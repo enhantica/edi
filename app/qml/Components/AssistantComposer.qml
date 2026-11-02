@@ -415,7 +415,7 @@ Rectangle {
             TextArea {
                 id: editor
                 objectName: "assistant.composer"
-                placeholderText: qsTr("Ask about your project or describe a refinement plan…")
+                placeholderText: qsTr("Ask about your project or describe a fitting plan…")
                 wrapMode: TextEdit.Wrap
                 selectByMouse: true
                 persistentSelection: true

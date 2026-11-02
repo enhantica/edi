@@ -52,7 +52,7 @@ inline ActivityPresentation presentActivity(const ActivityInput& in) {
     else if (in.kind == "plan") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Review work plan"));
     else if (in.kind == "question") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Assistant question"));
     else if (in.kind == "tool") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Project action"));
-    else if (in.kind == "trial") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Review refinement trial"));
+    else if (in.kind == "trial") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Review fit trial"));
     else if (out.decisionActivity) out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Review requested action"));
     else if (out.commandActivity) {
         if (in.commandCategory == "read") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Read files"));

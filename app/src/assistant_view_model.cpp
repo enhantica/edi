@@ -646,8 +646,8 @@ QString command_human_description(const Object& source) {
     const QString workflow="cat .agents/skills/project-assistance/SKILL.md";
     const QString refinement="cat .agents/skills/refinement-strategy/SKILL.md";
     const auto guidance=[](bool workflow,bool refinement) {
-        return workflow && refinement?QObject::tr("Read assistant workflow and refinement instructions"):
-            workflow?QObject::tr("Read assistant workflow instructions"):QObject::tr("Read assistant refinement instructions");
+        return workflow && refinement?QObject::tr("Read assistant workflow and fitting instructions"):
+            workflow?QObject::tr("Read assistant workflow instructions"):QObject::tr("Read assistant fitting instructions");
     };
     const auto command=source.value("command").toString();
     if(command==workflow)return guidance(true,false);
@@ -15695,7 +15695,7 @@ struct AssistantViewModel::State {
                 known.append(public_row("question", question.value("text").toString(), question, "awaiting_answer"));
             } else if (activity.value("type") == "fit") {
                 job_id = activity.value("job_id").toString();
-                known.append(public_row("tool", QObject::tr("Refinement trial running"), activity, "running"));
+                known.append(public_row("tool", QObject::tr("Fit trial running"), activity, "running"));
             } else throw std::invalid_argument("Invalid terminal-retention activity");
             for (const auto& value : known) row_ids.append(value.toObject().value("id").toString());
             terminal_row = public_row("tool", QObject::tr("Project tool outcome"), {}, "interrupted");
