@@ -517,23 +517,19 @@ def test_actual_registry_offers_closed_estimate_and_optional_compound_background
     schema = offered['estimate_background']['inputSchema']
     assert schema['type'] == 'object' and schema['additionalProperties'] is False
     assert set(schema['properties']) == {'purpose', 'experiment'}
-    assert set(schema['required']) == {'purpose', 'experiment'}
-    recipes = [
-        row
-        for row in objects(offered['create_cwl_project']['inputSchema'])
-        if 'background' in row.get('properties', {})
-    ]
-    assert recipes, 'Explicit manual compound backgrounds remain supported'
-    assert all('background' not in row.get('required', []) for row in recipes), (
-        'The ordinary compound route cannot require invented manual anchors'
+    assert set(schema['required']) == {'experiment'}, (
+        'Native action purpose is optional metadata; the physical experiment remains required'
     )
-    sites = [
-        row
-        for row in objects(offered['create_cwl_project']['inputSchema'])
-        if 'wyckoff_letter' in row.get('properties', {})
-    ]
-    assert sites and all('wyckoff_letter' not in row.get('required', []) for row in sites), (
-        'Manual mapped construction must permit the ordinary native omitted Wyckoff letter'
+    assert schema['properties']['purpose']['type'] == 'string', (
+        'A supplied purpose retains its declared string validation'
+    )
+    assert 'create_cwl_project' not in offered, (
+        'Default model tools retire duplicate compound setup; '
+        'the compatibility parser remains separate'
+    )
+    assert {'create_project', 'load_structure', 'create_experiment', 'set_experiment_type',
+            'load_data', 'estimate_background'} <= offered.keys(), (
+        'The ordinary Create/import/type/data/Estimate actions retain the supported setup capability'
     )
 
 
@@ -592,7 +588,17 @@ def test_native_estimate_uses_saved_nondefault_options_once_and_ordinary_undo(
     )
     actor.command('undo')
     actor.until(lambda row: not row['ui']['project']['calculating'])
-    assert point_rows(actor) == original, 'One ordinary Undo restores the whole prior background'
+    naming_undo = point_rows(actor)
+    assert [
+        {key: row[key] for key in ('position', 'intensity', 'free')} for row in naming_undo
+    ] == [
+        {key: row[key] for key in ('position', 'intensity', 'free')} for row in decoded
+    ], 'Naming Undo preserves the independently specified saved intensities, positions and flags'
+    actor.command('undo')
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    assert point_rows(actor) == original, (
+        'The separate ordinary Estimate Undo restores the whole captured original background'
+    )
     assert actor.last['ui']['project']['can_undo'] == prior_undo
     assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
