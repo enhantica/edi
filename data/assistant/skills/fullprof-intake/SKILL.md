@@ -5,7 +5,7 @@ description: Interpret selected FullProf text and preserve its scientific meanin
 
 # Inspect a selected FullProf project
 
-Version: 1.0.9. Purpose: interpret actual selected text, identify scientific mappings and missing prerequisites, and use only actually offered app actions. This strategy is not a PCR parser/converter or a fit authorization.
+Version: 1.0.10. Purpose: interpret actual selected text, identify scientific mappings and missing prerequisites, and use only actually offered app actions. This strategy is not a PCR parser/converter or a fit authorization.
 
 After interpretation and chemical-occupancy/scale mapping, prefer the offered complete native setup action when its code-owned scope fits the whole target. It creates no parser/CIF conversion: supply the scientifically mapped target and genuine data ID under its actual schema. Setup completion alone does not verify required source relations or final free flags; apply/read those afterward through ordinary offered actions, and fit only if authorized.
 
@@ -13,7 +13,7 @@ After interpretation and chemical-occupancy/scale mapping, prefer the offered co
 
 Establish the nuclear source convention and actual site/general multiplicities `m`/`M`. For general-position normalization, `OccFP = q * m / M`; recover `qraw = OccFP * M / m`. If a common positive phase factor `c` is established from source normalization or explicitly intended full non-shared sites, set `OccEDI = qraw / c` for EVERY species/site in that phase. Preserve genuine partial fractions and shared-site proportions; check the resulting shared-site sums and `sum(m * OccEDI)` by species against supplied composition. Do not infer `c` from the largest occupancy, normalize sites independently, clamp contradictions or set all sites to one. If `c` is unresolved, report that ambiguity before changing occupancies or scale. Removing `c` divides the structure factor by `c`: compensate the corresponding already-mapped phase intensity scale once with `SEDI = mapped(SFP) * c * c`, keeping other engine scale conventions separate. Read back native chemical occupancies and scale before claiming completion. [July2001 manual, physical PDF pages41,102](https://www2017.ill.eu/sites/fullprof/downloads/Docs/FullProf_Manual.pdf#page=102).
 
-Establish this chemical-occupancy mapping before writing occupancies. Choose the remaining supported setup and refinement actions from genuine native dependencies, source evidence and explicit user scope; no universal page/group sequence is required. Follow project-assistance for the current native operations. Copying raw PCR occupancy unchanged is not a conversion.
+Establish this chemical-occupancy mapping before writing occupancies. Choose the remaining supported setup and fit actions from genuine native dependencies, source evidence and explicit user scope; no universal page/group sequence is required. Follow project-assistance for the current native operations. Copying raw PCR occupancy unchanged is not a conversion.
 
 ## Available actions
 

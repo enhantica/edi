@@ -1,11 +1,14 @@
 ---
 name: refinement-strategy
-description: Choose and revise a refinement strategy from actual model, data, native eligibility and scientific references.
+description: Choose and revise a fitting strategy from actual model, data, native eligibility and scientific references.
 ---
 
-# Refine from current evidence
+# Fit from current evidence
 
-Version: 1.6.3. Follow the user's goal, supplied constraints and actually offered
+Say fit, fitting and fitted to the user, never refine or refinement: these are Edi's words. The
+references below keep their own titles.
+
+Version: 1.6.5. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
@@ -18,7 +21,7 @@ planning; native eligibility and ownership still apply.
    ambiguity. If probe, wavelength or TOF calibration is missing/conflicting, show
    Assistant and use offered structured questions; wait for the actual answer.
    Without that flow, issue a FINAL question and END the turn. Do no creation,
-   import, independent structure preparation, setup, refinement or Save meanwhile.
+   import, independent structure preparation, setup, fitting or Save meanwhile.
 
 2. **Find the dominant current mismatch efficiently.** Start broad numerical
    assessment with offered `inspect_data view=summary` and suitable explicit
@@ -83,7 +86,7 @@ planning; native eligibility and ownership still apply.
    fix again what the trial freed, run_fit the restored model and keep that adopted
    fit, so the work ends with fit results, R-factors and a report. Never finish with
    `fit_result_current` false after such an Undo. Restricted
-   convergence or negative-ADP Undo alone is not completed structure refinement;
+   convergence or negative-ADP Undo alone is not a completed structure fit;
    diagnose large reduced chi-square rather than force it to one. Save/Report may
    preserve scientifically limited work. After ordinary Save inspect authoritative
    saved/adopted values/SUs and current residuals; label old trial statistics

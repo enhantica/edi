@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.10.1",
+      "version": "1.10.2",
       "title": "Work with the displayed Edi project",
       "summary": "Work with the current native project, genuine CIF/data inputs, Estimate, ordinary saves and public scientific research.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "538326aa23f94b34fe9aa83375cd2ac8232a6191f0fbe538f2c728241c651cdf",
+      "sha256": "ceee094b2d11baa22dec3ae0acd0808787da0ea9167e6b8d0e9e06844adaf8f5",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.9",
+      "version": "1.0.10",
       "title": "Inspect a FullProf project",
       "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "c4fd47272db387f973f277003276b624332a2405a9997a979d7ac79e25877379",
+      "sha256": "b34b2851173d2297872e93813674d05f1774ecf1c5d57d2042aeadf546a50e28",
       "requires": [
         "selected_files"
       ],
@@ -50,11 +50,11 @@
     },
     {
       "id": "gsas-intake",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "title": "Inspect GSAS/GSAS-II material",
       "summary": "Inspect readable selected exports through offered actions; binary GPX is never executed and unsupported mappings remain explicit.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "1be108816c30cb1280651c945e223fab3635e9aa38cb3424dbcb5d97bd403f6f",
+      "sha256": "d0b00ba2f0fe1f1afd9e5625d10646a37946b863e4e4c3dbe0a1263e71b242b0",
       "requires": [
         "selected_files"
       ],
@@ -71,11 +71,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.6.4",
+      "version": "1.6.5",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "666bf3188b5e7755be1ebc47dd373d3843205c32b12425932cebda467034c3d7",
+      "sha256": "6cd76627a817164fc359b47aecf506c92e84c22a9a5d236adea1a82168eae0ea",
       "requires": [],
       "capabilities": [
         "inspect_project",
