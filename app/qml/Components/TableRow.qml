@@ -16,6 +16,11 @@ EaComponents.ListViewDelegate {
     // arrow pointer, as nothing in it can be chosen.
     property bool highlightsHover: true
 
+    // The table that styled this row's cells, which forgets them when the row goes.
+    property DataTable styledBy: null
+    property Item styledCells: null
+    Component.onDestruction: ApplicationInfo.tableRowDestroyed()
+
     // The row becomes current as soon as one of its editors takes focus, by a click or by Tab.
     onEditingChanged: ApplicationInfo.tableRowEditing()
     // A row's own click handler (one that opens what the row names) calls this too, so its click makes the row current

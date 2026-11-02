@@ -412,7 +412,11 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void tableAlignCell(const QJSValue& cell, const QJSValue& kind, bool fresh = false) const;
     Q_INVOKABLE void tableScheduleFitColumns() const;
     Q_INVOKABLE QJSValue tableColumnWidths() const;
-    Q_INVOKABLE QJSValue tableFitColumns(bool measure, const QJSValue& rows, const QJSValue& from = QJSValue()) const;
+    Q_INVOKABLE QJSValue tableFitColumns(const QJSValue& rows = QJSValue(), const QJSValue& from = QJSValue()) const;
+    Q_INVOKABLE void tableCombineWidths() const;
+    Q_INVOKABLE void tableForgetCells(const QJSValue& cells) const;
+    Q_INVOKABLE void tableApplyRuledWidths(bool force) const;
+    Q_INVOKABLE void tableColumnLayoutChanged() const;
     Q_INVOKABLE void tableStyleCells() const;
     Q_INVOKABLE void tableFitWholeModel() const;
     Q_INVOKABLE void tableMeasureRows(int run, int from) const;
@@ -617,6 +621,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void tableRowEditing() const;
     Q_INVOKABLE void tableRowActivated() const;
     Q_INVOKABLE void tableRowCompleted(const QJSValue& installOpacity) const;
+    Q_INVOKABLE void tableRowDestroyed() const;
     /// Searchable popup filtering, geometry and existing opening/request lifecycle.
     Q_INVOKABLE void searchPositionPopup(const QJSValue& opening) const;
     Q_INVOKABLE QJSValue searchMeasuredWidth(bool optionsOnly) const;

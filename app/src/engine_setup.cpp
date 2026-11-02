@@ -148,11 +148,12 @@ namespace {
 // slices of about 50 ms per turn of the event loop while any is pending, so input and drawing go on between slices and
 // an answer to the user never waits much longer than a tenth of a second. The window's own controller incubates only
 // around frames it draws, which left an idle window building its pages for seconds; 12 ms slices took about half as
-// long again as 50 ms ones.
+// long again as 50 ms ones. The timer waits 1 ms between slices: at 0 ms a slice was always due, so a caller processing
+// events until a condition held (a test waiting for layout to settle) never got back control while pages were built.
 class PageIncubation : public QObject, public QQmlIncubationController {
    public:
     explicit PageIncubation(QObject* parent) : QObject(parent) {
-        timer_.setInterval(0);
+        timer_.setInterval(1);
         QObject::connect(&timer_, &QTimer::timeout, &timer_, [this] { incubateFor(50); });
     }
 

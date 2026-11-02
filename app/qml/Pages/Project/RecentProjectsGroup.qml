@@ -9,7 +9,7 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-EaElements.GroupBox {
+SideBarGroup {
     objectName: "group.recentProjects"
     title: qsTr("Recent projects")
     icon: "archive"

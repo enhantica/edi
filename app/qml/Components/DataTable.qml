@@ -57,10 +57,14 @@ EaComponents.ListView {
     autoColumnPadding: EaStyle.Sizes.tableColumnSpacing * 3
     // The last data column, which holds the spare width as empty space after its content; -1 for none.
     readonly property int fillerIndex: equalColumns || spreadColumns.length > 0 ? -1 : columns.lastIndexOf(-1)
-    // Each column's widest text, its header's or a cell's, without the margin.
+    // Each column's widest text, its header's or a cell's, without the margin; the cells' alone, as last measured.
     property var fittedWidths: []
+    property var contentWidths: []
     property bool refitting: true
-    columnWidths: ApplicationInfo.tableColumnWidths()
+    // The widths the rule gives, set as columnWidths only when one of them changes: each change makes every row apply
+    // the widths again, and the rule is worked out again whenever the table's width moves during a page's layout.
+    readonly property var ruledWidths: ApplicationInfo.tableColumnWidths()
+    onRuledWidthsChanged: ApplicationInfo.tableApplyRuledWidths(false)
     // The spare width the last data column holds after its content, as empty space before the row buttons: its
     // cells keep their text where it fits, a right-aligned number by its neighbours.
     property real fillerWidth: 0
@@ -104,12 +108,17 @@ EaComponents.ListView {
     }
     Component.onDestruction: ApplicationInfo.tableDestroyed()
 
-    // Styles the cells of `rows` (alignment and padding) and, with `measure`, fits the columns to them and the header.
-    // Only the whole model is measured (fitWholeModel); a row the view makes, scrolled into view, is only styled and
-    // takes the widths the model was measured to (the owner, 2026-10-27). Without `measure` it returns the widths
-    // `rows` need, at least `from` (a part of the model measured before).
-    function fitColumns(measure = false, rows = null, from = null) {
-        return ApplicationInfo.tableFitColumns(measure, rows, from);
+    // Styles the cells of `rows` (alignment and padding), the view's rows when null, and returns the widths their cells
+    // need, at least `from` (a part of the model measured before). Only the whole model is measured (fitWholeModel); a
+    // row the view makes, scrolled into view, is only styled and takes the widths the model was measured to (the owner,
+    // 2026-10-27).
+    function fitColumns(rows = null, from = null) {
+        return ApplicationInfo.tableFitColumns(rows, from);
+    }
+    // The fitted widths: each column's header or its widest measured cell. A change of the header alone needs no new
+    // measure of the rows.
+    function combineWidths() {
+        ApplicationInfo.tableCombineWidths();
     }
     // A change of the content fits the columns afresh to every row of the model (fitWholeModel), once the table shows.
     function refit() {
@@ -118,6 +127,10 @@ EaComponents.ListView {
     // The cells of rows the view made, styled as the measured ones are.
     function styleCells() {
         ApplicationInfo.tableStyleCells();
+    }
+    // Forgets the cells of a row the view dropped, which would otherwise stay in the maps, each lookup scanning them.
+    function forgetCells(cells) {
+        ApplicationInfo.tableForgetCells(cells);
     }
     // Every row of the model is made beside the view, measured with the header, and dropped: the columns fit the widest
     // row wherever it is, and scrolling changes no width. A table not shown waits until it is.
@@ -136,7 +149,8 @@ EaComponents.ListView {
         id: measureLater
         property int run: 0
         property int from: 0
-        interval: 0
+        // Not 0 ms, which keeps a slice always due (PageIncubation in engine_setup.cpp).
+        interval: 1
         onTriggered: table.measureRows(run, from)
     }
     // Content that changed while the table was not shown, measured once it is.
@@ -157,12 +171,17 @@ EaComponents.ListView {
             delegate: table.delegate
         }
     }
-    onColumnsChanged: ApplicationInfo.tableColumnsChanged(false)
+    // A new layout of the flex columns measures the rows again; a fixed column's new width only works out the rule again.
+    property string flexLayout: ""
+    onColumnsChanged: ApplicationInfo.tableColumnLayoutChanged()
     // The spare width follows the columns: the last data column's cells take it as padding after their content.
     onColumnWidthsChanged: ApplicationInfo.tableColumnsChanged(true)
     onModelRevisionChanged: ApplicationInfo.tableColumnsChanged(false)
     onCountChanged: ApplicationInfo.tableColumnsChanged(false)
-    Component.onCompleted: refit()
+    Component.onCompleted: {
+        ApplicationInfo.tableApplyRuledWidths(true);
+        refit();
+    }
     Connections {
         property var ownerLife: null
         Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)

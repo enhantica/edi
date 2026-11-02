@@ -19,7 +19,7 @@ import edi.app
 // data, a simulation). A row made with Create experiment reads Load data… in its Data file cell until data is loaded
 // into it: a plain two- or three-column file whose rows become its measured data. Clicking a file name loads another
 // file in its place. Create, Load and Load data are each one undoable step.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
     property var pickerLife: ({
             alive: true

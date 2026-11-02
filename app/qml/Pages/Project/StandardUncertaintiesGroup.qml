@@ -11,7 +11,7 @@ import edi.app
 // How the project writes and shows every value with a standard uncertainty: the IUCr recommendation, or always
 // two digits. A setting of the project, saved with it, so whoever opens the project calculates from the same
 // numbers; the application preference only sets it for new projects.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property ProjectViewModel project: null

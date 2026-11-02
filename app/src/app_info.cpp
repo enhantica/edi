@@ -5882,6 +5882,11 @@ QJSValue tableProcedureCallback(const PanelUsageFrame& f, uint operation,
     if (operation == 142) {
         const auto math = panelUsageContextRead(f, "Math"); return panelUsageMemberCall(f, math, "max", {arg(0), arg(1)});
     }
+    if (operation == 145) {
+        const auto life = saved(0), table = saved(1);
+        if (tableDeferredCurrent(f, table, life)) return panelUsageMemberCall(f, table, "combineWidths");
+        return {};
+    }
     if (operation == 144) {
         const auto life = saved(0), table = saved(1);
         if (!tableDeferredCurrent(f, table, life)) return {};
@@ -5931,6 +5936,7 @@ QJSValue ApplicationInfo::tablePadForFiller(const QJSValue& cell, const QJSValue
         if (!panelUsageTruth(panelUsageMemberCall(f, paddings, "has", {cell}))) {
             paddings = panelUsageContextRead(f, "basePaddings"); const auto literal = panelUsageLiteral(f);
             panelUsageWrite(f, literal.value, "left", panelUsageRead(f, cell, "leftPadding")); panelUsageWrite(f, literal.value, "right", panelUsageRead(f, cell, "rightPadding"));
+            panelUsageWrite(f, literal.value, "styled", QJSValue(QString{}));
             panelUsageMemberCall(f, paddings, "set", {cell, panelUsageComplete(f, literal)});
         }
         paddings = panelUsageContextRead(f, "basePaddings"); base = panelUsageMemberCall(f, paddings, "get", {cell});
@@ -5944,6 +5950,13 @@ QJSValue ApplicationInfo::tablePadForFiller(const QJSValue& cell, const QJSValue
     const auto naturalRight = right;
     right = panelUsageAdd(f, right, assistantSameName(f, column, "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0));
     if (!panelUsageTruth(projectCall(f, owns))) return {};
+    // A view's cell already padded so is left as it is: its rows are styled again whenever rows come and go.
+    if (!fresh) {
+        const auto styled = QJSValue(kind.toString() + QLatin1Char(':') + right.toString());
+        if (!kind.strictlyEquals(QJSValue(QStringLiteral("check"))) && panelUsageRead(f, base, "styled").strictlyEquals(styled)) return base;
+        panelUsageWrite(f, base, "styled", styled);
+        if (!panelUsageReady(f)) return {};
+    }
     // Publish the non-filler baseline before notifications. Measurement uses the
     // actual padding, never a claim that the requested filler was applied.
     panelUsageWrite(f, base, "naturalRight", naturalRight);
@@ -5978,7 +5991,11 @@ QJSValue ApplicationInfo::tableCellKind(const QJSValue& cell) const {
 }
 void ApplicationInfo::tableAlignCell(const QJSValue& cell, const QJSValue& kind, bool fresh) const {
     const auto f = panelUsageEngine(this); if (tableHas(f, cell, "keepsAlignment")) return;
-    if (!fresh) panelUsageMemberCall(f, panelUsageContextRead(f, "cellKinds"), "set", {cell, kind});
+    if (!fresh) {
+        const auto kinds = panelUsageContextRead(f, "cellKinds");
+        if (panelUsageMemberCall(f, kinds, "get", {cell}).strictlyEquals(kind)) return;
+        panelUsageMemberCall(f, kinds, "set", {cell, kind});
+    }
     const bool number = kind.strictlyEquals(QJSValue(QStringLiteral("number"))) || kind.strictlyEquals(QJSValue(QStringLiteral("check")));
     const auto alignment = assistantContextField(f, "Text", number ? "AlignRight" : kind.strictlyEquals(QJSValue(QStringLiteral("icon"))) ? "AlignHCenter" : "AlignLeft");
     if (tableHas(f, cell, "columnAlignment")) assistantMemberWrite(f, cell, "columnAlignment", alignment);
@@ -6058,15 +6075,11 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     }
     return widths;
 }
-// Styles the cells of `rows` (or of the rows the view made) and, with `measure`, fits the columns to them and the
-// header. Without `measure` it returns the widths `rows` need, at least `from` (a part of the model measured before);
-// undefined means the table or a row changed meanwhile. Rows passed in are fresh, made only to be measured.
-QJSValue ApplicationInfo::tableFitColumns(bool measure, const QJSValue& rows, const QJSValue& from) const {
+// Styles the cells of `rows` (or of the rows the view made) and returns the widths `rows` need, at least `from` (a part
+// of the model measured before); undefined means the table or a row changed meanwhile. Rows passed in are fresh, made
+// only to be measured; the view's rows are only styled, and their widths come from the measured model.
+QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& from) const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return {};
-    QJSValue header;
-    if (panelUsageTruth(panelUsageContextRead(f, "headerItem")) && panelUsageTruth(assistantContextField(f, "headerItem", "implicitColumnWidths"))) {
-        const auto widths = assistantContextField(f, "headerItem", "implicitColumnWidths"); header = panelUsageMemberCall(f, widths, "filter", {tableCallback(f, 132, {}, 2)});
-    } else if (panelUsageReady(f)) header = f->newArray();
     const auto headerOwner = panelUsageContextRead(f, "headerItem");
     const auto headerCells = tableCellsOf(f, headerOwner);
     QJSValue headerRow;
@@ -6074,10 +6087,14 @@ QJSValue ApplicationInfo::tableFitColumns(bool measure, const QJSValue& rows, co
         const auto first = textIndex(f, headerCells, QJSValue(0));
         if (consentQtObject(f, first)) headerRow = panelUsageRead(f, first, "parent");
     }
-    const auto headerWidths = panelUsageTruth(headerCells) ? panelUsageMemberCall(f, headerCells, "map", {tableCallback(f, 133, {}, 2)}) : header;
     const bool fresh = !rows.isNull() && !rows.isUndefined();
-    const auto widths = panelUsageTruth(from) ? panelUsageMemberCall(f, from, "slice", {})
-                                              : panelUsageMemberCall(f, panelUsageContextRead(f, "columns"), "map", {tableCallback(f, 134, {headerWidths}, 2)});
+    QJSValue widths;
+    if (panelUsageTruth(from)) widths = panelUsageMemberCall(f, from, "slice", {});
+    else if (panelUsageReady(f)) {
+        const int count = panelUsageRead(f, panelUsageContextRead(f, "columns"), "length").toInt();
+        widths = f->newArray(count);
+        for (int index = 0; index < count; ++index) widths.setProperty(index, 0);
+    }
     QJSValue kinds = consentNull(); bool complete = true;
     const auto styled = fresh ? rows : assistantContextField(f, "contentItem", "children");
     panelUsageEach(f, styled, [&](const QJSValue& item) {
@@ -6104,6 +6121,7 @@ QJSValue ApplicationInfo::tableFitColumns(bool measure, const QJSValue& rows, co
             if (!panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
             const auto base = panelUsageGlobalCall(f, "padForFiller", {cell, QJSValue(index), kind, QJSValue(fresh)});
             if (!panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
+            if (!fresh) continue;
             const auto math = panelUsageContextRead(f, "Math"), previous = textIndex(f, widths, QJSValue(index)), inner = panelUsageContextRead(f, "Math");
             const auto measured = tableMeasure(f, cell, fresh, kind, base);
             const auto filler = tableAppliedFiller(f, cell, fresh, base);
@@ -6123,22 +6141,72 @@ QJSValue ApplicationInfo::tableFitColumns(bool measure, const QJSValue& rows, co
             panelUsageGlobalCall(f, "padForFiller", {textIndex(f, headerCells, QJSValue(index)), QJSValue(index)});
         }
     }
-    // Only a measuring pass fits the columns; styling keeps the widths the model was measured to.
-    if (measure) {
-        if (!editorLife(f, life)) return {}; panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return {};
-        if (!tableSameValues(f, widths, panelUsageContextRead(f, "fittedWidths"))) panelUsageContextWrite(f, "fittedWidths", widths);
-    }
     // The resolved-width notification only queues this header; write after it returns.
     // Keep sizing a newly created header even when the numeric widths did not change.
     if (editorLife(f, life) && consentQtObject(f, headerRow)
         && headerOwner.strictlyEquals(panelUsageContextRead(f, "headerItem"))
         && consentFieldEquals(f, headerRow, "parent", headerOwner)) tableApplyWidthsNow(f, headerRow);
-    if (measure || !editorLife(f, life)) return {};
+    if (!editorLife(f, life)) return {};
     return widths;
+}
+// The fitted widths: each column's header or its widest measured cell. A change of the header alone needs no new
+// measure of the rows.
+void ApplicationInfo::tableCombineWidths() const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
+    QJSValue header;
+    if (panelUsageTruth(panelUsageContextRead(f, "headerItem")) && panelUsageTruth(assistantContextField(f, "headerItem", "implicitColumnWidths")))
+        header = assistantContextField(f, "headerItem", "implicitColumnWidths");
+    else if (panelUsageReady(f)) header = f->newArray();
+    const auto headerCells = tableCellsOf(f, panelUsageContextRead(f, "headerItem"));
+    const auto headerWidths = panelUsageTruth(headerCells) ? panelUsageMemberCall(f, headerCells, "map", {tableCallback(f, 133, {}, 2)}) : header;
+    const auto content = panelUsageContextRead(f, "contentWidths");
+    if (!panelUsageReady(f)) return;
+    const int count = panelUsageRead(f, panelUsageContextRead(f, "columns"), "length").toInt();
+    auto widths = f->newArray(count);
+    const auto math = panelUsageContextRead(f, "Math");
+    for (int index = 0; panelUsageReady(f) && index < count; ++index) {
+        const auto column = QJSValue(index);
+        widths.setProperty(index, panelUsageMemberCall(f, math, "max", {tableNullish(textIndex(f, headerWidths, column), QJSValue(0)),
+                                                                         tableNullish(textIndex(f, content, column), QJSValue(0))}));
+    }
+    if (!editorLife(f, life)) return;
+    if (!tableSameValues(f, widths, panelUsageContextRead(f, "fittedWidths"))) panelUsageContextWrite(f, "fittedWidths", widths);
+}
+// Forgets the cells of a row the view dropped, which would otherwise stay in the maps, each lookup scanning them.
+void ApplicationInfo::tableForgetCells(const QJSValue& cells) const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
+    panelUsageEach(f, cells, [&](const QJSValue& cell) {
+        for (const char* map : {"basePaddings", "cellKinds", "checkCells"}) panelUsageMemberCall(f, panelUsageContextRead(f, map), "delete", {cell});
+        return panelUsageReady(f);
+    });
+}
+// Sets the rule's widths as columnWidths only when one of them changes (always on `force`): each change makes every
+// row apply the widths again.
+void ApplicationInfo::tableApplyRuledWidths(bool force) const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
+    const auto ruled = panelUsageContextRead(f, "ruledWidths");
+    if (force || !tableSameValues(f, ruled, panelUsageContextRead(f, "columnWidths"))) panelUsageContextWrite(f, "columnWidths", ruled);
+}
+// A new layout of the flex columns measures the rows again; a fixed column's new width only works out the rule again.
+void ApplicationInfo::tableColumnLayoutChanged() const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
+    const auto columns = panelUsageContextRead(f, "columns");
+    const int count = panelUsageRead(f, columns, "length").toInt();
+    QString layout;
+    for (int index = 0; panelUsageReady(f) && index < count; ++index)
+        layout += textIndex(f, columns, QJSValue(index)).strictlyEquals(QJSValue(-1)) ? QLatin1Char('f') : QLatin1Char('x');
+    if (!panelUsageReady(f)) return;
+    if (!panelUsageContextRead(f, "flexLayout").strictlyEquals(QJSValue(layout))) {
+        panelUsageContextWrite(f, "flexLayout", QJSValue(layout));
+        if (editorLife(f, life)) panelUsageGlobalCall(f, "refit", {});
+        return;
+    }
+    const auto table = panelUsageContextRead(f, "table");
+    panelUsageCallLater(f, tableCallback(f, 145, {life, table}, 0));
 }
 void ApplicationInfo::tableStyleCells() const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
-    panelUsageGlobalCall(f, "fitColumns", {QJSValue(false)});
+    panelUsageGlobalCall(f, "fitColumns", {});
 }
 namespace {
 // Whether a table that is visible may be measured now: a small model at once, a large one only where it can be seen.
@@ -6190,7 +6258,7 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
         panelUsageMemberCall(f, rows, "push", {row});
     }
     if (!editorLife(f, life)) return;
-    const auto widths = panelUsageGlobalCall(f, "fitColumns", {QJSValue(false), rows, panelUsageContextRead(f, "measuredWidths")});
+    const auto widths = panelUsageGlobalCall(f, "fitColumns", {rows, panelUsageContextRead(f, "measuredWidths")});
     if (!editorLife(f, life)) return;
     // Drops the rows, and stops making any still being made.
     assistantMemberWrite(f, measuring, "model", consentNull()); if (!editorLife(f, life)) return;
@@ -6204,8 +6272,9 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
         return;
     }
     panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return;
-    if (!tableSameValues(f, widths, panelUsageContextRead(f, "fittedWidths"))) panelUsageContextWrite(f, "fittedWidths", widths);
-    if (editorLife(f, life)) panelUsageGlobalCall(f, "styleCells", {});
+    panelUsageContextWrite(f, "contentWidths", widths); if (!editorLife(f, life)) return;
+    panelUsageGlobalCall(f, "combineWidths", {}); if (!editorLife(f, life)) return;
+    panelUsageGlobalCall(f, "styleCells", {});
 }
 // Whether the table can be seen: in no collapsed group, and on the current item of every SwipeView it is in (a page, a
 // sidebar tab). A SwipeView keeps its other items visible and a collapsed group only clips its content.
@@ -6374,7 +6443,7 @@ void ApplicationInfo::tableOwnerCallback(int kind) const {
     }
     if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
     if (panelUsageTruth(first) && panelUsageTruth(panelUsageRead(f, first, "parent"))) projectInvoke(f, "table", "applyWidths", {panelUsageRead(f, first, "parent")});
-    if (editorLife(f, panelUsageContextRead(f, "ownerLife"))) projectInvoke(f, "table", "refit");
+    if (editorLife(f, panelUsageContextRead(f, "ownerLife"))) projectInvoke(f, "table", "combineWidths");
 }
 bool ApplicationInfo::tableRevealRow(int index) const {
     const auto f = panelUsageEngine(this);
@@ -9167,6 +9236,15 @@ void ApplicationInfo::tableRowActivated() const {
     }
     panelUsageDeferredMemberCall(f, table, "rowActivated", [&] { return QJSValueList({assistantContextField(f, "row", "index")}); });
 }
+// A dropped row's cells leave the table's per-cell maps.
+void ApplicationInfo::tableRowDestroyed() const {
+    const auto f = panelUsageEngine(this); const auto table = assistantContextField(f, "row", "styledBy"), cells = assistantContextField(f, "row", "styledCells");
+    if (!panelUsageTruth(table) || !panelUsageTruth(cells)) return;
+    if (!tableDeferredCurrent(f, table, panelUsageRead(f, table, "columnFitLife"))) return;
+    const auto array = panelUsageContextRead(f, "Array");
+    const auto children = panelUsageDeferredMemberCall(f, array, "from", [&] { return QJSValueList({panelUsageRead(f, cells, "children")}); });
+    if (tableDeferredCurrent(f, table, panelUsageRead(f, table, "columnFitLife"))) panelUsageMemberCall(f, table, "forgetCells", {children});
+}
 void ApplicationInfo::tableRowCompleted(const QJSValue& installOpacity) const {
     const auto f = panelUsageEngine(this);
     panelUsageEach(f, assistantContextField(f, "row", "contentRowData"), [&](const QJSValue& cell) { rowFocusOnClick(f, cell); return panelUsageReady(f); });
@@ -9176,6 +9254,8 @@ void ApplicationInfo::tableRowCompleted(const QJSValue& installOpacity) const {
         const auto array = panelUsageContextRead(f, "Array"); const auto children = panelUsageDeferredMemberCall(f, array, "from", [&] { return QJSValueList({assistantContextField(f, "row", "contentRowData")}); });
         const auto first = panelUsageDeferredMemberCall(f, children, "find", [&] { return QJSValueList({panelUsageClosure(f, 131, {}, 1)}); });
         const auto cells = panelUsageTruth(first) ? panelUsageRead(f, first, "parent") : consentNull();
+        assistantMemberWrite(f, panelUsageContextRead(f, "row"), "styledBy", table);
+        assistantMemberWrite(f, panelUsageContextRead(f, "row"), "styledCells", cells);
         // A row only takes the widths the table measured its whole model to (DataTable.fitWholeModel): cells a
         // Repeater makes later are sized and styled as the others.
         if (tableDeferredCurrent(f, table, life) && !cells.isNull()) panelUsageDeferredMemberCall(f, panelUsageRead(f, cells, "childrenChanged"), "connect", [&] { return QJSValueList({panelUsageClosure(f, 323, {table, cells, life}, 0)}); });

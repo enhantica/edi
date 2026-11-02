@@ -12,7 +12,7 @@ import edi.app
 // Which values the Analysis table lists besides those a fit can free (edi ADR-0053 §7): one box per reason a value
 // cannot be fitted, each with how many such values are fixed. A value marked free is always listed. A setting of this
 // user, not part of the project, so it is on the page's Settings tab (edi ADR-0031 §2).
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property ProjectViewModel project: null

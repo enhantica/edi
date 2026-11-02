@@ -14,7 +14,7 @@ import edi.app
 // Structures (N) (easydiffractionbeta Pages/Model/SideBarBasic/Models.qml): the project's structures,
 // one current. The original Load accepts native .edi and the already supported
 // single-structure CIF vocabulary; all additions use the same editor/Undo.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property ProjectViewModel project: null
