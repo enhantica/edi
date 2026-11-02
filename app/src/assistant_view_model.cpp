@@ -2828,7 +2828,9 @@ struct AssistantViewModel::State {
     }
     void capture_resume_checkpoint() noexcept {
         try {
-            if(resume_checkpoint || !generic_authenticated || !generic_durable || generic_thread.isEmpty() ||
+            // The runtime saves a thread at its first turn: one that never had input cannot be resumed, and a
+            // reconnect starts a new one.
+            if(resume_checkpoint || !generic_authenticated || !generic_durable || generic_thread.isEmpty() || !generic_thread_has_input ||
                 generic_clear_pending || generic_context_pending || !backend_scope)return;
             const auto publication=file_projection();const auto scope=backend_scope;
             const auto thread=generic_thread,workspace=generic_workspace;
@@ -13341,7 +13343,8 @@ struct AssistantViewModel::State {
     bool generic_prepare_thread() {
         if(startup_restore_pending())return false;
         const auto publication = file_projection();
-        const auto viewed=generic_thread.isEmpty()?viewed_session:std::optional<ViewedSession>{};
+        // Only a session that had input exists in the runtime to resume; an empty one is started afresh.
+        const auto viewed=generic_thread.isEmpty() && viewed_session && viewed_session->had_input?viewed_session:std::optional<ViewedSession>{};
         const QPointer<CodexAgent> originalTransport(agent.get());
         const auto originalOutput=originalTransport?originalTransport->outputGeneration():0;
         const auto originalTransportCurrent=[&] {
