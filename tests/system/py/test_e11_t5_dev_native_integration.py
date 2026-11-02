@@ -12499,12 +12499,19 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
         tool_call('inspect_data', 'original-bragg-summary', dataset_id=identity, start=0, count=total+31, source='bragg', view='summary', partitions=3),
         tool_call('inspect_data', 'original-empty-summary', dataset_id=identity, start=total, count=0, view='summary', partitions=3),
         tool_call('inspect_data', 'original-rows-after-summary', dataset_id=identity, start=1, count=8, view='rows')]
-    actor.configure_turns([calls]);actor.request('Inspect this exact current dataset without edits: retain the requested whole native rows, exact focused rows and the offered compact summaries; do not fit or save.')
+    reports = []
+    actor.configure_turns([calls[:4]])
+    actor.request('Inspect the first four exact ranges without edits, a fit or a save.')
     _session_completed(actor, 1)
+    reports.append(json.loads(qml(actor, 'Session.assistant.workReportDocument()')))
+    actor.append_turn(calls[4:])
+    actor.request('Inspect the remaining exact ranges in this new turn without edits, a fit or a save.')
+    _session_completed(actor, 2)
+    reports.append(json.loads(qml(actor, 'Session.assistant.workReportDocument()')))
     outcomes = {call['call_id']: _original_inspection_reply(actor, call['call_id'])['data'] for call in calls}
     raw = outcomes['original-full-legacy'];explicit = outcomes['original-explicit-slice']
     assert 'summary' not in raw and 'view' not in raw and len(raw['rows']) == total \
-        and raw['start'] == 0 and raw['end'] == total and raw['eof'], 'Legacy/default full access retains every source row with no decimation/new quota or summary fields'
+        and raw['start'] == 0 and raw['end'] == total and raw['eof'], 'Each permitted default raw read retains every source row with no decimation or summary fields'
     assert explicit['rows'] == raw['rows'][1:9] and 'summary' not in explicit and 'view' not in explicit
     assert explicit == outcomes['original-rows-after-summary'], 'Later explicit raw retrieval remains byte-meaning-equivalent after compact inspection'
     assert raw['current'] is True and raw['publication'] == 'native', 'This positive current-computed fixture must really reach adopted native calculation, not a frame or empty stale curve'
@@ -12528,9 +12535,10 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
     report = json.loads(qml(actor, 'Session.assistant.workReportDocument()'))
     retained = {}
     for call in calls:
-        matches = [item['row']['payload'] for item in report['history_evidence']
-                   if item.get('row', {}).get('payload', {}).get('tool') == 'inspect_data'
-                   and item['row']['payload'].get('id') == call['call_id']]
+        matches = next((matching for document in reports
+            if (matching := [item['row']['payload'] for item in document['history_evidence']
+                if item.get('row', {}).get('payload', {}).get('tool') == 'inspect_data'
+                and item['row']['payload'].get('id') == call['call_id']])), [])
         assert len(matches) == 1, 'Every real original call has one complete canonical backend outcome, not a trimmed/overwritten conversational surrogate'
         assert json.loads(matches[0]['contentItems'][0]['text'])['data'] == outcomes[call['call_id']] \
             and matches[0]['nativeOutcome']['data'] == outcomes[call['call_id']], (

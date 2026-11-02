@@ -261,7 +261,13 @@ def _load_bound_module(name, path):
     return module
 
 
-SOURCE_ROOT, FROZEN_PATH = _source_inputs()
+# Inventory does not execute a case or qualify a binary. Runtime admission below
+# still requires every exact source, caller and binary proof before any case runs.
+if '--collect-only' in sys.argv or '--co' in sys.argv:
+    SOURCE_ROOT = Path(__file__).resolve().parents[4]
+    FROZEN_PATH = Path(__file__).with_name('original_cases.py').resolve(strict=True)
+else:
+    SOURCE_ROOT, FROZEN_PATH = _source_inputs()
 ACTUAL = _load_bound_module(
     'test_e11_t5_dev_native_integration',
     SOURCE_ROOT / 'tests/system/py/test_e11_t5_dev_native_integration.py',
