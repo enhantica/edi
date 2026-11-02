@@ -526,8 +526,8 @@ public:
         const std::vector<std::pair<QString,QString>> labels{
             {"create_project","Create a project"},{"show_report","Show the project report"},{"inspect_project","Inspect the current project"},
             {"inspect_data","Inspect diffraction data"},{"list_parameters","Inspect model parameters"},{"diagnostics","Check the current model"},
-            {"set_parameters","Update parameter values"},{"set_free","Choose parameters to refine"},{"run_fit","Refine the current model"},
-            {"undo_fit","Undo the latest refinement"},{"load_structure","Load a structure"},{"create_experiment","Add an experiment"},
+            {"set_parameters","Update parameter values"},{"set_free","Choose parameters to fit"},{"run_fit","Fit the current model"},
+            {"undo_fit","Undo the latest fit"},{"load_structure","Load a structure"},{"create_experiment","Add an experiment"},
             {"set_experiment_type","Choose the experiment type"},{"load_data","Load diffraction data"},{"read_selected_file","Read an attached file"},
             {"create_structure","Create a structure"},{"edit_structure","Edit the structure"},{"edit_atom","Edit an atomic site"},
             {"edit_experiment","Edit the experiment"},{"acquire_inputs","Inspect input files"},{"save_project","Save the project"},
