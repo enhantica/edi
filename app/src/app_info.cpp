@@ -6285,8 +6285,22 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
         freshInputs.metrics = panelUsageContextRead(f, "metrics").toQObject();
         freshWidths = tableNumbers(widths);
     }
+    QObject* const headerObject = fresh ? nullptr : panelUsageContextRead(f, "headerItem").toQObject();
     panelUsageEach(f, styled, [&](const QJSValue& item) {
         if (!editorLife(f, life)) { complete = false; return false; }
+        // After the first row has set the columns' kinds, a view row whose styling inputs are unchanged is skipped
+        // before any script call.
+        if (!fresh && !styleKinds.isEmpty()) {
+            QObject* rowObject = item.toQObject();
+            if (rowObject == nullptr || rowObject == headerObject) return panelUsageReady(f);
+            const auto rowCells = tableNativeCells(rowObject);
+            if (rowCells.isEmpty()) return panelUsageReady(f);
+            if (auto* rowHolder = rowCells.constFirst()->parentItem()) {
+                QString key = styleBase + styleKinds;
+                for (const auto* cell : rowHolder->childItems()) key += QString::number(quintptr(cell), 16) + QLatin1Char(',');
+                if (rowHolder->property("ediTableStyle").toString() == key) return panelUsageReady(f);
+            }
+        }
         const auto cells = tableCellsOf(f, item);
         if (!panelUsageTruth(cells) || panelUsageRead(f, cells, "length").strictlyEquals(QJSValue(0)) || assistantSameName(f, item, "headerItem")) return panelUsageReady(f);
         if (!editorLife(f, life)) { complete = false; return false; }
