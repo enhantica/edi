@@ -10783,14 +10783,38 @@ def test_original_question_batch_discards_partial_answers_when_original_owner_re
     else:
         if retirement == 'input_scope':
             file = _attachment_fixtures(tmp_path, 1)[0]
-            token = actor.begin_current_file_selection()
-            assert token and actor.command('selected_add', token=token, paths=[str(file)])['reply']['added'], (
-                'Input retirement must reach a genuine current pending-file admission, never a fake changed scope')
+            # File selection is idle-only. This attempted scope change cannot
+            # retire an active question because it has never been admitted.
+            files_before = _attachment_rows(actor)
+            token = qml(actor, 'Session.assistant.beginFileSelection(true)')
+            assert not token, (
+                'An active original question refuses new file selection before granting input authority')
+            added = actor.command('selected_add', token=token or '', paths=[str(file)])['reply']['added']
+            assert not added and _attachment_rows(actor) == files_before, (
+                'A refused file-selection attempt cannot change the actual selected-file scope')
+            assert actor.last['ui']['pending_question'] == second \
+                and not _session_state(actor).get('human_answers'), (
+                    'Refused file intake preserves the exact partial question and transmits no answer map')
+            assert len(_session_wire(actor, 'turn/start')) == 1, (
+                'Refused file intake cannot replay the original prompt or admit a replacement turn')
+            (actor.folder / 'refused-input-scope-at-original-question.json').write_text(
+                json.dumps({'token': token, 'added': added, 'pending': second}, indent=2))
+            return
         elif retirement == 'account_change':
+            reads_before = len(_session_wire(actor, 'account/read'))
             _session_configure(actor, fixture_account_read_reply={'account': {'type': 'chatgpt',
-                'email': 'other-original-question-owner@example.invalid', 'planType': 'plus'}, 'requiresOpenaiAuth': False})
+                'email': 'other-original-question-owner@example.invalid', 'planType': 'plus'},
+                'requiresOpenaiAuth': False}, usage_notifications=[{'method': 'account/updated',
+                    'params': {'authMode': 'chatgpt', 'planType': None}}])
             actor.command('refresh_usage')
-            actor.until(lambda value: not value['ui']['connected'])
+            actor.until(lambda value: len(_session_wire(actor, 'account/read')) > reads_before
+                and not value['ui']['connected'])
+            account_read = _session_wire(actor, 'account/read')[-1]
+            sent = map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
+            assert any(row.get('id') == account_read['id'] and row.get('result', {})
+                .get('account', {}).get('email') == 'other-original-question-owner@example.invalid'
+                for row in sent), (
+                    'Account retirement follows the actual correlated changed-owner reply after a real notification')
         else:
             actor.command(retirement)
         qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(second['question_id']) + ',"stale completion")')
