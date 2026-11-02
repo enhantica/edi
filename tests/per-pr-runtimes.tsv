@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-02T19:44:56Z
+# measured_utc = 2026-11-02T19:49:00Z
 #
-# Recorded from: measured test run (1159 node(s) measured once, 165953 banked, 0 stale row(s) dropped)
-# Collected tests: 210108; with a reported duration: 70253
+# Recorded from: measured test run (7 node(s) measured once, 165953 banked, 0 stale row(s) dropped)
+# Collected tests: 210108; with a reported duration: 70256
 # Module-scoped fixture costs recorded: 96
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 210108
 # inventory_cpp = 396
-# inventory_measured = 165953
-# inventory_unmeasured = 44551
+# inventory_measured = 165957
+# inventory_unmeasured = 44547
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 66683
 
@@ -65,13 +65,13 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::te
 0.470	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-Uani-tensor]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-beta-labels]
 0.410	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-beta-tensor]
-UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_five_worst_reflections_preserve_ratios_shifts_and_widths
+0.010	tests/integration/app/test_assistant_misfit_math.py::test_five_worst_reflections_preserve_ratios_shifts_and_widths
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_invalid_supplied_sigma_is_omitted_instead_of_inventing_weights
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_quiet_background_excludes_the_half_sigma_boundary
-UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_weighted_regions_and_background_use_the_same_array_population
+0.020	tests/integration/app/test_assistant_misfit_math.py::test_weighted_regions_and_background_use_the_same_array_population
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_workflow.py::test_data_read_step_names_actual_dataset_and_rows_even_when_clamped
-UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_misfit_workflow.py::test_data_reads_share_four_call_budget_and_reset_only_on_new_turn
-UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_misfit_workflow.py::test_every_adopted_powder_pattern_summary_matches_original_arrays
+0.000	tests/integration/app/test_assistant_misfit_workflow.py::test_data_reads_share_four_call_budget_and_reset_only_on_new_turn
+0.003	tests/integration/app/test_assistant_misfit_workflow.py::test_every_adopted_powder_pattern_summary_matches_original_arrays
 0.053	tests/integration/app/test_background_estimate_action.py::test_app_estimate_equals_python_after_undo_and_exact_reload[hrpt]
 0.050	tests/integration/app/test_background_estimate_action.py::test_app_estimate_equals_python_after_undo_and_exact_reload[sim_si]
 0.000	tests/integration/app/test_background_estimate_settings_action.py::test_blank_app_defaults_and_derived_hint_survive_two_saves
@@ -210547,8 +210547,8 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # unaffected; excluding one test only moves the cost to the next sibling).
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
-# module-cost: 24.857	build/tests-seq20/runner-replay/edi/tests/integration/app/test_assistant_misfit_workflow.py
 # module-cost: 5.172	tests/integration/app/test_about_components.py
+# module-cost: 26.797	tests/integration/app/test_assistant_misfit_workflow.py
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
 # module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
