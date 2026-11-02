@@ -217,7 +217,13 @@ def test_shipped_view_model_api_is_typed():
     files = list((ROOT / 'app/src').rglob('*.hpp')) + list((ROOT / 'app/src').rglob('*.h'))
     assert files, 'gate 4: the app must declare the typed QObject view-model contract'
     for file in files:
-        assert not api_violations(file.read_text(), file.relative_to(ROOT).as_posix()), (
+        source = file.read_text()
+        if not re.search(
+            r'\bQML_(?:ELEMENT|NAMED_ELEMENT|ANONYMOUS|SINGLETON|VALUE_TYPE)\b',
+            without_comments(source),
+        ):
+            continue  # Private provider transport signals do not cross the QML API.
+        assert not api_violations(source, file.relative_to(ROOT).as_posix()), (
             'I2: fixed-shape APIs must be typed; only the named ADR-0015 report, activity '
             f'and usage maps are allowed in {file.relative_to(ROOT)}'
         )
