@@ -74,6 +74,7 @@ TestCase {
                     throws: row.throws,
                     coercions: row.coercions,
                     sentinel_coercions: row.sentinel_coercions,
+                    separate_json_reads: row.separate_json_reads,
                     owner_current: row.owner_current,
                     parse_receiver: row.parse_receiver,
                     stringify_receiver: row.stringify_receiver

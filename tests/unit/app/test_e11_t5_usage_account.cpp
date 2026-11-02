@@ -7,6 +7,7 @@
 #include <private/qjsvalue_p.h>
 #include <private/qqmlcontextdata_p.h>
 #include <private/qqmllistwrapper_p.h>
+#include <private/qv4engine_p.h>
 #include <private/qv4persistent_p.h>
 
 #include <QColor>
@@ -244,15 +245,33 @@ class UsageCallLookupContext final : public QObject {
     Q_PROPERTY(QJSValue JSON READ json WRITE setJson NOTIFY jsonChanged)
     Q_PROPERTY(QJSValue Date READ date WRITE setDate NOTIFY dateChanged)
     Q_PROPERTY(QJSValue isFinite READ finite WRITE setFinite NOTIFY finiteChanged)
-    QJSValue math_, json_, date_, finite_;
+    QJSEngine* engine_;
+    QJSValue math_, json_, date_, finite_, defaultJson_;
+    QPointer<QObject> separateJsonConsumer_;
+    mutable int separateJsonReads_ = 0;
 
    public:
     explicit UsageCallLookupContext(QJSEngine* engine)
-        : math_(engine->globalObject().property("Math")),
+        : engine_(engine),
+          math_(engine->globalObject().property("Math")),
           json_(engine->globalObject().property("JSON")),
           date_(engine->globalObject().property("Date")),
-          finite_(engine->globalObject().property("isFinite")) {}
-    QJSValue json() const { return json_; }
+          finite_(engine->globalObject().property("isFinite")),
+          defaultJson_(json_) {}
+    QJSValue json() const {
+        // One usage projection is the counted subject. The original connection
+        // dialog independently parses its disclosure in the same creation context.
+        // Keep that real binding active with its ordinary JSON receiver; never
+        // filter, deduplicate or forgive any operation on the Panel's receiver.
+        if (separateJsonConsumer_ &&
+            engine_->handle()->qmlScopeObject() == separateJsonConsumer_.data()) {
+            ++separateJsonReads_;
+            return defaultJson_;
+        }
+        return json_;
+    }
+    void separateJsonConsumer(QObject* consumer) { separateJsonConsumer_ = consumer; }
+    int separateJsonReads() const { return separateJsonReads_; }
     void setJson(const QJSValue& value) { json_ = value; }
     QJSValue date() const { return date_; }
     QJSValue finite() const { return finite_; }
@@ -694,6 +713,16 @@ class UsageAccountProof final : public QObject {
             requireUsageContextReadback(&context, "JSON", jsonContext.json(), true, trace);
             auto owner = panel(applicationInfo, &context);
             auto scriptOwner = engine_->newQObject(owner.get());
+            QList<QObject*> disclosureConsumers;
+            for (auto* child : owner->findChildren<QObject*>())
+                if (child->metaObject()->indexOfProperty("disclosedContext") >= 0 &&
+                    child->metaObject()->indexOfProperty("disclosedContextText") >= 0)
+                    disclosureConsumers.append(child);
+            prerequisite(disclosureConsumers.size() == 1,
+                         "the real Panel owns one distinct disclosure JSON consumer");
+            const QPointer<QObject> disclosureConsumer = disclosureConsumers.front();
+            jsonContext.separateJsonConsumer(disclosureConsumer);
+            const auto scriptDisclosure = engine_->newQObject(disclosureConsumer);
             QPointer<QObject> original = scriptOwner.property("assistant").toQObject();
             prerequisite(original && foreign != original, "genuine Session AVMs are distinct");
             const auto usageProperty =
@@ -895,6 +924,24 @@ class UsageAccountProof final : public QObject {
                 });
                 jsonContext.setJson(json);
                 requireUsageContextReadback(&context, "JSON", json, true, trace);
+                // Exercise the actual other binding while this exact throwing
+                // receiver is installed. Scope is by concrete QML owner, never by
+                // event prefix, value, mode, sentinel or a timing/settling window.
+                const int separateReads = jsonContext.separateJsonReads();
+                const int disclosureValue = trace.size() + 17;
+                prerequisite(disclosureConsumer->setProperty(
+                                 "disclosedContextText",
+                                 QStringLiteral("{\"usageScopeControl\":%1}")
+                                     .arg(disclosureValue)),
+                             "the separate real disclosure input changes ordinarily");
+                const auto disclosure = scriptDisclosure.property("disclosedContext");
+                check.require(
+                    disclosure.property("usageScopeControl").toInt() == disclosureValue &&
+                        jsonContext.separateJsonReads() > separateReads &&
+                        proof.property("events").property("length").toInt() == 0 &&
+                        proof.property("throws").toInt() == 0 && !engine_->hasError(),
+                    "the original disclosure binding parses its own input without entering "
+                    "the armed usage-projection receiver");
                 const int publications = usageChanges.count();
                 scriptOwner.setProperty("assistant", engine_->newQObject(next));
                 prerequisite(scriptOwner.property("assistant").toQObject() == next,
@@ -910,6 +957,7 @@ class UsageAccountProof final : public QObject {
                     {"managed_thrown", proof.property("managedThrown").toBool()},
                     {"sentinel_coercions", proof.property("sentinelCoercions").toInt()},
                     {"sentinel_receiver", proof.property("sentinelReceiver").toBool()},
+                    {"separate_json_reads", jsonContext.separateJsonReads() - separateReads},
                     {"value", value.toVariant()},
                     {"owner_current", scriptOwner.property("assistant").toQObject() == next},
                     {"parse_receiver", proof.property("parseReceiver").toBool()},
