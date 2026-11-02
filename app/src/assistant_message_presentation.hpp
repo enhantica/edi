@@ -6,6 +6,7 @@
 #include <QMetaType>
 #include <QString>
 #include <QStringList>
+#include <QtQml/qqmlregistration.h>
 #include <optional>
 
 namespace edi_app::assistant_presentation {
@@ -15,9 +16,23 @@ struct ActivityInput {
     bool decisionIsString = false, itemIdIsString = false;
     std::optional<QString> nativeLabel;
 };
+// How a message row shows an activity: QML reads it as a typed value (ADR-0015 §2).
 struct ActivityPresentation {
+    Q_GADGET
+    QML_VALUE_TYPE(activityPresentation)
+    Q_PROPERTY(QString caption MEMBER caption CONSTANT)
+    Q_PROPERTY(QString state MEMBER state CONSTANT)
+    Q_PROPERTY(QString explanation MEMBER explanation CONSTANT)
+    Q_PROPERTY(QString outcomeKey MEMBER outcomeKey CONSTANT)
+    Q_PROPERTY(QString nativeCaption MEMBER nativeCaption CONSTANT)
+    Q_PROPERTY(bool commandActivity MEMBER commandActivity CONSTANT)
+    Q_PROPERTY(bool decisionActivity MEMBER decisionActivity CONSTANT)
+    Q_PROPERTY(bool summarizedActivity MEMBER summarizedActivity CONSTANT)
+
+   public:
     QString caption, state, explanation, outcomeKey, nativeCaption;
     bool commandActivity = false, decisionActivity = false, summarizedActivity = false;
+    bool operator==(const ActivityPresentation&) const = default;
 };
 inline QString messageText(const char* source) {
     // Keep the source QML context, rather than translating under AppInfo/AVM.

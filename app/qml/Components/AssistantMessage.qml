@@ -23,7 +23,7 @@ Rectangle {
         return ApplicationInfo.assistantMessageTableTone(lift);
     }
     property bool highlighted: false
-    readonly property var compactPresentation: ApplicationInfo.assistantActivityPresentation(kind, status, payload, assistant)
+    readonly property activityPresentation compactPresentation: ApplicationInfo.assistantActivityPresentation(kind, status, payload, assistant)
     readonly property bool commandActivity: compactPresentation.commandActivity
     readonly property bool decisionActivity: compactPresentation.decisionActivity
     readonly property bool summarizedActivity: compactPresentation.summarizedActivity

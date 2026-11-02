@@ -715,8 +715,8 @@ QJSValue ApplicationInfo::assistantHistoryInputFiles(const QString& kind, const 
     return result;
 }
 
-QVariantMap ApplicationInfo::assistantActivityPresentation(const QString& kind, const QString& status,
-                                                           const QJSValue& payload, QObject* assistant) const {
+edi_app::assistant_presentation::ActivityPresentation ApplicationInfo::assistantActivityPresentation(
+    const QString& kind, const QString& status, const QJSValue& payload, QObject* assistant) const {
     const QPointer<QJSEngine> engine(qjsEngine(this));
     if (!messageScriptReady(engine)) return {};
     if (auto* qml = qobject_cast<QQmlEngine*>(engine.data()))
@@ -782,10 +782,7 @@ QVariantMap ApplicationInfo::assistantActivityPresentation(const QString& kind, 
     }
     const auto shown = edi_app::assistant_presentation::presentActivity(input);
     if (!messageScriptReady(engine)) return {};
-    return {{"caption", shown.caption}, {"state", shown.state}, {"explanation", shown.explanation},
-        {"outcomeKey", shown.outcomeKey}, {"nativeCaption", shown.nativeCaption},
-        {"commandActivity", shown.commandActivity}, {"decisionActivity", shown.decisionActivity},
-        {"summarizedActivity", shown.summarizedActivity}};
+    return shown;
 }
 
 QString ApplicationInfo::assistantNativeActivityCaption(const QJSValue& payload, QObject* assistant) const {

@@ -14,6 +14,7 @@
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
+#include "assistant_message_presentation.hpp"
 #include "edi/palette.hpp"
 
 // What the app says about itself — its name, version and links. The only source of the identity the user
@@ -725,8 +726,8 @@ class ApplicationInfo : public QObject {
     /// Borrows actual QML-thread controls; no retained geometry; errors remain pending.
     Q_INVOKABLE qreal sessionBrowserButtonsWidth(QObject* panel, QObject* buttons) const;
     /// Stateless compact message presentation; no canonical/detail lookup or clipboard write.
-    Q_INVOKABLE QVariantMap assistantActivityPresentation(const QString& kind, const QString& status,
-                                                        const QJSValue& payload, QObject* assistant) const;
+    Q_INVOKABLE edi_app::assistant_presentation::ActivityPresentation assistantActivityPresentation(
+        const QString& kind, const QString& status, const QJSValue& payload, QObject* assistant) const;
     /// Original display-only literal normalization and web captions; no lookup or clipboard write.
     Q_INVOKABLE QString assistantSingleLineText(const QJSValue& value) const;
     Q_INVOKABLE QString assistantWebSearchCaption(const QJSValue& payload) const;
