@@ -256,6 +256,21 @@ bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool
     }
     return true;
 }
+// Whether a tooltip that is not part of the target lies over the press point. Popups live in the window's overlay,
+// above the page, and a visible one takes a press inside it.
+bool AssistantWidgetInput::coveredByToolTip() const {
+    if (!window_ || !request_ || !request_->target) return false;
+    for (QQuickItem* layer : window_->contentItem()->childItems()) {
+        if (!layer->inherits("QQuickOverlay")) continue;
+        for (QQuickItem* popup : layer->childItems()) {
+            if (popup->isVisible() && popup->inherits("QQuickPopupItem") && popup->parent() &&
+                popup->parent()->inherits("QQuickToolTip") && popup->contains(popup->mapFromScene(center_)) &&
+                !popup->isAncestorOf(request_->target.data()))
+                return true;
+        }
+    }
+    return false;
+}
 bool AssistantWidgetInput::usableTarget(QQuickItem& item, bool visualOnlySave) const {
     QPointF center;
     if(visualOnlySave && item.objectName()!=QStringLiteral("appBar.button.save"))return false;
@@ -328,7 +343,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     const auto original = request_;
     const auto id = ++serial_;
     choice_popup_.clear(); choice_content_.clear(); choice_row_.clear(); search_header_.clear(); search_editor_.clear(); choice_text_=std::move(optionText);
-    center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false;
+    center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false; tooltip_waits_ = 0;
     emit activeChanged(true);
     if (!self) return id;
     const bool ready = self->current(id);
@@ -598,6 +613,9 @@ void AssistantWidgetInput::advance() noexcept {
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;
               if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            // A tooltip left by the previous step (shown below the control it belongs to, and still fading out) can lie
+            // over the target and would take the press. A person's press comes later; this one waits for it to go.
+            if (tooltip_waits_ < 20 && coveredByToolTip()) { ++tooltip_waits_; timer_.start(50); return; }
             emit pointerPressed();
             if (!self) return;
             { const bool valid = self->current(id); if (!self) return;

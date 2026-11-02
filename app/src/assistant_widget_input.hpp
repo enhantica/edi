@@ -102,6 +102,7 @@ class AssistantWidgetInput final : public QObject {
     std::shared_ptr<Request> request_;
     std::uint64_t serial_ = 0;
     Step step_ = Step::Move;
+    int tooltip_waits_ = 0;
     QString original_text_;
     QPointer<QObject> choice_popup_;
     QPointer<QQuickItem> choice_content_, choice_row_, search_header_, search_editor_;
@@ -110,6 +111,7 @@ class AssistantWidgetInput final : public QObject {
     std::uint64_t choice_observation_=0;
     bool choice_closing_=false,choice_closed_=false;
     bool choicePopupOwned() const;
+    bool coveredByToolTip() const;
     bool choiceRowOwned() const;
     bool revealChoice();
     bool revealSearchEditor();
