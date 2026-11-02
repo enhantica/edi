@@ -16,8 +16,21 @@ def shown_fit(tmp_path_factory):
         show_actions=True,
     )
     try:
+        assert actor.last['ui']['show_actions'] is True, (
+            'The actual assistant controller must have Show actions enabled before the fit'
+        )
+        fit_state = (
+            '(function(){const f=Session.project.fit;return '
+            '{rows:f.results.count,undo:f.canUndo,running:f.running};})()'
+        )
+        before = base.qml(actor, fit_state)
+        assert before['rows'] == 0 and before['undo'] is False, (
+            'The shown-fit positive starts without an earlier native result or fit Undo record'
+        )
         send(actor, 1)
         reply = replies(actor)['shown-fit-reply']
+        reply['native_before'] = before
+        reply['native_after'] = base.qml(actor, fit_state)
         (actor.folder / 'actual-model-facing-shown-fit.json').write_text(
             json.dumps(reply, indent=2) + '\n', encoding='utf-8'
         )
@@ -31,6 +44,15 @@ def test_shown_real_fit_keeps_model_facing_details_or_explicit_unavailability(sh
     assert shown_fit['success'] and result.get('adopted') is True, (
         'The Show actions positive must complete and adopt a real native fit before '
         'its model-facing details are judged'
+    )
+    native = shown_fit['native_after']
+    assert (
+        native['rows'] > shown_fit['native_before']['rows']
+        and native['undo']
+        and not native['running']
+    ), (
+        'The ordinary native fit records a settled result and its real Undo start state, '
+        'independently of the model-facing result envelope'
     )
     required = {'misfit', 'diagnostics', 'parameters', 'fit_correlations'}
     assert required <= result.keys() or result.get('fit_details_unavailable') is True, (
