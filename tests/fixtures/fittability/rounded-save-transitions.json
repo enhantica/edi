@@ -2382,6 +2382,54 @@
       "path": "metadata_bytes.py",
       "before": "06f2a2b46b2169e3fa5cd05dd787bd02424ccad8aadf1dcaff2dbf91f84a2da4",
       "after": "da278754e88332d8536dee183238484e50344ab0e54d1d8b7511adfd714ed39c"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "README.md",
+      "before": "035f0fc9f8c4973c610eb11be21ef3889973349be68e76e83013a848fe23b34a",
+      "after": "9d17b1a359e411f8d4dab6a5f224de92a40df43613687e61b7bab28176bcaa32",
+      "reason": "Copied asset changed in the merged source; scientific bytes unchanged"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "metadata_bytes.py",
+      "before": "da278754e88332d8536dee183238484e50344ab0e54d1d8b7511adfd714ed39c",
+      "after": "3aecddf30458ed814a27786278716ac9d54e1a09774864b460037ac287a5191c",
+      "reason": "Copied asset changed in the merged source; scientific bytes unchanged"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "notices.json",
+      "before": "5e8f45e27d74d3507ea98afb8b5f7595698f54643a974e842e6438dc1681ec7d",
+      "after": "4e735528b95eb2520fcb6d1e77884f9043d1174ad0d3a64110f2969651651aa1",
+      "reason": "Copied asset changed in the merged source; scientific bytes unchanged"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "README.md",
+      "before": "035f0fc9f8c4973c610eb11be21ef3889973349be68e76e83013a848fe23b34a",
+      "after": "9d17b1a359e411f8d4dab6a5f224de92a40df43613687e61b7bab28176bcaa32",
+      "reason": "Copied asset changed in the merged source; scientific bytes unchanged"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "metadata_bytes.py",
+      "before": "da278754e88332d8536dee183238484e50344ab0e54d1d8b7511adfd714ed39c",
+      "after": "3aecddf30458ed814a27786278716ac9d54e1a09774864b460037ac287a5191c",
+      "reason": "Copied asset changed in the merged source; scientific bytes unchanged"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "notices.json",
+      "before": "5e8f45e27d74d3507ea98afb8b5f7595698f54643a974e842e6438dc1681ec7d",
+      "after": "4e735528b95eb2520fcb6d1e77884f9043d1174ad0d3a64110f2969651651aa1",
+      "reason": "Copied asset changed in the merged source; scientific bytes unchanged"
     }
   ],
   "retained_path_mismatches": []
