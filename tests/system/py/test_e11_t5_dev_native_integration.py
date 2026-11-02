@@ -332,7 +332,8 @@ class MainActor:
 def _frozen_main_probe(source, parent):
     before = source.stat()
     assert stat.S_ISREG(before.st_mode) and before.st_mode & 0o111, (
-        'The selected native probe must already be a real executable before capture')
+        'The selected native probe must already be a real executable before capture'
+    )
     content = source.read_bytes()
     digest = hashlib.sha256(content).hexdigest()
     destination = parent / ('native-probe-' + digest)
@@ -340,14 +341,23 @@ def _frozen_main_probe(source, parent):
         destination.write_bytes(content)
         destination.chmod(0o700)
     assert not destination.is_symlink() and destination.read_bytes() == content, (
-        'The immutable run executable must preserve every selected native probe byte')
+        'The immutable run executable must preserve every selected native probe byte'
+    )
     after = source.stat()
     assert (before.st_ino, before.st_size, before.st_mtime_ns) == (
-        after.st_ino, after.st_size, after.st_mtime_ns
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
     ) and source.read_bytes() == content, (
-        'A concurrent probe rebuild must refuse capture instead of mixing executable inputs')
-    return destination, {'origin': str(source.resolve()), 'executable': str(destination),
-        'sha256': digest, 'source_inode': before.st_ino, 'source_size': before.st_size}
+        'A concurrent probe rebuild must refuse capture instead of mixing executable inputs'
+    )
+    return destination, {
+        'origin': str(source.resolve()),
+        'executable': str(destination),
+        'sha256': digest,
+        'source_inode': before.st_ino,
+        'source_size': before.st_size,
+    }
 
 
 @pytest.fixture
@@ -5670,12 +5680,18 @@ def _draft_text(actor):
 
 
 def _type_original_draft(actor, text):
-    actor.until(lambda row: _unique_input_control(row, 'assistant.composer', fully=True) is not None)
+    actor.until(
+        lambda row: _unique_input_control(row, 'assistant.composer', fully=True) is not None
+    )
     actor.command('click', name='assistant.composer')
-    actor.until(lambda _row: actor.command('focused_input')['reply']['name'] == 'assistant.composer')
+    actor.until(
+        lambda _row: actor.command('focused_input')['reply']['name'] == 'assistant.composer'
+    )
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text=text)
-    assert _draft_text(actor) == text, 'The Clear witness starts from literal actual original TextArea input'
+    assert _draft_text(actor) == text, (
+        'The Clear witness starts from literal actual original TextArea input'
+    )
 
 
 def test_explicit_clear_clears_only_captured_draft_and_preserves_account_and_project(main_actor, tmp_path):
@@ -7804,31 +7820,53 @@ def test_explicit_new_project_never_reuses_current_and_preserves_original_choice
 
 def _review66_hold_original_identity(actor, release):
     value = json.loads((actor.folder / 'peer.json').read_bytes())
-    normal = {'account': {'type': 'chatgpt',
-        'email': value.get('account_email', 'integration@example.invalid'), 'planType': 'plus'},
-        'requiresOpenaiAuth': False}
+    normal = {
+        'account': {
+            'type': 'chatgpt',
+            'email': value.get('account_email', 'integration@example.invalid'),
+            'planType': 'plus',
+        },
+        'requiresOpenaiAuth': False,
+    }
     spec = _original_usage_fifo_reply(
-        actor, release.name, result=value.get('fixture_account_read_reply', normal))
-    _session_configure(actor, fixture_account_read_response=spec,
-        usage_notifications=[{'method': 'account/updated',
-            'params': {'authMode': 'chatgpt', 'planType': None}}])
+        actor, release.name, result=value.get('fixture_account_read_reply', normal)
+    )
+    _session_configure(
+        actor,
+        fixture_account_read_response=spec,
+        usage_notifications=[
+            {'method': 'account/updated', 'params': {'authMode': 'chatgpt', 'planType': None}}
+        ],
+    )
     before = len(_session_wire(actor, 'account/read'))
     actor.command('refresh_usage')
-    actor.until(lambda _value: len(_session_wire(actor, 'account/read')) > before
-        and Path(spec['ready']).is_file())
+    actor.until(
+        lambda _value: (
+            len(_session_wire(actor, 'account/read')) > before and Path(spec['ready']).is_file()
+        )
+    )
     request = _session_wire(actor, 'account/read')[-1]
-    proof = json.loads(Path(spec['ready']).read_text())
+    proof = json.loads(Path(spec['ready']).read_text(encoding='utf-8'))
     owner = actor.command('usage_transport_snapshot')['reply']
-    assert proof['request_id'] == request['id'] and proof['method'] == 'account/read' \
-        and proof['pid'] == owner['peer_pid'] and proof['parent_pid'] == owner['host_pid'] \
-        and owner['original_vm_child'], (
-            'The held account reply belongs to the exact current original owned helper request')
+    assert (
+        proof['request_id'] == request['id']
+        and proof['method'] == 'account/read'
+        and proof['pid'] == owner['peer_pid']
+        and proof['parent_pid'] == owner['host_pid']
+        and owner['original_vm_child']
+    ), 'The held account reply belongs to the exact current original owned helper request'
     if not hasattr(actor, '_review66_identity_holds'):
         actor._review66_identity_holds = {}
     actor._review66_identity_holds[str(release)] = {'spec': spec, 'released': False}
-    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
-    assert not any(row.get('id') == request['id'] and ('result' in row or 'error' in row) for row in sent), (
-        'The admission witness really holds the original correlated account reply after a mode-only notification')
+    sent = [
+        json.loads(line)
+        for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()
+    ]
+    assert not any(
+        row.get('id') == request['id'] and ('result' in row or 'error' in row) for row in sent
+    ), (
+        'The admission witness really holds the original correlated account reply after a mode-only notification'
+    )
     return request
 
 
@@ -7836,15 +7874,19 @@ def _review66_release_original_identity(actor, release):
     held = getattr(actor, '_review66_identity_holds', {}).get(str(release))
     if not held or held['released']:
         return
+    configured = json.loads((actor.folder / 'peer.json').read_text())
+    if configured.get('fixture_account_read_response') == held['spec']:
+        _session_configure(actor, fixture_account_read_response=None)
     try:
         descriptor = os.open(held['spec']['release_fifo'], os.O_WRONLY | os.O_NONBLOCK)
     except OSError as failure:
-        if failure.errno in (errno.ENXIO, errno.ENOENT):
+        if failure.errno in {errno.ENXIO, errno.ENOENT}:
             return  # A genuinely retired helper has no reply reader left.
         raise
     try:
         assert os.write(descriptor, b'R') == 1, (
-            'The captured original reply is released once without another application RPC')
+            'The captured original reply is released once without another application RPC'
+        )
         held['released'] = True
     finally:
         os.close(descriptor)
@@ -10759,27 +10801,58 @@ def test_original_question_batch_validates_all_questions_before_publishing_any(m
 
 @pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
 @pytest.mark.parametrize('retirement', ['cancel', 'sign_out', 'close_project', 'input_scope', 'account_change', 'destroy_engine'])
-def test_original_question_batch_discards_partial_answers_when_original_owner_retires(main_actor, tmp_path, retirement, question_delivery):
+def test_original_question_batch_discards_partial_answers_when_original_owner_retires(
+    main_actor, tmp_path, retirement, question_delivery
+):
     questions = _original_question_batch(3)
-    actor = main_actor([[{'human_questions': questions, 'human_without_public_item': question_delivery == 'builtin_callback', 'call_id': 'retired-original-question-array'}]])
+    actor = main_actor([
+        [
+            {
+                'human_questions': questions,
+                'human_without_public_item': question_delivery == 'builtin_callback',
+                'call_id': 'retired-original-question-array',
+            }
+        ]
+    ])
     assert actor.command('open', path=str(copied_estimate_project(tmp_path)))['reply']['opened'], (
-        'Retirement has a genuine original current project, not a manufactured pending-question owner')
-    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
-    actor.connect();actor.request('Ask the original questions without performing dependent setup.')
-    actor.until(lambda value: value['ui']['pending_question'].get('text') == questions[0]['question'])
+        'Retirement has a genuine original current project, not a manufactured pending-question owner'
+    )
+    _session_configure(
+        actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True
+    )
+    actor.connect()
+    actor.request('Ask the original questions without performing dependent setup.')
+    actor.until(
+        lambda value: value['ui']['pending_question'].get('text') == questions[0]['question']
+    )
     first = actor.last['ui']['pending_question']
-    _assert_original_question_callback_wire(actor, 'retired-original-question-array', question_delivery)
-    qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(first['question_id']) + ',"retained partial answer")')
-    actor.until(lambda value: value['ui']['pending_question'].get('text') == questions[1]['question'])
+    _assert_original_question_callback_wire(
+        actor, 'retired-original-question-array', question_delivery
+    )
+    qml(
+        actor,
+        'Session.assistant.answerQuestion('
+        + json.dumps(first['question_id'])
+        + ',"retained partial answer")',
+    )
+    actor.until(
+        lambda value: value['ui']['pending_question'].get('text') == questions[1]['question']
+    )
     second = actor.last['ui']['pending_question']
-    assert not _session_state(actor).get('human_answers'), 'The partial original answer has not been transmitted as a completed RPC'
+    assert not _session_state(actor).get('human_answers'), (
+        'The partial original answer has not been transmitted as a completed RPC'
+    )
     if retirement == 'destroy_engine':
-        assert actor.command('arm_session_notification', signal='usage', action='destroy_engine')['reply']['armed'], (
-            'Only the existing one-shot public usage observer may destroy this actual fixture-owned engine')
+        assert actor.command('arm_session_notification', signal='usage', action='destroy_engine')[
+            'reply'
+        ]['armed'], (
+            'Only the existing one-shot public usage observer may destroy this actual fixture-owned engine'
+        )
         actor.command('refresh_usage')
         facts = actor.command('session_fault_facts')['reply']
         assert facts['notification_hits'] == 1 and facts['action'] == 'destroy_engine', (
-            'Window/engine retirement must actually reach the original public notification boundary')
+            'Window/engine retirement must actually reach the original public notification boundary'
+        )
     else:
         if retirement == 'input_scope':
             file = _attachment_fixtures(tmp_path, 1)[0]
@@ -10788,46 +10861,93 @@ def test_original_question_batch_discards_partial_answers_when_original_owner_re
             files_before = _attachment_rows(actor)
             token = qml(actor, 'Session.assistant.beginFileSelection(true)')
             assert not token, (
-                'An active original question refuses new file selection before granting input authority')
-            added = actor.command('selected_add', token=token or '', paths=[str(file)])['reply']['added']
+                'An active original question refuses new file selection before granting input authority'
+            )
+            added = actor.command('selected_add', token=token or '', paths=[str(file)])['reply'][
+                'added'
+            ]
             assert not added and _attachment_rows(actor) == files_before, (
-                'A refused file-selection attempt cannot change the actual selected-file scope')
-            assert actor.last['ui']['pending_question'] == second \
-                and not _session_state(actor).get('human_answers'), (
-                    'Refused file intake preserves the exact partial question and transmits no answer map')
+                'A refused file-selection attempt cannot change the actual selected-file scope'
+            )
+            assert actor.last['ui']['pending_question'] == second and not _session_state(
+                actor
+            ).get('human_answers'), (
+                'Refused file intake preserves the exact partial question and transmits no answer map'
+            )
             assert len(_session_wire(actor, 'turn/start')) == 1, (
-                'Refused file intake cannot replay the original prompt or admit a replacement turn')
+                'Refused file intake cannot replay the original prompt or admit a replacement turn'
+            )
             (actor.folder / 'refused-input-scope-at-original-question.json').write_text(
-                json.dumps({'token': token, 'added': added, 'pending': second}, indent=2))
+                json.dumps({'token': token, 'added': added, 'pending': second}, indent=2)
+            )
             return
-        elif retirement == 'account_change':
+        if retirement == 'account_change':
             reads_before = len(_session_wire(actor, 'account/read'))
-            _session_configure(actor, fixture_account_read_reply={'account': {'type': 'chatgpt',
-                'email': 'other-original-question-owner@example.invalid', 'planType': 'plus'},
-                'requiresOpenaiAuth': False}, usage_notifications=[{'method': 'account/updated',
-                    'params': {'authMode': 'chatgpt', 'planType': None}}])
+            _session_configure(
+                actor,
+                fixture_account_read_reply={
+                    'account': {
+                        'type': 'chatgpt',
+                        'email': 'other-original-question-owner@example.invalid',
+                        'planType': 'plus',
+                    },
+                    'requiresOpenaiAuth': False,
+                },
+                usage_notifications=[
+                    {
+                        'method': 'account/updated',
+                        'params': {'authMode': 'chatgpt', 'planType': None},
+                    }
+                ],
+            )
             actor.command('refresh_usage')
-            actor.until(lambda value: len(_session_wire(actor, 'account/read')) > reads_before
-                and not value['ui']['connected'])
+            actor.until(
+                lambda value: (
+                    len(_session_wire(actor, 'account/read')) > reads_before
+                    and not value['ui']['connected']
+                )
+            )
             account_read = _session_wire(actor, 'account/read')[-1]
             sent = map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
-            assert any(row.get('id') == account_read['id'] and row.get('result', {})
-                .get('account', {}).get('email') == 'other-original-question-owner@example.invalid'
-                for row in sent), (
-                    'Account retirement follows the actual correlated changed-owner reply after a real notification')
+            assert any(
+                row.get('id') == account_read['id']
+                and row.get('result', {}).get('account', {}).get('email')
+                == 'other-original-question-owner@example.invalid'
+                for row in sent
+            ), (
+                'Account retirement follows the actual correlated changed-owner reply after a real notification'
+            )
         else:
             actor.command(retirement)
-        qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(second['question_id']) + ',"stale completion")')
-        assert not actor.last['ui']['pending_question'], 'The retired original question cannot remain answerable in the current UI'
+        qml(
+            actor,
+            'Session.assistant.answerQuestion('
+            + json.dumps(second['question_id'])
+            + ',"stale completion")',
+        )
+        assert not actor.last['ui']['pending_question'], (
+            'The retired original question cannot remain answerable in the current UI'
+        )
     wire = _session_wire(actor)
     replies = _session_state(actor).get('human_answers', [])
     assert not any('result' in row for row in replies), (
-        'No retired partial answer map is transmitted as a successful response, even after stale public input')
+        'No retired partial answer map is transmitted as a successful response, even after stale public input'
+    )
     assert len([row for row in wire if row.get('method') == 'turn/start']) == 1, (
-        'Question retirement never replays the original prompt or admits a replacement turn')
-    (actor.folder / 'retired-original-question.json').write_text(json.dumps({
-        'retirement': retirement, 'first': first, 'second': second, 'actual_replies': replies,
-        'actual_wire': wire}, indent=2))
+        'Question retirement never replays the original prompt or admits a replacement turn'
+    )
+    (actor.folder / 'retired-original-question.json').write_text(
+        json.dumps(
+            {
+                'retirement': retirement,
+                'first': first,
+                'second': second,
+                'actual_replies': replies,
+                'actual_wire': wire,
+            },
+            indent=2,
+        )
+    )
 
 
 @pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])

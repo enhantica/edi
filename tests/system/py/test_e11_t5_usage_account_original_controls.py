@@ -353,8 +353,11 @@ def _check_selection(value, expected):
         }
 
 
-def _check_account_projection(value, case, expected):
+def _check_account_projection(value, case, expected, *, phase):
     public = {key: case['account'][key] for key in ('email', 'planType') if key in case['account']}
+    if phase.get('scope') == 'current_native_mount':
+        # ADR-0015 account is now a fixed typed value with both string members.
+        public = {key: case['account'].get(key, '') for key in ('email', 'planType')}
     assert value['account'] == public and value['canonical_account'] == public
     for key in ('plan', 'plan_label', 'initial'):
         assert value[key] == expected[key], key
@@ -406,6 +409,14 @@ def _account_display(actor, expected):
         'NEVER_ACCOUNT_DISPLAY_269' in row['display']
         for row in envelope['ui']['texts']
         if row['visible']
+    )
+
+    # The fixture owns opening Account and closes that modal through ordinary input.
+    actor.command('manual_key', key='escape')
+    actor.until(
+        lambda _row: (
+            not base.qml(actor, base.control_expression('assistant.accountDialog') + '.visible')
+        )
     )
 
 
@@ -470,7 +481,7 @@ def test_original_canonical_usage_selection_account_and_visible_labels(main_acto
     _open_usage(actor)
     value = _observe(actor, phase, 'initial-canonical-presentation')
     _check_selection(value, case['expected'])
-    _check_account_projection(value, case, case['expected'])
+    _check_account_projection(value, case, case['expected'], phase=phase)
     expected = case['expected']
     if 'update' in case:
         before = len(base._session_wire(actor, 'account/rateLimits/read'))
@@ -483,7 +494,7 @@ def test_original_canonical_usage_selection_account_and_visible_labels(main_acto
         value = _observe(actor, phase, 'updated-canonical-presentation')
         expected = case['expected_update']
         _check_selection(value, expected)
-        _check_account_projection(value, case, expected)
+        _check_account_projection(value, case, expected, phase=phase)
     _account_display(actor, expected)
     _wire_proof(actor, case)
     assert _phase() == phase, 'Exact source/phase/binary input custody remains unchanged'
