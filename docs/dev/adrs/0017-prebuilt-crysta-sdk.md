@@ -151,9 +151,9 @@ binding bootstrap from this launcher.
 
 Its former `cpp-ci` install selected crysta's editable Python package and test
 extras, although neither is consumed by this build. Use crysta's `cpp-toolchain`
-environment, sharing its existing compiler/platform/activation feature without
-installing the root package. Remove the conditional editable package skip logic;
-install that environment frozen and run the same native CMake commands in it.
-Keep clean-environment isolation, Mac developer-tool preflight, source selection,
-targets, install prefix and app arguments unchanged. This does not qualify the
-local build as a tested SDK or change CI/release SDK selection.
+environment, sharing its existing compiler/platform/activation
+feature without installing the root package. Remove the conditional editable
+package skip logic; install that environment frozen and run the same native CMake
+commands in it. Keep clean-environment isolation, Mac developer-tool preflight,
+source selection, targets, install prefix and app arguments unchanged. This does
+not qualify the local build as a tested SDK or change CI/release SDK selection.
