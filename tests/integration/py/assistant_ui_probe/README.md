@@ -61,3 +61,24 @@ applied/Undo boundary. Busy-report sequencing occurs before queued owner
 delivery; it neither polls a held writer nor adds a production test seam. Raw
 Qt/QML stderr is retained. Undefined hook/property coding errors fail separately
 from deliberate native tool refusals; other warnings remain available for audit.
+
+Run the focused usage/account checks from the product root after building
+`edi_app_tests` and `assistant_real_owner_probe` in the current native graph:
+
+```bash
+export EDI_E11_USAGE_ACCOUNT_PHASE=native
+export EDI_E11_USAGE_ACCOUNT_SOURCE_ROOT="$PWD"
+export QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software
+build/app/app/edi_app_tests -input tests/unit/app/tst_e11_t5_usage_account.qml
+
+export EDI_E11_USAGE_ACCOUNT_MODE=mount-native
+export EDI_ASSISTANT_UI_PROBE="$PWD/build/app/assistant-ui-probe/assistant_real_owner_probe"
+export EDI_E11_USAGE_ACCOUNT_PROBE_SHA256="$(sha256sum "$EDI_ASSISTANT_UI_PROBE" | cut -d' ' -f1)"
+.pixi/envs/app/bin/python -m pytest --noconftest -o addopts= tests/system/py/test_e11_t5_usage_account_original_controls.py
+```
+
+The explicit native mode checks the declared native adapter and Panel source,
+retains the selected executable hash, and runs the canonical account/usage/UI
+assertions. It qualifies the current native mount only. The separate paired
+original/native comparison still requires its complete source, caller and binary
+bindings; current native checks do not bind or relabel an original cohort.

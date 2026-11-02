@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shlex
 from pathlib import Path
 
@@ -144,7 +145,44 @@ def _bound_receipt(variable):
     return json.loads(path.read_text())
 
 
+def _mount_native_phase():
+    assert os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == 'native', (
+        'The current mount invocation must explicitly select the native source phase'
+    )
+    assert _absolute(os.environ['EDI_E11_USAGE_ACCOUNT_SOURCE_ROOT']) == ROOT, (
+        'The current mount invocation must name this actual test source checkout'
+    )
+    header = ROOT / USAGE_HEADER
+    assert _sha(header) == USAGE_HEADER_HASHES['native'], (
+        'The current mount uses the declared native adapter, never an inferred original phase'
+    )
+    declared = re.search(r'panelHash\(\).*?"([0-9a-f]{64})"', header.read_text())
+    assert declared and _sha(ROOT / 'app/qml/Components/AssistantPanel.qml') == declared[1], (
+        'The current native Panel must match its explicitly declared adapter source'
+    )
+    probe = _absolute(os.environ['EDI_ASSISTANT_UI_PROBE'])
+    assert probe == _absolute(ROOT / 'build/app/assistant-ui-probe/assistant_real_owner_probe'), (
+        'The current mount check uses its own ordinary native graph, not a foreign cohort'
+    )
+    expected = os.environ['EDI_E11_USAGE_ACCOUNT_PROBE_SHA256']
+    assert len(expected) == 64 and _sha(probe) == expected, (
+        'The native mount invocation must retain the exact selected probe executable'
+    )
+    return {
+        'phase': 'native',
+        'scope': 'current_native_mount',
+        'allowance_call': 'p.allowanceWindow(MINUTES)',
+        'source_root': str(ROOT),
+        'header_sha256': _sha(header),
+        'panel_sha256': declared[1],
+        'probe': str(probe),
+        'probe_sha256': expected,
+    }
+
+
 def _phase():
+    if os.environ.get('EDI_E11_USAGE_ACCOUNT_MODE') == 'mount-native':
+        return _mount_native_phase()
     phase = json.loads((HERE / 'e11_t5_usage_canonical_phase.json').read_text())
     assert phase['binding_status'] == 'BOUND', 'Root must bind the completed fresh comparison'
     assert phase['caller_binding_status'] == 'BOUND', 'Both fresh caller maps require source proof'
@@ -400,19 +438,22 @@ def _wire_proof(actor, case):
 def test_original_canonical_usage_selection_account_and_visible_labels(main_actor, case):
     phase = _phase()
     actor = main_actor([[]])
-    _retain(
-        actor,
-        'explicit-original-qualification-inputs',
-        {
-            'phase': phase,
-            'current_bond': os.environ['EDI_E11_USAGE_ACCOUNT_BINARY_BOND'],
-            'current_bond_sha256': os.environ['EDI_E11_USAGE_ACCOUNT_BINARY_BOND_SHA256'],
-            'original_bond': os.environ['EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND'],
-            'original_bond_sha256': os.environ[
-                'EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND_SHA256'
-            ],
-        },
-    )
+    if phase.get('scope') == 'current_native_mount':
+        _retain(actor, 'current-native-inputs', phase)
+    else:
+        _retain(
+            actor,
+            'explicit-original-qualification-inputs',
+            {
+                'phase': phase,
+                'current_bond': os.environ['EDI_E11_USAGE_ACCOUNT_BINARY_BOND'],
+                'current_bond_sha256': os.environ['EDI_E11_USAGE_ACCOUNT_BINARY_BOND_SHA256'],
+                'original_bond': os.environ['EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND'],
+                'original_bond_sha256': os.environ[
+                    'EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND_SHA256'
+                ],
+            },
+        )
     base._session_configure(
         actor,
         session_fixture={'threads': [], 'page_size': 12},

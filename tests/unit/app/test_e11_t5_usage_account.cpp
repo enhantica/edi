@@ -2030,6 +2030,10 @@ class UsageAccountProof final : public QObject {
         UsageChecks check;
         QVariantList trace;
         try {
+            const auto mathPhase = e11_usage_phase::phase();
+            prerequisite((mathPhase == "native" || mathPhase == "original") &&
+                             qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == mathPhase,
+                         "Math characterization requires the explicit selected source phase");
             // These aliases expose lookup/call effects; they do not implement the relation.
             const auto make = engine_->evaluate(QStringLiteral(R"JS(
 (function(kind, mode, nativeMath, context) {
@@ -2139,10 +2143,10 @@ class UsageAccountProof final : public QObject {
                                  "s.reenter=function(){" +
                                      nested +
                                      ";};s.armed=true;"
-                                     "let result,thrown=false,same=false;try{result=" +
+                                     "let result,caught,thrown=false,same=false;try{result=" +
                                      call +
-                                     ";}catch(error){thrown=true;same=error===s.sentinel;}"
-                                     "finally{s.armed=false;}s.facts={events:s.events,"
+                                     ";}catch(error){caught=error;thrown=true;same=error===s.sentinel;}"
+                                     "finally{s.armed=false;}s.caught=caught;s.facts={events:s.events,"
                                      "receiver:s.receiver,argument:s.argument,effects:s.effects,"
                                      "reentered:s.reentered,inner:s.inner,thrown:thrown,same:same,"
                                      "result:result,replaced:Math===s.next};return true;})()");
@@ -2183,9 +2187,26 @@ class UsageAccountProof final : public QObject {
                         facts.value("effects").toInt() == 1,
                         label + ": original member getter cannot suppress prior argument effects");
                     const bool throws = getterThrow || argumentThrow || callThrow;
-                    check.require(facts.value("thrown").toBool() == throws &&
-                                      facts.value("same").toBool() == throws,
-                                  label + ": exact same-engine sentinel is preserved");
+                    if (getterThrow && mathPhase == "original") {
+                        // Qt 6.11.2's legacy noncallable formatter consumes the pending
+                        // plain-object sentinel; this is not native first-error safety.
+                        const auto caught = state.property("caught");
+                        const bool ownMessage = caught.isError() && caught.hasOwnProperty("message");
+                        const auto message = ownMessage ? caught.property("message") : QJSValue();
+                        const auto descriptor =
+                            QStringLiteral("Property '%1' of object [object Object] is not a function")
+                                .arg(kind == "reset" ? QStringLiteral("ceil")
+                                                     : QStringLiteral("floor"));
+                        check.require(facts.value("thrown").toBool() &&
+                                          !facts.value("same").toBool() && caught.isError() &&
+                                          caught.errorType() == QJSValue::TypeError && ownMessage &&
+                                          message.isString() && message.toString() == descriptor,
+                                      label + ": original getter has the exact legacy Qt TypeError");
+                    } else {
+                        check.require(facts.value("thrown").toBool() == throws &&
+                                          facts.value("same").toBool() == throws,
+                                      label + ": exact same-engine sentinel is preserved");
+                    }
                     check.require(
                         facts.value("receiver").toBool() && facts.value("argument").toBool(),
                         label + ": original receiver and evaluated argument are exact");
@@ -2204,6 +2225,40 @@ class UsageAccountProof final : public QObject {
                         check.require(facts.value("inner").toString() ==
                                           (kind == "reset" ? "Resets in 2 min" : "scheduled"),
                                       label + ": nested real caller retains its own result");
+                    object.setMath(engine_->globalObject().property("Math"));
+                }
+                if (mathPhase == "native") {
+                    const auto reference = make.call(
+                        {QJSValue(kind), QJSValue(QStringLiteral("getter-throw")),
+                         engine_->globalObject().property("Math"), engine_->newQObject(&object)});
+                    prerequisite(reference.isObject() && !engine_->hasError(),
+                                 "legacy Math reference has a clean actual Qt engine");
+                    prerequisite(
+                        target->setProperty("unitMathCapture", QVariant::fromValue(reference)),
+                        "legacy Math reference uses only the test-owned carrier");
+                    object.setMath(reference.property("math"));
+                    const auto member = kind == "reset" ? QStringLiteral("ceil")
+                                                        : QStringLiteral("floor");
+                    // These literal legacy calls characterize the pinned Qt formatter.
+                    const auto thrown = evaluate(
+                        target, "(function(){const s=unitMathCapture;s.armed=true;"
+                                "try{Math." + member + "(1);}catch(error){s.caught=error;"
+                                "s.same=error===s.sentinel;return true;}"
+                                "finally{s.armed=false;}return false;})()");
+                    const auto caught = reference.property("caught");
+                    const bool ownMessage = caught.isError() && caught.hasOwnProperty("message");
+                    const auto message = ownMessage ? caught.property("message") : QJSValue();
+                    const auto descriptor =
+                        QStringLiteral("Property '%1' of object [object Object] is not a function")
+                            .arg(member);
+                    check.require(
+                        thrown.metaType() == QMetaType::fromType<bool>() && thrown.toBool() &&
+                            !reference.property("same").toBool() && caught.isError() &&
+                            caught.errorType() == QJSValue::TypeError && ownMessage &&
+                            message.isString() && message.toString() == descriptor,
+                        kind + ": literal legacy getter has the exact pinned Qt TypeError");
+                    trace.append(QVariantMap{{"caller", kind}, {"mode", "legacy-getter-reference"},
+                                             {"caught", usageValueKind(caught)}});
                     object.setMath(engine_->globalObject().property("Math"));
                 }
                 check.require(warnings.isEmpty() && !engine_->hasError(),
