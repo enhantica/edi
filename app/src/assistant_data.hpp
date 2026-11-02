@@ -107,8 +107,9 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
         bool excluded=false;
         for(const auto& band:source.excluded)excluded=excluded || (x[i]>=band.x_min && x[i]<=band.x_max);
         if(excluded)continue;
-        const double s=has_su && std::isfinite((*source.su)[i]) && (*source.su)[i]>0?(*source.su)[i]:m[i]>0?std::sqrt(m[i]):0.0;
-        if(s<=0)continue;
+        // A supplied sigma that is not a positive number leaves its row out; a Poisson weight would be invented.
+        const double s=has_su?(*source.su)[i]:m[i]>0?std::sqrt(m[i]):0.0;
+        if(!std::isfinite(s) || s<=0)continue;
         sigma[i]=s;used.push_back(i);
     }
     out["points"]=index_number(used.size());
@@ -131,7 +132,7 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
     if(has_bkg) {
         const auto& b=*source.bkg;double sum=0,sq=0;std::size_t quiet=0;
         for(const auto i:used) {
-            if(!std::isfinite(b[i]) || c[i]-b[i]>0.5*sigma[i])continue;
+            if(!std::isfinite(b[i]) || !(c[i]-b[i]<0.5*sigma[i]))continue;  // strictly below half a sigma
             const auto w=(m[i]-b[i])/sigma[i];sum+=w;sq+=w*w;++quiet;
         }
         QJsonObject background{{"quiet_points",index_number(quiet)}};
