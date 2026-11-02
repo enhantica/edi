@@ -214,7 +214,7 @@ class CompactPresentationA1Proof final : public QObject {
         for(const auto& pair:std::vector<std::pair<QString,QString>>{
                 {"error","Assistant error"},{"plan","Review work plan"},
                 {"question","Assistant question"},{"tool","Project action"},
-                {"trial","Review refinement trial"}})
+                {"trial","Review fit trial"}})
             all.push_back({"fixed-kind-"+pair.first,pair.first,"({})",pair.second,
                 {"type","decision","item_id","tool","commandCategory","status"},{}});
         // A string decision requires reading item_id, but only string item IDs
@@ -483,7 +483,7 @@ public:
             {"plan-kind","plan","completed","Review work plan","Completed","check-circle",technical},
             {"question-kind","question","in_progress","Assistant question","In progress","hourglass-half",technical},
             {"tool-kind","tool","completed","Project action","Completed","check-circle",technical},
-            {"trial-kind","trial","interrupted","Review refinement trial","Stopped","stop-circle",technical},
+            {"trial-kind","trial","interrupted","Review fit trial","Stopped","stop-circle",technical},
             {"decision-before-command","activity","refused","Review requested action","Refused","times-circle",QJsonObject{{"decision","deny"},{"item_id","actual-presentation-id"}}},
             {"unknown-payload","activity","completed","Perform assistant action","Completed","check-circle",technical},
             {"file-change","activity","completed","Update files","Completed","check-circle",QJsonObject{{"type","fileChange"}}},
