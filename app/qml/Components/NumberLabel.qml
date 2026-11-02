@@ -20,7 +20,21 @@ EaComponents.ListViewLabel {
     // What hovering shows when the cell shows the number shorter: the number in full (NumberText.plainFull) where the
     // column has it, else as written.
     property string full: number
-    readonly property string shown: NumberText.fitted(number, width - leftPadding - rightPadding, metrics, narrow)
+    // What the cell shows: the number, or the shorter form where its column is narrower. Set from the changes it
+    // follows rather than bound, and only once a table has sized the cell: until then the cell is as wide as its own
+    // text, and following that width back to the text would loop (as ParameterCell does).
+    property string shown: number
+    function refit() {
+        const sized = Math.abs(width - implicitWidth) >= 0.5;
+        shown = sized ? NumberText.fitted(number, width - leftPadding - rightPadding, metrics, narrow) : number;
+    }
+    onWidthChanged: refit()
+    onLeftPaddingChanged: refit()
+    onRightPaddingChanged: refit()
+    onNumberChanged: refit()
+    onNarrowChanged: refit()
+    onFontChanged: refit()
+    Component.onCompleted: refit()
 
     text: shown
 
