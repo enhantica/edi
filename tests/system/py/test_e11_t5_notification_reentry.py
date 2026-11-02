@@ -94,6 +94,9 @@ def test_connected_consent_notice_retires_after_same_owner_approval(main_actor, 
             item for item in facts['properties'] if item['name'] == 'contextConsentRequired'
         )
         assert consent['current'] is False
-        assert consent['events'].count(False) == 1, 'Nested ordinary approval publishes false once'
+        assert consent['events'] in ([], [True, False]), (
+            'Nested approval may coalesce to initial false or announce true then false; '
+            'it never announces stale or duplicate consent'
+        )
         assert not actor.last['ui']['context_consent_required']
     assert not base._session_wire(actor, 'turn/start'), 'Consent observation starts no model work'

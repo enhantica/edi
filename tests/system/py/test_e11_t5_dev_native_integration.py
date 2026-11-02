@@ -63,6 +63,8 @@ class MainActor:
             },
         )
         self.last = self.command('show_actions', enabled=show_actions)
+        qml(self, '(function(){raise();requestActivate();return true;})()')
+        self.until(lambda _row: qml(self, 'active'))
         (folder / 'environment.json').write_text(
             json.dumps(self.last['ui'].get('environment', {}), indent=2) + '\n'
         )
@@ -94,6 +96,7 @@ class MainActor:
         if op == 'click' and arguments.get('name', '').startswith('appBar.tab.') and hasattr(self, 'last'):
             if _unique_input_control(self.last, 'home.start') is not None:
                 self.command('click', name='home.start')
+                self.until(lambda row: _unique_input_control(row, 'home.start') is None)
         assert self.process.poll() is None, 'The real Main host must remain alive'
         sequence = getattr(self, '_command_sequence', 0) + 1
         self._command_sequence = sequence
@@ -326,6 +329,27 @@ class MainActor:
         self.stderr.close()
 
 
+def _frozen_main_probe(source, parent):
+    before = source.stat()
+    assert stat.S_ISREG(before.st_mode) and before.st_mode & 0o111, (
+        'The selected native probe must already be a real executable before capture')
+    content = source.read_bytes()
+    digest = hashlib.sha256(content).hexdigest()
+    destination = parent / ('native-probe-' + digest)
+    if not destination.exists():
+        destination.write_bytes(content)
+        destination.chmod(0o700)
+    assert not destination.is_symlink() and destination.read_bytes() == content, (
+        'The immutable run executable must preserve every selected native probe byte')
+    after = source.stat()
+    assert (before.st_ino, before.st_size, before.st_mtime_ns) == (
+        after.st_ino, after.st_size, after.st_mtime_ns
+    ) and source.read_bytes() == content, (
+        'A concurrent probe rebuild must refuse capture instead of mixing executable inputs')
+    return destination, {'origin': str(source.resolve()), 'executable': str(destination),
+        'sha256': digest, 'source_inode': before.st_ino, 'source_size': before.st_size}
+
+
 @pytest.fixture
 def main_actor(tmp_path):
     actors = []
@@ -337,8 +361,10 @@ def main_actor(tmp_path):
             'Build assistant_real_owner_probe in the single implementation-owned kit, '
             'then set EDI_ASSISTANT_UI_PROBE to that exact binary'
         )
+        binary, identity = _frozen_main_probe(binary, tmp_path.parent)
         folder = tmp_path / ('actor-' + str(len(actors)))
         folder.mkdir()
+        (folder / 'selected-probe.json').write_text(json.dumps(identity, indent=2) + '\n')
         config = {'turns': turns}
         if hold_final:
             config['final_gate'] = str(folder / 'release-final')
@@ -371,6 +397,7 @@ def wait_positive_tab(actor, name):
     """Normal setup only: wait for the actual loader-backed enabled tab, without revealing controls."""
     if _unique_input_control(actor.last, 'home.start') is not None:
         actor.command('click', name='home.start')
+        actor.until(lambda row: _unique_input_control(row, 'home.start') is None)
     actor.until(lambda row: _unique_input_control(row, name) is not None)
 
 def copied_estimate_project(tmp_path, *, overrides=True):
@@ -5643,7 +5670,9 @@ def _draft_text(actor):
 
 
 def _type_original_draft(actor, text):
+    actor.until(lambda row: _unique_input_control(row, 'assistant.composer', fully=True) is not None)
     actor.command('click', name='assistant.composer')
+    actor.until(lambda _row: actor.command('focused_input')['reply']['name'] == 'assistant.composer')
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text=text)
     assert _draft_text(actor) == text, 'The Clear witness starts from literal actual original TextArea input'
@@ -7775,17 +7804,50 @@ def test_explicit_new_project_never_reuses_current_and_preserves_original_choice
 
 def _review66_hold_original_identity(actor, release):
     value = json.loads((actor.folder / 'peer.json').read_bytes())
-    fixture = dict(value.get('session_fixture', {}));fixture['account_read_hold'] = str(release)
-    _session_configure(actor, session_fixture=fixture,
-        usage_notifications=[{'method': 'account/updated', 'params': {'authMode': 'chatgpt', 'planType': None}}])
+    normal = {'account': {'type': 'chatgpt',
+        'email': value.get('account_email', 'integration@example.invalid'), 'planType': 'plus'},
+        'requiresOpenaiAuth': False}
+    spec = _original_usage_fifo_reply(
+        actor, release.name, result=value.get('fixture_account_read_reply', normal))
+    _session_configure(actor, fixture_account_read_response=spec,
+        usage_notifications=[{'method': 'account/updated',
+            'params': {'authMode': 'chatgpt', 'planType': None}}])
     before = len(_session_wire(actor, 'account/read'))
     actor.command('refresh_usage')
-    actor.until(lambda _value: len(_session_wire(actor, 'account/read')) > before)
+    actor.until(lambda _value: len(_session_wire(actor, 'account/read')) > before
+        and Path(spec['ready']).is_file())
     request = _session_wire(actor, 'account/read')[-1]
+    proof = json.loads(Path(spec['ready']).read_text())
+    owner = actor.command('usage_transport_snapshot')['reply']
+    assert proof['request_id'] == request['id'] and proof['method'] == 'account/read' \
+        and proof['pid'] == owner['peer_pid'] and proof['parent_pid'] == owner['host_pid'] \
+        and owner['original_vm_child'], (
+            'The held account reply belongs to the exact current original owned helper request')
+    if not hasattr(actor, '_review66_identity_holds'):
+        actor._review66_identity_holds = {}
+    actor._review66_identity_holds[str(release)] = {'spec': spec, 'released': False}
     sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
     assert not any(row.get('id') == request['id'] and ('result' in row or 'error' in row) for row in sent), (
         'The admission witness really holds the original correlated account reply after a mode-only notification')
     return request
+
+
+def _review66_release_original_identity(actor, release):
+    held = getattr(actor, '_review66_identity_holds', {}).get(str(release))
+    if not held or held['released']:
+        return
+    try:
+        descriptor = os.open(held['spec']['release_fifo'], os.O_WRONLY | os.O_NONBLOCK)
+    except OSError as failure:
+        if failure.errno in (errno.ENXIO, errno.ENOENT):
+            return  # A genuinely retired helper has no reply reader left.
+        raise
+    try:
+        assert os.write(descriptor, b'R') == 1, (
+            'The captured original reply is released once without another application RPC')
+        held['released'] = True
+    finally:
+        os.close(descriptor)
 
 
 @pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
@@ -7812,7 +7874,7 @@ def test_existing_human_question_retains_original_waiter_until_same_account_conf
             'Neither free-text nor offered-option input is transmitted or consumes its already displayed original human waiter while identity is unconfirmed')
         assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
             'Holding new human input preserves the original connection and known account without manufacturing its pending identity result')
-        release.touch();actor.command('refresh_usage')
+        _review66_release_original_identity(actor, release);actor.command('refresh_usage')
         actor.until(lambda _value: any(row.get('id') == held['id'] and 'result' in row
             for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
         qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(original['question_id']) + ',' + json.dumps(answer) + ')')
@@ -7834,7 +7896,7 @@ def test_existing_human_question_retains_original_waiter_until_same_account_conf
         (actor.folder / 'original-question-account-boundary.json').write_text(json.dumps({
             'held_read': held, 'original_question': original, 'actual_answers': actual}, indent=2))
     finally:
-        release.touch()
+        _review66_release_original_identity(actor, release)
 
 
 def test_latest_selected_model_and_effort_continue_after_exact_unchanged_identity(main_actor):
@@ -7855,7 +7917,7 @@ def test_latest_selected_model_and_effort_continue_after_exact_unchanged_identit
         actor.command('select_effort', id='medium')
         assert len(_session_wire(actor, 'thread/settings/update')) == boundary, (
             'Actual model and effort setters cannot send new thread policy while the correlated original account check is outstanding')
-        release.touch();actor.command('refresh_usage')
+        _review66_release_original_identity(actor, release);actor.command('refresh_usage')
         actor.until(lambda _value: len(_session_wire(actor, 'thread/settings/update')) > boundary)
         updates = _session_wire(actor, 'thread/settings/update')[boundary:]
         assert len(updates) == 1 and updates[0]['params']['model'] == 'gpt-5.6-luna' \
@@ -7868,7 +7930,7 @@ def test_latest_selected_model_and_effort_continue_after_exact_unchanged_identit
         (actor.folder / 'latest-settings-after-identity.json').write_text(json.dumps({
             'held_read': held, 'actual_updates': updates, 'actual_input': _session_state(actor)['inputs'][-1]}, indent=2))
     finally:
-        release.touch()
+        _review66_release_original_identity(actor, release)
 
 
 def test_declining_unapproved_other_project_session_preserves_original_before_open(main_actor, tmp_path):
@@ -8073,7 +8135,7 @@ def test_archive_preserves_real_account_and_active_operation_admission_boundarie
         assert len(_session_wire(actor, 'thread/archive')) == before, (
             'Foreign creation identity, pending account proof, signed-out old ownership and actual active work cannot admit a new Archive write')
     finally:
-        release.touch();actor.gate.touch()
+        _review66_release_original_identity(actor, release);actor.gate.touch()
 
 # Uncertain Stop is explicitly UNREACHED here: the existing peer immediately
 # acknowledges turn/interrupt. A completed Stop must not become a permanent
@@ -8922,7 +8984,7 @@ def test_one_send_share_waits_for_real_same_account_readiness_without_losing_ori
         assert qml(actor, '(' + editor + ').text') == text \
             and [row for row in _attachment_rows(actor) if row['pending']] == pending, (
             'A proved waiting admission keeps the exact original text and genuinely pending input instead of clearing them early')
-        release.touch();actor.command('refresh_usage')
+        _review66_release_original_identity(actor, release);actor.command('refresh_usage')
         _session_completed(actor, 1)
         actual = _session_state(actor)['inputs']
         assert len(_session_wire(actor, 'turn/start')) == 1 and len(actual) == 1 and _assert_exact_original_admitted_user_input(actor, actual[0], text, expected_thread_prior_inputs=0), (
@@ -8945,7 +9007,7 @@ def test_one_send_share_waits_for_real_same_account_readiness_without_losing_ori
             'original_pending_files': pending, 'actual_inputs': actual, 'send_count': 1,
             'share_count': 1, 'classification': 'ACTUAL_PREWIRE_WAIT_THEN_READINESS_NOT_UNCERTAIN_WRITE'}, indent=2))
     finally:
-        release.touch()
+        _review66_release_original_identity(actor, release)
 
 
 def test_uncertain_original_send_write_does_not_auto_replay_on_actual_same_owner_readiness(main_actor, tmp_path):
@@ -9669,7 +9731,7 @@ def test_original_share_wait_cannot_approve_changed_or_cancelled_input(main_acto
             assert qml(actor, 'Session.assistant.selectedModel') == 'gpt-5.6-luna', (
                 'The changed-model negative physically chooses an actually offered original model')
         assert not _session_wire(actor, 'turn/start'), 'No original pending input may be sent while its correlated account proof is held'
-        release.touch();actor.command('refresh_usage')
+        _review66_release_original_identity(actor, release);actor.command('refresh_usage')
         actor.until(lambda _value: any(row.get('id') == held['id'] and 'result' in row
             for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
         if boundary == 'account':
@@ -9684,7 +9746,7 @@ def test_original_share_wait_cannot_approve_changed_or_cancelled_input(main_acto
             'send_count': 1, 'share_count': 0 if boundary == 'cancel' else 1,
             'actual_requests': _session_wire(actor), 'actual_final': actor.command('inspect')['ui']}, indent=2))
     finally:
-        release.touch()
+        _review66_release_original_identity(actor, release)
 
 
 def _observe_original_toolbar_press(actor, marker, paths=()):

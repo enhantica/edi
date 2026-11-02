@@ -1258,7 +1258,7 @@ int main(int argc,char** argv) {
             auto op=input["op"].toString();Object result;
             qml_warning_operation=op;
             if (dispatch_trace) dispatch_trace->watch(observed ? observed->assistant() : nullptr);
-            if((!observed || !window) && op!="inspect" && op!="destroy" && op!="session_fault_facts")throw std::runtime_error("the original Main owner has retired");
+            if((!observed || !window) && op!="inspect" && op!="destroy" && op!="session_fault_facts" && op!="property_notification_read")throw std::runtime_error("the original Main owner has retired");
             if(op=="message_snapshot") {
                 e11_a2a_phase::requireDeclaredPhase();
                 const auto identity=input["row_id"].toString();
@@ -1844,7 +1844,8 @@ int main(int argc,char** argv) {
                 if(!dialog || !dialog->property("visible").toBool())throw std::runtime_error("actual original visible dialog is absent");
                 const auto role=input["role"].toString("ok");
                 const QMap<QString,QString> expressions{{"ok","standardButton(Dialog.Ok)"},{"save","standardButton(Dialog.Save)"},
-                    {"discard","standardButton(Dialog.Discard)"},{"cancel","standardButton(Dialog.Cancel)"}};
+                    {"discard","standardButton(Dialog.Discard)"},{"cancel","standardButton(Dialog.Cancel)"},
+                    {"close","standardButton(Dialog.Close)"}};
                 if(!expressions.contains(role))throw std::invalid_argument("closed original standard dialog role required");
                 QQmlExpression expression(qmlContext(dialog),dialog,expressions.value(role));
                 const auto button=expression.evaluate().value<QObject*>();
