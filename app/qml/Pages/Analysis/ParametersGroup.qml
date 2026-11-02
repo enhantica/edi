@@ -17,7 +17,7 @@ import edi.app
 // Minimum and maximum are the admissible range (edi has no user fit bounds), shown "-inf"/"inf" when
 // unbounded. Untitled and fixed open, as the original's group (SideBarBasic.qml): the status bar carries
 // the counts; `last`, as there, keeps the untitled group's border out of its content (note 7).
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property ProjectViewModel project: null

@@ -323,7 +323,8 @@ EaComponents.ListView {
         id: measureLater
         property int run: 0
         property int from: 0
-        interval: 0
+        // Not 0 ms, which keeps a slice always due (PageIncubation in engine_setup.cpp).
+        interval: 1
         onTriggered: table.measureRows(run, from)
     }
     // Content that changed while the table was not shown, measured once it is.

@@ -10,7 +10,7 @@ import edi.app
 
 // How a followed scan redraws the pattern while it runs (edi ADR-0029): a setting of this machine, not part of the
 // project, so it is on the page's Settings tab (edi ADR-0031 §2).
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     readonly property string openKey: "Settings:patternUpdates"
