@@ -6552,22 +6552,19 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
     const auto rows = f->newArray(); const auto host = panelUsageContextRead(f, "measuringHost");
     int next = from;
     // A row is null while what it is in is still being made in the background. Measuring without it would size the
-    // columns to their headers alone, and nothing would measure again, so the pass stops there and continues from that
-    // row on the next turn of the event loop, when it can be made. A row that still cannot be made after many turns is
-    // left out, as before.
-    QObject* const tableObject = panelUsageContextRead(f, "table").toQObject();
-    if (tableObject && tableObject->property("ediMeasureRun").toInt() != run) {
-        tableObject->setProperty("ediMeasureRun", run);
-        tableObject->setProperty("ediMeasureRetries", 0);
-    }
+    // columns to their headers alone, so the pass stops there and goes on from that row 100 ms later, for at most ten
+    // seconds; a row still not made then is left out.
     bool waiting = false;
     while (panelUsageReady(f) && next < total && (total <= atOnce || started.elapsed() < 20)) {
         const auto row = panelUsageMemberCall(f, panelUsageRead(f, measuring, "items"), "create", {QJSValue(next)});
         if (!editorLife(f, life)) return;
-        if (!panelUsageTruth(row) && tableObject && tableObject->property("ediMeasureRetries").toInt() < 1000) {
-            tableObject->setProperty("ediMeasureRetries", tableObject->property("ediMeasureRetries").toInt() + 1);
-            waiting = true;
-            break;
+        if (!panelUsageTruth(row)) {
+            const int retries = panelUsageContextRead(f, "unmadeRetries").toInt();
+            if (retries < 100) {
+                panelUsageContextWrite(f, "unmadeRetries", QJSValue(retries + 1));
+                waiting = true;
+                break;
+            }
         }
         ++next;
         if (panelUsageTruth(row)) assistantMemberWrite(f, row, "parent", host);
@@ -6576,7 +6573,7 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
     if (!editorLife(f, life)) return;
     if (waiting && panelUsageRead(f, rows, "length").toInt() == 0) {
         assistantMemberWrite(f, measuring, "model", consentNull()); if (!editorLife(f, life)) return;
-        const auto later = panelUsageContextRead(f, "measureLater");
+        const auto later = panelUsageContextRead(f, "measureMade");
         assistantMemberWrite(f, later, "run", QJSValue(run)); assistantMemberWrite(f, later, "from", QJSValue(next));
         if (editorLife(f, life)) panelUsageMemberCall(f, later, "start", {});
         return;
@@ -6626,6 +6623,7 @@ void ApplicationInfo::tableVisibleChanged() const {
 }
 void ApplicationInfo::tableRefit() const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
+    panelUsageContextWrite(f, "unmadeRetries", QJSValue(0)); if (!editorLife(f, life)) return;
     panelUsageContextWrite(f, "refitting", QJSValue(true)); if (editorLife(f, life)) panelUsageGlobalCall(f, "scheduleFitColumns", {});
 }
 void ApplicationInfo::tableColumnsChanged(bool widthsChanged) const {

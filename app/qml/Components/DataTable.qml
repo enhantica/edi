@@ -153,6 +153,16 @@ EaComponents.ListView {
         interval: 1
         onTriggered: table.measureRows(run, from)
     }
+    // Rows not made while their page is still built in the background are measured a little later, when they can be
+    // made, for at most ten seconds. Measured without them, a column fits only its header.
+    property int unmadeRetries: 0
+    Timer {
+        id: measureMade
+        property int run: 0
+        property int from: 0
+        interval: 100
+        onTriggered: table.measureRows(run, from)
+    }
     // Content that changed while the table was not shown, measured once it is.
     property bool unfitted: false
     onVisibleChanged: ApplicationInfo.tableVisibleChanged()
