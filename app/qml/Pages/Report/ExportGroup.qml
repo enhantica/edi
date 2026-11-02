@@ -14,7 +14,7 @@ import edi.app
 // right half of its row (the owner, 2026-10-27), then the static PDF (A4, the preview's figures as images) and the CIF report (every item under its official CIF name); one
 // Save report button below, which writes the ticked formats into the project's reports/ folder (in the browser it also
 // downloads them, one file or one zip).
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property ReportViewModel report: null

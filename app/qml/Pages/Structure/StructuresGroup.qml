@@ -14,7 +14,7 @@ import edi.app
 // Structures (N) (easydiffractionbeta Pages/Model/SideBarBasic/Models.qml): the project's structures,
 // one current; a structure enters only from a `.edi` block file, while the project holds none — an
 // edi project holds one structure.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property ProjectViewModel project: null

@@ -14,7 +14,7 @@ import edi.app
 
 // Get started (easydiffractionbeta Pages/Project/SideBarBasic/GetStarted.qml): create a new project, open one from its
 // project.edi or a .zip, or save the open one as a folder or a .zip, or a copy of it (edi ADR-0017 §13, ADR-0052).
-EaElements.GroupBox {
+SideBarGroup {
     id: group
     objectName: "group.getStarted"
     title: qsTr("Get started")

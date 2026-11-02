@@ -10,7 +10,7 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // The app's curated example catalogue (ADR-0031). Filtering never changes an example's identity.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
     objectName: "group.examples"
     title: qsTr("Examples")
