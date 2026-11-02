@@ -1,0 +1,81 @@
+{
+  "kind": "Replay admission diagnostic; no provider call or acceptance claim",
+  "checked_utc": "2026-11-02T15:15:06.194842+00:00",
+  "prior_receipt": {
+    "id": "d6441c16-8ebc-4d79-8272-473d20d8a9c5",
+    "status": "failed",
+    "tool": "add_relations",
+    "arguments": {
+      "aliases": [
+        {
+          "id": "B_Co1",
+          "path": "structure.atom_sites[Co1].adp_iso"
+        },
+        {
+          "id": "B_Co2",
+          "path": "structure.atom_sites[Co2].adp_iso"
+        }
+      ],
+      "constraints": [
+        {
+          "enabled": true,
+          "expression": "B_Co2 = B_Co1",
+          "id": "shared_cobalt_Biso"
+        }
+      ],
+      "purpose": "Test a common isotropic displacement for the two octahedral cobalt sites"
+    },
+    "nativeOutcome": {
+      "action_error": "control_commit_unconfirmed",
+      "action_field": "relation",
+      "atomic": false,
+      "calculation_pending": false,
+      "complete": false,
+      "message": "The genuine group click did not expand its controls",
+      "status": "partial",
+      "steps_completed": 6
+    }
+  },
+  "prior_project": "build/tests-seq14/cosio-sol-high-on/actual-agent-project",
+  "prior_project_seal": [
+    {
+      "path": "analysis/analysis.edi",
+      "sha256": "8b35f058bb4c791dcce480909f4ad1100b5757d09e008f657c144280cb1366bd"
+    },
+    {
+      "path": "experiments/d20.edi",
+      "sha256": "1b7c47f1258a6169ecaef2639616d6cb11218767fbf43ca7443714557d246271"
+    },
+    {
+      "path": "project.edi",
+      "sha256": "efd6c17f55f92fb1713e3f1c9c3a042077939a3dafc7f3c27403c063d5d0e3d7"
+    },
+    {
+      "path": "reports/report.edi",
+      "sha256": "ccf0a412ae4f61ed0be46e8e7b010680a5b9da02d43db3e3ae88aded07f44ffc"
+    },
+    {
+      "path": "reports/work-report.json",
+      "sha256": "6ec1b0e85184aad775b1f25af79758a3c9e0faa86991437c416619edb1ca6878"
+    },
+    {
+      "path": "structures/cosio.edi",
+      "sha256": "3e43e0764d7d4e099a04ada8feb516d0aaef25f31cbea0afcbdc9893b0b40bac"
+    }
+  ],
+  "retained_project_is_post_failure": true,
+  "retained_project_has_both_aliases": true,
+  "pre_relation_project_checkpoint_found": false,
+  "prior_temporary_documents_exists": false,
+  "prior_driver_requested_activation_at_start": true,
+  "prior_whole_run_window_activity_recorded": false,
+  "replay_started": false,
+  "replay_window_active_whole_run": null,
+  "replay_add_relations_outcome": null,
+  "pressed_group_header": null,
+  "group_rebuilt_between_arrival_and_press": null,
+  "reason": "The saved project already contains the two aliases. No pre-call project checkpoint is retained. Replaying the original batch requires reconstructing state or a fresh scientific session; neither can be represented as the requested exact project replay.",
+  "build_note": "Host build guard found active edi_app_tests builds. A detached diagnostic-probe launch left only its banner, no live recorded PID and no exit marker; no successful build or replay is claimed. Uncompiled passive-logging edits were reversed byte-exactly.",
+  "next_drive_needed": "Specify whether to use a reconstructed pre-call copy of the saved project or a fresh original-input session. The former changes starting state; the latter does not guarantee the same model-chosen action.",
+  "original_receipt_sha256": "80db49d1b14c0e157619e8795d635a251ad3cdddd2a1fff6fbced8e16d14ca22"
+}
