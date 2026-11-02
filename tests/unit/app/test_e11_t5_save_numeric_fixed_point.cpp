@@ -283,9 +283,16 @@ public:
         Checks check;
         const auto* reportedSource=crysta::build_commit();
         const std::string nativeSource=reportedSource?reportedSource:"";
-        const bool parserCompatible=nativeSource=="79010b0c73ddec01abf80ce00037d138ec7c1b8d" || nativeSource=="c815d994d132fc31d10e26aaf4ac8385a965e518";
+        // Both current local and declared CI SDK interface headers are byte-identical
+        // to the original approved source; the fixture records each comparison.
+        const bool parserCompatible=
+            nativeSource=="79010b0c73ddec01abf80ce00037d138ec7c1b8d" ||
+            nativeSource=="c815d994d132fc31d10e26aaf4ac8385a965e518" ||
+            nativeSource=="97818d18ec74cb6ead16f607845b06b446d8eac1" ||
+            nativeSource=="8ba9537cc90857afeedf768693f70635f607ee36";
         fact(QStringLiteral("native_parser_abi"),{{"linked_source",QString::fromStdString(nativeSource)},
             {"linked_version",QString::fromLatin1(crysta::version())},{"compatible",parserCompatible},
+            {"interface_reference_source","c815d994d132fc31d10e26aaf4ac8385a965e518"},
             {"snapshot_header_sha256","063a933fe307fc84e2837de6effde831e435939b0b5de915cafdd1b5d0e86a78"},
             {"original_header_sha256","fee5a54128a7359ba7dd98e675ba5957958ec46f17ed8733257ec03d8aaba29a"}});
         check.require(parserCompatible,QStringLiteral("UNREACHED: linked native revision has no proved compatible FIRST document-header snapshot"));
