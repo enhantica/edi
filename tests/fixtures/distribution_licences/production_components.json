@@ -92,6 +92,33 @@
         "Baloo 2",
         "Font Awesome Free"
       ]
+    },
+    {
+      "witness": "cmake/assistant_runtime.cmake publishes the complete locked native Codex package. data/assistant/runtime/PROVENANCE.md binds source 092d3acd and the actual server, code-mode host, rg and platform helpers; tools/deps/assistant-runtime/recipe.yaml fixes the package inputs. This native-only inclusion ceiling does not qualify any delivered package or corresponding-source release.",
+      "components": [
+        "OpenAI Codex",
+        "ripgrep",
+        "zsh",
+        "bubblewrap",
+        "rusty-v8",
+        "V8 (Codex code-mode host)",
+        "ICU data (deno_core_icudata)"
+      ]
+    },
+    {
+      "witness": "Only the native assistant target includes the unmodified jwt-cpp v0.7.2 headers and its default picojson adapter. third_party/jwt-cpp/PROVENANCE.md and LICENSE identify their archive and origin; app/CMakeLists.txt links the native authentication implementation.",
+      "components": [
+        "jwt-cpp",
+        "picojson"
+      ]
+    },
+    {
+      "witness": "cmake/EdiAssistantMath.cmake builds JKQTMathText and JKQTCommon from locked source 9e9f0af8 and enables the original XITS font resources. data/assistant/math/JKQtPlotter-LICENSE and XITS-OFL.txt carry the component notices. The two component-list spellings refer to this same reviewed native inclusion.",
+      "components": [
+        "JKQTMathText / JKQTCommon",
+        "JKQTMathText and JKQTCommon",
+        "XITS"
+      ]
     }
   ]
 }

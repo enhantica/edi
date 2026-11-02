@@ -24,9 +24,9 @@ from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 # Frozen from the published gui-components archive; ADR-0015.
 
-GUI_PIN = 'bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1'
-GUI_ARCHIVE_SHA256 = '4a91484651c78fcc639007b0144c349f8c5c87a9d5a98a85dfb8088947204f35'
-GUI_SOURCE_SHA256 = 'c61364b60961098a49cad8b1c1e0c8681ab2e510611f900fa7339c9b3c8984f2'
+GUI_PIN = '10dc5828020c90666a1ef015835475936d56e819'
+GUI_ARCHIVE_SHA256 = '89cfb0443e84a9d4a0cf0a07994f8ac7aa5b0bc296c7f23c3ce1e6f1eff9c93b'
+GUI_SOURCE_SHA256 = '65b857b24fdd782e7068d422fc11667e6aca84377d88f757efeed082be16d030'
 
 ROOT = Path(__file__).resolve().parents[3]
 SCREENSHOTS = ROOT / 'docs/dev/design/app-screenshots'

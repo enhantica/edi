@@ -719,12 +719,35 @@ def resource_inventory(tmp_path, web, production=None):
     scratch = tmp_path / ('web' if web else 'desktop')
     scratch.mkdir(parents=True)
     receipt = scratch / 'inventory.tsv'
+    # The native runtime's executable/sidecar publication is outside this QRC
+    # inventory; its own CMake publication suite exercises it. Refuse this
+    # separation if it ever gains a resource or compilation-source producer.
+    runtime = re.sub(r'#[^\n]*', '', (ROOT / 'cmake/assistant_runtime.cmake').read_text())
+    assert not re.search(
+        r'\b(?:qt_add_resources|qt_add_qml_module|target_sources)\s*\(', runtime
+    ), 'The native runtime packager must remain outside the observed QRC/source inventory'
     harness = f"""cmake_minimum_required(VERSION 3.25)
 project(ResourceProbe NONE)
 set(PROJECT_SOURCE_DIR "{ROOT.as_posix()}")
 set(CMAKE_CURRENT_SOURCE_DIR "{APP.as_posix()}")
 set(EMSCRIPTEN {'TRUE' if web else 'FALSE'})
 file(WRITE "{receipt.as_posix()}" "")
+# This observer configures resources without a compiler or Qt installation.
+# Resolve only the two current compilation-package declarations; resource
+# producers, target edges, source reachability and payload bytes stay observed.
+function(find_package package)
+ if(package STREQUAL "crysta" AND "${{ARGN}}" STREQUAL "CONFIG;QUIET")
+  return()
+ elseif(package STREQUAL "Qt6QmlPrivate" AND "${{ARGN}}" STREQUAL "REQUIRED")
+  return()
+ endif()
+ message(FATAL_ERROR "Examples: unexpected unobserved package ${{package}} ${{ARGN}}")
+endfunction()
+function(edi_bundle_assistant_runtime)
+ if(NOT ARGC EQUAL 0)
+  message(FATAL_ERROR "Examples: unexpected native runtime publication arguments")
+ endif()
+endfunction()
 foreach(command include configure_file qt_add_library
  target_include_directories set_target_properties
  qt_add_executable target_compile_definitions add_custom_target add_dependencies

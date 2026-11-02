@@ -107,7 +107,10 @@ def test_full_source_caller_refuses_changed_metadata_schema_or_unowned_bytes(
         changed = raw + b'_unowned.numeric 1.25\n'
     assert changed != raw, 'The negative really alters its intended source channel'
     path.write_bytes(changed)
-    with pytest.raises(AssertionError, match='complete committed description-migration input'):
+    with pytest.raises(
+        AssertionError,
+        match='live descriptive input must match its entire independently archived source',
+    ):
         metadata_bytes.pre_catalogue_bytes(path)
 
 
@@ -137,7 +140,10 @@ def test_full_experiment_source_guard_refuses_genuine_scientific_row_changes(
             changed = b''.join(lines)
     assert changed != raw, 'Every source negative actually reaches its independent raw channel'
     path.write_bytes(changed)
-    with pytest.raises(AssertionError, match='complete committed description-migration input'):
+    with pytest.raises(
+        AssertionError,
+        match='live descriptive input must match its entire independently archived source',
+    ):
         metadata_bytes.pre_catalogue_bytes(path)
 
 
@@ -275,7 +281,10 @@ def test_catalogue_whole_pair_refuses_unowned_or_malformed_changes(
         changed = raw + b'_unowned.scientific_parameter 1.25\n'
     assert changed != raw
     path.write_bytes(changed)
-    with pytest.raises(AssertionError, match='complete committed description-migration input'):
+    with pytest.raises(
+        AssertionError,
+        match='live descriptive input must match its entire independently archived source',
+    ):
         metadata_bytes.pre_catalogue_bytes(path)
 
 
@@ -286,7 +295,10 @@ def test_catalogue_reversal_refuses_cross_source_pair_and_leaves_unlisted_paths_
     del prior, current, instrument, facility
     raw = (ROOT / name).read_bytes()
     other = next(row[0] for row in CATALOGUE_INPUTS if row[0] != name)
-    with pytest.raises(AssertionError, match='complete committed description-migration input'):
+    with pytest.raises(
+        AssertionError,
+        match='live descriptive input must match its entire independently archived source',
+    ):
         metadata_bytes.pre_description_bytes(other, raw)
     assert metadata_bytes.pre_description_bytes('unlisted/' + name, raw) == raw
 
@@ -346,5 +358,8 @@ def test_catalogue_reversal_refuses_real_scientific_and_data_edits(
             changed = b''.join(lines)
     assert changed != raw
     path.write_bytes(changed)
-    with pytest.raises(AssertionError, match='complete committed description-migration input'):
+    with pytest.raises(
+        AssertionError,
+        match='live descriptive input must match its entire independently archived source',
+    ):
         metadata_bytes.pre_catalogue_bytes(path)

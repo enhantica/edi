@@ -120,6 +120,6 @@
   "sources": {
     "tests/fixtures/c13_t12_ids/baseline.zip": "9298a503e163219af2a4bbbf5e7a7ae6dfe98d46d71f729b1595dfd6f47dbe95",
     "tests/fixtures/report_units/iucr-fullprof-before.zip": "b2d559683eb4075203f841d7046a5ace3562ec01dcb251d12f8b7a93f721ef9d",
-    "tests/fixtures/report_units/iucr_reference.py": "be37d866db141336c0a7ca785bb748fad14386741bdbddaf28f86eb78371dbbc"
+    "tests/fixtures/report_units/iucr_reference.py": "0e2a73d3d431ce9df029470f5fae2ed8a53612328b65c80df1ecd541de696163"
   }
 }
