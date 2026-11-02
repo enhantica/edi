@@ -41,11 +41,39 @@ def properties(body):
 def table_census():
     result = []
     for path in sorted(QML.rglob('*.qml')):
-        for kind, body in qml_objects(path.read_text()):
-            values = dict(properties(body))
-            if kind.split('.')[-1] in {'DataTable', 'ListView'} and 'delegate' in values:
-                result.append((str(path.relative_to(QML)), values['delegate']))
+        result.extend(
+            (str(path.relative_to(QML)), delegate)
+            for delegate in table_delegates(path.read_text())
+        )
     return result
+
+
+def table_delegates(source):
+    # Qt Quick's conversation ListView is not a column table. The shared GUI
+    # module's ListView is a table, including callers bypassing DataTable.
+    words = tokens(source)
+    component_views = set()
+    for index, word in enumerate(words[:-1]):
+        if word != 'import' or words[index + 1] != 'EasyApplication.Gui.Components':
+            continue
+        cursor = index + 2
+        if cursor < len(words) and re.fullmatch(r'\d+(?:\.\d+)*', words[cursor]):
+            cursor += 1
+        alias = None
+        if words[cursor : cursor + 1] == ['as']:
+            assert cursor + 1 < len(words) and re.fullmatch(r'[A-Z]\w*', words[cursor + 1]), (
+                'A shared-GUI table import requires its complete declared QML namespace alias'
+            )
+            alias = words[cursor + 1]
+        component_views.add(f'{alias}.ListView' if alias else 'ListView')
+    delegates = []
+    for kind, body in qml_objects(source):
+        values = dict(properties(body))
+        if (
+            kind.split('.')[-1] == 'DataTable' or kind in component_views
+        ) and 'delegate' in values:
+            delegates.append(values['delegate'])
+    return delegates
 
 
 def test_no_old_tableview_type_in_any_qml_file():
@@ -148,3 +176,21 @@ def test_qml_census_observer_catches_nested_cells_but_ignores_comments():
     assert dict(properties(objects[-1][1]))['delegate'] == 'TableRow', (
         'The census reads the actual table delegate rather than a nested picker delegate'
     )
+    imports = 'import QtQuick\nimport QtQuick as Quick\n'
+    conversation = 'ListView { delegate: Column {} }\nQuick.ListView { delegate: Column {} }'
+    assert table_delegates(imports + conversation) == [], (
+        'Bare and qualified Qt Quick conversation lists are outside the column-table contract'
+    )
+    for component_import, view in (
+        ('import EasyApplication.Gui.Components as Cells\n', 'Cells.ListView'),
+        ('import EasyApplication.Gui.Components 1.0 as Alternate\n', 'Alternate.ListView'),
+        ('import EasyApplication.Gui.Components\n', 'ListView'),
+    ):
+        source = imports + component_import + view + ' { delegate: Column {} }'
+        assert table_delegates(source) == ['Column'], (
+            'Direct shared-GUI tables cannot evade row validation through aliases or versions'
+        )
+    for view in ('DataTable', 'Edi.DataTable'):
+        assert table_delegates(imports + view + ' { delegate: Column {} }') == ['Column'], (
+            'Both local and qualified DataTable callers retain invalid-delegate observations'
+        )
