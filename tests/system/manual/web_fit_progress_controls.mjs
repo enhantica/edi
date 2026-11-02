@@ -1,5 +1,6 @@
 // Protocol controls only; synthetic states are never application evidence.
 import assert from 'node:assert/strict';
+import {fittingObservationKind,hasRunningProgress} from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 import {runInNewContext} from 'node:vm';
 import {beginFitProgress,endFitProgress,isLiveFitProgress,advancesLiveFitProgress,observesOrderedFitProgress} from './web_fit_progress.mjs';
 
@@ -72,3 +73,19 @@ await beginFitProgress(evaluate);
 await assert.rejects(endFitProgress(evaluate),/without a page-hook exception/,
   'A failed native progress read must refuse rather than reuse old samples');count++;
 console.log(`${count} progress protocol controls green; no application fit green claimed`);
+
+for (const text of ['Stop','stop-circle Stop']) {
+  assert.equal(fittingObservationKind(text),'control',
+    'The status-bar running button exposes Stop, with or without its icon text');
+  assert(hasRunningProgress([text,'fitting · it 2']),
+    'The current Stop label and a live iteration together satisfy progress observation');
+}
+for (const text of ['Fit','Continue','Refit','Start fitting','Stop fitting','Cancel fitting','Stop search','Unstoppable']) {
+  assert.equal(fittingObservationKind(text),null,
+    'Idle actions, retired labels and unrelated stop text cannot impersonate the current fit control');
+  assert(!hasRunningProgress([text,'fitting · it 2']),
+    'Live iteration text alone cannot replace the actual running fit control');
+}
+assert(!hasRunningProgress(['Stop','Success','Iterations 20']),
+  'The current Stop control without a live iteration cannot impersonate running progress');
+console.log('status-bar fitting label controls green; no application fit green claimed');
