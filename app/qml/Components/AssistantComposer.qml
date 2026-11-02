@@ -157,9 +157,8 @@ Rectangle {
                         marksCurrentRow: true
                         currentRow: composer.selectedModelRow
                         columns: [choicePopup.radioColumnWidth, choicePopup.desiredLabelWidth]
-                        delegate: EaComponents.ListViewDelegate {
+                        delegate: TableRow {
                             id: modelRow
-                            required property int index
                             required property var model
                             readonly property string modelId: model.id
                             readonly property alias selector: modelRadio
@@ -189,7 +188,7 @@ Rectangle {
                                     Keys.onUpPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, -1, event)
                                 }
                             }
-                            EaComponents.TableViewLabel {
+                            EaComponents.ListViewLabel {
                                 objectName: "assistant.choice.model.label." + modelRow.modelId
                                 text: modelRow.model.displayName
                                 textFormat: Text.PlainText
@@ -227,9 +226,8 @@ Rectangle {
                         marksCurrentRow: true
                         currentRow: ApplicationInfo.assistantSelectedEffortRow()
                         columns: [choicePopup.radioColumnWidth, choicePopup.desiredLabelWidth]
-                        delegate: EaComponents.ListViewDelegate {
+                        delegate: TableRow {
                             id: effortRow
-                            required property int index
                             required property var modelData
                             readonly property string choiceId: modelData.token.length ? "assistant.choice.effort.value." + modelData.token : "assistant.choice.effort.default"
                             readonly property alias selector: effortRadio
@@ -259,7 +257,7 @@ Rectangle {
                                     Keys.onUpPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, false, false, event)
                                 }
                             }
-                            EaComponents.TableViewLabel {
+                            EaComponents.ListViewLabel {
                                 objectName: effortRow.choiceId + ".label"
                                 text: effortRow.modelData.label
                                 textFormat: Text.PlainText

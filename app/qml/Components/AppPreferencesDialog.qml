@@ -415,17 +415,16 @@ AppDialog {
                     defaultInfoText: qsTr("No skill sources")
                     columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
                     header: EaComponents.ListViewHeader {
-                        EaComponents.TableViewLabel {}
-                        EaComponents.TableViewLabel {
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {
                             text: qsTr("Source")
                             horizontalAlignment: Text.AlignLeft
                         }
-                        EaComponents.TableViewLabel {}
-                        EaComponents.TableViewLabel {}
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {}
                     }
-                    delegate: EaComponents.ListViewDelegate {
+                    delegate: TableRow {
                         id: sourceRow
-                        required property int index
                         readonly property string sourceId: model.id || ""
                         required property string label
                         required property string path
@@ -436,18 +435,19 @@ AppDialog {
                         property int presentation: 0
                         onSourceIdChanged: ApplicationInfo.preferenceSourceRevision()
                         onOriginalChanged: ApplicationInfo.preferenceSourceRevision()
-                        EaComponents.TableViewLabel {
+                        EaComponents.ListViewLabel {
                             text: sourceRow.index + 1
                             horizontalAlignment: Text.AlignHCenter
+                            marksCurrentRow: true
                         }
-                        EaComponents.TableViewLabel {
+                        EaComponents.ListViewLabel {
                             objectName: "preferences.ai.source.label." + sourceRow.sourceId
                             text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.label.startsWith("https://github.com/") ? sourceRow.label : sourceRow.path
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideMiddle
                             ToolTip.text: text + (sourceRow.status.length ? "\n" + sourceRow.status : "")
                         }
-                        EaComponents.TableViewButton {
+                        EaComponents.ListViewButton {
                             id: sourceEnabled
                             objectName: "preferences.ai.source.enabled." + sourceRow.sourceId
                             fontIcon: sourceRow.model.enabled ? "toggle-on" : "toggle-off"
@@ -467,7 +467,7 @@ AppDialog {
                                 }
                             }
                         }
-                        EaComponents.TableViewButton {
+                        EaComponents.ListViewButton {
                             id: sourceRemove
                             objectName: "preferences.ai.source.remove." + sourceRow.sourceId
                             fontIcon: "minus-circle"
