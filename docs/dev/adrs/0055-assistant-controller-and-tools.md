@@ -2616,3 +2616,7 @@ unchanged. Closed outgoing roles admit only the declared facts. Optional capture
 or validation failure leaves the original completed outcome unchanged; it cannot
 refit, veto adoption, consume Undo or replay work. Source alone is not actual
 provider use or runtime qualification of this new evidence.
+
+## Fit results carry a misfit summary
+
+Each adopted `run_fit` result carries `misfit`, one summary per powder pattern that Edi computes from the engine's own columns: the weighted residual (measured - calculated) / sigma over the range and in eight contiguous regions, the background against the data where the calculated peaks are below half a sigma, and the five reflections whose peaks fit worst, with their intensity ratio, centroid shift and width ratio. The model judges a fit from it rather than reading rows; `inspect_data` stays for a narrow, named range, at most four calls per turn, and its step says which rows it read.

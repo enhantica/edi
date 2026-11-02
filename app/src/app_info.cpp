@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "app_info.hpp"
 #include "assistant_message_presentation.hpp"
+#include "assistant_native_tools.hpp"
 #include "assistant_panel_presentation.hpp"
 #include "assistant_view_model.hpp"
 #include "web_files.hpp"
@@ -10622,7 +10623,11 @@ std::optional<edi_app::assistant_presentation::HumanActivityInput> prepareHumanP
     }
     const auto lines = humanDescriptionLines(input);
     if (needsHumanFallback(input, lines) && input.payload.value("type") == "dynamicToolCall" && owner)
-        input.nativeDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QString());
+        input.nativeDescription = [&] {
+            const auto tool = input.payload.value("tool").toString();
+            const auto detail = edi_app::assistant_native_detail(tool, input.payload.value("arguments").toObject());
+            return detail.isEmpty() ? owner->nativeActionDescription(tool, QString()) : detail;
+        }();
     if (!nonblankLiteral(humanOutcomeMessage(input)) && humanOutcomeCode(input) == "project_required" && owner)
         input.nativeErrorDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QStringLiteral("project_required"));
     return messageScriptReady(engine) ? std::optional<HumanActivityInput>(std::move(input)) : std::nullopt;

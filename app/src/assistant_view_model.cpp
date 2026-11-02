@@ -1366,6 +1366,10 @@ struct AssistantViewModel::State {
     };
     std::optional<FileSelection> file_selection;
     Object core, native, plan, question;
+    // Data reads in the current turn: a few named ranges, not paging through a pattern (the misfit summary in each fit
+    // result describes the whole pattern).
+    QString inspect_turn; int inspect_reads = 0;
+    static constexpr int inspect_reads_per_turn = 4;
     bool chat_reveal_requested = false;
     QString chat_reveal_question;
     QString model, effort, error, preference_error, preference_save_error;
@@ -8519,6 +8523,16 @@ struct AssistantViewModel::State {
             enriched["fit_correlations"]=Object{{"source","completed_adopted_fit"},
                 {"fit_attempt",QString::number(original.fit_attempt)},{"call_id",original.record->call},
                 {"model_currentness","unknown"},{"pairs_available",!pairs.isEmpty()},{"pairs",pairs}};
+            // How far each powder pattern is from its data after this fit, from the engine's arrays, so the model can
+            // judge the fit without reading rows (inspect_data stays for a narrow, named range).
+            QJsonArray misfit;
+            for(std::size_t i=0;i<model->experiments.size();++i) {
+                const auto& member=model->experiments[i];
+                if(member->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL)continue;
+                misfit.append(assistant_data::misfit(edi::capture_pattern(*model,i),
+                    QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value()))));
+            }
+            if(!misfit.isEmpty())enriched["misfit"]=misfit;
             // Validate the same closed native projection before optional capture
             // can replace this local result; failures leave the fit facts intact.
             (void)outgoing::size(enriched,outgoing::Role::Result);
@@ -9184,7 +9198,14 @@ struct AssistantViewModel::State {
 
                 inspection->approved_context = QJsonDocument(context).toJson(QJsonDocument::Compact);
             }
-            if(name=="inspect_data")read_result=native_data_slice(args,inspection);
+            if(name=="inspect_data") {
+                if(inspect_turn!=generic_turn){inspect_turn=generic_turn;inspect_reads=0;}
+                if(++inspect_reads>inspect_reads_per_turn) {
+                    reply(false,{{"status","refused"},{"code","refused"},{"message",QStringLiteral("inspect_data allows %1 reads per turn. Each fit result's misfit summary describes the whole pattern; read only a narrow, named range.").arg(inspect_reads_per_turn)}});
+                    return;
+                }
+                read_result=native_data_slice(args,inspection);
+            }
             else read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
             if(name=="diagnostics")read_result["native_state"]=context.value("native_state");
         }
