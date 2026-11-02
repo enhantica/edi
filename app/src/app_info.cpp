@@ -6502,13 +6502,9 @@ void ApplicationInfo::tableColumnLayoutChanged() const {
     for (int index = 0; panelUsageReady(f) && index < count; ++index)
         layout += textIndex(f, columns, QJSValue(index)).strictlyEquals(QJSValue(-1)) ? QLatin1Char('f') : QLatin1Char('x');
     if (!panelUsageReady(f)) return;
-    if (!panelUsageContextRead(f, "flexLayout").strictlyEquals(QJSValue(layout))) {
-        panelUsageContextWrite(f, "flexLayout", QJSValue(layout));
-        if (editorLife(f, life)) panelUsageGlobalCall(f, "refit", {});
-        return;
-    }
-    const auto table = panelUsageContextRead(f, "table");
-    panelUsageCallLater(f, tableCallback(f, 145, {life, table}, 0));
+    if (!panelUsageContextRead(f, "flexLayout").strictlyEquals(QJSValue(layout))) panelUsageContextWrite(f, "flexLayout", QJSValue(layout));
+    // Any change of the columns measures the rows again.
+    if (editorLife(f, life)) panelUsageGlobalCall(f, "refit", {});
 }
 void ApplicationInfo::tableStyleCells() const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
@@ -6555,15 +6551,36 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
     QElapsedTimer started; started.start();
     const auto rows = f->newArray(); const auto host = panelUsageContextRead(f, "measuringHost");
     int next = from;
-    // A row is null while what it is in is still being made in the background; it is not measured, as the view's rows
-    // are not, and a later change of the content measures it.
+    // A row is null while what it is in is still being made in the background. Measuring without it would size the
+    // columns to their headers alone, and nothing would measure again, so the pass stops there and continues from that
+    // row on the next turn of the event loop, when it can be made. A row that still cannot be made after many turns is
+    // left out, as before.
+    QObject* const tableObject = panelUsageContextRead(f, "table").toQObject();
+    if (tableObject && tableObject->property("ediMeasureRun").toInt() != run) {
+        tableObject->setProperty("ediMeasureRun", run);
+        tableObject->setProperty("ediMeasureRetries", 0);
+    }
+    bool waiting = false;
     while (panelUsageReady(f) && next < total && (total <= atOnce || started.elapsed() < 20)) {
-        const auto row = panelUsageMemberCall(f, panelUsageRead(f, measuring, "items"), "create", {QJSValue(next++)});
+        const auto row = panelUsageMemberCall(f, panelUsageRead(f, measuring, "items"), "create", {QJSValue(next)});
         if (!editorLife(f, life)) return;
+        if (!panelUsageTruth(row) && tableObject && tableObject->property("ediMeasureRetries").toInt() < 1000) {
+            tableObject->setProperty("ediMeasureRetries", tableObject->property("ediMeasureRetries").toInt() + 1);
+            waiting = true;
+            break;
+        }
+        ++next;
         if (panelUsageTruth(row)) assistantMemberWrite(f, row, "parent", host);
         panelUsageMemberCall(f, rows, "push", {row});
     }
     if (!editorLife(f, life)) return;
+    if (waiting && panelUsageRead(f, rows, "length").toInt() == 0) {
+        assistantMemberWrite(f, measuring, "model", consentNull()); if (!editorLife(f, life)) return;
+        const auto later = panelUsageContextRead(f, "measureLater");
+        assistantMemberWrite(f, later, "run", QJSValue(run)); assistantMemberWrite(f, later, "from", QJSValue(next));
+        if (editorLife(f, life)) panelUsageMemberCall(f, later, "start", {});
+        return;
+    }
     const auto widths = panelUsageGlobalCall(f, "fitColumns", {rows, panelUsageContextRead(f, "measuredWidths")});
     if (!editorLife(f, life)) return;
     // Drops the rows, and stops making any still being made.
@@ -6749,7 +6766,8 @@ void ApplicationInfo::tableOwnerCallback(int kind) const {
     }
     if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
     if (panelUsageTruth(first) && panelUsageTruth(panelUsageRead(f, first, "parent"))) projectInvoke(f, "table", "applyWidths", {panelUsageRead(f, first, "parent")});
-    if (editorLife(f, panelUsageContextRead(f, "ownerLife"))) projectInvoke(f, "table", "combineWidths");
+    // A header that changes after it was made measures the rows again: their cells may have changed with it.
+    if (editorLife(f, panelUsageContextRead(f, "ownerLife"))) projectInvoke(f, "table", "refit");
 }
 bool ApplicationInfo::tableRevealRow(int index) const {
     const auto f = panelUsageEngine(this);
