@@ -286,7 +286,8 @@ public:
         const bool parserCompatible=nativeSource=="79010b0c73ddec01abf80ce00037d138ec7c1b8d" || nativeSource=="c815d994d132fc31d10e26aaf4ac8385a965e518";
         fact(QStringLiteral("native_parser_abi"),{{"linked_source",QString::fromStdString(nativeSource)},
             {"linked_version",QString::fromLatin1(crysta::version())},{"compatible",parserCompatible},
-            {"snapshot_header_sha256","fee5a54128a7359ba7dd98e675ba5957958ec46f17ed8733257ec03d8aaba29a"}});
+            {"snapshot_header_sha256","063a933fe307fc84e2837de6effde831e435939b0b5de915cafdd1b5d0e86a78"},
+            {"original_header_sha256","fee5a54128a7359ba7dd98e675ba5957958ec46f17ed8733257ec03d8aaba29a"}});
         check.require(parserCompatible,QStringLiteral("UNREACHED: linked native revision has no proved compatible FIRST document-header snapshot"));
         if(!parserCompatible)return check.result();
         struct Input {const char* name;const char* token;double value,su;const char* rule;};

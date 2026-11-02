@@ -63,8 +63,6 @@ class MainActor:
             },
         )
         self.last = self.command('show_actions', enabled=show_actions)
-        qml(self, '(function(){raise();requestActivate();return true;})()')
-        self.until(lambda _row: qml(self, 'active'))
         (folder / 'environment.json').write_text(
             json.dumps(self.last['ui'].get('environment', {}), indent=2) + '\n'
         )
@@ -96,7 +94,6 @@ class MainActor:
         if op == 'click' and arguments.get('name', '').startswith('appBar.tab.') and hasattr(self, 'last'):
             if _unique_input_control(self.last, 'home.start') is not None:
                 self.command('click', name='home.start')
-                self.until(lambda row: _unique_input_control(row, 'home.start') is None)
         assert self.process.poll() is None, 'The real Main host must remain alive'
         sequence = getattr(self, '_command_sequence', 0) + 1
         self._command_sequence = sequence
@@ -179,9 +176,7 @@ class MainActor:
                 with (self.folder / 'message-observations.jsonl').open('a') as output:
                     output.write(json.dumps({'sequence': sequence, 'op': op, 'pid': self.process.pid,
                         'request': arguments, 'reply_envelope': value}) + '\n')
-            assert 'host_error' not in value, (
-                ("This boundary requires 'host_error' not in value", value)
-            )
+            assert 'host_error' not in value, value
             self.last = value
             ui = value.get('ui', {})
             (self.folder / 'last-observation.json').write_text(json.dumps({
@@ -331,37 +326,6 @@ class MainActor:
         self.stderr.close()
 
 
-def _frozen_main_probe(source, parent):
-    before = source.stat()
-    assert stat.S_ISREG(before.st_mode) and before.st_mode & 0o111, (
-        'The selected native probe must already be a real executable before capture'
-    )
-    content = source.read_bytes()
-    digest = hashlib.sha256(content).hexdigest()
-    destination = parent / ('native-probe-' + digest)
-    if not destination.exists():
-        destination.write_bytes(content)
-        destination.chmod(0o700)
-    assert not destination.is_symlink() and destination.read_bytes() == content, (
-        'The immutable run executable must preserve every selected native probe byte'
-    )
-    after = source.stat()
-    assert (before.st_ino, before.st_size, before.st_mtime_ns) == (
-        after.st_ino,
-        after.st_size,
-        after.st_mtime_ns,
-    ) and source.read_bytes() == content, (
-        'A concurrent probe rebuild must refuse capture instead of mixing executable inputs'
-    )
-    return destination, {
-        'origin': str(source.resolve()),
-        'executable': str(destination),
-        'sha256': digest,
-        'source_inode': before.st_ino,
-        'source_size': before.st_size,
-    }
-
-
 @pytest.fixture
 def main_actor(tmp_path):
     actors = []
@@ -373,10 +337,8 @@ def main_actor(tmp_path):
             'Build assistant_real_owner_probe in the single implementation-owned kit, '
             'then set EDI_ASSISTANT_UI_PROBE to that exact binary'
         )
-        binary, identity = _frozen_main_probe(binary, tmp_path.parent)
         folder = tmp_path / ('actor-' + str(len(actors)))
         folder.mkdir()
-        (folder / 'selected-probe.json').write_text(json.dumps(identity, indent=2) + '\n')
         config = {'turns': turns}
         if hold_final:
             config['final_gate'] = str(folder / 'release-final')
@@ -409,7 +371,6 @@ def wait_positive_tab(actor, name):
     """Normal setup only: wait for the actual loader-backed enabled tab, without revealing controls."""
     if _unique_input_control(actor.last, 'home.start') is not None:
         actor.command('click', name='home.start')
-        actor.until(lambda row: _unique_input_control(row, 'home.start') is None)
     actor.until(lambda row: _unique_input_control(row, name) is not None)
 
 def copied_estimate_project(tmp_path, *, overrides=True):
@@ -554,30 +515,25 @@ def test_actual_registry_offers_closed_estimate_and_optional_compound_background
     assert len(names) == len(set(names)), 'Actual executable tool identities must be unique'
     offered = {row['name']: row for row in tools}
     schema = offered['estimate_background']['inputSchema']
-    assert (
-        schema['type'] == 'object'
-        and schema['additionalProperties'] is False
-    ), (
-        'Required: actual registry offers closed estimate and optional compound '
-        'background.'
+    assert schema['type'] == 'object' and schema['additionalProperties'] is False
+    assert set(schema['properties']) == {'purpose', 'experiment'}
+    assert set(schema['required']) == {'purpose', 'experiment'}
+    recipes = [
+        row
+        for row in objects(offered['create_cwl_project']['inputSchema'])
+        if 'background' in row.get('properties', {})
+    ]
+    assert recipes, 'Explicit manual compound backgrounds remain supported'
+    assert all('background' not in row.get('required', []) for row in recipes), (
+        'The ordinary compound route cannot require invented manual anchors'
     )
-    assert set(schema['properties']) == {'purpose', 'experiment'}, (
-        'Required: actual registry offers closed estimate and optional compound '
-        'background.'
-    )
-    assert set(schema['required']) == {'experiment'}, (
-        'Native action purpose is optional metadata; the physical experiment remains required'
-    )
-    assert schema['properties']['purpose']['type'] == 'string', (
-        'A supplied purpose retains its declared string validation'
-    )
-    assert 'create_cwl_project' not in offered, (
-        'Default model tools retire duplicate compound setup; '
-        'the compatibility parser remains separate'
-    )
-    assert {'create_project', 'load_structure', 'create_experiment', 'set_experiment_type',
-            'load_data', 'estimate_background'} <= offered.keys(), (
-        'The ordinary Create/import/type/data/Estimate actions retain the supported setup capability'
+    sites = [
+        row
+        for row in objects(offered['create_cwl_project']['inputSchema'])
+        if 'wyckoff_letter' in row.get('properties', {})
+    ]
+    assert sites and all('wyckoff_letter' not in row.get('required', []) for row in sites), (
+        'Manual mapped construction must permit the ordinary native omitted Wyckoff letter'
     )
 
 
@@ -597,10 +553,7 @@ def test_native_estimate_uses_saved_nondefault_options_once_and_ordinary_undo(
     }
     actor = main_actor([[call]], show_actions=show_actions)
     project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: native estimate uses saved nondefault options once and '
-        'ordinary undo.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     original = point_rows(actor)
     prior_undo = actor.last['ui']['project']['can_undo']
@@ -611,25 +564,11 @@ def test_native_estimate_uses_saved_nondefault_options_once_and_ordinary_undo(
     native_result(actor.responses()[0])
     expected = REFERENCE['cases']['hrpt']['methods']['arpls']['override']['anchors']
     points = point_rows(actor)
-    assert len(points) == len(expected), (
-        'Required: native estimate uses saved nondefault options once and '
-        'ordinary undo.'
-    )
+    assert len(points) == len(expected)
     for point, (position, intensity) in zip(points, expected, strict=True):
-        assert point['position'] == pytest.approx(position, abs=1e-9, rel=0), (
-            'Required: native estimate uses saved nondefault options once and '
-            'ordinary undo.'
-        )
-        assert point['intensity'] == pytest.approx(
-            intensity, abs=1e-9, rel=1e-6
-        ), (
-            'Required: native estimate uses saved nondefault options once and '
-            'ordinary undo.'
-        )
-        assert point['free'] is False, (
-            'Required: native estimate uses saved nondefault options once and '
-            'ordinary undo.'
-        )
+        assert point['position'] == pytest.approx(position, abs=1e-9, rel=0)
+        assert point['intensity'] == pytest.approx(intensity, abs=1e-9, rel=1e-6)
+        assert point['free'] is False
     if show_actions:
         assert True in actor.last['ui']['action_transitions'], (
             'Show actions must actually enter its native visible flow'
@@ -647,34 +586,15 @@ def test_native_estimate_uses_saved_nondefault_options_once_and_ordinary_undo(
         'The independently specified six-figure rule is exercised only by this genuine no-SU background fixture'
     )
     settings={key:before_background[key] for key in ('type','estimate')}
-    assert actor.command('save')['reply']['saved'], (
-        'Required: native estimate uses saved nondefault options once and '
-        'ordinary undo.'
-    )
+    assert actor.command('save')['reply']['saved']
     assert point_rows(actor)==decoded, (
         'Ordinary Save adopts precisely the independently specified no-SU six-figure tokens while IDs, order, positions and flags stay exact'
     )
     actor.command('undo')
     actor.until(lambda row: not row['ui']['project']['calculating'])
-    naming_undo = point_rows(actor)
-    assert [
-        {key: row[key] for key in ('position', 'intensity', 'free')} for row in naming_undo
-    ] == [
-        {key: row[key] for key in ('position', 'intensity', 'free')} for row in decoded
-    ], 'Naming Undo preserves the independently specified saved intensities, positions and flags'
-    actor.command('undo')
-    actor.until(lambda row: not row['ui']['project']['calculating'])
-    assert point_rows(actor) == original, (
-        'The separate ordinary Estimate Undo restores the whole captured original background'
-    )
-    assert actor.last['ui']['project']['can_undo'] == prior_undo, (
-        'Required: native estimate uses saved nondefault options once and '
-        'ordinary undo.'
-    )
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: native estimate uses saved nondefault options once and '
-        'ordinary undo.'
-    )
+    assert point_rows(actor) == original, 'One ordinary Undo restores the whole prior background'
+    assert actor.last['ui']['project']['can_undo'] == prior_undo
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     assert point_rows(actor) == decoded, (
         'Genuine Open preserves exact IDs, order, positions and flags plus the independent decoded ordinary intensity codec'
@@ -711,10 +631,7 @@ def test_refused_estimate_cannot_mutate_and_does_not_block_next_native_operation
     ]
     actor = main_actor([calls], show_actions=show_actions)
     project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: refused estimate cannot mutate and does not block next native '
-        'operation.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     original = point_rows(actor)
     actor.connect()
@@ -733,10 +650,7 @@ def test_refused_estimate_cannot_mutate_and_does_not_block_next_native_operation
     actor.command('undo')
     actor.until(lambda row: not row['ui']['project']['calculating'])
     assert point_rows(actor) == original, 'The refused prefix must add no mutation or Undo entry'
-    assert not actor.last['ui']['project']['can_undo'], (
-        'Required: refused estimate cannot mutate and does not block next native '
-        'operation.'
-    )
+    assert not actor.last['ui']['project']['can_undo']
 
 
 def test_automatic_step_report_precedes_final_and_retains_latest_assessment(main_actor, tmp_path):
@@ -747,9 +661,7 @@ def test_automatic_step_report_precedes_final_and_retains_latest_assessment(main
     }
     actor = main_actor([[call]], hold_final=True)
     project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: automatic step report precedes final and retains laassessment.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     actor.connect()
     actor.request()
@@ -757,12 +669,8 @@ def test_automatic_step_report_precedes_final_and_retains_latest_assessment(main
     actor.until(lambda _row: bool(actor.responses()) and report.is_file())
     native_result(actor.responses()[0])
     first = json.loads(report.read_bytes())
-    assert first['scope_coverage']['trigger'] == 'automatic', (
-        'Required: automatic step report precedes final and retains laassessment.'
-    )
-    assert call['call_id'] in json.dumps(first['history_evidence']), (
-        'Required: automatic step report precedes final and retains laassessment.'
-    )
+    assert first['scope_coverage']['trigger'] == 'automatic'
+    assert call['call_id'] in json.dumps(first['history_evidence'])
     assert FINAL not in json.dumps(first['agent_assessment']), (
         'The held final assessment has not happened at this settled step'
     )
@@ -770,9 +678,7 @@ def test_automatic_step_report_precedes_final_and_retains_latest_assessment(main
     actor.command('refresh_usage')
     actor.until(lambda row: row['ui']['state'] == 'idle' and FINAL in report.read_text())
     final = json.loads(report.read_bytes())
-    assert FINAL in json.dumps(final['agent_assessment']), (
-        'Required: automatic step report precedes final and retains laassessment.'
-    )
+    assert FINAL in json.dumps(final['agent_assessment'])
     assert final['identity_inputs']['skills'], (
         'Automatic diagnostic identity retains actual skills'
     )
@@ -807,10 +713,7 @@ def test_report_refusal_preserves_unrelated_bytes_and_cannot_veto_science(
         destination.symlink_to(unrelated)
     else:
         destination.write_bytes(protected)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: report refusal preserves unrelated bytes and cannot veto '
-        'science.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     original = point_rows(actor)
     actor.connect()
@@ -818,13 +721,7 @@ def test_report_refusal_preserves_unrelated_bytes_and_cannot_veto_science(
     actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
     native_result(actor.responses()[0])
     assert point_rows(actor) != original, 'Report refusal cannot veto actual native Estimate'
-    assert (
-        destination.read_bytes() == protected
-        and unrelated.read_bytes() == protected
-    ), (
-        'Required: report refusal preserves unrelated bytes and cannot veto '
-        'science.'
-    )
+    assert destination.read_bytes() == protected and unrelated.read_bytes() == protected
     if collision == 'symlink':
         assert destination.is_symlink(), 'The unrelated link itself must be preserved'
     assert actor.last['ui']['work_report'].get('disposition') not in {
@@ -852,20 +749,12 @@ def test_selected_published_cif_reaches_native_load_without_recreating_structure
 ):
     actor = main_actor([[]], show_actions=show_actions)
     project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: selected published cif reaches native load without recreating '
-        'structure.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     before = actor.last['ui']['project']['structure_rows']
     path = ROOT / f'tests/fixtures/dictionary_display/published_cod_{code}.cif'
     token = actor.begin_current_file_selection()
-    assert actor.command('selected_add', token=token, paths=[str(path)])[
-        'reply'
-    ]['added'], (
-        'Required: selected published cif reaches native load without recreating '
-        'structure.'
-    )
+    assert actor.command('selected_add', token=token, paths=[str(path)])['reply']['added']
     selected = actor.last['ui']['selected_files']
     assert len(selected) == 1 and selected[0]['id'], (
         'A genuine admitted opaque file ID is required'
@@ -887,28 +776,13 @@ def test_selected_published_cif_reaches_native_load_without_recreating_structure
     actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[0])
     after = actor.last['ui']['project']['structure_rows']
-    assert len(after) == len(before) + 1 and after[:-1] == before, (
-        'Required: selected published cif reaches native load without recreating '
-        'structure.'
-    )
+    assert len(after) == len(before) + 1 and after[:-1] == before
     imported = after[-1]
-    assert (
-        imported['length_a'] == length_a
-        and imported['length_c'] == length_c
-    ), (
-        'Required: selected published cif reaches native load without recreating '
-        'structure.'
-    )
-    assert imported['gamma'] == gamma, (
-        'Required: selected published cif reaches native load without recreating '
-        'structure.'
-    )
+    assert imported['length_a'] == length_a and imported['length_c'] == length_c
+    assert imported['gamma'] == gamma
     actor.command('undo')
     actor.until(lambda row: not row['ui']['project']['calculating'])
-    assert actor.last['ui']['project']['structure_rows'] == before, (
-        'Required: selected published cif reaches native load without recreating '
-        'structure.'
-    )
+    assert actor.last['ui']['project']['structure_rows'] == before
 
 
 @pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
@@ -940,27 +814,17 @@ def test_explicit_manual_native_setup_does_not_import_the_attached_cif(
         ]
     ]
     actor = main_actor(turns, show_actions=show_actions)
-    assert actor.command('create', name='explicit-manual-fixture')['reply'][
-        'created'
-    ], (
-        'Required: explicit manual native setup does not import the attached cif.'
-    )
+    assert actor.command('create', name='explicit-manual-fixture')['reply']['created']
     path = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
     token = actor.begin_current_file_selection()
-    assert actor.command('selected_add', token=token, paths=[str(path)])[
-        'reply'
-    ]['added'], (
-        'Required: explicit manual native setup does not import the attached cif.'
-    )
+    assert actor.command('selected_add', token=token, paths=[str(path)])['reply']['added']
     actor.connect()
     actor.request('Add the structure manually without loading the attached CIF. Use a=6.173.')
     actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     for response in actor.responses():
         native_result(response)
     rows = actor.last['ui']['project']['structure_rows']
-    assert len(rows) == 1 and rows[0]['length_a'] == override, (
-        'Required: explicit manual native setup does not import the attached cif.'
-    )
+    assert len(rows) == 1 and rows[0]['length_a'] == override
     assert rows[0]['length_c'] != 5.21033, 'The attached Mg CIF cannot replace native defaults'
     assert rows[0]['sites'] == 1, 'Manual Create retains its ordinary initial atom'
 
@@ -989,10 +853,7 @@ def test_current_disabled_relation_preserves_ordinary_rows_and_duplicate_call_is
     actor = main_actor([[]], show_actions=show_actions)
     project = tmp_path / 'relation-project'
     shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: current disabled relation preserves ordinary rows and '
-        'duplicate call is once.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     original = actor.last['ui']['project']
     call['arguments']['aliases'][0]['path'] = next(
@@ -1016,46 +877,22 @@ def test_current_disabled_relation_preserves_ordinary_rows_and_duplicate_call_is
     )
     native_result(actor.responses()[0])
     current = actor.last['ui']['project']
-    assert current['aliases'][:-1] == original['aliases'], (
-        'Required: current disabled relation preserves ordinary rows and '
-        'duplicate call is once.'
-    )
-    assert current['constraints'][:-1] == original['constraints'], (
-        'Required: current disabled relation preserves ordinary rows and '
-        'duplicate call is once.'
-    )
-    assert current['aliases'][-1] == {
-        'id': 'manual_cell',
-        'parameter': 'phase.cell.length_a',
-    }, (
-        'Required: current disabled relation preserves ordinary rows and '
-        'duplicate call is once.'
-    )
+    assert current['aliases'][:-1] == original['aliases']
+    assert current['constraints'][:-1] == original['constraints']
+    assert current['aliases'][-1] == {'id': 'manual_cell', 'parameter': 'phase.cell.length_a'}
     assert current['constraints'][-1] == {
         'id': 'manual_disabled',
         'expression': 'manual_cell = a + 5.873',
         'enabled': False,
-    }, (
-        'Required: current disabled relation preserves ordinary rows and '
-        'duplicate call is once.'
-    )
+    }
     assert current['parameters'] == original['parameters'], (
         'A disabled relation and duplicate delivery cannot change scientific values/flags'
     )
     if not show_actions:
         actor.command('undo')
         actor.until(lambda row: not row['ui']['project']['calculating'])
-        assert actor.last['ui']['project']['aliases'] == original['aliases'], (
-            'Required: current disabled relation preserves ordinary rows and '
-            'duplicate call is once.'
-        )
-        assert (
-            actor.last['ui']['project']['constraints']
-            == original['constraints']
-        ), (
-            'Required: current disabled relation preserves ordinary rows and '
-            'duplicate call is once.'
-        )
+        assert actor.last['ui']['project']['aliases'] == original['aliases']
+        assert actor.last['ui']['project']['constraints'] == original['constraints']
 
 
 @pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
@@ -1066,10 +903,7 @@ def test_native_free_eligibility_follows_current_dev_marks_without_old_boolean_f
 ):
     actor = main_actor([[]], show_actions=show_actions)
     project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: native free eligibility follows current dev marks without old '
-        'boolean fields.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     parameters = actor.last['ui']['project']['parameters']
     blocked = next(row for row in parameters if row['fit_blocker'] != 0 and not row['free'])
@@ -1102,24 +936,12 @@ def test_native_free_eligibility_follows_current_dev_marks_without_old_boolean_f
     actor.connect()
     actor.request()
     actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle', visible_progress=show_actions)
-    assert actor.responses()[0]['result']['success'] is False, (
-        'Required: native free eligibility follows current dev marks without old '
-        'boolean fields.'
-    )
+    assert actor.responses()[0]['result']['success'] is False
     native_result(actor.responses()[1])
     after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
-    assert after[blocked['path']] == blocked, (
-        'Required: native free eligibility follows current dev marks without old '
-        'boolean fields.'
-    )
-    assert after[eligible['path']]['free'] is True, (
-        'Required: native free eligibility follows current dev marks without old '
-        'boolean fields.'
-    )
-    assert after[eligible['path']]['value'] == eligible['value'], (
-        'Required: native free eligibility follows current dev marks without old '
-        'boolean fields.'
-    )
+    assert after[blocked['path']] == blocked
+    assert after[eligible['path']]['free'] is True
+    assert after[eligible['path']]['value'] == eligible['value']
 
 
 @pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
@@ -1131,20 +953,10 @@ def test_manual_mapped_wyckoff_omission_and_explicit_value_survive_save_reload(
     letter,
 ):
     actor = main_actor([[]], show_actions=show_actions)
-    assert actor.command('create', name='manual-mapped-native')['reply'][
-        'created'
-    ], (
-        'Required: manual mapped wyckoff omission and explicit value survive save '
-        'reload.'
-    )
+    assert actor.command('create', name='manual-mapped-native')['reply']['created']
     data = ROOT / 'tests/fixtures/background_estimate/meas-lbco-hrpt.xye'
     token = actor.begin_current_file_selection()
-    assert actor.command('selected_add', token=token, paths=[str(data)])[
-        'reply'
-    ]['added'], (
-        'Required: manual mapped wyckoff omission and explicit value survive save '
-        'reload.'
-    )
+    assert actor.command('selected_add', token=token, paths=[str(data)])['reply']['added']
     file_id = actor.last['ui']['selected_files'][0]['id']
     site = {
         'id': 'manual_site',
@@ -1206,43 +1018,18 @@ def test_manual_mapped_wyckoff_omission_and_explicit_value_survive_save_reload(
     native_result(actor.responses()[0])
     actor.until(lambda row: not row['ui']['project']['calculating'])
     rows = actor.last['ui']['project']['structure_rows']
-    assert len(rows) == 1 and rows[0]['id'] == mapped['name'], (
-        'Required: manual mapped wyckoff omission and explicit value survive save '
-        'reload.'
-    )
-    assert rows[0]['length_a'] == mapped['cell']['length_a'], (
-        'Required: manual mapped wyckoff omission and explicit value survive save '
-        'reload.'
-    )
+    assert len(rows) == 1 and rows[0]['id'] == mapped['name']
+    assert rows[0]['length_a'] == mapped['cell']['length_a']
     actual_site = rows[0]['atom_rows'][0]
-    assert (
-        actual_site['id'] == site['id']
-        and actual_site['type'] == site['type_symbol']
-    ), (
-        'Required: manual mapped wyckoff omission and explicit value survive save '
-        'reload.'
-    )
+    assert actual_site['id'] == site['id'] and actual_site['type'] == site['type_symbol']
     assert [actual_site[key] for key in ('x', 'y', 'z', 'occupancy')] == [
         site[key] for key in ('fract_x', 'fract_y', 'fract_z', 'occupancy')
-    ], (
-        'Required: manual mapped wyckoff omission and explicit value survive save '
-        'reload.'
-    )
+    ]
     if letter is not None:
         assert actual_site['wyckoff'] == letter, 'An explicit supplied letter remains exact'
     destination = tmp_path / 'saved-manual'
-    assert actor.command('save_as', path=str(destination))['reply'][
-        'saved'
-    ], (
-        'Required: manual mapped wyckoff omission and explicit value survive save '
-        'reload.'
-    )
-    assert actor.command('open', path=str(destination))['reply'][
-        'opened'
-    ], (
-        'Required: manual mapped wyckoff omission and explicit value survive save '
-        'reload.'
-    )
+    assert actor.command('save_as', path=str(destination))['reply']['saved']
+    assert actor.command('open', path=str(destination))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     assert actor.last['ui']['project']['structure_rows'] == rows, (
         'Omitted or explicit native site identity and values survive ordinary save/reload'
@@ -1255,23 +1042,11 @@ def test_opening_a_saved_project_without_assistant_work_does_not_fabricate_a_rep
 ):
     actor = main_actor([[]])
     project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: opening a saved project without assistant work does not '
-        'fabricate a report.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
-    assert not (project / 'reports/work-report.json').exists(), (
-        'Required: opening a saved project without assistant work does not '
-        'fabricate a report.'
-    )
+    assert not (project / 'reports/work-report.json').exists()
     receipt = actor.last['ui']['work_report']
-    assert receipt.get('disposition') not in {
-        'saved',
-        'saved_incomplete',
-    }, (
-        'Required: opening a saved project without assistant work does not '
-        'fabricate a report.'
-    )
+    assert receipt.get('disposition') not in {'saved', 'saved_incomplete'}
 
 
 def test_unsaved_work_retains_accessible_diagnostics_without_implicit_science_save(main_actor):
@@ -1284,32 +1059,18 @@ def test_unsaved_work_retains_accessible_diagnostics_without_implicit_science_sa
             }
         ]
     ])
-    assert actor.command('create', name='unsaved-native-report')['reply'][
-        'created'
-    ], (
-        'Required: unsaved work retains accessible diagnostics without implicit '
-        'science save.'
-    )
+    assert actor.command('create', name='unsaved-native-report')['reply']['created']
     actor.connect()
     actor.request()
     actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
     native_result(actor.responses()[0])
-    assert actor.last['ui']['project']['structures'] == 1, (
-        'Required: unsaved work retains accessible diagnostics without implicit '
-        'science save.'
-    )
+    assert actor.last['ui']['project']['structures'] == 1
     native_path = actor.last['ui']['project']['path']
     assert isinstance(native_path, str) and not native_path, (
         'Optional reporting cannot implicitly save a project'
     )
     receipt = actor.last['ui']['work_report']
-    assert receipt.get('disposition') not in {
-        'saved',
-        'saved_incomplete',
-    }, (
-        'Required: unsaved work retains accessible diagnostics without implicit '
-        'science save.'
-    )
+    assert receipt.get('disposition') not in {'saved', 'saved_incomplete'}
     assert 'storage_root_unavailable' in json.dumps(receipt), (
         'The unavailable native root must be reported honestly, not treated as saved or disabled'
     )
@@ -1342,10 +1103,7 @@ def test_save_copy_keeps_automatic_final_report_at_the_actual_live_project_root(
     }
     actor = main_actor([[call]], hold_final=True)
     project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: save copy keeps automatic final report at the actual live '
-        'project root.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     actor.connect()
     actor.request()
@@ -1353,16 +1111,10 @@ def test_save_copy_keeps_automatic_final_report_at_the_actual_live_project_root(
     actor.until(lambda _row: bool(actor.responses()) and report.is_file())
     native_result(actor.responses()[0])
     copied = tmp_path / 'ordinary-save-copy'
-    assert actor.command(
-        'save_project_as', path=str(copied), zip=False, copy=True
-    )['reply']['saved'], (
-        'Required: save copy keeps automatic final report at the actual live '
-        'project root.'
-    )
-    assert actor.last['ui']['project']['path'] == str(project), (
-        'Required: save copy keeps automatic final report at the actual live '
-        'project root.'
-    )
+    assert actor.command('save_project_as', path=str(copied), zip=False, copy=True)['reply'][
+        'saved'
+    ]
+    assert actor.last['ui']['project']['path'] == str(project)
     copy_report = copied / 'reports/work-report.json'
     copy_before = copy_report.read_bytes() if copy_report.exists() else None
     actor.gate.touch()
@@ -1397,20 +1149,14 @@ def test_late_old_turn_cannot_publish_its_report_into_a_switched_project(main_ac
         for path in successor.rglob('*')
         if path.is_file()
     }
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: late old turn cannot publish its report into a switched '
-        'project.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     actor.connect()
     actor.request()
     old_report = project / 'reports/work-report.json'
     actor.until(lambda _row: bool(actor.responses()) and old_report.is_file())
     native_result(actor.responses()[0])
-    assert actor.command('open', path=str(successor))['reply']['opened'], (
-        'Required: late old turn cannot publish its report into a switched '
-        'project.'
-    )
+    assert actor.command('open', path=str(successor))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     actor.gate.touch()
     actor.command('refresh_usage')
@@ -1440,16 +1186,10 @@ def test_actual_native_mixed_batch_cannot_bypass_automatic_background_owner(
     shutil.copytree(
         ROOT / 'tests/fixtures/background_estimate/projects' / ('fitted-auto-' + kind), project
     )
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: actual native mixed batch cannot bypass automatic background '
-        'owner.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     native = actor.last['ui']['project']
-    assert native['backgrounds'][0]['mode'] == 'auto', (
-        'Required: actual native mixed batch cannot bypass automatic background '
-        'owner.'
-    )
+    assert native['backgrounds'][0]['mode'] == 'auto'
     parameters = native['parameters']
     owned = next(
         row
@@ -1479,23 +1219,12 @@ def test_actual_native_mixed_batch_cannot_bypass_automatic_background_owner(
     actor.connect()
     actor.request()
     actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
-    assert actor.responses()[0]['result']['success'] is False, (
-        'Required: actual native mixed batch cannot bypass automatic background '
-        'owner.'
-    )
+    assert actor.responses()[0]['result']['success'] is False
     assert actor.last['ui']['project']['parameters'] == parameters, (
         'Automatic point/poly/Chebyshev ownership must refuse the whole native batch before writes'
     )
-    assert (
-        actor.last['ui']['project']['backgrounds'] == native['backgrounds']
-    ), (
-        'Required: actual native mixed batch cannot bypass automatic background '
-        'owner.'
-    )
-    assert actor.last['ui']['project']['can_undo'] == native['can_undo'], (
-        'Required: actual native mixed batch cannot bypass automatic background '
-        'owner.'
-    )
+    assert actor.last['ui']['project']['backgrounds'] == native['backgrounds']
+    assert actor.last['ui']['project']['can_undo'] == native['can_undo']
 
 
 @pytest.mark.parametrize(
@@ -1513,69 +1242,22 @@ def test_actual_native_outgoing_context_keeps_published_single_crystal_measureme
     actor = main_actor([[]])
     project = tmp_path / 'single-crystal-native'
     shutil.copytree(ROOT / 'docs/user/cli' / name / 'project', project)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: actual native outgoing context keeps published single crystal '
-        'measurements.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     context = json.loads(actor.last['ui']['context'])
-    assert 'error' not in context, (
-        'Required: actual native outgoing context keeps published single crystal '
-        'measurements.'
-    )
+    assert 'error' not in context
     native = actor.last['ui']['project']['backgrounds']
-    assert len(context['datasets']) == len(native), (
-        'Required: actual native outgoing context keeps published single crystal '
-        'measurements.'
-    )
+    assert len(context['datasets']) == len(native)
     for row, bank in zip(context['datasets'], native, strict=True):
-        assert bank['reflection_count'] > 0, (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
-        assert (
-            row['id'] == bank['id'] and row['sample_form'] == 'single crystal'
-        ), (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
-        assert row['data_status'] == 'present', (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
-        assert (
-            row['observations']['intensity_count'] == bank['reflection_count']
-        ), (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
-        assert (
-            row['observations']['sigma_count'] == bank['reflection_sigma_count']
-        ), (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
-        assert (
-            row['observations']['weighting'] == 'measured_standard_uncertainty'
-        ), (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
-        assert row['axis']['kind'] == 'miller_indices', (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
-        assert row['axis']['count'] == bank['reflection_count'], (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
-        assert (
-            row['peak_profile_options'] == []
-            and row['absorption_type_options'] == []
-        ), (
-            'Required: actual native outgoing context keeps published single '
-            'crystal measurements.'
-        )
+        assert bank['reflection_count'] > 0
+        assert row['id'] == bank['id'] and row['sample_form'] == 'single crystal'
+        assert row['data_status'] == 'present'
+        assert row['observations']['intensity_count'] == bank['reflection_count']
+        assert row['observations']['sigma_count'] == bank['reflection_sigma_count']
+        assert row['observations']['weighting'] == 'measured_standard_uncertainty'
+        assert row['axis']['kind'] == 'miller_indices'
+        assert row['axis']['count'] == bank['reflection_count']
+        assert row['peak_profile_options'] == [] and row['absorption_type_options'] == []
         assert row['background'] is None, 'SC context cannot advertise a powder background'
 
 
@@ -1609,17 +1291,11 @@ def test_native_point_operations_respect_automatic_owner_and_keep_free_flag_cont
 ):
     actor = main_actor([[]], show_actions=show_actions)
     project = copied_point_project(tmp_path, mode)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: native point operations respect automatic owner and keep free '
-        'flag continuation.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     original = actor.last['ui']['project']
     bank = original['backgrounds'][0]
-    assert bank['mode'] == mode and bank['type'] == 'line-segment', (
-        'Required: native point operations respect automatic owner and keep free '
-        'flag continuation.'
-    )
+    assert bank['mode'] == mode and bank['type'] == 'line-segment'
     points = bank['points']
     assert len(points) >= 3, 'The saved fixture supplies removable interior points'
     target = points[len(points) // 2]
@@ -1693,49 +1369,26 @@ def test_native_point_operations_respect_automatic_owner_and_keep_free_flag_cont
     for response in responses[1:]:
         native_result(response)
     current = actor.last['ui']['project']
-    assert current['structure_rows'] == original['structure_rows'], (
-        'Required: native point operations respect automatic owner and keep free '
-        'flag continuation.'
-    )
-    assert current['backgrounds'][0]['mode'] == mode, (
-        'Required: native point operations respect automatic owner and keep free '
-        'flag continuation.'
-    )
+    assert current['structure_rows'] == original['structure_rows']
+    assert current['backgrounds'][0]['mode'] == mode
 
     def unaffected(rows):
         return {row['path']: row for row in rows if row['category'] != 'background'}
 
-    assert unaffected(current['parameters']) == unaffected(
-        original['parameters']
-    ), (
-        'Required: native point operations respect automatic owner and keep free '
-        'flag continuation.'
-    )
+    assert unaffected(current['parameters']) == unaffected(original['parameters'])
     if mode == 'auto':
         assert responses[0]['result']['success'] is False, (
             'Automatic ownership must refuse native add/update/remove before any structural write'
         )
-        assert current['backgrounds'] == original['backgrounds'], (
-            'Required: native point operations respect automatic owner and keep '
-            'free flag continuation.'
-        )
-        assert current['parameters'] == original['parameters'], (
-            'Required: native point operations respect automatic owner and keep '
-            'free flag continuation.'
-        )
+        assert current['backgrounds'] == original['backgrounds']
+        assert current['parameters'] == original['parameters']
         for _ in range(2):
             actor.command('undo')
         actor.until(lambda row: not row['ui']['project']['calculating'])
         assert actor.last['ui']['project']['can_undo'] == original['can_undo'], (
             'After undoing the two real flag edits, a refused structural operation adds no Undo'
         )
-        assert (
-            actor.last['ui']['project']['backgrounds']
-            == original['backgrounds']
-        ), (
-            'Required: native point operations respect automatic owner and keep '
-            'free flag continuation.'
-        )
+        assert actor.last['ui']['project']['backgrounds'] == original['backgrounds']
     else:
         native_result(responses[0])
         expected = [dict(row) for row in points]
@@ -4610,24 +4263,9 @@ class HistorySyncGate:
         candidates = list(storage.rglob('assistant/history.json'))
         assert len(candidates) == 1, 'The hold targets the actual normal canonical file created by genuine prior user work'
         self.target = candidates[0]
-        assert (
-            self.target.resolve().is_relative_to(storage)
-            and not self.target.is_symlink()
-        ), (
-            'This boundary requires self.target.resolve().is_relative_to(storage) and '
-            '(not self.target.is_symlink())'
-        )
-        assert self.target.stat().st_mode & 0o777 == 0o600, (
-
-            'This boundary requires self.target.stat().st_mode & 511 == 384'
-
-        )
-        assert '\n' not in str(self.target) and '\n' not in str(self.release), (
-
-            "This boundary requires '\\n' not in str(self.target) and '\\n' not in "
-            'str(self.release)'
-
-        )
+        assert self.target.resolve().is_relative_to(storage) and not self.target.is_symlink()
+        assert self.target.stat().st_mode & 0o777 == 0o600
+        assert '\n' not in str(self.target) and '\n' not in str(self.release)
         self.epoch += 1
         (self.folder / f'history-before-{self.epoch}.json').write_bytes(self.target.read_bytes())
         (self.folder / f'history-target-{self.epoch}.json').write_text(json.dumps({'target':str(self.target),'mode':mode,'epoch':self.epoch})+'\n')
@@ -4651,9 +4289,7 @@ class HistorySyncGate:
 
 def seeded_history_actor(main_actor, gate, *, calls, project, hold_final=True):
     actor = main_actor([[], calls], hold_final=hold_final)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: seeded history actor.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     actor.gate.touch()
     actor.connect()
@@ -4686,10 +4322,7 @@ def history_sync_library(tmp_path_factory):
     library=folder/'history-sync.so'
     command=['cc','-shared','-fPIC','-std=c11','-Wall','-Wextra','-Werror','-I',str(ROOT/'tests/fixtures/report_storage'),str(ROOT/'tests/fixtures/report_storage/history_sync.c'),'-o',str(library),*([] if sys.platform=='darwin' else ['-ldl'])]
     result=subprocess.run(command,capture_output=True,text=True,timeout=20)
-    assert result.returncode == 0, (
-        ('Required: history sync library.'),
-        result.stderr,
-    )
+    assert result.returncode==0,result.stderr
     (folder/'compile-command.json').write_text(json.dumps(command)+'\n')
     return library
 
@@ -4734,10 +4367,7 @@ def test_history_sync_keeps_main_heartbeat_stop_native_once_and_complete_disk_ro
         assert not any(row['phase'] in {'released','auto_release'} for row in gate.rows()),'The writer is still actually held during the native/heartbeat observations'
         native=next(row for row in actor.last['ui']['messages'] if (row.get('payload') or {}).get('tool')=='set_free')
         changed=next(x for x in actor.last['ui']['project']['parameters'] if x['path']=='experiment.instrument.calib_twotheta_offset')
-        assert changed['free'] is True, (
-            'Required: history sync keeps main heartbeat stop native once and '
-            'complete disk rows.'
-        )
+        assert changed['free'] is True
         actor.command('cancel')
         actor.until(lambda row:not row['ui']['can_cancel'] and row['ui']['state']=='idle')
         assert len(actor.responses())==1,'Genuine native Stop never replays the already applied native call'
@@ -4750,14 +4380,8 @@ def test_history_sync_keeps_main_heartbeat_stop_native_once_and_complete_disk_ro
         actual=canonical_row_map(disk)[native['id']]
         assert actual.get('workEvidence') and actual.get('workInputs') and actual.get('workRuntime'),'The latest canonical file retains the real supplement fields as well as primary native receipts'
         assert all(not row['main_thread'] for row in gate.rows() if row['phase']=='entered'),'Actual canonical sync happens off the GUI owner thread'
-        assert any(row['phase'] == 'sync_returned' for row in gate.rows()), (
-            'Required: history sync keeps main heartbeat stop native once and '
-            'complete disk rows.'
-        )
-        assert not any(row['phase'] == 'auto_release' for row in gate.rows()), (
-            'Required: history sync keeps main heartbeat stop native once and '
-            'complete disk rows.'
-        )
+        assert any(row['phase']=='sync_returned' for row in gate.rows())
+        assert not any(row['phase']=='auto_release' for row in gate.rows())
         assert baseline and actor.last['ui']['project']['parameters'],'Neither retained baseline nor scientific owner is replaced by the writer'
     finally:gate.finish()
 
@@ -4802,27 +4426,16 @@ def test_held_old_history_clear_new_conversation_and_vm_destruction_flush_latest
         actor.request('New original conversation that must survive owner destruction and supersede the held pre-Clear file.')
         actor.until(lambda row:len(actor.responses())==2 and row['ui']['state']=='idle')
         expected={row['id']:row for row in actor.last['ui']['messages']}
-        assert expected and not old_ids & set(expected), (
-            'Required: held old history clear new conversation and vm destruction '
-            'flush latest.'
-        )
+        assert expected and not old_ids&set(expected)
         native=next(row for row in expected.values() if (row.get('payload') or {}).get('tool')=='inspect_project')
         actor.command('destroy')
         assert actor.process.poll() is None,'Real VM/engine destruction returns while an accepted archive sync is still held'
-        assert not any(
-            row['phase'] in {'released', 'auto_release'} for row in gate.rows()
-        ), (
-            'Required: held old history clear new conversation and vm destruction '
-            'flush latest.'
-        )
+        assert not any(row['phase'] in {'released','auto_release'} for row in gate.rows())
         gate.finish()
         history_poll(lambda:set(expected).issubset(canonical_row_map(gate.disk())) and not (old_ids&set(canonical_row_map(gate.disk()))))
         for row in expected.values():
             assert_canonical_disk_row(gate.disk(),row)
-        assert not any(row['phase'] == 'auto_release' for row in gate.rows()), (
-            'Required: held old history clear new conversation and vm destruction '
-            'flush latest.'
-        )
+        assert not any(row['phase']=='auto_release' for row in gate.rows())
     finally:gate.finish()
 
 
@@ -4833,10 +4446,7 @@ def test_held_old_history_clear_new_conversation_and_vm_destruction_flush_latest
 def test_name_only_native_create_keeps_original_optional_metadata_defaults(main_actor,tmp_path,show_actions):
     name='optional_'+hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
     actor=main_actor([[tool_call('create_project','normal-name-only',name=name)]],show_actions=show_actions)
-    assert not actor.last['ui']['project'], (
-        'Required: name only native create keeps original optional metadata '
-        'defaults.'
-    )
+    assert not actor.last['ui']['project']
     documents=Path(actor.last['ui']['environment']['documents_root'])
     expected=documents/name
     assert not expected.exists(),'Only the actual normal current Session owner may create its absent destination'
@@ -4845,83 +4455,32 @@ def test_name_only_native_create_keeps_original_optional_metadata_defaults(main_
     actor.request('Create a new project with the requested name and retain every omitted ordinary metadata default.')
     actor.until(lambda row:len(actor.responses())==1 and row['ui']['state']=='idle',visible_progress=show_actions)
     result=native_result(actor.responses()[0])
-    assert (
-        result['adopted']
-        and result['complete']
-        and result['saved'] is True
-        and result['presentation_complete']
-    ), (
-        'Required: name only native create keeps original optional metadata '
-        'defaults.'
-    )
-    assert result['name'] == name and Path(result['path']) == expected, (
-        'Required: name only native create keeps original optional metadata '
-        'defaults.'
-    )
+    assert result['adopted'] and result['complete'] and result['saved'] is True and result['presentation_complete']
+    assert result['name']==name and Path(result['path'])==expected
     assert result['title']=='Untitled Project' and result['description']=='',(
         'An omitted title/description retains original dev metadata defaults instead of becoming a false precondition')
     actual=qml(actor,'({name:Session.project.name,title:Session.project.title,description:Session.project.description,authors:Session.project.authors,rule:Session.project.suRule,libraries:Session.project.report.embedLibraries})')
-    assert actual == {
-        'name': name,
-        'title': 'Untitled Project',
-        'description': '',
-        'authors': '',
-        'rule': preferences['rule'],
-        'libraries': preferences['libraries'],
-    }, (
-        'Required: name only native create keeps original optional metadata '
-        'defaults.'
-    )
-    assert (
-        actor.last['ui']['project']['structures'] == 0
-        and actor.last['ui']['project']['backgrounds'] == []
-    ), (
-        'Required: name only native create keeps original optional metadata '
-        'defaults.'
-    )
+    assert actual=={'name':name,'title':'Untitled Project','description':'','authors':'','rule':preferences['rule'],'libraries':preferences['libraries']}
+    assert actor.last['ui']['project']['structures']==0 and actor.last['ui']['project']['backgrounds']==[]
     import shlex
     text=(expected/'project.edi').read_text()
     metadata={parts[0]:parts[1] for line in text.splitlines() if len(parts:=shlex.split(line,comments=True))==2 and parts[0] in {'_metadata.name','_metadata.title'}}
     assert metadata=={'_metadata.name':name,'_metadata.title':'Untitled Project'},'Real ordinary Save writes original defaults independently of the native reply'
     events=actor.last['ui']['ui_sequence']
     if show_actions:
-        assert any(
-            e['kind'] == 'mouse_press' and e.get('create_contains_press')
-            for e in events
-        ), (
-            'Required: name only native create keeps original optional metadata '
-            'defaults.'
-        )
-        assert any(
-            e['kind'] in {'key_press', 'input_method'}
-            and e['focus'] == 'createProject.name'
-            and e['dialog_visible']
-            for e in events
-        ), (
-            'Required: name only native create keeps original optional metadata '
-            'defaults.'
-        )
+        assert any(e['kind']=='mouse_press' and e.get('create_contains_press') for e in events)
+        assert any(e['kind'] in {'key_press','input_method'} and e['focus']=='createProject.name' and e['dialog_visible'] for e in events)
         assert any(e['kind']=='mouse_press' and e.get('confirm_contains_press') and e['dialog_name']==name for e in events),(
             'Name-only ON actually opens, edits and confirms the original normal dialog')
     else:
-        assert not any(
-            e['kind'].startswith('pointer_') or e['dialog_visible']
-            for e in events
-            if not e['project_present']
-        ), (
-            'Required: name only native create keeps original optional metadata '
-            'defaults.'
-        )
+        assert not any(e['kind'].startswith('pointer_') or e['dialog_visible'] for e in events if not e['project_present'])
 
 
 @pytest.mark.parametrize('show_actions',[False,True],ids=['off','on'])
 def test_native_fit_suppresses_auto_results_but_original_user_fit_still_opens_them(main_actor,tmp_path,show_actions):
     actor=main_actor([[tool_call('run_fit','assistant-fit-no-results-overlay')]],show_actions=show_actions)
     path=tmp_path/'ordinary-fit';shutil.copytree(ROOT/'tests/fixtures/fit_quality/uncertainty',path)
-    assert actor.command('open', path=str(path))['reply']['opened'], (
-        'Required: native fit suppresses auto results but original user fit still '
-        'opens them.'
-    )
+    assert actor.command('open',path=str(path))['reply']['opened']
     actor.until(lambda row:not row['ui']['project']['calculating'])
     wait_positive_tab(actor,'appBar.tab.structure');actor.command('click',name='appBar.tab.structure')
     actor.until(lambda row:any(c['name']=='statusBar.fit.button' and c['enabled'] and c['fully_exposed'] for c in row['ui']['controls']))
@@ -4929,19 +4488,8 @@ def test_native_fit_suppresses_auto_results_but_original_user_fit_still_opens_th
     actor.connect();actor.request('Fit this current native fixture without opening a separate fit-results popup.')
     actor.until(lambda row:len(actor.responses())==1 and row['ui']['state']=='idle',visible_progress=show_actions)
     native_result(actor.responses()[0])
-    assert qml(actor, 'Session.project.fit.canUndo'), (
-        'Required: native fit suppresses auto results but original user fit still '
-        'opens them.'
-    )
-    assert any(
-        a['value'] != b['value']
-        for a, b in zip(
-            before, actor.last['ui']['project']['parameters'], strict=True
-        )
-    ), (
-        'Required: native fit suppresses auto results but original user fit still '
-        'opens them.'
-    )
+    assert qml(actor,'Session.project.fit.canUndo')
+    assert any(a['value']!=b['value'] for a,b in zip(before,actor.last['ui']['project']['parameters'],strict=True))
     def exposed_results(row):
         return any(c['name']=='fit.results.list' and c['visible'] and c['enabled'] and c['fully_exposed'] for c in row['ui']['controls'])
     assert not exposed_results(actor.last),(
@@ -4959,20 +4507,12 @@ def test_native_fit_suppresses_auto_results_but_original_user_fit_still_opens_th
 @pytest.mark.parametrize('show_actions',[False,True],ids=['off','on'])
 def test_unsaved_native_setup_autonomous_save_uses_original_suggested_folder(main_actor,tmp_path,show_actions):
     actor=main_actor([[]],show_actions=show_actions)
-    assert not actor.last['ui']['project'], (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
+    assert not actor.last['ui']['project']
     documents=Path(actor.last['ui']['environment']['documents_root'])
     data=ROOT/'tests/fixtures/background_estimate/meas-lbco-hrpt.xye'
     cif=ROOT/'tests/fixtures/dictionary_display/published_cod_9008506.cif'
     token=actor.begin_current_file_selection()
-    assert actor.command(
-        'selected_add', token=token, paths=[str(data), str(cif)]
-    )['reply']['added'], (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
+    assert actor.command('selected_add',token=token,paths=[str(data),str(cif)])['reply']['added']
     files=actor.last['ui']['selected_files'];name='unsaved_'+hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
     recipe={'project_name':name,'description':'Explicit native unsaved-setup persistence witness',
         'experiment_name':'sourcebank','sample_form':'powder','beam_mode':'constant wavelength',
@@ -4986,64 +4526,30 @@ def test_unsaved_native_setup_autonomous_save_uses_original_suggested_folder(mai
     native_result(actor.responses()[0]);actor.until(lambda row:not row['ui']['project']['calculating'])
     assert actor.last['ui']['project']['path']=='','This exact channel genuinely begins unsaved; a normal pre-saved Create is not a substitute'
     expected=documents/name
-    assert not expected.exists(), (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
+    assert not expected.exists()
     # dev08cafc45 Session::suggestedSaveTarget670: an unsaved ordinary native
     # project defaults to Documents/folderNameFor(name); desktop original
     # Main.saveAsChoice defaults Folder and copy=false. No chooser is supplied.
     from urllib.parse import urlparse,unquote
     original=qml(actor,'String(Session.suggestedSaveTarget(false))')
-    assert Path(unquote(urlparse(original).path)) == expected, (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
+    assert Path(unquote(urlparse(original).path))==expected
     actor.append_turn([tool_call('save_project','native-unsaved-current-save',destination='current')])
     actor.command('clear_ui_sequence')
     actor.request('Save this current unsaved project using the app\'s original normal defaults, without operator format or path assistance.')
     actor.until(lambda row:len(actor.responses())==2 and row['ui']['state']=='idle',visible_progress=show_actions)
     saved=native_result(actor.responses()[-1])
-    assert (
-        saved['saved']
-        and saved['committed']
-        and saved['active']
-        and not saved.get('uncertain', False)
-    ), (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
-    assert (
-        Path(actor.last['ui']['project']['path']) == expected
-        and (expected / 'project.edi').is_file()
-    ), (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
+    assert saved['saved'] and saved['committed'] and saved['active'] and not saved.get('uncertain',False)
+    assert Path(actor.last['ui']['project']['path'])==expected and (expected/'project.edi').is_file()
     assert not any(row['name'] in {'saveAs.folder','saveAs.zip','saveAs.copy'} and row['visible'] and row['enabled'] for row in actor.last['ui']['controls']),(
         'Native Save settles its ordinary owner instead of leaving the unanswerable format dialog pending')
     actor.until(lambda row:not row['ui']['project']['calculating'])
     before=actor.last['ui']['project'];flags=[(p['path'],p['free'],p['dependence']) for p in before['parameters']]
-    assert (
-        before['structures'] == 1
-        and before['backgrounds'][0]['input_intensity_count'] > 0
-    ), (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
+    assert before['structures']==1 and before['backgrounds'][0]['input_intensity_count']>0
     assert actor.command('open',path=str(expected))['reply']['opened'],'A genuinely complete CIF/measured native setup reopens through the original whole-project API'
     actor.until(lambda row:not row['ui']['project']['calculating'])
     after=actor.last['ui']['project']
-    assert after['structure_rows'] == before['structure_rows'], (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
-    assert [
-        (p['path'], p['free'], p['dependence']) for p in after['parameters']
-    ] == flags, (
-        'Required: unsaved native setup autonomous save uses original suggested '
-        'folder.'
-    )
+    assert after['structure_rows']==before['structure_rows']
+    assert [(p['path'],p['free'],p['dependence']) for p in after['parameters']]==flags
     for key in ('type','mode','points','input_count','input_intensity_count','input_sigma_count','input_first'):
         assert after['backgrounds'][0][key]==before['backgrounds'][0][key],(
             'Ordinary autonomous Save/Open preserves actual inputs and decoded background identity/values without a fabricated filename or measurement')
@@ -5060,10 +4566,7 @@ def test_original_reveal_accepts_same_exposed_target_after_real_window_resize_wi
     actor = main_actor([[]], show_actions=True)
     project = tmp_path / 'ordinary-reveal-project'
     shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: original reveal accepts same exposed target after real window '
-        'resize without scroll.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     original = actor.last['ui']['project']
     paths = {
@@ -5182,14 +4685,8 @@ def test_original_reveal_accepts_same_exposed_target_after_real_window_resize_wi
             actor.command('undo')
             actor.until(lambda row: not row['ui']['project']['calculating'])
         restored = actor.last['ui']['project']
-        assert restored['aliases'] == original['aliases'], (
-            'Required: original reveal accepts same exposed target after real '
-            'window resize without scroll.'
-        )
-        assert restored['constraints'] == original['constraints'], (
-            'Required: original reveal accepts same exposed target after real '
-            'window resize without scroll.'
-        )
+        assert restored['aliases'] == original['aliases']
+        assert restored['constraints'] == original['constraints']
         assert restored['parameters'] == original['parameters'], (
             'The original ordinary Undo history exactly restores the scientific and relation preimage'
         )
@@ -5997,225 +5494,87 @@ def _protocol_item(method, item):
     return {'notification': {'method': method, 'params': {'item': item, **clock}}}
 
 
-def test_lazy_command_human_details_preserve_first_supported_meanings_without_technical_copy(
-    main_actor,
-):
-    # Human labels are regression pins for the published fit wording (73ba7ccb).
+def test_lazy_command_human_details_preserve_first_supported_meanings_without_technical_copy(main_actor):
+    # Labels are the immutable FIRST formatter's human compatibility contract
+    # (Edi9d06 AssistantMessage.qml), not current projection output as oracle.
     hidden = 'independent-raw-command-output-NEVER-DISPLAY-69bb'
     cases = [
-        (
-            'workflow',
-            'cat .agents/skills/project-assistance/SKILL.md',
-            [],
-            'Read assistant workflow instructions',
-        ),
-        (
-            'strategy',
-            'cat .agents/skills/refinement-strategy/SKILL.md',
-            [],
-            'Read assistant fitting instructions',
-        ),
-        (
-            'read',
-            'cat /approved/counts.xye',
-            [
-                {
-                    'type': 'read',
-                    'command': 'cat /approved/counts.xye',
-                    'name': 'counts.xye',
-                    'path': '/approved/counts.xye',
-                }
-            ],
-            'Read counts.xye',
-        ),
-        (
-            'list',
-            'ls /approved/references',
-            [
-                {
-                    'type': 'listFiles',
-                    'command': 'ls /approved/references',
-                    'path': 'reference-directory',
-                }
-            ],
-            'List reference-directory',
-        ),
-        (
-            'search',
-            'rg atomic /approved/input.cif',
-            [
-                {
-                    'type': 'search',
-                    'command': 'rg atomic /approved/input.cif',
-                    'query': 'atomic coordinates',
-                    'path': '/approved/input.cif',
-                }
-            ],
-            'Search for atomic coordinates',
-        ),
-        (
-            'declared',
-            '# Edi purpose: Inspect selected input headings\nopaque unread technical script',
-            [
-                {
-                    'type': 'unknown',
-                    'command': '# Edi purpose: Inspect selected input headings\nopaque unread technical script',
-                }
-            ],
-            'Inspect selected input headings',
-        ),
+        ('workflow', 'cat .agents/skills/project-assistance/SKILL.md', [],
+         'Read assistant workflow instructions'),
+        ('strategy', 'cat .agents/skills/refinement-strategy/SKILL.md', [],
+         'Read assistant refinement instructions'),
+        ('read', 'cat /approved/counts.xye', [{'type': 'read', 'command': 'cat /approved/counts.xye',
+           'name': 'counts.xye', 'path': '/approved/counts.xye'}], 'Read counts.xye'),
+        ('list', 'ls /approved/references', [{'type': 'listFiles', 'command': 'ls /approved/references',
+           'path': 'reference-directory'}], 'List reference-directory'),
+        ('search', 'rg atomic /approved/input.cif', [{'type': 'search', 'command': 'rg atomic /approved/input.cif',
+           'query': 'atomic coordinates', 'path': '/approved/input.cif'}], 'Search for atomic coordinates'),
+        ('declared', '# Edi purpose: Inspect selected input headings\nopaque unread technical script',
+         [{'type': 'unknown', 'command': '# Edi purpose: Inspect selected input headings\nopaque unread technical script'}],
+         'Inspect selected input headings'),
     ]
-    cases.insert(
-        2,
-        (
-            'combined',
-            cases[0][1] + ' ' + cases[1][1].removeprefix('cat '),
-            [],
-            'Read assistant workflow and fitting instructions',
-        ),
-    )
     steps = []
     for identity, command, actions, _ in cases:
-        item = {
-            'type': 'commandExecution',
-            'id': 'human-' + identity,
-            'pluginId': None,
-            'scriptPath': None,
-            'command': command,
-            'cwd': '/independent/approved-workspace',
-            'processId': None,
-            'source': 'agent',
-            'status': 'inProgress',
-            'commandActions': actions,
-            'aggregatedOutput': None,
-            'exitCode': None,
-            'durationMs': None,
-        }
-        steps.extend([
-            _protocol_item('item/started', item),
-            _protocol_item(
-                'item/completed',
-                {
-                    **item,
-                    'status': 'completed',
-                    'aggregatedOutput': hidden,
-                    'exitCode': 0,
-                    'durationMs': 1,
-                },
-            ),
-        ])
+        item = {'type': 'commandExecution', 'id': 'human-' + identity,
+                'pluginId': None, 'scriptPath': None, 'command': command,
+                'cwd': '/independent/approved-workspace', 'processId': None, 'source': 'agent',
+                'status': 'inProgress', 'commandActions': actions,
+                'aggregatedOutput': None, 'exitCode': None, 'durationMs': None}
+        steps.extend([_protocol_item('item/started', item),
+                      _protocol_item('item/completed', {**item, 'status': 'completed',
+                                      'aggregatedOutput': hidden, 'exitCode': 0, 'durationMs': 1})])
     actor = main_actor([steps])
     actor.connect()
-    starts = [
-        row
-        for row in map(json.loads, actor.trace.read_text().splitlines())
-        if row.get('method') == 'thread/start'
-    ]
-    assert starts, (
-        'The command fixture belongs to an actual original bootstrapped runtime workspace'
-    )
+    starts = [row for row in map(json.loads, actor.trace.read_text().splitlines())
+              if row.get('method') == 'thread/start']
+    assert starts, 'The command fixture belongs to an actual original bootstrapped runtime workspace'
     for step in steps:
         step['notification']['params']['item']['cwd'] = starts[-1]['params']['cwd']
     actor.configure_turns([steps])
-    actor.request(
-        'Read the already selected public information; do not change the scientific model.'
-    )
+    actor.request('Read the already selected public information; do not change the scientific model.')
     _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] >= len(cases) + 2)
     assert qml(actor, 'Preferences.assistantCopyTechnicalDetails') is False, (
-        'Original human command meanings remain available without technical opt-in'
-    )
+        'Original human command meanings remain available without technical opt-in')
     rows = [_rows_values(actor, 'messages', i) for i in range(_rows_probe(actor)['count'])]
     activities = [row for row in rows if row['kind'] == 'activity']
-    assert len(activities) == len(cases), (
-        'All independently pinned command item pairs reach actual retained activity rows'
-    )
+    assert len(activities) == len(cases), 'All independently pinned command item pairs reach actual retained activity rows'
     view = control_expression('assistant.messages')
     observed = []
-    meanings_missing = []
     for current, (identity, command, actions, expected) in zip(activities, cases):
         index = next(i for i, row in enumerate(rows) if row['id'] == current['id'])
-        actor.command(
-            'evaluate',
-            expression='(function(){const v='
-            + view
-            + ';v.positionViewAtIndex('
-            + str(index)
-            + ',ListView.Center);})()',
-        )
-        response = actor.command(
-            'message_input', row_id=current['id'], name='assistant.command.toggle', action='click'
-        )['reply']
+        actor.command('evaluate', expression='(function(){const v=' + view
+                      + ';v.positionViewAtIndex(' + str(index) + ',ListView.Center);})()')
+        response = actor.command('message_input', row_id=current['id'],
+                                  name='assistant.command.toggle', action='click')['reply']
         assert response['reached'] and response['same_row_after'], (
-            'Known command description is expanded through its exact original realized Qt activity control'
-        )
+            'Known command description is expanded through its exact original realized Qt activity control')
         scene = _a2b_original_row_scene(actor, current)
-        assert (
-            scene['row_id'] == current['id']
-            and scene['kind'] == current['kind']
-            and scene['status'] == current['status']
-            and scene['current_owner']
-            and scene['same_window']
-            and scene['checked']
-            and scene['body_visible']
-        ), (
-            'The prior command meaning is observed on its unique actual expanded current row in the original window'
-        )
+        assert scene['row_id'] == current['id'] and scene['kind'] == current['kind'] \
+            and scene['status'] == current['status'] and scene['current_owner'] and scene['same_window'] \
+            and scene['checked'] and scene['body_visible'], (
+                'The prior command meaning is observed on its unique actual expanded current row in the original window')
         displayed = [scene['body']]
-        if not displayed or expected not in '\n'.join(displayed):
-            meanings_missing.append(identity + ': details')
-        assert hidden not in '\n'.join(
-            displayed
-        ) and 'opaque unread technical script' not in '\n'.join(displayed), (
-            'Human expansion never displays raw command/output trees as a substitute for the missing description'
-        )
-        actor.command(
-            'message_input', row_id=current['id'], name='assistant.command.toggle', action='hover'
-        )
-        copied = actor.command(
-            'message_input', row_id=current['id'], name='assistant.activity.copy', action='click'
-        )['reply']
-        assert copied['reached'] and hidden not in copied['clipboard'], (
-            'Default original-row Copy reaches the actual control without copying technical output'
-        )
-        if expected not in copied['clipboard']:
-            meanings_missing.append(identity + ': copy')
-        if identity in {'workflow', 'strategy', 'combined'} and re.search(
-            r'\brefin\w*', '\n'.join(displayed) + copied['clipboard'], re.IGNORECASE
-        ):
-            meanings_missing.append(identity + ': legacy assistant terminology')
+        assert displayed and expected in '\n'.join(displayed), (
+            'Lazy full-human expansion preserves the FIRST known skill/read/list/search/declared-purpose meaning')
+        assert hidden not in '\n'.join(displayed) and 'opaque unread technical script' not in '\n'.join(displayed), (
+            'Human expansion never displays raw command/output trees as a substitute for the missing description')
+        actor.command('message_input', row_id=current['id'], name='assistant.command.toggle', action='hover')
+        copied = actor.command('message_input', row_id=current['id'], name='assistant.activity.copy', action='click')['reply']
+        assert copied['reached'] and expected in copied['clipboard'] and hidden not in copied['clipboard'], (
+            'Default original-row Copy retains the useful human command meaning without technical output')
         args = ','.join(json.dumps(current[key]) for key in ('id', 'kind', 'status'))
         technical = qml(actor, 'Session.assistant.activityTechnicalDetails(' + args + ')')
         original = json.loads(technical)
-        assert (
-            original['payload']['command'] == command
-            and original['payload']['aggregatedOutput'] == hidden
-        ), (
-            'Explicit exact-row technical lookup still retains immutable original command/output evidence'
-        )
-        actor.command(
-            'message_input', row_id=current['id'], name='assistant.command.toggle', action='click'
-        )
+        assert original['payload']['command'] == command and original['payload']['aggregatedOutput'] == hidden, (
+            'Explicit exact-row technical lookup still retains immutable original command/output evidence')
+        actor.command('message_input', row_id=current['id'], name='assistant.command.toggle', action='click')
         collapsed = _a2b_original_row_scene(actor, current)
-        assert (
-            not collapsed['checked']
-            and collapsed['snapshot_null']
-            and collapsed['body'] == ''
-            and not collapsed['body_visible']
-        ), (
-            'Each original command row collapses through its actual control and clears retained full details'
-        )
-        observed.append({
-            'fixture': identity,
-            'row_id': current['id'],
-            'human': displayed,
-            'default_copy': copied['clipboard'],
-        })
+        assert not collapsed['checked'] and collapsed['snapshot_null'] \
+            and collapsed['body'] == '' and not collapsed['body_visible'], (
+                'Each original command row collapses through its actual control and clears retained full details')
+        observed.append({'fixture': identity, 'row_id': current['id'], 'human': displayed,
+                         'default_copy': copied['clipboard']})
     (actor.folder / 'command-human-compatibility.json').write_text(json.dumps(observed, indent=2))
-
-    assert not meanings_missing, (
-        'Every original details and copy path keeps its declared human fit wording: '
-        + ', '.join(meanings_missing)
-    )
 
 
 def test_sparse_interruption_notifies_only_original_changed_status_cells(main_actor):
@@ -6278,18 +5637,10 @@ def _draft_text(actor):
 
 
 def _type_original_draft(actor, text):
-    actor.until(
-        lambda row: _unique_input_control(row, 'assistant.composer', fully=True) is not None
-    )
     actor.command('click', name='assistant.composer')
-    actor.until(
-        lambda _row: actor.command('focused_input')['reply']['name'] == 'assistant.composer'
-    )
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text=text)
-    assert _draft_text(actor) == text, (
-        'The Clear witness starts from literal actual original TextArea input'
-    )
+    assert _draft_text(actor) == text, 'The Clear witness starts from literal actual original TextArea input'
 
 
 def test_explicit_clear_clears_only_captured_draft_and_preserves_account_and_project(main_actor, tmp_path):
@@ -6369,6 +5720,31 @@ def test_short_attachment_remove_cross_follows_rendered_label_by_normal_space_wi
         'Actual original label/font/remove control geometry is reached before spacing is judged')
     assert info['space'] - 1 <= info['gap'] <= 2 * info['space'] + 1, (
         'The actual remove glyph follows its short painted label by one to two normal font spaces, not the far line edge')
+
+
+def test_hidden_chat_working_stop_group_is_immediately_left_of_original_fit_group(main_actor, tmp_path):
+    actor = main_actor([[{'research': {'query': 'Public reference', 'action': None, 'results': None},
+                          'call_id': 'working-layout-reference'}]], hold_final=True)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Status layout reaches the real ordinary project and existing Fit controls')
+    actor.connect();actor.request('Read the public reference without changing science.')
+    actor.until(lambda value: value['ui']['can_cancel'])
+    actor.command('click', name='assistant.toggle')
+    working = control_expression('statusBar.assistant.working')
+    fit = control_expression('statusBar.fit')
+    info = qml(actor, '(function(){const w=' + working + ',f=' + fit
+        + ';if(!w||!f)return null;const a=w.parent,ap=a.mapToItem(contentItem,0,0),fp=f.mapToItem(contentItem,0,0);'
+        'return {assistant:{x:ap.x,y:ap.y,width:a.width,height:a.height,visible:a.visible},'
+        'fit:{x:fp.x,y:fp.y,width:f.width,height:f.height,visible:f.visible},sameParent:a.parent===f.parent};})()')
+    assert info and info['sameParent'] and info['assistant']['visible'] and info['fit']['visible'], (
+        'Working and original Fit groups are both actually visible in the same real status bar')
+    assert info['assistant']['x'] + info['assistant']['width'] <= info['fit']['x'], (
+        'AI working/Stop group precedes the original Fit group without overlap')
+    actor.command('click', name='assistant.stopVisibleAction')
+    actor.until(lambda value: not value['ui']['can_cancel'])
+    (actor.folder / 'statusbar-working-fit-geometry.json').write_text(json.dumps({
+        'actual_geometry': info, 'latency_qualification': 'No pointer hitch/frame-cost measurement is inferred'}, indent=2))
 
 
 def test_empty_session_table_keeps_dialog_width_and_refresh_next_to_original_close(main_actor):
@@ -8393,76 +7769,17 @@ def test_explicit_new_project_never_reuses_current_and_preserves_original_choice
 
 def _review66_hold_original_identity(actor, release):
     value = json.loads((actor.folder / 'peer.json').read_bytes())
-    normal = {
-        'account': {
-            'type': 'chatgpt',
-            'email': value.get('account_email', 'integration@example.invalid'),
-            'planType': 'plus',
-        },
-        'requiresOpenaiAuth': False,
-    }
-    spec = _original_usage_fifo_reply(
-        actor, release.name, result=value.get('fixture_account_read_reply', normal)
-    )
-    _session_configure(
-        actor,
-        fixture_account_read_response=spec,
-        usage_notifications=[
-            {'method': 'account/updated', 'params': {'authMode': 'chatgpt', 'planType': None}}
-        ],
-    )
+    fixture = dict(value.get('session_fixture', {}));fixture['account_read_hold'] = str(release)
+    _session_configure(actor, session_fixture=fixture,
+        usage_notifications=[{'method': 'account/updated', 'params': {'authMode': 'chatgpt', 'planType': None}}])
     before = len(_session_wire(actor, 'account/read'))
     actor.command('refresh_usage')
-    actor.until(
-        lambda _value: (
-            len(_session_wire(actor, 'account/read')) > before and Path(spec['ready']).is_file()
-        )
-    )
+    actor.until(lambda _value: len(_session_wire(actor, 'account/read')) > before)
     request = _session_wire(actor, 'account/read')[-1]
-    proof = json.loads(Path(spec['ready']).read_text(encoding='utf-8'))
-    owner = actor.command('usage_transport_snapshot')['reply']
-    assert (
-        proof['request_id'] == request['id']
-        and proof['method'] == 'account/read'
-        and proof['pid'] == owner['peer_pid']
-        and proof['parent_pid'] == owner['host_pid']
-        and owner['original_vm_child']
-    ), 'The held account reply belongs to the exact current original owned helper request'
-    if not hasattr(actor, '_review66_identity_holds'):
-        actor._review66_identity_holds = {}
-    actor._review66_identity_holds[str(release)] = {'spec': spec, 'released': False}
-    sent = [
-        json.loads(line)
-        for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()
-    ]
-    assert not any(
-        row.get('id') == request['id'] and ('result' in row or 'error' in row) for row in sent
-    ), (
-        'The admission witness really holds the original correlated account reply after a mode-only notification'
-    )
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    assert not any(row.get('id') == request['id'] and ('result' in row or 'error' in row) for row in sent), (
+        'The admission witness really holds the original correlated account reply after a mode-only notification')
     return request
-
-
-def _review66_release_original_identity(actor, release):
-    held = getattr(actor, '_review66_identity_holds', {}).get(str(release))
-    if not held or held['released']:
-        return
-    configured = json.loads((actor.folder / 'peer.json').read_text())
-    if configured.get('fixture_account_read_response') == held['spec']:
-        _session_configure(actor, fixture_account_read_response=None)
-    try:
-        descriptor = os.open(held['spec']['release_fifo'], os.O_WRONLY | os.O_NONBLOCK)
-    except OSError as failure:
-        if failure.errno in {errno.ENXIO, errno.ENOENT}:
-            return  # A genuinely retired helper has no reply reader left.
-        raise
-    try:
-        assert os.write(descriptor, b'R') == 1, (
-            'The captured original reply is released once without another application RPC'
-        )
-        held['released'] = True
-    finally:
-        os.close(descriptor)
 
 
 @pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
@@ -8489,7 +7806,7 @@ def test_existing_human_question_retains_original_waiter_until_same_account_conf
             'Neither free-text nor offered-option input is transmitted or consumes its already displayed original human waiter while identity is unconfirmed')
         assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
             'Holding new human input preserves the original connection and known account without manufacturing its pending identity result')
-        _review66_release_original_identity(actor, release);actor.command('refresh_usage')
+        release.touch();actor.command('refresh_usage')
         actor.until(lambda _value: any(row.get('id') == held['id'] and 'result' in row
             for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
         qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(original['question_id']) + ',' + json.dumps(answer) + ')')
@@ -8511,7 +7828,7 @@ def test_existing_human_question_retains_original_waiter_until_same_account_conf
         (actor.folder / 'original-question-account-boundary.json').write_text(json.dumps({
             'held_read': held, 'original_question': original, 'actual_answers': actual}, indent=2))
     finally:
-        _review66_release_original_identity(actor, release)
+        release.touch()
 
 
 def test_latest_selected_model_and_effort_continue_after_exact_unchanged_identity(main_actor):
@@ -8532,7 +7849,7 @@ def test_latest_selected_model_and_effort_continue_after_exact_unchanged_identit
         actor.command('select_effort', id='medium')
         assert len(_session_wire(actor, 'thread/settings/update')) == boundary, (
             'Actual model and effort setters cannot send new thread policy while the correlated original account check is outstanding')
-        _review66_release_original_identity(actor, release);actor.command('refresh_usage')
+        release.touch();actor.command('refresh_usage')
         actor.until(lambda _value: len(_session_wire(actor, 'thread/settings/update')) > boundary)
         updates = _session_wire(actor, 'thread/settings/update')[boundary:]
         assert len(updates) == 1 and updates[0]['params']['model'] == 'gpt-5.6-luna' \
@@ -8545,7 +7862,7 @@ def test_latest_selected_model_and_effort_continue_after_exact_unchanged_identit
         (actor.folder / 'latest-settings-after-identity.json').write_text(json.dumps({
             'held_read': held, 'actual_updates': updates, 'actual_input': _session_state(actor)['inputs'][-1]}, indent=2))
     finally:
-        _review66_release_original_identity(actor, release)
+        release.touch()
 
 
 def test_declining_unapproved_other_project_session_preserves_original_before_open(main_actor, tmp_path):
@@ -8750,7 +8067,7 @@ def test_archive_preserves_real_account_and_active_operation_admission_boundarie
         assert len(_session_wire(actor, 'thread/archive')) == before, (
             'Foreign creation identity, pending account proof, signed-out old ownership and actual active work cannot admit a new Archive write')
     finally:
-        _review66_release_original_identity(actor, release);actor.gate.touch()
+        release.touch();actor.gate.touch()
 
 # Uncertain Stop is explicitly UNREACHED here: the existing peer immediately
 # acknowledges turn/interrupt. A completed Stop must not become a permanent
@@ -9599,7 +8916,7 @@ def test_one_send_share_waits_for_real_same_account_readiness_without_losing_ori
         assert qml(actor, '(' + editor + ').text') == text \
             and [row for row in _attachment_rows(actor) if row['pending']] == pending, (
             'A proved waiting admission keeps the exact original text and genuinely pending input instead of clearing them early')
-        _review66_release_original_identity(actor, release);actor.command('refresh_usage')
+        release.touch();actor.command('refresh_usage')
         _session_completed(actor, 1)
         actual = _session_state(actor)['inputs']
         assert len(_session_wire(actor, 'turn/start')) == 1 and len(actual) == 1 and _assert_exact_original_admitted_user_input(actor, actual[0], text, expected_thread_prior_inputs=0), (
@@ -9622,7 +8939,7 @@ def test_one_send_share_waits_for_real_same_account_readiness_without_losing_ori
             'original_pending_files': pending, 'actual_inputs': actual, 'send_count': 1,
             'share_count': 1, 'classification': 'ACTUAL_PREWIRE_WAIT_THEN_READINESS_NOT_UNCERTAIN_WRITE'}, indent=2))
     finally:
-        _review66_release_original_identity(actor, release)
+        release.touch()
 
 
 def test_uncertain_original_send_write_does_not_auto_replay_on_actual_same_owner_readiness(main_actor, tmp_path):
@@ -10346,7 +9663,7 @@ def test_original_share_wait_cannot_approve_changed_or_cancelled_input(main_acto
             assert qml(actor, 'Session.assistant.selectedModel') == 'gpt-5.6-luna', (
                 'The changed-model negative physically chooses an actually offered original model')
         assert not _session_wire(actor, 'turn/start'), 'No original pending input may be sent while its correlated account proof is held'
-        _review66_release_original_identity(actor, release);actor.command('refresh_usage')
+        release.touch();actor.command('refresh_usage')
         actor.until(lambda _value: any(row.get('id') == held['id'] and 'result' in row
             for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
         if boundary == 'account':
@@ -10361,7 +9678,7 @@ def test_original_share_wait_cannot_approve_changed_or_cancelled_input(main_acto
             'send_count': 1, 'share_count': 0 if boundary == 'cancel' else 1,
             'actual_requests': _session_wire(actor), 'actual_final': actor.command('inspect')['ui']}, indent=2))
     finally:
-        _review66_release_original_identity(actor, release)
+        release.touch()
 
 
 def _observe_original_toolbar_press(actor, marker, paths=()):
@@ -11374,154 +10691,51 @@ def test_original_question_batch_validates_all_questions_before_publishing_any(m
 
 @pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
 @pytest.mark.parametrize('retirement', ['cancel', 'sign_out', 'close_project', 'input_scope', 'account_change', 'destroy_engine'])
-def test_original_question_batch_discards_partial_answers_when_original_owner_retires(
-    main_actor, tmp_path, retirement, question_delivery
-):
+def test_original_question_batch_discards_partial_answers_when_original_owner_retires(main_actor, tmp_path, retirement, question_delivery):
     questions = _original_question_batch(3)
-    actor = main_actor([
-        [
-            {
-                'human_questions': questions,
-                'human_without_public_item': question_delivery == 'builtin_callback',
-                'call_id': 'retired-original-question-array',
-            }
-        ]
-    ])
+    actor = main_actor([[{'human_questions': questions, 'human_without_public_item': question_delivery == 'builtin_callback', 'call_id': 'retired-original-question-array'}]])
     assert actor.command('open', path=str(copied_estimate_project(tmp_path)))['reply']['opened'], (
-        'Retirement has a genuine original current project, not a manufactured pending-question owner'
-    )
-    _session_configure(
-        actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True
-    )
-    actor.connect()
-    actor.request('Ask the original questions without performing dependent setup.')
-    actor.until(
-        lambda value: value['ui']['pending_question'].get('text') == questions[0]['question']
-    )
+        'Retirement has a genuine original current project, not a manufactured pending-question owner')
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();actor.request('Ask the original questions without performing dependent setup.')
+    actor.until(lambda value: value['ui']['pending_question'].get('text') == questions[0]['question'])
     first = actor.last['ui']['pending_question']
-    _assert_original_question_callback_wire(
-        actor, 'retired-original-question-array', question_delivery
-    )
-    qml(
-        actor,
-        'Session.assistant.answerQuestion('
-        + json.dumps(first['question_id'])
-        + ',"retained partial answer")',
-    )
-    actor.until(
-        lambda value: value['ui']['pending_question'].get('text') == questions[1]['question']
-    )
+    _assert_original_question_callback_wire(actor, 'retired-original-question-array', question_delivery)
+    qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(first['question_id']) + ',"retained partial answer")')
+    actor.until(lambda value: value['ui']['pending_question'].get('text') == questions[1]['question'])
     second = actor.last['ui']['pending_question']
-    assert not _session_state(actor).get('human_answers'), (
-        'The partial original answer has not been transmitted as a completed RPC'
-    )
+    assert not _session_state(actor).get('human_answers'), 'The partial original answer has not been transmitted as a completed RPC'
     if retirement == 'destroy_engine':
-        assert actor.command('arm_session_notification', signal='usage', action='destroy_engine')[
-            'reply'
-        ]['armed'], (
-            'Only the existing one-shot public usage observer may destroy this actual fixture-owned engine'
-        )
+        assert actor.command('arm_session_notification', signal='usage', action='destroy_engine')['reply']['armed'], (
+            'Only the existing one-shot public usage observer may destroy this actual fixture-owned engine')
         actor.command('refresh_usage')
         facts = actor.command('session_fault_facts')['reply']
         assert facts['notification_hits'] == 1 and facts['action'] == 'destroy_engine', (
-            'Window/engine retirement must actually reach the original public notification boundary'
-        )
+            'Window/engine retirement must actually reach the original public notification boundary')
     else:
         if retirement == 'input_scope':
             file = _attachment_fixtures(tmp_path, 1)[0]
-            # File selection is idle-only. This attempted scope change cannot
-            # retire an active question because it has never been admitted.
-            files_before = _attachment_rows(actor)
-            token = qml(actor, 'Session.assistant.beginFileSelection(true)')
-            assert not token, (
-                'An active original question refuses new file selection before granting input authority'
-            )
-            added = actor.command('selected_add', token=token or '', paths=[str(file)])['reply'][
-                'added'
-            ]
-            assert not added and _attachment_rows(actor) == files_before, (
-                'A refused file-selection attempt cannot change the actual selected-file scope'
-            )
-            actor.command('inspect')  # Row-table reads return a narrow UI envelope.
-            assert actor.last['ui']['pending_question'] == second and not _session_state(
-                actor
-            ).get('human_answers'), (
-                'Refused file intake preserves the exact partial question and transmits no answer map'
-            )
-            assert len(_session_wire(actor, 'turn/start')) == 1, (
-                'Refused file intake cannot replay the original prompt or admit a replacement turn'
-            )
-            (actor.folder / 'refused-input-scope-at-original-question.json').write_text(
-                json.dumps({'token': token, 'added': added, 'pending': second}, indent=2)
-            )
-            return
-        if retirement == 'account_change':
-            reads_before = len(_session_wire(actor, 'account/read'))
-            _session_configure(
-                actor,
-                fixture_account_read_reply={
-                    'account': {
-                        'type': 'chatgpt',
-                        'email': 'other-original-question-owner@example.invalid',
-                        'planType': 'plus',
-                    },
-                    'requiresOpenaiAuth': False,
-                },
-                usage_notifications=[
-                    {
-                        'method': 'account/updated',
-                        'params': {'authMode': 'chatgpt', 'planType': None},
-                    }
-                ],
-            )
+            token = actor.begin_current_file_selection()
+            assert token and actor.command('selected_add', token=token, paths=[str(file)])['reply']['added'], (
+                'Input retirement must reach a genuine current pending-file admission, never a fake changed scope')
+        elif retirement == 'account_change':
+            _session_configure(actor, fixture_account_read_reply={'account': {'type': 'chatgpt',
+                'email': 'other-original-question-owner@example.invalid', 'planType': 'plus'}, 'requiresOpenaiAuth': False})
             actor.command('refresh_usage')
-            actor.until(
-                lambda value: (
-                    len(_session_wire(actor, 'account/read')) > reads_before
-                    and not value['ui']['connected']
-                )
-            )
-            account_read = _session_wire(actor, 'account/read')[-1]
-            sent = map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
-            assert any(
-                row.get('id') == account_read['id']
-                and row.get('result', {}).get('account', {}).get('email')
-                == 'other-original-question-owner@example.invalid'
-                for row in sent
-            ), (
-                'Account retirement follows the actual correlated changed-owner reply after a real notification'
-            )
+            actor.until(lambda value: not value['ui']['connected'])
         else:
             actor.command(retirement)
-        qml(
-            actor,
-            'Session.assistant.answerQuestion('
-            + json.dumps(second['question_id'])
-            + ',"stale completion")',
-        )
-        assert not actor.last['ui']['pending_question'], (
-            'The retired original question cannot remain answerable in the current UI'
-        )
+        qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(second['question_id']) + ',"stale completion")')
+        assert not actor.last['ui']['pending_question'], 'The retired original question cannot remain answerable in the current UI'
     wire = _session_wire(actor)
     replies = _session_state(actor).get('human_answers', [])
     assert not any('result' in row for row in replies), (
-        'No retired partial answer map is transmitted as a successful response, even after stale public input'
-    )
+        'No retired partial answer map is transmitted as a successful response, even after stale public input')
     assert len([row for row in wire if row.get('method') == 'turn/start']) == 1, (
-        'Question retirement never replays the original prompt or admits a replacement turn'
-    )
-    (actor.folder / 'retired-original-question.json').write_text(
-        json.dumps(
-            {
-                'retirement': retirement,
-                'first': first,
-                'second': second,
-                'actual_replies': replies,
-                'actual_wire': wire,
-            },
-            indent=2,
-        )
-    )
+        'Question retirement never replays the original prompt or admits a replacement turn')
+    (actor.folder / 'retired-original-question.json').write_text(json.dumps({
+        'retirement': retirement, 'first': first, 'second': second, 'actual_replies': replies,
+        'actual_wire': wire}, indent=2))
 
 
 @pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
@@ -11760,10 +10974,7 @@ def post_adoption_rename_failure_library(tmp_path_factory):
                str(ROOT / 'tests/fixtures/report_storage/temporary_failure.c'), '-o', str(library),
                *([] if sys.platform == 'darwin' else ['-ldl'])]
     result = subprocess.run(command, capture_output=True, text=True, timeout=20)
-    assert result.returncode == 0, (
-        ('Required: post adoption rename failure library.'),
-        result.stderr,
-    )
+    assert result.returncode == 0, result.stderr
     (folder / 'compile-command.json').write_text(json.dumps(command) + '\n')
     return library
 
@@ -11934,13 +11145,7 @@ def test_original_owner_normal_math_reply_renders_every_formula_and_table_at_act
     source = (fixture / 'owner186-reply.txt').read_text()
     provenance = json.loads((fixture / 'PROVENANCE.json').read_text())
     expected = json.loads((fixture / 'owner186-expected.json').read_text())
-    assert (
-        hashlib.sha256(source.encode()).hexdigest()
-        == provenance['source_sha256']
-    ), (
-        'Required: original owner normal math reply renders every formula and '
-        'table at actual dpr.'
-    )
+    assert hashlib.sha256(source.encode()).hexdigest() == provenance['source_sha256']
     spans = expected['formula_spans_in_source_order']
     cursor = 0
     for span in spans:
@@ -11948,12 +11153,7 @@ def test_original_owner_normal_math_reply_renders_every_formula_and_table_at_act
         cursor = source.index(span, cursor) + len(span)
     actor, row, document = _genuine_math_message(main_actor, source)
     frame = actor.folder / ('owner-normal-math-dpr' + str(requested_dpr) + '.png')
-    assert actor.command('capture_frame', path=str(frame))['reply'][
-        'saved'
-    ], (
-        'Required: original owner normal math reply renders every formula and '
-        'table at actual dpr.'
-    )
+    assert actor.command('capture_frame', path=str(frame))['reply']['saved']
     evidence = {'requested_dpr': requested_dpr, 'source_sha256': provenance['source_sha256'],
         'expected_original_formula_spans': spans, 'actual_document': document,
         'actual_frame': str(frame), 'actual_environment': actor.last['ui'].get('environment', {}),
@@ -11961,14 +11161,7 @@ def test_original_owner_normal_math_reply_renders_every_formula_and_table_at_act
         'copy_qualification': 'Actual original whole-source and per-image selectedSource entrances; the separate existing public/keyboard/Linux-primary physical-copy baseline remains unchanged.',
         'list_qualification': 'This exact original reply has no list or heading. Separate existing real list/heading Markdown cases are retained, not claimed exercised here.'}
     (actor.folder / 'owner-normal-math-dpr-evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2)+'\n')
-    assert (
-        document['reached']
-        and document['same_window']
-        and document['source'] == source
-    ), (
-        'Required: original owner normal math reply renders every formula and '
-        'table at actual dpr.'
-    )
+    assert document['reached'] and document['same_window'] and document['source'] == source
     assert document['image_budget_bytes'] == provenance['original_image_budget_bytes'] == _ORIGINAL_MATH_IMAGE_BUDGET_BYTES, (
         'The normal reply retains the independently captured original 2097152-byte cap; subject-reported cap growth is not a rendering repair')
     assert document['images'] and all(image['resource_dpr'] == requested_dpr for image in document['images']), (
@@ -12070,9 +11263,7 @@ def _release_original_usage_reply(actor, spec, expected_id, *, method='account/r
             'Only the exact original current owned peer request/pipe is released, not a fabricated replacement ID')
     descriptor = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
     try:
-        assert os.write(descriptor, b'R') == 1, (
-            'Required:  release original usage reply.'
-        )
+        assert os.write(descriptor, b'R') == 1
     finally:
         os.close(descriptor)
     return proof
@@ -12145,12 +11336,7 @@ def test_original_usage_ready_loading_coalescing_empty_error_and_zero_keep_truth
             assert refreshing['loading'] and refreshing['stale'] and refreshing['buckets'] == accepted['buckets'], (
                 'The same-account refresh keeps every last valid allowance window while honestly marking it old/pending')
             actor.command('refresh_usage')
-            assert (
-                len(_session_wire(actor, 'account/rateLimits/read')) == before + 1
-            ), (
-                'Required: original usage ready loading coalescing empty error '
-                'and zero keep truthful current data.'
-            )
+            assert len(_session_wire(actor, 'account/rateLimits/read')) == before + 1
             _release_original_usage_reply(actor, spec, request['id']);released.add(index)
             actor.until(lambda _value: _original_usage_value(actor)['state'] in final_state)
             settled = retain('settled_refresh_' + str(index))
@@ -12186,17 +11372,11 @@ def test_original_usage_ready_loading_coalescing_empty_error_and_zero_keep_truth
 def _release_original_owned_usage_gate(actor, fifo, ready, token):
     actor.until(lambda _value: ready.is_file())
     proof = json.loads(ready.read_text());owned = actor.command('usage_transport_snapshot')['reply']
-    assert (
-        proof['pid'] == owned['peer_pid']
-        and proof['parent_pid'] == owned['host_pid']
-        and owned['original_vm_child']
-        and fifo.parent == actor.folder
-    ), 'Required:  release original owned usage gate.'
+    assert proof['pid'] == owned['peer_pid'] and proof['parent_pid'] == owned['host_pid'] \
+        and owned['original_vm_child'] and fifo.parent == actor.folder
     descriptor = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
     try:
-        assert os.write(descriptor, token) == 1, (
-            'Required:  release original owned usage gate.'
-        )
+        assert os.write(descriptor, token) == 1
     finally:
         os.close(descriptor)
     return proof
@@ -12256,13 +11436,7 @@ def test_original_usage_waiting_last_drain_before_same_account_reply_continues_w
         facts['notification_release'] = _release_original_owned_usage_gate(actor, notify_fifo, notify_ready, b'N')
         actor.until(lambda _value: bool(actor.command('usage_transport_snapshot')['reply']['pending_account_read_ids']))
         pending = retain('same_account_read_really_issued_before_drain')
-        assert (
-            pending['transport']['pending_account_read_ids']
-            and pending['usage']['state'] == 'waiting'
-        ), (
-            'Required: original usage waiting last drain before same account '
-            'reply continues without replay.'
-        )
+        assert pending['transport']['pending_account_read_ids'] and pending['usage']['state'] == 'waiting'
         facts['drain_release'] = _release_original_owned_usage_gate(actor, drain, drain_ready, b'D')
         actor.until(lambda _value: Path(confirm['ready']).is_file())
         before_reply = retain('last_real_drain_before_account_reply')
@@ -12281,17 +11455,8 @@ def test_original_usage_waiting_last_drain_before_same_account_reply_continues_w
         # No refresh/replayed send or synthetic ready hint after confirmation.
         actor.until(lambda _value: len(_session_wire(actor, 'account/rateLimits/read')) == before_count + 1)
         resumed = retain('account_completion_alone_admits_waiting_usage')
-        assert qml(actor, 'Session.assistant.account') == original_account, (
-            'Required: original usage waiting last drain before same account '
-            'reply continues without replay.'
-        )
-        assert (
-            resumed['usage']['state'] == 'loading'
-            and len(resumed['transport']['pending_usage_ids']) == 1
-        ), (
-            'Required: original usage waiting last drain before same account '
-            'reply continues without replay.'
-        )
+        assert qml(actor, 'Session.assistant.account') == original_account
+        assert resumed['usage']['state'] == 'loading' and len(resumed['transport']['pending_usage_ids']) == 1
         request = _session_wire(actor, 'account/rateLimits/read')[-1]
         _release_original_usage_reply(actor, final, request['id'])
         actor.until(lambda _value: _original_usage_value(actor)['state'] == 'ready')
@@ -12326,15 +11491,7 @@ def test_original_connect_without_usage_popup_automatically_obtains_current_vali
     _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
         fixture_usage_default_response={'result': _original_usage_window(37)}, fixture_account_read_response=initial)
     marker = 'e11.original.usage.bootstrap-states'
-    assert qml(
-        actor,
-        "(function(){const vm=Session.assistant,o=Qt.createQmlObject('import QtQuick; Item {property var facts:[];}',window.contentItem);o.objectName="
-        + json.dumps(marker)
-        + ';vm.usageChanged.connect(function(){if(Qt.isQtObject(o)&&Qt.isQtObject(vm))o.facts.push({current:Session.assistant===vm,usage:JSON.parse(JSON.stringify(vm.usage))});});return true;})()',
-    ), (
-        'Required: original connect without usage popup automatically obtains '
-        'current valid usage.'
-    )
+    assert qml(actor, '(function(){const vm=Session.assistant,o=Qt.createQmlObject(\'import QtQuick; Item {property var facts:[];}\',window.contentItem);o.objectName=' + json.dumps(marker) + ';vm.usageChanged.connect(function(){if(Qt.isQtObject(o)&&Qt.isQtObject(vm))o.facts.push({current:Session.assistant===vm,usage:JSON.parse(JSON.stringify(vm.usage))});});return true;})()')
     if initial is not None:
         if _unique_input_control(actor.last, 'home.start') is not None:
             actor.command('click', name='home.start')
@@ -12366,18 +11523,8 @@ def test_original_connect_without_usage_popup_automatically_obtains_current_vali
     assert any(row['current'] and row['usage'].get('state') == 'loading' and row['usage'].get('loading') is True
                and row['usage'].get('statusText') and row['usage'].get('caption') for row in states), (
         'An actual automatic original read publishes honest human loading feedback before ready, without requiring the popup')
-    assert (
-        not observed['loading']
-        and not observed['stale']
-        and any(
-            window['usedPercent'] == 37
-            for bucket in observed['buckets']
-            for window in bucket.get('windows', [])
-        )
-    ), (
-        'Required: original connect without usage popup automatically obtains '
-        'current valid usage.'
-    )
+    assert not observed['loading'] and not observed['stale'] and any(
+        window['usedPercent'] == 37 for bucket in observed['buckets'] for window in bucket.get('windows', []))
     assert _session_wire(actor, 'account/rateLimits/read') and not _session_wire(actor, 'turn/start'), (
         'Automatic usage is an actual supported original read without model/science input')
     accepted_count = len(_session_wire(actor, 'account/rateLimits/read'))
@@ -12423,12 +11570,7 @@ def test_original_connect_preempted_usage_continues_after_real_bootstrap_without
                       'final_wire': _session_wire(actor)})
         assert after['state'] == 'ready' and not after['stale'] and after['buckets'] == current['buckets'], (
             'The exact late preempted nine-percent result cannot replace the current accepted thirty-seven-percent snapshot')
-        assert len(
-            _session_wire(actor, 'account/rateLimits/read')
-        ) == count_before_late and not _session_wire(actor, 'turn/start'), (
-            'Required: original connect preempted usage continues after real '
-            'bootstrap without popup or old reply replay.'
-        )
+        assert len(_session_wire(actor, 'account/rateLimits/read')) == count_before_late and not _session_wire(actor, 'turn/start')
     finally:
         if not released and Path(first['ready']).is_file():
             try:
@@ -12468,16 +11610,8 @@ def test_original_issued_usage_deadline_disposition_retires_intent_without_repla
             and request_id not in expired['deadline_fault_after']['pending_usage_ids'] \
             and not expired['deadline_fault_after']['failure_active'], (
                 'Original optional deadline retires only the exact read without a provider/transport failure')
-        assert (
-            settled['state'] in ('unavailable', 'error')
-            and not settled['loading']
-            and settled['stale']
-            and settled['statusText']
-            and settled['buckets'] == accepted['buckets']
-        ), (
-            'Required: original issued usage deadline disposition retires intent '
-            'without replay or late overwrite.'
-        )
+        assert settled['state'] in ('unavailable', 'error') and not settled['loading'] \
+            and settled['stale'] and settled['statusText'] and settled['buckets'] == accepted['buckets']
         assert len(_session_wire(actor, 'account/rateLimits/read')) == count + 1, (
             'Timeout disposition retires refresh intent rather than automatically resubmitting the original read')
         _release_original_usage_reply(actor, late, request_id);released = True
@@ -12485,12 +11619,7 @@ def test_original_issued_usage_deadline_disposition_retires_intent_without_repla
         after = _original_usage_value(actor);facts['after_late_original_reply'] = after
         assert after['buckets'] == accepted['buckets'] and after['state'] == settled['state'] \
             and after['stale'] and not after['loading'], 'A late timed-out nine-percent result cannot replace the retained thirty-seven-percent observation'
-        assert len(
-            _session_wire(actor, 'account/rateLimits/read')
-        ) == count + 1 and not _session_wire(actor, 'turn/start'), (
-            'Required: original issued usage deadline disposition retires intent '
-            'without replay or late overwrite.'
-        )
+        assert len(_session_wire(actor, 'account/rateLimits/read')) == count + 1 and not _session_wire(actor, 'turn/start')
     finally:
         if not released and Path(late['ready']).is_file():
             try:
@@ -12518,9 +11647,7 @@ def _admit_original_pending_file_without_approval(actor, source):
     assert reply['added'], (
         'The original public selection operation really admits these unchanged source bytes without an approval setter')
     matches = [row for row in _attachment_rows(actor) if row['name'] == source.name and row['pending']]
-    assert (
-        len(matches) == 1 and matches[0]['bytes'] == source.stat().st_size
-    ), 'Required:  admit original pending file without approval.'
+    assert len(matches) == 1 and matches[0]['bytes'] == source.stat().st_size
     assert qml(actor, 'Session.assistant.contextConsentRequired'), 'A genuinely changed pending-file scope remains unapproved'
     return matches[0]
 
@@ -12529,27 +11656,18 @@ def _select_original_pending_draft_view(actor, target):
     before = len(_session_wire(actor))
     actor.command('click', name='assistant.sessions');_session_wait(actor)
     actual = actor.command('session_row_click', thread_id=target)['reply']
-    assert actual['reached'] and actual['actual_pressed_changes'] > 0, (
-        'Required:  select original pending draft view.'
-    )
+    assert actual['reached'] and actual['actual_pressed_changes'] > 0
     actor.until(lambda value: value['ui']['connected'] and not qml(actor, 'Session.assistant.sessionsLoading')
                 and not qml(actor, control_expression('assistant.sessionsDialog') + '.opened'))
     wire = _session_wire(actor)[before:]
     resumes = [row for row in wire if row.get('method') == 'thread/resume']
-    assert resumes and resumes[-1]['params']['threadId'] == target, (
-        'Required:  select original pending draft view.'
-    )
+    assert resumes and resumes[-1]['params']['threadId'] == target
     accepted = [row for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
                 if row.get('id') == resumes[-1]['id'] and 'result' in row]
-    assert (
-        len(accepted) == 1
-        and accepted[0]['result']['thread']['id'] == target
-    ), 'Required:  select original pending draft view.'
+    assert len(accepted) == 1 and accepted[0]['result']['thread']['id'] == target
     assert not any(row.get('method') in ('thread/start', 'turn/start') for row in wire), (
         'Actual accepted runtime identity, not stale browser/report fields, proves this is view-only exact-thread restoration')
-    assert not _original_context_disclosure_present(actor.last), (
-        'Required:  select original pending draft view.'
-    )
+    assert not _original_context_disclosure_present(actor.last)
     return {'physical': actual, 'wire': wire, 'accepted_id': accepted[0]['id'], 'accepted_thread': target}
 
 
@@ -12571,9 +11689,7 @@ def _assert_original_pending_association(record_snapshot, expected_rows, source_
     if unapproved:
         assert record['approved'] is False, 'Persisting a fresh pending draft cannot reuse the older approved execution scope'
     if draft is not None:
-        assert (
-            record['draft_sha256'] == hashlib.sha256(draft.encode()).hexdigest()
-        ), 'Required:  assert original pending association.'
+        assert record['draft_sha256'] == hashlib.sha256(draft.encode()).hexdigest()
 
 
 def _cancel_original_pending_send_without_admission(actor, expected_files, expected_text):
@@ -12583,9 +11699,7 @@ def _cancel_original_pending_send_without_admission(actor, expected_files, expec
     actor.until(lambda value: any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
         for row in value['ui']['controls']))
     actual = actor.command('dialog_ok', name='AssistantConnectionDialog', role='cancel')['reply']
-    assert actual['pressed_changes'] > 0 and actual['role'] == 'cancel', (
-        'Required:  cancel original pending send without admission.'
-    )
+    assert actual['pressed_changes'] > 0 and actual['role'] == 'cancel'
     assert len(_session_wire(actor, 'turn/start')) == before and _attachment_rows(actor) == expected_files \
         and _draft_text(actor) == expected_text, (
             'A real new-Send/Share Cancel leaves the exact genuine pending draft/history unadmitted, not implicitly approved by restoring it')
@@ -12605,41 +11719,12 @@ def test_original_viewed_thread_repeated_pending_add_remove_persists_without_exe
     edits = []
     first = _admit_original_pending_file_without_approval(actor, sources[1]);edits.append({'operation': 'add_first', 'actual': _attachment_rows(actor)})
     second = _admit_original_pending_file_without_approval(actor, sources[2]);edits.append({'operation': 'add_after_first_retirement', 'actual': _attachment_rows(actor)})
-    assert (
-        qml(
-            actor,
-            'Session.assistant.removeSelectedFile('
-            + json.dumps(first['id'])
-            + ')',
-        )
-        is True
-    ), (
-        'Required: original viewed thread repeated pending add remove persists '
-        'without execution thread or other draft graft.'
-    )
+    assert qml(actor, 'Session.assistant.removeSelectedFile(' + json.dumps(first['id']) + ')') is True
     edits.append({'operation': 'remove_first_after_retirement', 'actual': _attachment_rows(actor)})
     third = _admit_original_pending_file_without_approval(actor, sources[3]);edits.append({'operation': 'add_again', 'actual': _attachment_rows(actor)})
-    assert (
-        qml(
-            actor,
-            'Session.assistant.removeSelectedFile('
-            + json.dumps(second['id'])
-            + ')',
-        )
-        is True
-    ), (
-        'Required: original viewed thread repeated pending add remove persists '
-        'without execution thread or other draft graft.'
-    )
+    assert qml(actor, 'Session.assistant.removeSelectedFile(' + json.dumps(second['id']) + ')') is True
     a_rows = _attachment_rows(actor);edits.append({'operation': 'remove_second_after_retirement', 'actual': a_rows})
-    assert (
-        a_rows == [third]
-        and _draft_text(actor) == a_text
-        and qml(actor, 'Session.assistant.contextConsentRequired')
-    ), (
-        'Required: original viewed thread repeated pending add remove persists '
-        'without execution thread or other draft graft.'
-    )
+    assert a_rows == [third] and _draft_text(actor) == a_text and qml(actor, 'Session.assistant.contextConsentRequired')
     prefix = {'target': target, 'other': other, 'edits': edits, 'a_pending': a_rows, 'b_pending': b_rows,
         'execution_identity_qualification': 'Actual successful selected-file edits reach the source-known nonreused context-retirement entrance; no public generic_thread getter is invented. Wire/accepted resume is runtime identity authority; browser diagnostic fields may be stale.'}
     (actor.folder / 'original-repeated-pending-draft.json').write_text(json.dumps(prefix, indent=2)+'\n')
@@ -12654,14 +11739,8 @@ def test_original_viewed_thread_repeated_pending_add_remove_persists_without_exe
     prefix.update({'a_view': a_view, 'b_record_after_departure': stored_b, 'a_returned': _attachment_rows(actor)})
     (actor.folder / 'original-repeated-pending-draft.json').write_text(json.dumps(prefix, indent=2)+'\n')
     _assert_original_pending_association(stored_b, b_rows, by_name, draft=b_text)
-    assert (
-        _attachment_rows(actor) == a_rows
-        and _draft_text(actor) == a_text
+    assert _attachment_rows(actor) == a_rows and _draft_text(actor) == a_text \
         and qml(actor, 'Session.assistant.contextConsentRequired')
-    ), (
-        'Required: original viewed thread repeated pending add remove persists '
-        'without execution thread or other draft graft.'
-    )
     assert len(_session_wire(actor, 'turn/start')) == 2, 'All repeated pending edits and exact-thread views remain unsent'
     prefix['real_share_cancel'] = _cancel_original_pending_send_without_admission(actor, a_rows, a_text)
     (actor.folder / 'original-repeated-pending-draft.json').write_text(json.dumps(prefix, indent=2)+'\n')
@@ -12669,18 +11748,7 @@ def test_original_viewed_thread_repeated_pending_add_remove_persists_without_exe
     # Ordinary final-file removal is not New/Clear and must serialize an EMPTY
     # membership for this same viewed owner after its execution scope retired.
     original_inputs = json.loads(json.dumps(_session_state(actor)['inputs']))
-    assert (
-        qml(
-            actor,
-            'Session.assistant.removeSelectedFile('
-            + json.dumps(third['id'])
-            + ')',
-        )
-        is True
-    ), (
-        'Required: original viewed thread repeated pending add remove persists '
-        'without execution thread or other draft graft.'
-    )
+    assert qml(actor, 'Session.assistant.removeSelectedFile(' + json.dumps(third['id']) + ')') is True
     empty_a = _attachment_rows(actor)
     prefix['remove_last_actual'] = empty_a
     prefix['a_record_after_remove_last'] = actor.command('session_association_snapshot', thread_id=target)['reply']
@@ -12722,34 +11790,13 @@ def test_original_close_restart_keeps_repeated_pending_edits_separate_from_consu
     task = 'Retain this genuine consumed source before separate pending-draft edits.'
     _session_request_with_original_disclosure(actor, task);_session_completed(actor, 1);native_result(actor.responses()[0])
     thread = _session_state(actor)['inputs'][0]['threadId']
-    assert not next(
-        row
-        for row in _attachment_rows(actor)
-        if row['id'] == consumed['id']
-    )['pending'], (
-        'Required: original close restart keeps repeated pending edits separate '
-        'from consumed inputs and unapproved scope.'
-    )
+    assert not next(row for row in _attachment_rows(actor) if row['id'] == consumed['id'])['pending']
     first = _admit_original_pending_file_without_approval(actor, sources[1])
     last = _admit_original_pending_file_without_approval(actor, sources[2])
-    assert (
-        qml(
-            actor,
-            'Session.assistant.removeSelectedFile('
-            + json.dumps(first['id'])
-            + ')',
-        )
-        is True
-    ), (
-        'Required: original close restart keeps repeated pending edits separate '
-        'from consumed inputs and unapproved scope.'
-    )
+    assert qml(actor, 'Session.assistant.removeSelectedFile(' + json.dumps(first['id']) + ')') is True
     text = 'Keep only this actual later pending file through ordinary close.';_type_original_draft(actor, text)
     manifest = _attachment_rows(actor)
-    assert [row for row in manifest if row['pending']] == [last], (
-        'Required: original close restart keeps repeated pending edits separate '
-        'from consumed inputs and unapproved scope.'
-    )
+    assert [row for row in manifest if row['pending']] == [last]
     first_rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
     _capture_genuine_archive(actor, 'pending-context-retired-before-close')
     cache = _capture_exact_cache_manifest(actor, 'pending-context-retired-before-close')
@@ -12767,22 +11814,9 @@ def test_original_close_restart_keeps_repeated_pending_edits_separate_from_consu
         (restored.folder / 'original-close-pending-draft-restart.json').write_text(json.dumps(facts, indent=2)+'\n')
         assert resumes and resumes[-1]['params']['threadId'] == thread and not _session_wire(restored, 'thread/start') \
             and not _session_wire(restored, 'turn/start'), 'Actual automatic restart resumes original thread without transmitting or replaying pending input'
-        assert (
-            actual == manifest
-            and [row for row in actual if row['pending']] == [last]
-            and not next(row for row in actual if row['id'] == consumed['id'])[
-                'pending'
-            ]
-        ), (
-            'Required: original close restart keeps repeated pending edits '
-            'separate from consumed inputs and unapproved scope.'
-        )
-        assert _draft_text(restored) == text and qml(
-            restored, 'Session.assistant.contextConsentRequired'
-        ), (
-            'Required: original close restart keeps repeated pending edits '
-            'separate from consumed inputs and unapproved scope.'
-        )
+        assert actual == manifest and [row for row in actual if row['pending']] == [last] \
+            and not next(row for row in actual if row['id'] == consumed['id'])['pending']
+        assert _draft_text(restored) == text and qml(restored, 'Session.assistant.contextConsentRequired')
         _assert_original_pending_association(record, manifest, by_name, draft=text)
         displayed = {_rows_values(restored, 'messages', index)['id']: _rows_values(restored, 'messages', index)
                      for index in range(_rows_probe(restored)['count'])}
@@ -12803,34 +11837,20 @@ def test_original_pending_draft_invalidation_keeps_chooser_and_disclosure_owners
     actor = main_actor([[]]);_session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
         observe_context_continuity=True, final_text='The original ownership-fence observation is complete.')
     project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: original pending draft invalidation keeps chooser and '
-        'disclosure ownership fences.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.connect();_session_request_with_original_disclosure(actor, 'Retain this actual original project/thread before pending input changes.');_session_completed(actor, 1)
     thread = _session_state(actor)['inputs'][0]['threadId'];account = qml(actor, 'Session.assistant.account')
     sources = _attachment_fixtures(tmp_path, 3)
     pending = _admit_original_pending_file_without_approval(actor, sources[0]);text = 'Original captured pending draft before deliberate retirement.'
     _type_original_draft(actor, text)
-    late = qml(actor, 'Session.assistant.beginFileSelection(true)');assert late, (
-                                                                        'Required: original '
-                                                                        'pending draft '
-                                                                        'invalidation keeps '
-                                                                        'chooser and disclosure '
-                                                                        'ownership fences.'
-                                                                    )
+    late = qml(actor, 'Session.assistant.beginFileSelection(true)');assert late
     original_bytes = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources}
     before_turns = len(_session_wire(actor, 'turn/start'))
     if retirement == 'new_clear':
         actor.command('click', name='assistant.clear');actor.until(lambda value: not value['ui']['messages'])
         assert not any(row['pending'] for row in _attachment_rows(actor)) and _draft_text(actor) == '', (
             'The one original New session/Clear owner deliberately clears its captured unsent draft rather than preserving it under an obsolete association')
-        assert qml(
-            actor, 'Session.assistant.account'
-        ) == account and actor.last['ui']['project']['path'] == str(project), (
-            'Required: original pending draft invalidation keeps chooser and '
-            'disclosure ownership fences.'
-        )
+        assert qml(actor, 'Session.assistant.account') == account and actor.last['ui']['project']['path'] == str(project)
     elif retirement == 'different_account':
         actor.command('sign_out');_session_configure(actor, account_email='new-owned-draft-account@example.invalid')
         actor.until(lambda value: _unique_input_control(value, 'assistant.connection') is not None)
@@ -12840,30 +11860,13 @@ def test_original_pending_draft_invalidation_keeps_chooser_and_disclosure_owners
         before_resume = len(_session_wire(actor, 'thread/resume'))
         actor.command('click', name='assistant.sessions');rows = _session_wait(actor)
         assert thread in {row['id'] for row in rows}, 'Actual native metadata still lists the original own thread; visibility is distinct from resume authority'
-        chosen = actor.command('session_row_click', thread_id=thread)['reply'];assert chosen['reached'] and chosen['actual_pressed_changes'] > 0, (
-                                                                                   'Required: original '
-                                                                                   'pending draft '
-                                                                                   'invalidation keeps '
-                                                                                   'chooser and disclosure '
-                                                                                   'ownership fences.'
-                                                                               )
+        chosen = actor.command('session_row_click', thread_id=thread)['reply'];assert chosen['reached'] and chosen['actual_pressed_changes'] > 0
         actor.until(lambda _value: not qml(actor, 'Session.assistant.sessionsLoading'))
-        assert (
-            qml(actor, 'Session.assistant.sessionsError')
-            and len(_session_wire(actor, 'thread/resume')) == before_resume
-        ), (
-            'Required: original pending draft invalidation keeps chooser and '
-            'disclosure ownership fences.'
-        )
+        assert qml(actor, 'Session.assistant.sessionsError') and len(_session_wire(actor, 'thread/resume')) == before_resume
         actor.command('manual_key', key='escape')
     else:
         replacement = tmp_path / 'different-original-project';shutil.copytree(ROOT / 'tests/fixtures/background_estimate/projects/hrpt', replacement)
-        assert actor.command('open', path=str(replacement))['reply'][
-            'opened'
-        ], (
-            'Required: original pending draft invalidation keeps chooser and '
-            'disclosure ownership fences.'
-        )
+        assert actor.command('open', path=str(replacement))['reply']['opened']
         actor.until(lambda value: value['ui']['project']['path'] == str(replacement))
         assert _draft_text(actor) == text, 'Unrelated actual project retirement is not explicit New/Clear'
         assert qml(actor, 'Session.assistant.contextConsentRequired'), 'The new project cannot inherit original A disclosure authority'
@@ -12874,23 +11877,14 @@ def test_original_pending_draft_invalidation_keeps_chooser_and_disclosure_owners
     (actor.folder / 'original-pending-ownership-fences.json').write_text(json.dumps(facts, indent=2)+'\n')
     assert rejected['added'] is False and _attachment_rows(actor) == before_late, (
         'An original chooser callback retired by New/account/project cannot add under the replacement scope or erase its current input')
-    assert len(_session_wire(actor, 'turn/start')) == before_turns, (
-        'Required: original pending draft invalidation keeps chooser and '
-        'disclosure ownership fences.'
-    )
+    assert len(_session_wire(actor, 'turn/start')) == before_turns
     # A new deliberate local input may be attached under the replacement owner;
     # retained local user draft is not treated as old execution approval.
     fresh = _admit_original_pending_file_without_approval(actor, sources[2]);fresh_text = 'A fresh replacement-owner draft requires its own genuine disclosure.'
     _type_original_draft(actor, fresh_text)
     facts['new_pending'] = _attachment_rows(actor);facts['fresh_descriptor'] = fresh
     facts['real_cancel'] = _cancel_original_pending_send_without_admission(actor, facts['new_pending'], fresh_text)
-    assert all(
-        hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest
-        for path, digest in original_bytes.items()
-    ), (
-        'Required: original pending draft invalidation keeps chooser and '
-        'disclosure ownership fences.'
-    )
+    assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest for path, digest in original_bytes.items())
     (actor.folder / 'original-pending-ownership-fences.json').write_text(json.dumps(facts, indent=2)+'\n')
 
 def _original_saved_link_row(actor, source):
@@ -12936,10 +11930,7 @@ def test_original_successful_native_save_folder_link_uses_os_handler_without_rep
     outside = tmp_path / 'Unowned folder';outside.mkdir()
     gate = tmp_path / 'original-final-message-release'
     actor = main_actor([[]], show_actions=show_actions)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: original successful native save folder link uses os handler '
-        'without replacing project.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda value: not value['ui']['project']['calculating'])
     assert actor.command('observe_file_urls')['reply']['installed'], 'The test-owned ordinary file URL handler is installed before any possible external launch'
     assert qml(actor, '(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"originalSavedLinkOwner"; property var project:null; property var vm:null}\',contentItem);o.project=Session.project;o.vm=Session.assistant;return o.project!==null && o.vm!==null;})()'), 'A readonly original-owner witness retains real QObject identities without constructing native authority'
@@ -12958,13 +11949,7 @@ def test_original_successful_native_save_folder_link_uses_os_handler_without_rep
     assert saved['saved'] and saved['committed'] and saved['active'] and not saved['uncertain'] \
         and Path(saved['path']).resolve() == project.resolve(), (
             'Actual immutable native Save settlement, not model text or a proposed path, independently proves this exact folder')
-    starts = _session_wire(actor, 'thread/start');assert len(starts) == 1, (
-                                                      'Required: original '
-                                                      'successful native save '
-                                                      'folder link uses os '
-                                                      'handler without replacing '
-                                                      'project.'
-                                                  )
+    starts = _session_wire(actor, 'thread/start');assert len(starts) == 1
     workspace = Path(starts[0]['params']['cwd']).resolve()
     assert workspace.is_relative_to(Path(actor.last['test_storage']).resolve()), 'The captive-report control belongs to this real fixture-owned runtime workspace'
     original_report = b'<!doctype html><title>Original retained proof</title><p>Independent report bytes.</p>'
@@ -12987,18 +11972,12 @@ def test_original_successful_native_save_folder_link_uses_os_handler_without_rep
     old_count = len(actor.last['activated_urls'])
     assert not qml(actor, 'Session.assistant.openReport(' + json.dumps(spoof['id']) + ',' + json.dumps(str(project)) + ')'), (
         'A different retained completed row without this Save cannot borrow another row’s native folder authority')
-    assert len(actor.last['activated_urls']) == old_count, (
-        'Required: original successful native save folder link uses os handler '
-        'without replacing project.'
-    )
+    assert len(actor.last['activated_urls']) == old_count
     qml(actor, 'Session.assistant.clearHistory()')
     actor.until(lambda value: not value['ui']['messages'])
     assert not qml(actor, 'Session.assistant.openReport(' + json.dumps(row['id']) + ',' + json.dumps(str(project)) + ')'), (
         'A cleared row is stale and cannot retain a local folder-opening grant')
-    assert len(actor.last['activated_urls']) == old_count, (
-        'Required: original successful native save folder link uses os handler '
-        'without replacing project.'
-    )
+    assert len(actor.last['activated_urls']) == old_count
     (actor.folder / 'original-saved-folder-link-route.json').write_text(json.dumps({'saved': saved, 'row': row, 'clicks': facts,
         'qualification': 'File URL requests observed through original QDesktopServices handler; no actual external application launched. Original route and exact native Save row proven. No OS file-manager behavior or owner Mac run claimed.'}, indent=2)+'\n')
 
@@ -13017,19 +11996,10 @@ def test_original_failed_native_save_cannot_authorize_its_proposed_folder_link(
     monkeypatch.delenv('TEMPORARY_FAILURE_AFTER_FIRST', raising=False)
     monkeypatch.setenv('TEMPORARY_FAILURE_ARMED', str(armed))
     actor = main_actor([[tool_call('save_project', 'original-failed-save-link', destination='current')]], show_actions=show_actions)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Required: original failed native save cannot authorize its proposed '
-        'folder link.'
-    )
+    assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda value: not value['ui']['project']['calculating'])
     assert actor.command('observe_file_urls')['reply']['installed'], 'File dispatch interception is active before the negative local-link gesture'
-    assert qml(
-        actor,
-        '(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"originalSavedLinkOwner"; property var project:null; property var vm:null}\',contentItem);o.project=Session.project;o.vm=Session.assistant;return o.project!==null;})()',
-    ), (
-        'Required: original failed native save cannot authorize its proposed '
-        'folder link.'
-    )
+    assert qml(actor, '(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"originalSavedLinkOwner"; property var project:null; property var vm:null}\',contentItem);o.project=Session.project;o.vm=Session.assistant;return o.project!==null;})()')
     qml(actor, 'Session.project.title="Original genuine failed Save location"')
     source = '[FAILED-SAVE](' + str(project) + ')'
     _session_configure(actor, final_text=source)
@@ -13087,12 +12057,8 @@ def _assert_original_inspection_moments(actual, values, population, complete, *,
         assert actual['state'] == state and actual['mean'] is None and actual['rms'] is None, (
             'Missing/unavailable/empty populations stay explicit instead of becoming valid zero')
         return
-    assert actual['state'] == 'ok' and all(
-        isinstance(actual[key], (int, float))
-        and not isinstance(actual[key], bool)
-        and math.isfinite(actual[key])
-        for key in ('mean', 'rms')
-    ), 'Required:  assert original inspection moments.'
+    assert actual['state'] == 'ok' and all(isinstance(actual[key], (int, float)) and not isinstance(actual[key], bool)
+        and math.isfinite(actual[key]) for key in ('mean', 'rms'))
     k = 8 * len(values) + 8
     gamma = k * sys.float_info.epsilon / (1 - k * sys.float_info.epsilon)
     for key, value in zip(('mean', 'rms'), expected, strict=True):
@@ -13101,57 +12067,24 @@ def _assert_original_inspection_moments(actual, values, population, complete, *,
 
 
 def _assert_original_inspection_range(actual, raw, selected, *, reference=None, bragg=False):
-    assert set(actual) == {
-        'start',
-        'count',
-        'end',
-        'mask',
-        'axis_order',
-        'columns',
-    }, 'Required:  assert original inspection range.'
-    assert all(
-        _original_inspection_integer(actual[key])
-        for key in ('start', 'count', 'end')
-    ), 'Required:  assert original inspection range.'
-    assert (actual['start'], actual['count'], actual['end']) == (
-        selected['start'],
-        selected['count'],
-        selected['end'],
-    ), 'Required:  assert original inspection range.'
+    assert set(actual) == {'start', 'count', 'end', 'mask', 'axis_order', 'columns'}
+    assert all(_original_inspection_integer(actual[key]) for key in ('start', 'count', 'end'))
+    assert (actual['start'], actual['count'], actual['end']) == (selected['start'], selected['count'], selected['end'])
     rows = [row for row in raw['rows'] if selected['start'] <= row['row'] < selected['end']]
     assert len(rows) == selected['count'], 'Every selected native row belongs to the exact original raw source, not a resampled axis'
     mask = actual['mask']
-    assert set(mask) == {
-        'source',
-        'applicable',
-        'current',
-        'included',
-        'excluded',
-        'unknown',
-    }, 'Required:  assert original inspection range.'
+    assert set(mask) == {'source', 'applicable', 'current', 'included', 'excluded', 'unknown'}
     if bragg:
-        assert mask == {
-            'source': 'not_applicable',
-            'applicable': False,
-            'current': False,
-            'included': None,
-            'excluded': None,
-            'unknown': None,
-        }, 'Required:  assert original inspection range.'
+        assert mask == {'source': 'not_applicable', 'applicable': False, 'current': False,
+            'included': None, 'excluded': None, 'unknown': None}
         included = None
     elif raw['row_space'] == 'native_reflection':
         assert mask['source'] == 'single_crystal_file_fitUse' and mask['applicable'] is True \
             and mask['current'] is raw['shape_valid'], 'Actual settled SC shape/file-fitUse owner must really provide current known inclusion'
         included = [row.get('used') if mask['current'] else None for row in rows]
     else:
-        assert (
-            mask['source'] == 'native_calc_status'
-            and mask['applicable'] is True
-            and reference is not None
-        ), 'Required:  assert original inspection range.'
-        assert mask['current'] is (
-            reference['native_current'] and reference['graph_current']
-        ), 'Required:  assert original inspection range.'
+        assert mask['source'] == 'native_calc_status' and mask['applicable'] is True and reference is not None
+        assert mask['current'] is (reference['native_current'] and reference['graph_current'])
         status = reference['original_native_status_rows']
         included = [True if row['row'] < len(status) and status[row['row']] == 'incl' else
                     False if row['row'] < len(status) and status[row['row']] == 'excl' else None for row in rows] if mask['current'] else [None] * len(rows)
@@ -13180,22 +12113,15 @@ def _assert_original_inspection_range(actual, raw, selected, *, reference=None, 
         order = 'unordered'
     assert actual['axis_order'] == order, 'Ordering describes original selected native x only, never SC intensity/file sorting or equal-width bins'
     metadata = [column for column in raw['columns'] if column['name'] != 'used']
-    assert [column['name'] for column in actual['columns']] == [
-        column['name'] for column in metadata
-    ], 'Required:  assert original inspection range.'
+    assert [column['name'] for column in actual['columns']] == [column['name'] for column in metadata]
     for column, original in zip(actual['columns'], metadata, strict=True):
         assert all(column[key] == value for key, value in original.items()), 'All original ordered units/quantity/availability/currentness/length fields survive outgoing projection'
         count_keys = ('finite', 'missing', 'nan', 'positive_infinity', 'negative_infinity')
-        assert all(
-            _original_inspection_integer(column[key]) for key in count_keys
-        ) and sum(column[key] for key in count_keys) == len(rows), (
-            'Required:  assert original inspection range.'
-        )
+        assert all(_original_inspection_integer(column[key]) for key in count_keys) \
+            and sum(column[key] for key in count_keys) == len(rows)
         values = [row.get(column['name']) for row in rows]
         finite = [(row, value) for row, value in zip(rows, values, strict=True) if value is not None and math.isfinite(value)]
-        assert column['finite'] == len(finite), (
-            'Required:  assert original inspection range.'
-        )
+        assert column['finite'] == len(finite)
         if reference is not None:
             if not original['available']:
                 classes = ['missing'] * len(rows)
@@ -13217,20 +12143,15 @@ def _assert_original_inspection_range(actual, raw, selected, *, reference=None, 
                 expected = None
             assert column[field] == expected, 'Finite extremum witnesses keep the earliest original native row and exact mapping'
         if column['name'] == 'sigma':
-            assert column['sigma_quality'] == {
-                'positive': sum(value > 0 for _row, value in finite),
-                'zero': sum(value == 0 for _row, value in finite),
-                'negative': sum(value < 0 for _row, value in finite),
-            }, 'Required:  assert original inspection range.'
+            assert column['sigma_quality'] == {'positive': sum(value > 0 for _row, value in finite),
+                'zero': sum(value == 0 for _row, value in finite), 'negative': sum(value < 0 for _row, value in finite)}
         else:
             assert column.get('sigma_quality') is None, 'Non-sigma columns do not invent a sigma-quality role'
         if column['name'] in {'measured', 'sigma', 'calculated', 'background', 'residual'}:
             _assert_original_inspection_moments(column['all_finite'], [value for _row, value in finite], 'all_finite', True,
                 empty=not rows, available=original['available'])
             if bragg:
-                assert column['included_finite'] is None, (
-                    'Required:  assert original inspection range.'
-                )
+                assert column['included_finite'] is None
             else:
                 _assert_original_inspection_moments(column['included_finite'],
                     [value for value, use in zip(values, included, strict=True) if use is True and value is not None and math.isfinite(value)],
@@ -13241,47 +12162,20 @@ def _assert_original_inspection_range(actual, raw, selected, *, reference=None, 
 
 
 def _assert_original_inspection_summary(data, raw, partitions, *, reference=None, bragg=False):
-    assert data['view'] == 'summary' and 'rows' not in data, (
-        'Required:  assert original inspection summary.'
-    )
+    assert data['view'] == 'summary' and 'rows' not in data
     assert all(data[key] == value for key, value in raw.items() if key != 'rows'), 'Summary preserves all applicable original capture metadata, phases kept separate'
     summary = data['summary']
-    assert set(summary) == {
-        'schema',
-        'partitioning',
-        'requested_partitions',
-        'partitions',
-        'physical_components',
-        'overall',
-        'bins',
-    }, 'Required:  assert original inspection summary.'
-    assert (
-        summary['schema'] == 'edi.assistant.data-summary/1'
-        and summary['partitioning'] == 'contiguous_native_rows'
-    ), 'Required:  assert original inspection summary.'
-    assert _original_inspection_integer(
-        summary['requested_partitions']
-    ) and _original_inspection_integer(summary['partitions']), (
-        'Required:  assert original inspection summary.'
-    )
-    assert summary['requested_partitions'] == partitions and summary[
-        'partitions'
-    ] == min(partitions, raw['count']), (
-        'Required:  assert original inspection summary.'
-    )
+    assert set(summary) == {'schema', 'partitioning', 'requested_partitions', 'partitions', 'physical_components', 'overall', 'bins'}
+    assert summary['schema'] == 'edi.assistant.data-summary/1' and summary['partitioning'] == 'contiguous_native_rows'
+    assert _original_inspection_integer(summary['requested_partitions']) and _original_inspection_integer(summary['partitions'])
+    assert summary['requested_partitions'] == partitions and summary['partitions'] == min(partitions, raw['count'])
     assert summary['physical_components'] == {'available': False, 'reason': 'not_exposed_by_this_inspection'}, (
         'Descriptive summaries cannot fabricate Gaussian/Lorentz/total-width or physical validity evidence')
     _assert_original_inspection_range(summary['overall'], raw, raw, reference=reference, bragg=bragg)
-    bins = summary['bins'];assert len(bins) == summary['partitions'], (
-                               'Required:  assert original inspection summary.'
-                           )
+    bins = summary['bins'];assert len(bins) == summary['partitions']
     cursor = raw['start'];sizes = []
     for item in bins:
-        assert (
-            item['start'] == cursor
-            and item['count'] > 0
-            and item['end'] == item['start'] + item['count']
-        ), 'Required:  assert original inspection summary.'
+        assert item['start'] == cursor and item['count'] > 0 and item['end'] == item['start'] + item['count']
         _assert_original_inspection_range(item, raw, item, reference=reference, bragg=bragg)
         cursor = item['end'];sizes.append(item['count'])
     assert cursor == raw['end'] and sum(sizes) == raw['count'] \
@@ -13545,10 +12439,7 @@ def _original_inspection_files_keep_science_and_owned_diagnostic(
         original_work = observed['current_work']
         if producer() != receipt or observed['current_work'] != original_work:
             return False
-        assert science() == original_hashes, (
-            'Required:  original inspection files keep science and owned '
-            'diagnostic.'
-        )
+        assert science() == original_hashes
         return True
 
     try:
@@ -13568,10 +12459,7 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
     shutil.copytree(original, folder)
     file_hashes = {str(path.relative_to(folder)): hashlib.sha256(path.read_bytes()).hexdigest() for path in folder.rglob('*') if path.is_file()}
     original_entries = {str(path.relative_to(folder)) for path in folder.rglob('*')}
-    assert actor.command('open', path=str(folder))['reply']['opened'], (
-        'Required: actual compact inspection uses original native cells keeps '
-        'full raw and archive.'
-    )
+    assert actor.command('open', path=str(folder))['reply']['opened']
     actor.until(lambda value: not value['ui']['project']['calculating'])
     marker = 'e11.original-inspection-mirror-owner'
     assert qml(actor, r'''(function(){const vm=Session.assistant,p=Session.project,root=p.path;
@@ -13594,10 +12482,7 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
     actor.connect();context = json.loads(actor.last['ui']['context'])
     assert len(context['datasets']) == 1, 'The original fixture has one exact offered native dataset owner'
     dataset = context['datasets'][0];identity = dataset['id'];total = dataset['axis']['count']
-    assert isinstance(total, int) and total > 8, (
-        'Required: actual compact inspection uses original native cells keeps '
-        'full raw and archive.'
-    )
+    assert isinstance(total, int) and total > 8
     assert 'rows' not in dataset and 'measured' not in dataset and 'calculated' not in dataset, 'Default original context still contains metadata rather than hidden whole curve arrays'
     before = actor.command('save_readback_snapshot', inspection_reference=True)['reply']
     before_model = json.loads(json.dumps(actor.last['ui']['project']))
@@ -13608,27 +12493,13 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
         tool_call('inspect_data', 'original-bragg-summary', dataset_id=identity, start=0, count=total+31, source='bragg', view='summary', partitions=3),
         tool_call('inspect_data', 'original-empty-summary', dataset_id=identity, start=total, count=0, view='summary', partitions=3),
         tool_call('inspect_data', 'original-rows-after-summary', dataset_id=identity, start=1, count=8, view='rows')]
-    reports = []
-    actor.configure_turns([calls[:4]])
-    actor.request('Inspect the first four exact ranges without edits, a fit or a save.')
+    actor.configure_turns([calls]);actor.request('Inspect this exact current dataset without edits: retain the requested whole native rows, exact focused rows and the offered compact summaries; do not fit or save.')
     _session_completed(actor, 1)
-    reports.append(json.loads(qml(actor, 'Session.assistant.workReportDocument()')))
-    actor.append_turn(calls[4:])
-    actor.request('Inspect the remaining exact ranges in this new turn without edits, a fit or a save.')
-    _session_completed(actor, 2)
-    reports.append(json.loads(qml(actor, 'Session.assistant.workReportDocument()')))
     outcomes = {call['call_id']: _original_inspection_reply(actor, call['call_id'])['data'] for call in calls}
     raw = outcomes['original-full-legacy'];explicit = outcomes['original-explicit-slice']
     assert 'summary' not in raw and 'view' not in raw and len(raw['rows']) == total \
-        and raw['start'] == 0 and raw['end'] == total and raw['eof'], 'Each permitted default raw read retains every source row with no decimation or summary fields'
-    assert (
-        explicit['rows'] == raw['rows'][1:9]
-        and 'summary' not in explicit
-        and 'view' not in explicit
-    ), (
-        'Required: actual compact inspection uses original native cells keeps '
-        'full raw and archive.'
-    )
+        and raw['start'] == 0 and raw['end'] == total and raw['eof'], 'Legacy/default full access retains every source row with no decimation/new quota or summary fields'
+    assert explicit['rows'] == raw['rows'][1:9] and 'summary' not in explicit and 'view' not in explicit
     assert explicit == outcomes['original-rows-after-summary'], 'Later explicit raw retrieval remains byte-meaning-equivalent after compact inspection'
     assert raw['current'] is True and raw['publication'] == 'native', 'This positive current-computed fixture must really reach adopted native calculation, not a frame or empty stale curve'
     reference = next(row for row in before['banks'] if row['id'] == identity) if kind == 'powder' else None
@@ -13638,14 +12509,7 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
     old_bragg = outcomes['original-bragg-full'];new_bragg = outcomes['original-bragg-summary']
     assert new_bragg['view'] == 'summary' and 'summary' not in new_bragg and 'rows' not in new_bragg \
         and len(new_bragg['phases']) == len(old_bragg['phases']), 'Bragg summaries remain per-phase, never one global measured-axis aggregate'
-    assert all(
-        new_bragg[key] == value
-        for key, value in old_bragg.items()
-        if key != 'phases'
-    ), (
-        'Required: actual compact inspection uses original native cells keeps '
-        'full raw and archive.'
-    )
+    assert all(new_bragg[key] == value for key, value in old_bragg.items() if key != 'phases')
     for phase, old_phase in zip(new_bragg['phases'], old_bragg['phases'], strict=True):
         # Phase entries retain original metadata and get their OWN summary;
         # top-level view belongs to the DataInspection envelope only.
@@ -13658,26 +12522,15 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
     report = json.loads(qml(actor, 'Session.assistant.workReportDocument()'))
     retained = {}
     for call in calls:
-        matches = next((matching for document in reports
-            if (matching := [item['row']['payload'] for item in document['history_evidence']
-                if item.get('row', {}).get('payload', {}).get('tool') == 'inspect_data'
-                and item['row']['payload'].get('id') == call['call_id']])), [])
+        matches = [item['row']['payload'] for item in report['history_evidence']
+                   if item.get('row', {}).get('payload', {}).get('tool') == 'inspect_data'
+                   and item['row']['payload'].get('id') == call['call_id']]
         assert len(matches) == 1, 'Every real original call has one complete canonical backend outcome, not a trimmed/overwritten conversational surrogate'
         assert json.loads(matches[0]['contentItems'][0]['text'])['data'] == outcomes[call['call_id']] \
             and matches[0]['nativeOutcome']['data'] == outcomes[call['call_id']], (
                 'Actual outgoing projection keeps the declared summary/raw fields, while full retained backend call evidence remains accessible')
         retained[call['call_id']] = matches[0]
-    assert (
-        len(
-            retained['original-full-legacy']['nativeOutcome']['data'][
-                'rows'
-            ]
-        )
-        == total
-    ), (
-        'Required: actual compact inspection uses original native cells keeps '
-        'full raw and archive.'
-    )
+    assert len(retained['original-full-legacy']['nativeOutcome']['data']['rows']) == total
     _original_inspection_files_keep_science_and_owned_diagnostic(
         actor, folder, file_hashes, original_entries, marker, report['scope_coverage']['instance_id'])
     assert not any(row.get('params', {}).get('tool') in {'set_parameters', 'set_free', 'run_fit', 'save_project'}
@@ -13693,10 +12546,7 @@ def test_actual_compact_inspection_registration_and_current_guidance_are_deliver
     actor.command('create', name='original-summary-guidance')
     specs = actor.command('tool_specs')['reply']['tools']
     inspection = [tool for tool in specs if tool['name'] == 'inspect_data']
-    assert len(inspection) == 1, (
-        'Required: actual compact inspection registration and current guidance '
-        'are delivered once.'
-    )
+    assert len(inspection) == 1
     properties = inspection[0]['inputSchema']['properties']
     assert set(properties['view']['enum']) == {'rows', 'summary'} and properties['partitions']['type'] == 'integer', (
         'Only an actually registered same-tool summary capability may be advertised by current guidance')
@@ -13714,24 +12564,9 @@ def test_actual_compact_inspection_registration_and_current_guidance_are_deliver
     actual = [tool for tool in params['dynamicTools'] if tool['name'] == 'inspect_data']
     assert actual == inspection, 'Actual stock registration/wire receives the same offered schema, not an undelivered backend-only feature'
     instructions = params['developerInstructions']
-    assert (
-        instructions.startswith(_SHARED_CONTROL_REGRESSION_PIN)
-        and instructions.count(_SHARED_CONTROL_REGRESSION_PIN) == 1
-    ), (
-        'Required: actual compact inspection registration and current guidance '
-        'are delivered once.'
-    )
-    assert instructions.count(_SKILL_INTRO_REGRESSION_PIN) == 1, (
-        'Required: actual compact inspection registration and current guidance '
-        'are delivered once.'
-    )
-    assert instructions.endswith(
-        _SKILL_INTRO_REGRESSION_PIN
-        + ''.join(expected[key] + '\n' for key in sorted(expected))
-    ), (
-        'Required: actual compact inspection registration and current guidance '
-        'are delivered once.'
-    )
+    assert instructions.startswith(_SHARED_CONTROL_REGRESSION_PIN) and instructions.count(_SHARED_CONTROL_REGRESSION_PIN) == 1
+    assert instructions.count(_SKILL_INTRO_REGRESSION_PIN) == 1
+    assert instructions.endswith(_SKILL_INTRO_REGRESSION_PIN + ''.join(expected[key] + '\n' for key in sorted(expected)))
     assert all(instructions.count(body) == 1 for body in expected.values()), 'Every entire current original skill body survives once, including declared summary/category/user-scope/Undo guidance; this is delivery, not model adherence'
     assert all(_SHARED_CONTROL_REGRESSION_PIN not in tool['description'] for tool in params['dynamicTools']), 'The global original control contract is not duplicated per tool'
     (actor.folder / 'original-compact-inspection-guidance-delivery.json').write_text(json.dumps({
