@@ -19,7 +19,7 @@ from tests.system.py import test_e11_t5_dev_native_integration as base
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def actor_in(folder, turns):
+def actor_in(folder, turns, *, show_actions=False):
     folder.mkdir()
     binary = Path(
         os.environ.get(
@@ -27,7 +27,7 @@ def actor_in(folder, turns):
             ROOT / 'build/app/assistant-ui-probe/assistant_real_owner_probe',
         )
     )
-    actor = base.MainActor(binary, folder, {'turns': turns}, False)
+    actor = base.MainActor(binary, folder, {'turns': turns}, show_actions)
     base.qml(actor, '(function(){raise();requestActivate();return true;})()')
     project = folder / 'project'
     shutil.copytree(ROOT / 'tests/fixtures/fit_quality/uncertainty', project)
@@ -90,7 +90,7 @@ def fitted(tmp_path_factory):
         (actor.folder / 'misfit-and-original-arrays.json').write_text(
             json.dumps(receipt, indent=2) + '\n'
         )
-        yield receipt
+        return receipt
     finally:
         actor.close()
 
@@ -254,48 +254,41 @@ def reads(tmp_path_factory):
             'datasets': datasets,
             'again': again,
         }
-        (actor.folder / 'read-budget-and-original-descriptions.json').write_text(
+        (actor.folder / 'uncapped-reads-and-original-descriptions.json').write_text(
             json.dumps(receipt, indent=2) + '\n'
         )
-        receipt['actor'] = actor
-        yield receipt
+        receipt['descriptions'] = [
+            actor.command('activity_description', row_id=row['id'])['reply']['description']
+            for row in actor.last['ui']['messages']
+            if (row.get('payload') or {}).get('tool') == 'inspect_data'
+        ]
+        (actor.folder / 'rendered-read-descriptions.json').write_text(
+            json.dumps(receipt['descriptions'], indent=2) + '\n', encoding='utf-8'
+        )
+        return receipt
     finally:
         actor.close()
 
 
-def test_data_reads_share_four_call_budget_and_reset_only_on_new_turn(evidence):
+def test_fifth_valid_data_read_remains_available_without_a_per_turn_cap(evidence):
     reads = evidence['reads']
     first = reads['first']
-    assert all(first[call['call_id']]['success'] for call in reads['calls'][:4]), (
-        'Four actual row/summary/Bragg reads across datasets share one allowed turn budget'
+    assert all(first[call['call_id']]['success'] for call in reads['calls']), (
+        'Every valid requested row, summary and Bragg read remains available beyond '
+        'the former four-read boundary'
     )
-    assert (
-        not first['fifth-read']['success']
-        and first['fifth-read']['value'].get('status') == 'refused'
-    ), 'A fifth valid data read is refused before returning another native data slice'
-    assert first['fifth-read']['value'].get('code') == 'refused', (
-        'The fifth valid call is rejected by the read budget, not a malformed-range error'
-    )
-    assert 'data' not in first['fifth-read']['value'], (
-        'A budget refusal cannot leak the fifth requested data slice'
+    data = first['fifth-read']['value'].get('data')
+    assert data and data['start'] == 0 and data['end'] == 1 and len(data['rows']) == 1, (
+        'The fifth valid read returns its actual native slice instead of a cap refusal'
     )
     assert all(reads['all'][call['call_id']]['success'] for call in reads['again']), (
-        'A fresh genuine provider turn receives a new four-read allowance without '
-        'clearing the session'
+        'A later genuine turn keeps native reads available without clearing the session'
     )
 
 
 def test_data_read_step_names_actual_dataset_and_rows_even_when_clamped(evidence):
     reads = evidence['reads']
-    actor = reads['actor']
-    descriptions = [
-        actor.command('activity_description', row_id=row['id'])['reply']['description']
-        for row in actor.last['ui']['messages']
-        if (row.get('payload') or {}).get('tool') == 'inspect_data'
-    ]
-    (actor.folder / 'rendered-read-descriptions.json').write_text(
-        json.dumps(descriptions, indent=2) + '\n'
-    )
+    descriptions = reads['descriptions']
     for call in reads['calls'][:2]:
         data = reads['first'][call['call_id']]['value']['data']
         matching = [text for text in descriptions if data['dataset_id'] in text]

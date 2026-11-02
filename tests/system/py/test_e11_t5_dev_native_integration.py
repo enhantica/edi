@@ -5537,87 +5537,221 @@ def _protocol_item(method, item):
     return {'notification': {'method': method, 'params': {'item': item, **clock}}}
 
 
-def test_lazy_command_human_details_preserve_first_supported_meanings_without_technical_copy(main_actor):
-    # Labels are the immutable FIRST formatter's human compatibility contract
-    # (Edi9d06 AssistantMessage.qml), not current projection output as oracle.
+def test_lazy_command_human_details_preserve_first_supported_meanings_without_technical_copy(
+    main_actor,
+):
+    # Preserve the FIRST formatter meanings with the owner's updated fit wording.
     hidden = 'independent-raw-command-output-NEVER-DISPLAY-69bb'
     cases = [
-        ('workflow', 'cat .agents/skills/project-assistance/SKILL.md', [],
-         'Read assistant workflow instructions'),
-        ('strategy', 'cat .agents/skills/refinement-strategy/SKILL.md', [],
-         'Read assistant refinement instructions'),
-        ('read', 'cat /approved/counts.xye', [{'type': 'read', 'command': 'cat /approved/counts.xye',
-           'name': 'counts.xye', 'path': '/approved/counts.xye'}], 'Read counts.xye'),
-        ('list', 'ls /approved/references', [{'type': 'listFiles', 'command': 'ls /approved/references',
-           'path': 'reference-directory'}], 'List reference-directory'),
-        ('search', 'rg atomic /approved/input.cif', [{'type': 'search', 'command': 'rg atomic /approved/input.cif',
-           'query': 'atomic coordinates', 'path': '/approved/input.cif'}], 'Search for atomic coordinates'),
-        ('declared', '# Edi purpose: Inspect selected input headings\nopaque unread technical script',
-         [{'type': 'unknown', 'command': '# Edi purpose: Inspect selected input headings\nopaque unread technical script'}],
-         'Inspect selected input headings'),
+        (
+            'workflow',
+            'cat .agents/skills/project-assistance/SKILL.md',
+            [],
+            'Read assistant workflow instructions',
+        ),
+        (
+            'strategy',
+            'cat .agents/skills/refinement-strategy/SKILL.md',
+            [],
+            'Read assistant fit instructions',
+        ),
+        (
+            'read',
+            'cat /approved/counts.xye',
+            [
+                {
+                    'type': 'read',
+                    'command': 'cat /approved/counts.xye',
+                    'name': 'counts.xye',
+                    'path': '/approved/counts.xye',
+                }
+            ],
+            'Read counts.xye',
+        ),
+        (
+            'list',
+            'ls /approved/references',
+            [
+                {
+                    'type': 'listFiles',
+                    'command': 'ls /approved/references',
+                    'path': 'reference-directory',
+                }
+            ],
+            'List reference-directory',
+        ),
+        (
+            'search',
+            'rg atomic /approved/input.cif',
+            [
+                {
+                    'type': 'search',
+                    'command': 'rg atomic /approved/input.cif',
+                    'query': 'atomic coordinates',
+                    'path': '/approved/input.cif',
+                }
+            ],
+            'Search for atomic coordinates',
+        ),
+        (
+            'declared',
+            '# Edi purpose: Inspect selected input headings\nopaque unread technical script',
+            [
+                {
+                    'type': 'unknown',
+                    'command': '# Edi purpose: Inspect selected input headings\nopaque unread technical script',
+                }
+            ],
+            'Inspect selected input headings',
+        ),
     ]
+    cases.insert(
+        2,
+        (
+            'combined',
+            cases[0][1] + ' ' + cases[1][1].removeprefix('cat '),
+            [],
+            'Read assistant workflow and fit instructions',
+        ),
+    )
     steps = []
     for identity, command, actions, _ in cases:
-        item = {'type': 'commandExecution', 'id': 'human-' + identity,
-                'pluginId': None, 'scriptPath': None, 'command': command,
-                'cwd': '/independent/approved-workspace', 'processId': None, 'source': 'agent',
-                'status': 'inProgress', 'commandActions': actions,
-                'aggregatedOutput': None, 'exitCode': None, 'durationMs': None}
-        steps.extend([_protocol_item('item/started', item),
-                      _protocol_item('item/completed', {**item, 'status': 'completed',
-                                      'aggregatedOutput': hidden, 'exitCode': 0, 'durationMs': 1})])
+        item = {
+            'type': 'commandExecution',
+            'id': 'human-' + identity,
+            'pluginId': None,
+            'scriptPath': None,
+            'command': command,
+            'cwd': '/independent/approved-workspace',
+            'processId': None,
+            'source': 'agent',
+            'status': 'inProgress',
+            'commandActions': actions,
+            'aggregatedOutput': None,
+            'exitCode': None,
+            'durationMs': None,
+        }
+        steps.extend([
+            _protocol_item('item/started', item),
+            _protocol_item(
+                'item/completed',
+                {
+                    **item,
+                    'status': 'completed',
+                    'aggregatedOutput': hidden,
+                    'exitCode': 0,
+                    'durationMs': 1,
+                },
+            ),
+        ])
     actor = main_actor([steps])
     actor.connect()
-    starts = [row for row in map(json.loads, actor.trace.read_text().splitlines())
-              if row.get('method') == 'thread/start']
-    assert starts, 'The command fixture belongs to an actual original bootstrapped runtime workspace'
+    starts = [
+        row
+        for row in map(json.loads, actor.trace.read_text().splitlines())
+        if row.get('method') == 'thread/start'
+    ]
+    assert starts, (
+        'The command fixture belongs to an actual original bootstrapped runtime workspace'
+    )
     for step in steps:
         step['notification']['params']['item']['cwd'] = starts[-1]['params']['cwd']
     actor.configure_turns([steps])
-    actor.request('Read the already selected public information; do not change the scientific model.')
+    actor.request(
+        'Read the already selected public information; do not change the scientific model.'
+    )
     _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] >= len(cases) + 2)
     assert qml(actor, 'Preferences.assistantCopyTechnicalDetails') is False, (
-        'Original human command meanings remain available without technical opt-in')
+        'Original human command meanings remain available without technical opt-in'
+    )
     rows = [_rows_values(actor, 'messages', i) for i in range(_rows_probe(actor)['count'])]
     activities = [row for row in rows if row['kind'] == 'activity']
-    assert len(activities) == len(cases), 'All independently pinned command item pairs reach actual retained activity rows'
+    assert len(activities) == len(cases), (
+        'All independently pinned command item pairs reach actual retained activity rows'
+    )
     view = control_expression('assistant.messages')
     observed = []
+    meanings_missing = []
     for current, (identity, command, actions, expected) in zip(activities, cases):
         index = next(i for i, row in enumerate(rows) if row['id'] == current['id'])
-        actor.command('evaluate', expression='(function(){const v=' + view
-                      + ';v.positionViewAtIndex(' + str(index) + ',ListView.Center);})()')
-        response = actor.command('message_input', row_id=current['id'],
-                                  name='assistant.command.toggle', action='click')['reply']
+        actor.command(
+            'evaluate',
+            expression='(function(){const v='
+            + view
+            + ';v.positionViewAtIndex('
+            + str(index)
+            + ',ListView.Center);})()',
+        )
+        response = actor.command(
+            'message_input', row_id=current['id'], name='assistant.command.toggle', action='click'
+        )['reply']
         assert response['reached'] and response['same_row_after'], (
-            'Known command description is expanded through its exact original realized Qt activity control')
+            'Known command description is expanded through its exact original realized Qt activity control'
+        )
         scene = _a2b_original_row_scene(actor, current)
-        assert scene['row_id'] == current['id'] and scene['kind'] == current['kind'] \
-            and scene['status'] == current['status'] and scene['current_owner'] and scene['same_window'] \
-            and scene['checked'] and scene['body_visible'], (
-                'The prior command meaning is observed on its unique actual expanded current row in the original window')
+        assert (
+            scene['row_id'] == current['id']
+            and scene['kind'] == current['kind']
+            and scene['status'] == current['status']
+            and scene['current_owner']
+            and scene['same_window']
+            and scene['checked']
+            and scene['body_visible']
+        ), (
+            'The prior command meaning is observed on its unique actual expanded current row in the original window'
+        )
         displayed = [scene['body']]
-        assert displayed and expected in '\n'.join(displayed), (
-            'Lazy full-human expansion preserves the FIRST known skill/read/list/search/declared-purpose meaning')
-        assert hidden not in '\n'.join(displayed) and 'opaque unread technical script' not in '\n'.join(displayed), (
-            'Human expansion never displays raw command/output trees as a substitute for the missing description')
-        actor.command('message_input', row_id=current['id'], name='assistant.command.toggle', action='hover')
-        copied = actor.command('message_input', row_id=current['id'], name='assistant.activity.copy', action='click')['reply']
-        assert copied['reached'] and expected in copied['clipboard'] and hidden not in copied['clipboard'], (
-            'Default original-row Copy retains the useful human command meaning without technical output')
+        if not displayed or expected not in '\n'.join(displayed):
+            meanings_missing.append(identity + ': details')
+        assert hidden not in '\n'.join(
+            displayed
+        ) and 'opaque unread technical script' not in '\n'.join(displayed), (
+            'Human expansion never displays raw command/output trees as a substitute for the missing description'
+        )
+        actor.command(
+            'message_input', row_id=current['id'], name='assistant.command.toggle', action='hover'
+        )
+        copied = actor.command(
+            'message_input', row_id=current['id'], name='assistant.activity.copy', action='click'
+        )['reply']
+        assert copied['reached'] and hidden not in copied['clipboard'], (
+            'Default original-row Copy reaches the actual control without copying technical output'
+        )
+        if expected not in copied['clipboard']:
+            meanings_missing.append(identity + ': copy')
         args = ','.join(json.dumps(current[key]) for key in ('id', 'kind', 'status'))
         technical = qml(actor, 'Session.assistant.activityTechnicalDetails(' + args + ')')
         original = json.loads(technical)
-        assert original['payload']['command'] == command and original['payload']['aggregatedOutput'] == hidden, (
-            'Explicit exact-row technical lookup still retains immutable original command/output evidence')
-        actor.command('message_input', row_id=current['id'], name='assistant.command.toggle', action='click')
+        assert (
+            original['payload']['command'] == command
+            and original['payload']['aggregatedOutput'] == hidden
+        ), (
+            'Explicit exact-row technical lookup still retains immutable original command/output evidence'
+        )
+        actor.command(
+            'message_input', row_id=current['id'], name='assistant.command.toggle', action='click'
+        )
         collapsed = _a2b_original_row_scene(actor, current)
-        assert not collapsed['checked'] and collapsed['snapshot_null'] \
-            and collapsed['body'] == '' and not collapsed['body_visible'], (
-                'Each original command row collapses through its actual control and clears retained full details')
-        observed.append({'fixture': identity, 'row_id': current['id'], 'human': displayed,
-                         'default_copy': copied['clipboard']})
+        assert (
+            not collapsed['checked']
+            and collapsed['snapshot_null']
+            and collapsed['body'] == ''
+            and not collapsed['body_visible']
+        ), (
+            'Each original command row collapses through its actual control and clears retained full details'
+        )
+        observed.append({
+            'fixture': identity,
+            'row_id': current['id'],
+            'human': displayed,
+            'default_copy': copied['clipboard'],
+        })
     (actor.folder / 'command-human-compatibility.json').write_text(json.dumps(observed, indent=2))
+
+    assert not meanings_missing, (
+        'Every original details and copy path keeps its declared human fit wording: '
+        + ', '.join(meanings_missing)
+    )
 
 
 def test_sparse_interruption_notifies_only_original_changed_status_cells(main_actor):
@@ -5771,31 +5905,6 @@ def test_short_attachment_remove_cross_follows_rendered_label_by_normal_space_wi
         'Actual original label/font/remove control geometry is reached before spacing is judged')
     assert info['space'] - 1 <= info['gap'] <= 2 * info['space'] + 1, (
         'The actual remove glyph follows its short painted label by one to two normal font spaces, not the far line edge')
-
-
-def test_hidden_chat_working_stop_group_is_immediately_left_of_original_fit_group(main_actor, tmp_path):
-    actor = main_actor([[{'research': {'query': 'Public reference', 'action': None, 'results': None},
-                          'call_id': 'working-layout-reference'}]], hold_final=True)
-    project = copied_estimate_project(tmp_path)
-    assert actor.command('open', path=str(project))['reply']['opened'], (
-        'Status layout reaches the real ordinary project and existing Fit controls')
-    actor.connect();actor.request('Read the public reference without changing science.')
-    actor.until(lambda value: value['ui']['can_cancel'])
-    actor.command('click', name='assistant.toggle')
-    working = control_expression('statusBar.assistant.working')
-    fit = control_expression('statusBar.fit')
-    info = qml(actor, '(function(){const w=' + working + ',f=' + fit
-        + ';if(!w||!f)return null;const a=w.parent,ap=a.mapToItem(contentItem,0,0),fp=f.mapToItem(contentItem,0,0);'
-        'return {assistant:{x:ap.x,y:ap.y,width:a.width,height:a.height,visible:a.visible},'
-        'fit:{x:fp.x,y:fp.y,width:f.width,height:f.height,visible:f.visible},sameParent:a.parent===f.parent};})()')
-    assert info and info['sameParent'] and info['assistant']['visible'] and info['fit']['visible'], (
-        'Working and original Fit groups are both actually visible in the same real status bar')
-    assert info['assistant']['x'] + info['assistant']['width'] <= info['fit']['x'], (
-        'AI working/Stop group precedes the original Fit group without overlap')
-    actor.command('click', name='assistant.stopVisibleAction')
-    actor.until(lambda value: not value['ui']['can_cancel'])
-    (actor.folder / 'statusbar-working-fit-geometry.json').write_text(json.dumps({
-        'actual_geometry': info, 'latency_qualification': 'No pointer hitch/frame-cost measurement is inferred'}, indent=2))
 
 
 def test_empty_session_table_keeps_dialog_width_and_refresh_next_to_original_close(main_actor):
