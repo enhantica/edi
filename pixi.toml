@@ -354,6 +354,9 @@ weekly-only-tests = { cmd = [
 # nightly schedule runs the nightly-only group and the Sunday schedule the weekly-only group.
 core-tests = { cmd = ["bash", "tools/ci/core-tests.sh"], depends-on = ["core-build"] }
 system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build"] }
+# The integration tests whose wiring vectors need the real app, on the test runner the app job built
+# (EDI_APP_TEST_RUNNER); the core job, which has no app, skips them.
+native-wiring = { cmd = ["bash", "tools/ci/native-wiring-tests.sh"], depends-on = ["core-build"] }
 # --- core (C++) ---------------------------------------------------------------------- / item 8: the
 # pinned crysta SDK (downloaded or reused, never compiled) and its source, for every prefix reader — also
 # in a consumer job, where core-build only restores the native build.
