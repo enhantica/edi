@@ -78,6 +78,8 @@ SITE_FONTS = {
     ('app/src/fit_view_model.cpp', '\u2192'): ('Encode Sans',),
     # The arrow between two values, drawn in Encode Sans while the digits keep the value's font.
     ('app/qml/Components/DigitText.qml', '\u2192'): ('Encode Sans',),
+    # DigitText's split of its text into runs, ported to C++; the arrow it finds is drawn as above.
+    ('app/src/app_info.cpp', '\u2192'): ('Encode Sans',),
 }
 # The dictionary's names reach the pages at run time, through the display bridge.
 DICTIONARY = 'data/dictionary/parameters.yaml'
