@@ -10869,6 +10869,7 @@ def test_original_question_batch_discards_partial_answers_when_original_owner_re
             assert not added and _attachment_rows(actor) == files_before, (
                 'A refused file-selection attempt cannot change the actual selected-file scope'
             )
+            actor.command('inspect')  # Row-table reads return a narrow UI envelope.
             assert actor.last['ui']['pending_question'] == second and not _session_state(
                 actor
             ).get('human_answers'), (
