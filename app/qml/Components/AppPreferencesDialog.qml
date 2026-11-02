@@ -413,7 +413,7 @@ AppDialog {
                     maxRowCountShow: 5
                     sourceModel: aiPage.original ? aiPage.original.skillSources : null
                     defaultInfoText: qsTr("No skill sources")
-                    columnWidths: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                    columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
                     header: EaComponents.ListViewHeader {
                         EaComponents.TableViewLabel {}
                         EaComponents.TableViewLabel {

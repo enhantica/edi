@@ -156,7 +156,7 @@ Rectangle {
                         scrollBarPolicy: ScrollBar.AlwaysOff
                         marksCurrentRow: true
                         currentRow: composer.selectedModelRow
-                        columnWidths: [choicePopup.radioColumnWidth, choicePopup.desiredLabelWidth]
+                        columns: [choicePopup.radioColumnWidth, choicePopup.desiredLabelWidth]
                         delegate: EaComponents.ListViewDelegate {
                             id: modelRow
                             required property int index
@@ -226,7 +226,7 @@ Rectangle {
                         scrollBarPolicy: ScrollBar.AlwaysOff
                         marksCurrentRow: true
                         currentRow: ApplicationInfo.assistantSelectedEffortRow()
-                        columnWidths: [choicePopup.radioColumnWidth, choicePopup.desiredLabelWidth]
+                        columns: [choicePopup.radioColumnWidth, choicePopup.desiredLabelWidth]
                         delegate: EaComponents.ListViewDelegate {
                             id: effortRow
                             required property int index
