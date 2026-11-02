@@ -137,9 +137,10 @@ EaComponents.ListView {
     function fitWholeModel() {
         ApplicationInfo.tableFitWholeModel();
     }
-    // A model of up to this many rows is measured at once. A larger one (a pattern's points) is measured a frame's
-    // worth of rows at a time, so the window keeps responding; a new change of the content starts it again.
-    readonly property int measuredAtOnce: 100
+    // A model of up to this many rows is measured at once, so a table settles while its group unfolds (a 112-point
+    // background did not, measured a frame at a time). A larger one (a pattern's points) is measured a frame's worth
+    // of rows at a time, so the window keeps responding; a new change of the content starts it again.
+    readonly property int measuredAtOnce: 200
     property int measureRun: 0
     property var measuredWidths: null
     function measureRows(run, from) {
