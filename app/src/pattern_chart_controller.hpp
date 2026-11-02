@@ -123,14 +123,13 @@ class PatternChartController : public QObject {
     // their rows at each refresh.
     Q_PROPERTY(edi_app::ChartLegendModel* legend READ legend CONSTANT)
     Q_PROPERTY(edi_app::ChartBandModel* excludedBands READ excludedBands CONSTANT)
-    // The style table's colours for the theme and the experiment (edi::pattern_style_table).
+    // The style table's colours for the theme and the experiment (edi::pattern_style_table), set by each drawing from
+    // the table it draws with, as the legend and the Bragg row labels are.
     Q_PROPERTY(QColor measuredColor READ measuredColor NOTIFY measuredColorChanged)
     Q_PROPERTY(QColor calculatedColor READ calculatedColor NOTIFY calculatedColorChanged)
     Q_PROPERTY(QColor backgroundColor READ backgroundColor NOTIFY backgroundColorChanged)
     Q_PROPERTY(QColor residualColor READ residualColor NOTIFY residualColorChanged)
     Q_PROPERTY(QColor excludedColor READ excludedColor NOTIFY excludedColorChanged)
-    // The tick colours: the scheme's structure colours, one series each (no scheme has more than five), by the
-    // structure's place in the project taken round the scheme's colours, as the structure lists take them.
     // Each structure's tick colour, by its place: one per `bragg.<place>` row of the style table.
     Q_PROPERTY(QList<QColor> braggColors READ braggColors NOTIFY braggColorsChanged)
     // Each structure's curve over the background (edi ADR-0017 §15): whether it is drawn, and, for each one drawn,
@@ -220,12 +219,12 @@ class PatternChartController : public QObject {
     QList<BraggLabel> braggLabels() const { return bragg_labels_; }
     ChartLegendModel* legend() const { return legend_; }
     ChartBandModel* excludedBands() const { return excluded_bands_; }
-    QColor measuredColor() const { return color(measured_style_); }
-    QColor calculatedColor() const { return color(QStringLiteral("calc")); }
-    QColor backgroundColor() const { return color(QStringLiteral("bkg")); }
-    QColor residualColor() const { return color(QStringLiteral("resid")); }
-    QColor excludedColor() const { return color(QStringLiteral("excluded")); }
-    QList<QColor> braggColors() const;
+    QColor measuredColor() const { return measured_color_; }
+    QColor calculatedColor() const { return calculated_color_; }
+    QColor backgroundColor() const { return background_color_; }
+    QColor residualColor() const { return residual_color_; }
+    QColor excludedColor() const { return excluded_color_; }
+    QList<QColor> braggColors() const { return bragg_colors_; }
     bool structureCurves() const { return structure_curves_; }
     void setStructureCurves(bool on);
     QList<QColor> structureCurveColors() const { return structure_curve_colors_; }
@@ -349,7 +348,6 @@ class PatternChartController : public QObject {
             emit(this->*changed)();
         }
     }
-    void publishColors();
     void scaleResidual();
     edi::PatternView view() const;
     // The view moves to these ranges (unset: fitted) over `animationDuration`. Each frame is an ordinary
@@ -437,9 +435,9 @@ class PatternChartController : public QObject {
     double x_tick_ = 0.0, x_anchor_ = 0.0, y_tick_ = 0.0, y_anchor_ = 0.0, residual_tick_ = 0.0;
     int bragg_rows_ = 0, revision_ = 0;
     bool has_residual_ = false, has_data_ = false, current_ = false;
-    QString x_title_, y_title_, residual_title_, measured_style_ = QStringLiteral("meas.0");
-    std::size_t colour_count_ = 0;
-    qsizetype bragg_colour_count_ = 0;
+    QString x_title_, y_title_, residual_title_;
+    QColor measured_color_, calculated_color_, background_color_, residual_color_, excluded_color_;
+    QList<QColor> bragg_colors_;
     QList<BraggLabel> bragg_labels_;
     ChartLegendModel* legend_;
     ChartBandModel* excluded_bands_;
