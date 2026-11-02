@@ -13,11 +13,15 @@ class NativeSnapshotBoundaryProof final : public QObject {
     QQmlEngine* engine_;
 public:
     explicit NativeSnapshotBoundaryProof(QQmlEngine* engine) : engine_(engine) {}
-    Q_INVOKABLE bool explicitNativePhase() const {
-        e11_a2a_phase::requireDeclaredPhase();
-        return !e11_a2a_phase::isOriginal()
-            && qgetenv("EDI_E11_T5_A2A_PHASE") == QByteArrayLiteral("native")
-            && qgetenv("EDI_E11_T5_A2A_SOURCE_SHA").size() == 40;
+    Q_INVOKABLE bool nativePhaseInputs() const {
+        try {
+            e11_a2a_phase::requireDeclaredPhase();
+            return !e11_a2a_phase::isOriginal()
+                && e11_test_inputs::phase("EDI_E11_T5_A2A_PHASE") == QByteArrayLiteral("native")
+                && e11_test_inputs::sourceRevision("EDI_E11_T5_A2A_SOURCE_SHA").size() == 40;
+        } catch (const std::exception&) {
+            return false;
+        }
     }
     Q_INVOKABLE QVariantMap pendingErrorIdentity(QObject* applicationInfo, QObject* assistant) {
         // Resolve every ordinary input BEFORE installing the same-engine error.

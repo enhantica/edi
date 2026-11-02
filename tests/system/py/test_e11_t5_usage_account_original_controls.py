@@ -34,11 +34,14 @@ USAGE_HEADER_HASHES = {
     'original': '88a78241a487ff474a833b82e57c5ed3aab0cd594b7e8526194d310f4426c22d',
 }
 ACTIVITY_HEADER_SHA256 = '07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe'
-ACTIVITY_ADAPTER_SHA256 = '9d3cfc16c6e85e94ed249b55924184c5d43a6ac8f7a781ffee329da18504a298'
+ACTIVITY_ADAPTER_SHA256 = '12a9d9eab412576680cef19a8f0b74ec176e011413f54ad6abd561c31b362e9d'
 PROBE_SOURCE_SHA256 = '5cace5b63a55b0b373848242d63646121e4532f4a7071d8ac6a4c3e68930bd5c'
 ACTIVITY_INPUTS = {
     'tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp': ACTIVITY_HEADER_SHA256,
     'tests/unit/app/e11_t5_a2a_phase_adapter.hpp': ACTIVITY_ADAPTER_SHA256,
+    'tests/unit/app/e11_t5_test_inputs.hpp': (
+        '94ff6f84183d464f9c0079a0b1db58a58274831f3bb286cfa0712a99061a6ad5'
+    ),
     'tests/integration/py/assistant_ui_probe/probe.cpp': PROBE_SOURCE_SHA256,
 }
 CALLER_KEYS = {

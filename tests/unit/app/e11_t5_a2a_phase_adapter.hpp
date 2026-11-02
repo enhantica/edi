@@ -39,15 +39,14 @@ inline QString observedCaption(QObject* row) {
 }
 }
 #include "e11_t5_a2a_phase_adapter_impl.hpp"
+#include "e11_t5_test_inputs.hpp"
 
 namespace e11_a2a_phase {
 inline void requireDeclaredPhase() {
-    const auto actual=qgetenv("EDI_E11_T5_A2A_PHASE");
-    if(!actual.isEmpty() && actual!=phaseName())throw std::runtime_error("The declared A2a phase disagrees with its selected source header");
-    const auto source=qgetenv("EDI_E11_T5_A2A_SOURCE_SHA");
-    if(!source.isEmpty() && source.size()!=40)throw std::runtime_error("The declared A2a source SHA must be complete");
-    for(const auto byte:source)if(!((byte>='0'&&byte<='9')||(byte>='a'&&byte<='f')))
-        throw std::runtime_error("The declared A2a phase source must be a lowercase full Git SHA");
+    const auto actual = e11_test_inputs::phase("EDI_E11_T5_A2A_PHASE");
+    if (actual != phaseName())
+        throw std::runtime_error("The selected A2a phase disagrees with its compiled source header");
+    (void)e11_test_inputs::sourceRevision("EDI_E11_T5_A2A_SOURCE_SHA");
 }
 inline void requirePhaseConsumer(QObject* row) {
     for(const auto* name:{"activityDescription","fullHumanDescription","humanActivityText","readHumanDetails"}) {

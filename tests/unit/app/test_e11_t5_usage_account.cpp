@@ -10,6 +10,8 @@
 #include <private/qv4engine_p.h>
 #include <private/qv4persistent_p.h>
 
+#include "e11_t5_test_inputs.hpp"
+
 #include <QColor>
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -354,11 +356,10 @@ class UsageAccountProof final : public QObject {
     }
     UsagePanelLease panel(QObject* applicationInfo, QQmlContext* creationContext = nullptr,
                           const QString& scopeMembers = {}) const {
-        prerequisite(qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
-                     "explicit selected usage phase is mandatory");
-        const auto root = qgetenv("EDI_E11_USAGE_ACCOUNT_SOURCE_ROOT");
-        prerequisite(!root.isEmpty(), "actual source root is mandatory");
-        QFile source(QString::fromUtf8(root) + "/app/qml/Components/AssistantPanel.qml");
+        prerequisite(e11_test_inputs::phase("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
+                     "selected usage phase must match its compiled source adapter");
+        const auto root = e11_test_inputs::sourceRoot("EDI_E11_USAGE_ACCOUNT_SOURCE_ROOT");
+        QFile source(root + "/app/qml/Components/AssistantPanel.qml");
         prerequisite(source.open(QIODevice::ReadOnly), "cannot read exact selected Panel source");
         prerequisite(
             QCryptographicHash::hash(source.readAll(), QCryptographicHash::Sha256).toHex() ==
@@ -1275,8 +1276,8 @@ class UsageAccountProof final : public QObject {
         try {
             const auto phase = e11_usage_phase::phase();
             prerequisite((phase == "native" || phase == "original") &&
-                             qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == phase,
-                         "actual context matrix requires the explicit selected source phase");
+                             e11_test_inputs::phase("EDI_E11_USAGE_ACCOUNT_PHASE") == phase,
+                         "actual context matrix requires its selected compiled source phase");
             const auto selected = qgetenv("EDI_E11_CONTEXT_RETIREMENT_CHARACTERIZATION");
             prerequisite(
                 retirementCharacterization ? selected == "selected" : selected.isEmpty(),
@@ -1653,7 +1654,7 @@ class UsageAccountProof final : public QObject {
             prerequisite(
                 applicationInfo && qjsEngine(applicationInfo) == engine_ && !engine_->hasError(),
                 "the actual imported singleton and proof engine are identical and clean");
-            prerequisite(qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
+            prerequisite(e11_test_inputs::phase("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
                          "the storage fixture uses its explicit actual selected usage phase");
             const QStringList admitted{"scalar-known-retired",   "scalar-found-undefined",
                                        "scalar-absent-global",   "id-precedence",
@@ -1918,7 +1919,7 @@ class UsageAccountProof final : public QObject {
             prerequisite(
                 applicationInfo && qjsEngine(applicationInfo) == engine_ && !engine_->hasError(),
                 "conversion uses the actual imported singleton and clean proof engine");
-            prerequisite(qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
+            prerequisite(e11_test_inputs::phase("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
                          "conversion uses the explicit actual selected usage phase");
             prerequisite(scenario == "default-conversion" || scenario == "native-reference-gc",
                          "unknown Edi conversion scenario refuses");
@@ -2080,7 +2081,7 @@ class UsageAccountProof final : public QObject {
         try {
             const auto mathPhase = e11_usage_phase::phase();
             prerequisite((mathPhase == "native" || mathPhase == "original") &&
-                             qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == mathPhase,
+                             e11_test_inputs::phase("EDI_E11_USAGE_ACCOUNT_PHASE") == mathPhase,
                          "Math characterization requires the explicit selected source phase");
             // These aliases expose lookup/call effects; they do not implement the relation.
             const auto make = engine_->evaluate(QStringLiteral(R"JS(

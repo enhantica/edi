@@ -14,8 +14,8 @@ TestCase {
     property QtObject foreignObject: QtObject { property string text: boundary.leak }
 
     function initTestCase() {
-        verify(NativeSnapshotBoundaryProof.explicitNativePhase(),
-               "requires explicit native phase and full bound source SHA; never skipped");
+        verify(NativeSnapshotBoundaryProof.nativePhaseInputs(),
+               "requires native source phase and full derived or explicit source revision; never skipped");
     }
     function refuse(value, label) {
         // A genuine imported singleton and the same normal engine/assistant entrance.
