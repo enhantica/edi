@@ -91,6 +91,37 @@ def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each
     return {prop.span()}
 
 
+def assistant_exception_spans(source, relative_path):
+    # ADR-0015: free-form reports, activity payload and usage remain maps.
+    if relative_path != 'app/src/assistant_view_model.hpp':
+        return set()
+    patterns = [
+        r'Q_PROPERTY\s*\(\s*QVariantMap\s+workReportReceipt\s+READ\s+workReportReceipt\s+NOTIFY\s+workReportReceiptChanged\s*\)',
+        r'Q_PROPERTY\s*\(\s*QVariantMap\s+usage\s+READ\s+usage\s+NOTIFY\s+usageChanged\s*\)',
+        r'void\s+workReportFinished\s*\(\s*QVariantMap\s+receipt\s*\)\s*;',
+        r'Q_INVOKABLE\s+QVariantMap\s+captureWorkReport\s*\(\s*\)\s*;',
+        (
+            r'Q_INVOKABLE\s+QVariantMap\s+activityHumanDetails\s*\('
+            r'\s*const QString&\s+rowId,\s*const QString&\s+kind,'
+            r'\s*const QString&\s+status\s*\)\s*const\s*;'
+        ),
+    ]
+    allowed = set()
+    for pattern in patterns:
+        matches = list(re.finditer(pattern, source))
+        if len(matches) != 1:
+            continue
+        match = matches[0]
+        witness = (
+            source[: match.start()]
+            + 'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged)'
+            + source[match.end() :]
+        ).replace('AssistantViewModel', 'ReportViewModel')
+        if report_model_exception_spans(witness, 'app/src/report_view_model.hpp'):
+            allowed.add(match.span())
+    return allowed
+
+
 def api_violations(source, relative_path=None):
     source = without_comments(source)
     forbidden = set(FORBIDDEN)
@@ -100,6 +131,9 @@ def api_violations(source, relative_path=None):
             if set(re.findall(r'\w+', value or old_value)) & forbidden:
                 forbidden.add(name or old_name)
     allowed = report_model_exception_spans(source, relative_path)
+    allowed |= assistant_exception_spans(source, relative_path)
+    for start, end in sorted(allowed, reverse=True):
+        source = source[:start] + ' ' * (end - start) + source[end:]
     surfaces = re.finditer(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
     fragments = [
         ' '.join(part or '' for part in match.groups())
@@ -132,6 +166,48 @@ def test_typed_api_escape_rehearsals(declaration):
 
 
 def test_typed_api_allows_model_internal_variants():
+    header = 'app/src/assistant_view_model.hpp'
+    for declaration in (
+        'Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)',
+        (
+            'Q_PROPERTY(QVariantMap workReportReceipt READ workReportReceipt '
+            'NOTIFY workReportReceiptChanged)'
+        ),
+        'Q_INVOKABLE QVariantMap captureWorkReport();',
+        'signals: void workReportFinished(QVariantMap receipt);',
+        (
+            'Q_INVOKABLE QVariantMap activityHumanDetails(const QString& rowId, '
+            'const QString& kind, const QString& status) const;'
+        ),
+    ):
+        source = 'namespace edi_app { class AssistantViewModel { ' + declaration + ' }; }'
+        assert not api_violations(source, header), (
+            'I2 ADR-0015 admits only the exact named free-form surface'
+        )
+        for escaped, path in (
+            (source, 'app/src/foreign.hpp'),
+            (source.replace('AssistantViewModel', 'OtherViewModel'), header),
+            (source.replace('namespace edi_app', 'namespace foreign'), header),
+            (source.replace(declaration, declaration + declaration), header),
+        ):
+            assert api_violations(escaped, path), (
+                'I2 ADR-0015 exceptions cannot escape their unique owner and declaration'
+            )
+    for member in (
+        'pendingPlan',
+        'pendingQuestion',
+        'account',
+        'submitDraftAdmission',
+        'beginManualControlInput',
+    ):
+        source = (
+            'namespace edi_app { class AssistantViewModel { Q_INVOKABLE QVariantMap '
+            + member
+            + '(); }; }'
+        )
+        assert api_violations(source, header), (
+            'I2 fixed-shape assistant members remain typed without map exceptions'
+        )
     assert not api_violations(
         'QVariant data(const QModelIndex&, int); Q_PROPERTY(double value READ value)'
     ), 'I2: Qt model data() may return QVariant internally while its QML API stays typed'
@@ -142,7 +218,8 @@ def test_shipped_view_model_api_is_typed():
     assert files, 'gate 4: the app must declare the typed QObject view-model contract'
     for file in files:
         assert not api_violations(file.read_text(), file.relative_to(ROOT).as_posix()), (
-            f'I2: no JSON/dictionary state crosses the API in {file.relative_to(ROOT)}'
+            'I2: fixed-shape APIs must be typed; only the named ADR-0015 report, activity '
+            f'and usage maps are allowed in {file.relative_to(ROOT)}'
         )
     for file in (ROOT / 'app/qml').rglob('*.qml'):
         assert not re.search(
