@@ -3953,6 +3953,8 @@ struct AssistantViewModel::State {
         QPointer<ConstraintListModel> constraint_model;
 
         unsigned reveal_steps = 0;
+        // The control's scene rectangle at the last reveal check and how often the reveal waited for it to settle.
+        QRectF still_bounds; unsigned still_waits = 0;
         double value = 0;
         bool free = false;
         std::uint64_t edit_scope = 0, fit_token = 0;
@@ -4280,7 +4282,7 @@ struct AssistantViewModel::State {
             if (!widget_entry_current(run,entry)) { widget_refuse(run,widget_outcome_error); return; }
             const bool unchanged = run->tool == "set_parameters" ? entry->member->value.get()==entry->value : entry->member->free.get()==entry->free;
             if (!unchanged) {
-                run->input.reset(); run->edit_scope=0; run->reveal_steps=0;
+                run->input.reset(); run->edit_scope=0; run->reveal_steps=0; run->still_waits=0; run->still_bounds={};
                 run->parameterFilter.clear();
                 run->valueText.clear();
 
@@ -5144,6 +5146,18 @@ struct AssistantViewModel::State {
         }
         return true;
     }
+    // True while `item` is still sliding into place, as a page or sidebar tab just chosen does: it lies outside the
+    // window or has moved since the last check. A control measured mid-slide is out of reach and no viewport can bring
+    // it in. The waits are bounded per parameter; after them the caller measures and refuses as before.
+    bool widget_item_settling(const std::shared_ptr<NativeWidget>& run, QQuickItem* item) {
+        if(!item || run->still_waits>=60)return false;
+        const auto bounds=item->mapRectToScene(QRectF(0,0,item->width(),item->height()));
+        const bool inside=run->window && bounds.left()>=0 && bounds.right()<=run->window->width();
+        const bool still=bounds==run->still_bounds;
+        run->still_bounds=bounds;
+        if(inside && still)return false;
+        ++run->still_waits;return true;
+    }
     bool widget_reveal_parameter(const std::shared_ptr<NativeWidget>& run, QQuickItem* field) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input || !field || field->window() != run->window ||
@@ -5159,6 +5173,13 @@ struct AssistantViewModel::State {
         if(!originalField || !widget_entry_current(run,entry))return false;
         if(widget_wait_group_layout(run,originalField))return false;
         if(!originalField || !widget_entry_current(run,entry))return false;
+        if(run->tool!="create_expose" && widget_item_settling(run,originalField)) {
+            QTimer::singleShot(50,&owner,[this,run,entry] {
+                if(!widget_entry_owned(run,entry))return;
+                try{widget_resume_revealed(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
+            });
+            return false;
+        }
         QPointer<QQuickItem> wanted(originalField), group, viewport, wholeRow;
         const bool boundedControl=!field->property("tableRowHeight").isValid() && !field->inherits("QQuickTextEdit");
         for (auto* a = field->parentItem(); a; a = a->parentItem()) {
@@ -6479,6 +6500,13 @@ struct AssistantViewModel::State {
             if(!widget_entry_current(run,entry)){refuse(widget_outcome_error,ControlCause::Superseded);return;}
             target=widget_sidebar_tab(run,"basic",&lookupCause,&named);
             if(named!=original){refuse(QObject::tr("The original Main sidebar target changed"),ControlCause::Superseded);return;}
+        }
+        if(!target && named && widget_item_settling(run,named)) {
+            QTimer::singleShot(50,&owner,[this,run,entry] {
+                if(!widget_entry_owned(run,entry))return;
+                try{widget_click_main(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
+            });
+            return;
         }
         if (!target) {
             control_failure(run,ControlCause::MainSidebar);
