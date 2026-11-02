@@ -143,7 +143,10 @@ SideBarGroup {
             alive: true
         })
     Component.onDestruction: ApplicationInfo.formPickerDestroyed()
+    // This page's browser file request and the project it was made for: only its own answer is used, and only
+    // while that project is still open.
     property int webRequest: 0
+    property var webRequestProject: null
     property var webIntent: null
     function chooseStructure() {
         return ApplicationInfo.chooseStructureFile();
