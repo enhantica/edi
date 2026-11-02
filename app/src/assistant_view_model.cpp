@@ -1401,10 +1401,6 @@ struct AssistantViewModel::State {
     };
     std::optional<FileSelection> file_selection;
     Object core, native, plan, question;
-    // Data reads in the current turn: a few named ranges, not paging through a pattern (the misfit summary in each fit
-    // result describes the whole pattern).
-    QString inspect_turn; int inspect_reads = 0;
-    static constexpr int inspect_reads_per_turn = 4;
     bool chat_reveal_requested = false;
     QString chat_reveal_question;
     QString model, effort, error, preference_error, preference_save_error;
@@ -8515,6 +8511,9 @@ struct AssistantViewModel::State {
     }
     void native_fit_diagnostics(Object& result, const NativeCall& original, const QPointer<FitViewModel>& completed,
                                 const edi::FitResultBase& fitted) noexcept {
+        bool attached=false;
+        // The model is told when the fit's details are missing, so it reads the data instead of guessing.
+        const auto unavailable=qScopeGuard([&]() noexcept {if(!attached)try{result["fit_details_unavailable"]=true;}catch(...){}});
         try {
             const QPointer<AssistantViewModel> receiver(&owner);
             const QPointer<ProjectViewModel> target(project);
@@ -8571,15 +8570,17 @@ struct AssistantViewModel::State {
             // Validate the same closed native projection before optional capture
             // can replace this local result; failures leave the fit facts intact.
             (void)outgoing::size(enriched,outgoing::Role::Result);
-            if(current() && target->revision()==revision && edi::unchanged_since(*model,stamps))result.swap(enriched);
+            if(current() && target->revision()==revision && edi::unchanged_since(*model,stamps)){result.swap(enriched);attached=true;}
         } catch(...) {} // Optional inspection cannot replace the completed native fit outcome.
     }
     void native_fit_finished(const edi::FitReport& report, bool presented, const NativeCall& original) noexcept {
         const auto completion_scope = native_settlement_scope(original);
         const QPointer<AssistantViewModel> receiver(&owner);
+        // Taken before widget_end, which clears native_fit once a shown fit has stopped: without it a Show actions fit
+        // lost its diagnostics, correlations and misfit.
+        const QPointer<FitViewModel> completed_fit(native_fit);
         if (native_widget && native_widget->call.record == original.record) { const auto run = native_widget; widget_end(run); }
         if (!receiver || !completion_scope()) return;
-        const QPointer<FitViewModel> completed_fit(native_fit);
         native_fit.clear(); // The exact actual completed report, not running=false.
         const auto original_call = [&] {
             return receiver && receiver->state_.get() == this && native_call && native_call->record == original.record && native_call->receipt == original.receipt && native_call->rpc == original.rpc;
@@ -9233,14 +9234,7 @@ struct AssistantViewModel::State {
 
                 inspection->approved_context = QJsonDocument(context).toJson(QJsonDocument::Compact);
             }
-            if(name=="inspect_data") {
-                if(inspect_turn!=generic_turn){inspect_turn=generic_turn;inspect_reads=0;}
-                if(++inspect_reads>inspect_reads_per_turn) {
-                    reply(false,{{"status","refused"},{"code","refused"},{"message",QStringLiteral("inspect_data allows %1 reads per turn. Each fit result's misfit summary describes the whole pattern; read only a narrow, named range.").arg(inspect_reads_per_turn)}});
-                    return;
-                }
-                read_result=native_data_slice(args,inspection);
-            }
+            if(name=="inspect_data")read_result=native_data_slice(args,inspection);
             else read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
             if(name=="diagnostics")read_result["native_state"]=context.value("native_state");
         }
