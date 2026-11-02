@@ -805,10 +805,21 @@ QString folding_read(const Object& row) {
     const auto tool=payload.value("tool").toString();
     return tool=="inspect_data" || tool=="inspect_project" || tool=="list_parameters" || tool=="diagnostics"?tool:QString{};
 }
+// What a read actually covered: its arguments, with the dataset and rows the read returned (a range past the end is
+// clamped) in place of those requested.
+Object read_arguments(const Object& payload) {
+    auto args=payload.value("arguments").toObject();
+    const auto data=payload.value("nativeOutcome").toObject().value("data").toObject();
+    if(data.value("start").isDouble() && data.value("count").isDouble()) {
+        args["start"]=data.value("start");args["count"]=data.value("count");
+        if(data.value("dataset_id").isString())args["dataset_id"]=data.value("dataset_id");
+    }
+    return args;
+}
 // What one step read, for its details: the rows or parts of a data read, else the purpose the assistant gave.
 QString step_detail(const Object& row) {
     const auto payload=row.value("payload").toObject();
-    const auto detail=assistant_native_detail(payload.value("tool").toString(),payload.value("arguments").toObject());
+    const auto detail=assistant_native_detail(payload.value("tool").toString(),read_arguments(payload));
     return detail.isEmpty()?row.value("text").toString():detail;
 }
 Object message_display_row(const Object& original) {
@@ -17997,7 +18008,7 @@ AssistantViewModel::PreparedActivityRead AssistantViewModel::prepareActivityRead
                         const auto member = other.toObject();
                         if (!members.contains(member.value("id").toString())) continue;
                         const auto detail = members.size() > 1 ? step_detail(member) : assistant_native_detail(
-                            payload.value("tool").toString(), payload.value("arguments").toObject());
+                            payload.value("tool").toString(), read_arguments(payload));
                         if (!detail.isEmpty()) reads.append(detail);
                     }
                     if (!reads.isEmpty()) result.payload["reads"] = reads;
