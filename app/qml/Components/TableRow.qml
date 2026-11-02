@@ -16,14 +16,6 @@ EaComponents.ListViewDelegate {
     // arrow pointer, as nothing in it can be chosen.
     property bool highlightsHover: true
 
-    // The table that styled this row's cells, which forgets them when the row goes.
-    property DataTable styledBy: null
-    property Item styledCells: null
-    Component.onDestruction: {
-        if (styledBy !== null && !styledBy.gone && styledCells !== null)
-            styledBy.forgetCells(Array.from(styledCells.children));
-    }
-
     // The row becomes current as soon as one of its editors takes focus, by a click or by Tab.
     onEditingChanged: {
         if (row.editing)
@@ -59,8 +51,6 @@ EaComponents.ListViewDelegate {
         if (table !== null) {
             const first = Array.from(row.contentRowData).find(cell => cell instanceof Item);
             const cells = first ? first.parent : null;
-            row.styledBy = table;
-            row.styledCells = cells;
             if (cells !== null)
                 cells.childrenChanged.connect(() => {
                     table.applyWidths(cells);
