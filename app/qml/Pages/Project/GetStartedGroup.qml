@@ -98,9 +98,11 @@ SideBarGroup {
         onOpened: ApplicationInfo.createProjectDialogEvent(0)
         onRejected: ApplicationInfo.createProjectDialogEvent(1)
         onClosed: ApplicationInfo.createProjectDialogEvent(2)
-        // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
-        // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
-        defaultProjectParentDirectory: EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
+        // A new project's folder is beside the last project opened, else under the user's documents, unless one was
+        // chosen before; it is saved there at once (the owner, 2026-10-08 and 2026-11-02). The browser has no folder to
+        // save into: Save As downloads it.
+        readonly property string lastOpenFolder: Session.existingParentFolder(RecentProjects.last)
+        defaultProjectParentDirectory: lastOpenFolder !== "" ? lastOpenFolder : EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
         // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges). The flag is
         // reset here, not only when the dialog has closed: this page goes before its closing ends, and the new page's
         // dialog would open again on a flag still set.

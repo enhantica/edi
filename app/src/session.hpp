@@ -125,6 +125,9 @@ class Session : public QObject {
     QString openedExample() const { return opened_example_; }
     QString openedArchive() const { return opened_archive_; }
     QString locationText() const;
+    // The folder holding `path` when it exists, else empty: the folder of the last project opened, where a new project
+    // goes unless one was chosen.
+    Q_INVOKABLE QString existingParentFolder(const QString& path) const;
     QString projectLocation() const;
     bool needsSaveAs() const;
     QString colourScheme() const { return colour_scheme_; }

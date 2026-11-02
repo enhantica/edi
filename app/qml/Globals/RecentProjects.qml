@@ -20,6 +20,8 @@ QtObject {
         property string last: ""
         onRecentChanged: recentProjects.refresh()
     }
+    // The last project open, where a new project goes beside unless a folder was chosen (GetStartedGroup).
+    readonly property string last: recentSettings.last
     property Connections sessionConnection: Connections {
         target: Session
         function onProjectDirectoryUsed(path) {

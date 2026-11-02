@@ -460,6 +460,12 @@ QString Session::projectLocation() const {
     return location;
 }
 
+QString Session::existingParentFolder(const QString& path) const {
+    if (path.isEmpty()) return {};
+    const QFileInfo parent(QFileInfo(path).absolutePath());
+    return parent.isDir() ? parent.absoluteFilePath() : QString{};
+}
+
 QString Session::locationText() const {
     if (project_ == nullptr) {
         return {};
