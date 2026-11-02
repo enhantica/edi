@@ -23,3 +23,11 @@ build, authored tool sequence, fit oracle or CI acceptance is supplied by this
 diagnostic. The executable is frozen before either run so an independent build
 cannot replace it between sessions. Source hashes and dirty state are retained;
 the diagnostic does not claim a clean build.
+
+Both original turns completed. Each naturally fitted, used Undo, and reported a
+successful Save with an existing folder. The reported missing-folder error did
+not reproduce. Both created under isolated Documents instead of the last-open
+parent, and both retained an empty project.location text item despite a populated
+Session.locationText. Save replies had saved=true and presentation_complete=false.
+The per-Save fields and raw native Save replies are in live_observation.json;
+full original receipts remain under the local evidence directory.
