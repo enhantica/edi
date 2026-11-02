@@ -3157,7 +3157,20 @@ struct AssistantViewModel::State {
             datasets.append(Object{{"id",row.value("id")},{"sample_form",row.value("sample_form")},{"beam_mode",row.value("beam_mode")},
                 {"probe",row.value("probe")},{"calculation_only",row.value("calculation_only")}});
         }
-        const Object identity{{"structures",model.value("structures")},{"datasets",datasets}};
+        // A space group is compared by its name and setting. Its IT number follows from them, and a project opened
+        // from an example has none until it is saved, so a saved and reopened project would otherwise ask for
+        // approval again.
+        QJsonArray structures;
+        for (const auto& value : model.value("structures").toArray()) {
+            auto row = value.toObject();
+            if (row.value("space_group").isObject()) {
+                auto group = row.value("space_group").toObject();
+                group.remove("it_number");
+                row["space_group"] = group;
+            }
+            structures.append(row);
+        }
+        const Object identity{{"structures",structures},{"datasets",datasets}};
         generic_measured_size(identity);
         auto result = std::make_shared<DisclosureScope>();
         result->project = target; result->has_project = target != nullptr; result->model = target ? target->assistantProject() : nullptr;
