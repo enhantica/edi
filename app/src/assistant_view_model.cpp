@@ -3329,6 +3329,8 @@ struct AssistantViewModel::State {
             {"calculating",target && target->calculating()},
             {"fitting",target && target->fit()->nativeRunning()},{"fit_undo_available",target && target->fitUndoAvailable()},{"show_actions",show_actions},{"calculations",calculations},{"interface_groups",interface_groups}};
         if(target)native_state["project_modified"]=target->modified();
+        // Undo of a fit clears its result record (edi ADR-0017 §17): whether fit results, R-factors and a report exist now.
+        if(target)native_state["fit_result_current"]=target->fit()->results()->rowCount()>0;
         if(!selected_structure_id.isEmpty())native_state["selected_structure_id"]=selected_structure_id;
         if(!selected_experiment_id.isEmpty())native_state["selected_experiment_id"]=selected_experiment_id;
         context["native_state"]=native_state;
@@ -7249,7 +7251,8 @@ struct AssistantViewModel::State {
         const bool published = input && input->outcome.published;
         return {{"status", complete ? "edited" : applied ? "applied_unconfirmed" : "refused"},
             {"applied", applied}, {"published", published}, {"complete", complete}, {"uncertain", applied && !complete},
-            {"steps_completed", applied ? 1 : 0}, {"calculation_pending", run->project && run->project->calculating()}};
+            {"steps_completed", applied ? 1 : 0}, {"calculation_pending", run->project && run->project->calculating()},
+            {"fit_result_current", run->project && run->project->fit()->results()->rowCount() > 0}};
     }
     void apply_fit_undo(const std::shared_ptr<NativeWidget>& run) {
         if (!widget_current(run) || !run->project->fitUndoAvailable()) {

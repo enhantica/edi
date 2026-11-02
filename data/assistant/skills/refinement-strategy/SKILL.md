@@ -78,7 +78,11 @@ planning; native eligibility and ownership still apply.
    cannot justify undoing earlier accepted science. Fixing retains current values.
 
 5. **Preserve useful work and state an honest endpoint.** Continue justified work
-   or name the specific incomplete evidence/capability/quantities. Restricted
+   or name the specific incomplete evidence/capability/quantities. Undo clears the
+   fit result record: after undoing a rejected trial that followed an accepted fit,
+   fix again what the trial freed, run_fit the restored model and keep that adopted
+   fit, so the work ends with fit results, R-factors and a report. Never finish with
+   `fit_result_current` false after such an Undo. Restricted
    convergence or negative-ADP Undo alone is not completed structure refinement;
    diagnose large reduced chi-square rather than force it to one. Save/Report may
    preserve scientifically limited work. After ordinary Save inspect authoritative
