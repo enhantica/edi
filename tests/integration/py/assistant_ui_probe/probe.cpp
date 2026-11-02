@@ -597,6 +597,28 @@ Array model_rows(edi_app::RowTableModel* model) {
     }
     return result;
 }
+Object pending_plan_snapshot(const edi_app::AssistantPendingPlan& plan) {
+    if (plan.plan_id.isEmpty()) return {};
+    Array groups;
+    for (const auto& group : plan.groups)
+        groups.push_back(Object{{"id",group.id},{"paths",QJsonArray::fromStringList(group.paths)}});
+    QJsonValue budget;
+    if (plan.budget.defined) budget=Object{{"max_trials",plan.budget.max_trials},
+        {"max_iterations",plan.budget.max_iterations},{"max_elapsed_ms",plan.budget.max_elapsed_ms}};
+    return {{"plan_id",plan.plan_id},{"summary",plan.summary},{"groups",groups},{"budget",budget},
+        {"objective",Object{{"absolute_tolerance",plan.objective.absolute_tolerance},
+                            {"relative_tolerance",plan.objective.relative_tolerance}}}};
+}
+Object pending_question_snapshot(const edi_app::AssistantPendingQuestion& question) {
+    if (question.question_id.isEmpty()) return {};
+    Array options;
+    for (const auto& option : question.options)
+        options.push_back(Object{{"id",option.id},{"label",option.label},{"description",option.description}});
+    return {{"question_id",question.question_id},{"text",question.text},{"options",options},
+        {"recommended",question.recommended.isEmpty()?QJsonValue():QJsonValue(question.recommended)},
+        {"allow_free_text",question.allow_free_text},{"draftText",question.draftText}};
+}
+
 int main(int argc,char** argv) {
     const bool codex_mode=argc==2 && QByteArray(argv[1])=="--codex";
     QTemporaryDir storage;
@@ -1163,8 +1185,8 @@ int main(int argc,char** argv) {
                 {"context",assistant->contextPreview()},
                 {"context_consent_required",assistant->contextConsentRequired()},
                 {"selected_files",model_rows(assistant->selectedFiles())},
-                {"models",model_rows(assistant->models())},{"pending_plan",QJsonObject::fromVariantMap(assistant->pendingPlan())},
-                {"pending_question",QJsonObject::fromVariantMap(assistant->pendingQuestion())},
+                {"models",model_rows(assistant->models())},{"pending_plan",pending_plan_snapshot(assistant->pendingPlan())},
+                {"pending_question",pending_question_snapshot(assistant->pendingQuestion())},
                 {"active_job",assistant->activeJobId()},{"can_cancel",assistant->canCancel()},
                 {"project",project},{"texts",texts},{"controls",controls},
                 {"disclosures",disclosures},{"width",window->width()},{"height",window->height()}};
