@@ -13,8 +13,9 @@ import edi.app
 // The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home unless the
 // Analysis page is enabled, so its Fit button is there on every page (the owner, 2026-10-26). The first item, always
 // present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
-// The fit area on the right follows the running fit and then summarises the last one (§17), as status items like the
-// ones on the left: the live values with the progress bar at the far right, then the outcome and the values.
+// The fit area on the right, before the assistant's group, follows the running fit and then summarises the last one
+// (§17), as status items like the ones on the left: the live values with the progress bar at its right end, then the
+// outcome and the values.
 EaElements.StatusBar {
     id: bar
 
@@ -131,8 +132,9 @@ EaElements.StatusBar {
         implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) + (assistantArea.visible ? assistantArea.implicitWidth : 0) + (visibleMode.visible ? visibleMode.implicitWidth : 0) + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
-        anchors.right: fitArea.visible ? fitArea.left : openingProgress.visible ? openingProgress.left : parent.right
-        anchors.rightMargin: fitArea.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
+        // At the far right, after the fit area (the owner, 2026-11-02).
+        anchors.right: openingProgress.visible ? openingProgress.left : parent.right
+        anchors.rightMargin: openingProgress.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         Rectangle {
             id: assistantRule
@@ -224,16 +226,17 @@ EaElements.StatusBar {
             onClicked: Session.assistant.cancel()
         }
     }
-    // The fit area, right-aligned outside the base's row of items: the last fit's status and values as status items like
-    // the ones on the left (the owner, 2026-10-13), and while a fit runs its live values with the progress bar at the
-    // far right, which stays put while their width changes. The status opens the last fit's results.
+    // The fit area, right-aligned outside the base's row of items and before the assistant's group: the last fit's
+    // status and values as status items like the ones on the left (the owner, 2026-10-13), and while a fit runs its live
+    // values with the progress bar at its right end, which stays put while their width changes. The status opens the
+    // last fit's results.
     Row {
         id: fitArea
 
         objectName: "statusBar.fit"
         parent: bar
-        anchors.right: parent.right
-        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        anchors.right: assistantGroup.visible ? assistantGroup.left : parent.right
+        anchors.rightMargin: assistantGroup.visible ? spacing : EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         spacing: Math.round(EaStyle.Sizes.fontPixelSize * 1.2)
         // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one; hidden while a
