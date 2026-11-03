@@ -18,7 +18,7 @@ from tests.system.py import test_e11_t5_dev_native_integration as base
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def actor_in(folder, turns, *, show_actions=False):
+def actor_in(folder, turns, *, show_actions=False, prepare=None):
     folder.mkdir()
     binary = Path(
         os.environ.get(
@@ -38,6 +38,8 @@ def actor_in(folder, turns, *, show_actions=False):
     analysis.write_text(
         analysis.read_text().replace('_fitting_mode.type single', '_fitting_mode.type joint')
     )
+    if prepare is not None:
+        prepare(project)
     opened = actor.command('open', path=str(project))['reply']['opened']
     assert opened, 'The ordinary project loader must open the two-pattern captured-input fixture'
     actor.until(lambda row: not row['ui']['project']['calculating'])

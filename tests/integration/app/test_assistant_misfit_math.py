@@ -221,3 +221,51 @@ def test_coincident_phases_do_not_inherit_one_phases_peak_direction():
     assert result.get('points', 0) == 0 and not result.get('worst_peaks'), (
         'A fully masked pattern has no usable points or directional peak diagnostics'
     )
+
+
+def test_between_sample_exclusion_rejects_the_reflection_center():
+    data = authored_peak()
+    center = 13.25
+    data['excluded'] = [[13.125, 14.5]]
+    data['phases'] = [{'phase_id': 'alpha', 'positions': [center]}]
+    lo, hi = data['excluded'][0]
+    assert data['x'][3] < lo < center < data['x'][4] < hi, (
+        'The exclusion begins between samples and contains the independently authored center'
+    )
+    assert not actual(data).get('worst_peaks'), (
+        'A reflection inside the excluded range cannot acquire an outside peak support'
+    )
+
+
+def test_provider_result_encoding_retains_combined_misfit():
+    data = authored_peak()
+    data['phases'].append({'phase_id': 'beta', 'positions': [13.125]})
+    combined = actual({**data, 'provider_wire': True})
+    expected_members = {(13, 'alpha'), (13.125, 'beta')}
+    (raw_peak,) = combined['native']['worst_peaks']
+    assert (
+        set(zip(raw_peak['positions'], raw_peak['phase_ids'], strict=True)) == expected_members
+    ), 'The native producer emits one real combined peak for the two authored reflections'
+    (published,) = json.loads(combined['provider_text'])['misfit']
+    (wire_peak,) = published['worst_peaks']
+    assert (
+        wire_peak.get('combined') is True
+        and set(zip(wire_peak.get('positions', []), wire_peak.get('phase_ids', []), strict=True))
+        == expected_members
+    ), 'The encoded provider reply retains combined attribution for both observed reflections'
+
+
+def test_provider_result_encoding_retains_unavailable_misfit():
+    data = authored_peak()
+    unavailable = actual({**data, 'provider_wire': True, 'excluded': [[10, 16]]})
+    raw_empty = unavailable['native']
+    assert raw_empty.get('available') is False and raw_empty.get('reason'), (
+        'The native producer explains why the fully masked pattern is unavailable'
+    )
+    (empty,) = json.loads(unavailable['provider_text'])['misfit']
+    assert empty.get('available') is False and empty.get('coverage') == raw_empty['coverage'], (
+        'The encoded provider reply retains both unavailability and its calculation coverage'
+    )
+    assert empty.get('reason') == raw_empty['reason'], (
+        'The encoded provider reply preserves the native reason for zero usable samples'
+    )

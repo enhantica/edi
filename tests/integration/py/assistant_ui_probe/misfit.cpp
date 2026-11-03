@@ -1,4 +1,5 @@
 #include "assistant_data.hpp"
+#include "assistant_outgoing.hpp"
 #include <QJsonDocument>
 #include <iostream>
 #include <limits>
@@ -34,6 +35,16 @@ int main() {
             phase.position=values(object.value("positions"));pattern.phases.push_back(std::move(phase));
         }
         const auto result=edi_app::assistant_data::misfit(pattern,input.value("dataset_id").toString("bank"));
-        std::cout<<QJsonDocument(result).toJson(QJsonDocument::Compact).toStdString()<<'\n'<<std::flush;
+        QJsonObject observation = result;
+        if (input.value("provider_wire").toBool()) {
+            using namespace edi_app::outgoing;
+            const QJsonObject outcome{{"misfit", QJsonArray{result}}};
+            const auto bytes = size(outcome, Role::Result);
+            const auto encoded = QJsonDocument(project(outcome, Role::Result, bytes))
+                                     .toJson(QJsonDocument::Compact);
+            if (static_cast<quint64>(encoded.size()) != bytes) return 4;
+            observation = {{"native", result}, {"provider_text", QString::fromUtf8(encoded)}};
+        }
+        std::cout<<QJsonDocument(observation).toJson(QJsonDocument::Compact).toStdString()<<'\n'<<std::flush;
     }
 }

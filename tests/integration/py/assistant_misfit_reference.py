@@ -82,6 +82,8 @@ def native_peaks(data):
         for position in phase['positions']:
             if not finite(position) or not x[used[0]] <= position <= x[used[-1]]:
                 continue
+            if any(lo <= position <= hi for lo, hi in data.get('excluded', [])):
+                continue
             center = min(finite_axis, key=lambda i: abs(x[i] - position))
             if center not in net or net[center] <= 0:
                 continue

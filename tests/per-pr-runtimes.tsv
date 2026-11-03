@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T05:30:48Z
+# measured_utc = 2026-11-03T06:23:42Z
 #
-# Recorded from: replayed eight review gates onto the merged inventory
-# Collected tests: 211339; with a reported duration: 70521
-# Module-scoped fixture costs recorded: 106
+# Recorded from: measured test run (9 node(s) measured once, 166247 banked, 0 stale row(s) dropped)
+# Collected tests: 211348; with a reported duration: 70521
+# Module-scoped fixture costs recorded: 107
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 211339
+# inventory_python = 211348
 # inventory_cpp = 396
 # inventory_measured = 166247
-# inventory_unmeasured = 45488
+# inventory_unmeasured = 45497
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 67914
+# inventory_pr_python = 67923
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -65,11 +65,20 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::te
 0.470	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-Uani-tensor]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-beta-labels]
 0.410	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[tetragonal-beta-tensor]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_candidate_boundaries.py::test_accepted_fit_currentness_reaches_both_provider_roles
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_candidate_boundaries.py::test_calculate_misfit_reaches_provider_without_any_fit
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_candidate_boundaries.py::test_candidate_endpoint_restores_accepted_flags_relations_and_record[refusal]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_candidate_boundaries.py::test_candidate_endpoint_restores_accepted_flags_relations_and_record[stop]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_candidate_boundaries.py::test_candidate_endpoint_restores_accepted_flags_relations_and_record[undo]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_candidate_boundaries.py::test_native_fit_wire_retains_real_combined_peak
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_between_sample_exclusion_rejects_the_reflection_center
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_coincident_phases_do_not_inherit_one_phases_peak_direction
 0.010	tests/integration/app/test_assistant_misfit_math.py::test_five_worst_reflections_preserve_ratios_shifts_and_widths
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_invalid_supplied_sigma_is_omitted_instead_of_inventing_weights
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_peak_below_background_has_no_measured_direction
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_peak_support_cannot_cross_or_center_in_a_mask
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_provider_result_encoding_retains_combined_misfit
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_provider_result_encoding_retains_unavailable_misfit
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_quiet_background_excludes_the_half_sigma_boundary
 0.020	tests/integration/app/test_assistant_misfit_math.py::test_weighted_regions_and_background_use_the_same_array_population
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_workflow.py::test_data_read_step_names_actual_dataset_and_rows_even_when_clamped
@@ -211779,6 +211788,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # These rows mark and deselect NOTHING - kept for visibility
 # and the stale-module integrity refusal.
 # module-cost: 5.172	tests/integration/app/test_about_components.py
+# module-cost: 106.468	tests/integration/app/test_assistant_candidate_boundaries.py
 # module-cost: 30.584	tests/integration/app/test_assistant_misfit_workflow.py
 # module-cost: 70.695	tests/integration/app/test_assistant_review_receipts.py
 # module-cost: 16.504	tests/integration/app/test_assistant_shown_fit_details.py
