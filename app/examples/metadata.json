@@ -301,6 +301,56 @@
         "docs/user/cli/pd-neut-cwl_cosio-d20/project/structures/cosio.edi"
       ]
     },
+    "pd-neut-cwl_cosio-d20_2k": {
+      "samples": [
+        "Co₂SiO₄ [Pnma.1] · D20 @ ILL"
+      ],
+      "origin": "2.3 K",
+      "detail": "Olivine at 2.3 K · Magnetic structure, k = 0",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "ILL"
+        ],
+        "instruments": [
+          "D20"
+        ],
+        "dimensionality": [
+          "1d"
+        ],
+        "polarisation": [
+          "unpolarised"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_cosio-d20_2k",
+        "Co₂SiO₄ [Pnma.1] · D20 @ ILL · 2.3 K",
+        "Olivine at 2.3 K · Magnetic structure, k = 0"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/structures/cosio.edi"
+      ]
+    },
     "pd-neut-cwl_lmo-echidna": {
       "samples": [
         "LiNiO₂ [R-3m]"

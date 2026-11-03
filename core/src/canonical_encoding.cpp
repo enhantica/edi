@@ -273,6 +273,30 @@ void put_written(std::string& out, const detail::WrittenText& field) {
     put_u64(out, field.written());
 }
 
+// The magnetic description's text (edi ADR-0068): every category crysta reads.
+void put_magnetic(std::string& out, const MagneticDescription& magnetic) {
+    const auto pairs = [&out](const std::vector<std::pair<std::string, std::string>>& rows) {
+        put_u64(out, rows.size());
+        for (const auto& [id, text] : rows) {
+            put_text(out, id);
+            put_text(out, text);
+        }
+    };
+    pairs(magnetic.operations);
+    pairs(magnetic.centerings);
+    pairs(magnetic.propagation_vectors);
+    put_text(out, magnetic.parent.name_h_m_alt);
+    put_text(out, magnetic.parent.it_number);
+    put_text(out, magnetic.parent.transform_pp_abc);
+    put_text(out, magnetic.parent.child_transform_pp_abc);
+    put_u64(out, magnetic.form_factors.size());
+    for (const auto& [symbol, ion] : magnetic.form_factors) {
+        put_text(out, symbol);
+        put_text(out, ion.ion);
+        put_text(out, ion.j2_coefficient);
+    }
+}
+
 void put_structure(std::string& out, const Structure& structure, Scope scope) {
     put_text(out, structure.name);
     put_text(out, structure.space_group.name_h_m);
@@ -307,6 +331,19 @@ void put_structure(std::string& out, const Structure& structure, Scope scope) {
         put_text(out, tensor.id);
         for (const Parameter* component : tensor.parameters()) {
             put_parameter(out, *component, scope);
+        }
+    }
+    // The magnetic description and moments: inputs of the magnetic intensity (edi ADR-0068). A
+    // structure without them adds nothing, so its identity is unchanged.
+    if (!structure.atom_site_moment.empty() || !static_cast<const MagneticDescription&>(structure.magnetic).empty()) {
+        put_magnetic(out, structure.magnetic);
+        put_u64(out, structure.atom_site_moment.size());
+        for (const auto& moment_item : structure.atom_site_moment) {
+            AtomSiteMoment& moment = *moment_item;
+            put_text(out, moment.id);
+            for (const Parameter* component : moment.parameters()) {
+                put_parameter(out, *component, scope);
+            }
         }
     }
     put_u64(out, structure.scattering_lengths_fm.size());
@@ -405,6 +442,21 @@ std::string geometry_inputs(const Structure& structure) {
         put_u64(out, tensor.id.written());
         for (const Parameter* component : tensor.parameters()) {
             put_written(out, component->value);
+        }
+    }
+    // The moments are geometry inputs: the app draws the moments in the cell (edi ADR-0068).
+    if (!structure.atom_site_moment.empty() || !static_cast<const MagneticDescription&>(structure.magnetic).empty()) {
+        put_magnetic(out, structure.magnetic);
+        put_u64(out, structure.magnetic.written());
+        put_u64(out, structure.atom_site_moment.size());
+        put_u64(out, structure.atom_site_moment.generation());
+        for (const auto& moment_item : structure.atom_site_moment) {
+            AtomSiteMoment& moment = *moment_item;
+            put_text(out, moment.id);
+            put_u64(out, moment.id.written());
+            for (const Parameter* component : moment.parameters()) {
+                put_written(out, component->value);
+            }
         }
     }
     put_geom(out, structure.geom);

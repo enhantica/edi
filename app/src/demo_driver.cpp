@@ -277,6 +277,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                    + QStringList{structure, basic}});
     steps_.push_back({"t16-32-lbco-experiment", {experiment, basic}});
     steps_.push_back({"t16-33-lbco-analysis", {analysis, basic}});
+    // The magnetic Co2SiO4 example at 2.3 K: the structure with its moment arrows.
+    steps_.push_back({"magnetic-01-cosio-2k-moments", start + open_example("pd-neut-cwl_cosio-d20_2k")
+                                                     + QStringList{"wait-fit", structure, basic}});
     // A scan's datasets as experiments: the bundled 162-file example, before any scan has been fitted.
     steps_.push_back({"t16-50-scan-experiment", start + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
                                                     + QStringList{experiment, basic, "expand:group.experiments"}});

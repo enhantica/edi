@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-02T23:40:12Z
+# measured_utc = 2026-11-03T07:38:51Z
 #
-# Recorded from: measured test run (20 node(s) measured once, 166221 banked, 0 stale row(s) dropped)
-# Collected tests: 210171; with a reported duration: 70518
+# Recorded from: focused magnetic Python replay and native scene/category replay; baseline rows retained
+# Collected tests: 210192; with a reported duration: 70519
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210171
-# inventory_cpp = 396
-# inventory_measured = 166241
-# inventory_unmeasured = 44326
+# inventory_python = 210192
+# inventory_cpp = 398
+# inventory_measured = 166243
+# inventory_unmeasured = 44347
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66769
+# inventory_pr_python = 66790
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -149250,6 +149250,27 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[chebyshev]
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[line-segment]
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[polynomial]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[crysta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[edi]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_every_expanded_moment_matches_the_published_axial_operations
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_ferromagnet_and_opposite_pair_closed_forms[moment0-False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_ferromagnet_and_opposite_pair_closed_forms[moment0-True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_ferromagnet_and_opposite_pair_closed_forms[moment1-False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_ferromagnet_and_opposite_pair_closed_forms[moment1-True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_ferromagnet_and_opposite_pair_closed_forms[moment2-False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_ferromagnet_and_opposite_pair_closed_forms[moment2-True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_fullprof_fixed_profile_and_magnetic_peaks
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_fullprof_reflection_positions_and_orbit_multiplicities
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_load_repairs_forbidden_values_and_free_flags
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_magnetic_categories_are_declared_in_the_product_schema
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_moment_symmetry_has_exactly_four_independent_components
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_native_categories_survive_two_saves[False]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_native_categories_survive_two_saves[True]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_pnma_magnetic_squared_factors_match_independent_sum[-0.2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_pnma_magnetic_squared_factors_match_independent_sum[0.2]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_pnma_magnetic_squared_factors_match_independent_sum[0]
+0.000	tests/integration/py/test_magnetic_pnma.py::test_reference_files_have_committed_hashes
+0.020	tests/integration/py/test_magnetic_pnma.py::test_zero_moments_preserve_the_nuclear_pattern_bitwise
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_phase_capture_requires_real_shared_grouping[comment]
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_phase_capture_requires_real_shared_grouping[quoted]
@@ -208966,6 +208987,8 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 report tables retain identity paths, starts, uncertainties, and bank metrics
 0.026	tests/unit/cpp/test_fullprof_powder_factors.cpp::FullProf phase factors at the fixed PCR model match its summary
 UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_paths.cpp::Every experiment loop path names the declared row id
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_categories.cpp::Magnetic Main groups expose the four independent cobalt components
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_scene.cpp::Cobalt moment arrows preserve the independent cell expansion and display scale
 UNMEASURED:failed-nonfinite-measured-band	tests/unit/cpp/test_pattern_owner_bands.cpp::Owner uncertainty bands give absent zero and nonfinite su zero width
 0.000	tests/unit/cpp/test_pattern_owner_bands.cpp::Owner uncertainty bands retain independent measured and residual edges
 0.001	tests/unit/cpp/test_report_coloured_table.cpp::Report I40 writes the signed coloured matrix as a text table

@@ -16,6 +16,7 @@
 #include <cmath>
 #include <limits>
 #include <locale>
+#include <map>
 #include <numbers>
 #include <sstream>
 #include <stdexcept>
@@ -607,6 +608,12 @@ SceneSource capture_scene(const Structure& structure) {
         }
         adp.u_cartn = u;
     }
+    const ExpandedAtomSiteMoments& moments = geometry.expanded_atom_site_moments;
+    source.moment_site_id = moments.atom_site_id.buffer();
+    source.moment_symmetry = moments.site_symmetry.buffer();
+    source.moment_x = moments.crystalaxis_x.buffer();
+    source.moment_y = moments.crystalaxis_y.buffer();
+    source.moment_z = moments.crystalaxis_z.buffer();
     try {
         source.operation_rotations = space_group_rotations(structure.space_group);
     } catch (const std::exception&) {
@@ -796,6 +803,40 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             scene.axes.push_back({static_cast<char>('a' + k), scene.cell_basis[k], style_color(kKeys[k])});
         }
     }
+    // Each magnetic row's moment, M = A D^-1 m with m along the unit cell axes (D = diag(a, b, c)).
+    if (options.moments && column_size(source.moment_site_id) != 0) {
+        std::map<std::pair<std::string, std::string>, std::size_t> row_of;
+        for (std::size_t row = 0; row != n; ++row) {
+            row_of.emplace(std::make_pair((*source.atom_site_id)[row],
+                                          column_value(source.site_symmetry, row, std::string())),
+                           row);
+        }
+        std::array<double, 3> length{};
+        for (int k = 0; k != 3; ++k) {
+            length[k] = norm(scene.cell_basis[k]);
+        }
+        const std::size_t count = std::min({column_size(source.moment_site_id), column_size(source.moment_symmetry),
+                                            column_size(source.moment_x), column_size(source.moment_y),
+                                            column_size(source.moment_z)});
+        for (std::size_t i = 0; i != count; ++i) {
+            const auto found = row_of.find({(*source.moment_site_id)[i], (*source.moment_symmetry)[i]});
+            if (found == row_of.end()) {
+                continue;
+            }
+            const std::size_t atom = atom_of_row[found->second];
+            if (!scene.atoms[atom].drawn) {
+                continue;
+            }
+            const double components[3] = {(*source.moment_x)[i], (*source.moment_y)[i], (*source.moment_z)[i]};
+            Vec3 vector{0.0, 0.0, 0.0};
+            for (int k = 0; k != 3; ++k) {
+                if (length[k] > 0.0) {
+                    vector = add(vector, mul(scene.cell_basis[k], components[k] / length[k]));
+                }
+            }
+            scene.moments.push_back({atom, scene.atoms[atom].centre, mul(vector, options.moment_scale)});
+        }
+    }
     if (options.labels) {
         for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
             if (scene.atoms[i].drawn) {
@@ -972,6 +1013,27 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
         arrow.letter_anchor = mul(arrow.direction, length + overhang + style_value("axis.letter.offset") * h);
         drawing.triad.push_back(arrow);
     }
+    // A moment arrow is centred on its atom; its thickness is fixed in Angstrom, so it reads at every zoom
+    // like the bonds.
+    constexpr double kMomentShaftRadius = 0.06;
+    constexpr double kMomentHeadRadius = 0.15;
+    constexpr double kMomentHeadShare = 0.3;
+    for (const SceneMoment& moment : scene.moments) {
+        const double length = norm(moment.vector);
+        if (length <= 0.0) {
+            continue;
+        }
+        SceneArrow arrow;
+        arrow.letter = 'm';
+        arrow.color = style_color("moment");
+        arrow.direction = divided(moment.vector, length);
+        arrow.origin = sub(moment.centre, mul(moment.vector, 0.5));
+        arrow.head_length = std::min(kMomentHeadShare * length, 0.4);
+        arrow.shaft_length = length - arrow.head_length;
+        arrow.shaft_radius = kMomentShaftRadius;
+        arrow.head_radius = kMomentHeadRadius;
+        drawing.moments.push_back(arrow);
+    }
     return drawing;
 }
 
@@ -1009,6 +1071,7 @@ const std::vector<SceneStyle>& structure_style_table() {
         {"axis.a", "#DC2828", "#DC2828", 0.0},
         {"axis.b", "#28B428", "#28B428", 0.0},
         {"axis.c", "#2850DC", "#2850DC", 0.0},
+        {"moment", "#C2185B", "#F06292", 0.0},  // the magnetic moment arrows (edi ADR-0068)
         {"axis.shaft.radius", "", "", 0.009},
         {"axis.head.radius", "", "", 0.028},
         {"axis.head.length", "", "", 0.085},

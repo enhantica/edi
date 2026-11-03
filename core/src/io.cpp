@@ -677,7 +677,8 @@ const std::string& loop_cell(const Loop& loop, const std::vector<std::string>& r
 // transcribed from `crysta/data/dictionary/parameters.tsv` at the pinned commit. It was verified to
 // reject nothing across every `.edi` in the acceptance vehicle and in edi's fixtures.
 const std::set<std::string>& covered_categories() {
-    static const std::set<std::string> categories{"absorption", "atom_site", "atom_site_aniso", "background",
+    static const std::set<std::string> categories{"absorption", "atom_site", "atom_site_aniso",
+                                                  "atom_site_moment", "background",
                                                   "extinction",
                                                   "cell",       "data_range",       "experiment_type",
                                                   "instrument",  "linked_structure",
@@ -702,6 +703,10 @@ const std::set<std::string>& known_covered_tags() {
         "_atom_site_aniso.adp_11", "_atom_site_aniso.adp_12", "_atom_site_aniso.adp_13",
         "_atom_site_aniso.adp_22", "_atom_site_aniso.adp_23", "_atom_site_aniso.adp_33",
         "_atom_site_aniso.id",
+        // _atom_site_moment (the magnetic sites' moments)
+        "_atom_site_moment.label", "_atom_site_moment.crystalaxis_x",
+        "_atom_site_moment.crystalaxis_y", "_atom_site_moment.crystalaxis_z",
+        "_atom_site_moment.symmform",
         // _background
         "_background.coef", "_background.id", "_background.intensity", "_background.order",
         "_background.origin", "_background.position", "_background.type", "_background.x_max",
@@ -767,6 +772,97 @@ const std::set<std::string>& known_covered_tags() {
         "_peak.asym_fcj_1", "_peak.asym_fcj_2",
     };
     return tags;
+}
+
+// The magnetic description of a structure block, each category as written; crysta checks it
+// when the structure reaches it (edi ADR-0068).
+void read_magnetic(const Block& block, Structure& structure, const std::string& where) {
+    const auto text = [&block](const char* tag) {
+        const std::string* value = block.find(tag);
+        return value == nullptr ? std::string() : *value;
+    };
+    MagneticDescription magnetic;
+    magnetic.group = {text("_space_group_magn.number_BNS"), text("_space_group_magn.name_BNS"),
+                      text("_space_group_magn.name_UNI"), text("_space_group_magn.number_OG"),
+                      text("_space_group_magn.name_OG"),
+                      text("_space_group_magn.point_group_name_UNI"),
+                      text("_space_group_magn.point_group_number_Litvin")};
+    magnetic.parent = {text("_parent_space_group.name_H-M_alt"),
+                       text("_parent_space_group.IT_number"),
+                       text("_parent_space_group.transform_Pp_abc"),
+                       text("_parent_space_group.child_transform_Pp_abc"),
+                       text("_parent_space_group.reference_setting"),
+                       text("_parent_space_group.derived")};
+    const auto id_text = [&](const char* id_tag, const char* text_tag) {
+        std::vector<std::pair<std::string, std::string>> rows;
+        if (const Loop* loop = block.loop_with(id_tag)) {
+            for (const auto& row : loop->rows) {
+                rows.emplace_back(loop_cell(*loop, row, id_tag, where),
+                                  loop_cell(*loop, row, text_tag, where));
+            }
+        }
+        return rows;
+    };
+    magnetic.operations = id_text("_space_group_symop_magn_operation.id",
+                                  "_space_group_symop_magn_operation.xyz");
+    magnetic.centerings = id_text("_space_group_symop_magn_centering.id",
+                                  "_space_group_symop_magn_centering.xyz");
+    magnetic.propagation_vectors =
+        id_text("_parent_propagation_vector.id", "_parent_propagation_vector.kxkykz");
+    if (const Loop* loop = block.loop_with("_space_group_magn_transforms.id")) {
+        for (const auto& row : loop->rows) {
+            const auto cell = [&](const char* tag) {
+                return loop->column(tag) >= 0 ? loop_cell(*loop, row, tag, where) : std::string();
+            };
+            magnetic.transforms.emplace_back(
+                cell("_space_group_magn_transforms.id"),
+                crysta::MagneticTransform{cell("_space_group_magn_transforms.Pp_abc"),
+                                          cell("_space_group_magn_transforms.source")});
+        }
+    }
+    if (const Loop* loop = block.loop_with("_magnetic_form_factor.type_symbol")) {
+        for (const auto& row : loop->rows) {
+            const auto cell = [&](const char* tag) {
+                const std::string value =
+                    loop->column(tag) >= 0 ? loop_cell(*loop, row, tag, where) : std::string();
+                return value == "." || value == "?" ? std::string() : value;
+            };
+            magnetic.form_factors.emplace(
+                cell("_magnetic_form_factor.type_symbol"),
+                crysta::MagneticIon{cell("_magnetic_form_factor.ion"),
+                                    cell("_magnetic_form_factor.j2_coefficient")});
+        }
+    }
+    if (!magnetic.empty()) {
+        structure.magnetic = std::move(magnetic);
+    }
+    if (const Loop* loop = block.loop_with("_atom_site_moment.label")) {
+        const ParameterSpec* const specs[3] = {&spec::atom_site_moment_crystalaxis_x,
+                                               &spec::atom_site_moment_crystalaxis_y,
+                                               &spec::atom_site_moment_crystalaxis_z};
+        for (const auto& row : loop->rows) {
+            AtomSiteMoment moment;
+            moment.id = loop_cell(*loop, row, "_atom_site_moment.label", where);
+            const std::vector<Parameter*> components = moment.parameters();
+            for (std::size_t k = 0; k < 3; ++k) {
+                read_into(*components[k],
+                          parse_parameter(loop_cell(*loop, row, specs[k]->edi_names[0], where),
+                                          where),
+                          where);
+            }
+            if (loop->column("_atom_site_moment.symmform") >= 0) {
+                moment.symmform = loop_cell(*loop, row, "_atom_site_moment.symmform", where);
+            }
+            const bool named =
+                std::any_of(structure.atom_sites.begin(), structure.atom_sites.end(),
+                            [&moment](const auto& site) { return site->id.value() == moment.id.value(); });
+            if (!named) {
+                fail_domain(where, "orphan-moment-row",
+                            "_atom_site_moment row '" + moment.id.value() + "' names no atom site");
+            }
+            structure.atom_site_moment.push_back(std::move(moment));
+        }
+    }
 }
 
 std::string tag_category(const std::string& tag) {
@@ -968,6 +1064,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     // its site symmetry ties it, with adp_iso its equivalent (ADR 0027).
     add_missing_aniso_rows(structure);
     complete_atom_site_aniso(structure);
+    read_magnetic(block, structure, where);
 
     // The optional declared scattering-length map (`Structure.scattering_lengths_fm`). Absent
     // means "not set" — the built-in table applies by element lookup; there is no other route

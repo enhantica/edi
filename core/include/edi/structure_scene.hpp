@@ -86,6 +86,9 @@ struct SceneSource {
     // The space group's rotations in fractional coordinates (row-major), by symmetry operation id - 1: an
     // expanded row's `site_symmetry` code `n_klm` names its operation n, which turns the site's tensor onto it.
     std::vector<std::array<int, 9>> operation_rotations;
+    // `_expanded_atom_site_moment`: each magnetic row's moment in Bohr magnetons along a, b and c.
+    Column<std::string> moment_site_id, moment_symmetry;
+    Column<double> moment_x, moment_y, moment_z;
 };
 // Owner thread. Reads the stored geometry only while `structure.geometry_current()` is true, and never
 // computes it; otherwise the source has `current` false and no column.
@@ -98,6 +101,8 @@ struct SceneOptions {
     double adp_probability = 0.99;  // diffraction-lib's `_structure_style.adp_probability`, in (0, 1)
     AtomSubset atoms = AtomSubset::All;
     bool bonds = true, cell = true, axes = true, labels = false;
+    bool moments = true;        // `_structure_view.show_moments`
+    double moment_scale = 0.5;  // Angstrom of arrow per Bohr magneton (the app's setting)
 };
 
 struct ScenePart {  // one site at a position
@@ -142,6 +147,10 @@ struct SceneLabel {
     Vec3 anchor;
     std::string text;
 };
+struct SceneMoment {  // one magnetic atom's moment, centred on it
+    std::size_t atom = 0;
+    Vec3 centre, vector;  // Angstrom; the vector is the moment times the scale
+};
 struct SceneLegendEntry {
     std::string element;
     Rgb color;
@@ -161,6 +170,7 @@ struct StructureScene {
     std::vector<SceneEdge> cell_edges;
     std::vector<SceneAxis> axes;
     std::vector<SceneLabel> labels;
+    std::vector<SceneMoment> moments;
     std::vector<SceneLegendEntry> legend;
     std::vector<std::string> substituted_elements;  // sorted, once each; "" for parts with no element
     SceneFrame frame;
@@ -214,6 +224,7 @@ struct SceneDrawing {  // everything a renderer places, in scene units
     std::vector<SceneInstance> spheres, cylinders;  // cylinders: half-bonds, then cell edges
     std::vector<std::size_t> shared;  // the drawn shared sites: shared[k] is the atom whose mesh ordinal is k
     std::vector<SceneArrow> triad;
+    std::vector<SceneArrow> moments;  // one per drawn magnetic atom, placed in the scene
 };
 // The unit sphere has radius 1; the unit cylinder has radius 1 and length 1 along +y, centred.
 SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport);

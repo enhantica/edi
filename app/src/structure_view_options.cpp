@@ -94,6 +94,15 @@ void StructureViewOptions::setAtoms(const QString& atoms) {
 void StructureViewOptions::setBonds(bool shown) { assign(options_.bonds, shown, &StructureViewOptions::bondsChanged); }
 void StructureViewOptions::setCell(bool shown) { assign(options_.cell, shown, &StructureViewOptions::cellChanged); }
 void StructureViewOptions::setAxes(bool shown) { assign(options_.axes, shown, &StructureViewOptions::axesChanged); }
+void StructureViewOptions::setShowMoments(bool shown) {
+    moments_declared_ = moments_declared_ || shown != options_.moments;
+    assign(options_.moments, shown, &StructureViewOptions::showMomentsChanged);
+}
+void StructureViewOptions::setMomentScale(double scale) {
+    if (scale > 0.0) {
+        assign(options_.moment_scale, scale, &StructureViewOptions::momentScaleChanged);
+    }
+}
 
 void StructureViewOptions::cycleAtoms(bool hasCopies) {
     switch (options_.atoms) {
@@ -111,7 +120,7 @@ void StructureViewOptions::cycleAtoms(bool hasCopies) {
 
 std::map<std::string, std::string> StructureViewOptions::toView() const {
     const auto flag = [](bool on) { return std::string(on ? "true" : "false"); };
-    return {{"atom_view", atomView().toStdString()},
+    std::map<std::string, std::string> view{{"atom_view", atomView().toStdString()},
             {"colour_scheme", colorScheme().toStdString()},
             {"atom_scale", QString::number(options_.atom_scale, 'g', 6).toStdString()},
             {"adp_probability", QString::number(options_.adp_probability, 'g', 6).toStdString()},
@@ -120,6 +129,10 @@ std::map<std::string, std::string> StructureViewOptions::toView() const {
             {"bonds", flag(options_.bonds)},
             {"cell", flag(options_.cell)},
             {"axes", flag(options_.axes)}};
+    if (moments_declared_) {
+        view["show_moments"] = flag(options_.moments);
+    }
+    return view;
 }
 
 void StructureViewOptions::setFromView(const std::map<std::string, std::string>& view) {
@@ -146,6 +159,8 @@ void StructureViewOptions::setFromView(const std::map<std::string, std::string>&
     setBonds(flag("bonds", defaults.bonds));
     setCell(flag("cell", defaults.cell));
     setAxes(flag("axes", defaults.axes));
+    setShowMoments(flag("show_moments", defaults.moments));
+    moments_declared_ = view.contains("show_moments");
 }
 
 }  // namespace edi_app

@@ -11,7 +11,7 @@ import edi.app
 // The structure view's toolbar (edi ADR-0017 §16): diffraction-lib's modebar (`templates/structure.html.j2`),
 // its buttons and behaviour, drawn as ChartToolButton with the chart toolbar's spacing and spacer. The features
 // first, one button per feature the structure has, in diffraction-lib's order: atoms (all, asymmetric unit, none),
-// labels, bonds, cell, axes. Then the camera group, ending in Home: projection, view along a, b and c, reset view
+// labels, bonds, cell, magnetic moments (when the structure has them), axes. Then the camera group, ending in Home: projection, view along a, b and c, reset view
 // (owner, 2026-10-05). The colour scheme drop-down precedes it in the view's centred toolbar line (StructureView).
 Row {
     id: toolbar
@@ -52,6 +52,14 @@ Row {
         toolTip: qsTr("Cell")
         checked: toolbar.options !== null && toolbar.options.cell
         onClicked: toolbar.options.cell = !toolbar.options.cell
+    }
+    ChartToolButton {
+        objectName: "structure.toolbar.moments"
+        visible: toolbar.controller !== null && toolbar.controller.hasMoments
+        fontIcon: "long-arrow-alt-up"
+        toolTip: qsTr("Magnetic moments")
+        checked: toolbar.options !== null && toolbar.options.showMoments
+        onClicked: toolbar.options.showMoments = !toolbar.options.showMoments
     }
     ChartToolButton {
         objectName: "structure.toolbar.axes"

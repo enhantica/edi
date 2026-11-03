@@ -36,6 +36,7 @@
 #include "number_token.hpp"
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
+#include "crysta/magnetic.hpp"
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
 #include "crysta/background_estimate.hpp"
@@ -223,6 +224,7 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                      s.geom.min_bond_distance_cutoff.get();
                                  built.geom.bond_distance_inc = s.geom.bond_distance_inc.get();
                                  built.atom_site_aniso = detail::to_crysta_atom_site_aniso(s);
+                                 detail::to_crysta_magnetic(s, built);
                              });
 }
 
@@ -328,6 +330,40 @@ std::vector<ParameterTie> structure_ties(const Structure& s) {
             // An unresolvable setting or site: the components are reported independent.
         }
         ties.insert(ties.end(), rows.begin(), rows.end());
+    }
+    // The magnetic moments: crysta's ties from the magnetic site symmetry (edi ADR-0068).
+    if (!s.atom_site_moment.empty()) {
+        // Each site's ties, or none when crysta refuses the structure or an operator.
+        std::map<std::string, std::vector<crysta::MomentTie>> site_ties;
+        try {
+            const crysta::Structure engine = to_crysta_structure(s);
+            for (const crysta::AtomSiteMoment& candidate : engine.atom_site_moment) {
+                site_ties[candidate.site_id.value()] = crysta::moment_ties(engine, candidate);
+            }
+        } catch (const std::exception&) {
+            site_ties.clear();
+        }
+        for (const auto& moment : s.atom_site_moment) {
+            const std::vector<Parameter*> components = const_cast<AtomSiteMoment&>(*moment).parameters();
+            std::vector<ParameterTie> rows;
+            for (const Parameter* component : components) {
+                rows.push_back({component});
+            }
+            const auto found = site_ties.find(moment->id.value());
+            if (found != site_ties.end()) {
+                for (const crysta::MomentTie& tie : found->second) {
+                    ParameterTie& row = rows[tie.component];
+                    if (tie.fixed) {
+                        row.kind = TieKind::Fixed;
+                        row.fixed_value = 0.0;
+                    } else {
+                        row.kind = TieKind::Follows;
+                        row.leader = components[tie.terms.front().first];
+                    }
+                }
+            }
+            ties.insert(ties.end(), rows.begin(), rows.end());
+        }
     }
     return ties;
 }
@@ -2775,6 +2811,35 @@ crysta::Cell to_crysta_cell(const Cell& c) {
 }
 
 // The anisotropic sites' tensors, in their declared types.
+void to_crysta_magnetic(const Structure& s, crysta::Structure& built) {
+    const MagneticDescription& magnetic = s.magnetic;
+    if (!magnetic.empty()) {
+        if (!magnetic.group.empty()) {
+            built.magnetic_group = magnetic.group;
+        }
+        if (!magnetic.parent.empty()) {
+            built.parent_space_group = magnetic.parent;
+        }
+        built.magnetic_transforms = magnetic.transforms;
+        built.magnetic_operations = magnetic.operations;
+        built.magnetic_centerings = magnetic.centerings;
+        built.propagation_vectors = magnetic.propagation_vectors;
+        built.magnetic_form_factors = magnetic.form_factors;
+    }
+    std::vector<crysta::AtomSiteMoment> rows;
+    rows.reserve(s.atom_site_moment.size());
+    for (const auto& item : s.atom_site_moment) {
+        const AtomSiteMoment& m = *item;
+        crysta::AtomSiteMoment& row = rows.emplace_back(
+            m.id.value(), std::array<crysta::Parameter, 3>{
+                              param(m.crystalaxis_x, crysta::MAGNETIC_MOMENT, "crystalaxis_x"),
+                              param(m.crystalaxis_y, crysta::MAGNETIC_MOMENT, "crystalaxis_y"),
+                              param(m.crystalaxis_z, crysta::MAGNETIC_MOMENT, "crystalaxis_z")});
+        row.symmform = m.symmform;
+    }
+    built.atom_site_moment = std::move(rows);
+}
+
 std::vector<crysta::AtomSiteAniso> to_crysta_atom_site_aniso(const Structure& s) {
     std::vector<crysta::AtomSiteAniso> rows;
     rows.reserve(s.atom_site_aniso.size());
@@ -3397,6 +3462,12 @@ StructureGeometry structure_geometry(const Structure& structure, const ViewWindo
     out.window = window;
     out.space_group_symop.operation_xyz = shared_column(computed.space_group_symop.operation_xyz);
     const crysta::ExpandedAtomSites& atoms = computed.expanded_atom_sites;
+    const crysta::ExpandedAtomSiteMoments& moments = computed.expanded_atom_site_moments;
+    out.expanded_atom_site_moments.atom_site_id = shared_column(moments.atom_site_id);
+    out.expanded_atom_site_moments.site_symmetry = shared_column(moments.site_symmetry);
+    out.expanded_atom_site_moments.crystalaxis_x = shared_column(moments.crystalaxis_x);
+    out.expanded_atom_site_moments.crystalaxis_y = shared_column(moments.crystalaxis_y);
+    out.expanded_atom_site_moments.crystalaxis_z = shared_column(moments.crystalaxis_z);
     out.expanded_atom_sites.atom_site_id = shared_column(atoms.atom_site_id);
     out.expanded_atom_sites.site_symmetry = shared_column(atoms.site_symmetry);
     out.expanded_atom_sites.fract_x = shared_column(atoms.fract_x);

@@ -110,6 +110,9 @@ projects:
   - id: pd-neut-cwl_cosio-d20
     executing: true
     user-facing: true
+  - id: pd-neut-cwl_cosio-d20_2k
+    executing: true
+    user-facing: true
   - id: pd-neut-cwl_lmo-echidna
     executing: true
     user-facing: true

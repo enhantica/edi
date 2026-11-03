@@ -341,6 +341,28 @@ inline std::vector<Category> structure_categories(Structure& structure) {
     }
     categories.push_back(aniso);
     categories.push_back({"scattering_length", true, structure.scattering_lengths_fm.size()});
+    // The magnetic description (edi ADR-0068), for a structure that has one: crysta reads and
+    // writes it, so each category shows its rows as the file holds them.
+    const MagneticDescription& magnetic = structure.magnetic;
+    if (!magnetic.empty() || !structure.atom_site_moment.empty()) {
+        categories.push_back({"space_group_magn"});
+        categories.push_back({"parent_space_group"});
+        categories.push_back({"parent_propagation_vector", true, magnetic.propagation_vectors.size()});
+        categories.push_back({"space_group_symop_magn_operation", true, magnetic.operations.size()});
+        if (!magnetic.centerings.empty()) {
+            categories.push_back({"space_group_symop_magn_centering", true, magnetic.centerings.size()});
+        }
+        Category moments{"atom_site_moment", true, structure.atom_site_moment.size()};
+        for (const auto& moment : structure.atom_site_moment) {
+            const char* names[] = {"crystalaxis_x", "crystalaxis_y", "crystalaxis_z"};
+            const std::vector<Parameter*> parameters = moment->parameters();
+            for (std::size_t i = 0; i < parameters.size(); ++i) {
+                moments.fields.push_back({names[i], parameters[i], true, refinable(parameters[i])});
+            }
+        }
+        categories.push_back(moments);
+        categories.push_back({"magnetic_form_factor", true, magnetic.form_factors.size()});
+    }
     detail::mark_dependents(categories);
     return categories;
 }
@@ -421,6 +443,9 @@ inline std::vector<Category> calculated_categories(const Structure& structure) {
                                      {"expanded_atom_site", true, geometry.expanded_atom_sites.size()}};
     if (geometry.geom_bond.size() > 0) {
         categories.push_back({"geom_bond", true, geometry.geom_bond.size()});
+    }
+    if (geometry.expanded_atom_site_moments.size() > 0) {
+        categories.push_back({"expanded_atom_site_moment", true, geometry.expanded_atom_site_moments.size()});
     }
     return categories;
 }
