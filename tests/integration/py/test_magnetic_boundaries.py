@@ -7,8 +7,35 @@ import edi as api
 import numpy as np
 import pytest
 
+from tests.conftest import corpus_case_dir
 from tests.fixtures.magnetic_pnma import commensurate as cases
 from tests.fixtures.magnetic_pnma import reference as ref
+
+
+def corpus_variant(root, structure):
+    """A bounded magnetic admission variant of the pinned CoSiO D20 corpus data."""
+    source = corpus_case_dir('cosio-d20-s4') / 'project'
+    experiment = (source / 'experiments/d20.edi').read_text()
+    # Freeze the nuclear experiment recipe; only explicitly chosen boundary parameters vary.
+    experiment = experiment.replace('()', '')
+    ref.project(root, structure, experiment)
+    (root / 'analysis').mkdir()
+    (root / 'analysis/analysis.edi').write_text(
+        '_edi.schema_version 3\n_minimizer.type crysta\n_minimizer.max_iterations 1\n'
+    )
+    return root
+
+
+@pytest.mark.parametrize('spelling', ['1/2,0,0', '0.5,0,0'])
+def test_cli_accepts_equivalent_exact_and_decimal_commensurate_controls(tmp_path, spelling):
+    root = ref.project(tmp_path / 'input', cases.structure(period=22, vectors=(spelling,)))
+    command = [sys.executable, '-m', 'edi', 'calc', str(root), '--dry']
+    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
+    assert result.returncode == 0, (
+        'The CLI admits both exact and decimal valid controls through magnetic validation: '
+        + result.stdout
+        + result.stderr
+    )
 
 
 @pytest.mark.parametrize('case', sorted(cases.INVALID))
@@ -85,7 +112,7 @@ def test_operator_replacement_refuses_atomically_with_warm_caches(tmp_path):
 def test_free_cell_and_metric_dependent_moment_fit_refuses_before_trials(tmp_path):
     text = cases.structure(b=4, gamma=60, operations=('x,y,z,+1', 'x+y,-y,z,+1'), moment='-.5 1 0')
     text = text.replace('_parent_space_group.derived false', '_parent_space_group.derived true')
-    model = api.Project.load(ref.project(tmp_path / 'input', text))
+    model = api.Project.load(corpus_variant(tmp_path / 'input', text))
     model.structure.cell.length_b.free = True
     model.structure.atom_site_moment['A'].crystalaxis_y.free = True
     with pytest.raises((ValueError, RuntimeError), match=r'(?i)metric|cell.*moment|moment.*cell'):
@@ -117,12 +144,8 @@ def test_binding_k_edit_refuses_without_mutating_the_warm_model(tmp_path):
 
 
 def test_post_fit_model_saves_and_reloads_its_validated_propagation(tmp_path):
-    root = ref.project(
+    root = corpus_variant(
         tmp_path / 'input', cases.structure(**cases.VALID['anti-translation-in-centring'])
-    )
-    (root / 'analysis').mkdir()
-    (root / 'analysis/analysis.edi').write_text(
-        '_edi.schema_version 3\n_minimizer.type crysta\n_minimizer.max_iterations 1\n'
     )
     model = api.Project.load(root)
     model.structure.atom_site_moment['A'].crystalaxis_y.free = True
@@ -159,3 +182,42 @@ def test_fullprof_dead_cell_mask_uses_its_own_printed_point_list():
         assert bool(mask[index[0]]) is expected, (
             'The FullProf reference excludes just the dead detector cell and keeps its neighbours'
         )
+
+
+@pytest.mark.parametrize('route', ['native', 'magcif'])
+@pytest.mark.parametrize('unsupported', ['superspace', 'irrational'])
+def test_modulated_or_incommensurate_input_refuses_by_name(tmp_path, route, unsupported):
+    text = cases.structure()
+    if unsupported == 'superspace':
+        text += '\n_space_group_magn.ssg_name "P1(0b0)0"\n'
+        reason = r'(?i)superspace|ssg|modulat'
+    else:
+        # Irrational sqrt(2)/10 at eleven decimal places cannot be a child-lattice character.
+        text = cases.structure(vectors=('0.14142135624,0,0',))
+        reason = r'(?i)incommensurate|propagation|translation|rational|commensurate'
+    if route == 'magcif':
+        text = cases.magnetic_cif(text)
+    with pytest.raises((ValueError, RuntimeError), match=reason):
+        api.Project.load(ref.project(tmp_path / 'input', text))
+
+
+@pytest.mark.parametrize('route', ['native', 'magcif'])
+def test_strained_parent_with_half_order_character_is_admitted(tmp_path, route):
+    text = cases.structure(
+        period=2,
+        parent='P 4',
+        parent_number=75,
+        vectors=('1/2,0,0',),
+        centrings=('x,y,z,+1', 'x+1/2,y,z,-1'),
+    )
+    if route == 'magcif':
+        text = cases.magnetic_cif(text)
+    model = api.Project.load(ref.project(tmp_path / 'input', text))
+    model.save_as(tmp_path / 'saved')
+    saved = ref.columns((tmp_path / 'saved/structures/cosio.edi').read_text())
+    assert saved['_parent_propagation_vector.kxkykz'] in [['1/2,0,0'], ['0.5,0,0']], (
+        'A strained declared tetragonal parent does not refuse a valid half-order child'
+    )
+    assert [float(saved['_cell.length_' + axis][0]) for axis in 'ab'] == [8, 5], (
+        'Import retains the observed strained child metric rather than projecting onto the parent'
+    )

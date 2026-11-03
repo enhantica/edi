@@ -16,6 +16,7 @@ CASES = [
     'nuclear_and_magnetic_tick_rows_cover_the_independent_reflections',
     'k_editor_refuses_without_changing_the_saved_model',
     'catalogue_count_and_selector_operator_replacement',
+    'primitive_propagation_add_refuses_without_losing_rows',
     'propagation_rows_add_remove_and_refuse_duplicates:fraction-first',
     'propagation_rows_add_remove_and_refuse_duplicates:decimal-first',
     'named_magcif_import_uses_the_app_loader:isodistort',

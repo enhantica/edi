@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T10:30:23Z
+# measured_utc = 2026-11-03T10:37:01Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 166245 banked, 0 stale row(s) dropped)
-# Collected tests: 210332; with a reported duration: 70519
+# Recorded from: measured test run (8 node(s) measured once, 166247 banked, 0 stale row(s) dropped)
+# Collected tests: 210341; with a reported duration: 70521
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210332
+# inventory_python = 210341
 # inventory_cpp = 400
-# inventory_measured = 166245
-# inventory_unmeasured = 44487
+# inventory_measured = 166247
+# inventory_unmeasured = 44494
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66930
+# inventory_pr_python = 66939
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -234,6 +234,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::te
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[named_magcif_import_uses_the_app_loader:fullprof]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[named_magcif_import_uses_the_app_loader:isodistort]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[nuclear_and_magnetic_tick_rows_cover_the_independent_reflections]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[primitive_propagation_add_refuses_without_losing_rows]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[propagation_rows_add_remove_and_refuse_duplicates:decimal-first]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[propagation_rows_add_remove_and_refuse_duplicates:fraction-first]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[visibility_keeps_camera_and_independent_moments]
@@ -149266,6 +149267,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[line-segment]
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[polynomial]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_binding_k_edit_refuses_without_mutating_the_warm_model
+0.260	tests/integration/py/test_magnetic_boundaries.py::test_cli_accepts_equivalent_exact_and_decimal_commensurate_controls[0.5,0,0]
+0.310	tests/integration/py/test_magnetic_boundaries.py::test_cli_accepts_equivalent_exact_and_decimal_commensurate_controls[1/2,0,0]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[ambiguous-rounded-decimal]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[child-basis-not-parent-lattice]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[decimal-before-fraction-duplicate]
@@ -149315,8 +149318,14 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[sixteenth-exact]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[strained-parent]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[tripled]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_modulated_or_incommensurate_input_refuses_by_name[irrational-magcif]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_modulated_or_incommensurate_input_refuses_by_name[irrational-native]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_modulated_or_incommensurate_input_refuses_by_name[superspace-magcif]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_modulated_or_incommensurate_input_refuses_by_name[superspace-native]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_operator_replacement_refuses_atomically_with_warm_caches
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_post_fit_model_saves_and_reloads_its_validated_propagation
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_strained_parent_with_half_order_character_is_admitted[magcif]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_strained_parent_with_half_order_character_is_admitted[native]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-centring-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-centring-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-operations-factory]

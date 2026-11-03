@@ -14,6 +14,7 @@ TestCase {
     property var appWindow
     property var scratch
     Component { id: application; Main {} }
+    Component { id: preferences; AppPreferencesDialog {} }
     Component { id: pattern; PatternChart { width: 1200; height: 800 } }
     function init() {
         scratch = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/magnetic_pnma/app-project"));
@@ -82,6 +83,18 @@ TestCase {
         verify(/\(6\)/.test(displacement.title), "Atomic displacement reports all six site rows instead of zero");
     }
     function test_magnetic_selector_and_scale_use_one_editing_surface() {
+        const dialog = preferences.createObject(appWindow.contentItem);
+        verify(dialog !== null, "The magnetic preference check uses the production dialog");
+        dialog.open();
+        tryCompare(dialog, "visible", true, 1000, "Preferences opens before checking duplicate controls");
+        const appearanceTab = findChild(dialog.contentItem, "preferences.tab.appearance");
+        verify(appearanceTab !== null, "The production Appearance preference tab is present");
+        mouseClick(appearanceTab);
+        verify(waitForPolish(dialog.contentItem), "Preference controls complete their layout");
+        const preferenceItems = Render.descendants(dialog.contentItem);
+        verify(!preferenceItems.some(item => /moment.*(?:scale|length)|(?:scale|length).*moment/i.test(String(item.text || item.label || item.objectName || ""))), "The moment length preference is removed when project Appearance owns the field");
+        dialog.close();
+        dialog.destroy();
         const magnetic = group("space_group_magn");
         const selectors = Render.descendants(magnetic).filter(item => typeof item.textAt === "function" && item.editable === true);
         compare(selectors.length, 1, "The magnetic name fields share one searchable selector");
@@ -105,6 +118,14 @@ TestCase {
         verify(view !== null, "The magnetic case reaches the real structure view");
         tryVerify(() => view.current, 10000, "The magnetic scene is current before visibility edits");
         const controller = view.controller;
+        controller.dark = false;
+        const light = controller.styleColor("moment");
+        controller.dark = true;
+        const dark = controller.styleColor("moment");
+        verify(light.a > 0 && dark.a > 0, "Moment arrows have a visible colour in both palettes");
+        verify(light.r === light.g && light.g === light.b && dark.r === dark.g && dark.g === dark.b, "Moment arrows use neutral grey in both palettes");
+        verify(dark.r > light.r, "The dark palette uses lighter moment grey than the light palette");
+        controller.dark = false;
         controller.viewAnimationDuration = 0;
         const state = () => JSON.stringify({position: controller.cameraPosition, rotation: controller.cameraRotation, projection: controller.cameraProjection, zoom: controller.magnification});
         const before = state();
@@ -189,6 +210,21 @@ TestCase {
         verify(Session.save(), "A refused incompatible selector choice leaves a saveable prior model");
         compare(SettingsProof.text(scratch, "structures/cosio.edi"), before, "The selector cannot replace operators with a group incompatible with the current propagation");
         verify(Probe.rows(Session.loadWarnings).some(row => /propagation|translation|lattice|magnetic/i.test(row.message)), "A refused magnetic selection gives its acceptance-rule reason");
+    }
+    function test_primitive_propagation_add_refuses_without_losing_rows() {
+        const vectors = group("parent_propagation_vector");
+        const objects = Render.descendants(vectors);
+        const table = objects.find(item => item.sourceModel !== undefined && typeof item.itemAtIndex === "function");
+        verify(table !== undefined && table.count === 1, "Primitive cobalt starts with its one zero propagation row");
+        const add = objects.find(item => typeof item.clicked === "function" && item.text === "Add vector");
+        verify(add !== undefined, "The primitive model exposes the same Add vector boundary");
+        verify(Session.save(), "The primitive model saves before the refused addition");
+        const before = SettingsProof.text(scratch, "structures/cosio.edi");
+        mouseClick(add);
+        compare(table.count, 1, "A primitive cell cannot add another distinct commensurate propagation vector");
+        verify(Session.save(), "A refused addition preserves a saveable magnetic model");
+        compare(SettingsProof.text(scratch, "structures/cosio.edi"), before, "A refused new vector preserves every prior row and operator");
+        verify(Probe.rows(Session.loadWarnings).some(row => /duplicate|propagation|translation|commensurate/i.test(row.message)), "The refused addition states the same acceptance-rule reason as an edit");
     }
     function test_propagation_rows_add_remove_and_refuse_duplicates_data() {
         return [{tag: "fraction-first", first: "1/2", duplicate: "0.5"},
