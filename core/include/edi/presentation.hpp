@@ -58,7 +58,7 @@ struct PatternSource {
         std::string structure_id, label;
         std::size_t place = 0;  // the structure's place in the project's list: its colour
         Column net;
-        // A magnetic structure's magnetic part (crysta's ADR-0108), placed as its magnetic reflections are; its
+        // A magnetic structure's magnetic part, placed as its magnetic reflections are; its
         // other component is then its nuclear part (edi ADR-0068).
         bool magnetic = false;
     };

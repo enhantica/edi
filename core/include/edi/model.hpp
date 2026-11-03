@@ -3452,7 +3452,7 @@ struct PdDataBase {
     // row-major, one value per point and structure in `component_order` (the structures' ids). Empty until a
     // calculation ran, and when no structure is linked.
     ComputedColumn<double> component_intensities_net;
-    // crysta's ADR-0108: a magnetic structure's curve in its magnetic part (the profile from |M⊥|² alone) and its
+    // A magnetic structure's curve in its magnetic part (the profile from |M⊥|² alone) and its
     // nuclear part (the net curve less it), in the layout of component_intensities_net. Empty unless a linked structure
     // is magnetic and seen by neutrons.
     ComputedColumn<double> component_intensities_magnetic;
