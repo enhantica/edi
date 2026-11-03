@@ -280,6 +280,16 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The magnetic Co2SiO4 example at 2.3 K: the structure with its moment arrows.
     steps_.push_back({"magnetic-01-cosio-2k-moments", start + open_example("pd-neut-cwl_cosio-d20_2k")
                                                      + QStringList{"wait-fit", structure, basic}});
+    // The magnetic groups of the 2.3 K example: Main, then Extra.
+    steps_.push_back({"magnetic-03-main-groups",
+                      start + open_example("pd-neut-cwl_cosio-d20_2k")
+                          + QStringList{"wait-fit", structure, basic, "expand:group.space_group_magn",
+                                        "expand:group.parent_propagation_vector", "expand:group.atom_site_moment"}});
+    steps_.push_back({"magnetic-04-extra-groups",
+                      start + open_example("pd-neut-cwl_cosio-d20_2k") + QStringList{"wait-fit", structure, extras}});
+    // Its pattern: the nuclear and the magnetic Bragg tick rows.
+    steps_.push_back({"magnetic-05-pattern-ticks",
+                      start + open_example("pd-neut-cwl_cosio-d20_2k") + QStringList{"wait-fit", experiment, basic}});
     // The Examples list filtered by the structure tag: only the magnetic examples.
     steps_.push_back({"magnetic-02-examples-filter",
                       start + QStringList{"appBar.tab.project", "sideBar.tab.basic", "examples.property",

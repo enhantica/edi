@@ -81,13 +81,18 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
 
 // One experiment's `_refln` rows grouped into phases, one per structure id in the order the ids first
 // appear. A phase's place is its structure's place in `structure_names` (its first place when there
-// is no such name). capture_pattern groups this way, and so does a scan's fitted file.
+// is no such name). capture_pattern groups this way, and so does a scan's fitted file. With the
+// rows' |M⊥|² (edi ADR-0068) a magnetic structure gets two phases, as two structures would: its
+// nuclear reflections (F² above zero) and its magnetic ones (|M⊥|² above zero), the magnetic phase
+// placed after every structure so its row and colour are its own.
 std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,
                                                     std::span<const double> position,
                                                     std::span<const std::int32_t> index_h,
                                                     std::span<const std::int32_t> index_k,
                                                     std::span<const std::int32_t> index_l,
-                                                    std::span<const std::string> structure_names);
+                                                    std::span<const std::string> structure_names,
+                                                    std::span<const double> f_squared = {},
+                                                    std::span<const double> m_perp_squared = {});
 
 // Each structure's curve above the background out of crysta's row-major table (`net`, one value per point and
 // structure in `order`), one component per structure, placed as group_reflections places phases. None when the

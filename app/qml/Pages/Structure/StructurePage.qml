@@ -23,6 +23,8 @@ WorkflowPage {
             "cell": cellContent,
             "atom_site": atomSitesContent,
             "atom_site_aniso": atomSiteAdpContent,
+            "atom_site_moment": atomSiteMomentContent,
+            "space_group_magn": magneticSpaceGroupContent,
             "scattering_length": scatteringLengthsContent
         })
 
@@ -95,6 +97,7 @@ WorkflowPage {
             AppearanceGroup {
                 options: page.project ? page.project.structureViewOptions : null
                 controller: structureView.controller
+                structure: page.structure
             }
         }
     }
@@ -144,6 +147,18 @@ WorkflowPage {
     Component {
         id: atomSiteAdpContent
         AtomSiteAdpGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: magneticSpaceGroupContent
+        MagneticSpaceGroupGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: atomSiteMomentContent
+        AtomSiteMomentGroup {
             structure: page.structure
         }
     }

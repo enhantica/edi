@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T09:29:43Z
+# measured_utc = 2026-11-03T10:37:01Z
 #
-# Recorded from: focused magnetic Python replay and native scene/category replay; baseline rows retained
-# Collected tests: 210243; with a reported duration: 70520
+# Recorded from: measured test run (8 node(s) measured once, 166247 banked, 0 stale row(s) dropped)
+# Collected tests: 210341; with a reported duration: 70521
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210243
-# inventory_cpp = 398
-# inventory_measured = 166244
-# inventory_unmeasured = 44397
+# inventory_python = 210341
+# inventory_cpp = 400
+# inventory_measured = 166247
+# inventory_unmeasured = 44494
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66841
+# inventory_pr_python = 66939
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -225,6 +225,19 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[jmol]
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[pattern]
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[vesta]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[analysis_contains_only_independent_magnetic_components]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[catalogue_count_and_selector_operator_replacement]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[extra_groups_are_single_ordered_and_human_readable]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[k_editor_refuses_without_changing_the_saved_model]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[magnetic_selector_and_scale_use_one_editing_surface]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[main_order_all_sites_ids_ions_and_symmetry_form]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[named_magcif_import_uses_the_app_loader:fullprof]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[named_magcif_import_uses_the_app_loader:isodistort]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[nuclear_and_magnetic_tick_rows_cover_the_independent_reflections]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[primitive_propagation_add_refuses_without_losing_rows]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[propagation_rows_add_remove_and_refuse_duplicates:decimal-first]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[propagation_rows_add_remove_and_refuse_duplicates:fraction-first]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[visibility_keeps_camera_and_independent_moments]
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_capture.py::test_native_capture_is_accepted_by_the_preview_consumer
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[citation_clipboard_uses_the_shared_placeholder]
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[citation_popup_offers_text_and_bibtex]
@@ -148404,6 +148417,9 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::te
 0.000	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[sc-neut-cwl_tb2ti2o7-heidi]
 0.000	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[sc-neut-tof_taurine-senju]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_exclusions_name_every_selected_notebook_and_its_runner
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_magnetic_structure_membership_and_filter_counts_have_independent_expectations
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_magnetic_structure_tag_registry_defines_labels_icons_and_tones[crystal-Crystal structure]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_magnetic_structure_tag_registry_defines_labels_icons_and_tones[magnetic-Magnetic structure]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_cosio-d20_scan-162f]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_cosio-d20_scan-324f]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-cwl_cosio-d20_scan-3f]
@@ -148429,10 +148445,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::te
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-neut-tof_si-sepd_start-5]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-xray-cwl_lif_single]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_old_projects_keep_their_files_pins_and_execution[pd-xray-cwl_pbso4-lab_round-robin]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[cli-page]
-0.000	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[metadata]
-0.010	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[registry]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[tutorial-page]
+0.000	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[cli-page]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[metadata]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[registry]
+0.000	tests/integration/py/test_example_catalogue.py::test_selected_cases_and_order_match_the_independent_owner_selection[tutorial-page]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_excluded_writer_keeps_real_d_and_absent_derived_values[cw]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_excluded_writer_keeps_real_d_and_absent_derived_values[tof]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_excluded_serialization.py::test_modern_excluded_rows_load_and_round_trip[cw]
@@ -149250,14 +149266,78 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[chebyshev]
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[line-segment]
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[polynomial]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_binding_k_edit_refuses_without_mutating_the_warm_model
+0.260	tests/integration/py/test_magnetic_boundaries.py::test_cli_accepts_equivalent_exact_and_decimal_commensurate_controls[0.5,0,0]
+0.310	tests/integration/py/test_magnetic_boundaries.py::test_cli_accepts_equivalent_exact_and_decimal_commensurate_controls[1/2,0,0]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[ambiguous-rounded-decimal]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[child-basis-not-parent-lattice]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[decimal-before-fraction-duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[fraction-before-decimal-duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[grey-nonzero]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[invalid-theta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[missing-identity]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[missing-theta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[negative-duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[nonintegral-rotation]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[nonunimodular-rotation]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[not-closed]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[primitive-third]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[reciprocal-duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[rotating-centring]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[wrong-anticharacter]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[wrong-child-metric]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_cli_refuses_invalid_magnetic_input_before_calculation[wrong-positive-character]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_free_cell_and_metric_dependent_moment_fit_refuses_before_trials
+0.000	tests/integration/py/test_magnetic_boundaries.py::test_fullprof_dead_cell_mask_uses_its_own_printed_point_list
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[ambiguous-rounded-decimal]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[child-basis-not-parent-lattice]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[decimal-before-fraction-duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[fraction-before-decimal-duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[grey-nonzero]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[invalid-theta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[missing-identity]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[missing-theta]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[negative-duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[nonintegral-rotation]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[nonunimodular-rotation]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[not-closed]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[primitive-third]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[reciprocal-duplicate]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[rotating-centring]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[wrong-anticharacter]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[wrong-child-metric]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_refuses_the_same_invalid_characters[wrong-positive-character]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[anti-translation-in-centring]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[anti-translation-in-operations]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[arbitrary-exact-denominator]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[grey-zero]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[half-order-displaced-sublattice]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[multiple-distinct-vectors]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[rounded-third]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[sixteenth-decimal]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[sixteenth-exact]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[strained-parent]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_magnetic_cif_handoff_retains_admitted_propagation_rows[tripled]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_modulated_or_incommensurate_input_refuses_by_name[irrational-magcif]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_modulated_or_incommensurate_input_refuses_by_name[irrational-native]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_modulated_or_incommensurate_input_refuses_by_name[superspace-magcif]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_modulated_or_incommensurate_input_refuses_by_name[superspace-native]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_operator_replacement_refuses_atomically_with_warm_caches
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_post_fit_model_saves_and_reloads_its_validated_propagation
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_strained_parent_with_half_order_character_is_admitted[magcif]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_boundaries.py::test_strained_parent_with_half_order_character_is_admitted[native]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-centring-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-centring-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-operations-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-operations-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[arbitrary-exact-denominator-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[arbitrary-exact-denominator-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[grey-zero-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[grey-zero-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[half-order-displaced-sublattice-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[half-order-displaced-sublattice-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[multiple-distinct-vectors-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[multiple-distinct-vectors-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[rounded-third-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[rounded-third-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[sixteenth-decimal-factory]
@@ -149271,6 +149351,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py
 0.010	tests/integration/py/test_magnetic_commensurate.py::test_dead_detector_cell_is_excluded_on_the_products_own_grid
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_grey_centred_structure_has_zero_moments_and_undoubled_nuclear_intensity
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_cell_edit_is_atomic_and_loading_rederives_moment_ties
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[ambiguous-rounded-decimal-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[ambiguous-rounded-decimal-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[child-basis-not-parent-lattice-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[child-basis-not-parent-lattice-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[decimal-before-fraction-duplicate-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[decimal-before-fraction-duplicate-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[fraction-before-decimal-duplicate-factory]
@@ -149285,6 +149369,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[missing-theta-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[negative-duplicate-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[negative-duplicate-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[nonintegral-rotation-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[nonintegral-rotation-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[nonunimodular-rotation-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[nonunimodular-rotation-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[not-closed-factory]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[not-closed-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[primitive-third-factory]
@@ -149301,6 +149389,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[wrong-positive-character-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_named_magnetic_cif_imports_preserve_moments_and_iso_loops[cosio1.mcif]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_named_magnetic_cif_imports_preserve_moments_and_iso_loops[isodistort.mcif]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_extended_magnetic_scan_records_every_temperature_in_ascending_order
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_extended_scan_retains_the_original_files_and_reverses_the_full_sequence
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_low_temperature_fit_record_has_independent_moment_sanity_bounds
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_examples_have_records_and_documentation[pd-neut-cwl_cosio-d20_2k-executing]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_examples_have_records_and_documentation[pd-neut-cwl_cosio-d20_scan-213f-offline]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_examples_share_cobalt_displacements_and_exclude_only_dead_cell[pd-neut-cwl_cosio-d20_2k]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_examples_share_cobalt_displacements_and_exclude_only_dead_cell[pd-neut-cwl_cosio-d20_scan-213f]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_worked_examples_are_in_documentation_navigation[pd-neut-cwl_cosio-d20_2k]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_worked_examples_are_in_documentation_navigation[pd-neut-cwl_cosio-d20_scan-213f]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_preview_example_background_leaves_the_first_magnetic_peak_unpinned
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[crysta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[edi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_every_expanded_moment_matches_the_published_axial_operations
@@ -209038,6 +209136,8 @@ UNMEASURED:expected-red-on-d775b5fd	tests/unit/cpp/test_e05_t1_fit_job.cpp::E05-
 0.000	tests/unit/cpp/test_e09_t55_report_model_adapter.cpp::E09-T55 report tables retain identity paths, starts, uncertainties, and bank metrics
 0.026	tests/unit/cpp/test_fullprof_powder_factors.cpp::FullProf phase factors at the fixed PCR model match its summary
 UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_paths.cpp::Every experiment loop path names the declared row id
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_admission.cpp::Native C++ factories share the magnetic admission rule
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_admission.cpp::The C++ magCIF handoff shares the magnetic admission rule
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_categories.cpp::Magnetic Main groups expose the four independent cobalt components
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_scene.cpp::Cobalt moment arrows preserve the independent cell expansion and display scale
 UNMEASURED:failed-nonfinite-measured-band	tests/unit/cpp/test_pattern_owner_bands.cpp::Owner uncertainty bands give absent zero and nonfinite su zero width

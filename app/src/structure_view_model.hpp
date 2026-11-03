@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 #include <cstdint>
@@ -181,6 +182,30 @@ class AtomSiteAdpListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
+// The Magnetic moments group (edi ADR-0068; the owner, 2026-11-03): one row per atom site, in the sites' order, as the
+// Atomic displacement group — its id, the magnetic ion its moment takes ("" when the site carries no moment), the three
+// components along the cell axes and the symmetry form crysta derives, read only. The ion belongs to the site's atom
+// type, so two sites of one type share it.
+class AtomSiteMomentListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+
+   public:
+    AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
+                            QObject* parent);
+    void sync();
+    // The ions a row can choose: none, then the form-factor table's ions for the site's element.
+    Q_INVOKABLE QStringList ions(int row) const;
+    // "" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
+    Q_INVOKABLE void setIon(int row, const QString& ion);
+
+   private:
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+};
+
 // The structure's custom neutron scattering lengths.
 class ScatteringLengthListModel : public RowTableModel {
     Q_OBJECT
@@ -218,9 +243,17 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::CellViewModel* cell READ cell CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteListModel* atomSites READ atomSites CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteAdpListModel* atomSiteAdps READ atomSiteAdps CONSTANT)
+    Q_PROPERTY(edi_app::AtomSiteMomentListModel* atomSiteMoments READ atomSiteMoments CONSTANT)
     Q_PROPERTY(edi_app::ScatteringLengthListModel* scatteringLengths READ scatteringLengths CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
+    // The magnetic space group as the file names it (`_space_group_magn`, by item name), read only until it can be
+    // chosen from crysta's table; and the parent group (`_parent_space_group`: name, number, transform), with
+    // `differs` when it is not the space group itself (edi ADR-0068).
+    Q_PROPERTY(QVariantMap magneticGroup READ magneticGroup NOTIFY magneticChanged)
+    Q_PROPERTY(QVariantMap parentGroup READ parentGroup NOTIFY magneticChanged)
+    // Whether any site carries a moment.
+    Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
 
    public:
     StructureViewModel(SavedFile saved, edi::Structure& structure, ProjectEditor& editor,
@@ -231,9 +264,13 @@ class StructureViewModel : public QObject {
     CellViewModel* cell() const { return cell_; }
     AtomSiteListModel* atomSites() const { return atom_sites_; }
     AtomSiteAdpListModel* atomSiteAdps() const { return atom_site_adps_; }
+    AtomSiteMomentListModel* atomSiteMoments() const { return atom_site_moments_; }
     ScatteringLengthListModel* scatteringLengths() const { return scattering_lengths_; }
     CategoryListModel* categories() const { return categories_; }
     BlockText* text() const { return text_; }
+    QVariantMap magneticGroup() const;
+    QVariantMap parentGroup() const;
+    bool magnetic() const { return !structure_.atom_site_moment.empty(); }
     const edi::Structure* structure() const { return &structure_; }
     void sync();
     // ADR-0022: the structure's immutable scene source, captured on this (the owner) thread when the
@@ -245,6 +282,7 @@ class StructureViewModel : public QObject {
 
    signals:
     void nameChanged();
+    void magneticChanged();
     void sceneSourceChanged();
     void sceneWentStale();
 
@@ -257,6 +295,7 @@ class StructureViewModel : public QObject {
     CellViewModel* cell_;
     AtomSiteListModel* atom_sites_;
     AtomSiteAdpListModel* atom_site_adps_;
+    AtomSiteMomentListModel* atom_site_moments_;
     ScatteringLengthListModel* scattering_lengths_;
     CategoryListModel* categories_;
     BlockText* text_;

@@ -30,9 +30,9 @@ TEST_CASE("Magnetic Main groups expose the four independent cobalt components") 
                     "The Main model exposes the moment companion rows");
     CHECK_MESSAGE(group < propagation, "The propagation vector follows the magnetic space group");
     CHECK_MESSAGE(propagation < moments, "The magnetic moments follow the propagation vector");
-    CHECK_MESSAGE(moments->rows == 2, "The cobalt model presents exactly two asymmetric moments");
-    CHECK_MESSAGE(moments->fields.size() == 6,
-                  "Each cobalt moment presents three component fields");
+    CHECK_MESSAGE(moments->rows == 6, "The cobalt model presents all six asymmetric atom sites");
+    CHECK_MESSAGE(moments->fields.size() >= 6,
+                  "The all-site table retains the six magnetic component fields");
     const auto independent = std::count_if(moments->fields.begin(), moments->fields.end(),
                                            [](const auto& field) { return field.refinable; });
     CHECK_MESSAGE(independent == 4, "The core Main groups allow only four independent components");

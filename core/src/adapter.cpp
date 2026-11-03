@@ -4284,6 +4284,7 @@ void Project::publish_calculation(DueEstimates due) {
         rows.index_l = shared_column(refln.index_l);
         rows.f_calc = shared_column(refln.f_calc);
         rows.f_squared_calc = shared_column(refln.f_squared_calc);
+        rows.m_perp_squared_calc = shared_column(refln.m_perp_squared_calc);
         rows.position = shared_column(refln.position);
         reflections.push_back(std::move(rows));
     }
@@ -5554,7 +5555,8 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     }
     source.phases = group_reflections(view.refln.structure_id.values(), view.refln.position.values(),
                                       view.refln.index_h.values(), view.refln.index_k.values(),
-                                      view.refln.index_l.values(), names);
+                                      view.refln.index_l.values(), names, view.refln.f_squared_calc.values(),
+                                      view.refln.m_perp_squared_calc.values());
     // Each structure's curve, which crysta's snapshot leaves out, from the fit's own computed columns.
     const crysta::ComputedData& computed = fitted.experiment().computed().data();
     source.components = structure_components(computed.component_order.values(), computed.component_intensities_net.values(),

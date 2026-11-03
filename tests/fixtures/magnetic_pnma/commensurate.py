@@ -1,5 +1,7 @@
 """Exact commensurate examples derived from lattice characters, not engine output."""
 
+from pathlib import Path
+
 
 def structure(  # noqa: PLR0913 — each argument is an independent crystallographic input
     *,
@@ -105,3 +107,48 @@ INVALID = {
     'reciprocal-duplicate': {'period': 3, 'vectors': ('1/3,0,0', '4/3,0,0')},
     'negative-duplicate': {'period': 3, 'vectors': ('1/3,0,0', '-1/3,0,0')},
 }
+
+
+VALID.update({
+    'multiple-distinct-vectors': {'period': 6, 'vectors': ('1/2,0,0', '1/3,0,0')},
+    'arbitrary-exact-denominator': {'period': 37, 'vectors': ('1/37,0,0',)},
+})
+INVALID.update({
+    'ambiguous-rounded-decimal': {'period': 22, 'vectors': ('0.3,0,0',)},
+    'child-basis-not-parent-lattice': {'period': 0.5},
+    'nonintegral-rotation': {'operations': ('x,y,z,+1', 'x/2,y,z,+1')},
+    'nonunimodular-rotation': {'operations': ('x,y,z,+1', '2x,y,z,+1')},
+})
+
+
+def magnetic_cif(text):
+    """Spell native input using CIF 1.1 dictionary tags, retaining magCIF's dotted names."""
+    text = text.replace('_edi.schema_version 3\n', '')
+    mapping = {
+        '_space_group.name_h_m': '_space_group_name_H-M_alt',
+        '_atom_site.id': '_atom_site_label',
+        '_atom_site.adp_iso': '_atom_site_B_iso_or_equiv',
+        '_atom_site.wyckoff_letter': '_atom_site_Wyckoff_symbol',
+    }
+    for before, after in mapping.items():
+        text = text.replace(before, after)
+    for category in ['cell', 'atom_site']:
+        text = text.replace('_' + category + '.', '_' + category + '_')
+    # An ion is chosen by the importer; these native form-factor settings are not CIF inputs.
+    start = text.index('loop_\n_magnetic_form_factor')
+    end = text.index('loop_\n_atom_site_moment', start)
+    return text[:start] + text[end:]
+
+
+def write_boundary_cases(root):
+    """Materialise the same independent character controls for the native C++ entrances."""
+    root.mkdir(parents=True, exist_ok=True)
+    for prefix, cases in [('accept', VALID), ('refuse', INVALID)]:
+        for name, arguments in cases.items():
+            text = structure(**arguments)
+            (root / f'{prefix}-{name}.edi').write_text(text)
+            (root / f'{prefix}-{name}.mcif').write_text(magnetic_cif(text))
+
+
+if __name__ == '__main__':
+    write_boundary_cases(Path(__file__).parent / 'admission')

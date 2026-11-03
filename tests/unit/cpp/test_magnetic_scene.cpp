@@ -45,8 +45,8 @@ void check_arrows(edi::Structure& structure) {
         const auto source = edi::capture_scene(structure);
         REQUIRE_MESSAGE(source.current, "The moment viewer captures current computed geometry");
         Options options;
-        CHECK_MESSAGE(options.moment_scale == .5,
-                      "Moment arrows default to half an Angstrom per Bohr magneton");
+        CHECK_MESSAGE(options.moment_scale == .75,
+                      "Moment arrows default to three quarters of an Angstrom per Bohr magneton");
         options.moments = true;
         options.axes = options.bonds = options.cell = false;
         for (const double scale : {.5, .8}) {
@@ -79,6 +79,12 @@ void check_arrows(edi::Structure& structure) {
                             "The viewer draws one arrow per expanded magnetic atom only");
             std::vector<bool> matched(centres.size(), false);
             for (const auto& arrow : drawing.moments) {
+                CHECK_MESSAGE(arrow.shaft_radius == doctest::Approx(.12),
+                              "The arrow shaft is twice the preview radius");
+                CHECK_MESSAGE(arrow.head_radius == doctest::Approx(.30),
+                              "The arrow head is twice the preview radius");
+                CHECK_MESSAGE(arrow.color.r == arrow.color.g && arrow.color.g == arrow.color.b,
+                              "Moment arrows use neutral grey instead of the preview magenta");
                 const double length = arrow.shaft_length + arrow.head_length;
                 const std::array<double, 3> direction{arrow.direction.x, arrow.direction.y,
                                                       arrow.direction.z};
@@ -105,6 +111,11 @@ void check_arrows(edi::Structure& structure) {
                         "Moment arrow direction preserves every axial-vector sign");
             }
         }
+        options.atoms = edi::AtomSubset::None;
+        const Drawing independent =
+            edi::scene_drawing(edi::present_structure(source, options), {640, 480, 0});
+        CHECK_MESSAGE(independent.moments.size() >= images.size(),
+                      "Hiding atoms leaves all magnetic moment arrows visible");
         options.moments = false;
         const Drawing hidden =
             edi::scene_drawing(edi::present_structure(source, options), {640, 480, 0});

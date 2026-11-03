@@ -26,14 +26,6 @@ Rectangle {
     // The theme colours the view draws with; a PDF's figure takes the light ones.
     property FigureColors colors: FigureColors {}
     property string reportStructure: ""
-
-    // The moment arrows' length follows the app's preference (edi ADR-0068).
-    Binding {
-        target: view.options
-        property: "momentScale"
-        value: Preferences.momentArrowScale
-        when: view.options !== null
-    }
     // The view is on the page and the tab the window shows: its page binds it, as the pattern chart's (a loaded
     // page that is not shown stays visible, clipped out of the window). A view not shown prepares nothing and
     // presents once, with the latest source, when it is shown again; a view no page hides is shown.
