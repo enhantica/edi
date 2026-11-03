@@ -59,7 +59,10 @@ void GeneratedCategory::read() {
     const bool output = output_;
     const QStringList names = names_, labels = labels_, units = units_, set_by_program = set_by_program_, kinds = kinds_;
     loop_ = category.loop;
-    output_ = edi::category_is_output(id);
+    // The magnetic operators and centrings follow the magnetic space group, so they are shown read-only, as the
+    // symmetry operators are (edi ADR-0068; the owner, 2026-11-03).
+    output_ = edi::category_is_output(id) || id == "space_group_symop_magn_operation" ||
+              id == "space_group_symop_magn_centering";
     names_.clear();
     labels_.clear();
     units_.clear();
