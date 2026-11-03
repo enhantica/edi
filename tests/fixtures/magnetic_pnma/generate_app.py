@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tests.fixtures.magnetic_pnma import reference
+from tests.fixtures.magnetic_pnma import commensurate, reference
 
 if __name__ == '__main__':
     root = Path(__file__).parent / 'app-project'
@@ -29,3 +29,16 @@ if __name__ == '__main__':
                 if 7.996 < angle < 150.05 and not 64.65 <= angle <= 64.74:
                     angles.add(round(angle, 7))
     (root.parent / 'magnetic-ticks.json').write_text(json.dumps(sorted(angles), indent=2) + '\n')
+
+    edit_root = root.parent / 'propagation-project'
+    if not edit_root.exists():
+        experiment = (
+            (root.parent / 'experiment.edi').read_text().split('loop_\n_data.two_theta')[0]
+        )
+        experiment += (
+            '_data_range.two_theta_min 10\n_data_range.two_theta_max 30\n'
+            '_data_range.two_theta_step .5\n'
+        )
+        reference.project(
+            edit_root, commensurate.structure(period=22, vectors=('1/2,0,0',)), experiment
+        )

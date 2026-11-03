@@ -161,6 +161,75 @@ TestCase {
         verify(Session.save(), "A refused k edit leaves a saveable consistent model");
         compare(SettingsProof.text(scratch, "structures/cosio.edi"), before, "A refused GUI propagation edit writes no change to the model");
     }
+    function test_catalogue_count_and_selector_operator_replacement() {
+        const magnetic = group("space_group_magn");
+        const selectors = Render.descendants(magnetic).filter(item => typeof item.textAt === "function" && item.editable === true);
+        compare(selectors.length, 1, "The vendored groups reach one searchable magnetic selector");
+        const selector = selectors[0];
+        compare(selector.count, 1651, "The selector contains every independently counted BNS group");
+        function choice(number) {
+            for (let i = 0; i < selector.count; ++i)
+                if (selector.textAt(i).includes(number)) return i;
+            return -1;
+        }
+        const grey = choice("62.442");
+        verify(grey >= 0, "The independent grey Pnma identity is searchable by BNS number");
+        selector.currentIndex = grey;
+        selector.activated(grey);
+        tryCompare(Session.project, "calculating", false, 15000, "The accepted group selection recalculates through the core");
+        const moments = Probe.rows(Session.project.parameters).filter(row => row.category === "atom_site_moment");
+        verify(moments.length >= 6 && moments.every(row => Number(row.value) === 0), "Selecting grey Pnma replaces signed operators and fixes every moment at zero");
+        verify(Session.save(), "The selected grey group saves through the native writer");
+        const before = SettingsProof.text(scratch, "structures/cosio.edi");
+        verify(before.includes("62.442") && /x,y,z,-1/.test(before.replace(/\s+/g, "")), "The saved BNS identity and negative-time identity agree after selection");
+        const incompatible = choice("1.3");
+        verify(incompatible >= 0, "The type-IV control is present in the same catalogue");
+        selector.currentIndex = incompatible;
+        selector.activated(incompatible);
+        verify(Session.save(), "A refused incompatible selector choice leaves a saveable prior model");
+        compare(SettingsProof.text(scratch, "structures/cosio.edi"), before, "The selector cannot replace operators with a group incompatible with the current propagation");
+        verify(Probe.rows(Session.loadWarnings).some(row => /propagation|translation|lattice|magnetic/i.test(row.message)), "A refused magnetic selection gives its acceptance-rule reason");
+    }
+    function test_propagation_rows_add_remove_and_refuse_duplicates_data() {
+        return [{tag: "fraction-first", first: "1/2", duplicate: "0.5"},
+                {tag: "decimal-first", first: "0.5", duplicate: "1/2"}];
+    }
+    function test_propagation_rows_add_remove_and_refuse_duplicates(data) {
+        const location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/magnetic_pnma/propagation-project"));
+        const original = SettingsProof.text(location, "structures/cosio.edi");
+        verify(SettingsProof.write(location, "structures/cosio.edi", original.replace("1/2,0,0", data.first + ",0,0")), "The duplicate control independently chooses its exact starting spelling");
+        verify(Session.openProject(location), "The period-22 edit control opens with one valid half-order row");
+        const vectors = group("parent_propagation_vector");
+        const objects = () => Render.descendants(vectors);
+        const table = objects().find(item => item.sourceModel !== undefined && typeof item.itemAtIndex === "function");
+        verify(table !== undefined && table.count === 1, "The propagation control starts with exactly one row");
+        const removes = () => objects().filter(item => typeof item.clicked === "function" && /remove|delete/i.test((item.objectName || "") + " " + (item.toolTip || "")));
+        verify(removes().length === 1 && !removes()[0].enabled, "The final propagation row cannot be removed");
+        verify(!objects().some(item => /enable|active/i.test(item.objectName || "") && "checked" in item), "Propagation rows have no enable toggle");
+        const add = objects().find(item => typeof item.clicked === "function" && item.text === "Add vector");
+        verify(add !== undefined && add.width > vectors.width * .6, "A wide Add vector button sits below the propagation table");
+        mouseClick(add);
+        tryCompare(table, "count", 2, 2000, "Add vector creates a second compatible distinct row");
+        verify(Session.save(), "The two accepted propagation rows save");
+        const before = SettingsProof.text(location, "structures/cosio.edi");
+        const editors = objects().filter(item => typeof item.text === "string" && "readOnly" in item && !item.readOnly && item.enabled);
+        verify(editors.length >= 2, "Both propagation rows have real editable k fields");
+        const editor = editors[editors.length - 1];
+        const old = editor.text;
+        for (const value of [data.duplicate + ",0,0", "1/3,0,0"]) {
+            editor.forceActiveFocus();
+            editor.text = value;
+            keyClick(Qt.Key_Return);
+            tryCompare(editor, "text", old, 2000, "An exact duplicate or incompatible k restores the previous row");
+            verify(Session.save(), "A refused propagation edit keeps a valid saveable row set");
+            compare(SettingsProof.text(location, "structures/cosio.edi"), before, "Duplicate and incompatible edits preserve every prior propagation row");
+            verify(Probe.rows(Session.loadWarnings).some(row => /duplicate|propagation|translation|commensurate/i.test(row.message)), "Each refused row edit explains the acceptance-rule failure");
+        }
+        verify(removes().length === 2 && removes().every(item => item.enabled), "Every row can be removed while another remains");
+        mouseClick(removes()[1]);
+        tryCompare(table, "count", 1, 2000, "Removing a propagation row leaves its peer intact");
+        verify(removes().length === 1 && !removes()[0].enabled, "Removal disables again at the last remaining row");
+    }
     function test_named_magcif_import_uses_the_app_loader_data() {
         return [{tag: "isodistort", file: "isodistort.mcif"}, {tag: "fullprof", file: "cosio1.mcif"}];
     }

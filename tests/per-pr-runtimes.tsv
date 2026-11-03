@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T10:10:53Z
+# measured_utc = 2026-11-03T10:30:23Z
 #
-# Recorded from: scoped magnetic boundary, preview and example replays; native failures declared
-# Collected tests: 210329; with a reported duration: 70519
+# Recorded from: measured test run (3 node(s) measured once, 166245 banked, 0 stale row(s) dropped)
+# Collected tests: 210332; with a reported duration: 70519
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210329
+# inventory_python = 210332
 # inventory_cpp = 400
 # inventory_measured = 166245
-# inventory_unmeasured = 44484
+# inventory_unmeasured = 44487
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66927
+# inventory_pr_python = 66930
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -226,6 +226,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[pattern]
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[vesta]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[analysis_contains_only_independent_magnetic_components]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[catalogue_count_and_selector_operator_replacement]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[extra_groups_are_single_ordered_and_human_readable]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[k_editor_refuses_without_changing_the_saved_model]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[magnetic_selector_and_scale_use_one_editing_surface]
@@ -233,6 +234,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::te
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[named_magcif_import_uses_the_app_loader:fullprof]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[named_magcif_import_uses_the_app_loader:isodistort]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[nuclear_and_magnetic_tick_rows_cover_the_independent_reflections]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[propagation_rows_add_remove_and_refuse_duplicates:decimal-first]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[propagation_rows_add_remove_and_refuse_duplicates:fraction-first]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[visibility_keeps_camera_and_independent_moments]
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_capture.py::test_native_capture_is_accepted_by_the_preview_consumer
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[citation_clipboard_uses_the_shared_placeholder]
