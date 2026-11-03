@@ -11,7 +11,9 @@
 - **Model:** the nuclear structure of `pd-neut-cwl_cosio-d20`, with the cell, coordinates, zero shift and profile terms
   of a FullProf 8.40 fit of this pattern, the displacement parameters of a FullProf
   fit of the 56.8 K pattern (Co1 and Co2 share one value), and the magnetic structure of ISODISTORT's description of
-  Co₂SiO₄ in Pnma.1 (irrep mGM1+): its eight operators and the moments of that FullProf fit.
+  Co₂SiO₄ in Pnma.1 (irrep mGM1+): its eight operators. The moments start along b at 1 μB, Co1 (0, 1, 0) and
+  Co2 (0, 1, 0), a start any user could choose; from it the fit reaches the same minimum (Rwp 4.73 %, the owner's
+  run of 2026-11-03).
 - **Reference:** A. Sazonov et al., *Magnetic behaviour of synthetic Co₂SiO₄*, Acta Cryst. B65 (2009) 664–675.
 - **Excluded:** 0–6° and 150–180°, and 64.65–64.74°, which holds only the dead D20 detector cell at 64.6953°.
 - **Background:** sixteen points, none between 7.6° and 12.6°, so none sits under the first magnetic peak.

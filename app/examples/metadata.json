@@ -1,6 +1,60 @@
 {
   "schema": 1,
   "examples": {
+    "pd-neut-cwl_cosio-d20_scan-213f": {
+      "samples": [
+        "Co₂SiO₄ [Pnma.1]"
+      ],
+      "origin": "D20 @ ILL",
+      "detail": "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "sequential"
+        ],
+        "facilities": [
+          "ILL"
+        ],
+        "instruments": [
+          "D20"
+        ],
+        "dimensionality": [
+          "1d"
+        ],
+        "polarisation": [
+          "unpolarised"
+        ],
+        "structure": [
+          "crystal",
+          "magnetic"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_cosio-d20_scan-213f",
+        "Co₂SiO₄ [Pnma.1] · D20 @ ILL",
+        "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/structures/cosio.edi"
+      ]
+    },
     "pd-neut-cwl_lbco_simulation": {
       "samples": [
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
@@ -1023,59 +1077,6 @@
         "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/d1a.edi",
         "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/lab.edi",
         "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/structures/pbso4.edi"
-      ]
-    },
-    "pd-neut-cwl_cosio-d20_scan": {
-      "samples": [
-        "Co₂SiO₄ [Pnma]"
-      ],
-      "origin": "D20 @ ILL",
-      "detail": "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out",
-      "values": {
-        "sampleForm": [
-          "powder"
-        ],
-        "beamMode": [
-          "constant wavelength"
-        ],
-        "probe": [
-          "neutron"
-        ],
-        "scatteringType": [
-          "bragg"
-        ],
-        "purpose": [
-          "refinement"
-        ],
-        "fittingMode": [
-          "sequential"
-        ],
-        "facilities": [
-          "ILL"
-        ],
-        "instruments": [
-          "D20"
-        ],
-        "dimensionality": [
-          "1d"
-        ],
-        "polarisation": [
-          "unpolarised"
-        ],
-        "structure": [
-          "crystal"
-        ]
-      },
-      "searchAliases": [
-        "pd-neut-cwl_cosio-d20_scan",
-        "Co₂SiO₄ [Pnma] · D20 @ ILL",
-        "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out"
-      ],
-      "sources": [
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/experiments/d20.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/structures/cosio.edi"
       ]
     },
     "pd-xray-cwl_latp-bm01_scan": {

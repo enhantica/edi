@@ -26,8 +26,8 @@ All three read the same files, in `docs/user/cli/pd-neut-cwl_cosio-d20_2k/projec
 
 ## The model
 
-The moments start at the values of a FullProf fit of the same pattern: Co1 (0.701, 2.595, 0.19) μB and Co2
-(0, 2.967, 0) μB along a, b and c. Every displacement parameter is fixed at a fit of the paramagnetic pattern at
+The moments start along b at 1 μB: Co1 (0, 1, 0) μB and Co2 (0, 1, 0) μB along a, b and c, and the fit finds their
+size and direction. Every displacement parameter is fixed at a fit of the paramagnetic pattern at
 56.8 K, with Co1 and Co2 sharing one value. One dead detector cell at 64.6953° is excluded.
 
 ## Sources

@@ -66,7 +66,7 @@ differently and why.
 
 | example | app title | tutorial |
 | --- | --- | --- |
-| [Sequential fit: Co₂SiO₄, D20 temperature scan](pd-neut-cwl_cosio-d20_scan/index.md) | Co₂SiO₄ [Pnma] · D20 @ ILL | [pd-neut-cwl_cosio-d20_scan](../tutorials/pd-neut-cwl_cosio-d20_scan.ipynb) |
+| [Sequential magnetic fit: Co₂SiO₄, D20 scan from 2.3 K](pd-neut-cwl_cosio-d20_scan-213f/index.md) | Co₂SiO₄ [Pnma.1] · D20 @ ILL | [pd-neut-cwl_cosio-d20_scan-213f](../tutorials/pd-neut-cwl_cosio-d20_scan-213f.ipynb) |
 | [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan/index.md) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF | [pd-xray-cwl_latp-bm01_scan](../tutorials/pd-xray-cwl_latp-bm01_scan.ipynb) |
 
 ## Single crystal

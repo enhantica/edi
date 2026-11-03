@@ -42,3 +42,8 @@ The position-rounding contract also needs reconciliation. The exact PCR cell giv
 (200) d = 5.154032 Å, while `cosio.hkl` prints 5.154033 Å. The difference is 0.000001 Å,
 twice half the printed final digit. The strict position gate records this reference-contract
 failure separately from missing magnetic behavior. Its tolerance has not been enlarged.
+
+The fixed-parameter 2.3 K app reflection and tick oracles use `cosio-2k-reference.edi`,
+the documented example's original structure at edi 4f77e01b. The measured grid is the
+published D20 experiment. The fit-start gate separately loads the current published
+example unchanged.

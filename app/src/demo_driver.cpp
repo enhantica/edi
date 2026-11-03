@@ -766,7 +766,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         shot("fit-results", start + open_example("pd-neut-cwl_lbco-hrpt") +
                                 QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"});
         // A scan's window keeps changing while its datasets load, so its step is captured unsettled.
-        shot("sequential-extract", start + open_example("pd-neut-cwl_cosio-d20_scan") +
+        shot("sequential-extract", start + open_cli_project("pd-neut-cwl_cosio-d20_scan") +
                                        QStringList{analysis, extras, "expand:group.sequential_fit_extract", "capture-now"});
     }
     // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
@@ -876,7 +876,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // captured while the scan runs and after it. Run only when asked (`--demo-only seqfit-`).
     if (only.startsWith(QLatin1String("seqfit-"))) {
         steps_.push_back({"seqfit-1-running", QStringList{"resize:1280x960", "theme:light"} + start
-                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
+                                                  + open_cli_project("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "statusBar.fit.button",
                                                                 "wait-files:10", "drag:chart.pointer:0.55,0.05,0.65,0.95",
                                                                 "wait-files:30", "capture-now"}});
@@ -934,7 +934,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     }
     if (only.startsWith(QLatin1String("scanviews-"))) {
         steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                            + open_example("pd-neut-cwl_cosio-d20_scan")
+                                                            + open_cli_project("pd-neut-cwl_cosio-d20_scan")
                                                             + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"scanviews-02-map-light", {"mainArea.analysis.tab.map"}});
         steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
@@ -995,7 +995,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("colours-"))) {
         steps_.push_back({"colours-1-experiment-stacked-light",
                           QStringList{"resize:1280x960", "theme:light"} + start
-                              + open_example("pd-neut-cwl_cosio-d20_scan")
+                              + open_cli_project("pd-neut-cwl_cosio-d20_scan")
                               + QStringList{QStringLiteral("appBar.tab.experiment"), basic,
                                             "mainArea.experiment.tab.stacked"}});
         steps_.push_back({"colours-2-experiment-map-light", {"mainArea.experiment.tab.map"}});
@@ -1019,7 +1019,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // with every label (the owner, 2026-10-22). Run only when asked (`--demo-only rowlabels-`).
     if (only.startsWith(QLatin1String("rowlabels-"))) {
         steps_.push_back({"rowlabels-01-stacked-value-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
+                                                                  + open_cli_project("pd-neut-cwl_cosio-d20_scan")
                                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"rowlabels-01b-stacked-height-4x-light", {"scanView.stacked.toolbar.height", "choose:4×"}});
         steps_.push_back({"rowlabels-01c-stacked-height-2x-light", {"scanView.stacked.toolbar.height", "choose:2×"}});
@@ -1056,7 +1056,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("mapcands-"))) {
         const QStringList titles = {"Blue-Red", "Viridis", "Batlow", "Inferno", "Lapaz", "Greys"};
         steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
-                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
+                                                  + open_cli_project("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.map",
                                                                 "scanView.map.toolbar.yscale", "choose:Log"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {

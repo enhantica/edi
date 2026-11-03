@@ -14,10 +14,10 @@ if __name__ == '__main__':
     if not root.exists():
         reference.project(root)
 
-    # The published 2.3 K input supplies cell, moments, wavelength, offset and mask.
+    # Use the fixed 2.3 K structure that supplied the tick witness and the published D20 grid.
     # Bragg's law and the signed Pnma expansion supply the expected reflection positions.
     project = root.parents[3] / 'docs/user/cli/pd-neut-cwl_cosio-d20_2k/project'
-    structure = reference.columns((project / 'structures/cosio.edi').read_text())
+    structure = reference.columns((root.parent / 'cosio-2k-reference.edi').read_text())
     structure = {key: [value.split('(')[0] for value in row] for key, row in structure.items()}
     experiment = reference.columns((project / 'experiments/d20.edi').read_text())
     cell = np.array([float(structure['_cell.length_' + axis][0]) for axis in 'abc'])

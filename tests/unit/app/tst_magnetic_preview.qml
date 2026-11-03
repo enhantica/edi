@@ -10,6 +10,9 @@ import ProjectTextAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "E04Review.js" as Review
+import "AtomsSelector.js" as Atoms
+import "NumericCellInk.js" as Ink
+import "ApprovedPalette.js" as Approved
 
 TestCase {
     id: test
@@ -18,12 +21,14 @@ TestCase {
     property var appWindow
     property var scratch
     property var repeatFitPreferences: null
+    property var priorChartPalette: null
     ProjectTextProof { id: dictionaryProof }
     Component { id: application; Main {} }
     Component { id: preferences; AppPreferencesDialog {} }
     Component { id: fitPublication; SignalSpy { signalName: "finished" } }
     Component { id: analysisParameters; ParametersGroup { width: 760; y: 60; z: 1000; tableViewportHeight: 500 } }
     Component { id: pattern; PatternChart { width: 1200; height: 800 } }
+    Component { id: lightFigure; FigureColors { light: true } }
     function init() {
         scratch = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/magnetic_pnma/app-project"));
         verify(Session.openProject(scratch), "The magnetic preview opens the independent cobalt input");
@@ -38,6 +43,10 @@ TestCase {
             Preferences.engineThreads = repeatFitPreferences.threads;
             Preferences.showFitResults = repeatFitPreferences.showResults;
             repeatFitPreferences = null;
+        }
+        if (priorChartPalette !== null) {
+            Preferences.colourScheme = priorChartPalette;
+            priorChartPalette = null;
         }
         appWindow.destroy();
     }
@@ -102,6 +111,28 @@ TestCase {
                          "Bonds", "Magnetic operators", "Moments in the cell", "Appearance"],
                 "The rendered 2.3 K Extra groups use the approved names and order");
     }
+    function test_magnetic_operators_are_read_only() {
+        const operators = group("space_group_symop_magn_operation", "structure", "extras");
+        let table = null;
+        tryVerify(() => {
+            table = Render.descendants(operators).find(item => item.visible && item.count > 1 &&
+                typeof item.itemAtIndex === "function");
+            return table !== undefined;
+        }, 3000, "The real Extra table lists the magnetic operators");
+        for (let i = 0; i < table.count; ++i) {
+            table.positionViewAtIndex(i, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => Ui.rendered(table.itemAtIndex(i)), 1000, "Each magnetic operator row is reachable");
+            const row = table.itemAtIndex(i);
+            verify(Render.texts(row).some(cell => /^[^,]*[xyz][^,]*,/.test(cell.text)),
+                   "Each operator row visibly displays its coordinate expression");
+            const editors = Render.descendants(row).filter(item => item.visible &&
+                (typeof item.selectAll === "function" || typeof item.currentIndex === "number"));
+            for (const cell of editors)
+                verify(cell.readOnly === true || !cell.enabled,
+                       "The magnetic operator field is read-only: " + cell.objectName);
+        }
+    }
     function test_main_order_all_sites_ids_ions_and_symmetry_form() {
         const shown = groups("structure", "basic");
         const ids = shown.map(item => item.categoryId);
@@ -124,78 +155,188 @@ TestCase {
         const displacement = group("atom_site_aniso");
         verify(/\(6\)/.test(displacement.title), "Atomic displacement reports all six site rows instead of zero");
     }
-    function test_monoclinic_moment_form_selector_edits_and_saves_crystal_axes() {
+    function openMonoclinicMomentWitness(withUncertainty = true) {
         Session.closeProject();
-        const structureFile = "structures/cosio.edi";
-        const fixture = Probe.readFile("tests/fixtures/magnetic_pnma/moment-forms-monoclinic.edi");
-        verify(fixture.length > 0 && SettingsProof.write(scratch, structureFile, fixture),
-               "The test replaces the disposable project structure with its monoclinic witness");
-        verify(Session.openProject(scratch), "The monoclinic cobalt structure opens in the real app");
-        tryCompare(Session.project, "calculating", false, 15000, "The monoclinic project settles before editing");
+        const file = "structures/cosio.edi";
+        let fixture = Probe.readFile("tests/fixtures/magnetic_pnma/moment-forms-monoclinic.edi");
+        if (!withUncertainty)
+            fixture = fixture.replace(/^CoWitness 9\.92820323.*$/m, "CoWitness 9.928 4.125 13.856");
+        verify(fixture.length > 0 && SettingsProof.write(scratch, file, fixture),
+               "The test installs its independent monoclinic moment witness");
+        verify(Session.openProject(scratch), "The monoclinic cobalt witness opens in the app");
+        tryCompare(Session.project, "calculating", false, 15000, "The monoclinic calculation finishes");
         tryVerify(() => appWindow.pagesWanted > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
-                  10000, "The reopened witness finishes building its workflow pages");
-        const forms = ["Crystal axes", "Cartesian", "Spherical"];
-        function controls() {
-            const moments = group("atom_site_moment");
-            const candidates = Render.descendants(moments).filter(item => item.visible &&
-                typeof item.textAt === "function" &&
-                Array.from({length: item.count}, (_, i) => item.textAt(i)).includes("Crystal axes"));
-            compare(candidates.length, 1, "The Magnetic moments group has one form selector");
-            const box = candidates[0];
-            compare(Array.from({length: box.count}, (_, i) => box.textAt(i)), forms,
-                    "The form selector offers crystal axes, Cartesian and spherical coordinates");
-            return {box, moments};
+                  10000, "The monoclinic witness builds its workflow pages");
+        return file;
+    }
+    function momentSelector() {
+        const moments = group("atom_site_moment");
+        const box = findChild(moments, "atomSiteMoments.form");
+        verify(box && box.visible, "The group exposes its real moments-as selector");
+        compare(Array.from({length: box.count}, (_, i) => box.textAt(i)), ["Crystal axes", "Cartesian", "Spherical"],
+                "The selector offers all three coordinate forms");
+        return {box, moments};
+    }
+    function momentFormView(form) {
+        const {box, moments} = momentSelector();
+        const index = ["Crystal axes", "Cartesian", "Spherical"].indexOf(form);
+        if (box.currentIndex !== index)
+            box.activated(index);
+        tryCompare(box, "currentText", form, 3000, "The selected coordinate form is displayed");
+        let table = null;
+        tryVerify(() => {
+            table = Render.descendants(moments).find(item => item.visible && item.headerItem &&
+                typeof item.itemAtIndex === "function" && item.itemAtIndex(0));
+            return table !== undefined;
+        }, 3000, "The selected coordinate form renders its actual table and first moment row");
+        appWindow.update();
+        verify(waitForRendering(table, 5000), "The selected moment table reaches a rendered layout");
+        const row = table.itemAtIndex(0);
+        const headers = Array.from(table.headerItem.contentRowData).filter(cell => cell.visible);
+        const crystalAxes = form === "Crystal axes";
+        const modulus = findChild(row, crystalAxes ? "atomSiteMoment.modulus.0" : "atomSiteMoment.formModulus.0");
+        const editors = (crystalAxes ? ["mx", "my", "mz"] : ["form.0", "form.1", "form.2"])
+            .map(name => findChild(row, "atomSiteMoment." + name + ".0"));
+        verify(editors.every(cell => cell && cell.visible && cell.enabled && !cell.readOnly),
+               form + " presents three editable coordinates on the general site");
+        return {box, moments, table, headers, modulus, editors};
+    }
+    function readMomentToken(text) {
+        const match = String(text).trim().replace(/−/g, "-")
+            .match(/^([+-]?\d+(?:\.(\d+))?)(?:\(\d+(?:\.\d+)?\))?(?:[eE]([+-]?\d+))?$/);
+        verify(match !== null, "The displayed moment cell has a numeric value: " + text);
+        const scale = Math.pow(10, Number(match[3] || 0));
+        const unit = scale * Math.pow(10, -(match[2] || "").length);
+        return {value: Number(match[1]) * scale, unit};
+    }
+    function momentNear(token, expected, reason) {
+        verify(Math.abs(token.value - expected) <= token.unit / 2 + 1e-7,
+               reason + " expected " + expected + " observed " + token.value);
+    }
+    function twoDigitSuUnit(su) {
+        const unit = Math.pow(10, Math.floor(Math.log10(su)) - 1);
+        return Math.round(su / unit) === 100 ? 10 * unit : unit;
+    }
+    function test_magnetic_numeric_cells_draw_the_full_value_and_uncertainty() {
+        Session.closeProject();
+        const path = "structures/cosio.edi";
+        const cobalt = Probe.readFile("tests/fixtures/magnetic_pnma/cosio-2k-reference.edi")
+            .replace(/^Co1 0\.701.*$/m, "Co1 1.500(29) 2.800(29) -0.697(29) Mx,My,Mz")
+            .replace(/^Co2 0 2\.967.*$/m, "Co2 0 2.640(44) 0 0,My,0");
+        verify(cobalt.includes("1.500(29)") && cobalt.includes("2.640(44)") && SettingsProof.write(scratch, path, cobalt),
+               "The frozen cobalt witness carries independent decimal values and uncertainties");
+        verify(Session.openProject(scratch), "The cobalt clipping witness opens at the default sidebar width");
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
+                  10000, "The reopened project builds its actual sidebar");
+        const moments = group("atom_site_moment");
+        const table = Render.descendants(moments).find(item => item.visible && item.headerItem &&
+            typeof item.itemAtIndex === "function");
+        verify(table && table.count >= 2, "The real moments table displays both cobalt rows");
+
+        // The orthogonal norm of (1.500,2.800,-0.697) rounds to 3.252. Equal
+        // component uncertainties propagate unchanged to its norm. Co2 lies on y.
+        const expected = [["1.500(29)", "2.800(29)", "-0.697(29)", "3.252(29)"],
+                          ["0", "2.640(44)", "0", "2.640(44)"]];
+        const issues = [];
+        for (const [rowIndex, values] of expected.entries()) {
+            table.positionViewAtIndex(rowIndex, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => table.itemAtIndex(rowIndex) !== null, 2000, "The actual cobalt row is materialised");
+            appWindow.update();
+            verify(waitForRendering(table, 5000), "The cobalt row reaches a rendered frame at the default width");
+            for (const [columnIndex, column] of ["mx", "my", "mz", "modulus"].entries()) {
+                const cell = findChild(table.itemAtIndex(rowIndex), "atomSiteMoment." + column + "." + rowIndex);
+                verify(cell !== null, "The cobalt row has the numeric column " + column);
+                issues.push(...Ink.problems(cell, values[columnIndex], "Co" + (rowIndex + 1) + " " + column));
+            }
         }
-        function readToken(text) {
-            const match = String(text).trim().replace(/−/g, "-")
-                .match(/^([+-]?\d+(?:\.(\d+))?)(?:\(\d+(?:\.\d+)?\))?(?:[eE]([+-]?\d+))?$/);
-            verify(match !== null, "The displayed moment cell has a numeric value: " + text);
-            const scale = Math.pow(10, Number(match[3] || 0));
-            const unit = scale * Math.pow(10, -(match[2] || "").length);
-            return {value: Number(match[1]) * scale, unit};
+        compare(issues.length, 0, "Every cobalt cell draws its full value and uncertainty: " + issues.join("; "));
+    }
+    function test_moment_form_layout_and_alignment() {
+        openMonoclinicMomentWitness();
+        const differences = [];
+        for (const form of ["Crystal axes", "Cartesian", "Spherical"]) {
+            const {box, moments, table, headers, modulus, editors} = momentFormView(form);
+            const names = headers.map(cell => String(cell.text));
+            const magCount = names.filter(name => /^\|\s*M\s*\|$/.test(name)).length;
+            if (magCount !== 1 || (form === "Spherical" && modulus?.visible))
+                differences.push(form + " shows " + magCount + " magnitude headers or a repeated magnitude cell");
+            const magnitude = form === "Spherical" ? editors[0] : modulus;
+            if (!magnitude || magnitude.horizontalAlignment !== Text.AlignRight)
+                differences.push(form + " magnitude is not right aligned");
+            if (Math.abs(box.width - table.width) > 1 ||
+                Math.abs(box.mapToItem(moments, 0, 0).x - table.mapToItem(moments, 0, 0).x) > 1)
+                differences.push(form + " selector width " + box.width + " differs from group content " + table.width);
+            if (box.label !== "Moments as" ||
+                box.mapToItem(moments, 0, box.height).y > table.mapToItem(moments, 0, 0).y + 1)
+                differences.push(form + " selector is not labelled and placed above the table");
+            if (form !== "Spherical" && magnitude) {
+                const widths = editors.concat([magnitude]).map(cell => cell.width);
+                if (Math.max(...widths) - Math.min(...widths) > 1)
+                    differences.push(form + " component and magnitude widths differ: " + widths.join(", "));
+            }
+            if (names[names.length - 1] !== "Symmetry")
+                differences.push("the last " + form + " column is " + names[names.length - 1]);
+            if (form === "Cartesian" && (!names.includes("Mx (x ∥ a)") || !names.includes("Mz (z ∥ c*)")))
+                differences.push("Cartesian headers do not use U+2225: " + names.join(", "));
         }
-        function near(token, expected, reason) {
-            verify(Math.abs(token.value - expected) <= token.unit / 2 + 1e-7,
-                   reason + " expected " + expected + " observed " + token.value);
+        compare(differences.length, 0, "Moment table layout follows the approved forms: " + differences.join("; "));
+    }
+    function test_derived_moments_use_component_decimals_without_uncertainty() {
+        openMonoclinicMomentWitness(false);
+        const cartesian = [9.928 - 13.856 / 2, 4.125, 13.856 * Math.sqrt(3) / 2];
+        const [x, y, z] = cartesian;
+        const norm = Math.hypot(x, y, z);
+        const spherical = [norm, Math.atan2(Math.hypot(x, y), z) * 180 / Math.PI,
+                           Math.atan2(y, x) * 180 / Math.PI];
+        const differences = [];
+        for (const form of ["Crystal axes", "Cartesian", "Spherical"]) {
+            const {modulus, editors} = momentFormView(form);
+            const cells = form === "Crystal axes" ? [[modulus, norm]] :
+                form === "Cartesian" ? editors.map((cell, i) => [cell, cartesian[i]]).concat([[modulus, norm]]) :
+                editors.map((cell, i) => [cell, spherical[i]]);
+            for (const [cell, expected] of cells) {
+                verify(cell && cell.visible, form + " shows each derived value");
+                const token = readMomentToken(cell.text);
+                if (Math.abs(token.unit - .001) > 1e-12 || Math.abs(token.value - expected) > .0005001)
+                    differences.push(form + " shows " + cell.text + " for " + expected.toFixed(3));
+            }
         }
-        near(readToken("13.00(22)"), 13, "Bracketed uncertainty preserves the preceding magnitude");
-        function inspect(form, components, magnitude, uncertainties) {
-            const {box, moments} = controls();
-            const index = forms.indexOf(form);
-            if (box.currentIndex !== index)
-                box.activated(index);
-            tryCompare(box, "currentText", form, 3000, "The selected coordinate form is displayed");
+        compare(differences.length, 0, "Derived values inherit three input decimals without s.u.: " + differences.join("; "));
+    }
+    function test_monoclinic_moment_form_selector_edits_and_saves_crystal_axes() {
+        const structureFile = openMonoclinicMomentWitness();
+        momentNear(readMomentToken("13.00(22)"), 13, "Bracketed uncertainty preserves the preceding magnitude");
+        function inspect(form, components, magnitude, uncertainties, modulusUncertainty) {
+            const {headers, modulus, editors} = momentFormView(form);
             const crystalAxes = form === "Crystal axes";
-            const table = findChild(moments, crystalAxes ? "atomSiteMoments.list" : "atomSiteMoments.converted");
-            tryVerify(() => table && table.visible && table.headerItem && table.itemAtIndex(0) !== null, 3000,
-                      "The cobalt witness renders the selected form's magnetic moment row");
-            verify(box.mapToItem(moments, 0, box.height).y <= table.mapToItem(moments, 0, 0).y + 1,
-                   "The form selector sits above the Magnetic moments table");
-            const headers = Array.from(table.headerItem.contentRowData);
-            verify(headers.some(cell => cell.visible && /^\|\s*M\s*\|$/.test(String(cell.text).trim())),
-                   "Every coordinate form shows the |M| column");
-            const row = table.itemAtIndex(0);
-            const modulus = findChild(row, crystalAxes ? "atomSiteMoment.modulus.0" : "atomSiteMoment.formModulus.0");
-            verify(modulus && modulus.visible && modulus.readOnly,
-                   "The identified magnitude cell is visible and read-only");
-            near(readToken(modulus.value), magnitude, form + " reports the physical moment norm");
-            const editors = (crystalAxes ? ["mx", "my", "mz"] : ["form.0", "form.1", "form.2"])
-                .map(name => findChild(row, "atomSiteMoment." + name + ".0"));
-            verify(editors.every(cell => cell && cell.visible && cell.enabled && !cell.readOnly),
-                   form + " presents three editable coordinates on the general site");
+            const spherical = form === "Spherical";
+            compare(headers.filter(cell => /^\|\s*M\s*\|$/.test(String(cell.text).trim())).length,
+                    1, "Each form displays the magnitude once");
+            if (!spherical) {
+                verify(modulus && modulus.visible && modulus.readOnly,
+                       "The Cartesian and crystal-axis magnitude cells are read-only");
+                const token = readMomentToken(modulus.text);
+                momentNear(token, magnitude, form + " reports the physical moment norm");
+                if (modulusUncertainty !== undefined)
+                    verify(Math.abs(token.unit - twoDigitSuUnit(modulusUncertainty)) < 1e-12,
+                           form + " displays the norm at its propagated uncertainty precision");
+            }
             for (let axis = 0; axis < 3; ++axis) {
                 const cell = editors[axis];
-                const token = readToken(crystalAxes ? cell.valueText : cell.written);
-                near(token, components[axis], form + " displays component " + axis + " in its selected basis");
+                const token = readMomentToken(cell.text);
+                momentNear(token, components[axis], form + " displays component " + axis + " in its selected basis");
                 if (uncertainties && crystalAxes) {
                     verify(cell.item.fileSu !== "", form + " shows a separate uncertainty for component " + axis);
-                    near(readToken(cell.item.fileSu), uncertainties[axis],
-                         form + " shows the independently referenced uncertainty of component " + axis);
+                    momentNear(readMomentToken(cell.item.fileSu), uncertainties[axis],
+                               form + " shows the independently referenced uncertainty of component " + axis);
                 } else if (uncertainties) {
+                    verify(Math.abs(token.unit - twoDigitSuUnit(uncertainties[axis])) < 1e-12,
+                           form + " displays component " + axis + " at its propagated uncertainty precision");
                     const tooltip = String(cell.ToolTip.text);
-                    verify(/^s\.u\.\s+/.test(tooltip), form + " identifies its component uncertainty in the tooltip");
-                    near(readToken(tooltip.replace(/^s\.u\.\s+/, "")), uncertainties[axis],
-                         form + " shows the independently propagated uncertainty of component " + axis);
+                    verify(/^s\.u\.\s+/.test(tooltip), form + " labels the propagated uncertainty");
+                    momentNear(readMomentToken(tooltip.replace(/^s\.u\.\s+/, "")), uncertainties[axis],
+                               form + " reports the independently propagated uncertainty of component " + axis);
                 }
             }
             return editors;
@@ -212,10 +353,10 @@ TestCase {
             degrees * Math.hypot(0.1 * 7.2, 0.2 * 9.6, 0.3 * (-3.6 - 2.5 * root3)) / 169,
             degrees * Math.hypot(0.1 * 4, 0.2 * 3, 0.3 * 2) / 25
         ];
-        inspect("Crystal axes", crystal, 13, [0.1, 0.2, 0.3]);
+        inspect("Crystal axes", crystal, 13, [0.1, 0.2, 0.3], sphericalSu[0]);
         inspect("Spherical", spherical(4), 13, sphericalSu);
         const cartesian = inspect("Cartesian", [3, 4, 12], 13,
-                                  [Math.hypot(0.1, 0.15), 0.2, 0.15 * root3]);
+                                  [Math.hypot(0.1, 0.15), 0.2, 0.15 * root3], sphericalSu[0]);
         const y = cartesian[1];
         Ui.scrollIntoView(y);
         verify(Ui.exposed(y), "The Cartesian Y editor is reachable by real input");
@@ -249,24 +390,25 @@ TestCase {
         for (const [i, axis] of ["x", "y", "z"].entries()) {
             const column = tags.indexOf("_atom_site_moment.crystalaxis_" + axis);
             verify(column >= 0, "The saved crystal-axis column identifies its numeric field");
-            near(readToken(rows[0][column]), [crystal[0], 6, crystal[2]][i],
+            momentNear(readMomentToken(rows[0][column]), [crystal[0], 6, crystal[2]][i],
                  "The saved crystal-axis value preserves the cross-view edit");
         }
         Session.closeProject();
         verify(Session.openProject(scratch), "The saved monoclinic project reopens");
-        tryCompare(controls().box, "currentText", "Spherical", 3000, "The form choice persists as a project view preference");
+        tryCompare(momentSelector().box, "currentText", "Spherical", 3000, "The form choice persists as a project view preference");
     }
     function test_symmetry_form_column_has_room_and_a_gap_after_mz() {
         const moments = group("atom_site_moment");
         const form = findChild(moments, "atomSiteMoment.symmform.0");
         const mx = findChild(moments, "atomSiteMoment.mx.0");
         const my = findChild(moments, "atomSiteMoment.my.0");
-        const mz = findChild(moments, "atomSiteMoment.mz.0");
-        verify(form && mx && my && mz, "The first cobalt row lays out the symmetry form beside its three components");
+        const magnitude = findChild(moments, "atomSiteMoment.modulus.0");
+        verify(form && mx && my && magnitude, "The first cobalt row lays out symmetry after its magnitude");
         verify(form.readOnly, "The wider symmetry form remains read-only");
         compare(form.horizontalAlignment, Text.AlignRight, "The symmetry form text is right-aligned");
         const em = form.font.pixelSize;
-        verify(form.width - form.implicitWidth >= em / 2, "The symmetry form has spare width beyond its full expression");
+        verify(Math.abs(form.x + form.width - form.parent.width) <= 1,
+               "The final symmetry column fills the remaining row width");
         function extent(input) {
             const first = input.positionToRectangle(0);
             const last = input.positionToRectangle(input.text.length);
@@ -275,16 +417,16 @@ TestCase {
         }
         const gap = (left, right) => extent(right)[0] - extent(left)[1];
         const normal = gap(mx, my);
-        const separated = gap(mz, form);
+        const separated = gap(magnitude, form);
         verify(separated >= normal + em / 4,
-               "The rendered text has a distinct gap after Mz: " + separated + " px versus " + normal + " px");
+               "The rendered text leaves a distinct gap before symmetry: " + separated + " px versus " + normal + " px");
     }
     function test_magnetic_column_shows_none_and_aligns_each_choice() {
         const moments = group("atom_site_moment");
         const table = findChild(moments, "atomSiteMoments.list");
         verify(table !== null, "The moments group exposes its rendered table");
         const headers = Render.cells(table.headerItem);
-        verify(headers.some(cell => cell.visible && String(cell.text).toLowerCase() === "magnetic"), "The moment choice column is headed magnetic");
+        verify(headers.some(cell => cell.visible && String(cell.text) === "Magnetic"), "The moment choice column is headed Magnetic");
         const boxes = [];
         for (let i = 0; i < table.count; ++i) {
             const box = findChild(table.itemAtIndex(i), "atomSiteMoment.ion." + i);
@@ -378,7 +520,9 @@ TestCase {
         verify(Session.openProject(scratch), "The saved magnetic appearance reopens");
         compare(Session.project.structureViewOptions.momentScale, 1.125, "Moment scale survives project save and reload");
     }
-    function test_visibility_keeps_camera_and_independent_moments() {
+    function checkVisibilityViews(reference) {
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
+                  10000, "The Structure pages finish building");
         click("appBar.tab.structure");
         const view = Review.find(Ui.page(appWindow), "structure.view");
         verify(view !== null, "The magnetic case reaches the real structure view");
@@ -386,86 +530,190 @@ TestCase {
         const controller = view.controller;
         const options = Session.project.structureViewOptions;
         controller.viewAnimationDuration = 0;
+        options.momentView = "through_atom";
         const xyz = v => [v.x, v.y, v.z];
         const quaternion = q => [q.scalar, q.x, q.y, q.z];
-        const projection = matrix => [matrix.m11, matrix.m22, matrix.m13, matrix.m23];
-        const differences = [];
-        function state() {
+        const projection = m => [m.m11, m.m22, m.m13, m.m23];
+        function cameraState() {
             const camera = view.view3d ? view.view3d.camera : null;
-            const result = {
-                position: xyz(controller.cameraPosition),
-                orientation: quaternion(controller.cameraRotation),
-                zoom: controller.magnification,
-                projection: controller.projection,
-                effectiveZoom: controller.projection === "perspective"
-                    ? projection(controller.cameraProjection) : [controller.orthographicMagnification]
-            };
-            if (camera) {
-                result.drawnPosition = xyz(camera.scenePosition);
-                result.drawnOrientation = quaternion(camera.sceneRotation);
-                result.drawnZoom = controller.projection === "perspective"
-                    ? projection(camera.projection) : [camera.horizontalMagnification, camera.verticalMagnification];
-            }
-            return result;
+            return [
+                xyz(controller.cameraPosition), quaternion(controller.cameraRotation),
+                controller.magnification, controller.projection,
+                controller.projection === "perspective" ? projection(controller.cameraProjection) : [controller.orthographicMagnification],
+                camera ? [xyz(camera.scenePosition), quaternion(camera.sceneRotation),
+                          controller.projection === "perspective" ? projection(camera.projection) :
+                              [camera.horizontalMagnification, camera.verticalMagnification]] : []
+            ];
         }
-        function toggle(control, property) {
-            const before = state();
-            const beforeValue = options[property];
+        function change(control, property, action = null) {
+            const before = cameraState();
+            const prior = options[property];
             const revision = controller.revision;
-            click("structure.toolbar." + control);
-            tryVerify(() => options[property] !== beforeValue && controller.revision > revision, 5000,
-                      control + " toolbar click publishes the changed visibility and scene");
+            if (action)
+                action();
+            else
+                click("structure.toolbar." + control);
+            tryVerify(() => options[property] !== prior && controller.revision > revision, 5000,
+                      control + " input publishes changed visibility and scene");
             appWindow.update();
             verify(waitForRendering(view, 5000), control + " reaches a rendered frame with the new visibility");
-            const after = state();
-            for (const key of Object.keys(before)) {
-                if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
-                    differences.push(before.projection + " " + control + " " + beforeValue + " → " +
-                                     options[property] + " " + key + " " + JSON.stringify(before[key]) +
-                                     " → " + JSON.stringify(after[key]));
+            compare(cameraState(), before, reference.name + " " + control + " keeps camera position, orientation and zoom");
+        }
+        function samePoint(left, right) {
+            return left.every((coordinate, axis) => Math.abs(coordinate - right[axis]) < 0.0001);
+        }
+        function verifySites(orbits, positions, context) {
+            const hits = orbits.map(() => 0);
+            for (const p of positions) {
+                const index = orbits.findIndex(orbit => orbit.some(q => samePoint(p, q)));
+                verify(index >= 0, context + " draws only reference coordinates: " + JSON.stringify(p));
+                ++hits[index];
             }
+            compare(hits, orbits.map(() => 1), context + " draws one instance per expected position or orbit");
+        }
+        const combo = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+        const entries = ["All", "Asymmetric unit (crystal)", "Asymmetric unit (magnetic)", "Magnetic atoms", "None"];
+        const spheres = controller.spheres;
+        verifySites(reference.all, Array.from({length: spheres.count}, (_, row) => xyz(spheres.instancePosition(row))),
+                    reference.name + " default All atoms");
+        Atoms.checkEntries(test, combo, entries);
+        function select(index) {
+            const label = entries[index];
+            if (combo.currentText !== label)
+                change("atoms", "atoms", () => Atoms.select(test, appWindow, combo, label));
+        }
+        function verifyView(index, moments, atomOrbits, arrowOrbits) {
+            select(index);
+            if (moments !== options.showMoments)
+                change("moments", "showMoments");
+            const context = reference.name + " " + entries[index] + " moments " + (moments ? "on" : "off");
+            const spheres = controller.spheres;
+            const shafts = controller.triadShafts;
+            const heads = controller.triadHeads;
+            const centres = Array.from({length: spheres.count}, (_, row) => xyz(spheres.instancePosition(row)));
+            verifySites(atomOrbits, centres, context + " atoms");
+            compare(shafts.count, heads.count, context + " every arrow has a shaft and a head");
+            const anchors = Array.from({length: shafts.count}, (_, row) => {
+                // Recover the centre of the whole arrow from the two mesh centres and lengths.
+                const shaft = xyz(shafts.instancePosition(row));
+                const head = xyz(heads.instancePosition(row));
+                const headLength = heads.instanceScale(row).y;
+                const fraction = headLength / (shafts.instanceScale(row).y + headLength);
+                return shaft.map((v, axis) => v + fraction * (head[axis] - v));
+            });
+            verifySites(arrowOrbits, anchors, context + " moments");
+            if (atomOrbits.length)
+                verify(anchors.every(anchor => centres.some(centre => samePoint(anchor, centre))),
+                       context + " anchors every arrow on a displayed magnetic atom");
         }
         for (let mode = 0; mode < 2; ++mode) {
             if (mode === 1) {
                 const beforeProjection = controller.projection;
                 click("structure.toolbar.projection");
-                tryVerify(() => controller.projection !== beforeProjection, 5000,
-                          "The second pass reaches the other projection");
+                tryVerify(() => controller.projection !== beforeProjection, 5000, "Both projections are exercised");
             }
             const beforeZoom = controller.magnification;
             controller.zoomAt(view.width * 0.42, view.height * 0.58, 120);
-            tryVerify(() => controller.magnification !== beforeZoom, 5000,
-                      "The visibility pass starts from a user-adjusted zoom");
+            tryVerify(() => controller.magnification !== beforeZoom, 5000, "Visibility starts from an adjusted zoom");
             appWindow.update();
             verify(waitForRendering(view, 5000), "The adjusted camera reaches a rendered frame");
-            const baseline = state();
-            verify(baseline.position.concat(baseline.orientation, baseline.effectiveZoom).every(Number.isFinite),
-                   "The camera snapshot contains real position, orientation and effective zoom numbers");
-            const startingAtoms = options.atoms;
-            const visited = new Set();
-            for (let transition = 0; transition < 3; ++transition) {
-                toggle("atoms", "atoms");
-                visited.add(options.atoms);
-                if (options.atoms === startingAtoms)
-                    break;
-            }
-            compare(options.atoms, startingAtoms, "The atom control completes its whole display cycle");
-            verify(visited.has("none") && visited.size >= 2, "The atom cycle both hides and shows atoms");
+            const [position, orientation, zoom] = cameraState();
+            verify(position.concat(orientation, zoom).every(Number.isFinite),
+                   "The camera contains finite position, orientation and zoom");
+            if (options.axes)
+                change("axes", "axes");
+            for (const args of [
+                [0, false, reference.all, []], [1, false, reference.crystal, []],
+                [2, false, reference.magnetic, []], [0, true, reference.all, reference.cobalt],
+                [3, true, reference.cobalt, reference.cobalt], [4, true, [], reference.cobalt],
+                [1, true, reference.crystal, reference.crystalCobalt],
+                [2, true, reference.magnetic, reference.magneticCobalt], [4, true, [], reference.cobalt]
+            ])
+                verifyView(...args);
             for (const [control, property] of [["bonds", "bonds"], ["labels", "showLabels"],
                                                ["moments", "showMoments"], ["cell", "cell"], ["axes", "axes"]]) {
+                if (!Ui.control(Probe, appWindow, "structure.toolbar." + control)) {
+                    verify(control === "bonds" && reference.name === "Doubled parent cell",
+                           "Every applicable visibility control is available");
+                    continue;
+                }
                 const original = options[property];
-                toggle(control, property);
-                toggle(control, property);
+                change(control, property);
+                change(control, property);
                 compare(options[property], original, control + " is tested both hidden and shown");
             }
         }
-        for (let transition = 0; options.atoms !== "none" && transition < 3; ++transition)
-            toggle("atoms", "atoms");
-        compare(options.atoms, "none", "The final scene has hidden atoms");
-        if (!options.showMoments)
-            toggle("moments", "showMoments");
-        verify(options.showMoments && controller.hasMoments, "Moments remain enabled and present with atoms hidden");
-        compare(differences.length, 0, "Every visibility change keeps the same camera before and after: " + differences.join("; "));
+    }
+    function test_visibility_keeps_camera_and_independent_moments_data() {
+        return [{tag: "pnma", doubled: false}, {tag: "doubled", doubled: true}];
+    }
+    function test_visibility_keeps_camera_and_independent_moments(data) {
+        const flatten = lists => [].concat(...lists);
+        const singletons = points => points.map(point => [point]);
+        if (!data.doubled) {
+            // ISODISTORT Pnma.1 operations and the published 2.344 K sites.
+            const operations = [
+                ([x,y,z]) => [x,y,z], ([x,y,z]) => [x+0.5,-y+0.5,-z+0.5],
+                ([x,y,z]) => [-x,y+0.5,-z], ([x,y,z]) => [-x+0.5,-y,z+0.5],
+                ([x,y,z]) => [-x,-y,-z], ([x,y,z]) => [-x+0.5,y+0.5,z+0.5],
+                ([x,y,z]) => [x,-y+0.5,z], ([x,y,z]) => [x+0.5,y,-z+0.5]
+            ];
+            const sites = [[0,0,0], [0.2809,0.25,0.9836], [0.0933,0.25,0.4278],
+                           [0.0896,0.25,0.773], [0.4478,0.25,0.2179], [0.1639,0.0321,0.2805]];
+            const periodic = sites.map(site => [...new Set(operations.map(op =>
+                op(site).map(x => (x - Math.floor(x)).toFixed(6)).join(",")))].map(key => key.split(",").map(Number)));
+            compare(periodic.map(orbit => orbit.length), [4,4,4,4,4,8],
+                    "Independent Pnma and Pnma.1 operations give the published Wyckoff multiplicities");
+            // A closed cell includes the adjacent image on each face of a boundary site.
+            const images = x => x === 0 ? [0, 1] : [x];
+            const display = periodic.map(orbit => {
+                const points = [];
+                for (const [x, y, z] of orbit)
+                    for (const a of images(x))
+                        for (const b of images(y))
+                            for (const c of images(z))
+                                points.push([a*10.308064, b*6.002187, c*4.787394]);
+                return points;
+            });
+            checkVisibilityViews({
+                name: "2.344 K cobalt olivine", all: singletons(flatten(display)),
+                crystal: display, magnetic: display, cobalt: singletons(flatten(display.slice(0, 2))),
+                crystalCobalt: display.slice(0, 2), magneticCobalt: display.slice(0, 2)
+            });
+            return;
+        }
+
+        Session.closeProject();
+        const file = Probe.readFile("tests/fixtures/magnetic_pnma/doubled-atom-orbits.edi");
+        verify(file.length > 0 && SettingsProof.write(scratch, "structures/cosio.edi", file),
+               "The scratch project carries the doubled parent-cell witness");
+        verify(Session.openProject(scratch), "The doubled parent-cell project opens");
+        // The P1 child's magnetic identity leaves each site alone. Parent translation
+        // (1/2,0,0) in the child basis pairs the two Co and two O sites.
+        const positions = [[1,1.5,3], [5,1.5,3], [2,3,6], [6,3,6]];
+        const magnetic = singletons(positions);
+        checkVisibilityViews({
+            name: "Doubled parent cell", all: magnetic, magnetic: magnetic,
+            crystal: [positions.slice(0, 2), positions.slice(2)], cobalt: magnetic.slice(0, 2),
+            crystalCobalt: [positions.slice(0, 2)], magneticCobalt: magnetic.slice(0, 2)
+        });
+        for (const label of ["Asymmetric unit (crystal)", "Asymmetric unit (magnetic)", "Magnetic atoms", "None", "All"]) {
+            const combo = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+            Atoms.select(test, appWindow, combo, label);
+            const selected = Session.project.structureViewOptions.atoms;
+            verify(Session.save(), "The project saves with the selected Atoms view");
+            Session.closeProject();
+            verify(Session.openProject(scratch), "The saved Atoms view reopens from disk");
+            tryCompare(Session.project.structureViewOptions, "atoms", selected, 2000,
+                       "The selected appearance value survives save and reload");
+            tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted, 10000,
+                      "The saved Structure pages rebuild before reading the Atoms selector");
+            click("appBar.tab.structure");
+            tryVerify(() => {
+                const reopened = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+                return reopened && reopened.currentText === label;
+            }, 5000, "The toolbar restores the selected view after reload");
+        }
     }
     function test_analysis_contains_only_independent_magnetic_components() {
         click("appBar.tab.analysis");
@@ -487,7 +735,7 @@ TestCase {
         return rows.find(row => Math.abs(label.modelData.centre - row.points[0].y) < .5);
     }
     function test_nuclear_and_magnetic_tick_rows_cover_the_independent_reflections() {
-        openMagneticFitExample();
+        openCobaltProject("pd-neut-cwl_cosio-d20_2k", true);
         const chart = pattern.createObject(appWindow.contentItem, {experiment: Session.project.currentExperiment});
         verify(chart !== null && waitForPolish(chart), "The magnetic chart reaches the actual shared controller");
         const controller = Probe.objectsWithProperty(chart, "braggLabels")[0];
@@ -552,11 +800,16 @@ TestCase {
     }
     function test_phase_contributions_draw_two_independent_curves_and_fills() {
         openMagneticFitExample();
+        priorChartPalette = Preferences.colourScheme;
+        Preferences.colourScheme = "earth";
+        const expectedPalette = Approved.colours(Probe, "earth", "structures", 2, false,
+                                                 {experiments: 1, structures: 2});
         Preferences.structureCurves = true;
         Preferences.patternLegendShown = true;
         const chart = pattern.createObject(appWindow.contentItem, {
             experiment: Session.project.currentExperiment,
-            settingsPage: "pattern"
+            settingsPage: "pattern",
+            colors: createTemporaryObject(lightFigure, appWindow)
         });
         verify(chart && waitForPolish(chart), "The contribution check uses the production chart");
         const controller = Probe.objectsWithProperty(chart, "braggLabels")[0];
@@ -617,6 +870,8 @@ TestCase {
         compare(rows.length, 2, "The legend presents two independent controls for the same phase");
         const ticks = tickRows(chart);
         const labels = tickLabels(chart);
+        const actualPalette = [];
+        const rgb = colour => [colour.r, colour.g, colour.b];
         for (const glyph of ["layer-group", "magnet"]) {
             const label = labels.find(item => item.segments.some(part => part.icon === glyph));
             const entry = rows.find(item => item.segments.some(part => part.icon === glyph));
@@ -625,8 +880,12 @@ TestCase {
             verify(tick, "Each contribution icon identifies an actual populated tick series");
             compare(String(entry.segments.find(part => part.icon === glyph).color), String(tick.color),
                     "Each contribution control uses its tick row's shade");
-            verify(areas().some(area => String(area.outline.color) === String(tick.color)), "Each contribution curve matches its tick shade");
+            const area = areas().find(candidate => String(candidate.outline.color) === String(tick.color));
+            verify(area, "Each contribution curve matches its tick shade");
+            compare(rgb(area.color), rgb(tick.color), "The fill shares its contribution's colour with the tick and outline");
+            actualPalette.push(String(tick.color).toLowerCase());
         }
+        compare(actualPalette, expectedPalette, "Nuclear and magnetic contributions take consecutive approved phase palette colours");
         const magneticControl = () => Render.descendants(legend).find(item => item.objectName === "chart.legend.entry" &&
             item.bragg && item.visible && item.segments.some(part => part.icon === "magnet"));
         const nuclear = rows.find(item => item.segments.some(part => part.icon === "layer-group"));
@@ -648,8 +907,13 @@ TestCase {
         tryVerify(() => visibleShades().length === 2, 2000, "The magnetic legend control restores its curve and fill");
         chart.destroy();
     }
-    function openCobaltProject(example) {
+    function openCobaltProject(example, fixedMoments = false) {
         const project = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/" + example + "/project"));
+        if (fixedMoments) {
+            const frozen = Probe.readFile("tests/fixtures/magnetic_pnma/cosio-2k-reference.edi");
+            verify(frozen.length > 0 && SettingsProof.write(project, "structures/cosio.edi", frozen),
+                   "The fixed-parameter replay uses the structure that supplied its independent reference");
+        }
         verify(Session.openProject(project), "The gate opens a disposable copy of the documented cobalt project");
         tryCompare(Session.project, "calculating", false, 15000, "The example's initial measured pattern finishes");
         return project;
@@ -683,7 +947,7 @@ TestCase {
         ];
     }
     function test_experiment_reflections_match_crysta(data) {
-        openCobaltProject(data.example);
+        openCobaltProject(data.example, data.magnetic);
         const text = SettingsProof.text(Probe.repoUrl("tests/fixtures/magnetic_pnma"), "reflection-table.json");
         const expected = new Map(JSON.parse(text)[data.example].map(([hkl, ...values]) => [hkl, values]));
         const table = experimentReflectionTable();
@@ -980,6 +1244,29 @@ TestCase {
         compare(publication.count, 3, "The filter and tab sequence spans three fresh fit publications");
         publication.destroy();
     }
+    function test_published_magnetic_start_reaches_the_reference_minimum() {
+        openMagneticFitExample();
+        const moments = Probe.rows(Session.project.parameters).filter(row => row.category === "atom_site_moment" && row.free);
+        const start = new Map(moments.map(row => [row.rowLabel + "." + row.name, row.parameter.value]));
+        const expected = [["Co1.crystalaxis_x", 0], ["Co1.crystalaxis_y", 1],
+                          ["Co1.crystalaxis_z", 0], ["Co2.crystalaxis_y", 1]];
+        compare(start.size, expected.length, "The published project declares four free moment starts");
+        compare(expected.map(([key]) => start.get(key)), expected.map(([, value]) => value),
+                "The published project starts at Co1 (0, 1, 0) and Co2 My = 1 μB");
+        repeatFitPreferences = {threads: Preferences.engineThreads, showResults: Preferences.showFitResults};
+        Preferences.engineThreads = 1;
+        Preferences.showFitResults = false;
+        const fit = Session.project.fit;
+        verify(fit.available, "The published one-magneton model admits its fit");
+        fit.start();
+        tryVerify(() => !fit.running && fit.outcome !== "", 55000, "The app publishes the fit from the published start");
+        compare(fit.outcome, "success", "The published start converges");
+        const result = Probe.rows(fit.results.agreement).find(row => row.place >= 0);
+        verify(result, "The fit publishes the observed bank's agreement");
+        const rwp = Number(result.values[1]);
+        verify(Number.isFinite(rwp) && rwp.toFixed(2) === "4.73",
+               "The fit reaches the owner's 4.73 percent reference minimum: Rwp=" + rwp);
+    }
     function test_fit_from_zero_moments_reaches_reference_and_logs_start() {
         const path = Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k");
         Preferences.engineThreads = 1;
@@ -991,7 +1278,9 @@ TestCase {
             if (zero)
                 for (const row of moments())
                     row.parameter.value = 0;
-            verify(moments().every(row => (row.parameter.value === 0) === zero), "The fit receives the requested nonzero or all-zero start");
+            const values = moments().map(row => row.parameter.value);
+            verify(zero ? values.every(value => value === 0) : values.some(value => value !== 0),
+                   "The fit receives either the published magnetic start or an all-zero start");
             verify(OnboardingProbe.startHostLog().length > 0, "The test observes the actual fit log");
             const model = Session.project.fit;
             verify(model.available, "The real project admits a fit with the requested moment start");
