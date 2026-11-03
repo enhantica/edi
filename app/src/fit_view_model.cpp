@@ -427,6 +427,8 @@ FitViewModel::~FitViewModel() { close(); }
 
 void FitViewModel::close() {
     invalidateFitUndo();
+    accepted_fit_.reset();
+    starting_ = undo_target_ = {};
     latest_attempt_ = submitted_attempt_ = finished_attempt_ = native_attempt_ = 0;
     catch_up_.clear();
     caught_up_pending_ = false;
@@ -516,7 +518,7 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
     }
     submitted_single_joint_ = !scan;
     submitted_attempt_ = attempt; // The real submitted job owns this identity even if a later attempt refuses.
-    if (!scan) before_fit_ = std::make_shared<const edi::Project>(project_);
+    if (!scan) starting_ = {attempt, std::make_shared<const edi::Project>(project_), accepted_fit_};
     const bool admitted = job_->start(scan ? owner_.scanTemplate() : nullptr);
     if (!admitted && submitted_attempt_ == attempt) submitted_attempt_ = 0;
     if (owner_.retired_) return;
@@ -571,12 +573,16 @@ bool FitViewModel::undo() {
     }
     // Through the project's one write door, as an edit: the restore, then the calculation of the pre-fit
     // state on the worker (edi::Edit::undo_fit). The fit items describe a fit the model no longer holds.
-    // The assistant's Undo of a rejected fit goes back to the state before it, with the record and flags of the
-    // accepted fit before (edi ADR-0055); the app's own Undo clears the record, as diffraction-lib's does.
+    // The assistant's Undo of a rejected fit goes back to the accepted state before it: values, flags, saved starts,
+    // relations and fit record (edi ADR-0055), owned by the attempt being undone. The app's own Undo clears the
+    // record, as diffraction-lib's does. Either way the accepted state is then the one before the undone fit.
     edi::Project& project = project_;
-    auto edit = input ? edi::Edit::undo_fit_to(project, before_fit_, accepted_fit_) : edi::Edit::undo_fit(project);
+    const UndoTarget target = undo_target_.attempt == undo_attempt_ ? undo_target_ : UndoTarget{};
+    auto edit = input ? edi::Edit::undo_fit_to(project, target.before, target.accepted) : edi::Edit::undo_fit(project);
     if (owner_.applyUndo(std::move(edit), false).isEmpty()) {
         if (owner_.retired_) return true;
+        accepted_fit_ = target.attempt ? target.accepted : nullptr;
+        undo_target_ = {};
         setProgress(QString(), QString(), QString());
         setElapsed(QString());
         results_->setRecord(project_);
@@ -1080,7 +1086,10 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
         // The table, the χ², the chart and the texts all come from this one result, in this one step.
         owner_.publishFit();
         if (owner_.retired_) return;
-        accepted_fit_ = submitted_single_joint_ ? std::make_shared<const edi::Project>(project_) : nullptr;
+        if (submitted_single_joint_) {
+            undo_target_ = starting_.attempt == attempt ? starting_ : UndoTarget{};
+            accepted_fit_ = std::make_shared<const edi::Project>(project_);
+        }
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),

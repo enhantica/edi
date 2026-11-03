@@ -3374,7 +3374,7 @@ struct AssistantViewModel::State {
             {"calculating",target && target->calculating()},
             {"fitting",target && target->fit()->nativeRunning()},{"fit_undo_available",target && target->fitUndoAvailable()},{"show_actions",show_actions},{"calculations",calculations},{"interface_groups",interface_groups}};
         if(target)native_state["project_modified"]=target->modified();
-        // Undo of a fit clears its result record (edi ADR-0017 §17): whether fit results, R-factors and a report exist now.
+        // Whether fit results, R-factors and a report exist now (an assistant Undo restores the accepted fit's, ADR-0055).
         if(target)native_state["fit_result_current"]=target->fit()->results()->rowCount()>0;
         if(!selected_structure_id.isEmpty())native_state["selected_structure_id"]=selected_structure_id;
         if(!selected_experiment_id.isEmpty())native_state["selected_experiment_id"]=selected_experiment_id;

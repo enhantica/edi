@@ -1529,62 +1529,67 @@ class Edit {
         });
     }
 
-    // The last fit undone back to the state just before it, for the assistant's Undo of a rejected trial (edi
-    // ADR-0055): undo_fit's restore, then the fit record and the saved fit starts the project held when that fit
-    // started instead of none, and, when the restored values are exactly those the previous adopted fit left, that
-    // fit's free flags too.
-    // `before` is the project as the undone fit started and `accepted` as the previous adopted fit left it; either
-    // may be null, and one whose experiments or parameters no longer match is not used. Worked out on a copy first.
+    // The last fit undone back to the accepted state before it, for the assistant's Undo of a rejected trial (edi
+    // ADR-0055). `accepted` is the project as the previous adopted fit left it and `before` the project as the undone
+    // fit started; the first of them whose experiments and parameters still match the project is the target, and
+    // everything it holds that a fit or a trial's setup changes comes back from it: every parameter's value, s.u.,
+    // free flag and saved fit start, the relations, and the fit record (results, R factors, report). With neither,
+    // this is undo_fit. Worked out on a copy, and the relations prepared, before anything live is written.
     static Edit undo_fit_to(Project& project, std::shared_ptr<const Project> before,
                             std::shared_ptr<const Project> accepted) {
         return Edit([&project, before = std::move(before), accepted = std::move(accepted)] {
             Project restored = project;
             const bool undone = !restore_fit_start(restored).was_no_op;
-            const auto same_experiments = [](const Project& a, const Project& b) {
-                if (a.experiments.size() != b.experiments.size()) return false;
-                for (std::size_t i = 0; i < a.experiments.size(); ++i)
-                    if (a.experiments[i]->name.value() != b.experiments[i]->name.value()) return false;
+            const auto matches = [&restored](Project& kept) {
+                if (kept.experiments.size() != restored.experiments.size()) return false;
+                for (std::size_t i = 0; i < kept.experiments.size(); ++i)
+                    if (kept.experiments[i]->name.value() != restored.experiments[i]->name.value()) return false;
+                const auto to = parameter_entries(restored);
+                const auto from = parameter_entries(kept);
+                if (to.size() != from.size()) return false;
+                for (std::size_t i = 0; i < to.size(); ++i)
+                    if (to[i].path != from[i].path || !to[i].parameter || !from[i].parameter) return false;
                 return true;
             };
-            if (undone && before && same_experiments(restored, *before)) {
-                copy_fit_result(restored, *before);
-                // The fit starts the earlier fit saved (its _fit_parameter rows) come back with it, when every
-                // parameter is where and what it was as the undone fit started.
-                Project prior = *before;
-                const auto to = parameter_entries(restored);
-                const auto from = parameter_entries(prior);
-                bool same = to.size() == from.size();
-                for (std::size_t i = 0; same && i < to.size(); ++i) {
-                    same = to[i].path == from[i].path && to[i].parameter && from[i].parameter &&
-                           to[i].parameter->value.get() == from[i].parameter->value.get();
-                }
-                if (same) {
-                    for (std::size_t i = 0; i < to.size(); ++i) {
-                        to[i].parameter->start_value = from[i].parameter->start_value.get();
-                        to[i].parameter->start_uncertainty = from[i].parameter->start_uncertainty.get();
-                    }
-                }
+            std::optional<Project> target;
+            for (const auto& candidate : {accepted, before}) {
+                if (!undone || target || !candidate) continue;
+                Project kept = *candidate;
+                if (matches(kept)) target = std::move(kept);
             }
             std::vector<bool> flags;
-            if (undone && accepted) {
-                Project kept = *accepted;
-                const auto to = named_slots(restored);
-                const auto from = named_slots(kept);
-                bool same = to.size() == from.size();
-                for (std::size_t i = 0; same && i < to.size(); ++i) {
-                    same = to[i].unique_name == from[i].unique_name &&
-                           to[i].parameter->value.get() == from[i].parameter->value.get() &&
-                           to[i].parameter->uncertainty.get() == from[i].parameter->uncertainty.get();
+            std::optional<ItemVec<ParameterAlias>> aliases;
+            std::optional<ItemVec<ParameterConstraint>> constraints;
+            if (target) {
+                const auto to = parameter_entries(restored);
+                const auto from = parameter_entries(*target);
+                for (std::size_t i = 0; i < to.size(); ++i) {
+                    Parameter& into = *to[i].parameter;
+                    const Parameter& kept = *from[i].parameter;
+                    into.value = kept.value.get();
+                    into.uncertainty = kept.uncertainty.get();
+                    into.start_value = kept.start_value.get();
+                    into.start_uncertainty = kept.start_uncertainty.get();
+                    flags.push_back(kept.free.get());
                 }
-                if (same) for (const auto& slot : from) flags.push_back(slot.parameter->free.get());
+                std::vector<std::shared_ptr<ParameterAlias>> alias_rows;
+                for (const auto& row : target->aliases) alias_rows.push_back(std::make_shared<ParameterAlias>(*row));
+                std::vector<std::shared_ptr<ParameterConstraint>> constraint_rows;
+                for (const auto& row : target->constraints)
+                    constraint_rows.push_back(std::make_shared<ParameterConstraint>(*row));
+                aliases.emplace(std::move(alias_rows));
+                constraints.emplace(std::move(constraint_rows));
+                copy_fit_result(restored, *target);
             }
             if (!copy_parameter_states(project, restored)) {
                 throw std::logic_error("undo: the restored copy does not match the project");
             }
-            if (!flags.empty()) {
-                const auto live = named_slots(project);
-                if (live.size() == flags.size())
-                    for (std::size_t i = 0; i < live.size(); ++i) live[i].parameter->free = static_cast<bool>(flags[i]);
+            if (target) {
+                const auto live = parameter_entries(project);
+                for (std::size_t i = 0; i < live.size() && i < flags.size(); ++i)
+                    live[i].parameter->free = static_cast<bool>(flags[i]);
+                project.aliases = std::move(*aliases);
+                project.constraints = std::move(*constraints);
             }
             copy_fit_result(project, restored);
         });
