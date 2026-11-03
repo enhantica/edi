@@ -8,6 +8,7 @@
 
 #include "edi/io.hpp"
 #include "crysta/adp.hpp"
+#include "crysta/magnetic.hpp"
 #include "edi/symmetry.hpp"
 #include "crysta/tokens.hpp"
 
@@ -565,6 +566,25 @@ SceneSource capture_scene(const Structure& structure) {
         }
         source.site_adps.push_back({site->id.value(), u_iso, std::nullopt});
     }
+    // The Atoms selector's sites: for a magnetic structure the parent group decides which listed sites stand for the
+    // crystal's asymmetric unit; otherwise every listed site does.
+    std::vector<std::array<double, 3>> fract;
+    std::vector<std::string> types;
+    for (const auto& site : structure.atom_sites) {
+        fract.push_back({site->fract_x.value, site->fract_y.value, site->fract_z.value});
+        types.push_back(site->type_symbol.value());
+    }
+    const std::vector<bool> kept = structure.magnetic->empty()
+                                       ? std::vector<bool>(fract.size(), true)
+                                       : crysta::parent_asymmetric_sites(structure.magnetic->parent, fract, types);
+    for (std::size_t i = 0; i != structure.atom_sites.size(); ++i) {
+        if (kept[i]) {
+            source.crystal_sites.insert(structure.atom_sites[i]->id.value());
+        }
+    }
+    for (const auto& moment : structure.atom_site_moment) {
+        source.magnetic_sites.insert(moment->id.value());
+    }
     if (!structure.geometry_current()) {
         return source;  // I11: no column of a geometry that no longer describes the structure
     }
@@ -672,6 +692,8 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
     const double probability = options.atom_view == AtomView::Adp ? probability_scale(options.adp_probability) : 0.0;
     std::vector<std::string> substituted;
     for (SceneAtom& atom : scene.atoms) {
+        bool crystal = false;   // an identity image of a site standing for the crystal's asymmetric unit
+        bool magnetic = false;  // a part of a site with a moment
         // I5: relative shares; a zero sum gives equal shares; one part is whole.
         const std::size_t parts = atom.parts.size();
         double total = 0.0;
@@ -692,7 +714,9 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             atom.label += part.site_id;
             if (column_value(source.site_symmetry, part.row, std::string()) == "1_555") {
                 atom.asymmetric = true;
+                crystal = crystal || source.crystal_sites.contains(part.site_id);
             }
+            magnetic = magnetic || source.magnetic_sites.contains(part.site_id);
         }
         const ElementRadius radius = element_radius(atom.parts[atom.major].element, options.atom_view);
         atom.table_radius = radius.radius;
@@ -737,8 +761,23 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             substituted.push_back(atom.parts[atom.major].element);  // the empty element (no symbol) too, once
         }
         // I8: the atom subset.
-        atom.drawn = options.atoms == AtomSubset::All ||
-                     (options.atoms == AtomSubset::AsymmetricUnit && atom.asymmetric);
+        switch (options.atoms) {
+            case AtomSubset::All:
+                atom.drawn = true;
+                break;
+            case AtomSubset::AsymmetricUnit:
+                atom.drawn = crystal;
+                break;
+            case AtomSubset::AsymmetricMagnetic:
+                atom.drawn = atom.asymmetric;
+                break;
+            case AtomSubset::MagneticAtoms:
+                atom.drawn = magnetic;
+                break;
+            case AtomSubset::None:
+                atom.drawn = false;
+                break;
+        }
         if (!atom.asymmetric) {
             scene.has_copies = true;
         }
@@ -824,9 +863,11 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                 continue;
             }
             const std::size_t atom = atom_of_row[found->second];
-            // The moments have their own switch: hiding the atoms keeps them, and only the
-            // asymmetric-unit subset narrows them as it narrows the atoms.
-            if (options.atoms == AtomSubset::AsymmetricUnit && !scene.atoms[atom].asymmetric) {
+            // The moments have their own switch: hiding the atoms keeps them, and an asymmetric unit narrows them
+            // as it narrows the atoms.
+            const bool narrowed =
+                options.atoms == AtomSubset::AsymmetricUnit || options.atoms == AtomSubset::AsymmetricMagnetic;
+            if (narrowed && !scene.atoms[atom].drawn) {
                 continue;
             }
             const double components[3] = {(*source.moment_x)[i], (*source.moment_y)[i], (*source.moment_z)[i]};
@@ -838,6 +879,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             }
             scene.moments.push_back({atom, scene.atoms[atom].centre, mul(vector, options.moment_scale)});
             scene.moment_colours = options.moment_colours;
+            scene.moment_view = options.moment_view;
         }
     }
     if (options.labels) {
@@ -1016,7 +1058,7 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
         arrow.letter_anchor = mul(arrow.direction, length + overhang + style_value("axis.letter.offset") * h);
         drawing.triad.push_back(arrow);
     }
-    // A moment arrow is centred on its atom; its thickness is fixed in Angstrom, so it reads at every zoom
+    // A moment arrow sits on its atom as moment_view says; its thickness is fixed in Angstrom, so it reads at every zoom
     // like the bonds.
     constexpr double kMomentShaftRadius = 0.12;
     constexpr double kMomentHeadRadius = 0.3;
@@ -1038,7 +1080,11 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
                           ? own
                           : Rgb{greyed(own.r), greyed(own.g), greyed(own.b)};
         arrow.direction = divided(moment.vector, length);
-        arrow.origin = sub(moment.centre, mul(moment.vector, 0.5));
+        // Through the atom (centred), from its centre, or from its surface (moment_view).
+        arrow.origin = scene.moment_view == MomentView::FromCentre ? moment.centre
+                       : scene.moment_view == MomentView::FromSurface
+                           ? add(moment.centre, mul(arrow.direction, atom.radius))
+                           : sub(moment.centre, mul(moment.vector, 0.5));
         arrow.head_length = std::min(kMomentHeadShare * length, 0.6);
         arrow.shaft_length = length - arrow.head_length;
         arrow.shaft_radius = kMomentShaftRadius;

@@ -303,8 +303,8 @@ class StructureViewModel : public QObject {
     // The magnetic space group as the file names it (`_space_group_magn`, by item name), read only until it can be
     // chosen from crysta's table; and the parent group (`_parent_space_group`: name, number, transform), with
     // `differs` when it is not the space group itself (edi ADR-0068).
-    Q_PROPERTY(QVariantMap magneticGroup READ magneticGroup NOTIFY magneticChanged)
-    Q_PROPERTY(QVariantMap parentGroup READ parentGroup NOTIFY magneticChanged)
+    Q_PROPERTY(QVariantMap magneticGroup READ magneticGroup NOTIFY magneticGroupChanged)
+    Q_PROPERTY(QVariantMap parentGroup READ parentGroup NOTIFY parentGroupChanged)
     // Whether any site carries a moment.
     Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
 
@@ -337,6 +337,8 @@ class StructureViewModel : public QObject {
    signals:
     void nameChanged();
     void magneticChanged();
+    void magneticGroupChanged();
+    void parentGroupChanged();
     void sceneSourceChanged();
     void sceneWentStale();
 

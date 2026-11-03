@@ -746,6 +746,8 @@ void StructureViewModel::sync() {
     propagation_vectors_->sync();
     scattering_lengths_->sync();
     emit magneticChanged();
+    emit magneticGroupChanged();
+    emit parentGroupChanged();
     categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
 }

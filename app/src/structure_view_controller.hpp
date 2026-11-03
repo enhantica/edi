@@ -69,7 +69,7 @@ class StructureViewController : public QObject {
     // crysta found a bond: the toolbar offers the bonds button only then (diffraction-lib's modebar).
     Q_PROPERTY(bool hasBonds READ hasBonds NOTIFY hasBondsChanged)
     // Whether the structure carries magnetic moments, so the toolbar offers to show them.
-    Q_PROPERTY(bool hasMoments READ hasMoments NOTIFY hasBondsChanged)
+    Q_PROPERTY(bool hasMoments READ hasMoments NOTIFY hasMomentsChanged)
     Q_PROPERTY(QString substitutedElements READ substitutedElements NOTIFY substitutedElementsChanged)
     // The mesh detail (ADR-0017 §16): chosen by the number of drawn atoms.
     Q_PROPERTY(QString detail READ detail NOTIFY detailChanged)
@@ -224,6 +224,7 @@ class StructureViewController : public QObject {
     void hasSitesChanged();
     void hasCopiesChanged();
     void hasBondsChanged();
+    void hasMomentsChanged();
     void substitutedElementsChanged();
     void sphereSegmentsChanged();
     void sphereRingsChanged();

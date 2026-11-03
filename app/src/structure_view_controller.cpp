@@ -490,6 +490,7 @@ void StructureViewController::present() {
     emit hasSitesChanged();
     emit hasCopiesChanged();
     emit hasBondsChanged();
+    emit hasMomentsChanged();
     emit substitutedElementsChanged();
     setCurrent(scene_.current && (report_ ? true : latestCurrent()));
     draw();

@@ -177,7 +177,7 @@ TestCase {
                 "The selector offers all three coordinate forms");
         return {box, moments};
     }
-    function momentFormView(form) {
+    function momentFormView(form, requireEditable = true) {
         const {box, moments} = momentSelector();
         const index = ["Crystal axes", "Cartesian", "Spherical"].indexOf(form);
         if (box.currentIndex !== index)
@@ -197,8 +197,8 @@ TestCase {
         const modulus = findChild(row, crystalAxes ? "atomSiteMoment.modulus.0" : "atomSiteMoment.formModulus.0");
         const editors = (crystalAxes ? ["mx", "my", "mz"] : ["form.0", "form.1", "form.2"])
             .map(name => findChild(row, "atomSiteMoment." + name + ".0"));
-        verify(editors.every(cell => cell && cell.visible && cell.enabled && !cell.readOnly),
-               form + " presents three editable coordinates on the general site");
+        verify(editors.every(cell => cell && cell.visible && (!requireEditable || (cell.enabled && !cell.readOnly))),
+               form + " presents all three coordinates on the general site");
         return {box, moments, table, headers, modulus, editors};
     }
     function readMomentToken(text) {
@@ -215,7 +215,7 @@ TestCase {
     }
     function twoDigitSuUnit(su) {
         const unit = Math.pow(10, Math.floor(Math.log10(su)) - 1);
-        return Math.round(su / unit) === 100 ? 10 * unit : unit;
+        return Math.ceil(su / unit - 1e-9) === 100 ? 10 * unit : unit;
     }
     function test_magnetic_numeric_cells_draw_the_full_value_and_uncertainty() {
         Session.closeProject();
@@ -251,6 +251,123 @@ TestCase {
             }
         }
         compare(issues.length, 0, "Every cobalt cell draws its full value and uncertainty: " + issues.join("; "));
+    }
+    function covarianceMomentWitness(kind) {
+        Session.closeProject();
+        const project = Probe.readFile("tests/fixtures/magnetic_pnma/app-project/project.edi");
+        verify(project.length > 0 && SettingsProof.write(scratch, "project.edi", project + "\n_su_format.rule iucr_99\n"),
+               "The witness explicitly uses upward rounding to two uncertainty digits");
+        let structure = Probe.readFile("tests/fixtures/magnetic_pnma/moment-forms-monoclinic.edi");
+        if (kind === "fitted") {
+            structure = structure.replace("_cell.angle_beta 120", "_cell.angle_beta 120.0(20)");
+            const fit = Probe.readFile("tests/fixtures/magnetic_pnma/moment-known-covariance.edi");
+            verify(fit.length > 0 && SettingsProof.write(scratch, "analysis/analysis.edi", fit),
+                   "The project includes the independent fitted covariance record");
+        }
+        if (kind === "zero" || kind === "pole") {
+            structure = structure.replace("_cell.angle_beta 120", "_cell.angle_beta 90")
+                .replace(/^CoWitness 9\.92820323.*$/m, "CoWitness 0.0(1) 0.0(2) " +
+                         (kind === "pole" ? "2.0(3)" : "0.0(3)"));
+        }
+        verify(structure.length > 0 && SettingsProof.write(scratch, "structures/cosio.edi", structure),
+               "The scratch project carries the intended magnetic uncertainty witness");
+        verify(Session.openProject(scratch), "The independent moment and fit-record fixture opens: " + Session.lastError);
+        tryCompare(Session.project, "calculating", false, 15000, "The witness finishes calculating");
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
+                  10000, "The witness builds the production Structure workflow");
+    }
+    function momentTooltip(cell) {
+        return [cell, ...Render.descendants(cell)].map(item => item.ToolTip?.text)
+            .filter(Boolean).join(" ");
+    }
+    function displayedMomentUncertainty(text) {
+        const token = String(text).trim().match(/^[+−-]?\d+(?:\.(\d+))?\((\d+)\)(?:[eE]([+-]?\d+))?$/);
+        if (!token)
+            return null;
+        const unit = Math.pow(10, Number(token[3] || 0) - (token[1] || "").length);
+        return {value: Number(token[2]) * unit, unit};
+    }
+    function matchesRoundedMomentUncertainty(text, expected) {
+        const observed = displayedMomentUncertainty(text);
+        const unit = twoDigitSuUnit(expected);
+        const rounded = Math.ceil(expected / unit - 1e-9) * unit;
+        return observed !== null && Math.abs(observed.unit - unit) < 1e-12 &&
+            Math.abs(observed.value - rounded) < 1e-8;
+    }
+    function test_derived_moment_uncertainties_use_the_applicable_covariance_data() {
+        return [{tag: "fitted", kind: "fitted"}, {tag: "fallback", kind: "fallback"}];
+    }
+    function test_derived_moment_uncertainties_use_the_applicable_covariance(data) {
+        covarianceMomentWitness(data.kind);
+        const fitted = data.kind === "fitted";
+        if (fitted) {
+            const chart = Session.project.correlations;
+            tryCompare(chart, "available", 4, 3000, "The app reads all four independent fitted covariance axes");
+            const labels = Array.from(chart.labels);
+            const byName = name => labels.findIndex(label => label.endsWith(name));
+            const x = byName(".crystalaxis_x"), z = byName(".crystalaxis_z"), beta = byName(".angle_beta");
+            verify(Math.min(x, z, beta) >= 0, "The fit record contains moment components and the fitted beta");
+            const rho = (a, b) => chart.values[Math.max(a,b) * labels.length + Math.min(a,b)];
+            compare(rho(x, z), .55, "The fitted source retains the signed x–z correlation");
+            compare(rho(z, beta), -.35, "The fitted source retains the moment–cell correlation");
+        }
+        // At beta=120°, Cartesian (X,Y,Z)=(3,4,12). Differentiate
+        // (A + C cos beta, B, C sin beta) with respect to (A,B,C,beta in degrees).
+        const degree = Math.PI / 180;
+        const root3 = Math.sqrt(3);
+        const cartesian = [[1,0,-.5,-12*degree], [0,1,0,0], [0,0,root3/2,-4*root3*degree]];
+        // Gradients of modulus, polar and azimuthal angle in the Cartesian frame.
+        const spherical = [[3/13,4/13,12/13],
+                           [36/(5*169*degree),48/(5*169*degree),-5/(169*degree)],
+                           [-4/(25*degree),3/(25*degree),0]];
+        const compose = grad => cartesian[0].map((_, i) =>
+            grad.reduce((sum, value, j) => sum + value * cartesian[j][i], 0));
+        const su = [.1,.2,.3,fitted ? 2 : 0];
+        const correlations = [[1,-.25,.55,.2], [-.25,1,.15,.4],
+                              [.55,.15,1,-.35], [.2,.4,-.35,1]];
+        const uncertainty = grad => Math.sqrt(grad.reduce((variance, a, i) =>
+            variance + grad.reduce((sum, b, j) =>
+                sum + a * b * su[i] * su[j] * (i === j ? 1 : fitted ? correlations[i][j] : 0),
+                0), 0));
+        const errors = [];
+        function check(cell, expected, name) {
+            if (!matchesRoundedMomentUncertainty(cell.text, expected))
+                errors.push(name + " shows " + cell.text + ", expected s.u. " + expected.toFixed(6));
+            const tooltip = momentTooltip(cell);
+            const reason = fitted ? /covariance/i : /uncorrelated|independent/i;
+            if (!reason.test(tooltip))
+                errors.push(name + " tooltip lacks the uncertainty source: " + tooltip);
+        }
+        for (const [form, gradients, names] of [
+            ["Cartesian", cartesian, ["Mx", "My", "Mz"]],
+            ["Spherical", spherical.map(compose), ["Modulus", "Polar", "Azimuthal"]]
+        ]) {
+            const {editors, modulus} = momentFormView(form);
+            for (let i = 0; i < gradients.length; ++i)
+                check(editors[i], uncertainty(gradients[i]), form + " " + names[i]);
+            if (form === "Cartesian")
+                check(modulus, uncertainty(compose(spherical[0])), "Cartesian |M|");
+        }
+        const crystal = momentFormView("Crystal axes");
+        check(crystal.modulus, uncertainty(compose(spherical[0])), "Crystal axes |M|");
+        compare(errors.length, 0, "Every derived moment uses the applicable hand Jacobian propagation: " + errors.join("; "));
+    }
+    function test_undetermined_moment_angles_have_no_uncertainty_data() {
+        return [{tag: "zero", kind: "zero"}, {tag: "pole", kind: "pole"}];
+    }
+    function test_undetermined_moment_angles_have_no_uncertainty(data) {
+        covarianceMomentWitness(data.kind);
+        const {editors} = momentFormView("Spherical", false);
+        const angles = data.kind === "zero" ? [1, 2] : [2];
+        const errors = [];
+        for (const angle of angles) {
+            const cell = editors[angle];
+            const tooltip = momentTooltip(cell);
+            if (!/undetermined/i.test(cell.text + " " + tooltip) ||
+                displayedMomentUncertainty(cell.text) || /(?:s\.u\.|uncertainty)\s*[:=]?\s*[+−-]?\d/i.test(tooltip))
+                errors.push("angle " + angle + " shows " + cell.text + " with tooltip " + tooltip);
+        }
+        compare(errors.length, 0, "An undetermined spherical angle has no numeric s.u.: " + errors.join("; "));
     }
     function test_moment_form_layout_and_alignment() {
         openMonoclinicMomentWitness();
@@ -333,10 +450,8 @@ TestCase {
                 } else if (uncertainties) {
                     verify(Math.abs(token.unit - twoDigitSuUnit(uncertainties[axis])) < 1e-12,
                            form + " displays component " + axis + " at its propagated uncertainty precision");
-                    const tooltip = String(cell.ToolTip.text);
-                    verify(/^s\.u\.\s+/.test(tooltip), form + " labels the propagated uncertainty");
-                    momentNear(readMomentToken(tooltip.replace(/^s\.u\.\s+/, "")), uncertainties[axis],
-                               form + " reports the independently propagated uncertainty of component " + axis);
+                    verify(matchesRoundedMomentUncertainty(cell.text, uncertainties[axis]),
+                           form + " renders the independently propagated uncertainty of component " + axis);
                 }
             }
             return editors;

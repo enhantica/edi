@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "structure_view_options.hpp"
 
+#include <optional>
+
 namespace edi_app {
 
 StructureViewOptions::StructureViewOptions(QObject* parent)
-    : QObject(parent), atom_view_options_(new OptionListModel(this)), moment_form_options_(new OptionListModel(this)) {
+    : QObject(parent),
+      atom_view_options_(new OptionListModel(this)),
+      moment_form_options_(new OptionListModel(this)),
+      moment_view_options_(new OptionListModel(this)) {
     atom_view_options_->setOptions({"covalent", "vdw", "ionic", "adp"});
     // Each shows its name from crysta's dictionary: Crystal axes, Cartesian, Spherical.
     moment_form_options_->setItemOptions("structure_view.moment_form", {"crystal_axes", "cartesian", "spherical"});
+    moment_view_options_->setItemOptions("structure_view.moment_view", {"through_atom", "from_centre", "from_surface"});
 }
 
 template <class T>
@@ -75,6 +81,10 @@ QString StructureViewOptions::atoms() const {
     switch (options_.atoms) {
         case edi::AtomSubset::AsymmetricUnit:
             return QStringLiteral("asymmetric");
+        case edi::AtomSubset::AsymmetricMagnetic:
+            return QStringLiteral("asymmetric_magnetic");
+        case edi::AtomSubset::MagneticAtoms:
+            return QStringLiteral("magnetic");
         case edi::AtomSubset::None:
             return QStringLiteral("none");
         case edi::AtomSubset::All:
@@ -83,11 +93,23 @@ QString StructureViewOptions::atoms() const {
     return QStringLiteral("all");
 }
 
+QStringList StructureViewOptions::atomChoices(bool magnetic) const {
+    if (magnetic) {
+        return {QStringLiteral("all"), QStringLiteral("asymmetric"), QStringLiteral("asymmetric_magnetic"),
+                QStringLiteral("magnetic"), QStringLiteral("none")};
+    }
+    return {QStringLiteral("all"), QStringLiteral("asymmetric"), QStringLiteral("none")};
+}
+
 void StructureViewOptions::setAtoms(const QString& atoms) {
     if (atoms == QLatin1String("all")) {
         assign(options_.atoms, edi::AtomSubset::All, &StructureViewOptions::atomsChanged);
     } else if (atoms == QLatin1String("asymmetric")) {
         assign(options_.atoms, edi::AtomSubset::AsymmetricUnit, &StructureViewOptions::atomsChanged);
+    } else if (atoms == QLatin1String("asymmetric_magnetic")) {
+        assign(options_.atoms, edi::AtomSubset::AsymmetricMagnetic, &StructureViewOptions::atomsChanged);
+    } else if (atoms == QLatin1String("magnetic")) {
+        assign(options_.atoms, edi::AtomSubset::MagneticAtoms, &StructureViewOptions::atomsChanged);
     } else if (atoms == QLatin1String("none")) {
         assign(options_.atoms, edi::AtomSubset::None, &StructureViewOptions::atomsChanged);
     }
@@ -117,17 +139,26 @@ void StructureViewOptions::setMomentForm(const QString& form) {
     }
 }
 
-void StructureViewOptions::cycleAtoms(bool hasCopies) {
-    switch (options_.atoms) {
-        case edi::AtomSubset::All:
-            assign(options_.atoms, hasCopies ? edi::AtomSubset::AsymmetricUnit : edi::AtomSubset::None, &StructureViewOptions::atomsChanged);
+QString StructureViewOptions::momentView() const {
+    switch (options_.moment_view) {
+        case edi::MomentView::FromCentre:
+            return QStringLiteral("from_centre");
+        case edi::MomentView::FromSurface:
+            return QStringLiteral("from_surface");
+        case edi::MomentView::ThroughAtom:
             break;
-        case edi::AtomSubset::AsymmetricUnit:
-            assign(options_.atoms, edi::AtomSubset::None, &StructureViewOptions::atomsChanged);
-            break;
-        case edi::AtomSubset::None:
-            assign(options_.atoms, edi::AtomSubset::All, &StructureViewOptions::atomsChanged);
-            break;
+    }
+    return QStringLiteral("through_atom");
+}
+
+void StructureViewOptions::setMomentView(const QString& view) {
+    const auto chosen = view == QLatin1String("from_centre")    ? std::optional(edi::MomentView::FromCentre)
+                        : view == QLatin1String("from_surface") ? std::optional(edi::MomentView::FromSurface)
+                        : view == QLatin1String("through_atom") ? std::optional(edi::MomentView::ThroughAtom)
+                                                                : std::nullopt;
+    if (chosen.has_value()) {
+        moments_declared_ = moments_declared_ || *chosen != options_.moment_view;
+        assign(options_.moment_view, *chosen, &StructureViewOptions::momentViewChanged);
     }
 }
 
@@ -165,6 +196,7 @@ std::map<std::string, std::string> StructureViewOptions::toView() const {
         view["show_moments"] = flag(options_.moments);
         view["moment_scale"] = QString::number(options_.moment_scale, 'g', 6).toStdString();
         view["moment_form"] = moment_form_.toStdString();
+        view["moment_view"] = momentView().toStdString();
     }
     return view;
 }
@@ -196,7 +228,9 @@ void StructureViewOptions::setFromView(const std::map<std::string, std::string>&
     setShowMoments(flag("show_moments", defaults.moments));
     setMomentScale(number("moment_scale", defaults.moment_scale));
     setMomentForm(text("moment_form").isEmpty() ? QStringLiteral("crystal_axes") : text("moment_form"));
-    moments_declared_ = view.contains("show_moments") || view.contains("moment_scale") || view.contains("moment_form");
+    setMomentView(text("moment_view").isEmpty() ? QStringLiteral("through_atom") : text("moment_view"));
+    moments_declared_ = view.contains("show_moments") || view.contains("moment_scale") || view.contains("moment_form") ||
+                        view.contains("moment_view");
 }
 
 }  // namespace edi_app

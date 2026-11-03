@@ -27,19 +27,45 @@ Column {
     readonly property real ionWidth: EaStyle.Sizes.fontPixelSize * 5
     readonly property string form: options ? options.momentForm : "crystal_axes"
     readonly property bool crystalAxes: form === "crystal_axes"
-    // The |M| column's text: the modulus rounded by its s.u. under the project's rule.
-    function modulusText(parts) {
+    // Mx, My, Mz and |M| share one width; the symmetry column takes the rest (the owner, 2026-11-03).
+    readonly property real componentWidth: EaStyle.Sizes.fontPixelSize * 5.5
+    // That shared width: the widest value a table's cells have shown, with its s.u., so no value is cut short. Each
+    // value cell reports its whole text's width as it changes (a fit's new values change no model row, so the
+    // table's own fit is not redone); the width only grows.
+    function componentsWidth(table, widest) {
+        return Math.max(group.componentWidth, Math.ceil(widest) + table.autoColumnPadding / 2);
+    }
+    // The decimals a value shows as its cell writes it (up to six significant digits).
+    function decimalsOf(value) {
+        if (typeof value !== "number" || !isFinite(value))
+            return 0;
+        const text = String(Number(value.toPrecision(6)));
+        const point = text.indexOf(".");
+        return point < 0 || text.indexOf("e") >= 0 ? 0 : text.length - point - 1;
+    }
+    // A value derived from the moment (|M|, a Cartesian or spherical component): rounded by its s.u. under the
+    // project's rule, or without one to the most decimals the crystal-axis components show (the owner, 2026-11-03).
+    function derivedText(value, su, crystal) {
+        if (typeof value !== "number" || !isFinite(value))
+            return "";
+        const text = NumberText.ruled(value, su);
+        if (text)
+            return `${text.value}(${text.bracket})`;
+        const decimals = Math.max(0, ...(crystal ?? []).slice(0, 3).map(group.decimalsOf));
+        return value.toFixed(decimals);
+    }
+    // The |M| column's text, from the row's components in any form (index 6, its s.u. 7) and its crystal-axis ones.
+    function modulusText(parts, crystal) {
         if (!parts || parts.length < 8)
             return "";
-        const text = NumberText.ruled(parts[6], parts[7]);
-        return text ? text.bracket : Session.display("atom_site_moment.crystalaxis_x", parts[6]);
+        return group.derivedText(parts[6], parts[7], crystal);
     }
 
     spacing: AppSizes.groupContentSpacing
 
     SelectorField {
         objectName: "atomSiteMoments.form"
-        width: (EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing) / 2
+        width: EaStyle.Sizes.sideBarContentWidth
         uid: "structure_view.moment_form"
         options: group.options ? group.options.momentFormOptions : null
         token: group.form
@@ -54,9 +80,11 @@ Column {
         sourceModel: group.moments
 
         equalColumns: true
-        // The symmetry form wider than its text and right-aligned like the components, so it stands clear of Mz
-        // (the owner, 2026-11-03).
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, -1, textColumnWidth("symmform", Session.label("atom_site_moment.symmform")) + EaStyle.Sizes.fontPixelSize * 4]
+        // The symmetry form takes what the equal component columns leave, right-aligned like the components, so it
+        // stands clear of |M| (the owner, 2026-11-03).
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), components, components, components, components, -1]
+        readonly property real components: group.componentsWidth(table, widestValue)
+        property real widestValue: 0
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -85,12 +113,13 @@ Column {
                 uid: "atom_site_moment.crystalaxis_z"
             }
             EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: Text.AlignRight
                 text: "|M|"
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignRight
                 uid: "atom_site_moment.symmform"
+                text: qsTr("symmetry")
             }
         }
 
@@ -137,6 +166,8 @@ Column {
                 }
             }
             ParameterCell {
+                onImplicitWidthChanged: table.widestValue = Math.max(table.widestValue, implicitWidth)
+                Component.onCompleted: table.widestValue = Math.max(table.widestValue, implicitWidth)
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteMoment.mx.${row.index}`
@@ -147,6 +178,8 @@ Column {
                 helpToolTip: true
             }
             ParameterCell {
+                onImplicitWidthChanged: table.widestValue = Math.max(table.widestValue, implicitWidth)
+                Component.onCompleted: table.widestValue = Math.max(table.widestValue, implicitWidth)
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteMoment.my.${row.index}`
@@ -157,6 +190,8 @@ Column {
                 helpToolTip: true
             }
             ParameterCell {
+                onImplicitWidthChanged: table.widestValue = Math.max(table.widestValue, implicitWidth)
+                Component.onCompleted: table.widestValue = Math.max(table.widestValue, implicitWidth)
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteMoment.mz.${row.index}`
@@ -168,22 +203,29 @@ Column {
             }
             // The moment's modulus, read only.
             TextCell {
+                property int columnAlignment: Text.AlignRight
+                onImplicitWidthChanged: table.widestValue = Math.max(table.widestValue, implicitWidth)
+                Component.onCompleted: table.widestValue = Math.max(table.widestValue, implicitWidth)
+
                 objectName: `atomSiteMoment.modulus.${row.index}`
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: columnAlignment
                 readOnly: true
                 // Read again whenever a component's value or s.u. changes.
                 value: {
                     const changes = [row.mx, row.my, row.mz].map(item => item ? [item.value, item.uncertainty] : null);
-                    return row.magnetic && group.moments && changes && group.moments.revision >= 0 ? group.modulusText(group.moments.components(row.index, "crystal_axes")) : "";
+                    if (!row.magnetic || !group.moments || !changes || group.moments.revision < 0)
+                        return "";
+                    const parts = group.moments.components(row.index, "crystal_axes");
+                    return group.modulusText(parts, parts);
                 }
             }
             // Derived from the site and the magnetic group: read only. Aligned as the components are, so the table
             // treats it as a number column (DataTable.kindOf).
             TextCell {
-                readonly property bool number: true
+                property int columnAlignment: Text.AlignRight
 
                 objectName: `atomSiteMoment.symmform.${row.index}`
-                horizontalAlignment: Text.AlignRight
+                horizontalAlignment: columnAlignment
                 readOnly: true
                 value: row.symmform
             }
@@ -203,7 +245,10 @@ Column {
         readonly property var titles: spherical ? [qsTr("|M|"), qsTr("θ (deg)"), qsTr("φ (deg)")] : [qsTr("Mx (x ∥ a)"), qsTr("My"), qsTr("Mz (z ∥ c*)")]
 
         equalColumns: true
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.ionWidth, -1, -1, -1, -1]
+        // In spherical form the modulus is the first component, so the |M| column takes no width and is hidden.
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.ionWidth, components, components, components, spherical ? 0 : components, -1]
+        readonly property real components: group.componentsWidth(converted, widestValue)
+        property real widestValue: 0
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -231,8 +276,14 @@ Column {
                 text: converted.titles[2]
             }
             EaComponents.ListViewLabel {
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: Text.AlignRight
+                visible: !converted.spherical
                 text: "|M|"
+            }
+            HeaderLabel {
+                horizontalAlignment: Text.AlignRight
+                uid: "atom_site_moment.symmform"
+                text: qsTr("symmetry")
             }
         }
 
@@ -244,7 +295,10 @@ Column {
             required property var mx
             required property var my
             required property var mz
+            required property string symmform
             readonly property bool magnetic: ion !== "none"
+            // The crystal-axis components, whose decimals a derived value without an s.u. shows.
+            readonly property var crystal: parts.length > 0 && group.moments ? group.moments.components(index, "crystal_axes") : []
             // The moment in the chosen form, read again whenever a crystal-axis value or s.u. changes.
             readonly property var parts: {
                 const changes = [mx, my, mz].map(item => item ? [item.value, item.uncertainty] : null);
@@ -267,46 +321,64 @@ Column {
                 value: formRow.ion
             }
             TextCell {
-                readonly property bool number: true
+                property int columnAlignment: Text.AlignRight
+                onImplicitWidthChanged: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
+                Component.onCompleted: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
 
                 objectName: `atomSiteMoment.form.0.${formRow.index}`
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: columnAlignment
                 accepts: "number"
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
-                value: formRow.parts.length > 0 ? formRow.parts[0] : ""
+                value: formRow.parts.length > 0 ? group.derivedText(formRow.parts[0], formRow.parts[3], formRow.crystal) : ""
                 ToolTip.text: formRow.parts.length > 3 && isFinite(formRow.parts[3]) ? qsTr("s.u. %1").arg(Session.display("atom_site_moment.crystalaxis_x", formRow.parts[3])) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 0, Number(text))
             }
             TextCell {
-                readonly property bool number: true
+                property int columnAlignment: Text.AlignRight
+                onImplicitWidthChanged: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
+                Component.onCompleted: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
 
                 objectName: `atomSiteMoment.form.1.${formRow.index}`
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: columnAlignment
                 accepts: "number"
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
-                value: formRow.parts.length > 1 ? formRow.parts[1] : ""
+                value: formRow.parts.length > 1 ? group.derivedText(formRow.parts[1], formRow.parts[4], formRow.crystal) : ""
                 ToolTip.text: formRow.parts.length > 4 && isFinite(formRow.parts[4]) ? qsTr("s.u. %1").arg(Session.display("atom_site_moment.crystalaxis_x", formRow.parts[4])) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 1, Number(text))
             }
             TextCell {
-                readonly property bool number: true
+                property int columnAlignment: Text.AlignRight
+                onImplicitWidthChanged: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
+                Component.onCompleted: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
 
                 objectName: `atomSiteMoment.form.2.${formRow.index}`
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: columnAlignment
                 accepts: "number"
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
-                value: formRow.parts.length > 2 ? formRow.parts[2] : ""
+                value: formRow.parts.length > 2 ? group.derivedText(formRow.parts[2], formRow.parts[5], formRow.crystal) : ""
                 ToolTip.text: formRow.parts.length > 5 && isFinite(formRow.parts[5]) ? qsTr("s.u. %1").arg(Session.display("atom_site_moment.crystalaxis_x", formRow.parts[5])) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 2, Number(text))
             }
             TextCell {
+                property int columnAlignment: Text.AlignRight
+                onImplicitWidthChanged: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
+                Component.onCompleted: converted.widestValue = Math.max(converted.widestValue, implicitWidth)
+
                 objectName: `atomSiteMoment.formModulus.${formRow.index}`
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: columnAlignment
+                visible: !converted.spherical
                 readOnly: true
-                value: group.modulusText(formRow.parts)
+                value: group.modulusText(formRow.parts, formRow.crystal)
+            }
+            TextCell {
+                property int columnAlignment: Text.AlignRight
+
+                horizontalAlignment: columnAlignment
+                readOnly: true
+                value: formRow.symmform
             }
         }
     }

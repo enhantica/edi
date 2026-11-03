@@ -114,6 +114,14 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
                     }
                 }
             }
+            // A moment's components name their site as its own parameters do (the owner, 2026-11-03).
+            for (const auto& moment : structure->atom_site_moment) {
+                if (moment->id.value() == site->id.value()) {
+                    for (const edi::Parameter* parameter : moment->parameters()) {
+                        element.emplace(parameter, site->type_symbol);
+                    }
+                }
+            }
         }
     }
     // An ADP's label and units for its site's declared type, from the dictionary's variants.
