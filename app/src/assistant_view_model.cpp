@@ -2026,11 +2026,13 @@ struct AssistantViewModel::State {
     }
     // Clearing or rebinding the session ends its trial without a rollback: the candidate is dropped for good.
     void retire_trial() noexcept {if(project)try{project->fit()->dropCandidate();}catch(...){}}
+    // A failed startup reopen keeps its saved association: a later Open or Create does not forget it.
+    bool startup_reopen_kept=false;
     void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
     // The automatic reopen of the last conversation at startup failed. It is retired, so Connect no longer repeats it;
     // the saved association is kept; the reason is shown in plain words; and the ordinary Connect ChatGPT offer,
     // with its consent to exactly what is shared, is the way on. Nothing connects or approves a context by itself.
-    void startup_reopen_failed(const QString& reason) noexcept {
+    void startup_reopen_failed(const QString reason) noexcept {
         try {
             // Nothing of the failed reopen may continue behind Connect: no resume of it, no pending selection.
             const auto target=restore_last_target;
@@ -2041,18 +2043,27 @@ struct AssistantViewModel::State {
             sessions_loading=false;
             retire_startup_restore();
             startup_restore_observation["reopen_failure"]=reason;
-            error=sessions_error=QObject::tr("Your last conversation could not be reopened. %1 It is still listed in Sessions. Choose Connect ChatGPT to start a new conversation.").arg(reason);
+            const auto message=QObject::tr("Your last conversation could not be reopened. %1 It is still listed in Sessions. Choose Connect ChatGPT to start a new conversation.").arg(reason);
+            error=sessions_error=message;
+            // A connection the failed reopen had started is retired too, so the ordinary Connect offer is what remains.
+            startup_reopen_kept=true;
+            if(generic_connecting && !generic_authenticated) {
+                generic_fail(message);
+                // That failure must not leave a recovery of the failed reopen behind either.
+                resume_checkpoint.reset();generic_resuming=false;
+                return;
+            }
             notify();
         } catch(...) {}
     }
     // A conversation selection failed after it began (account check, project Open, preparation or continuation): it
-    // settles once, under its own operation, with the actual cause; the startup reopen also takes the path above.
-    // A manual Sessions selection keeps its own error and can be retried.
-    void settle_reopen_failure(quint64 operation,const QString& target,const QString& reason) noexcept {
+    // settles once, under its own operation, with the actual cause (fail_session_operation ends a startup reopen too).
+    // A manual Sessions selection also shows its error and can be retried.
+    void settle_reopen_failure(quint64 operation,const QString target,const QString reason) noexcept {
         const bool automatic=!target.isEmpty() && restore_last_target==target && operation==session_operation;
+        const QPointer<AssistantViewModel> receiver(&owner);
         fail_session_operation(operation,target,reason);
-        if(automatic)startup_reopen_failed(reason);
-        else if(operation==session_operation){try{error=reason;notify();}catch(...){}}
+        if(!automatic && receiver && receiver->state_.get()==this && operation==session_operation){try{error=reason;notify();}catch(...){}}
     }
 
     bool session_account_preflight=false;
@@ -2525,15 +2536,26 @@ struct AssistantViewModel::State {
         return std::isfinite(modified) && std::floor(modified)==modified &&
             modified>=-8640000000000.0 && modified<=8640000000000.0;
     }
-    void fail_session_operation(quint64 operation,const QString& target,const QString& reason) noexcept {
-        if(operation!=session_operation || (!sessions_loading && session_selection_target.isEmpty()) || (!target.isEmpty() && !session_selection_target.isEmpty() && session_selection_target!=target))return;
+    // By value: a caller may pass the selection fields this clears.
+    void fail_session_operation(quint64 operation,const QString target,const QString reason) noexcept {
+        // A startup reopen's failure ends that reopen even when its selection has already been cleared.
+        const bool startup=!target.isEmpty() && restore_last_target==target && operation==session_operation;
+        if(operation!=session_operation || (!sessions_loading && session_selection_target.isEmpty()) || (!target.isEmpty() && !session_selection_target.isEmpty() && session_selection_target!=target)) {
+            if(startup)startup_reopen_failed(reason);
+            return;
+        }
         sessions_loading=false;sessions_error=reason;
         if(!target.isEmpty() && session_selection_target==target) {
             session_selection_target.clear();session_restore_target.clear();session_account_preflight=false;session_preparation.reset();account_selection_wait.reset();session_account_target.clear();session_account_email.clear();
             session_opening_target.clear();session_opened_project.clear();session_opening_bound=false;
             if(resume_checkpoint && resume_checkpoint->thread==target){resume_checkpoint.reset();generic_resuming=false;}
         }
+        // A failed startup reopen ends there, whichever path failed it, if after this publication its selection still
+        // owns the startup reopen under the same operation.
+        const QPointer<AssistantViewModel> receiver(&owner);
         try {work_reports.changed();emit owner.sessionsChanged();}catch(...) {}
+        if(startup && receiver && receiver->state_.get()==this && operation==session_operation && restore_last_target==target)
+            startup_reopen_failed(reason);
     }
     bool session_request_current(const SessionRequest& request) const {
         return publishing && generic_authenticated && !generic_retiring && (request.kind=="history" || request.epoch==sessions_epoch) &&
@@ -12707,11 +12729,16 @@ struct AssistantViewModel::State {
         const auto settleTrial=qScopeGuard([this,trial,trialOwner]() noexcept {(void)settle_trial(trial,trialOwner,true);});
         // A failure of the startup reopen's account check (a refusal, a mismatch, a transport or reply failure) is
         // that reopen's failure too: it settles once with this cause and leaves the ordinary Connect offer.
-        const auto& startup=restore_last_target;
+        const auto startup=restore_last_target;const auto startupOperation=session_operation;
         const bool startupCheck=!startup.isEmpty() && restore_last_attempted &&
             (session_account_target==startup || session_restore_target==startup || session_selection_target==startup ||
              (resume_checkpoint && resume_checkpoint->thread==startup));
-        const auto settleStartup=qScopeGuard([this,startupCheck,explanation]() noexcept {if(startupCheck)startup_reopen_failed(explanation);});
+        const QPointer<AssistantViewModel> startupReceiver(&owner);
+        const auto settleStartup=qScopeGuard([this,startupCheck,startup,startupOperation,startupReceiver,explanation]() noexcept {
+            // Only while that reopen still owns the startup slot under its operation after this failure published.
+            if(startupCheck && startupReceiver && startupReceiver->state_.get()==this && restore_last_target==startup &&
+               session_operation==startupOperation)startup_reopen_failed(explanation);
+        });
         FileProjection projection;
         try {
             projection = file_projection();
@@ -16841,7 +16868,7 @@ struct AssistantViewModel::State {
             // Only the constructor's initial binding may precede startup selection.
             // A later unrelated ordinary Open/Create/Reset is a new user context.
             if(oldBinding!=0 && startup_restore_pending())retire_startup_restore();
-            if(!startup_restore_pending())forget_last_session();
+            if(!startup_restore_pending() && !startup_reopen_kept)forget_last_session();
         }
         if(!preserveSetup){resume_checkpoint.reset();generic_resuming=false;viewed_session.reset();}
 #endif
@@ -17688,7 +17715,7 @@ void AssistantViewModel::continueSessionRestore(const QString& id) {
                 !prepared.target || prepared.target->assistantProject()!=prepared.target_model)throw std::runtime_error("The prepared project Open owner changed before conversation selection");
             prepared.proof=original->file_projection();prepared.revision=original->controller->revision();prepared.disclosure->account=original->usage_epoch;
             original->offer_session_preparation();
-        } else (void)original->begin_saved_session(id);
+        } else if(!original->begin_saved_session(id))original->settle_reopen_failure(operation,id,original->saved_session_refusal);
     }}
     catch(const std::exception& failure) {if(receiver && receiver->state_.get()==original) {
         original->settle_reopen_failure(operation,id,original->bounded_error(QString::fromUtf8(failure.what())));
@@ -17760,11 +17787,11 @@ void AssistantViewModel::restoreLastSession() {
     }catch(const std::exception& failure) {if(receiver && receiver->state_.get()==original) {
         const auto reason=original->bounded_error(QString::fromUtf8(failure.what()));
         original->fail_session_operation(original->session_operation,original->session_selection_target,reason);
-        if(receiver && receiver->state_.get()==original)original->startup_reopen_failed(reason);
+        if(receiver && receiver->state_.get()==original && original->startup_restore_pending())original->startup_reopen_failed(reason);
     }}catch(...) {if(receiver && receiver->state_.get()==original) {
         const auto reason=tr("The cause was not reported; your draft is retained.");
         original->fail_session_operation(original->session_operation,original->session_selection_target,reason);
-        if(receiver && receiver->state_.get()==original)original->startup_reopen_failed(reason);
+        if(receiver && receiver->state_.get()==original && original->startup_restore_pending())original->startup_reopen_failed(reason);
     }}
 #endif
 }
