@@ -3782,6 +3782,9 @@ NB_MODULE(_edi, m) {
         })
         .def_prop_ro("f_squared_calc", [live_refln](const edi::PowderReflnDataBase& r) {
             return readonly_array(live_refln(r).f_squared_calc);
+        })
+        .def_prop_ro("f_squared_total_calc", [live_refln](const edi::PowderReflnDataBase& r) {
+            return readonly_array(live_refln(r).f_squared_total_calc);
         });
     nb::class_<edi::PowderCwlReflnData, edi::PowderReflnDataBase>(m, "PowderCwlReflnData")
         .def_prop_ro("two_theta",
