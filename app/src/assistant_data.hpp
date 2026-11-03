@@ -4,7 +4,9 @@
 #include "experiment_view_model.hpp"
 #include "experiment_models.hpp"
 #include "assistant_data_summary.hpp"
+#include <algorithm>
 #include <array>
+#include <optional>
 #include <QVariant>
 #include "../../core/src/assistant_json.hpp"
 #include "edi/display.hpp"
@@ -94,10 +96,12 @@ inline QJsonObject powder(const edi::PatternSource& source,std::size_t start,std
 // points and points without a usable sigma are left out.
 inline QJsonObject misfit(const edi::PatternSource& source,const QString& dataset_id,std::size_t regions=8,std::size_t peaks=5) {
     QJsonObject out{{"dataset_id",dataset_id},{"axis_kind",QString::fromStdString(source.x_item)},
-        {"axis_unit",unit(source.x_item.c_str())},{"current",source.current}};
+        {"axis_unit",unit(source.x_item.c_str())},{"current",source.current},{"coverage","adopted_fit"}};
     const auto total=source.x?source.x->size():std::size_t{};
     const auto sized=[total](const edi::PatternSource::Column& c){return c && c->size()==total;};
-    if(!total || !sized(source.meas) || !sized(source.calc)) {out["points"]=0;return out;}
+    if(!total || !sized(source.meas) || !sized(source.calc)) {
+        out["points"]=0;out["available"]=false;out["reason"]="no_measured_or_calculated_column";return out;
+    }
     const auto& x=*source.x;const auto& m=*source.meas;const auto& c=*source.calc;
     const bool has_bkg=sized(source.bkg),has_su=sized(source.su);
     std::vector<std::size_t> used;used.reserve(total);
@@ -113,7 +117,8 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
         sigma[i]=s;used.push_back(i);
     }
     out["points"]=index_number(used.size());
-    if(used.empty())return out;
+    out["available"]=!used.empty();
+    if(used.empty()){out["reason"]="no_usable_points";return out;}
     const auto weighted=[&](std::size_t i){return (m[i]-c[i])/sigma[i];};
     double square=0;for(const auto i:used)square+=weighted(i)*weighted(i);
     out["x_min"]=number(x[used.front()]);out["x_max"]=number(x[used.back()]);
@@ -138,47 +143,74 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
         QJsonObject background{{"quiet_points",index_number(quiet)}};
         if(quiet){background["weighted_mean"]=number(sum/quiet);background["weighted_rms"]=number(std::sqrt(sq/quiet));}
         out["background"]=background;
-        // Each reflection's peak: the points around it where the calculated peak stands above a tenth of its height.
-        struct Peak {double position=0,chi=0,ratio=0,shift=0,width=0;std::string phase;std::size_t start=0;bool widthKnown=false;};
-        std::vector<Peak> found;
+        // Each reflection's peak: the run of included points around it where the calculated peak stands above a
+        // tenth of its height. An excluded or unusable point ends the run, and a reflection whose nearest point is not
+        // included has no peak to measure. Overlapping runs are one combined peak: its numbers belong to all of its
+        // reflections together, never to one of them.
+        struct Support {std::size_t lo=0,hi=0;double position=0;std::string phase;};
+        std::vector<Support> supports;
         std::vector<std::size_t> place(total,used.size());
         for(std::size_t k=0;k<used.size();++k)place[used[k]]=k;
+        const auto joined=[&](std::size_t k){return used[k]+1==used[k+1];};  // no left-out point between k and k+1
         for(const auto& phase:source.phases) {
             if(!phase.position)continue;
             for(const double p:*phase.position) {
                 if(!std::isfinite(p) || p<x[used.front()] || p>x[used.back()])continue;
-                std::size_t near=0;double best=std::numeric_limits<double>::infinity();
-                for(std::size_t k=0;k<used.size();++k){const auto d=std::abs(x[used[k]]-p);if(d<best){best=d;near=k;}}
-                const double top=c[used[near]]-b[used[near]];
+                std::size_t near=total;double best=std::numeric_limits<double>::infinity();
+                for(std::size_t i=0;i<total;++i){const auto d=std::abs(x[i]-p);if(std::isfinite(d) && d<best){best=d;near=i;}}
+                if(near==total || place[near]==used.size())continue;
+                const auto at=place[near];
+                const double top=c[near]-b[near];
                 if(!(top>0))continue;
-                auto lo=near,hi=near;
-                while(lo>0 && c[used[lo-1]]-b[used[lo-1]]>0.1*top)--lo;
-                while(hi+1<used.size() && c[used[hi+1]]-b[used[hi+1]]>0.1*top)++hi;
-                if(std::any_of(found.begin(),found.end(),[&](const Peak& f){return f.start==lo;}))continue;
-                double chi=0,on=0,cn=0,om=0,cm=0;
-                for(auto k=lo;k<=hi;++k) {
-                    const auto i=used[k];const auto w=weighted(i);chi+=w*w;
-                    const auto o=std::max(0.0,m[i]-b[i]),q=std::max(0.0,c[i]-b[i]);on+=o;cn+=q;om+=o*x[i];cm+=q*x[i];
-                }
-                Peak peak;peak.position=p;peak.chi=chi;peak.phase=phase.structure_id;peak.start=lo;
-                if(cn>0)peak.ratio=on/cn;
-                if(on>0 && cn>0) {
-                    const auto oc=om/on,cc=cm/cn;double ov=0,cv=0;
-                    for(auto k=lo;k<=hi;++k){const auto i=used[k];
-                        ov+=std::max(0.0,m[i]-b[i])*(x[i]-oc)*(x[i]-oc);cv+=std::max(0.0,c[i]-b[i])*(x[i]-cc)*(x[i]-cc);}
-                    peak.shift=oc-cc;
-                    if(cv>0){peak.width=std::sqrt((ov/on)/(cv/cn));peak.widthKnown=true;}
-                }
-                found.push_back(peak);
+                auto lo=at,hi=at;
+                while(lo>0 && joined(lo-1) && c[used[lo-1]]-b[used[lo-1]]>0.1*top)--lo;
+                while(hi+1<used.size() && joined(hi) && c[used[hi+1]]-b[used[hi+1]]>0.1*top)++hi;
+                supports.push_back({lo,hi,p,phase.structure_id});
             }
         }
-        std::sort(found.begin(),found.end(),[](const Peak& a,const Peak& b){return a.chi>b.chi;});
+        std::sort(supports.begin(),supports.end(),[](const Support& l,const Support& r){return l.lo<r.lo || (l.lo==r.lo && l.hi<r.hi);});
+        struct Peak {std::size_t lo=0,hi=0;std::vector<double> positions;std::vector<std::string> phases;double chi=0;
+            std::optional<double> ratio,shift,width;};
+        std::vector<Peak> found;
+        for(const auto& support:supports) {
+            if(!found.empty() && support.lo<=found.back().hi) {
+                auto& last=found.back();last.hi=std::max(last.hi,support.hi);
+                last.positions.push_back(support.position);last.phases.push_back(support.phase);continue;
+            }
+            found.push_back({support.lo,support.hi,{support.position},{support.phase}});
+        }
+        for(auto& peak:found) {
+            double on=0,cn=0,om=0,cm=0;
+            for(auto k=peak.lo;k<=peak.hi;++k) {
+                const auto i=used[k];const auto w=weighted(i);peak.chi+=w*w;
+                const auto o=std::max(0.0,m[i]-b[i]),q=std::max(0.0,c[i]-b[i]);on+=o;cn+=q;om+=o*x[i];cm+=q*x[i];
+            }
+            if(cn>0)peak.ratio=on/cn;
+            // Without measured intensity above the background there is no observed centroid, so no shift or width.
+            if(on>0 && cn>0) {
+                const auto oc=om/on,cc=cm/cn;double ov=0,cv=0;
+                for(auto k=peak.lo;k<=peak.hi;++k){const auto i=used[k];
+                    ov+=std::max(0.0,m[i]-b[i])*(x[i]-oc)*(x[i]-oc);cv+=std::max(0.0,c[i]-b[i])*(x[i]-cc)*(x[i]-cc);}
+                peak.shift=oc-cc;
+                if(cv>0)peak.width=std::sqrt((ov/on)/(cv/cn));
+            }
+        }
+        std::sort(found.begin(),found.end(),[](const Peak& l,const Peak& r){return l.chi>r.chi;});
         QJsonArray worst;
         for(std::size_t k=0;k<found.size() && k<peaks;++k) {
             const auto& f=found[k];
-            QJsonObject peak{{"position",number(f.position)},{"phase_id",QString::fromStdString(f.phase)},
-                {"weighted_square_sum",number(f.chi)},{"intensity_ratio",number(f.ratio)},{"centroid_shift",number(f.shift)}};
-            if(f.widthKnown)peak["width_ratio"]=number(f.width);
+            QJsonObject peak{{"weighted_square_sum",number(f.chi)}};
+            if(f.positions.size()==1) {
+                peak["position"]=number(f.positions.front());peak["phase_id"]=QString::fromStdString(f.phases.front());
+            } else {
+                QJsonArray positions,phases;
+                for(std::size_t r=0;r<f.positions.size();++r){
+                    positions.append(number(f.positions[r]));phases.append(QString::fromStdString(f.phases[r]));}
+                peak["combined"]=true;peak["positions"]=positions;peak["phase_ids"]=phases;
+            }
+            if(f.ratio)peak["intensity_ratio"]=number(*f.ratio);
+            if(f.shift)peak["centroid_shift"]=number(*f.shift);
+            if(f.width)peak["width_ratio"]=number(*f.width);
             worst.append(peak);
         }
         out["worst_peaks"]=worst;
