@@ -638,10 +638,114 @@ TestCase {
         tryVerify(() => visibleShades().length === 2, 2000, "The magnetic legend control restores its curve and fill");
         chart.destroy();
     }
-    function openMagneticFitExample() {
-        const project = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"));
-        verify(Session.openProject(project), "The gate opens a disposable copy of the documented 2.3 K fit");
+    function openCobaltProject(example) {
+        const project = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/" + example + "/project"));
+        verify(Session.openProject(project), "The gate opens a disposable copy of the documented cobalt project");
         tryCompare(Session.project, "calculating", false, 15000, "The example's initial measured pattern finishes");
+        return project;
+    }
+    function openMagneticFitExample() {
+        return openCobaltProject("pd-neut-cwl_cosio-d20_2k");
+    }
+    function test_experiment_reflections_match_crysta_data() {
+        return [
+            {tag: "magnetic", example: "pd-neut-cwl_cosio-d20_2k", magnetic: true},
+            {tag: "nuclear", example: "pd-neut-cwl_cosio-d20", magnetic: false}
+        ];
+    }
+    function test_experiment_reflections_match_crysta(data) {
+        openCobaltProject(data.example);
+        tryVerify(() => appWindow.pagesWanted > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
+                  10000, "The new project's workflow pages finish rebuilding before navigation");
+        const text = SettingsProof.text(Probe.repoUrl("tests/fixtures/magnetic_pnma"), "reflection-table.json");
+        const expected = new Map(JSON.parse(text)[data.example].map(([hkl, ...values]) => [hkl, values]));
+        Ui.click(test, Probe, appWindow, "appBar.tab.experiment", true);
+        Ui.click(test, Probe, appWindow, "sideBar.tab.extras", true);
+        let extra = null;
+        tryVerify(() => {
+            extra = Review.findGroup(Ui.page(appWindow), "group.refln");
+            return extra !== null;
+        }, 5000, "Experiment Extra exposes the powder Reflections group");
+        extra.collapsed = false;
+        Ui.scrollIntoView(extra);
+        let table = null;
+        tryVerify(() => {
+            table = findChild(extra, "reflections.list");
+            return table !== null && table.headerItem !== null;
+        }, 5000, "The powder reflection table is rendered in the Experiment Extra group");
+        const cells = row => Array.from(row.contentRowData).filter(cell => typeof cell.text === "string" && cell.visible);
+        const titles = ["", "h k l", "d (Å)", "2θ (deg)", "F² calc"];
+        if (data.magnetic)
+            titles.push("|M⊥|² calc");
+        compare(cells(table.headerItem).map(cell => cell.text), titles,
+                "Experiment Extra labels the powder reflection columns with their crystallographic quantities and units");
+        tryCompare(table, "count", expected.size, 5000, "The table lists all reflections in crysta's independent loop");
+        if (data.magnetic) {
+            for (const hkl of ["1 0 0", "0 0 1"]) {
+                const reference = expected.get(hkl);
+                verify(reference && reference[2] === 0 && reference[3] > 0,
+                       "The crysta loop includes the nuclear-forbidden magnetic reflection " + hkl);
+            }
+        }
+        const seen = new Set();
+        for (let i = 0; i < table.count; ++i) {
+            table.positionViewAtIndex(i, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => Ui.rendered(table.itemAtIndex(i)), 1000, "Each reflection row is reachable after scrolling to row " + (i + 1));
+            const row = cells(table.itemAtIndex(i));
+            compare(row.length, titles.length, "The rendered reflection matches the column layout");
+            const hkl = row[1].text.trim().replace(/\s+/g, " ");
+            const reference = expected.get(hkl);
+            verify(reference && !seen.has(hkl), "Each rendered reflection matches one unique crysta row: " + hkl);
+            seen.add(hkl);
+            for (let column = 0; column < reference.length; ++column) {
+                const cell = row[column + 2];
+                const full = Number(cell.full);
+                const value = reference[column];
+                const tolerance = Math.abs(value) * 5.01e-6 + 1e-12;
+                verify(typeof cell.full === "string" && cell.full !== "" && Math.abs(full - value) <= tolerance,
+                       "The " + titles[column + 2] + " cell matches crysta's six-significant-digit loop for " + hkl);
+                if (column === 3) {
+                    verify(/^-?\d+\.\d{3}$/.test(cell.number) && Math.abs(Number(cell.number) - full) <= .00050001,
+                           "The magnetic squared factor uses the table's three-decimal number style for " + hkl);
+                }
+            }
+        }
+    }
+    function test_fitted_experiment_saves_magnetic_squared_factors() {
+        const project = openMagneticFitExample();
+        const factor = "_refln.m_perp_squared_calc";
+        verify(!SettingsProof.text(project, "experiments/d20.edi").includes(factor),
+               "The input experiment has no previously saved magnetic reflection loop");
+        const fit = Session.project.fit;
+        verify(fit.available, "The published 2.3 K example admits its fit");
+        fit.start();
+        tryVerify(() => !fit.running && fit.outcome !== "", 55000, "The app publishes the completed 2.3 K fit");
+        compare(fit.outcome, "success", "The 2.3 K fit succeeds before saving its experiment");
+        verify(Session.save(), "The app saves the fitted project into its disposable directory");
+        const lines = SettingsProof.text(project, "experiments/d20.edi").trim().split(/\r?\n/);
+        const first = lines.findIndex(line => line.trim() === "_refln.id");
+        verify(first >= 0, "The post-fit experiment file contains a calculated reflection loop");
+        const headings = [];
+        while (lines[first + headings.length]?.trim().startsWith("_refln."))
+            headings.push(lines[first + headings.length].trim());
+        const magnetic = headings.indexOf(factor);
+        verify(magnetic >= 0, "The post-fit experiment reflection loop saves the magnetic squared factor item");
+        const indices = ["h", "k", "l"].map(axis => headings.indexOf("_refln.index_" + axis));
+        const nuclear = headings.indexOf("_refln.f_squared_calc");
+        verify(indices.every(index => index >= 0) && nuclear >= 0, "The saved magnetic factors retain their reflection identities and nuclear factors");
+        const rows = new Map();
+        for (const line of lines.slice(first + headings.length)) {
+            const values = line.trim().split(/\s+/);
+            if (values.length !== headings.length || !/^\d+$/.test(values[0]))
+                break;
+            rows.set(indices.map(index => values[index]).join(" "), values);
+        }
+        for (const hkl of ["1 0 0", "0 0 1"]) {
+            const row = rows.get(hkl);
+            verify(row && Number(row[nuclear]) === 0 && Number(row[magnetic]) > 0,
+                   "The saved fit contains a positive magnetic factor for the nuclear-forbidden reflection " + hkl);
+        }
     }
     function checkAnalysisRows(table, block, category, variability, transition) {
         const model = table.sourceModel;
