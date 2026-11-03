@@ -17,8 +17,8 @@ _peak.broad_gauss_v -0.589718()
 _peak.broad_gauss_w 0.413007()
 _peak.broad_lorentz_x 0
 _peak.broad_lorentz_y 0.017548()
-_peak.asym_fcj_1 0.03()
-_peak.asym_fcj_2 0.02()
+_peak.asym_fcj_1 0()
+_peak.asym_fcj_2 0
 _peak.cutoff_fwhm 8
 
 _absorption.type cylinder-hewat

@@ -17,8 +17,10 @@
 - **Reference:** A. Sazonov et al., *Magnetic behaviour of synthetic Co₂SiO₄*, Acta Cryst. B65 (2009) 664–675.
 - **Excluded:** 0–6° and 150–180°, and 64.65–64.74°, which holds only the dead D20 detector cell at 64.6953°.
 - **Background:** sixteen points, none between 7.6° and 12.6°, so none sits under the first magnetic peak.
-- **Profile:** the Thompson-Cox-Hastings pseudo-Voigt with Finger-Cox-Jephcoat asymmetry, S/L and D/L free, which
-  describes the low-angle flank of the first magnetic peak.
+- **Profile:** the Thompson-Cox-Hastings pseudo-Voigt with Finger-Cox-Jephcoat asymmetry, which describes the
+  low-angle flank of the first magnetic peak. S/L and D/L share one free value (the analysis constrains D/L to S/L),
+  fitted from 0: the profile is symmetric under swapping them, so freed separately they trade off along a flat valley
+  and only their common value is determined. The fit gives 0.0619(9).
 - **Expected values:** `expected.json` holds FullProf's fit of the same pattern, background, profile and magnetic
   model (`knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/`, S/L and D/L held at crysta's fitted values): Rwp
   within 5 % of FullProf's 4.75 %, and the three well-determined moment components within 0.15 μB of FullProf's, about

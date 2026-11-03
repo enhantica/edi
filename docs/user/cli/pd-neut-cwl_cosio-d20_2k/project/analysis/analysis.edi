@@ -11,8 +11,11 @@ _alias.id
 _alias.parameter_unique_name
 biso_Co1 cosio.atom_site.Co1.adp_iso
 biso_Co2 cosio.atom_site.Co2.adp_iso
+sl d20.peak.asym_fcj_1
+dl d20.peak.asym_fcj_2
 
 loop_
 _constraint.id
 _constraint.expression
 biso_Co2 "biso_Co2 = biso_Co1"
+dl "dl = sl"
