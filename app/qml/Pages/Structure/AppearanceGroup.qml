@@ -33,7 +33,7 @@ SideBarGroup {
     Column {
         spacing: AppSizes.groupContentSpacing
 
-        // Two fields in equal columns, as ParameterGrid lays out the instrument's.
+        // Two fields in equal columns and rows spaced, as ParameterGrid lays out the instrument's.
         Grid {
             id: grid
 
@@ -41,6 +41,7 @@ SideBarGroup {
 
             columns: 2
             columnSpacing: AppSizes.inputSpacing
+            rowSpacing: AppSizes.groupContentSpacing
 
             SelectorField {
                 objectName: "structure.appearance.atomView"
@@ -80,36 +81,6 @@ SideBarGroup {
                 onAccepted: commit()
                 onEditingFinished: commit()
             }
-            // The moment arrows' length per Bohr magneton, beside the atom scale (the owner, 2026-11-03).
-            EaElements.ParamTextField {
-                id: momentScale
-
-                objectName: "structure.appearance.momentScale"
-                visible: group.structure !== null && group.structure.magnetic
-                width: grid.fieldWidth
-                parameter: group.options ? {
-                    "value": group.options.momentScale,
-                    "error": 0,
-                    "enabled": true,
-                    "fittable": false,
-                    "fit": false,
-                    "name": "moment_scale",
-                    "shortPrettyName": qsTr("Moment scale"),
-                    "units": "Å/μB"
-                } : ({})
-
-                // Above 0; anything else leaves the scale as it was.
-                function commit() {
-                    if (group.options !== null && text !== momentScale.value) {
-                        group.options.momentScale = Number(text);
-                        text = Qt.binding(() => momentScale.value);
-                    }
-                }
-
-                Component.onCompleted: FieldTitles.align(momentScale)
-                onAccepted: commit()
-                onEditingFinished: commit()
-            }
             // The ADP view sizes its ellipsoids by a probability, not a scale: its field takes the scale's place
             // (the owner, 2026-10-06; diffraction-lib's `adp_probability`, 0.99 by default).
             EaElements.ParamTextField {
@@ -138,6 +109,43 @@ SideBarGroup {
                 }
 
                 Component.onCompleted: FieldTitles.align(probability)
+                onAccepted: commit()
+                onEditingFinished: commit()
+            }
+            // Holds the left column so the moment scale sits below the atom scale.
+            Item {
+                visible: momentScale.visible
+                width: grid.fieldWidth
+                height: 1
+            }
+            // The moment arrows' length per Bohr magneton, in the right column below the atom scale (the owner,
+            // 2026-11-03).
+            EaElements.ParamTextField {
+                id: momentScale
+
+                objectName: "structure.appearance.momentScale"
+                visible: group.structure !== null && group.structure.magnetic
+                width: grid.fieldWidth
+                parameter: group.options ? {
+                    "value": group.options.momentScale,
+                    "error": 0,
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "name": "moment_scale",
+                    "shortPrettyName": qsTr("Moment scale"),
+                    "units": "Å/μB"
+                } : ({})
+
+                // Above 0; anything else leaves the scale as it was.
+                function commit() {
+                    if (group.options !== null && text !== momentScale.value) {
+                        group.options.momentScale = Number(text);
+                        text = Qt.binding(() => momentScale.value);
+                    }
+                }
+
+                Component.onCompleted: FieldTitles.align(momentScale)
                 onAccepted: commit()
                 onEditingFinished: commit()
             }

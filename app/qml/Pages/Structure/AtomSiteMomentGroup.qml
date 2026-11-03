@@ -29,7 +29,8 @@ Column {
         sourceModel: group.moments
 
         equalColumns: true
-        // The symmetry form a little wider than its text, so it stands clear of Mz (the owner, 2026-11-03).
+        // The symmetry form wider than its text and right-aligned like the components, so it stands clear of Mz
+        // (the owner, 2026-11-03).
         columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, textColumnWidth("symmform", Session.label("atom_site_moment.symmform")) + EaStyle.Sizes.fontPixelSize * 4]
 
         header: EaComponents.ListViewHeader {
@@ -59,7 +60,7 @@ Column {
                 uid: "atom_site_moment.crystalaxis_z"
             }
             HeaderLabel {
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: Text.AlignRight
                 uid: "atom_site_moment.symmform"
             }
         }
@@ -136,10 +137,13 @@ Column {
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits).arg("_atom_site_moment.crystalaxis_z") : ""
                 helpToolTip: true
             }
-            // Derived from the site and the magnetic group: read only.
+            // Derived from the site and the magnetic group: read only. Aligned as the components are, so the table
+            // treats it as a number column (DataTable.kindOf).
             TextCell {
+                readonly property bool number: true
+
                 objectName: `atomSiteMoment.symmform.${row.index}`
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: Text.AlignRight
                 readOnly: true
                 value: row.symmform
             }
