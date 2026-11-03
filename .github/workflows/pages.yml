@@ -47,7 +47,8 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/edi-wasm
-          key: wasm-toolchain-${{ runner.os }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tools/ci/wasm-toolchain.sh', 'pixi.lock') }}
+          # The same key as ci.yml's app-wasm job, so the two share one copy.
+          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
       - name: Prepare notebooks
         run: pixi run notebook-prepare
       - name: Mint a crysta installation token
