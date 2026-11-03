@@ -78,9 +78,22 @@ public:
             QVariantList points;
             for (const auto& point : series->points())
                 points.append(QVariantMap{{"x", point.x()}, {"y", point.y()}});
-            result.append(QVariantMap{{"name", series->objectName()}, {"points", points}});
+            result.append(QVariantMap{{"name", series->objectName()}, {"points", points}, {"color", series->color()}});
         }
         return result;
+    }
+    // Read the crystallography input to tick rendering before presentation can omit or bin a row.
+    Q_INVOKABLE QVariantList braggInputs(QObject* experiment, bool magnetic) const {
+        const auto* model = qobject_cast<edi_app::ExperimentViewModel*>(experiment);
+        if (!model) return {};
+        const auto& refln = model->experiment()->refln;
+        const auto& positions = refln.position.values();
+        const auto& intensity = magnetic ? refln.m_perp_squared_calc.values() : refln.f_squared_calc.values();
+        QVariantList points;
+        for (std::size_t i = 0; i < std::min(positions.size(), intensity.size()); ++i) {
+            if (intensity[i] > 0.0) points.append(positions[i]);
+        }
+        return points;
     }
     Q_INVOKABLE QVariantList measured(QObject* chart) const {
         QVariantList result;

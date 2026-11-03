@@ -409,4 +409,38 @@ Item {
             verify(Session.hasProject, Session.lastError);
         }
     }
+
+    TestCase {
+        name: "SequentialMagneticExample"
+        when: windowShown
+
+        function cleanup() {
+            Session.examples.searchText = "";
+            Session.examples.filterProperty = "purpose";
+            Session.examples.filterValue = "";
+        }
+        function test_catalogue_row_and_tags() {
+            const id = "pd-neut-cwl_cosio-d20_scan-213f";
+            const catalogue = Session.examples;
+            const countMatches = () => Array.from({length: catalogue.count},
+                (_, i) => catalogue.text(i, "exampleId")).filter(value => value === id).length;
+            compare(countMatches(), 1, "The extended magnetic scan has one bundled Examples entry");
+            const group = createTemporaryObject(examplesComponent, parent);
+            verify(group !== null, "The sequential entry uses the production Examples group");
+            catalogue.searchText = id;
+            catalogue.filterProperty = "structure";
+            catalogue.filterValue = "magnetic";
+            compare(countMatches(), 1, "The magnetic filter keeps the sequential magnetic entry");
+            let row = null;
+            tryVerify(() => {
+                row = Ui.find(group, "examples.open." + id);
+                return row !== null && Ui.exposed(row);
+            }, 5000, "The magnetic filter exposes the sequential example's real row");
+            for (const tag of ["Fitting", "Sequential", "pd", "neut", "cwl", "Bragg", "Crystal", "Magnetic"])
+                verify(row.tagLabels.includes(tag), "The sequential magnetic row carries the " + tag + " chip");
+            catalogue.filterProperty = "fittingMode";
+            catalogue.filterValue = "sequential";
+            compare(countMatches(), 1, "The sequential filter keeps the sequential magnetic entry");
+        }
+    }
 }

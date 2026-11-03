@@ -3,6 +3,7 @@ import QtTest
 import edi.app
 import EdiAcceptance 1.0
 import OnboardingAcceptance 1.0
+import PatternPolishAcceptance 1.0
 import ReportAcceptance 1.0
 import ProjectTextAcceptance 1.0
 import "UiInteraction.js" as Ui
@@ -464,69 +465,177 @@ TestCase {
         const filters = Probe.objectsWithProperty(Ui.page(appWindow), "categoryGroups");
         verify(filters.some(filter => filter.categoryGroups.some(row => row.key === "atom_site_moment" && /Magnetic moments/.test(row.title))), "The Analysis category uses the readable Magnetic moments title");
     }
+    function tickRows(chart) {
+        return PatternProof.series(chart, "chart.series.bragg.").filter(row =>
+            row.points.some(point => Number.isFinite(point.y)));
+    }
+    function tickLabels(chart) {
+        return Render.descendants(chart).filter(item =>
+            item.objectName === "chart.bragg.label" && item.visible);
+    }
+    function tickRowFor(rows, label) {
+        return rows.find(row => Math.abs(label.modelData.centre - row.points[0].y) < .5);
+    }
     function test_nuclear_and_magnetic_tick_rows_cover_the_independent_reflections() {
+        openMagneticFitExample();
         const chart = pattern.createObject(appWindow.contentItem, {experiment: Session.project.currentExperiment});
         verify(chart !== null && waitForPolish(chart), "The magnetic chart reaches the actual shared controller");
-        tryVerify(() => Probe.objectsWithProperty(chart, "braggLabels").length === 1, 5000, "The pattern uses one presentation controller");
         const controller = Probe.objectsWithProperty(chart, "braggLabels")[0];
+        verify(controller, "The pattern exposes its presentation controller");
         tryCompare(controller, "braggRows", 2, 5000, "A magnetic phase has separate nuclear and magnetic tick rows");
-        const expected = JSON.parse(SettingsProof.text(Probe.repoUrl("tests/fixtures/magnetic_pnma"), "magnetic-ticks.json"));
-        const series = Render.series(chart).filter(item => String(item.objectName).startsWith("chart.series.bragg.") && item.at !== undefined && item.count > 0);
-        const magneticRows = series.filter(row => {
-            const points = Array.from({length: row.count}, (_, i) => row.at(i).x);
-            return expected.every(angle => points.some(x => Math.abs(x - angle) < .0001));
-        });
-        compare(magneticRows.length, 1, "One tick series contains every independent magnetic reflection, including nuclear-forbidden peaks");
-        const magnetic = magneticRows[0];
-        const nuclear = series.find(row => row !== magnetic);
-        verify(nuclear !== undefined, "The nuclear tick series is present beside the magnetic series");
+        appWindow.update();
+        verify(waitForRendering(chart, 5000), "The chart renders after the tick rows are published");
+        tryVerify(() => tickRows(chart).length === 2 && tickLabels(chart).length === 2,
+                  5000, "Both tick series and their labels are populated");
+        const rows = tickRows(chart);
+        const labels = tickLabels(chart);
+        const magneticLabel = labels.find(item => item.segments.some(part => part.icon === "magnet"));
+        const nuclearLabel = labels.find(item => item.segments.some(part => part.icon === "layer-group"));
+        verify(magneticLabel && nuclearLabel, "Each tick series has its own visible structure or magnet icon");
+        const magnetic = tickRowFor(rows, magneticLabel);
+        const nuclear = tickRowFor(rows, nuclearLabel);
+        verify(magnetic && nuclear && magnetic !== nuclear, "Each label identifies a distinct populated tick row");
         verify(String(magnetic.color) !== String(nuclear.color), "The two tick series retain their distinct fill colours");
-        const rendered = Render.descendants(chart).filter(item => item.objectName === "chart.bragg.label" && item.visible);
-        const labelFor = row => rendered.find(item => Math.abs(item.modelData.centre - row.at(0).y) < .5);
-        const magneticLabel = labelFor(magnetic);
-        const nuclearLabel = labelFor(nuclear);
-        verify(magneticLabel && nuclearLabel, "Each tick series has a visible label at its own row");
+
+        const expected = JSON.parse(SettingsProof.text(Probe.repoUrl("tests/fixtures/magnetic_pnma"), "magnetic-ticks.json"));
+        const left = controller.xMin;
+        const right = controller.xMax;
+        const columns = Math.floor(controller.plotWidth * controller.devicePixelRatio);
+        verify(columns > 0 && right > left, "The rendered pattern has a nonempty pixel grid");
+        const column = x => Math.min(columns - 1, Math.floor((x - left) / (right - left) * columns));
+        const occupied = new Map();
+        for (const [row, label] of [[magnetic, magneticLabel], [nuclear, nuclearLabel]]) {
+            const ticks = [];
+            for (const point of row.points) {
+                if (Number.isFinite(point.x) && point.y < label.modelData.centre)
+                    ticks.push(column(point.x));
+            }
+            occupied.set(row, new Set(ticks));
+            compare(occupied.get(row).size, ticks.length, "A row draws at most one tick per pixel column");
+        }
+        const eligible = angle => left <= angle && angle <= right &&
+            !expected.excluded.some(([lo, hi]) => lo <= angle && angle <= hi);
+        const visible = expected.reflections.filter(({angle}) => eligible(angle));
+        for (const hkl of ["1,0,0", "0,0,1"])
+            verify(visible.some(peak => String(peak.hkl) === hkl), "The view includes the nuclear-forbidden control " + hkl);
+        verify(new Set(visible.map(({angle}) => column(angle))).size < visible.length,
+               "Independent reflections exercise at least one shared pixel column");
+        const missing = visible.filter(({angle}) => !occupied.get(magnetic).has(column(angle)));
+        compare(missing.length, 0, "Every visible independent magnetic reflection has a tick in its column: " +
+                missing.map(({hkl, angle}) => "(" + hkl + ") at " + angle).join(", "));
+        for (const [row, isMagnetic] of [[magnetic, true], [nuclear, false]]) {
+            const input = PatternProof.braggInputs(Session.project.currentExperiment, isMagnetic).filter(eligible);
+            verify(input.length > 0, "The crystallography engine supplies unbinned reflections for each tick row");
+            const expectedColumns = new Set(input.map(column));
+            const actualColumns = occupied.get(row);
+            const missingColumns = [...expectedColumns].filter(index => !actualColumns.has(index));
+            compare(missingColumns.length, 0,
+                    "Every eligible " + (isMagnetic ? "magnetic" : "nuclear") + " input reflection is represented in its row");
+        }
         compare(magneticLabel.segments.find(part => part.text !== undefined)?.text, "cosio", "The magnetic tick row shows the phase name without a magnetic suffix");
         compare(nuclearLabel.segments.find(part => part.text !== undefined)?.text, "cosio", "The nuclear tick row shows the same phase name");
-        const magnet = magneticLabel.segments.find(part => part.icon !== undefined);
-        const structure = nuclearLabel.segments.find(part => part.icon !== undefined);
-        compare(magnet?.icon, "magnet", "A magnet icon identifies the magnetic row");
-        compare(structure?.icon, "layer-group", "A structure icon identifies the nuclear row");
-        compare(String(magnet.color), String(structure.color), "The magnet uses the same phase colour as its nuclear structure icon");
+        const magnet = magneticLabel.segments.find(part => part.icon === "magnet");
+        const structure = nuclearLabel.segments.find(part => part.icon === "layer-group");
+        compare(String(magnet.color), String(magnetic.color), "The magnet icon matches its own magnetic tick shade");
+        compare(String(structure.color), String(nuclear.color), "The structure icon matches its own nuclear tick shade");
         chart.destroy();
     }
     function test_phase_contributions_draw_two_independent_curves_and_fills() {
+        openMagneticFitExample();
         Preferences.structureCurves = true;
         Preferences.patternLegendShown = true;
-        const chart = pattern.createObject(appWindow.contentItem, {experiment: Session.project.currentExperiment});
+        const chart = pattern.createObject(appWindow.contentItem, {
+            experiment: Session.project.currentExperiment,
+            settingsPage: "pattern"
+        });
         verify(chart && waitForPolish(chart), "The contribution check uses the production chart");
+        const controller = Probe.objectsWithProperty(chart, "braggLabels")[0];
+        verify(controller, "The pattern exposes its presentation controller");
         const areas = () => Render.series(chart).filter(series => /^chart\.series\.structure\.\d+$/.test(series.objectName));
-        tryVerify(() => areas().length === 2 && areas().every(area => area.upperSeries.count > 0 && area.lowerSeries.count > 0), 5000, "One magnetic phase draws two populated contribution fills");
+        appWindow.update();
+        verify(waitForRendering(chart, 5000), "The chart renders after the phase fills are published");
+        tryVerify(() => areas().length === 2 && areas().every(area => area.upperSeries.count > 0 && area.lowerSeries.count > 0)
+                  && tickRows(chart).length === 2, 5000, "One magnetic phase draws two populated contribution fills and tick rows");
         const [first, second] = areas();
+        verify(controller.plotHeight > 0, "The contribution fills have a rendered plot height");
+        const lift = .05 * (controller.yMax - controller.yMin) / controller.plotHeight;
         for (const area of [first, second]) {
             verify(area.outline.count > 0 && area.outline.color.a > 0 && area.color.a > 0, "Each contribution draws a populated visible outline and a visible fill");
-            verify(area.upperSeries.count === area.outline.count, "Each contribution fill follows its own curve");
+            const edges = new Map();
+            for (let i = 0; i < area.upperSeries.count; ++i) {
+                const upper = area.upperSeries.at(i);
+                const lower = area.lowerSeries.at(i);
+                compare(upper.x, lower.x, "The two fill edges share the same horizontal sample");
+                if (!edges.has(upper.x))
+                    edges.set(upper.x, []);
+                edges.get(upper.x).push({upper: upper.y, base: lower.y});
+            }
+            function closesAt(x) {
+                const samples = edges.get(x) || [];
+                verify(samples.length > 1 && samples.some(edge =>
+                    Math.abs(edge.upper - edge.base - lift) < 1e-8),
+                    "The fill closes onto its base beside the gap at " + x + "°");
+            }
+            let previous = null;
+            let inGap = false;
+            let internalGaps = 0;
+            for (let i = 0; i < area.outline.count; ++i) {
+                const point = area.outline.at(i);
+                if (!Number.isFinite(point.y)) {
+                    if (previous && !inGap) {
+                        closesAt(previous.x);
+                        inGap = true;
+                    }
+                    continue;
+                }
+                if (inGap) {
+                    closesAt(point.x);
+                    ++internalGaps;
+                    inGap = false;
+                }
+                const matches = edges.get(point.x) || [];
+                verify(matches.some(edge => Math.abs(edge.upper - Math.max(point.y, edge.base + lift)) < 1e-8),
+                       "Each contribution fill follows its own curve at " + point.x + "°");
+                previous = point;
+            }
+            verify(internalGaps > 0, "The example exercises an internal fill closure");
         }
         verify(String(first.outline.color) !== String(second.outline.color), "Nuclear and magnetic contributions use different shades");
         const legend = findChild(chart, "chart.legend");
         verify(legend && legend.visible, "The real chart legend exposes the two phase controls");
-        const rows = Render.descendants(legend).filter(item => item.objectName === "chart.legend.entry" && item.visible && !item.bragg && item.segments.some(part => part.text === "cosio"));
+        const rows = Render.descendants(legend).filter(item => item.objectName === "chart.legend.entry" && item.visible && item.bragg && item.segments.some(part => part.text === "cosio"));
         compare(rows.length, 2, "The legend presents two independent controls for the same phase");
-        const ticks = Render.series(chart).filter(series => String(series.objectName).startsWith("chart.series.bragg.") && series.count > 0);
-        const tickLabels = Render.descendants(chart).filter(item => item.objectName === "chart.bragg.label" && item.visible);
+        const ticks = tickRows(chart);
+        const labels = tickLabels(chart);
         for (const glyph of ["layer-group", "magnet"]) {
-            const label = tickLabels.find(item => item.segments.some(part => part.icon === glyph));
+            const label = labels.find(item => item.segments.some(part => part.icon === glyph));
             const entry = rows.find(item => item.segments.some(part => part.icon === glyph));
             verify(label && entry, "The contribution and its tick row share the approved icon: " + glyph);
-            const tick = ticks.find(series => Math.abs(series.at(0).y - label.modelData.centre) < .5);
+            const tick = tickRowFor(ticks, label);
             verify(tick, "Each contribution icon identifies an actual populated tick series");
+            compare(String(entry.segments.find(part => part.icon === glyph).color), String(tick.color),
+                    "Each contribution control uses its tick row's shade");
             verify(areas().some(area => String(area.outline.color) === String(tick.color)), "Each contribution curve matches its tick shade");
         }
-        const magnetic = rows.find(item => item.segments.some(part => part.icon === "magnet"));
-        legend.toggled(magnetic.key);
-        tryVerify(() => areas().filter(area => area.outline.color.a > 0 && area.color.a > 0).length === 1, 2000, "The magnetic legend control hides one curve and fill independently");
-        legend.toggled(magnetic.key);
-        tryVerify(() => areas().every(area => area.outline.color.a > 0 && area.color.a > 0), 2000, "The magnetic legend control restores its curve and fill");
+        const magneticControl = () => Render.descendants(legend).find(item => item.objectName === "chart.legend.entry" &&
+            item.bragg && item.visible && item.segments.some(part => part.icon === "magnet"));
+        const nuclear = rows.find(item => item.segments.some(part => part.icon === "layer-group"));
+        const visibleShades = () => areas().filter(area => area.outline.color.a > 0 && area.color.a > 0 &&
+            area.outline.count > 0 && area.upperSeries.count > 0 && area.lowerSeries.count > 0 &&
+            Number.isFinite(area.outline.at(0).y) && Number.isFinite(area.upperSeries.at(0).y))
+            .map(area => String(area.outline.color));
+        function toggleMagnetic(hidden) {
+            const row = magneticControl();
+            verify(row && legend.toggleAt(row, row.width / 2, row.height / 2),
+                   "The production legend accepts the magnetic row's click position");
+            tryVerify(() => magneticControl()?.hidden === hidden, 2000,
+                      "The magnetic legend entry publishes its changed visibility state");
+        }
+        const nuclearShade = String(nuclear.color);
+        toggleMagnetic(true);
+        tryVerify(() => String(visibleShades()) === nuclearShade, 2000, "The magnetic legend control leaves only the nuclear curve and fill visible");
+        toggleMagnetic(false);
+        tryVerify(() => visibleShades().length === 2, 2000, "The magnetic legend control restores its curve and fill");
         chart.destroy();
     }
     function openMagneticFitExample() {

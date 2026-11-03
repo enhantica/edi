@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T13:33:10Z
+# measured_utc = 2026-11-03T15:11:53Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 166249 banked, 0 stale row(s) dropped)
-# Collected tests: 210350; with a reported duration: 70523
+# Recorded from: measured test run (1 node(s) measured once, 166249 banked, 0 stale row(s) dropped)
+# Collected tests: 210351; with a reported duration: 70523
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210350
+# inventory_python = 210351
 # inventory_cpp = 400
 # inventory_measured = 166249
-# inventory_unmeasured = 44501
+# inventory_unmeasured = 44502
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66948
+# inventory_pr_python = 66949
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -149408,6 +149408,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::te
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_worked_examples_are_in_documentation_navigation[pd-neut-cwl_cosio-d20_2k]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_worked_examples_are_in_documentation_navigation[pd-neut-cwl_cosio-d20_scan-213f]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_preview_example_background_leaves_the_first_magnetic_peak_unpinned
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_sequential_magnetic_example_has_a_tutorial_page
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[crysta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[edi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_every_expanded_moment_matches_the_published_axial_operations
