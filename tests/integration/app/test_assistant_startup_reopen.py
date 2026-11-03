@@ -140,24 +140,44 @@ def hold_account_reply(folder, name, account):
     }
 
 
-def connect_offer(actor):
-    if native._unique_input_control(actor.last, 'home.start') is not None:
-        actor.command('click', name='home.start')
-    actor.until(
+def connect_offer(actor, *, acknowledge_open_failure):
+    if acknowledge_open_failure:
+        actor.until(lambda _row: native.qml(actor, 'refusal.opened'))
+        delivery = actor.command('dialog_ok', name='refusal.dialog', role='ok')['reply']
+        assert delivery['pressed_changes'] > 0, (
+            'Required: acknowledge the ordinary Open refusal with its actual OK button.'
+        )
+        actor.until(lambda _row: not native.qml(actor, 'refusal.visible'))
+
+    ready = actor.until(
         lambda row: (
-            native._unique_input_control(row, 'assistant.connection', fully=True) is not None
+            native._unique_input_control(row, 'home.start') is not None
+            or native._unique_input_control(row, 'assistant.connection', fully=True) is not None
         )
     )
+    if native._unique_input_control(ready, 'home.start') is not None:
+        actor.command('click', name='home.start')
+        actor.until(
+            lambda row: (
+                native._unique_input_control(row, 'assistant.connection', fully=True) is not None
+            )
+        )
     actor.command('click', name='assistant.connection')
-    actor.until(native._original_context_disclosure_present)
-    return native.qml(
-        actor,
-        '(function(){const dialog=testAppObjects.snapshot().find(x=>'
-        'x&&typeof x.beginOffer==="function"&&x.opened&&x.assistant===Session.assistant);'
-        'return dialog?{title:dialog.title,offer:!!dialog.approvalOwner,'
-        'identity:dialog.disclosedContextIdentity,current:Session.assistant.contextConsentIdentity'
-        '}:null;})()',
+
+    def disclosure():
+        return native.qml(
+            actor,
+            '(function(){const dialog=testAppObjects.snapshot().find(x=>'
+            'x&&typeof x.beginOffer==="function"&&x.opened&&x.assistant===Session.assistant);'
+            'return dialog?{title:dialog.title,offer:!!dialog.approvalOwner,'
+            'identity:dialog.disclosedContextIdentity,current:Session.assistant.contextConsentIdentity'
+            '}:null;})()',
+        )
+
+    actor.until(
+        lambda row: native._original_context_disclosure_present(row) and disclosure() is not None
     )
+    return disclosure()
 
 
 def arm_reopen_retirement(actor, successor):
@@ -167,7 +187,8 @@ def arm_reopen_retirement(actor, successor):
         '\'import QtQuick; Item {objectName:"startup.retirement";property int hits:0;'
         "property bool opened:false}',window.contentItem);"
         'const retire=function(){'
-        'if(!w.hits&&(vm.lastError+vm.sessionsError).includes("unavailable or changed")){'
+        'if(!w.hits&&/unavailable or changed|moved, replaced or changed/.test('
+        'vm.lastError+vm.sessionsError)){'
         'w.hits++;vm.cancelSessionSelection();w.opened=Session.openProject('
         + json.dumps(successor.as_uri())
         + ');}};vm.lastErrorChanged.connect(retire);'
@@ -271,9 +292,12 @@ def observe_failure(folder, sources, thread, scenario):
                 and GENERIC_ACCOUNT_CHECK not in json.dumps(result)
             ):
                 try:
-                    result['offer'] = connect_offer(actor)
+                    result['offer'] = connect_offer(
+                        actor, acknowledge_open_failure=scenario in {'malformed', 'prepare'}
+                    )
                 except AssertionError as error:
                     result['offer_error'] = str(error)
+                result['offer_reads'] = native._session_wire(actor, 'account/read')
                 result['offer_threads'] = native._session_wire(actor, 'thread/start')
                 result['offer_turns'] = native._session_wire(actor, 'turn/start')
             return result
@@ -361,6 +385,7 @@ def assert_connect_requires_new_consent(receipt, *, reads=1):
         and offer.get('offer')
         and offer.get('identity')
         and offer['identity'] == offer.get('current')
+        and receipt['offer_reads'] == receipt['preconsent_reads']
         and not receipt['offer_threads']
         and not receipt['offer_turns']
     ), 'Required: the genuine Connect ChatGPT dialog offers exact scope before any new thread.'
@@ -374,7 +399,7 @@ def test_unavailable_startup_project_reports_reopen_cause_and_connects_a_new_thr
     assert result['association'] == expected, (
         'Required: the original thread association and its saved identity are preserved.'
     )
-    assert 'unavailable or changed' in result['sessions_error'] and not result['project'], (
+    assert 'moved, replaced or changed' in result['sessions_error'] and not result['project'], (
         'Required: report the changed original project without opening its replacement.'
     )
     assert_connect_requires_new_consent(result)
