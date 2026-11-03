@@ -74,29 +74,33 @@ def project(root, structure=None, experiment=None, *, show=True):
     return root
 
 
-def expansion():
+def expansion(source=None):
     """Apply the eight published diagonal operations, deduplicating each site."""
-    source = columns((ROOT / 'magnetic.edi').read_text())
+    if source is None:
+        source = columns((ROOT / 'magnetic.edi').read_text())
     xyz = np.array([source['_atom_site.fract_' + a] for a in 'xyz'], dtype=float).T
+    moments = np.array(
+        [source['_atom_site_moment.crystalaxis_' + axis] for axis in 'xyz'], dtype=float
+    ).T
     result = {}
-    for label, position, moment in zip(
-        ['Co1_1', 'Co2_1'], xyz[:2], [(0.7, 2.6, 0.3), (0, 2.97, 0)], strict=True
-    ):
+    for label, moment in zip(source['_atom_site_moment.label'], moments, strict=True):
+        position = xyz[source['_atom_site.id'].index(label)]
         for rotation, translation in zip(ROTATIONS, TRANSLATIONS, strict=True):
             point = np.round((rotation * position + translation) % 1, 9)
             result[label, *point] = np.prod(rotation) * rotation * moment
     return result
 
 
-def magnetic_squared(hkl, c2=0):
+def magnetic_squared(hkl, c2=0, *, source=None):
     """Physical sum in fm squared from the independent cell and expanded moments."""
-    source = columns((ROOT / 'magnetic.edi').read_text())
+    if source is None:
+        source = columns((ROOT / 'magnetic.edi').read_text())
     cell = np.array([float(source['_cell.length_' + a][0]) for a in 'abc'])
     reciprocal = np.asarray(hkl) / cell
     s = np.linalg.norm(reciprocal) / 2
     direction = reciprocal / np.linalg.norm(reciprocal)
     amplitude = np.zeros(3, dtype=complex)
-    for (_, x, y, z), moment in expansion().items():
+    for (_, x, y, z), moment in expansion(source).items():
         amplitude += moment * np.exp(2j * np.pi * np.dot(hkl, (x, y, z)))
     amplitude *= 2.695 * form_factor(s, c2) * np.exp(-0.269 * s * s)
     perpendicular = amplitude - np.dot(direction, amplitude) * direction
