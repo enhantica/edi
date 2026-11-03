@@ -505,7 +505,8 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     }
     source.phases = group_reflections(refln.structure_id.values(), refln.position.values(),
                                       refln.index_h.values(), refln.index_k.values(),
-                                      refln.index_l.values(), names);
+                                      refln.index_l.values(), names, refln.f_squared_calc.values(),
+                                      refln.m_perp_squared_calc.values());
     source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
                                               data.axis().size(), names);
     if (axis == PatternAxis::DSpacing) {
@@ -546,7 +547,9 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
                                                     std::span<const std::int32_t> index_h,
                                                     std::span<const std::int32_t> index_k,
                                                     std::span<const std::int32_t> index_l,
-                                                    std::span<const std::string> structure_names) {
+                                                    std::span<const std::string> structure_names,
+                                                    std::span<const double> f_squared,
+                                                    std::span<const double> m_perp_squared) {
     struct Building {
         PatternSource::Phase phase;
         std::vector<double> position;
@@ -555,26 +558,44 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
     std::vector<Building> building;
     const std::size_t rows = std::min({structure_id.size(), position.size(), index_h.size(),
                                        index_k.size(), index_l.size()});
-    for (std::size_t row = 0; row < rows; ++row) {
-        const std::string& id = structure_id[row];
+    const bool magnetic = m_perp_squared.size() >= rows && f_squared.size() >= rows && rows > 0;
+    std::size_t magnetic_places = 0;
+    const auto phase_of = [&](const std::string& key, const std::string& id, bool magnetic_phase) {
         auto found = std::find_if(building.begin(), building.end(),
-                                  [&](const Building& b) { return b.phase.structure_id == id; });
+                                  [&](const Building& b) { return b.phase.structure_id == key; });
         if (found == building.end()) {
             Building next;
-            next.phase.structure_id = id;
-            next.phase.label = id;
+            next.phase.structure_id = key;
+            next.phase.label = magnetic_phase ? id + " (magnetic)" : id;
             next.phase.place = building.size();
             for (std::size_t place = 0; place < structure_names.size(); ++place) {
                 if (structure_names[place] == id) {
                     next.phase.place = place;
                 }
             }
+            if (magnetic_phase) {
+                next.phase.place = std::max(structure_names.size(), building.size()) + magnetic_places++;
+            }
             building.push_back(std::move(next));
             found = building.end() - 1;
         }
-        found->position.push_back(position[row]);
-        found->hkl.push_back({index_h[row], index_k[row], index_l[row]});
-        found->phase.rows.push_back(row);
+        return found;
+    };
+    for (std::size_t row = 0; row < rows; ++row) {
+        const std::string& id = structure_id[row];
+        const bool nuclear = !magnetic || f_squared[row] > 0.0;
+        if (nuclear) {
+            auto found = phase_of(id, id, false);
+            found->position.push_back(position[row]);
+            found->hkl.push_back({index_h[row], index_k[row], index_l[row]});
+            found->phase.rows.push_back(row);
+        }
+        if (magnetic && m_perp_squared[row] > 0.0) {
+            auto found = phase_of(id + "/magnetic", id, true);
+            found->position.push_back(position[row]);
+            found->hkl.push_back({index_h[row], index_k[row], index_l[row]});
+            found->phase.rows.push_back(row);
+        }
     }
     std::vector<PatternSource::Phase> phases;
     phases.reserve(building.size());
@@ -582,7 +603,7 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
         b.phase.position = std::make_shared<const std::vector<double>>(std::move(b.position));
         b.phase.hkl =
             std::make_shared<const std::vector<std::array<std::int32_t, 3>>>(std::move(b.hkl));
-        if (building.size() == 1) {
+        if (building.size() == 1 && b.phase.rows.size() == rows) {
             b.phase.rows.clear();  // rows 0, 1, 2, …
         }
         phases.push_back(std::move(b.phase));
