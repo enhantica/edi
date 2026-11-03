@@ -94,9 +94,12 @@ inline QJsonObject powder(const edi::PatternSource& source,std::size_t start,std
 // contiguous regions, the background against the data where the calculated peaks are below half a sigma, and the
 // reflections whose peaks fit worst (their intensity, position and width against the measured peak). Excluded
 // points and points without a usable sigma are left out.
-inline QJsonObject misfit(const edi::PatternSource& source,const QString& dataset_id,std::size_t regions=8,std::size_t peaks=5) {
+// `coverage` names what computed the columns: an adopted fit ("adopted_fit") or the current calculation
+// ("calculation").
+inline QJsonObject misfit(const edi::PatternSource& source,const QString& dataset_id,std::size_t regions=8,std::size_t peaks=5,
+                          const char* coverage="adopted_fit") {
     QJsonObject out{{"dataset_id",dataset_id},{"axis_kind",QString::fromStdString(source.x_item)},
-        {"axis_unit",unit(source.x_item.c_str())},{"current",source.current},{"coverage","adopted_fit"}};
+        {"axis_unit",unit(source.x_item.c_str())},{"current",source.current},{"coverage",coverage}};
     const auto total=source.x?source.x->size():std::size_t{};
     const auto sized=[total](const edi::PatternSource::Column& c){return c && c->size()==total;};
     if(!total || !sized(source.meas) || !sized(source.calc)) {
@@ -156,6 +159,9 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
             if(!phase.position)continue;
             for(const double p:*phase.position) {
                 if(!std::isfinite(p) || p<x[used.front()] || p>x[used.back()])continue;
+                // A center inside an excluded region has no peak, wherever the region's edges fall between samples.
+                if(std::any_of(source.excluded.begin(),source.excluded.end(),
+                               [p](const auto& band){return p>=band.x_min && p<=band.x_max;}))continue;
                 std::size_t near=total;double best=std::numeric_limits<double>::infinity();
                 for(std::size_t i=0;i<total;++i){const auto d=std::abs(x[i]-p);if(std::isfinite(d) && d<best){best=d;near=i;}}
                 if(near==total || place[near]==used.size())continue;

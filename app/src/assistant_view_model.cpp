@@ -9115,6 +9115,23 @@ struct AssistantViewModel::State {
         inspection->data_view=view;inspection->data_member=member.get();inspection->data_generation=generation;
         return {{"data",data}};
     }
+    // The misfit of every powder pattern from the columns its current calculation published, marked coverage
+    // "calculation"; empty while a calculation or fit runs, without a project, or if a pattern cannot be read.
+    QJsonArray calculation_misfit() const {
+        QJsonArray out;
+        if(!project || project->calculating() || project->fit()->nativeRunning())return out;
+        auto* model=project->assistantProject();
+        if(!model)return out;
+        try {
+            for(std::size_t i=0;i<model->experiments.size();++i) {
+                const auto& member=model->experiments[i];
+                if(member->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL)continue;
+                out.append(assistant_data::misfit(edi::capture_pattern(*model,i),
+                    QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value())),8,5,"calculation"));
+            }
+        } catch(...) {return {};}
+        return out;
+    }
     bool native_data_current(const std::shared_ptr<NativeReceipt>& inspection) const {
         if(!inspection || !inspection->data_member)return true;
         const auto view=inspection->data_view;
@@ -9264,7 +9281,13 @@ struct AssistantViewModel::State {
             }
             if(name=="inspect_data")read_result=native_data_slice(args,inspection);
             else read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
-            if(name=="diagnostics")read_result["native_state"]=context.value("native_state");
+            if(name=="diagnostics") {
+                read_result["native_state"]=context.value("native_state");
+                // Calculate's misfit (the 2026-11-02 record names fit and calculate results): every powder pattern
+                // as its current calculation left it.
+                const auto calculated=calculation_misfit();
+                if(!calculated.isEmpty())read_result["misfit"]=calculated;
+            }
         }
         if(!native_prepare(rpc, id, name, purpose, original))return;
         if (inspecting) {

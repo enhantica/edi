@@ -64,7 +64,7 @@ inline void complete_result_maximum(QJsonObject& maximum) {
     constexpr auto code=maximum_result_code();
     maximum.insert("code",QLatin1StringView(code.data(),static_cast<qsizetype>(code.size())));
 }
-enum class Type { Text, FitReason, ActionError, ActionField, RecipeField, RecipeReason, RecipeGuidance, Number, Boolean, Object, Array, TextArray };
+enum class Type { Text, FitReason, ActionError, ActionField, RecipeField, RecipeReason, RecipeGuidance, Number, Boolean, Object, Array, TextArray, NumberArray };
 struct Field { const char* name; Type type; Role child=Role::Result; };
 inline const Field* fields(Role role, std::size_t& count) {
 #define ROWS(...) static constexpr Field rows[]={__VA_ARGS__}; count=std::size(rows); return rows
@@ -106,10 +106,10 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Fit: { ROWS(T("status"),B("converged"),N("reduced_chi_square"),N("iterations"),B("objective_unavailable")); }
     case Role::FitCorrelations: { ROWS(T("source"),T("fit_attempt"),T("call_id"),T("model_currentness"),B("pairs_available"),A("pairs",FitCorrelation)); }
     case Role::FitCorrelation: { ROWS(T("parameter_unique_name_i"),T("parameter_unique_name_j"),N("correlation")); }
-    case Role::Misfit: { ROWS(T("dataset_id"),T("axis_kind"),T("axis_unit"),B("current"),N("points"),N("x_min"),N("x_max"),N("weighted_rms"),A("regions",MisfitRegion),O("background",MisfitBackground),A("worst_peaks",MisfitPeak)); }
+    case Role::Misfit: { ROWS(T("dataset_id"),T("axis_kind"),T("axis_unit"),B("current"),T("coverage"),B("available"),T("reason"),N("points"),N("x_min"),N("x_max"),N("weighted_rms"),A("regions",MisfitRegion),O("background",MisfitBackground),A("worst_peaks",MisfitPeak)); }
     case Role::MisfitRegion: { ROWS(N("x_from"),N("x_to"),N("points"),N("weighted_rms"),N("weighted_mean")); }
     case Role::MisfitBackground: { ROWS(N("quiet_points"),N("weighted_mean"),N("weighted_rms")); }
-    case Role::MisfitPeak: { ROWS(N("position"),T("phase_id"),N("weighted_square_sum"),N("intensity_ratio"),N("centroid_shift"),N("width_ratio")); }
+    case Role::MisfitPeak: { ROWS(N("position"),T("phase_id"),B("combined"),Field{"positions",Type::NumberArray},Field{"phase_ids",Type::TextArray},N("weighted_square_sum"),N("intensity_ratio"),N("centroid_shift"),N("width_ratio")); }
     case Role::ReaderFacts: { ROWS(N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma")); }
     case Role::SelectedText: { ROWS(T("file_id"),T("collection_id"),T("generation"),T("encoding"),T("text"),N("total_bytes"),N("start"),N("end"),N("next_offset"),B("eof"),B("complete")); }
     case Role::DataInspection: { ROWS(T("view"),O("summary",DataSummary),T("dataset_id"),T("sample_form"),T("source"),T("captured_revision"),T("publication_generation"),T("row_space"),T("publication"),B("current"),B("available"),B("shape_valid"),N("native_row_count"),N("requested_start"),N("requested_count"),B("calculating"),B("fitting"),T("calculation_error"),B("calculation_error_present"),B("calculation_error_complete"),T("axis_kind"),T("axis_unit"),N("total"),N("start"),N("count"),N("end"),B("eof"),A("columns",DataColumn),A("rows",DataRow),A("phases",DataPhase)); }
@@ -189,12 +189,13 @@ inline QJsonValue field_value(const QJsonValue& value,const Field& field,quint64
         if(!value.isBool())throw std::invalid_argument("Outgoing fact has an invalid native type");
         add(size,value.toBool()?4:5);return materialize?value:QJsonValue();
     case Type::Object:return walk(value,field.child,size,materialize);
-    case Type::Array:case Type::TextArray: {
+    case Type::Array:case Type::TextArray:case Type::NumberArray: {
         if(!value.isArray())throw std::invalid_argument("Outgoing rows have an invalid native type");
         QJsonArray result;add(size,2);bool comma=false;
         for(const auto& item:value.toArray()) {
             if(comma)add(size,1);comma=true;
-            const auto projected=field.type==Type::TextArray?field_value(item,Field{"",Type::Text},size,materialize):walk(item,field.child,size,materialize);
+            const auto projected=field.type==Type::TextArray?field_value(item,Field{"",Type::Text},size,materialize):
+                field.type==Type::NumberArray?field_value(item,Field{"",Type::Number},size,materialize):walk(item,field.child,size,materialize);
             if(materialize)result.append(projected);
         }
         return materialize?QJsonValue(result):QJsonValue();
