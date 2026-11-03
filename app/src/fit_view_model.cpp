@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "fit_view_model.hpp"
 
+#include <utility>
 #include <QFileInfo>
 #include <QPointer>
 #include <QScopeGuard>
@@ -429,6 +430,7 @@ void FitViewModel::close() {
     invalidateFitUndo();
     accepted_fit_.reset();
     starting_ = undo_target_ = {};
+    candidate_ = accepted_restored_ = stop_rollback_ = false;
     latest_attempt_ = submitted_attempt_ = finished_attempt_ = native_attempt_ = 0;
     catch_up_.clear();
     caught_up_pending_ = false;
@@ -583,12 +585,28 @@ bool FitViewModel::undo() {
         if (owner_.retired_) return true;
         accepted_fit_ = target.attempt ? target.accepted : nullptr;
         undo_target_ = {};
+        candidate_ = false;
         setProgress(QString(), QString(), QString());
         setElapsed(QString());
         results_->setRecord(project_);
         return true;
     }
     return false;
+}
+
+bool FitViewModel::restoreAccepted() {
+    if (!candidate_ || !accepted_fit_ || running_ || owner_.retired_) return false;
+    edi::Project& project = project_;
+    const auto outcome = owner_.applyRecordedEdit(edi::Edit::restore_accepted(project, accepted_fit_), false);
+    if (owner_.retired_ || !outcome.applied) return false;
+    candidate_ = false;
+    results_->setRecord(project_);
+    return true;
+}
+
+void FitViewModel::restoreAcceptedOnStop() {
+    if (running_) stop_rollback_ = candidate_;
+    else (void)restoreAccepted();
 }
 
 void FitViewModel::sync() {
@@ -1046,6 +1064,11 @@ void FitViewModel::ended(const edi::FitReport& report) {
     const bool visible = !owner_.retired_;
     try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
     presenting_ = previous_presentation;
+    // An assistant fit that ends refused, failed or stopped leaves no candidate behind: the accepted state comes back.
+    accepted_restored_ = false;
+    const bool stopped = std::exchange(stop_rollback_, false);
+    if ((completion || stopped) && !failure && visible && (!report.adopted() || report.status == edi::FitStatus::CANCELLED))
+        try { accepted_restored_ = restoreAccepted(); } catch (...) {}
     // Even a presentation failure has a real completed optimizer/publication
     // report. Contain the internal callback independently of ordinary Qt signals.
     if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
@@ -1088,7 +1111,11 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
         if (owner_.retired_) return;
         if (submitted_single_joint_) {
             undo_target_ = starting_.attempt == attempt ? starting_ : UndoTarget{};
-            accepted_fit_ = std::make_shared<const edi::Project>(project_);
+            // A fit stopped part way is not accepted: a candidate it ends goes back to the accepted state.
+            if (report.status != edi::FitStatus::CANCELLED) {
+                accepted_fit_ = std::make_shared<const edi::Project>(project_);
+                candidate_ = false;
+            }
         }
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),

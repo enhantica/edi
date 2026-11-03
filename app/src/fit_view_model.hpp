@@ -262,6 +262,15 @@ class FitViewModel : public QObject {
     // The project closes: the fit stops and delivers nothing more. Before the worker goes.
     void close();
 
+    // An assistant trial: its first change after an accepted fit opens a candidate, which an accepted fit or an
+    // Undo closes. restoreAccepted puts the accepted state back over an open candidate (edi ADR-0055) and answers
+    // whether it did; restoreAcceptedOnStop does it now, or when a running fit ends. acceptedRestored: whether the
+    // last assistant fit's end did.
+    void markCandidate() noexcept { if (accepted_fit_) candidate_ = true; }
+    bool restoreAccepted();
+    void restoreAcceptedOnStop();
+    bool acceptedRestored() const noexcept { return accepted_restored_; }
+
    signals:
     void runningChanged();
     void continuableChanged();
@@ -327,6 +336,9 @@ class FitViewModel : public QObject {
     };
     std::shared_ptr<const edi::Project> accepted_fit_;
     UndoTarget starting_, undo_target_;
+    // Whether the assistant changed the project since the accepted fit (markCandidate), and whether the last
+    // assistant fit's end put the accepted state back (restoreAccepted).
+    bool candidate_ = false, accepted_restored_ = false, stop_rollback_ = false;
     bool presenting_ = false, submitted_single_joint_ = false;
     friend class AssistantViewModel;
     std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);

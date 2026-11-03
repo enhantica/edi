@@ -1540,62 +1540,79 @@ class Edit {
         return Edit([&project, before = std::move(before), accepted = std::move(accepted)] {
             Project restored = project;
             const bool undone = !restore_fit_start(restored).was_no_op;
-            const auto matches = [&restored](Project& kept) {
-                if (kept.experiments.size() != restored.experiments.size()) return false;
-                for (std::size_t i = 0; i < kept.experiments.size(); ++i)
-                    if (kept.experiments[i]->name.value() != restored.experiments[i]->name.value()) return false;
-                const auto to = parameter_entries(restored);
-                const auto from = parameter_entries(kept);
-                if (to.size() != from.size()) return false;
-                for (std::size_t i = 0; i < to.size(); ++i)
-                    if (to[i].path != from[i].path || !to[i].parameter || !from[i].parameter) return false;
-                return true;
-            };
-            std::optional<Project> target;
-            for (const auto& candidate : {accepted, before}) {
-                if (!undone || target || !candidate) continue;
-                Project kept = *candidate;
-                if (matches(kept)) target = std::move(kept);
-            }
-            std::vector<bool> flags;
-            std::optional<ItemVec<ParameterAlias>> aliases;
-            std::optional<ItemVec<ParameterConstraint>> constraints;
-            if (target) {
-                const auto to = parameter_entries(restored);
-                const auto from = parameter_entries(*target);
-                for (std::size_t i = 0; i < to.size(); ++i) {
-                    Parameter& into = *to[i].parameter;
-                    const Parameter& kept = *from[i].parameter;
-                    into.value = kept.value.get();
-                    into.uncertainty = kept.uncertainty.get();
-                    into.start_value = kept.start_value.get();
-                    into.start_uncertainty = kept.start_uncertainty.get();
-                    flags.push_back(kept.free.get());
-                }
-                std::vector<std::shared_ptr<ParameterAlias>> alias_rows;
-                for (const auto& row : target->aliases) alias_rows.push_back(std::make_shared<ParameterAlias>(*row));
-                std::vector<std::shared_ptr<ParameterConstraint>> constraint_rows;
-                for (const auto& row : target->constraints)
-                    constraint_rows.push_back(std::make_shared<ParameterConstraint>(*row));
-                aliases.emplace(std::move(alias_rows));
-                constraints.emplace(std::move(constraint_rows));
-                copy_fit_result(restored, *target);
-            }
-            if (!copy_parameter_states(project, restored)) {
-                throw std::logic_error("undo: the restored copy does not match the project");
-            }
-            if (target) {
-                const auto live = parameter_entries(project);
-                for (std::size_t i = 0; i < live.size() && i < flags.size(); ++i)
-                    live[i].parameter->free = static_cast<bool>(flags[i]);
-                project.aliases = std::move(*aliases);
-                project.constraints = std::move(*constraints);
-            }
-            copy_fit_result(project, restored);
+            restore_kept_state(project, std::move(restored), undone ? accepted : nullptr, undone ? before : nullptr);
+        });
+    }
+    // The accepted state put back when an assistant trial ends without one of its own (a Stop, a refused or cancelled
+    // fit; edi ADR-0055): from `accepted`, as undo_fit_to restores it. Refuses with nothing written when `accepted`
+    // no longer matches the project's experiments and parameters.
+    static Edit restore_accepted(Project& project, std::shared_ptr<const Project> accepted) {
+        return Edit([&project, accepted = std::move(accepted)] {
+            if (!accepted || !restore_kept_state(project, Project(project), accepted, nullptr))
+                throw std::invalid_argument("The accepted fit no longer matches this project");
         });
     }
 
    private:
+    // undo_fit_to's and restore_accepted's write: the first of `first` and `second` whose experiments and parameters
+    // match `restored` gives every parameter's value, s.u., free flag and saved fit start, the relations and the fit
+    // record; `restored` is then written onto `project`. Answers whether a state was found.
+    static bool restore_kept_state(Project& project, Project restored, std::shared_ptr<const Project> first,
+                                   std::shared_ptr<const Project> second) {
+        const auto matches = [&restored](Project& kept) {
+            if (kept.experiments.size() != restored.experiments.size()) return false;
+            for (std::size_t i = 0; i < kept.experiments.size(); ++i)
+                if (kept.experiments[i]->name.value() != restored.experiments[i]->name.value()) return false;
+            const auto to = parameter_entries(restored);
+            const auto from = parameter_entries(kept);
+            if (to.size() != from.size()) return false;
+            for (std::size_t i = 0; i < to.size(); ++i)
+                if (to[i].path != from[i].path || !to[i].parameter || !from[i].parameter) return false;
+            return true;
+        };
+        std::optional<Project> target;
+        for (const auto& candidate : {first, second}) {
+            if (target || !candidate) continue;
+            Project kept = *candidate;
+            if (matches(kept)) target = std::move(kept);
+        }
+        std::vector<bool> flags;
+        std::optional<ItemVec<ParameterAlias>> aliases;
+        std::optional<ItemVec<ParameterConstraint>> constraints;
+        if (target) {
+            const auto to = parameter_entries(restored);
+            const auto from = parameter_entries(*target);
+            for (std::size_t i = 0; i < to.size(); ++i) {
+                Parameter& into = *to[i].parameter;
+                const Parameter& kept = *from[i].parameter;
+                into.value = kept.value.get();
+                into.uncertainty = kept.uncertainty.get();
+                into.start_value = kept.start_value.get();
+                into.start_uncertainty = kept.start_uncertainty.get();
+                flags.push_back(kept.free.get());
+            }
+            std::vector<std::shared_ptr<ParameterAlias>> alias_rows;
+            for (const auto& row : target->aliases) alias_rows.push_back(std::make_shared<ParameterAlias>(*row));
+            std::vector<std::shared_ptr<ParameterConstraint>> constraint_rows;
+            for (const auto& row : target->constraints)
+                constraint_rows.push_back(std::make_shared<ParameterConstraint>(*row));
+            aliases.emplace(std::move(alias_rows));
+            constraints.emplace(std::move(constraint_rows));
+            copy_fit_result(restored, *target);
+        }
+        if (!copy_parameter_states(project, restored)) {
+            throw std::logic_error("undo: the restored copy does not match the project");
+        }
+        if (target) {
+            const auto live = parameter_entries(project);
+            for (std::size_t i = 0; i < live.size() && i < flags.size(); ++i)
+                live[i].parameter->free = static_cast<bool>(flags[i]);
+            project.aliases = std::move(*aliases);
+            project.constraints = std::move(*constraints);
+        }
+        copy_fit_result(project, restored);
+        return target.has_value();
+    }
     struct ResultOperation {};
     explicit Edit(std::function<void()> operation) : operation_(std::move(operation)) {}
     Edit(ResultOperation, std::function<AppliedResult()> operation) : result_operation_(std::move(operation)) {}

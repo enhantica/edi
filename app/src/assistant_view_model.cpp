@@ -8649,6 +8649,7 @@ struct AssistantViewModel::State {
                 result["fit_reason"] = QLatin1StringView(outgoing::unanchored_cw_dilation.data(),static_cast<qsizetype>(outgoing::unanchored_cw_dilation.size()));
             if (!report.refusal.empty()) result["message"] = bounded_error(QString::fromStdString(report.refusal));
             if(presented && report.adopted() && report.result)native_fit_diagnostics(result,original,completed_fit,*report.result);
+            if(completed_fit && completed_fit->acceptedRestored())result["accepted_restored"]=true;
             native_finish(presented && report.adopted() && report.status != edi::FitStatus::CANCELLED, result);
         } catch (...) {
             if (original_call()) native_finish(false, original.record->outcome);
@@ -8679,6 +8680,10 @@ struct AssistantViewModel::State {
         if(!admission.input_current())return false;
         if(account_confirmation_pending){if(agent)(void)agent->deferServerRequest(rpc,agent->outputGeneration());return false;}
         native_records.insert(record->key,record);
+        // A change after an accepted fit opens a trial candidate: a Stop or a refused fit puts the accepted state back
+        // (FitViewModel::restoreAccepted, edi ADR-0055).
+        static const QSet<QString> reads{"inspect_project","inspect_data","list_parameters","diagnostics","read_selected_file","acquire_inputs","show_report","save_project","undo_fit"};
+        if(project && !reads.contains(name))project->fit()->markCandidate();
         try {native_call.emplace(NativeCall{rpc,record,native_receipt});}
         catch(...){native_records.remove(record->key);throw;}
         return true;
@@ -9430,7 +9435,9 @@ struct AssistantViewModel::State {
         }
         if (name == "run_fit") {
             if (!project->fit()->available() || edi::is_scan_fitting_mode(edi::effective_fitting_mode(*project->assistantProject()))) {
-                native_finish(false, {{"status", "unavailable"}, {"message", "This native action supports an available single/joint fit only."}}); return;
+                Object refused{{"status", "unavailable"}, {"message", "This native action supports an available single/joint fit only."}};
+                if (project->fit()->restoreAccepted()) refused["accepted_restored"] = true;
+                native_finish(false, refused); return;
             }
             auto* handle = project->fit();
             QPointer<FitViewModel> captured = handle;
@@ -18717,6 +18724,13 @@ void AssistantViewModel::cancel() {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) {
         const QPointer<AssistantViewModel> self(this);
+        // A Stop ends the assistant's trial: the accepted fit's state comes back over its open candidate, or, while its
+        // fit is still stopping, when that fit ends (edi ADR-0055). Last, after the interruption is on its way: the
+        // restore is an edit, and an edit first would make this Stop see a changed project and return.
+        const QPointer<ProjectViewModel> trial(state_->project);
+        const auto restore = qScopeGuard([trial] {
+            if (trial) try { trial->fit()->restoreAcceptedOnStop(); } catch (...) {}
+        });
         const auto binding = state_->generation; const auto serial = state_->native_serial; const auto account = state_->usage_epoch;
         const auto entries = state_->native_records.size();
         const auto record = state_->native_call ? state_->native_call->record : nullptr;
