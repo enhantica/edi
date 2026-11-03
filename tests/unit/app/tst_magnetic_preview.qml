@@ -782,16 +782,21 @@ TestCase {
             }
             compare(hits, orbits.map(() => 1), context + " draws one instance per expected position or orbit");
         }
-        const combo = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+        let combo = null;
+        tryVerify(() => {
+            combo = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+            return combo !== null && combo.count > 0;
+        }, 5000, "The Atoms selector is exposed after the Structure toolbar settles");
         const entries = ["All", "Asymmetric unit (crystal)", "Asymmetric unit (magnetic)", "Magnetic atoms", "None"];
         const spheres = controller.spheres;
         verifySites(reference.all, Array.from({length: spheres.count}, (_, row) => xyz(spheres.instancePosition(row))),
                     reference.name + " default All atoms");
         Atoms.checkEntries(test, combo, entries);
+        Atoms.checkSelected(test, combo, "All");
         function select(index) {
             const label = entries[index];
             if (combo.currentText !== label)
-                change("atoms", "atoms", () => Atoms.select(test, appWindow, combo, label));
+                change("atoms", "atoms", () => Atoms.select(test, Probe, appWindow, combo, label));
         }
         function verifyView(index, moments, atomOrbits, arrowOrbits) {
             select(index);
@@ -910,7 +915,7 @@ TestCase {
         });
         for (const label of ["Asymmetric unit (crystal)", "Asymmetric unit (magnetic)", "Magnetic atoms", "None", "All"]) {
             const combo = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
-            Atoms.select(test, appWindow, combo, label);
+            Atoms.select(test, Probe, appWindow, combo, label);
             const selected = Session.project.structureViewOptions.atoms;
             verify(Session.save(), "The project saves with the selected Atoms view");
             Session.closeProject();
@@ -920,10 +925,15 @@ TestCase {
             tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted, 10000,
                       "The saved Structure pages rebuild before reading the Atoms selector");
             click("appBar.tab.structure");
+            tryVerify(() => Review.find(Ui.page(appWindow), "structure.view")?.current, 15000,
+                      "The reopened structure publishes current geometry");
+            let reopened = null;
             tryVerify(() => {
-                const reopened = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
-                return reopened && reopened.currentText === label;
-            }, 5000, "The toolbar restores the selected view after reload");
+                reopened = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+                return reopened !== null && reopened.count > 0;
+            }, 5000, "The reopened Structure toolbar exposes its Atoms selector");
+            tryCompare(reopened, "currentText", label, 2000, "The toolbar restores the selected view after reload");
+            Atoms.checkSelected(test, reopened, label);
         }
     }
     function test_analysis_contains_only_independent_magnetic_components() {

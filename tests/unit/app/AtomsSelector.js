@@ -8,15 +8,26 @@ function checkEntries(test, combo, expected) {
                  "The Atoms selector offers exactly the views for this structure");
 }
 
-function select(test, window, combo, label) {
-    if (combo.currentText === label)
+function checkSelected(test, combo, label) {
+    const shortLabels = {
+        "Asymmetric unit (crystal)": "Crystal AU",
+        "Asymmetric unit (magnetic)": "Magnetic AU",
+        "Magnetic atoms": "Magnetic"
+    };
+    test.compare(combo.currentText, label, "The selected Atoms option retains its full name");
+    test.compare(combo.displayText, shortLabels[label] || label,
+                 "The closed Atoms selector displays its short name");
+}
+
+function select(test, probe, window, combo, label) {
+    if (combo.currentText === label) {
+        checkSelected(test, combo, label);
         return;
+    }
     const index = Array.from({length: combo.count}, (_, row) => combo.textAt(row)).indexOf(label);
     test.verify(index >= 0, "The requested Atoms view is offered: " + label);
-    test.tryVerify(() => Ui.exposed(combo) && !Ui.moving(window.contentItem), 2000,
-                   "The Atoms selector is reachable after the toolbar settles");
-    test.mouseClick(combo, combo.width / 2, combo.height / 2);
-    test.tryCompare(combo.popup, "opened", true, 2000, "Pointer input opens the Atoms selector");
+    Ui.click(test, probe, window, "structure.toolbar.atoms", true);
+    test.tryCompare(combo.popup, "opened", true, 2000, "Pointer input opens the Atoms selector for " + label);
     const list = combo.popup.contentItem;
     test.tryVerify(() => list.itemAtIndex(index) && Ui.exposed(list.itemAtIndex(index)), 2000,
                    "The requested Atoms view is visible in the popup");
@@ -24,5 +35,6 @@ function select(test, window, combo, label) {
     test.compare(entry.text, label, "The visible Atoms choice carries the requested caption");
     test.mouseClick(entry, entry.width / 2, entry.height / 2);
     test.tryCompare(combo, "currentText", label, 2000, "Pointer input selects the requested Atoms view");
-    test.tryCompare(combo.popup, "opened", false, 2000, "The Atoms selector closes after selection");
+    test.tryCompare(combo.popup, "visible", false, 2000, "The Atoms popup leaves the input overlay after selection");
+    checkSelected(test, combo, label);
 }
