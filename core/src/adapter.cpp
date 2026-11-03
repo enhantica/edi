@@ -4687,6 +4687,16 @@ crysta::IterationCallback to_engine_callback(const IterationCallback& subscriber
     };
 }
 
+// What the fit will start away from 0 (crysta's zero-start table), one message each, for the preamble.
+template <typename Provider>
+std::vector<std::string> zero_start_messages(Provider& provider) {
+    std::vector<std::string> messages;
+    for (const crysta::ZeroStart& start : crysta::zero_starts(provider.labels(), provider.values())) {
+        messages.push_back(start.message);
+    }
+    return messages;
+}
+
 // The engine's parameter columns by edi identity path, through the resolver the fit's result is
 // translated with; empty where a label does not resolve (the result's translation then refuses the
 // fit). Only for a subscriber: with none, nothing is resolved.
@@ -5200,7 +5210,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // crossing. Single-bank path: `banks` empty, mode single (mirrors crysta).
             if (on_start) {
                 on_start(FitPreamble{/*joint=*/false, /*banks=*/{}, n_points_loaded, provider.n_data(),
-                                     provider.n_free(), pre_fit});
+                                     provider.n_free(), pre_fit, zero_start_messages(provider)});
             }
             const std::vector<std::string> paths =
                 identity_paths(on_iteration, provider.labels(), [this](const std::string& label) {
@@ -6003,7 +6013,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                     bank_names.push_back(bank_item->name);
                 }
                 on_start(FitPreamble{/*joint=*/true, std::move(bank_names), n_points_loaded,
-                                     provider.n_data(), provider.n_free(), pre_fit});
+                                     provider.n_data(), provider.n_free(), pre_fit, zero_start_messages(provider)});
             }
             const std::vector<std::string> paths =
                 identity_paths(on_iteration, provider.labels(), [this](const std::string& label) {

@@ -8,8 +8,10 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
+    'sidebar_categories_follow_crysta_dictionary_order',
     'extra_groups_are_single_ordered_and_human_readable',
     'main_order_all_sites_ids_ions_and_symmetry_form',
+    'monoclinic_moment_form_selector_edits_and_saves_crystal_axes',
     'symmetry_form_column_has_room_and_a_gap_after_mz',
     'magnetic_column_shows_none_and_aligns_each_choice',
     'moment_colour_preferences_offer_three_schemes',
@@ -48,7 +50,7 @@ def test_magnetic_preview_uses_rendered_production_controls(case):
         timeout=140
         if case.startswith(('fit_from_zero', 'analysis_filter_counts_survive'))
         else 90
-        if case.startswith('analysis_filter_counts')
+        if case.startswith(('analysis_filter_counts', 'visibility_keeps_camera'))
         else 45,
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
     )
