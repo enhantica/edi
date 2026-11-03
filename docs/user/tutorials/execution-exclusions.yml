@@ -22,6 +22,8 @@ excluded:
     unblocked_by: tutorial-runner
   - notebook: pd-neut-cwl_cosio-d20.ipynb
     unblocked_by: tutorial-runner
+  - notebook: pd-neut-cwl_cosio-d20_2k.ipynb
+    unblocked_by: tutorial-runner
   - notebook: pd-neut-cwl_lmo-echidna.ipynb
     unblocked_by: tutorial-runner
   - notebook: pd-neut-cwl_y2o3-spodi.ipynb

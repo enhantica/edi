@@ -23,6 +23,7 @@ lists each one with what it waits for.
 | [Rietveld fit: La₀.₅Ba₀.₅CoO₃, HRPT](pd-neut-cwl_lbco-hrpt.ipynb) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI |
 | [Rietveld fit: herbertsmithite, HRPT](pd-neut-cwl_hs-hrpt.ipynb) | ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI |
 | [Rietveld fit: Co₂SiO₄, D20](pd-neut-cwl_cosio-d20.ipynb) | Co₂SiO₄ [Pnma] · D20 @ ILL |
+| [Magnetic structure fit: Co₂SiO₄ at 2.3 K, D20](pd-neut-cwl_cosio-d20_2k.ipynb) | Co₂SiO₄ [Pnma.1] · D20 @ ILL |
 | [Rietveld fit: LiNiO₂, ECHIDNA](pd-neut-cwl_lmo-echidna.ipynb) | LiNiO₂ [R-3m] · ECHIDNA @ ANSTO |
 | [Rietveld fit: Y₂O₃, SPODI](pd-neut-cwl_y2o3-spodi.ipynb) | Y₂O₃ [Ia-3] · SPODI @ FRM II |
 | [Two-phase fit: YAlO₃ and Al₂O₃, SPODI](pd-neut-cwl_yalo3-al2o3-spodi.ipynb) | YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II |
