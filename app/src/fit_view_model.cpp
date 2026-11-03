@@ -430,7 +430,7 @@ void FitViewModel::close() {
     invalidateFitUndo();
     accepted_fit_.reset();
     starting_ = undo_target_ = {};
-    candidate_ = accepted_restored_ = stop_rollback_ = false;
+    candidate_ = stop_rollback_ = manual_since_accepted_ = false;
     latest_attempt_ = submitted_attempt_ = finished_attempt_ = native_attempt_ = 0;
     catch_up_.clear();
     caught_up_pending_ = false;
@@ -520,7 +520,7 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
     }
     submitted_single_joint_ = !scan;
     submitted_attempt_ = attempt; // The real submitted job owns this identity even if a later attempt refuses.
-    if (!scan) starting_ = {attempt, std::make_shared<const edi::Project>(project_), accepted_fit_};
+    if (!scan) starting_ = {attempt, std::make_shared<const edi::Project>(project_), accepted_fit_, !manual_since_accepted_};
     const bool admitted = job_->start(scan ? owner_.scanTemplate() : nullptr);
     if (!admitted && submitted_attempt_ == attempt) submitted_attempt_ = 0;
     if (owner_.retired_) return;
@@ -580,12 +580,23 @@ bool FitViewModel::undo() {
     // record, as diffraction-lib's does. Either way the accepted state is then the one before the undone fit.
     edi::Project& project = project_;
     const UndoTarget target = undo_target_.attempt == undo_attempt_ ? undo_target_ : UndoTarget{};
-    auto edit = input ? edi::Edit::undo_fit_to(project, target.before, target.accepted) : edi::Edit::undo_fit(project);
-    if (owner_.applyUndo(std::move(edit), false).isEmpty()) {
+    // With no manual edit since the accepted fit, the whole accepted project comes back in this one step, whatever
+    // the trial's setup changed (exclusions, background points and terms included); otherwise the project as the
+    // undone fit started, so a manual change is never overwritten.
+    const bool whole = input && target.accepted && target.owned;
+    auto edit = whole ? edi::Edit::replace_project(project, edi::Project(*target.accepted))
+                : input ? edi::Edit::undo_fit_to(project, target.before, nullptr) : edi::Edit::undo_fit(project);
+    const QPointer<FitViewModel> self(this);
+    restoring_ = true;
+    const bool undone = owner_.applyUndo(std::move(edit), whole).isEmpty();
+    if (!self) return undone;
+    restoring_ = false;
+    if (undone) {
         if (owner_.retired_) return true;
         accepted_fit_ = target.attempt ? target.accepted : nullptr;
         undo_target_ = {};
         candidate_ = false;
+        if (whole) manual_since_accepted_ = false;
         setProgress(QString(), QString(), QString());
         setElapsed(QString());
         results_->setRecord(project_);
@@ -594,19 +605,24 @@ bool FitViewModel::undo() {
     return false;
 }
 
-bool FitViewModel::restoreAccepted() {
-    if (!candidate_ || !accepted_fit_ || running_ || owner_.retired_) return false;
-    edi::Project& project = project_;
-    const auto outcome = owner_.applyRecordedEdit(edi::Edit::restore_accepted(project, accepted_fit_), false);
-    if (owner_.retired_ || !outcome.applied) return false;
-    candidate_ = false;
+bool FitViewModel::restoreAccepted(quint64 owner) {
+    if (!candidate_ || candidate_owner_ != owner || !accepted_fit_ || running_ || owner_.retired_) return false;
+    const auto accepted = accepted_fit_;
+    candidate_ = stop_rollback_ = false;
+    const QPointer<FitViewModel> self(this);
+    restoring_ = true;
+    const QString refusal = owner_.restoreProject(*accepted);
+    if (!self) return false;
+    restoring_ = false;
+    if (!refusal.isEmpty() || owner_.retired_) return false;
+    manual_since_accepted_ = false;
     results_->setRecord(project_);
     return true;
 }
 
-void FitViewModel::restoreAcceptedOnStop() {
-    if (running_) stop_rollback_ = candidate_;
-    else (void)restoreAccepted();
+void FitViewModel::restoreAcceptedOnStop(quint64 owner) {
+    if (running_) stop_rollback_ = candidate_ && candidate_owner_ == owner;
+    else (void)restoreAccepted(owner);
 }
 
 void FitViewModel::sync() {
@@ -1065,10 +1081,10 @@ void FitViewModel::ended(const edi::FitReport& report) {
     try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
     presenting_ = previous_presentation;
     // An assistant fit that ends refused, failed or stopped leaves no candidate behind: the accepted state comes back.
-    accepted_restored_ = false;
-    const bool stopped = std::exchange(stop_rollback_, false);
-    if ((completion || stopped) && !failure && visible && (!report.adopted() || report.status == edi::FitStatus::CANCELLED))
-        try { accepted_restored_ = restoreAccepted(); } catch (...) {}
+    // A fit the user's Stop interrupted after its assistant call had retired: the accepted state comes back now. An
+    // assistant fit still owned by its call is settled there (native_finish), with the result saying so.
+    if (std::exchange(stop_rollback_, false) && !completion && visible && (!report.adopted() || report.status == edi::FitStatus::CANCELLED))
+        try { (void)restoreAccepted(candidate_owner_); } catch (...) {}
     // Even a presentation failure has a real completed optimizer/publication
     // report. Contain the internal callback independently of ordinary Qt signals.
     if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
@@ -1114,7 +1130,7 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
             // A fit stopped part way is not accepted: a candidate it ends goes back to the accepted state.
             if (report.status != edi::FitStatus::CANCELLED) {
                 accepted_fit_ = std::make_shared<const edi::Project>(project_);
-                candidate_ = false;
+                candidate_ = manual_since_accepted_ = false;
             }
         }
         const edi::FitResultBase& result = *report.result;

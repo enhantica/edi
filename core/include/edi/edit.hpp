@@ -1543,18 +1543,8 @@ class Edit {
             restore_kept_state(project, std::move(restored), undone ? accepted : nullptr, undone ? before : nullptr);
         });
     }
-    // The accepted state put back when an assistant trial ends without one of its own (a Stop, a refused or cancelled
-    // fit; edi ADR-0055): from `accepted`, as undo_fit_to restores it. Refuses with nothing written when `accepted`
-    // no longer matches the project's experiments and parameters.
-    static Edit restore_accepted(Project& project, std::shared_ptr<const Project> accepted) {
-        return Edit([&project, accepted = std::move(accepted)] {
-            if (!accepted || !restore_kept_state(project, Project(project), accepted, nullptr))
-                throw std::invalid_argument("The accepted fit no longer matches this project");
-        });
-    }
-
    private:
-    // undo_fit_to's and restore_accepted's write: the first of `first` and `second` whose experiments and parameters
+    // undo_fit_to's write: the first of `first` and `second` whose experiments and parameters
     // match `restored` gives every parameter's value, s.u., free flag and saved fit start, the relations and the fit
     // record; `restored` is then written onto `project`. Answers whether a state was found.
     static bool restore_kept_state(Project& project, Project restored, std::shared_ptr<const Project> first,

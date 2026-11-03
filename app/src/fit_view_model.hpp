@@ -262,14 +262,19 @@ class FitViewModel : public QObject {
     // The project closes: the fit stops and delivers nothing more. Before the worker goes.
     void close();
 
-    // An assistant trial: its first change after an accepted fit opens a candidate, which an accepted fit or an
-    // Undo closes. restoreAccepted puts the accepted state back over an open candidate (edi ADR-0055) and answers
-    // whether it did; restoreAcceptedOnStop does it now, or when a running fit ends. acceptedRestored: whether the
-    // last assistant fit's end did.
-    void markCandidate() noexcept { if (accepted_fit_) candidate_ = true; }
-    bool restoreAccepted();
-    void restoreAcceptedOnStop();
-    bool acceptedRestored() const noexcept { return accepted_restored_; }
+    // An assistant trial (edi ADR-0055): an edit the assistant applied after an accepted fit opens a candidate owned by
+    // that assistant session (`owner`); an accepted fit or an Undo closes it, and a manual edit drops it, so a
+    // rollback never overwrites a change the trial did not make. restoreAccepted puts the whole accepted project
+    // back over the owner's open candidate as one Undo step and answers whether it did; restoreAcceptedOnStop does it
+    // now, or when a running fit ends.
+    void markCandidate(quint64 owner) noexcept {
+        if (accepted_fit_ && !restoring_) { candidate_ = true; candidate_owner_ = owner; }
+    }
+    void dropCandidate() noexcept {
+        if (!restoring_) { candidate_ = stop_rollback_ = false; manual_since_accepted_ = true; }
+    }
+    bool restoreAccepted(quint64 owner);
+    void restoreAcceptedOnStop(quint64 owner);
 
    signals:
     void runningChanged();
@@ -333,12 +338,13 @@ class FitViewModel : public QObject {
     struct UndoTarget {
         std::uint64_t attempt = 0;
         std::shared_ptr<const edi::Project> before, accepted;
+        bool owned = false;  // no manual edit since the accepted fit: Undo may put the whole accepted project back
     };
     std::shared_ptr<const edi::Project> accepted_fit_;
     UndoTarget starting_, undo_target_;
-    // Whether the assistant changed the project since the accepted fit (markCandidate), and whether the last
-    // assistant fit's end put the accepted state back (restoreAccepted).
-    bool candidate_ = false, accepted_restored_ = false, stop_rollback_ = false;
+    // Whether the assistant changed the project since the accepted fit (markCandidate), and which session did.
+    bool candidate_ = false, stop_rollback_ = false, manual_since_accepted_ = false, restoring_ = false;
+    quint64 candidate_owner_ = 0;
     bool presenting_ = false, submitted_single_joint_ = false;
     friend class AssistantViewModel;
     std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);

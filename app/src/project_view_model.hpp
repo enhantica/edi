@@ -400,6 +400,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Native batches and the existing manual relation/free editor share the same
     // preowned Undo and actual applied/publication boundary. No QML entry point.
     EditOutcome applyRecordedEdit(const edi::Edit& change, bool structural);
+    // The whole project put back to `accepted` (an assistant trial's rollback, edi ADR-0055): one structural edit
+    // and one Undo step, as a Text tab apply is, so a later Undo cannot split it. Empty, or why it was refused.
+    QString restoreProject(const edi::Project& accepted);
     EditOutcome changeBackgroundPoint(edi::ExperimentBase&, const edi::BackgroundPointInput&, bool native_bounded = false);
     BackgroundOutcome edit_background_point(edi::ExperimentBase&, const edi::BackgroundPointInput&) override;
     QString rename_background_point(edi::ExperimentBase&, edi::LineSegment&, const std::string&) override;

@@ -2012,6 +2012,18 @@ struct AssistantViewModel::State {
     QString restore_last_target;
     Object startup_restore_observation;
     bool startup_restore_pending() const {return restore_last_metadata_unavailable || !restore_last_target.isEmpty();}
+    // The session's trial ends: its candidate goes back to the accepted fit as this session's own edit, now or, on
+    // a Stop or a disconnect while its fit still runs, when that fit ends (edi ADR-0055). Answers whether it did now.
+    bool settle_trial(const QPointer<ProjectViewModel>& trial,quint64 owner,bool stopping) noexcept {
+        if(!trial)return false;
+        try {
+            const bool own=trial==project && owner==generation;
+            const auto id=own?begin_own_edit():0;
+            const auto done=qScopeGuard([this,id,own]{if(own)end_own_edit(id);});
+            if(stopping){trial->fit()->restoreAcceptedOnStop(owner);return false;}
+            return trial->fit()->restoreAccepted(owner);
+        }catch(...){return false;}
+    }
     void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
     // The automatic reopen of the last conversation at startup failed. A failed reopen never leaves the user without a
     // connection: it is retired (Connect no longer repeats it), the saved association is kept, the reason is shown,
@@ -8360,7 +8372,13 @@ struct AssistantViewModel::State {
         return typed ? NativeUndoFacts::Typed : NativeUndoFacts::Applied;
     }
     void native_finish(bool success, const Object& proposed_outcome) noexcept {
-        const Object& outcome=proposed_outcome;
+        // Every run_fit that ends without an accepted fit (refused, unavailable, not started, failed, stopped, or its
+        // presentation failed) ends the trial: the accepted project comes back over the candidate before the result
+        // is answered, and the result says so beside the attempt's own facts (edi ADR-0055).
+        Object settled=proposed_outcome;
+        if(!success && native_call && native_call->record && native_call->record->tool==QLatin1StringView("run_fit") &&
+           settle_trial(project,generation,false))settled["accepted_restored"]=true;
+        const Object& outcome=settled;
         if(native_call && native_call->record->estimate_receipt && native_call->record->estimate_receipt->applied)
             native_call->may_have_written=true;
         if (!native_call || native_call->finishing) return;
@@ -8648,8 +8666,10 @@ struct AssistantViewModel::State {
                 !report.result && !report.adopted())
                 result["fit_reason"] = QLatin1StringView(outgoing::unanchored_cw_dilation.data(),static_cast<qsizetype>(outgoing::unanchored_cw_dilation.size()));
             if (!report.refusal.empty()) result["message"] = bounded_error(QString::fromStdString(report.refusal));
-            if(presented && report.adopted() && report.result)native_fit_diagnostics(result,original,completed_fit,*report.result);
-            if(completed_fit && completed_fit->acceptedRestored())result["accepted_restored"]=true;
+            // A stopped fit's partial result is not accepted, so no fit details describe it.
+            if(presented && report.adopted() && report.result && report.status!=edi::FitStatus::CANCELLED)
+                native_fit_diagnostics(result,original,completed_fit,*report.result);
+
             native_finish(presented && report.adopted() && report.status != edi::FitStatus::CANCELLED, result);
         } catch (...) {
             if (original_call()) native_finish(false, original.record->outcome);
@@ -8680,10 +8700,6 @@ struct AssistantViewModel::State {
         if(!admission.input_current())return false;
         if(account_confirmation_pending){if(agent)(void)agent->deferServerRequest(rpc,agent->outputGeneration());return false;}
         native_records.insert(record->key,record);
-        // A change after an accepted fit opens a trial candidate: a Stop or a refused fit puts the accepted state back
-        // (FitViewModel::restoreAccepted, edi ADR-0055).
-        static const QSet<QString> reads{"inspect_project","inspect_data","list_parameters","diagnostics","read_selected_file","acquire_inputs","show_report","save_project","undo_fit"};
-        if(project && !reads.contains(name))project->fit()->markCandidate();
         try {native_call.emplace(NativeCall{rpc,record,native_receipt});}
         catch(...){native_records.remove(record->key);throw;}
         return true;
@@ -9435,9 +9451,7 @@ struct AssistantViewModel::State {
         }
         if (name == "run_fit") {
             if (!project->fit()->available() || edi::is_scan_fitting_mode(edi::effective_fitting_mode(*project->assistantProject()))) {
-                Object refused{{"status", "unavailable"}, {"message", "This native action supports an available single/joint fit only."}};
-                if (project->fit()->restoreAccepted()) refused["accepted_restored"] = true;
-                native_finish(false, refused); return;
+                native_finish(false, {{"status", "unavailable"}, {"message", "This native action supports an available single/joint fit only."}}); return;
             }
             auto* handle = project->fit();
             QPointer<FitViewModel> captured = handle;
@@ -12665,6 +12679,10 @@ struct AssistantViewModel::State {
         }
     }
     void generic_fail(const QString& explanation, CodexAgent::FailureKind kind = CodexAgent::FailureKind::Other) noexcept {
+        // A disconnect ends the session's trial too: its candidate goes back to the accepted fit once the failure is
+        // settled, or when a still running fit ends (edi ADR-0055).
+        const QPointer<ProjectViewModel> trial(project);const auto trialOwner=generation;
+        const auto settleTrial=qScopeGuard([this,trial,trialOwner]() noexcept {(void)settle_trial(trial,trialOwner,true);});
         FileProjection projection;
         try {
             projection = file_projection();
@@ -16677,6 +16695,10 @@ struct AssistantViewModel::State {
             });
             QObject::connect(target, &ProjectViewModel::projectEdited, &owner, [this, receiver, binding, bound_project, active] {
                 if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
+                // An edit this session applied opens or extends its trial candidate; any other edit is not the trial's,
+                // so no later rollback may overwrite it (edi ADR-0055).
+                if (applying_own_edit()) bound_project->fit()->markCandidate(binding);
+                else bound_project->fit()->dropCandidate();
                 auto publication = file_projection();
                 if (controller && !applying_own_edit()) {
 #ifndef __EMSCRIPTEN__
@@ -18727,9 +18749,9 @@ void AssistantViewModel::cancel() {
         // A Stop ends the assistant's trial: the accepted fit's state comes back over its open candidate, or, while its
         // fit is still stopping, when that fit ends (edi ADR-0055). Last, after the interruption is on its way: the
         // restore is an edit, and an edit first would make this Stop see a changed project and return.
-        const QPointer<ProjectViewModel> trial(state_->project);
-        const auto restore = qScopeGuard([trial] {
-            if (trial) try { trial->fit()->restoreAcceptedOnStop(); } catch (...) {}
+        const QPointer<ProjectViewModel> trial(state_->project);const auto trialOwner=state_->generation;
+        const auto restore = qScopeGuard([self,state=state_.get(),trial,trialOwner] {
+            if (self && self->state_.get()==state) (void)state->settle_trial(trial,trialOwner,true);
         });
         const auto binding = state_->generation; const auto serial = state_->native_serial; const auto account = state_->usage_epoch;
         const auto entries = state_->native_records.size();

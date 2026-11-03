@@ -4093,6 +4093,17 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     return {};
 }
 
+QString ProjectViewModel::restoreProject(const edi::Project& accepted) {
+    const PublicationScope publication(*this);
+    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) return pending;
+    auto before = std::make_shared<const edi::Project>(*project_);
+    const QString error = apply(edi::Edit::replace_project(*project_, edi::Project(accepted)), true);
+    if (!error.isEmpty()) return error;
+    undo_history_.emplace_back(AppliedText{std::move(before)});
+    syncUndo();
+    return {};
+}
+
 void ProjectViewModel::syncUndo() {
     if (retired_) return;
     // Nothing is undone while a fit runs, as nothing is edited then. A fit entry whose start state is gone
