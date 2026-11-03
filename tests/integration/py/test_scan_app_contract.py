@@ -15,20 +15,31 @@ ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
 
 
+def lexical_mask(text, *, strings=False):
+    # Match whole tokens in source order, so // and /* inside a quoted URL
+    # stay in the string. Blanking keeps original offsets and newlines.
+    pattern = (
+        r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'
+        r"'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`"
+    )
+
+    def mask(match):
+        token = match.group()
+        if strings or token.startswith(('//', '/*')):
+            return ''.join('\n' if char == '\n' else ' ' for char in token)
+        return token
+
+    return re.sub(pattern, mask, text, flags=re.DOTALL)
+
+
 def source(path):
-    return re.sub(r'//[^\n]*|/\*.*?\*/', '', (APP / path).read_text(), flags=re.DOTALL)
+    return lexical_mask((APP / path).read_text())
 
 
 def spans(text):
     # Mask complete lexical tokens before balancing: quoted braces and comment
     # apostrophes are not QML delimiters. Preserve offsets for caller slices.
-    masked = re.sub(
-        r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'
-        r"'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`",
-        lambda match: ' ' * len(match.group()),
-        text,
-        flags=re.DOTALL,
-    )
+    masked = lexical_mask(text, strings=True)
     stack, found = [], []
     for position, character in enumerate(masked):
         if character == '{':
@@ -48,26 +59,40 @@ def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
         'while retaining real nested objects'
     )
 
+    for comment in ("// owner's } quote\n", "/* owner's } ' quote */"):
+        source = 'Item { ' + comment + ' Child { value: 3 } }'
+        assert block(source, 'Item {') == source, (
+            'QML observers must ignore line and block comment apostrophes when balancing objects'
+        )
+    decoy = '// delegate: IconLine { fake }\ndelegate: IconLine { height: 7 }'
+    assert block(decoy, 'delegate: IconLine {') == 'delegate: IconLine { height: 7 }', (
+        'QML observers must locate the real declaration rather than a commented marker'
+    )
+    with pytest.raises(AssertionError, match='claimed operation'):
+        block('// delegate: IconLine { height: 7 }', 'delegate: IconLine {')
+    literal = 'Item {\n property string url: "https://host/a/*path*/"\n}'
+    assert property_value(literal, 'url') == '"https://host/a/*path*/"', (
+        'QML observers must preserve comment-like bytes inside quoted property values'
+    )
+    array = 'Item {\n model: [1, /* ] owner\'s " quote */ 2]\n}'
+    assert re.sub(r'\s+', '', property_value(array, 'model')) == '[1,2]', (
+        'QML observers must ignore commented brackets when balancing array properties'
+    )
+    with pytest.raises(pytest.fail.Exception, match='observed block must close'):
+        block('Item { Child { value: 3 }', 'Item {')
+
 
 def block(text, marker):
-    assert marker in text, (
+    masked = lexical_mask(text, strings=True)
+    assert marker in masked, (
         'Scan wiring: the claimed operation must exist in its effective component: ' + marker
     )
-    start = text.index(marker)
-    opening = text.index('{', start)
+    start = masked.index(marker)
+    opening = masked.index('{', start)
     depth = 0
-    quote = ''
-    escaped = False
-    for position in range(opening, len(text)):
-        character = text[position]
-        if quote:
-            if character == quote and not escaped:
-                quote = ''
-            escaped = character == '\\' and not escaped
-        elif character in '"\'`':
-            quote = character
-            escaped = False
-        elif character == '{':
+    for position in range(opening, len(masked)):
+        character = masked[position]
+        if character == '{':
             depth += 1
         elif character == '}':
             depth -= 1
@@ -101,7 +126,18 @@ def require(text, pattern, message):
     )
 
 
+def continued_expression(text, start):
+    end = text.index('\n', start)
+    line = text[start:end].strip()
+    for continuation in text[end + 1 :].splitlines():
+        if not continuation.lstrip().startswith(('?', ':')):
+            break
+        line += ' ' + continuation.strip()
+    return line
+
+
 def property_value(text, name):
+    text = lexical_mask(text)
     opening = text.find('{')
     nested = [(a, b) for a, b in spans(text) if a > opening]
     pattern = (
@@ -116,21 +152,17 @@ def property_value(text, name):
         if text[start] == '{':
             return block(text[start:], '{')
         if text[start] == '[':
-            depth, quote = 0, ''
-            for end in range(start, len(text)):
-                c = text[end]
-                if quote:
-                    if c == quote and text[end - 1] != '\\':
-                        quote = ''
-                elif c in '"\'`':
-                    quote = c
-                elif c == '[':
+            depth = 0
+            masked = lexical_mask(text, strings=True)
+            for end in range(start, len(masked)):
+                character = masked[end]
+                if character == '[':
                     depth += 1
-                elif c == ']':
+                elif character == ']':
                     depth -= 1
                     if depth == 0:
                         return text[start : end + 1]
-        line = text[start : text.index('\n', start)].strip()
+        line = continued_expression(text, start)
         if line.endswith('{'):
             opening = text.index('{', start)
             return text[start:opening] + block(text[opening:], '{')
@@ -304,20 +336,32 @@ console.log(JSON.stringify(output));"""
 
 
 def assert_follow(text):
-    follow = item(text, 'fitting.follow')
-    assert property_value(follow, 'checkable') == 'true', (
-        'Follow wiring: the actual button must toggle'
+    follow = item(text, 'statusBar.fit.follow')
+    enabled = 'clickable' if re.search(r'(?m)^\s*clickable:', follow) else 'enabled'
+    result = evaluate(
+        '[null,{scanning:false,following:false},{scanning:false,following:true},'
+        '{scanning:true,following:false},{scanning:true,following:true}].map(fit=>{'
+        'const bar={fit};return ['
+        + property_value(follow, enabled)
+        + ','
+        + property_value(follow, 'checked')
+        + '];})',
     )
-    assert property_value(follow, 'enabled') == 'group.fit !== null && group.fit.scanning', (
-        'Follow wiring: its own enabled binding must require a running scan'
+    assert result == [
+        [False, False],
+        [False, False],
+        [False, False],
+        [True, False],
+        [True, True],
+    ], 'Status Follow availability and checked state follow only the running scan'
+    handler = 'onToggled' if re.search(r'(?m)^\s*onToggled:', follow) else 'onClicked'
+    result = evaluate(
+        '[false,true].map(initial=>{const bar={fit:{following:initial}};'
+        + ('const checked=!initial;(' if handler == 'onToggled' else 'const checked=initial;(')
+        + property_value(follow, handler)
+        + ');return bar.fit.following;})',
     )
-    assert (
-        property_value(follow, 'checked')
-        == 'group.fit !== null && group.fit.scanning && group.fit.following'
-    ), 'Follow wiring: its own checked binding must read live follow state'
-    assert property_value(follow, 'onToggled') == 'group.fit.following = checked', (
-        'Follow wiring: toggling must update that fit model'
-    )
+    assert result == [True, False], 'Actual status Follow input toggles its own running fit model'
 
 
 def test_messages_is_first_in_both_layout_and_width_inventory():
@@ -337,56 +381,28 @@ def test_messages_is_first_in_both_layout_and_width_inventory():
 
 
 def test_button_names_and_follow_have_live_model_bindings():
-    text = source('qml/Pages/Analysis/FittingGroup.qml')
-    start = item(text, 'fitting.start')
-    assert (
-        property_value(start, 'enabled')
-        == 'group.fit !== null && (group.fit.running || group.fit.available)'
-    ), 'Buttons wiring: availability must guard the actual fit button'
-    assert (
-        property_value(start, 'onClicked')
-        == 'group.fit.running ? group.fit.cancel() : group.fit.start()'
-    ), 'Buttons wiring: the actual fit button dispatches stop or start from live running state'
+    text = source('qml/Components/StatusBarFitButton.qml')
     require(
-        property_value(start, 'text'),
-        r'group\.fit\.running\s*\?\s*qsTr\("Stop fitting"\).*'
-        r'group\.fit\.continuable\s*\?\s*qsTr\("Continue fitting"\).*'
-        r'qsTr\("Start fitting"\)',
-        'Buttons wiring: the actual button label follows running and resumable state',
+        text,
+        r'onClicked:[^\n]*fit\.cancel\(\)[^\n]*fit\.start\(\)',
+        'Status Fit dispatches stop or start from live worker state',
     )
-    assert_follow(text)
-    follow = item(text, 'fitting.follow')
-    assert control_type(text, 'fitting.start') == control_type(text, 'fitting.follow'), (
-        'Buttons wiring: Start and Follow inherit the same button base'
+    require(
+        text,
+        r'valueText:[^\n]*qsTr\("Stop"\)[^\n]*fit\.continuable[^\n]*qsTr\("Continue"\)[^\n]*qsTr\("Fit"\)',
+        'Status Fit labels follow running and resumable state',
     )
-    # Both controls inherit the same base width unless they override it.
-    for name in ('width', 'implicitWidth', 'wide'):
-        a = re.search(r'(?m)^\s*' + name + r':([^\n]+)', start)
-        b = re.search(r'(?m)^\s*' + name + r':([^\n]+)', follow)
-        assert (a.group(1).strip() if a else None) == (b.group(1).strip() if b else None), (
-            'Buttons wiring: Start and Follow share the same base and width override'
-        )
+    assert_follow(source('qml/Components/StatusBar.qml'))
 
 
 def test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers():
-    text = source('qml/Pages/Analysis/FittingGroup.qml')
+    text = source('qml/Components/StatusBar.qml')
     assert_follow(text)
-    for old, new in [
-        ('checkable: true', 'checkable: false'),
-        ('enabled: group.fit !== null && group.fit.scanning', 'enabled: false'),
-        (
-            'checked: group.fit !== null && group.fit.scanning && group.fit.following',
-            'checked: true',
-        ),
-        ('onToggled: group.fit.following = checked', 'onToggled: {}'),
-    ]:
-        changed = text.replace(old, new)
-        assert changed != text, (
-            'Follow wiring: each escape must actually alter the production control'
-        )
-        changed += (
-            '\nButton { enabled: group.fit.scanning; onToggled: group.fit.following = checked }'
-        )
+    follow = item(text, 'statusBar.fit.follow')
+    for field in ('following', 'scanning'):
+        changed = text.replace(follow, follow.replace('fit.' + field, 'fit.disconnected'))
+        assert changed != text, 'Each Follow escape changes the actual displayed control'
+        changed += '\nButton { onClicked: bar.fit.following = true; enabled: bar.fit.scanning }'
         with pytest.raises(AssertionError):
             assert_follow(changed)
 
@@ -403,11 +419,17 @@ OUTCOMES = [
 
 def outcome_functions(text, *, include_context=True):
     colors = {color: color for _key, _word, _icon, color in OUTCOMES}
+    colors.update(
+        themeForeground='themeForeground', statusBarIconForeground='statusBarIconForeground'
+    )
     context = 'const qsTr=x=>x; const EaStyle={Colors:' + json.dumps(colors) + '};'
     return (
         (context if include_context else '')
         + '\n'
-        + '\n'.join(block(text, 'function ' + name + '(') for name in ('word', 'icon', 'color'))
+        + '\n'.join(
+            block(text, 'function ' + name + '(')
+            for name in ('word', 'icon', 'color', 'textColor')
+        )
     )
 
 
@@ -433,7 +455,7 @@ def assert_outcome_consumers(bar, label, dialog):
     )
     context = (
         outcome_functions(source('qml/Globals/FitOutcomes.qml'))
-        + '\nconst FitOutcomes={word,icon,color};'
+        + '\nconst FitOutcomes={word,icon,color,textColor};'
     )
     icon_label = object_id(label, 'iconLabel')
     value_label = object_id(label, 'value')
@@ -456,32 +478,39 @@ def assert_outcome_consumers(bar, label, dialog):
     assignments = ','.join(
         key + ':(' + property_value(summary, key) + ')' for key in status_properties
     )
-    rows = evaluate(
-        'keys.map(outcome=>{const row={outcome,icon:"fallback",value:"17"}; '
-        'const control={'
-        + assignments
-        + '}; return [['
-        + ','.join(display_expressions)
-        + '],['
-        + ','.join(expressions)
-        + ']];})',
-        context,
-    )
-    for (_key, word, icon, color), (segments, overall) in zip(OUTCOMES, rows, strict=True):
-        assert [
-            segments[0],
-            segments[1],
-            segments[2],
-            segments[3],
-        ] == [icon, word, color, color], (
-            'Outcomes: displayed status icon and digit value use the effective tuple'
+    for stale in (False, True):
+        rows = evaluate(
+            'keys.map(key=>{const bar={fit:{outcome:key,outOfDate:'
+            + str(stale).lower()
+            + '}};const outcome=('
+            + property_value(summary, 'outcome')
+            + ');const outdated=('
+            + property_value(summary, 'outdated')
+            + ');const row={outcome,icon:"fallback",value:"17"}; '
+            'const control={'
+            + assignments
+            + '}; return [['
+            + ','.join(display_expressions)
+            + '],['
+            + ','.join(expressions)
+            + ']];})',
+            context,
         )
-        assert overall == [
-            icon,
-            color,
-            word,
-            color,
-        ], 'Outcomes: Overall status takes the outcome branch for icon, word and both colours'
+        for (_key, word, icon, color), (segments, overall) in zip(OUTCOMES, rows, strict=True):
+            neutral = color == 'themeForegroundMinor'
+            text_color = 'themeForeground' if neutral else color
+            status_icon_color = 'statusBarIconForeground' if neutral else color
+            expected = (
+                ['history', 'Outdated', 'orange', 'orange']
+                if stale
+                else [icon, word, status_icon_color, text_color]
+            )
+            assert segments == expected, (
+                'Outcomes: status uses its current outcome or the amber outdated history marker'
+            )
+            assert overall == [icon, color, word, text_color], (
+                'Outcomes: results retain their original outcome; neutral text stays readable'
+            )
     assert not re.search(r'font\.underline:\s*true', bar + label + dialog), (
         'Outcomes: clickable summaries do not underline'
     )
@@ -525,6 +554,7 @@ def status_item_declarations(text):
         body = object_id(area, identifier)
         prefix = (
             'const outcome=(' + property_value(body, 'outcome') + ');'
+            'const outdated=(' + property_value(body, 'outdated') + ');'
             if identifier == 'statusItem'
             else ''
         )
@@ -561,7 +591,7 @@ def status_item_results(text, fit):
         'statusBarIconForeground:"#666666",statusBarTextForeground:"#666666"}};'
     )
     context += outcome_functions(source('qml/Globals/FitOutcomes.qml'), include_context=False)
-    context += '\nconst FitOutcomes={word,icon,color};'
+    context += '\nconst FitOutcomes={word,icon,color,textColor};'
     for name in ('running', 'scanning', 'summary', 'scanSummary'):
         context += (
             'const '
@@ -601,7 +631,7 @@ const bar={fit:{running:true,scanning:true,ok:7,fail:2,scanOk:7,scanFailed:2,ela
 eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:12,total:24,fraction:0.5,
 
 percent:50,scanFitted:9,scanSkipped:3,scanProcessed:12,scanTotal:24,iterations:'13',outcome:'success'}};
-const fitArea={};const outcome='success';
+const fitArea={};const outcome='success';const outdated=false;
 const EaStyle={Colors:{red:'red',green:'green',themeForeground:'neutral',
 statusBarIconForeground:'neutral'}};"""
     running = property_value(area, 'running')
@@ -650,7 +680,7 @@ statusBarIconForeground:'neutral'}};"""
     state = context + "bar.fit.scanning=true;bar.fit.running=true;bar.fit.outcome='success';"
     state += (
         outcome_functions(source('qml/Globals/FitOutcomes.qml'), include_context=False)
-        + '\nconst FitPresentation={word,icon,color};'
+        + '\nconst FitPresentation={word,icon,color,textColor};'
     )
     state = state.replace("const FitOutcomes={separator:' | '};", '')
     state += '\nconst FitOutcomes=FitPresentation;'
@@ -730,7 +760,9 @@ console.log(JSON.stringify(calls));"""
             .replace('RECEIVED', received)
         )
         expected = (
-            [['web', '.edi', True], ['loaded', ['a.edi', 'b.edi']]] if available else [['desktop']]
+            [['web', '.cif,.edi', True], ['loaded', ['a.edi', 'b.edi']]]
+            if available
+            else [['desktop']]
         )
         assert javascript(program) == expected, (
             'Load wiring: each platform opens its multi-file route and '
@@ -765,9 +797,15 @@ def test_type_selectors_live_in_explorer_and_follow_selected_row():
 def test_data_free_experiment_type_has_a_write_boundary(axis):
     text = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
     control = item(text, 'experimentType.' + axis)
-    expected_guard = 'false' if axis in {'sampleForm', 'scatteringType'} else 'row.editable'
+    expected_guard = {
+        'sampleForm': 'row.editable',
+        'scatteringType': 'false',
+        'beamMode': 'row.editable',
+        'radiationProbe': 'row.editable && !row.singleCrystal',
+    }[axis]
     assert property_value(control, 'enabled') == expected_guard, (
-        'Type wiring: unsupported sample/scattering choices stay disabled; '
+        'Type wiring: data-free sample form and both supported beam modes are editable; '
+        'SC probe and scattering stay fixed; '
         'supported axes follow the data-free guard'
     )
     require(
@@ -777,21 +815,25 @@ def test_data_free_experiment_type_has_a_write_boundary(axis):
     )
     require(
         control,
-        r'onActivated:\s*index => row\.choose\(' + axis + r',\s*"' + axis + r'",\s*index\)',
+        r'onSelected:\s*token => row\.choose\("' + axis + r'",\s*token\)',
         'Type wiring: each supported axis uses the selected-row edit route',
     )
     chooser = block(text, 'function choose(')
-    program = """const Qt={binding:f=>f()}; let calls=[];
-const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}
-
-};
-const box={value:'old',permittedValues:['old','chosen','other'],currentIndex:0}
-
-;
+    activation = block(source('qml/Components/SelectorField.qml'), 'onActivated:').split(':', 1)[1]
+    program = (
+        """const Qt={binding:f=>f()}; let calls=[];
+const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}};
+const options={tokenAt:index=>['old','chosen','other'][index],
+               indexOf:value=>['old','chosen','other'].indexOf(value)};
+const selector={token:'old'}; const token=selector.token; let currentIndex=0; let refusal='';
+const Session={project:{lastError:''}};
 CHOOSER
-choose(box,AXIS,1);
-console.log(JSON.stringify([calls,box.currentIndex]));""".replace('CHOOSER', chooser).replace(
-        'AXIS', json.dumps(axis)
+const selected=token=>choose(AXIS,token);
+(ACTIVATION)(1);
+console.log(JSON.stringify([calls,currentIndex]));"""
+        .replace('CHOOSER', chooser)
+        .replace('AXIS', json.dumps(axis))
+        .replace('ACTIVATION', activation)
     )
     assert javascript(program) == [[[3, axis, 'chosen']], 0], (
         'Type wiring: activation forwards the selected experiment, axis '
@@ -806,15 +848,13 @@ console.log(JSON.stringify([calls,box.currentIndex]));""".replace('CHOOSER', cho
 
 def test_disabled_placeholders_and_load_data_are_present():
     types = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
-    for placeholder in ('dimensionality', 'polarization'):
+    for placeholder in ('dimensionality', 'polarisation'):
         assert (
             property_value(item(types, 'experimentType.' + placeholder), 'enabled') == 'false'
-        ), 'Type wiring: each placeholder is disabled on its own control'
-    assert (
-        property_value(item(types, 'experimentType.polarization'), 'visible')
-        == 'row.experiment !== null && row.experiment.radiationProbe ==='
-        ' ExperimentViewModel.Neutron'
-    ), 'Type wiring: polarization is restricted to neutron experiments'
+        ), 'Each experiment descriptor with one admitted value remains disabled'
+    assert property_value(item(types, 'experimentType.polarisation'), 'options') == (
+        'row.experiment ? row.experiment.polarisationOptions : null'
+    ), 'ADR-0054 displays the selected experiment polarisation for each probe'
     require_availability(source('qml/Pages/Experiment/ExperimentsGroup.qml'))
 
 
@@ -869,7 +909,7 @@ def assert_explorer_outcomes(qml):
     ]
     context = outcome_functions(source('qml/Globals/FitOutcomes.qml'))
     context += (
-        '\nconst FitOutcomes={word,icon,color}; const keys='
+        '\nconst FitOutcomes={word,icon,color,textColor}; const keys='
         + json.dumps([key for key, _word, _icon, _color in OUTCOMES])
         + ';'
     )
@@ -1101,9 +1141,9 @@ def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibil
             (),
         ),
         (
-            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'box.permittedValues[index]',
-            'box.permittedValues[0]',
+            'qml/Components/SelectorField.qml',
+            'options.tokenAt(index)',
+            'options.tokenAt(0)',
             test_data_free_experiment_type_has_a_write_boundary,
             ('beamMode',),
         ),
@@ -1116,8 +1156,8 @@ def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibil
         ),
         (
             'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'row.experiment.radiationProbe === ExperimentViewModel.Neutron',
-            'row.experiment.radiationProbe === ExperimentViewModel.Neutron || true',
+            'row.experiment.polarisationOptions',
+            'row.experiment.dimensionalityOptions',
             test_disabled_placeholders_and_load_data_are_present,
             (),
         ),

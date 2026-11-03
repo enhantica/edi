@@ -37,6 +37,7 @@
 #include <utility>
 #include <vector>
 
+#include "edi/background_estimate.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
@@ -250,11 +251,35 @@ class Edit {
     static Edit chi_square_tolerance(Project& project, double tolerance) {
         return Edit([&project, tolerance] { set_minimizer_chi_square_tolerance(project, tolerance); });
     }
+    // The facility and instrument that measured an experiment (ADR-0054), both at once, as a change of facility
+    // may also clear the instrument. "?" states an unknown one.
+    static Edit instrument_description(ExperimentBase& experiment, std::string facility, std::string instrument) {
+        return Edit([&experiment, facility = std::move(facility), instrument = std::move(instrument)] {
+            experiment.instrument.facility = facility;
+            experiment.instrument.name = instrument;
+        });
+    }
     static Edit peak_profile(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_peak_profile(experiment, token); });
     }
     static Edit absorption(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_absorption(experiment, token); });
+    }
+    static Edit extinction(ExperimentBase& experiment, std::string token) {
+        return Edit([&experiment, token = std::move(token)] { select_extinction(experiment, token); });
+    }
+    static Edit mosaic_distribution(ExperimentBase& experiment, std::string token) {
+        return Edit([&experiment, token = std::move(token)] { select_mosaic_distribution(experiment, token); });
+    }
+    // A single crystal's observed threshold and a fit's cutoff (edi ADR-0050); empty clears.
+    static Edit reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {
+        return Edit([&experiment, sigma] { set_reflns_threshold_sigma(experiment, sigma); });
+    }
+    static Edit reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis) {
+        return Edit([&experiment, basis = std::move(basis)] { set_reflns_threshold_basis(experiment, basis); });
+    }
+    static Edit refine_ls_threshold_sigma(Project& project, std::optional<double> sigma) {
+        return Edit([&project, sigma] { set_refine_ls_threshold_sigma(project, sigma); });
     }
     // The background model, the old type's rows and constants removed (select_background_type).
     static Edit background_type(ExperimentBase& experiment, std::string token) {
@@ -264,6 +289,58 @@ class Edit {
     // polynomial's origin and an end of the Chebyshev domain, each under its rule.
     static Edit background_point_ids(ExperimentBase& experiment, std::vector<std::string> ids) {
         return Edit([&experiment, ids = std::move(ids)] { set_background_point_ids(experiment, ids); });
+    }
+    static Edit background_term_ids(ExperimentBase& experiment, std::vector<std::string> ids) {
+        return Edit([&experiment, ids = std::move(ids)] { set_background_term_ids(experiment, ids); });
+    }
+    // ADR-0040: an estimate's points, recorded as what the estimate with `options` wrote (the estimate is
+    // computed before the Edit exists); and the points with the mode and their record as they were, which its
+    // Undo puts back. Each is one collection assignment, which checks the ids first, then assignments.
+    static Edit background_estimate(ExperimentBase& experiment, BackgroundEstimate estimate,
+                                    BackgroundEstimateOptions options) {
+        return Edit([&experiment, estimate = std::make_shared<BackgroundEstimate>(std::move(estimate)),
+                     options = std::move(options)] { apply_background_estimate(experiment, *estimate, options); });
+    }
+    static Edit restore_background(ExperimentBase& experiment, BackgroundState state) {
+        return Edit([&experiment, state = std::make_shared<BackgroundState>(std::move(state))] {
+            edi::restore_background(experiment, *state);
+        });
+    }
+    // The estimate settings, each under its rule (ADR-0040).
+    static Edit background_estimate_mode(ExperimentBase& experiment, std::string mode) {
+        return Edit([&experiment, mode = std::move(mode)] { set_background_estimate_mode(experiment, mode); });
+    }
+    static Edit background_estimate_method(ExperimentBase& experiment, std::string method) {
+        return Edit([&experiment, method = std::move(method)] { set_background_estimate_method(experiment, method); });
+    }
+    static Edit background_estimate_width(ExperimentBase& experiment, std::optional<double> width) {
+        return Edit([&experiment, width] { set_background_estimate_width(experiment, width); });
+    }
+    static Edit background_estimate_smoothness(ExperimentBase& experiment, std::optional<double> smoothness) {
+        return Edit([&experiment, smoothness] { set_background_estimate_smoothness(experiment, smoothness); });
+    }
+    static Edit background_estimate_n_points(ExperimentBase& experiment, std::optional<int> n_points) {
+        return Edit([&experiment, n_points] { set_background_estimate_n_points(experiment, n_points); });
+    }
+    static Edit background_estimate_tolerance(ExperimentBase& experiment, std::optional<double> tolerance) {
+        return Edit([&experiment, tolerance] { set_background_estimate_tolerance(experiment, tolerance); });
+    }
+    static Edit background_estimate_in_peaks(ExperimentBase& experiment, std::string in_peaks) {
+        return Edit([&experiment, in_peaks = std::move(in_peaks)] { set_background_estimate_in_peaks(experiment, in_peaks); });
+    }
+    static Edit background_estimate_max_terms(ExperimentBase& experiment, std::optional<int> max_terms) {
+        return Edit([&experiment, max_terms] { set_background_estimate_max_terms(experiment, max_terms); });
+    }
+    static Edit background_estimate_use_model(ExperimentBase& experiment, std::string use_model) {
+        return Edit([&experiment, use_model = std::move(use_model)] {
+            set_background_estimate_use_model(experiment, use_model);
+        });
+    }
+    // Every auto-mode experiment brought up to date (refresh_background_estimates): an estimate the engine
+    // refuses throws before its experiment is written.
+    static Edit refresh_background_estimates(Project& project,
+                                             std::vector<std::pair<std::string, std::string>>* reasons = nullptr) {
+        return Edit([&project, reasons] { edi::refresh_background_estimates(project, reasons); });
     }
     static Edit append_background_term(ExperimentBase& experiment) {
         return Edit([&experiment] { experiment.background_terms.push_back(next_background_term(experiment)); });
@@ -421,6 +498,9 @@ class Edit {
     static Edit background_id(LineSegment& point, std::string id) {
         return Edit([&point, id = std::move(id)] { point.id = id; });
     }
+    static Edit background_id(PolynomialTerm& term, std::string id) {
+        return Edit([&term, id = std::move(id)] { term.id = id; });
+    }
     /// Rename an exclusion row under its collection's uniqueness rule.
     static Edit excluded_region_id(ExcludedRegion& region, std::string id) {
         return Edit([&region, id = std::move(id)] { region.id = id; });
@@ -498,6 +578,58 @@ class Edit {
             project.structures.assign(std::move(structures));
         });
     }
+    // The whole project replaced by `replacement`, a project read as an open reads it (a Text tab's apply,
+    // project_with_file_text; edi ADR-0017 §7), and its undo, the project as it was: every block is a new one.
+    // A structure or an experiment of the same name stays the same object, its content replaced, so what shows it
+    // keeps showing it; a new one is added and one no longer there removed, as Create and Remove do.
+    static Edit replace_project(Project& project, Project replacement) {
+        auto next = std::make_shared<const Project>(std::move(replacement));
+        return Edit([&project, next] {
+            Project read = *next;  // a copy each time, so the edit can run again
+            const std::vector<ItemVec<Structure>::Ptr> structures_before(project.structures.begin(),
+                                                                        project.structures.end());
+            const std::vector<ItemVec<BraggPdExperiment>::Ptr> experiments_before(project.experiments.begin(),
+                                                                                 project.experiments.end());
+            const auto kept = [](const auto& before, const auto& item) {
+                const auto found = std::find_if(before.begin(), before.end(), [&item](const auto& held) {
+                    return held->name.value() == item->name.value();
+                });
+                return found != before.end() ? *found : nullptr;
+            };
+            std::vector<ItemVec<Structure>::Ptr> structures;
+            for (const auto& structure : read.structures) {
+                auto same = kept(structures_before, structure);
+                structures.push_back(same ? same : structure);
+            }
+            std::vector<ItemVec<BraggPdExperiment>::Ptr> experiments;
+            for (const auto& experiment : read.experiments) {
+                auto same = kept(experiments_before, experiment);
+                experiments.push_back(same ? same : experiment);
+            }
+            // The read blocks' content goes into the kept objects once they have left the project.
+            std::vector<std::pair<ItemVec<Structure>::Ptr, Structure>> structure_content;
+            for (std::size_t i = 0; i < structures.size(); ++i) {
+                if (structures[i] != read.structures[i]) {
+                    structure_content.emplace_back(structures[i], *read.structures[i]);
+                }
+            }
+            std::vector<std::pair<ItemVec<BraggPdExperiment>::Ptr, BraggPdExperiment>> experiment_content;
+            for (std::size_t i = 0; i < experiments.size(); ++i) {
+                if (experiments[i] != read.experiments[i]) {
+                    experiment_content.emplace_back(experiments[i], *read.experiments[i]);
+                }
+            }
+            project = std::move(read);
+            for (auto& [held, content] : structure_content) {
+                *held = std::move(content);
+            }
+            for (auto& [held, content] : experiment_content) {
+                *held = std::move(content);
+            }
+            project.structures.assign(std::move(structures));
+            project.experiments.assign(std::move(experiments));
+        });
+    }
     // The structures, links and texture rows put back as `before` holds them (an undo of Create or Remove
     // structure): each experiment is found by identity first, so one removed since refuses with nothing written.
     static Edit restore_structures(Project& project, StructuresUndo before) {
@@ -533,14 +665,15 @@ class Edit {
     }
 
     // Loaded experiments added, all or none: every name is checked against the project and against
-    // the others (add_loaded_experiment's rule and message), then the collection takes them in one
-    // mutation.
+    // the others, and every linked structure against the project's (add_loaded_experiment's rules
+    // and messages), then the collection takes them in one mutation.
     static Edit add_experiments(Project& project, std::vector<BraggPdExperiment> experiments) {
         auto batch = std::make_shared<std::vector<BraggPdExperiment>>(std::move(experiments));
         return Edit([&project, batch] {
             require_scan_template(project, project.experiments.size() + batch->size());
             std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
             for (const BraggPdExperiment& experiment : *batch) {
+                require_held_links(project, experiment);
                 const std::string key = KeyTraits<BraggPdExperiment>::canonical(experiment.name);
                 for (const auto& held : all) {
                     if (KeyTraits<BraggPdExperiment>::canonical(held->name) == key) {

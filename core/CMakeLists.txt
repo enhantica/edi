@@ -7,67 +7,21 @@
 # without the engine; adapter.cpp keeps everything that holds a crysta type.
 find_package(crysta CONFIG REQUIRED)  # the engine, as a standalone C++ package (build-crysta.sh)
 
-add_library(edi_core STATIC
-    src/version.cpp
-    src/adapter.cpp
-    src/canonical_encoding.cpp
-    src/parameter_paths.cpp
-    src/fit_policy.cpp
-    src/io.cpp
-    src/validation.cpp
-    src/report.cpp
-    src/json.cpp
-    src/report_model.cpp
-    src/report_json.cpp
-    src/report_html.cpp
-    src/report_save.cpp
-    src/palette.cpp
-    src/category_title.cpp
-    src/duration_text.cpp
-    src/correlation_matrix.cpp
-    src/parameter_symbol.cpp
-    src/su_text.cpp
-    src/selectors.cpp
-    src/worker.cpp
-    src/live_preview.cpp
-    src/fit_job.cpp
-    src/presentation.cpp
-    src/structure_scene.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp
-)
+# The sources and the embedded data tables, shared with the ThreadSanitizer tree (tools/ci/tsan).
+include(${CMAKE_SOURCE_DIR}/cmake/edi_core_sources.cmake)
+edi_core_sources(${CMAKE_SOURCE_DIR} EDI_CORE_SOURCES)
+add_library(edi_core STATIC ${EDI_CORE_SOURCES})
 add_library(edi::core ALIAS edi_core)
-
-# ADR-0022: the element table (data/elements/element-styles.tsv, PROVENANCE.md beside it) is embedded in
-# the core as a string, so no runtime file lookup exists; element_style_table() parses it once. A change
-# to the file reconfigures.
-set(EDI_ELEMENT_STYLES_TSV ${CMAKE_SOURCE_DIR}/data/elements/element-styles.tsv)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_ELEMENT_STYLES_TSV})
-file(READ ${EDI_ELEMENT_STYLES_TSV} EDI_ELEMENT_STYLES)
-configure_file(src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp @ONLY)
-
-# The colour palettes (data/palettes, PROVENANCE.md beside them) are embedded the same way; a change reconfigures.
-foreach(scheme IN ITEMS default colour-blind-safe tableau paul-tol vivid)
-    string(TOUPPER ${scheme} palette_name)
-    string(REPLACE "-" "_" palette_name ${palette_name})
-    set(palette_tsv ${CMAKE_SOURCE_DIR}/data/palettes/${scheme}.tsv)
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${palette_tsv})
-    file(READ ${palette_tsv} EDI_${palette_name}_PALETTE)
-endforeach()
-configure_file(src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp @ONLY)
-
-# ADR-0036: the HTML report's script (data/report/report.js) is embedded the same way, so every surface writes the same
-# file with no lookup; a change to the script reconfigures.
-set(EDI_REPORT_JS_FILE ${CMAKE_SOURCE_DIR}/data/report/report.js)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_REPORT_JS_FILE})
-file(READ ${EDI_REPORT_JS_FILE} EDI_REPORT_JS)
-configure_file(src/report_js_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/report_js_data.cpp @ONLY)
 
 target_include_directories(edi_core
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz
 )
+# miniz (core/third_party/miniz, edi ADR-0052) reads and writes project archives; without zlib's names it cannot
+# clash with the zlib Qt links.
+target_compile_definitions(edi_core PRIVATE MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
 # crysta's public headers use C++20 (e.g. <numbers>), so the core (which consumes them through the
 # adapter) compiles as C++20; the edi model surface itself stays plain value types.
 target_compile_features(edi_core PUBLIC cxx_std_20)
@@ -186,3 +140,9 @@ endif()
 # format (the Makefile `... target` shape silently matches nothing under Ninja).
 list(LENGTH EDI_TEST_SOURCES EDI_TEST_CASE_FILES)
 file(WRITE ${CMAKE_BINARY_DIR}/edi_tests_case_files.txt "${EDI_TEST_CASE_FILES}\n")
+
+# Public-model acceptance observer, built once alongside the native artifacts.
+if(NOT EMSCRIPTEN AND EXISTS "${CMAKE_SOURCE_DIR}/tests/fixtures/single_crystal_edges/CMakeLists.txt")
+    add_subdirectory(${CMAKE_SOURCE_DIR}/tests/fixtures/single_crystal_edges
+                     ${CMAKE_BINARY_DIR}/single_crystal_edges)
+endif()

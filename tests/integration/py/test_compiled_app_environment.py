@@ -11,7 +11,10 @@ import pytest
 from tests.fixtures.scan_app import harness as scan
 from tests.fixtures.scan_screen import harness as screen
 from tests.fixtures.thread_selector import harness as selector
-from tests.integration.py.test_app_build_cache import namespace  # noqa: F401 - shared fixture
+from tests.integration.py.test_app_build_cache import (
+    check_delivered_snapshot,
+    namespace,  # noqa: F401 - shared fixture
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -115,8 +118,8 @@ def test_normal_screen_capture_provisions_an_absent_app_prefix(namespace, tmp_pa
         if command[0] != 'pixi':
             return original_run(command, **kwargs)
         plan = json.loads(Path(command[-1]).read_text(encoding='utf-8'))
-        assert plan['executable'] == str(root / 'build/app/app/edi_app'), (
-            'desktop screen capture launches the delivered normal app without a fixture build'
+        assert plan['executable'] == receipt['executable'], (
+            'desktop capture launches its checked delivered-app snapshot without a fixture build'
         )
         result = original_run(
             [
@@ -140,6 +143,7 @@ def test_normal_screen_capture_provisions_an_absent_app_prefix(namespace, tmp_pa
     scratch.mkdir()
     path = screen.normal_app.receipt(root, scratch / 'desktop', sdk, source)
     receipt = json.loads(path.read_text(encoding='utf-8'))
+    check_delivered_snapshot(receipt, root)
     with pytest.raises(ProvisioningObservedError):
         screen.capture(receipt, scratch, dict(os.environ))
     assert records == [

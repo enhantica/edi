@@ -107,6 +107,7 @@ NOT_MODEL = {
     'StructureGeometry': 'the computed structure categories, published whole',
     'WindowGeometry': 'a geometry computed for a view window',
     'IterationRecord': 'a fit report',
+    'WeightFraction': "a linked structure's weight fraction, derived from the model on each read",
     'FitPreamble': 'a fit report',
     'ScanFileRecord': 'a fit report',
     'ScanPreamble': 'a fit report',
@@ -118,6 +119,8 @@ NOT_MODEL = {
 NOT_STORAGE = {
     'Structure::geometry_source': 'what the stored geometry was computed from',
     'ExperimentBase::computed_source': 'what the computed categories were computed from',
+    'ExperimentBase::carried_calculation': 'whether its file held calculated results',
+    'ExperimentBase::description_chosen': 'whether the user may choose its description (ADR-0054)',
     'Project::edits_': "the project's editor record",
     'Project::tail_': "the project's last member, which links its collections to its record",
     'FitResultRecord::scan_results': "a scan's results by file, shared, not saved (ADR-0034)",
@@ -171,12 +174,12 @@ AGGREGATE = re.compile(
 # A whole column of a data table: a shared computed buffer, or a measured column, whose values a
 # recording cell holds in place.
 COLUMN = re.compile(
-    r'^(?:ComputedColumn<.+>|detail::Written<std::vector<double>>'
+    r'^(?:ComputedColumn<.+>|detail::Written<std::vector<(?:double|std::int32_t)>>'
     r'|detail::Written<std::optional<std::vector<double>>>)$'
 )
 CONTAINER = re.compile(r'\bstd::(?:vector|deque|list|map|set|unordered_map|unordered_set)\b')
 SCALAR = re.compile(
-    r'^(?:std::optional<)?(?:std::string|double|int|bool|\w+Enum)>?$|^std::optional<Parameter>$|^OptionalParameter$'
+    r'^(?:std::optional<)?(?:std::string|double|int|bool|std::uint64_t|\w+Enum)>?$|^std::optional<Parameter>$|^OptionalParameter$'
 )
 
 

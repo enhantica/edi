@@ -35,3 +35,14 @@ wasm_check_emsdk_pin() {
     return 1
   fi
 }
+
+# wasm_check_driver_node <caller>: the browser drivers and crysta's witnesses run on the environment's Node, the
+# version pixi.toml pins and crysta's checks are written for, not on Emscripten's older bundled one.
+wasm_check_driver_node() {
+  local major
+  major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || true)"
+  if [ -z "$major" ] || [ "$major" -lt 22 ]; then
+    echo "$1: the environment's Node ($(node --version 2>/dev/null || echo none)) is missing or older than 22 — run through pixi" >&2
+    return 1
+  fi
+}

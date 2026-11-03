@@ -93,9 +93,6 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode);
 // The profile a new experiment of this beam mode gets: the TCH pseudo-Voigt for constant wavelength.
 std::string default_peak_profile(BeamModeEnum mode);
-// What a profile selector shows for a token: the constant-wavelength profiles' short names
-//, the token itself for any other.
-std::string peak_profile_label(const std::string& token);
 // The absorption families of a beam mode, as a file spells them: CW none / cylinder-hewat /
 // cylinder-lobanov (the mu_r body), TOF none / cylinder (the ABSCOR pair). Read from crysta's
 // vocabulary table (ADR-0017).
@@ -110,8 +107,6 @@ std::vector<std::string> supported_fitting_modes();
 // modes and `single`, which fits the shown dataset and makes it the template; `joint` for several experiments;
 // else `single`.
 std::vector<std::string> applicable_fitting_modes(const Project& project);
-// What a fitting-mode selector shows for a token (the owner, 2026-10-11); `.edi` keeps the token.
-std::string fitting_mode_label(const std::string& token);
 // The registered descent flows (model.hpp descent_ids, crysta's registration order).
 std::vector<std::string> supported_descents();
 
@@ -128,6 +123,25 @@ void conform_peak_slots(PeakBase& peak, const std::string& token);
 // AbsorptionBase.type setter's vocabulary and messages (a TOF "cylinder-hewat" is its "cylinder"),
 // then apply the family contract (apply_absorption_family).
 void select_absorption(ExperimentBase& experiment, const std::string& token);
+// A single crystal's extinction types and their labels: None and Isotropic Becker-Coppens type I, type II
+// and mixed (edi ADR-0049), and the mosaic distributions' (Gaussian, Lorentzian).
+std::vector<std::string> extinction_type_labels();
+// The same labels as the selector shows them: Becker-Coppens types end in "(analytical)", Larson's in "(empirical)".
+// The tokens and the report keep the plain names.
+std::vector<std::string> extinction_type_choice_labels();
+std::vector<std::string> mosaic_distribution_labels();
+// Switch a single crystal's extinction type (apply_extinction_type) or its mosaic distribution, which
+// only a type with a mosaic spread carries.
+void select_extinction(ExperimentBase& experiment, const std::string& token);
+void select_mosaic_distribution(ExperimentBase& experiment, const std::string& token);
+// A single crystal's observed threshold (edi ADR-0050), checked by crysta's rules: n finite and not below 0, the
+// basis `intensity` or `amplitude`, and the threshold's labels (I, F); empty clears. The fit's cutoff the same way.
+std::vector<std::string> reflns_threshold_basis_labels();
+void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma);
+void set_reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis);
+void set_refine_ls_threshold_sigma(Project& project, std::optional<double> sigma);
+// The expression the threshold makes, as CIF writes it (`I>2u(I)`).
+std::string reflns_threshold_expression(const ExperimentBase& experiment);
 // Switch the background model as diffraction-lib's `_replace_background` does: the new type starts empty, and the
 // old type's points or terms and its constants are removed. The constants the new type needs start from the measured
 // axis: the polynomial origin at the middle of its range, the Chebyshev domain at its ends (1, and 0..1, without
@@ -143,6 +157,17 @@ std::vector<std::string> position_point_ids(const ExperimentBase& experiment);
 // name the point (the rename-propagation rule). Refused, with nothing renamed, when the count differs or two ids are
 // equal or empty.
 void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids);
+// Ids for a polynomial's or Chebyshev's terms from their orders (`0`, `1`, ...), which no two terms share.
+std::vector<std::string> order_term_ids(const ExperimentBase& experiment);
+// The terms renamed to `ids`, in their order, as set_background_point_ids renames the points.
+void set_background_term_ids(ExperimentBase& experiment, const std::vector<std::string>& ids);
+// A line-segment background's points replaced at once by copies of `points` (an estimate, or undo putting
+// back the points it replaced). Refused, with nothing written, on another background type or when two
+// points share an id.
+void set_background_points(ExperimentBase& experiment, const std::vector<LineSegment>& points);
+// A polynomial or Chebyshev background's terms replaced at once by copies of `terms` (an estimate, or undo putting
+// back the terms it replaced). Refused, with nothing written, on a line-segment background.
+void set_background_terms(ExperimentBase& experiment, const std::vector<PolynomialTerm>& terms);
 // A term's order, refused outside 0..background_max_order of the experiment's type or when another term holds it.
 void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order);
 // The polynomial background's origin: finite and not zero (crysta's rule).

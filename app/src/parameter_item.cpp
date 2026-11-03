@@ -3,8 +3,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "category_list_model.hpp"
+#include "edi/display.hpp"
+#include "edi/fittability.hpp"
 #include "edi/parameter_spec.hpp"
 #include "project_editor.hpp"
 
@@ -18,7 +21,6 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
       uncertainty_(entry.parameter->uncertainty),
       free_(entry.parameter->free),
       refinable_(entry.refinable),
-      fittable_(entry.fittable),
       path_(QString::fromStdString(entry.path)),
       block_kind_(QString::fromStdString(entry.block_kind)),
       block_name_(QString::fromStdString(entry.block_name)),
@@ -28,12 +30,61 @@ ParameterItem::ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& ed
     const edi::ParameterSpec* spec = entry.parameter->spec;
     uid_ = spec != nullptr ? QStringLiteral("%1.%2").arg(QString::fromUtf8(spec->category), QString::fromUtf8(spec->name))
                            : category_ + QLatin1Char('.') + name_;
-    display_name_ = spec != nullptr ? QString::fromUtf8(spec->display_name) : name_;
-    display_units_ = spec != nullptr ? QString::fromUtf8(spec->display_units) : QString();
-    short_name_ = spec != nullptr ? QString::fromStdString(edi::parameter_symbol(spec)) : name_;
+    // Every name the parameter shows comes from crysta's dictionary through the core's bridge.
+    display_name_ = spec != nullptr ? QString::fromStdString(edi::label(uid_.toStdString())) : name_;
+    display_units_ = spec != nullptr ? QString::fromStdString(edi::units_label(uid_.toStdString())) : QString();
+    short_name_ = spec != nullptr ? QString::fromStdString(edi::label(uid_.toStdString())) : name_;
     minimum_ = spec != nullptr ? spec->range.min : -std::numeric_limits<double>::infinity();
     maximum_ = spec != nullptr ? spec->range.max : std::numeric_limits<double>::infinity();
-    category_icon_ = QString::fromUtf8(category_presentation(category_).icon);
+    category_icon_ = category_presentation(category_).icon;
+}
+
+ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& editor, QObject* parent)
+    : QObject(parent),
+      editor_(editor),
+      own_(std::make_unique<edi::Parameter>(entry.value)),
+      parameter_(own_.get()),
+      value_(entry.value),
+      uncertainty_(0.0),
+      free_(false),
+      refinable_(false),
+      fittable_(false),
+      fit_reason_(QString::fromStdString(edi::fit_reason(edi::FitBlocker::Descriptor))),
+      fit_group_(FixedSetting),
+      path_(QString::fromStdString(entry.path)),
+      uid_(QString::fromStdString(entry.uid)),
+      block_kind_(QString::fromStdString(entry.block_kind)),
+      block_name_(QString::fromStdString(entry.block_name)),
+      category_(QString::fromStdString(entry.category)),
+      row_label_(QString::fromStdString(entry.row_label)),
+      name_(QString::fromStdString(entry.name)) {
+    display_name_ = QString::fromStdString(edi::label(entry.uid));
+    display_units_ = QString::fromStdString(edi::units_label(entry.uid));
+    short_name_ = display_name_;
+    minimum_ = -std::numeric_limits<double>::infinity();
+    maximum_ = std::numeric_limits<double>::infinity();
+    category_icon_ = category_presentation(category_).icon;
+}
+
+void ParameterItem::setFittability(bool fittable, const QString& reason, int group) {
+    if (fit_group_ != group) {
+        fit_group_ = group;
+        emit fitGroupChanged();
+    }
+    if (fittable_ != fittable) {
+        fittable_ = fittable;
+        emit fittableChanged();
+    }
+    if (fit_reason_ != reason) {
+        fit_reason_ = reason;
+        emit fitReasonChanged();
+    }
+}
+
+void ParameterItem::setDescriptorValue(double value) {
+    if (own_ != nullptr) {
+        own_->value = value;
+    }
 }
 
 void ParameterItem::setBlockIndex(int index) {
@@ -61,6 +112,64 @@ void ParameterItem::setLabel(const QString& short_name, const QString& units) {
     }
 }
 
+void ParameterItem::setVariant(const QString& variant) {
+    if (variant_ != variant) {
+        variant_ = variant;
+        emit sliderStepChanged();
+        emit toolTipChanged();
+    }
+}
+
+QString ParameterItem::toolTip() const {
+    if (parameter_->spec == nullptr && own_ == nullptr) {
+        return {};
+    }
+    return QString::fromStdString(edi::tooltip(uid_.toStdString(), variant_.toStdString()));
+}
+
+void ParameterItem::setSpelling(const std::string& rule, bool exact) {
+    if (su_rule_ != rule || exact_ != exact) {
+        su_rule_ = rule;
+        exact_ = exact;
+        refreshFileText();
+    }
+}
+
+void ParameterItem::refreshFileText() {
+    // Empty for a parameter the dictionary does not know; a page then shows the value itself.
+    QString value;
+    QString su;
+    if (own_ != nullptr) {
+        value = QString::fromStdString(edi::display_text(uid_.toStdString(), value_));
+    } else if (parameter_->spec != nullptr && !su_rule_.empty()) {
+        const edi::FileText text = edi::file_text(*parameter_, su_rule_, exact_);
+        value = QString::fromStdString(text.value);
+        su = QString::fromStdString(text.su);
+    }
+    if (value != file_value_) {
+        file_value_ = value;
+        emit fileValueChanged();
+    }
+    if (su != file_su_) {
+        file_su_ = su;
+        emit fileSuChanged();
+    }
+}
+
+double ParameterItem::sliderStep() const {
+    if (parameter_->spec == nullptr) {
+        return 0.0;
+    }
+    return edi::display_step(*parameter_, variant_.toStdString());
+}
+
+QString ParameterItem::displayText(double value) const {
+    if (parameter_->spec == nullptr) {
+        return {};
+    }
+    return QString::fromStdString(edi::display_text(uid_.toStdString(), value, variant_.toStdString()));
+}
+
 void ParameterItem::setPhaseIndex(int index) {
     if (phase_index_ != index) {
         phase_index_ = index;
@@ -75,6 +184,20 @@ void ParameterItem::setRefinable(bool refinable) {
     }
 }
 
+void ParameterItem::setDomainWarning(const QString& warning) {
+    if (domain_warning_ != warning) {
+        domain_warning_ = warning;
+        emit domainWarningChanged();
+    }
+}
+
+void ParameterItem::setEstimated(bool estimated) {
+    if (estimated_ != estimated) {
+        estimated_ = estimated;
+        emit estimatedChanged();
+    }
+}
+
 namespace {
 // The refusal of a write to a parameter symmetry holds (edi ADR-0019). The pages disable such a field, so
 // this answers only a caller that writes anyway.
@@ -82,8 +205,17 @@ QString symmetry_refusal() { return QObject::tr("the space group fixes this para
 }  // namespace
 
 void ParameterItem::setValue(double value) {
+    if (own_ != nullptr) {
+        setLastError(tr("a descriptor: its value is edited on its page"));
+        return;
+    }
     if (!refinable_) {
         setLastError(symmetry_refusal());
+        return;
+    }
+    // Asked of the project as it is now, not of `estimated`, which follows the mode only at the next publish.
+    if (const QString refusal = editor_.value_refusal(*parameter_); !refusal.isEmpty()) {
+        setLastError(refusal);
         return;
     }
     edi::Parameter* parameter = parameter_;
@@ -91,12 +223,17 @@ void ParameterItem::setValue(double value) {
 }
 
 void ParameterItem::setFree(bool free) {
+    // A flag is set only where a fit can vary it; one set before a change that blocked it can still be cleared.
+    if (free && !fittable_) {
+        setLastError(tr("Cannot be fitted: %1").arg(fit_reason_));
+        return;
+    }
     if (!refinable_) {
         setLastError(symmetry_refusal());
         return;
     }
-    if (!fittable_) {
-        setLastError(tr("this is a fixed setting, never fitted"));
+    if (const QString refusal = editor_.free_refusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
         return;
     }
     edi::Parameter* parameter = parameter_;
@@ -121,6 +258,7 @@ int ParameterItem::publish() {
     }
     if ((changed & ValueField) != 0) {
         emit valueChanged();
+        emit sliderStepChanged();
         if (outsideRange() != was_outside) {
             emit outsideRangeChanged();
         }
@@ -134,6 +272,8 @@ int ParameterItem::publish() {
     if ((changed & FreeField) != 0) {
         emit freeChanged();
     }
+    // A symmetry change alters how a value is written without changing it, so the text is read again each time.
+    refreshFileText();
     return changed;
 }
 

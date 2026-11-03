@@ -233,6 +233,7 @@ from edi._edi import (  # noqa: E402 - the __path__ resolution above must run fi
     TofPseudoVoigt,
     ValidationError,
     VerbosityEnum,
+    WeightFraction,
     error_report,
     iteration_line,
     machine_report,
@@ -269,6 +270,12 @@ from edi._edi import (  # noqa: E402 -
 )
 from edi._edi import (  # noqa: E402 - after the __path__ resolution
     _read_plain_data as _edi_read_plain_data,  # Crysta's plain-data reader
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _single_crystal_from_scratch as _single_crystal_from_scratch,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _single_crystal_with_reflections as _single_crystal_with_reflections,
 )
 from edi._edi import (  # noqa: E402 -
     _structure_factor_evaluations as _structure_factor_evaluations,
@@ -366,6 +373,7 @@ __all__ = [
     'TofPseudoVoigt',
     'ValidationError',
     'VerbosityEnum',
+    'WeightFraction',
     'error_report',
     'iteration_line',
     'machine_report',
@@ -528,6 +536,8 @@ def _analysis(self: Project) -> Analysis:
 Project.analysis = property(_analysis)
 
 
+from edi import _project_output as _output  # noqa: E402 - after the extension's resolution
+
 # edi's data folder, beside the package in a source checkout: the report's vendored chart
 # libraries are there.
 _DATA_DIR = _Path(__file__).resolve().parent.parent.parent / 'data'
@@ -540,9 +550,16 @@ class Report:
     (what ``save()`` writes) and ``html_offline`` and ``excluded`` in ``reports/report.edi``,
     ``correlation_threshold`` and ``x_axis`` in ``analysis/analysis.edi``. Each reads its default
     until stated, without stating it, and a value a file could not hold is refused, naming the
-    item. ``model``, ``as_html``, ``save_html`` and ``save`` take the same keywords, each None
-    keeping the stored setting and a given one replacing it for that call only; none of them
-    changes a setting.
+    item. ``save_cif`` writes the CIF report alone. ``model``, ``as_html``, ``save_html`` and
+    ``save`` take the same keywords, each None keeping the stored setting and a given one
+    replacing it for that call only; none of them
+    changes a setting. Two more keywords are choices of the call alone, as the app makes them
+    from its Preferences and its Analysis page: ``colour_scheme``, a figure palette's token
+    (by default ``'earth'``; ``'classic'``, ``'soft'``, ``'natural'`` and ``'colourBlindSafe'``,
+    ``data/palettes/PROVENANCE.md``), and
+    ``correlation_experiment``, the name of the experiment whose parameters the correlation chart
+    shows in a fit of several (by default the first). ``check`` judges every saved report with
+    those defaults, so a report is out of date only when the project changed.
     """
 
     # A setting it does not have is refused: a misspelt option ignored in silence would leave
@@ -573,7 +590,7 @@ class Report:
 
     @property
     def cif(self) -> bool:
-        """Whether the CIF report is ticked (its writer comes later)."""
+        """Whether ``save()`` writes the CIF report (by default it does not)."""
         return bool(self._project._report_cif)
 
     @cif.setter
@@ -628,9 +645,13 @@ class Report:
         x_axis: str | None = None,
         correlation_threshold: float | None = None,
         excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
     ) -> ReportModel:
         """The report as data, as the HTML report, the app and a notebook show it."""
-        return self._project._report_model(offline, x_axis, correlation_threshold, excluded)
+        return self._project._report_model(
+            offline, x_axis, correlation_threshold, excluded, colour_scheme, correlation_experiment
+        )
 
     def as_html(
         self,
@@ -639,10 +660,18 @@ class Report:
         x_axis: str | None = None,
         correlation_threshold: float | None = None,
         excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
     ) -> str:
         """The report as one HTML file's text."""
         return self._project._report_html_text(
-            _DATA_DIR, offline, x_axis, correlation_threshold, excluded
+            _DATA_DIR,
+            offline,
+            x_axis,
+            correlation_threshold,
+            excluded,
+            colour_scheme,
+            correlation_experiment,
         )
 
     def save_html(
@@ -653,27 +682,47 @@ class Report:
         x_axis: str | None = None,
         correlation_threshold: float | None = None,
         excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
     ) -> _Path:
         """Write the HTML report to ``path``, by default ``<project>/reports/<name>.html``.
 
-        Returns the path written.
+        A failed write leaves the file already at ``path`` as it was. Returns the path written.
         """
+        text = self.as_html(
+            offline=offline,
+            x_axis=x_axis,
+            correlation_threshold=correlation_threshold,
+            excluded=excluded,
+            colour_scheme=colour_scheme,
+            correlation_experiment=correlation_experiment,
+        )
+        return self._write(path, '.html', text)
+
+    def save_cif(self, path: str | _Path | None = None) -> _Path:
+        """Write the report as a CIF to ``path``, by default ``<project>/reports/<name>.cif``.
+
+        Every item is written under its official CIF name, else its ``_edi_`` one, each value with
+        its s.u. A failed write leaves the file already at ``path`` as it was. Returns the path
+        written.
+        """
+        return self._write(path, '.cif', self._project._report_cif_text())
+
+    def _write(self, path: str | _Path | None, suffix: str, text: str) -> _Path:
         if path is None:
             folder = self._project.metadata.path
             if folder is None:
                 raise ValueError('the project has no folder: save it first, or give a path')
-            path = _Path(folder) / 'reports' / f'{self._project.name or "report"}.html'
+            path = _Path(folder) / 'reports' / f'{self._project.name or "report"}{suffix}'
         path = _Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            self.as_html(
-                offline=offline,
-                x_axis=x_axis,
-                correlation_threshold=correlation_threshold,
-                excluded=excluded,
-            ),
-            encoding='utf-8',
-        )
+        # Written whole and renamed over the old file as project output (edi ADR-0039), so a
+        # failed write leaves the old file and nothing behind a link is written. A path outside
+        # the project is the caller's own: only its folder is the root there.
+        folder = self._project.metadata.path
+        root = _Path(folder) if folder is not None else None
+        if root is None or not path.absolute().is_relative_to(root.absolute()):
+            root = path.parent
+        _output.write_project_file(root.absolute(), path.absolute(), text)
         return path
 
     def save(
@@ -683,6 +732,8 @@ class Report:
         x_axis: str | None = None,
         correlation_threshold: float | None = None,
         excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
     ) -> list[_Path]:
         """Save report: each ticked format but the PDF into ``<project>/reports/``, with its row.
 
@@ -691,7 +742,13 @@ class Report:
         A ticked PDF is written by the app; its file and row are left as they were.
         """
         written, pdf_left = self._project._report_save(
-            _DATA_DIR, offline, x_axis, correlation_threshold, excluded
+            _DATA_DIR,
+            offline,
+            x_axis,
+            correlation_threshold,
+            excluded,
+            colour_scheme,
+            correlation_experiment,
         )
         if pdf_left:
             print(
@@ -853,6 +910,20 @@ _CW_PROFILE_KEYS = {
 }
 _BEAM_MODE_TOF = 'time-of-flight'
 _BEAM_MODE_CW = 'constant wavelength'
+_SAMPLE_FORM_SINGLE_CRYSTAL = 'single crystal'
+
+
+def _single_crystal_experiment(name, beam_mode, radiation_probe, scattering_type):
+    """A single crystal from scratch: neutron and Bragg, with diffraction-lib's defaults."""
+    if radiation_probe not in {'', 'neutron'}:
+        raise ValueError(
+            f"radiation_probe '{radiation_probe}' is not supported for a single crystal"
+        )
+    if scattering_type not in {'', 'bragg'}:
+        raise ValueError(f"scattering_type '{scattering_type}' is not supported")
+    return _single_crystal_from_scratch(name, beam_mode)
+
+
 _CW_PEAK_KEYS = frozenset({
     'type',
     'cutoff_fwhm',
@@ -863,10 +934,12 @@ _CW_PEAK_KEYS = frozenset({
 _CW_INSTRUMENT_KEYS = frozenset({'setup_wavelength', 'calib_twotheta_offset'})
 # The optional CW line shifts — accepted from a spec, never engaged by default.
 _CW_LINE_SHIFT_KEYS = frozenset({'calib_sample_displacement', 'calib_sample_transparency'})
-# The X-ray CW monochromator polarization — accepted from an X-ray spec only.
+# The X-ray CW monochromator polarization and K-alpha doublet — accepted from an X-ray spec only.
 _XRAY_POLARIZATION_KEYS = frozenset({
     'setup_polarization_coefficient',
     'setup_monochromator_twotheta',
+    'setup_wavelength_2',
+    'setup_wavelength_2_to_1_ratio',
 })
 
 _PEAK_PROFILE_BY_TOKEN = {
@@ -941,7 +1014,7 @@ class StructureFactory:
 
         diffraction-lib ``StructureFactory.from_cif_path``.
         """
-        return _structure_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'))
+        return _structure_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'), str(cif_path))
 
     @staticmethod
     def from_dict(spec):
@@ -1181,7 +1254,9 @@ class ExperimentFactory:
 
         diffraction-lib ``ExperimentFactory.from_cif_path``.
         """
-        return _experiment_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'))
+        return _experiment_from_edi_text(
+            _Path(cif_path).read_text(encoding='utf-8'), str(cif_path)
+        )
 
     @classmethod
     def from_data_path(
@@ -1208,6 +1283,10 @@ class ExperimentFactory:
             radiation_probe=radiation_probe,
             scattering_type=scattering_type,
         )
+        if sample_form == _SAMPLE_FORM_SINGLE_CRYSTAL:
+            # A single crystal reads reflections: a FullProf .int or a plain h k l F2 su
+            # [wavelength] file.
+            return _single_crystal_with_reflections(experiment, str(data_path))
         rows = _edi_read_plain_data(str(data_path))
         x, y, sy = rows['x'], rows['y'], rows['sigma']
         if beam_mode == _BEAM_MODE_CW:
@@ -1241,6 +1320,8 @@ class ExperimentFactory:
         ``tof-jorgensen``. A CW experiment starts with its profile's peak parameters and both CW
         instrument parameters present, fixed at 0.
         """
+        if sample_form == _SAMPLE_FORM_SINGLE_CRYSTAL:
+            return _single_crystal_experiment(name, beam_mode, radiation_probe, scattering_type)
         peak_spec = {}
         if peak_type:
             peak_spec['type'] = peak_type

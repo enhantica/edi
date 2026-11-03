@@ -4,7 +4,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Logic as EaLogic
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -24,24 +23,21 @@ Column {
     property ExperimentViewModel experiment: null
     readonly property RangeViewModel range: experiment ? experiment.measuredRange : null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
-    readonly property string units: timeOfFlight ? "µs" : "°"
+    // The range's items: the `_data_range` of the experiment's beam mode.
+    readonly property string rangeItem: timeOfFlight ? "data_range.time_of_flight" : "data_range.two_theta"
+    readonly property string axisItem: timeOfFlight ? "data.time_of_flight" : "data.two_theta"
     readonly property bool editable: experiment !== null && experiment.calculationOnly
 
-    // The axis by the app's one rule for numbers (NumberText); an intensity first rounded to three decimals,
-    // so a calculated value that is effectively zero (1e-46 at a pattern's tail, its digits floating-point
-    // noise that differs by platform) reads 0. The table shows the data, it does not edit it.
-    function shown(value) {
-        return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
+    // Each column, measured or calculated, in its item's display format; the table shows the data, it does not edit it.
+    function shown(uid, value) {
+        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
     }
-    function intensity(value) {
-        return value === undefined || isNaN(value) ? "" : NumberText.plain(Number(value.toFixed(3)), 10);
-    }
-    // "inc": the steps at the base's default precision, as ValueField shows a number.
+    // The step, or the smallest and largest steps of an uneven pattern, in the step's display format.
     function increment(summary) {
         if (!summary)
             return "";
-        const smallest = EaLogic.Utils.toDefaultPrecision(summary.stepMinimum);
-        const largest = EaLogic.Utils.toDefaultPrecision(summary.stepMaximum);
+        const smallest = Session.display(group.rangeItem + "_step", summary.stepMinimum);
+        const largest = Session.display(group.rangeItem + "_step", summary.stepMaximum);
         return smallest === largest ? summary.step : `${smallest}–${largest}`;
     }
 
@@ -54,8 +50,7 @@ Column {
             editable: group.editable
             onCommitted: text => group.experiment.setRange(Number(text), group.range.maximum, group.range.step)
             accepts: "number"
-            label: qsTr("min")
-            unit: group.units
+            uid: group.rangeItem + "_min"
             fieldValue: group.range ? group.range.minimum : ""
         }
         ValueField {
@@ -63,8 +58,7 @@ Column {
             editable: group.editable
             onCommitted: text => group.experiment.setRange(group.range.minimum, Number(text), group.range.step)
             accepts: "number"
-            label: qsTr("max")
-            unit: group.units
+            uid: group.rangeItem + "_max"
             fieldValue: group.range ? group.range.maximum : ""
         }
         ValueField {
@@ -72,8 +66,7 @@ Column {
             editable: group.editable
             onCommitted: text => group.experiment.setRange(group.range.minimum, group.range.maximum, Number(text))
             accepts: "number"
-            label: qsTr("inc")
-            unit: group.units
+            uid: group.rangeItem + "_step"
             fieldValue: group.increment(group.range)
         }
         ValueField {
@@ -92,85 +85,102 @@ Column {
         defaultInfoText: qsTr("No measured points")
         sourceModel: visible ? group.experiment.pattern : null
 
-        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1]
+        // Each structure's curve, one column per structure at the end of the row. A Repeater places its cells before
+        // itself, so the Repeater, declared last, takes the last width, kept narrow.
+        readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
+        columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
+        // A layout of its own (the owner, 2026-10-27): the count, the status and the structures' columns fit their
+        // content, and the other numeric columns share the rest equally after their own widths.
+        spreadColumns: [1, 2, 3, 4, 5, 6, 7]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: group.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
+            HeaderLabel {
+                uid: group.axisItem
+                withUnits: true
             }
-            EaComponents.TableViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("meas")
+            HeaderLabel {
+                uid: "data.intensity_meas"
             }
-            EaComponents.TableViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("s.u.")
+            HeaderLabel {
+                uid: "data.intensity_meas_su"
             }
-            EaComponents.TableViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("calc")
+            HeaderLabel {
+                uid: "data.intensity_calc"
             }
-            EaComponents.TableViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("d (Å)")
+            HeaderLabel {
+                uid: "data.d_spacing"
+                withUnits: true
             }
-            EaComponents.TableViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("bkg")
+            HeaderLabel {
+                uid: "data.intensity_bkg"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
                 text: qsTr("resid")
             }
-            EaComponents.TableViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("status")
+            HeaderLabel {
+                uid: "data.calc_status"
+            }
+            Repeater {
+                model: table.componentNames
+                delegate: EaComponents.ListViewLabel {
+                    required property string modelData
+                    objectName: "data.header.component." + modelData
+                    horizontalAlignment: Text.AlignHCenter
+                    text: modelData
+                }
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             // The roles by the model (its `x` role would shadow the delegate's own x).
             required property var model
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.shown(row.model.x)
+                number: group.shown(group.axisItem, row.model.x)
+                full: NumberText.plainFull(row.model.x)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityMeas)
+                number: group.shown("data.intensity_meas", row.model.intensityMeas)
+                full: NumberText.plainFull(row.model.intensityMeas)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityMeasSu)
+                number: group.shown("data.intensity_meas_su", row.model.intensityMeasSu)
+                full: NumberText.plainFull(row.model.intensityMeasSu)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityCalc)
+                number: group.shown("data.intensity_calc", row.model.intensityCalc)
+                full: NumberText.plainFull(row.model.intensityCalc)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.shown(row.model.dSpacing)
+                number: group.shown("data.d_spacing", row.model.dSpacing)
+                full: NumberText.plainFull(row.model.dSpacing)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.intensityBkg)
+                number: group.shown("data.intensity_bkg", row.model.intensityBkg)
+                full: NumberText.plainFull(row.model.intensityBkg)
             }
-            EaComponents.TableViewLabel {
+            NumberLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: group.intensity(row.model.residual)
+                // The residual, meas − calc, on the measured intensity's scale and in its format.
+                number: group.shown("data.intensity_meas", row.model.residual)
+                full: NumberText.plainFull(row.model.residual)
             }
             // The point's calculation status as an icon, the word in its tooltip, as the experiments' fit column.
             IconCell {
@@ -181,7 +191,18 @@ Column {
                 icon: status === "incl" ? FitOutcomes.icon("success") : status === "excl" ? "minus-circle" : status === "failed" ? FitOutcomes.icon("failed") : ""
                 iconColor: String(status === "incl" ? EaStyle.Colors.green : status === "failed" ? EaStyle.Colors.red : EaStyle.Colors.themeForegroundMinor)
                 ring: status === "pending"
-                toolTip: status === "incl" ? qsTr("Included") : status === "excl" ? qsTr("Excluded") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
+                toolTip: status === "incl" ? Session.optionLabel("data.calc_status", "incl") : status === "excl" ? Session.optionLabel("data.calc_status", "excl") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
+            }
+            // One cell per structure on every row, an empty one where the point has no curve (an excluded point, or
+            // before a calculation): the base centres a row's cells, so a row with fewer would sit apart from the
+            // header.
+            Repeater {
+                model: table.componentNames.map((name, i) => (row.model.componentIntensities ?? [])[i] ?? NaN)
+                delegate: EaComponents.ListViewLabel {
+                    required property var modelData
+                    horizontalAlignment: Text.AlignHCenter
+                    text: group.shown("pd_calc.component_intensities_net", modelData)
+                }
             }
         }
     }

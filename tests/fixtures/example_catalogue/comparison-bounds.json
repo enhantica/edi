@@ -1,0 +1,1878 @@
+{
+  "source_commit": "16b8cca9b903ee4bbdff45a4201bcd649b5a39a8",
+  "single_crystal_source_commit": "fe080a385eea3422cd3660c65563933966a5923d",
+  "single_crystal_scope": "Tolerance-policy retention pins from the first committed single-crystal comparisons; numerical correctness remains bound to the external FullProf outputs, not these pins",
+  "scope": "Unchanged comparison bounds before the October 24 minor-phase disposition; these are tolerance-policy retention pins, never calculated correctness values",
+  "cases": {
+    "pd-neut-cwl_lbco-hrpt": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.La.adp_iso.value": {
+          "tol_abs": 0.05560615664,
+          "tol_rel": null
+        },
+        "param.Co.adp_iso.value": {
+          "tol_abs": 0.1115348565,
+          "tol_rel": null
+        },
+        "param.O.adp_iso.value": {
+          "tol_abs": 0.03205091242,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 7.625015336e-05,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-cwl_hs-hrpt": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      },
+      "asymmetry-off": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "param.Zn.adp_iso.value": {
+          "tol_abs": 0.12716252924,
+          "tol_rel": null
+        },
+        "param.Cu.adp_iso.value": {
+          "tol_abs": 0.08342322018,
+          "tol_rel": null
+        },
+        "param.O.fract_x.value": {
+          "tol_abs": 0.0003203844288,
+          "tol_rel": null
+        },
+        "param.O.fract_z.value": {
+          "tol_abs": 0.0002702192888,
+          "tol_rel": null
+        },
+        "param.O.adp_iso.value": {
+          "tol_abs": 0.08003207502,
+          "tol_rel": null
+        },
+        "param.Cl.fract_z.value": {
+          "tol_abs": 0.0002380484286,
+          "tol_rel": null
+        },
+        "param.Cl.adp_iso.value": {
+          "tol_abs": 0.08085672892,
+          "tol_rel": null
+        },
+        "param.H.fract_x.value": {
+          "tol_abs": 0.0003182299474,
+          "tol_rel": null
+        },
+        "param.H.fract_z.value": {
+          "tol_abs": 0.0002635701454,
+          "tol_rel": null
+        },
+        "param.H.adp_iso.value": {
+          "tol_abs": 0.08704979336,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.0002894085036,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "tol_abs": 0.0007500507352,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-cwl_cosio-d20": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Co1.adp_iso.value": {
+          "tol_abs": 0.2176346674,
+          "tol_rel": null
+        },
+        "param.Co2.fract_x.value": {
+          "tol_abs": 0.0014201222244,
+          "tol_rel": null
+        },
+        "param.Co2.fract_z.value": {
+          "tol_abs": 0.002914992548,
+          "tol_rel": null
+        },
+        "param.Si.fract_x.value": {
+          "tol_abs": 0.0007715120454,
+          "tol_rel": null
+        },
+        "param.Si.fract_z.value": {
+          "tol_abs": 0.0016394273542,
+          "tol_rel": null
+        },
+        "param.Si.adp_iso.value": {
+          "tol_abs": 0.17782583972,
+          "tol_rel": null
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.000593042799,
+          "tol_rel": null
+        },
+        "param.O1.fract_z.value": {
+          "tol_abs": 0.0012832645996,
+          "tol_rel": null
+        },
+        "param.O1.adp_iso.value": {
+          "tol_abs": 0.15635899926,
+          "tol_rel": null
+        },
+        "param.O2.fract_x.value": {
+          "tol_abs": 0.0005074518538,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.0013464259364,
+          "tol_rel": null
+        },
+        "param.O2.adp_iso.value": {
+          "tol_abs": 0.16042139918,
+          "tol_rel": null
+        },
+        "param.O3.fract_x.value": {
+          "tol_abs": 0.0004534372296,
+          "tol_rel": null
+        },
+        "param.O3.fract_y.value": {
+          "tol_abs": 0.0006494373716,
+          "tol_rel": null
+        },
+        "param.O3.fract_z.value": {
+          "tol_abs": 0.0009677540626,
+          "tol_rel": null
+        },
+        "param.O3.adp_iso.value": {
+          "tol_abs": 0.12395571102,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.000501907792,
+          "tol_rel": null
+        },
+        "param.cell_length_b.value": {
+          "tol_abs": 0.0002995478296,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "tol_abs": 0.000230170791,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-cwl_lmo-echidna": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.O.fract_z.value": {
+          "tol_abs": 0.00013569640866,
+          "tol_rel": null
+        },
+        "param.O.adp_iso.value": {
+          "tol_abs": 0.05233687176,
+          "tol_rel": null
+        },
+        "param.Li1.adp_iso.value": {
+          "tol_abs": 0.2257603912,
+          "tol_rel": null
+        },
+        "param.Ni2.adp_iso.value": {
+          "tol_abs": 0.031408631,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.00012480178198,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "tol_abs": 0.0007328419254,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-cwl_y2o3-spodi": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Y1.fract_x.value": {
+          "tol_abs": 0.000251759424,
+          "tol_rel": null
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.000419093002,
+          "tol_rel": null
+        },
+        "param.O1.fract_y.value": {
+          "tol_abs": 0.0004485562262,
+          "tol_rel": null
+        },
+        "param.O1.fract_z.value": {
+          "tol_abs": 0.0003997977342,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.00014326321234,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-cwl_yalo3-al2o3-spodi": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      },
+      "asymmetry-off": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "param.Al2O3.Al1.fract_z.value": {
+          "tol_abs": 0.00669686419,
+          "tol_rel": null
+        },
+        "param.Al2O3.Al1.adp_iso.value": {
+          "tol_abs": 0.547678203,
+          "tol_rel": null
+        },
+        "param.Al2O3.O1.fract_x.value": {
+          "tol_abs": 0.006688989262,
+          "tol_rel": null
+        },
+        "param.Al2O3.O1.adp_iso.value": {
+          "tol_abs": 0.4774451522,
+          "tol_rel": null
+        },
+        "param.Al2O3.cell_length_a.value": {
+          "tol_abs": 0.0008106637538,
+          "tol_rel": null
+        },
+        "param.Al2O3.cell_length_c.value": {
+          "tol_abs": 0.003511754486,
+          "tol_rel": null
+        },
+        "param.YAlO3.Y.fract_x.value": {
+          "tol_abs": 0.000270156261,
+          "tol_rel": null
+        },
+        "param.YAlO3.Y.fract_y.value": {
+          "tol_abs": 0.0001891525862,
+          "tol_rel": null
+        },
+        "param.YAlO3.Y.adp_iso.value": {
+          "tol_abs": 0.0202718766,
+          "tol_rel": null
+        },
+        "param.YAlO3.Al.adp_iso.value": {
+          "tol_abs": 0.03569657814,
+          "tol_rel": null
+        },
+        "param.YAlO3.O1.fract_x.value": {
+          "tol_abs": 0.0003374260118,
+          "tol_rel": null
+        },
+        "param.YAlO3.O1.fract_y.value": {
+          "tol_abs": 0.000286097614,
+          "tol_rel": null
+        },
+        "param.YAlO3.O1.adp_iso.value": {
+          "tol_abs": 0.02275548214,
+          "tol_rel": null
+        },
+        "param.YAlO3.O2.fract_x.value": {
+          "tol_abs": 0.0002289337452,
+          "tol_rel": null
+        },
+        "param.YAlO3.O2.fract_y.value": {
+          "tol_abs": 0.0002023765004,
+          "tol_rel": null
+        },
+        "param.YAlO3.O2.fract_z.value": {
+          "tol_abs": 0.00014727459784,
+          "tol_rel": null
+        },
+        "param.YAlO3.O2.adp_iso.value": {
+          "tol_abs": 0.017820906366,
+          "tol_rel": null
+        },
+        "param.YAlO3.cell_length_a.value": {
+          "tol_abs": 6.087973096e-05,
+          "tol_rel": null
+        },
+        "param.YAlO3.cell_length_b.value": {
+          "tol_abs": 6.212831344e-05,
+          "tol_rel": null
+        },
+        "param.YAlO3.cell_length_c.value": {
+          "tol_abs": 8.427143052e-05,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-tof_si-sepd": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Si.adp_iso.value": {
+          "tol_abs": 0.00858932922,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.0001191783385,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-tof_cecoal-polaris": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Ce.fract_z.value": {
+          "tol_abs": 0.0003257921338,
+          "tol_rel": null
+        },
+        "param.Ce.adp_iso.value": {
+          "tol_abs": 0.0398843225,
+          "tol_rel": null
+        },
+        "param.Co.fract_z.value": {
+          "tol_abs": 0.0006513201012,
+          "tol_rel": null
+        },
+        "param.Co.adp_iso.value": {
+          "tol_abs": 0.0506609718,
+          "tol_rel": null
+        },
+        "param.Al1.adp_iso.value": {
+          "tol_abs": 0.04683935328,
+          "tol_rel": null
+        },
+        "param.Al2.fract_z.value": {
+          "tol_abs": 0.000439335178,
+          "tol_rel": null
+        },
+        "param.Al2.adp_iso.value": {
+          "tol_abs": 0.04846669024,
+          "tol_rel": null
+        },
+        "param.Al3.fract_x.value": {
+          "tol_abs": 0.0002795216606,
+          "tol_rel": null
+        },
+        "param.Al3.fract_z.value": {
+          "tol_abs": 0.0003232210636,
+          "tol_rel": null
+        },
+        "param.Al3.adp_iso.value": {
+          "tol_abs": 0.04524170976,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.0012975863406,
+          "tol_rel": null
+        },
+        "param.cell_length_b.value": {
+          "tol_abs": 0.0006908521744,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "tol_abs": 0.0011752631568,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-tof_ceo2-pearl": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Ce.adp_iso.value": {
+          "tol_abs": 0.02454817134,
+          "tol_rel": null
+        },
+        "param.O.adp_iso.value": {
+          "tol_abs": 0.0202810589,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-tof_lbco-si-mcstas": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.lbco.Co.adp_iso.value": {
+          "tol_abs": 0.19083766126,
+          "tol_rel": null
+        },
+        "param.lbco.O.adp_iso.value": {
+          "tol_abs": 0.06335945996,
+          "tol_rel": null
+        },
+        "param.lbco.cell_length_a.value": {
+          "tol_abs": 0.0002874322666,
+          "tol_rel": null
+        },
+        "param.si.cell_length_a.value": {
+          "tol_abs": 0.0012744234636,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-tof_ncaf-wish": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Ca1.fract_x.value": {
+          "tol_abs": 0.0003381255862,
+          "tol_rel": null
+        },
+        "param.Ca1.adp_iso.value": {
+          "tol_abs": 0.0909758641,
+          "tol_rel": null
+        },
+        "param.Al1.fract_x.value": {
+          "tol_abs": 0.000560999705,
+          "tol_rel": null
+        },
+        "param.Al1.adp_iso.value": {
+          "tol_abs": 0.09339387184,
+          "tol_rel": null
+        },
+        "param.Na1.fract_x.value": {
+          "tol_abs": 0.0003104071496,
+          "tol_rel": null
+        },
+        "param.Na1.adp_iso.value": {
+          "tol_abs": 0.19065251856,
+          "tol_rel": null
+        },
+        "param.F1.fract_x.value": {
+          "tol_abs": 0.0002293352334,
+          "tol_rel": null
+        },
+        "param.F1.fract_y.value": {
+          "tol_abs": 0.0002199177904,
+          "tol_rel": null
+        },
+        "param.F1.fract_z.value": {
+          "tol_abs": 0.0002595241378,
+          "tol_rel": null
+        },
+        "param.F1.adp_iso.value": {
+          "tol_abs": 0.06602515008,
+          "tol_rel": null
+        },
+        "param.F2.fract_x.value": {
+          "tol_abs": 0.0003103313976,
+          "tol_rel": null
+        },
+        "param.F2.fract_y.value": {
+          "tol_abs": 0.00024492978,
+          "tol_rel": null
+        },
+        "param.F2.fract_z.value": {
+          "tol_abs": 0.0002429399246,
+          "tol_rel": null
+        },
+        "param.F2.adp_iso.value": {
+          "tol_abs": 0.0785180092,
+          "tol_rel": null
+        },
+        "param.F3.fract_x.value": {
+          "tol_abs": 0.00014412326152,
+          "tol_rel": null
+        },
+        "param.F3.adp_iso.value": {
+          "tol_abs": 0.09376030376,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-tof_ferrite-austenite-beer": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.ferrite.Fe.adp_iso.value": {
+          "tol_abs": 0.017640985094,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-xray-cwl_pbso4-lab": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Pb.fract_x.value": {
+          "tol_abs": 0.00015199161034,
+          "tol_rel": null
+        },
+        "param.Pb.fract_z.value": {
+          "tol_abs": 0.0002240254726,
+          "tol_rel": null
+        },
+        "param.Pb.adp_iso.value": {
+          "tol_abs": 0.03336202508,
+          "tol_rel": null
+        },
+        "param.S.fract_x.value": {
+          "tol_abs": 0.000872933113,
+          "tol_rel": null
+        },
+        "param.S.fract_z.value": {
+          "tol_abs": 0.0011736391122,
+          "tol_rel": null
+        },
+        "param.S.adp_iso.value": {
+          "tol_abs": 0.15486260214,
+          "tol_rel": null
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.0019593072114,
+          "tol_rel": null
+        },
+        "param.O1.fract_z.value": {
+          "tol_abs": 0.002287290696,
+          "tol_rel": null
+        },
+        "param.O1.adp_iso.value": {
+          "tol_abs": 0.4129733838,
+          "tol_rel": null
+        },
+        "param.O2.fract_x.value": {
+          "tol_abs": 0.0022717593,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.002801757714,
+          "tol_rel": null
+        },
+        "param.O2.adp_iso.value": {
+          "tol_abs": 0.405503596,
+          "tol_rel": null
+        },
+        "param.O3.fract_x.value": {
+          "tol_abs": 0.0013322413106,
+          "tol_rel": null
+        },
+        "param.O3.fract_y.value": {
+          "tol_abs": 0.0018732257526,
+          "tol_rel": null
+        },
+        "param.O3.fract_z.value": {
+          "tol_abs": 0.0019682751296,
+          "tol_rel": null
+        },
+        "param.O3.adp_iso.value": {
+          "tol_abs": 0.278820813,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.00017741478494,
+          "tol_rel": null
+        },
+        "param.cell_length_b.value": {
+          "tol_abs": 0.0001162262084,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "tol_abs": 0.0001507565749,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-xray-cwl_lam7o3-p021": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.La.fract_x.value": {
+          "tol_abs": 0.00016637525258,
+          "tol_rel": null
+        },
+        "param.La.fract_z.value": {
+          "tol_abs": 0.000610097074,
+          "tol_rel": null
+        },
+        "param.La.adp_iso.value": {
+          "tol_abs": 0.019896880628,
+          "tol_rel": null
+        },
+        "param.Ti.adp_iso.value": {
+          "tol_abs": 0.02682343304,
+          "tol_rel": null
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.002004230956,
+          "tol_rel": null
+        },
+        "param.O1.fract_z.value": {
+          "tol_abs": 0.003319177466,
+          "tol_rel": null
+        },
+        "param.O1.adp_iso.value": {
+          "tol_abs": 0.13420471622,
+          "tol_rel": null
+        },
+        "param.O2.fract_x.value": {
+          "tol_abs": 0.002878947014,
+          "tol_rel": null
+        },
+        "param.O2.fract_y.value": {
+          "tol_abs": 0.0018615621958,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.00270633233,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.0002132971624,
+          "tol_rel": null
+        },
+        "param.cell_length_b.value": {
+          "tol_abs": 0.0003255402704,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "tol_abs": 0.0002170218386,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      },
+      "ladder": {
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.02
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.002004230956,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-xray-cwl_pbso4-d1a-lab": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      },
+      "asymmetry-off": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "param.Pb.fract_x.value": {
+          "tol_abs": 0.00019977788854,
+          "tol_rel": null
+        },
+        "param.Pb.fract_z.value": {
+          "tol_abs": 0.0002850251134,
+          "tol_rel": null
+        },
+        "param.Pb.adp_iso.value": {
+          "tol_abs": 0.0490108438,
+          "tol_rel": null
+        },
+        "param.S.fract_x.value": {
+          "tol_abs": 0.0007731859238,
+          "tol_rel": null
+        },
+        "param.S.fract_z.value": {
+          "tol_abs": 0.0010310974604,
+          "tol_rel": null
+        },
+        "param.S.adp_iso.value": {
+          "tol_abs": 0.12050830444,
+          "tol_rel": null
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.0005862615312,
+          "tol_rel": null
+        },
+        "param.O1.fract_z.value": {
+          "tol_abs": 0.000614111451,
+          "tol_rel": null
+        },
+        "param.O1.adp_iso.value": {
+          "tol_abs": 0.10183701622,
+          "tol_rel": null
+        },
+        "param.O2.fract_x.value": {
+          "tol_abs": 0.000574298486,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.0007236143072,
+          "tol_rel": null
+        },
+        "param.O2.adp_iso.value": {
+          "tol_abs": 0.09755784944,
+          "tol_rel": null
+        },
+        "param.O3.fract_x.value": {
+          "tol_abs": 0.0003462634548,
+          "tol_rel": null
+        },
+        "param.O3.fract_y.value": {
+          "tol_abs": 0.0004824553616,
+          "tol_rel": null
+        },
+        "param.O3.fract_z.value": {
+          "tol_abs": 0.0004461329594,
+          "tol_rel": null
+        },
+        "param.O3.adp_iso.value": {
+          "tol_abs": 0.06682504906,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.0002346704156,
+          "tol_rel": null
+        },
+        "param.cell_length_b.value": {
+          "tol_abs": 0.0001537486555,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "tol_abs": 0.0002063535492,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-neut-cwl_cosio-d20_scan": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Co1.adp_iso.value": {
+          "tol_abs": 0.19511691858,
+          "tol_rel": null
+        },
+        "param.Co2.fract_x.value": {
+          "tol_abs": 0.0016273339668,
+          "tol_rel": null
+        },
+        "param.Co2.fract_z.value": {
+          "tol_abs": 0.003541807802,
+          "tol_rel": null
+        },
+        "param.Si.fract_x.value": {
+          "tol_abs": 0.0009460301472,
+          "tol_rel": null
+        },
+        "param.Si.fract_z.value": {
+          "tol_abs": 0.0019338735178,
+          "tol_rel": null
+        },
+        "param.Si.adp_iso.value": {
+          "tol_abs": 0.15493769346,
+          "tol_rel": null
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.0007346408598,
+          "tol_rel": null
+        },
+        "param.O1.fract_z.value": {
+          "tol_abs": 0.0015925245836,
+          "tol_rel": null
+        },
+        "param.O1.adp_iso.value": {
+          "tol_abs": 0.14655069864,
+          "tol_rel": null
+        },
+        "param.O2.fract_x.value": {
+          "tol_abs": 0.000636627887,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.0016843036226,
+          "tol_rel": null
+        },
+        "param.O2.adp_iso.value": {
+          "tol_abs": 0.14485761742,
+          "tol_rel": null
+        },
+        "param.O3.fract_x.value": {
+          "tol_abs": 0.0005482639974,
+          "tol_rel": null
+        },
+        "param.O3.fract_y.value": {
+          "tol_abs": 0.0008357072404,
+          "tol_rel": null
+        },
+        "param.O3.fract_z.value": {
+          "tol_abs": 0.0012248737572,
+          "tol_rel": null
+        },
+        "param.O3.adp_iso.value": {
+          "tol_abs": 0.12484621374,
+          "tol_rel": null
+        },
+        "param.cell_length_a.value": {
+          "tol_abs": 0.000600091455,
+          "tol_rel": null
+        },
+        "param.cell_length_b.value": {
+          "tol_abs": 0.0003494368596,
+          "tol_rel": null
+        },
+        "param.cell_length_c.value": {
+          "tol_abs": 0.0002751973122,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "pd-xray-cwl_latp-bm01_scan": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      },
+      "asymmetry-off": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "param.alpo4_c2221.cell_length_a.value": {
+          "tol_abs": 0.0247817917,
+          "tol_rel": null
+        },
+        "param.alpo4_c2221.cell_length_b.value": {
+          "tol_abs": 0.02688388234,
+          "tol_rel": null
+        },
+        "param.alpo4_c2221.cell_length_c.value": {
+          "tol_abs": 0.02245298244,
+          "tol_rel": null
+        },
+        "param.alpo4_p63mc.cell_length_a.value": {
+          "tol_abs": 0.011201818298,
+          "tol_rel": null
+        },
+        "param.alpo4_p63mc.cell_length_c.value": {
+          "tol_abs": 0.0322107216,
+          "tol_rel": null
+        },
+        "param.latp.Ti1.fract_z.value": {
+          "tol_abs": 0.000179169662,
+          "tol_rel": null
+        },
+        "param.latp.Ti1.adp_iso.value": {
+          "tol_abs": 0.04074938388,
+          "tol_rel": null
+        },
+        "param.latp.P1.fract_x.value": {
+          "tol_abs": 0.0005402443934,
+          "tol_rel": null
+        },
+        "param.latp.P1.adp_iso.value": {
+          "tol_abs": 0.04311452546,
+          "tol_rel": null
+        },
+        "param.latp.O1.fract_x.value": {
+          "tol_abs": 0.0013214401452,
+          "tol_rel": null
+        },
+        "param.latp.O1.fract_y.value": {
+          "tol_abs": 0.0012687560724,
+          "tol_rel": null
+        },
+        "param.latp.O1.fract_z.value": {
+          "tol_abs": 0.000464872065,
+          "tol_rel": null
+        },
+        "param.latp.O1.adp_iso.value": {
+          "tol_abs": 0.14376558246,
+          "tol_rel": null
+        },
+        "param.latp.O2.fract_x.value": {
+          "tol_abs": 0.0009446374316,
+          "tol_rel": null
+        },
+        "param.latp.O2.fract_y.value": {
+          "tol_abs": 0.0009003219394,
+          "tol_rel": null
+        },
+        "param.latp.O2.fract_z.value": {
+          "tol_abs": 0.0004233459742,
+          "tol_rel": null
+        },
+        "param.latp.O2.adp_iso.value": {
+          "tol_abs": 0.12075890804,
+          "tol_rel": null
+        },
+        "param.latp.cell_length_a.value": {
+          "tol_abs": 0.000365291472,
+          "tol_rel": null
+        },
+        "param.latp.cell_length_c.value": {
+          "tol_abs": 0.0015949516252,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "sc-neut-cwl_tb2ti2o7-heidi": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 1e-06
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "sc-neut-cwl_pr2nio4-5c2": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Pr.fract_z.value": {
+          "tol_abs": 0.00015190482954,
+          "tol_rel": null
+        },
+        "param.Pr.adp_11.value": {
+          "tol_abs": 0.060437187,
+          "tol_rel": null
+        },
+        "param.Pr.adp_22.value": {
+          "tol_abs": 0.05833385988,
+          "tol_rel": null
+        },
+        "param.Pr.adp_33.value": {
+          "tol_abs": 0.04756878476,
+          "tol_rel": null
+        },
+        "param.Ni.adp_11.value": {
+          "tol_abs": 0.03808730192,
+          "tol_rel": null
+        },
+        "param.Ni.adp_22.value": {
+          "tol_abs": 0.03607405166,
+          "tol_rel": null
+        },
+        "param.Ni.adp_33.value": {
+          "tol_abs": 0.03580400006,
+          "tol_rel": null
+        },
+        "param.O1.adp_11.value": {
+          "tol_abs": 0.05410485114,
+          "tol_rel": null
+        },
+        "param.O1.adp_22.value": {
+          "tol_abs": 0.05271675714,
+          "tol_rel": null
+        },
+        "param.O1.adp_33.value": {
+          "tol_abs": 0.06320749272,
+          "tol_rel": null
+        },
+        "param.O1.adp_12.value": {
+          "tol_abs": 0.0335666569,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.00018849034964,
+          "tol_rel": null
+        },
+        "param.O2.adp_11.value": {
+          "tol_abs": 0.13538476154,
+          "tol_rel": null
+        },
+        "param.O2.adp_22.value": {
+          "tol_abs": 0.12919731038,
+          "tol_rel": null
+        },
+        "param.O2.adp_33.value": {
+          "tol_abs": 0.06486102678,
+          "tol_rel": null
+        },
+        "param.Oi.adp_11.value": {
+          "tol_abs": 0.7410589512,
+          "tol_rel": null
+        },
+        "param.Oi.adp_22.value": {
+          "tol_abs": 0.7170087636,
+          "tol_rel": null
+        },
+        "param.Oi.adp_33.value": {
+          "tol_abs": 0.4490963104,
+          "tol_rel": null
+        },
+        "param.Od.fract_x.value": {
+          "tol_abs": 0.004254754672,
+          "tol_rel": null
+        },
+        "param.Od.fract_y.value": {
+          "tol_abs": 0.003725339092,
+          "tol_rel": null
+        },
+        "param.Od.fract_z.value": {
+          "tol_abs": 0.0013602607474,
+          "tol_rel": null
+        },
+        "param.Od.adp_iso.value": {
+          "tol_abs": 0.3068088176,
+          "tol_rel": null
+        },
+        "param.scale.value": {
+          "tol_abs": 0.056497278,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "sc-neut-tof_taurine-senju": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.senju_1.scale.value": {
+          "tol_abs": 0.1188716199,
+          "tol_rel": null
+        },
+        "param.senju_2.scale.value": {
+          "tol_abs": 0.17842328726,
+          "tol_rel": null
+        },
+        "param.senju_3.scale.value": {
+          "tol_abs": 0.12730538338,
+          "tol_rel": null
+        },
+        "param.senju_4.scale.value": {
+          "tol_abs": 0.12965589278,
+          "tol_rel": null
+        },
+        "param.senju_5.scale.value": {
+          "tol_abs": 0.12616100786,
+          "tol_rel": null
+        },
+        "param.senju_6.scale.value": {
+          "tol_abs": 0.12768825592,
+          "tol_rel": null
+        },
+        "param.senju_1.coefficient_11.value": {
+          "tol_abs": 0.007107061452,
+          "tol_rel": null
+        },
+        "param.H22.adp_11.value": {
+          "tol_abs": 0.008557007484,
+          "tol_rel": null
+        },
+        "param.H21.adp_11.value": {
+          "tol_abs": 0.00888265123,
+          "tol_rel": null
+        },
+        "param.S1.fract_x.value": {
+          "tol_abs": 0.002729875234,
+          "tol_rel": null
+        },
+        "param.S1.fract_y.value": {
+          "tol_abs": 0.0014929852184,
+          "tol_rel": null
+        },
+        "param.S1.fract_z.value": {
+          "tol_abs": 0.0017101708608,
+          "tol_rel": null
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.0017771526824,
+          "tol_rel": null
+        },
+        "param.O1.fract_y.value": {
+          "tol_abs": 0.0008458640678,
+          "tol_rel": null
+        },
+        "param.O1.fract_z.value": {
+          "tol_abs": 0.0010367798592,
+          "tol_rel": null
+        },
+        "param.O2.fract_x.value": {
+          "tol_abs": 0.0016574064842,
+          "tol_rel": null
+        },
+        "param.O2.fract_y.value": {
+          "tol_abs": 0.0009977073262,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.0011547287832,
+          "tol_rel": null
+        },
+        "param.O3.fract_x.value": {
+          "tol_abs": 0.0016296095578,
+          "tol_rel": null
+        },
+        "param.O3.fract_y.value": {
+          "tol_abs": 0.0009125843454,
+          "tol_rel": null
+        },
+        "param.O3.fract_z.value": {
+          "tol_abs": 0.0008651954188,
+          "tol_rel": null
+        },
+        "param.N1.fract_x.value": {
+          "tol_abs": 0.0013132597516,
+          "tol_rel": null
+        },
+        "param.N1.fract_y.value": {
+          "tol_abs": 0.000521242858,
+          "tol_rel": null
+        },
+        "param.N1.fract_z.value": {
+          "tol_abs": 0.0006878893344,
+          "tol_rel": null
+        },
+        "param.H1.fract_x.value": {
+          "tol_abs": 0.003522316938,
+          "tol_rel": null
+        },
+        "param.H1.fract_y.value": {
+          "tol_abs": 0.001571731699,
+          "tol_rel": null
+        },
+        "param.H1.fract_z.value": {
+          "tol_abs": 0.0019657092892,
+          "tol_rel": null
+        },
+        "param.H2.fract_x.value": {
+          "tol_abs": 0.003565503714,
+          "tol_rel": null
+        },
+        "param.H2.fract_y.value": {
+          "tol_abs": 0.0016673072008,
+          "tol_rel": null
+        },
+        "param.H2.fract_z.value": {
+          "tol_abs": 0.0019612912274,
+          "tol_rel": null
+        },
+        "param.H3.fract_x.value": {
+          "tol_abs": 0.003799440464,
+          "tol_rel": null
+        },
+        "param.H3.fract_y.value": {
+          "tol_abs": 0.001560633706,
+          "tol_rel": null
+        },
+        "param.H3.fract_z.value": {
+          "tol_abs": 0.002132658272,
+          "tol_rel": null
+        },
+        "param.C1.fract_x.value": {
+          "tol_abs": 0.001653221598,
+          "tol_rel": null
+        },
+        "param.C1.fract_y.value": {
+          "tol_abs": 0.0006944636858,
+          "tol_rel": null
+        },
+        "param.C1.fract_z.value": {
+          "tol_abs": 0.0008399743868,
+          "tol_rel": null
+        },
+        "param.H11.fract_x.value": {
+          "tol_abs": 0.00353197714,
+          "tol_rel": null
+        },
+        "param.H11.fract_y.value": {
+          "tol_abs": 0.0017174377964,
+          "tol_rel": null
+        },
+        "param.H11.fract_z.value": {
+          "tol_abs": 0.002072565882,
+          "tol_rel": null
+        },
+        "param.H12.fract_x.value": {
+          "tol_abs": 0.003636630646,
+          "tol_rel": null
+        },
+        "param.H12.fract_y.value": {
+          "tol_abs": 0.0014964275022,
+          "tol_rel": null
+        },
+        "param.H12.fract_z.value": {
+          "tol_abs": 0.0018409131206,
+          "tol_rel": null
+        },
+        "param.C2.fract_x.value": {
+          "tol_abs": 0.0017805702064,
+          "tol_rel": null
+        },
+        "param.C2.fract_y.value": {
+          "tol_abs": 0.0006752958022,
+          "tol_rel": null
+        },
+        "param.C2.fract_z.value": {
+          "tol_abs": 0.0008400370864,
+          "tol_rel": null
+        },
+        "param.H21.fract_x.value": {
+          "tol_abs": 0.00391168282,
+          "tol_rel": null
+        },
+        "param.H21.fract_y.value": {
+          "tol_abs": 0.0016069809962,
+          "tol_rel": null
+        },
+        "param.H21.fract_z.value": {
+          "tol_abs": 0.0018744112452,
+          "tol_rel": null
+        },
+        "param.H22.fract_x.value": {
+          "tol_abs": 0.003933776574,
+          "tol_rel": null
+        },
+        "param.H22.fract_y.value": {
+          "tol_abs": 0.0017088950072,
+          "tol_rel": null
+        },
+        "param.H22.fract_z.value": {
+          "tol_abs": 0.002073570844,
+          "tol_rel": null
+        },
+        "param.S1.adp_11.value": {
+          "tol_abs": 0.005697805582,
+          "tol_rel": null
+        },
+        "param.O1.adp_11.value": {
+          "tol_abs": 0.004258978154,
+          "tol_rel": null
+        },
+        "param.O2.adp_11.value": {
+          "tol_abs": 0.00341248243,
+          "tol_rel": null
+        },
+        "param.O3.adp_11.value": {
+          "tol_abs": 0.004202890784,
+          "tol_rel": null
+        },
+        "param.N1.adp_11.value": {
+          "tol_abs": 0.002513271416,
+          "tol_rel": null
+        },
+        "param.H1.adp_11.value": {
+          "tol_abs": 0.009192205654,
+          "tol_rel": null
+        },
+        "param.H2.adp_11.value": {
+          "tol_abs": 0.008373055952,
+          "tol_rel": null
+        },
+        "param.H3.adp_11.value": {
+          "tol_abs": 0.008377074652,
+          "tol_rel": null
+        },
+        "param.C1.adp_11.value": {
+          "tol_abs": 0.003366386452,
+          "tol_rel": null
+        },
+        "param.H11.adp_11.value": {
+          "tol_abs": 0.008131357514,
+          "tol_rel": null
+        },
+        "param.H12.adp_11.value": {
+          "tol_abs": 0.009155961564,
+          "tol_rel": null
+        },
+        "param.C2.adp_11.value": {
+          "tol_abs": 0.003592503346,
+          "tol_rel": null
+        },
+        "param.S1.adp_22.value": {
+          "tol_abs": 0.0013914291178,
+          "tol_rel": null
+        },
+        "param.S1.adp_33.value": {
+          "tol_abs": 0.00246122346,
+          "tol_rel": null
+        },
+        "param.S1.adp_12.value": {
+          "tol_abs": 0.0019640881064,
+          "tol_rel": null
+        },
+        "param.S1.adp_13.value": {
+          "tol_abs": 0.002802813962,
+          "tol_rel": null
+        },
+        "param.S1.adp_23.value": {
+          "tol_abs": 0.0012013158468,
+          "tol_rel": null
+        },
+        "param.O1.adp_22.value": {
+          "tol_abs": 0.0009732615934,
+          "tol_rel": null
+        },
+        "param.O1.adp_33.value": {
+          "tol_abs": 0.0014693747474,
+          "tol_rel": null
+        },
+        "param.O1.adp_12.value": {
+          "tol_abs": 0.0012955806286,
+          "tol_rel": null
+        },
+        "param.O1.adp_13.value": {
+          "tol_abs": 0.0019632450918,
+          "tol_rel": null
+        },
+        "param.O1.adp_23.value": {
+          "tol_abs": 0.0007993767528,
+          "tol_rel": null
+        },
+        "param.O2.adp_22.value": {
+          "tol_abs": 0.0009795508912,
+          "tol_rel": null
+        },
+        "param.O2.adp_33.value": {
+          "tol_abs": 0.0018479033866,
+          "tol_rel": null
+        },
+        "param.O2.adp_12.value": {
+          "tol_abs": 0.0012912144872,
+          "tol_rel": null
+        },
+        "param.O2.adp_13.value": {
+          "tol_abs": 0.0018527450602,
+          "tol_rel": null
+        },
+        "param.O2.adp_23.value": {
+          "tol_abs": 0.0009249994112,
+          "tol_rel": null
+        },
+        "param.O3.adp_22.value": {
+          "tol_abs": 0.0008968313868,
+          "tol_rel": null
+        },
+        "param.O3.adp_33.value": {
+          "tol_abs": 0.0012975739478,
+          "tol_rel": null
+        },
+        "param.O3.adp_12.value": {
+          "tol_abs": 0.0012697765218,
+          "tol_rel": null
+        },
+        "param.O3.adp_13.value": {
+          "tol_abs": 0.0017785488654,
+          "tol_rel": null
+        },
+        "param.O3.adp_23.value": {
+          "tol_abs": 0.0006734056748,
+          "tol_rel": null
+        },
+        "param.N1.adp_22.value": {
+          "tol_abs": 0.0005650799974,
+          "tol_rel": null
+        },
+        "param.N1.adp_33.value": {
+          "tol_abs": 0.0008509492334,
+          "tol_rel": null
+        },
+        "param.N1.adp_12.value": {
+          "tol_abs": 0.000940054118,
+          "tol_rel": null
+        },
+        "param.N1.adp_13.value": {
+          "tol_abs": 0.0010683893222,
+          "tol_rel": null
+        },
+        "param.N1.adp_23.value": {
+          "tol_abs": 0.000481376768,
+          "tol_rel": null
+        },
+        "param.H1.adp_22.value": {
+          "tol_abs": 0.0018695652398,
+          "tol_rel": null
+        },
+        "param.H1.adp_33.value": {
+          "tol_abs": 0.002829075872,
+          "tol_rel": null
+        },
+        "param.H1.adp_12.value": {
+          "tol_abs": 0.002947742856,
+          "tol_rel": null
+        },
+        "param.H1.adp_13.value": {
+          "tol_abs": 0.004021103226,
+          "tol_rel": null
+        },
+        "param.H1.adp_23.value": {
+          "tol_abs": 0.0016578224694,
+          "tol_rel": null
+        },
+        "param.H2.adp_22.value": {
+          "tol_abs": 0.001773896542,
+          "tol_rel": null
+        },
+        "param.H2.adp_33.value": {
+          "tol_abs": 0.002697973456,
+          "tol_rel": null
+        },
+        "param.H2.adp_12.value": {
+          "tol_abs": 0.00279624319,
+          "tol_rel": null
+        },
+        "param.H2.adp_13.value": {
+          "tol_abs": 0.00367292192,
+          "tol_rel": null
+        },
+        "param.H2.adp_23.value": {
+          "tol_abs": 0.0016475418544,
+          "tol_rel": null
+        },
+        "param.H3.adp_22.value": {
+          "tol_abs": 0.0019622367702,
+          "tol_rel": null
+        },
+        "param.H3.adp_33.value": {
+          "tol_abs": 0.003240840278,
+          "tol_rel": null
+        },
+        "param.H3.adp_12.value": {
+          "tol_abs": 0.002648720924,
+          "tol_rel": null
+        },
+        "param.H3.adp_13.value": {
+          "tol_abs": 0.003860651448,
+          "tol_rel": null
+        },
+        "param.H3.adp_23.value": {
+          "tol_abs": 0.0016917084374,
+          "tol_rel": null
+        },
+        "param.C1.adp_22.value": {
+          "tol_abs": 0.000663214088,
+          "tol_rel": null
+        },
+        "param.C1.adp_33.value": {
+          "tol_abs": 0.0010889849336,
+          "tol_rel": null
+        },
+        "param.C1.adp_12.value": {
+          "tol_abs": 0.0010314381692,
+          "tol_rel": null
+        },
+        "param.C1.adp_13.value": {
+          "tol_abs": 0.0013677266134,
+          "tol_rel": null
+        },
+        "param.C1.adp_23.value": {
+          "tol_abs": 0.0005933439844,
+          "tol_rel": null
+        },
+        "param.H11.adp_22.value": {
+          "tol_abs": 0.00202259431,
+          "tol_rel": null
+        },
+        "param.H11.adp_33.value": {
+          "tol_abs": 0.003380110012,
+          "tol_rel": null
+        },
+        "param.H11.adp_12.value": {
+          "tol_abs": 0.00260177928,
+          "tol_rel": null
+        },
+        "param.H11.adp_13.value": {
+          "tol_abs": 0.003621147602,
+          "tol_rel": null
+        },
+        "param.H11.adp_23.value": {
+          "tol_abs": 0.001625106607,
+          "tol_rel": null
+        },
+        "param.H12.adp_22.value": {
+          "tol_abs": 0.0018846210946,
+          "tol_rel": null
+        },
+        "param.H12.adp_33.value": {
+          "tol_abs": 0.002569331248,
+          "tol_rel": null
+        },
+        "param.H12.adp_12.value": {
+          "tol_abs": 0.00287704387,
+          "tol_rel": null
+        },
+        "param.H12.adp_13.value": {
+          "tol_abs": 0.003754711438,
+          "tol_rel": null
+        },
+        "param.H12.adp_23.value": {
+          "tol_abs": 0.0014525046222,
+          "tol_rel": null
+        },
+        "param.C2.adp_22.value": {
+          "tol_abs": 0.000746750439,
+          "tol_rel": null
+        },
+        "param.C2.adp_33.value": {
+          "tol_abs": 0.0011291024364,
+          "tol_rel": null
+        },
+        "param.C2.adp_12.value": {
+          "tol_abs": 0.001203570518,
+          "tol_rel": null
+        },
+        "param.C2.adp_13.value": {
+          "tol_abs": 0.001406119763,
+          "tol_rel": null
+        },
+        "param.C2.adp_23.value": {
+          "tol_abs": 0.0006412396618,
+          "tol_rel": null
+        },
+        "param.H21.adp_22.value": {
+          "tol_abs": 0.002096116176,
+          "tol_rel": null
+        },
+        "param.H21.adp_33.value": {
+          "tol_abs": 0.002508700082,
+          "tol_rel": null
+        },
+        "param.H21.adp_12.value": {
+          "tol_abs": 0.00315356973,
+          "tol_rel": null
+        },
+        "param.H21.adp_13.value": {
+          "tol_abs": 0.003480476652,
+          "tol_rel": null
+        },
+        "param.H21.adp_23.value": {
+          "tol_abs": 0.0016068303114,
+          "tol_rel": null
+        },
+        "param.H22.adp_22.value": {
+          "tol_abs": 0.0019281928984,
+          "tol_rel": null
+        },
+        "param.H22.adp_33.value": {
+          "tol_abs": 0.003502570582,
+          "tol_rel": null
+        },
+        "param.H22.adp_12.value": {
+          "tol_abs": 0.002830598288,
+          "tol_rel": null
+        },
+        "param.H22.adp_13.value": {
+          "tol_abs": 0.00412616864,
+          "tol_rel": null
+        },
+        "param.H22.adp_23.value": {
+          "tol_abs": 0.001756116106,
+          "tol_rel": null
+        },
+        "param.senju_1.coefficient_22.value": {
+          "tol_abs": 0.00297860395,
+          "tol_rel": null
+        },
+        "param.senju_1.coefficient_33.value": {
+          "tol_abs": 0.002933684074,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    }
+  }
+}

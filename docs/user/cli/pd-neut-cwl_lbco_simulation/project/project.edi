@@ -1,0 +1,6 @@
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_lbco_simulation
+_metadata.title "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI"
+_metadata.description "Cubic perovskite · Simulated pattern without measured data"
+_metadata.authors .

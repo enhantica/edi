@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <iterator>
 #include <map>
 #include <atomic>
 #include <memory>
@@ -327,6 +328,11 @@ struct wraps_written : std::false_type {};
 template <template <typename...> class Wrapper, typename... A>
 struct wraps_written<Wrapper<A...>>
     : std::bool_constant<(is_written<std::remove_cvref_t<A>>::value || ...)> {};
+// A class iterator never compares with a field's value. Ruling it out first keeps the comparisons
+// with other types from being considered for iterators over the field's own type, where checking
+// their constraint would need that same constraint (libc++ 23's optional and destroy).
+template <typename U>
+concept class_iterator = std::is_class_v<U> && requires { typename U::iterator_category; };
 
 // A model field that records its own writes. Every assignment — an equal value, a
 // self-assignment and a whole-object assignment included — gives the field a new write identity
@@ -655,9 +661,11 @@ class Written {
     }
 
     // Comparison with whatever the value compares with. A type that compares through a template
-    // (an optional, a container) would not find the conversion alone.
+    // (an optional, a container) would not find the conversion alone. Iterators are left out first:
+    // an iterator over values that mention a cell finds these operators too, and libc++ 23 then
+    // checks the requirement below in terms of itself.
     template <typename U>
-        requires(!std::same_as<U, Written> && !wraps_written<U>::value) &&
+        requires(!std::same_as<U, Written> && !wraps_written<U>::value && !class_iterator<U>) &&
                 requires(const T& t, const U& u) { t == u; }
     friend bool operator==(const Written& a, const U& b) {
         return a.state_.v() == b;
@@ -695,7 +703,7 @@ class Written {
         return a.state_.v() <=> b.state_.v();
     }
     template <typename U>
-        requires(!std::same_as<U, Written> && !wraps_written<U>::value) &&
+        requires(!std::same_as<U, Written> && !wraps_written<U>::value && !class_iterator<U>) &&
                 requires(const T& t, const U& u) { t <=> u; }
     friend auto operator<=>(const Written& a, const U& b) {
         return a.state_.v() <=> b;
@@ -1139,9 +1147,17 @@ class CategoryRef {
 
     void point_at(const RowLink& link) noexcept { link_ = &link; }
     const RowLink* get() const noexcept { return link_; }
+    // The site or the experiment holding the parameter, as its handle last reached it, so its display
+    // variant follows its owner in a project or not. Like the row, each encloses the parameter.
+    void held_by(const AtomSite& site) noexcept { site_ = &site; }
+    void held_by(const ExperimentBase& experiment) noexcept { experiment_ = &experiment; }
+    const AtomSite* site() const noexcept { return site_; }
+    const ExperimentBase* experiment() const noexcept { return experiment_; }
 
    private:
     const RowLink* link_ = nullptr;
+    const AtomSite* site_ = nullptr;
+    const ExperimentBase* experiment_ = nullptr;
 };
 
 }  // namespace detail
@@ -1150,6 +1166,11 @@ class CategoryRef {
 // by a declared constraint. Derived from crysta's relation graph (refresh_relations, io.hpp); never
 // saved.
 enum class Dependence : std::uint8_t { Independent, SymmetryFixed, SymmetryTied, Constrained };
+
+// What keeps a fit from varying a parameter (ADR-0053), the first that applies: a descriptor,
+// symmetry, a declared constraint, no fitted experiment using it that measures what it needs, or no derivative for
+// it in crysta. Set by refresh_fittability (fittability.hpp) from crysta's one rule; never saved.
+enum class FitBlocker : std::uint8_t { None, Descriptor, Symmetry, Constraint, Data, Capability };
 
 // A user-facing scalar with refinement state: value, standard uncertainty (absolute), and a
 // free/fit flag. Maps 1:1 onto the engine's ParameterState.
@@ -1184,6 +1205,14 @@ struct Parameter {
     detail::Epoch epoch;
     // Set by refresh_relations and apply_relations; a dependent's free flag stays false.
     Dependence dependence = Dependence::Independent;
+    // Set by refresh_fittability: what keeps a fit from varying it, and crysta's reason for it (empty when
+    // fittable).
+    FitBlocker fit_blocker = FitBlocker::None;
+    std::string fit_reason;
+    // Set with them: no enabled link reads the value (a disabled link's scale and texture, a structure no enabled link
+    // names). Its free flag is kept for when a link reads it again, so a fit leaves it out and neither a fit nor a load
+    // refuses or clears it.
+    bool fit_idle = false;
 
     Parameter() = default;
     Parameter(double value_, std::optional<double> esd_ = 0.0, bool free_ = false)
@@ -1312,11 +1341,27 @@ class OptionalParameter {
     std::vector<std::shared_ptr<ParameterCell>> retired_;
 };
 
-// The free flag's rule (edi ADR-0024): a dependent stays dependent, so freeing one changes nothing and
-// answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`.
+// Why freeing `parameter` is refused, as of its last refresh_fittability: "cannot be fitted: <reason>" for a
+// descriptor, a value no fitted experiment can determine, or one crysta cannot differentiate (edi ADR-0053); empty
+// otherwise. A dependent's flag is ignored instead (edi ADR-0024).
+inline std::string free_refusal(const Parameter& parameter) {
+    const FitBlocker blocker = parameter.fit_blocker;
+    if (blocker != FitBlocker::Descriptor && blocker != FitBlocker::Data && blocker != FitBlocker::Capability) {
+        return {};
+    }
+    return "cannot be fitted: " + parameter.fit_reason;
+}
+
+// The free flag's rule (edi ADR-0024, ADR-0053): a dependent stays dependent, so freeing one changes nothing and
+// answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`. Freeing a parameter
+// free_refusal names is refused (std::invalid_argument).
 inline bool set_free(Parameter& parameter, bool free) {
     if (free && parameter.dependence != Dependence::Independent) {
         return false;
+    }
+    if (const std::string refusal = free_refusal(parameter); free && !refusal.empty()) {
+        throw std::invalid_argument((parameter.spec != nullptr ? parameter.spec->name : std::string("parameter")) +
+                                    " " + refusal);
     }
     parameter.free = free;
     return true;
@@ -2720,7 +2765,6 @@ struct RowSchema<edi::AtomSite> {
     static constexpr const char* name = "_atom_site";
     static constexpr auto fields = std::tuple{&edi::AtomSite::id, &edi::AtomSite::type_symbol, &edi::AtomSite::wyckoff_letter, &edi::AtomSite::adp_type, &edi::AtomSite::fract_x, &edi::AtomSite::fract_y, &edi::AtomSite::fract_z, &edi::AtomSite::occupancy, &edi::AtomSite::adp_iso};
     static constexpr std::array items{"id", "type_symbol", "wyckoff_letter", "adp_type", "fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"};
-    static constexpr std::array cif{"_atom_site_label", "_atom_site_type_symbol", "_atom_site_Wyckoff_symbol", "_atom_site_fract_x", "_atom_site_fract_y", "_atom_site_fract_z", "_atom_site_occupancy", "_atom_site_B_iso_or_equiv", "_atom_site_U_iso_or_equiv", "_atom_site_adp_type"};
 };
 
 // The columns of the `_atom_site_aniso` table.
@@ -2729,7 +2773,6 @@ struct RowSchema<edi::AtomSiteAniso> {
     static constexpr const char* name = "_atom_site_aniso";
     static constexpr auto fields = std::tuple{&edi::AtomSiteAniso::id, &edi::AtomSiteAniso::adp_11, &edi::AtomSiteAniso::adp_22, &edi::AtomSiteAniso::adp_33, &edi::AtomSiteAniso::adp_12, &edi::AtomSiteAniso::adp_13, &edi::AtomSiteAniso::adp_23};
     static constexpr std::array items{"id", "adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"};
-    static constexpr std::array cif{"_atom_site_aniso_label", "_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33", "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23", "_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33", "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23", "_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33", "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"};
 };
 }  // namespace crysta
 
@@ -2862,6 +2905,9 @@ struct Structure : std::enable_shared_from_this<Structure> {
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).
     // A loop category held in one cell; written whole or with `modify`.
     detail::Written<std::map<std::string, double>> scattering_lengths_fm;
+    // How the Structure view shows this structure (`_structure_view`, by item name: atom_view, atom_scale, ...),
+    // saved with it; empty: the view's defaults. No calculation reads it. Written whole.
+    detail::Written<std::map<std::string, std::string>> view;
 
     // The cell's parameters, then every site's, in collection order.
     std::vector<Parameter*> parameters();
@@ -2902,6 +2948,7 @@ inline Structure::Structure(const Structure& other)
       atom_sites(other.atom_sites),
       atom_site_aniso(other.atom_site_aniso),
       scattering_lengths_fm(other.scattering_lengths_fm),
+      view(other.view),
       epoch(other.epoch),
       geom(other.geom),
       geometry(other.geometry),
@@ -3078,7 +3125,7 @@ struct RowSchema<edi::LineSegment> {
     static constexpr auto fields = std::tuple{&edi::LineSegment::id, &edi::LineSegment::position, &edi::LineSegment::intensity};
     static constexpr std::array items{"id", "position", "intensity"};
     static constexpr std::array legacy{"_pd_background", "_easydiffraction_background"};
-    static constexpr std::array cif{"_pd_background_line_segment_X", "_pd_background_line_segment_intensity"};
+    static constexpr std::array cif{"_pd_background_line_segment_intensity"};
     // The `_background.type` this table serves.
     static constexpr std::array variants{"line-segment"};
 };
@@ -3263,6 +3310,18 @@ struct ExperimentType {
     ScatteringTypeEnum effective_scattering_type() const {
         return scattering_type.value_or(ScatteringTypeEnum::BRAGG);
     }
+    // The experiment's description (ADR-0054), each held as declared and empty until
+    // declared, `?` and `.` included: the dimensionality (`1d`, the only one) and the polarisation
+    // (`unpolarised` for neutron, the inapplicable `.` for X-ray).
+    std::string dimensionality;
+    std::string polarisation;
+    std::string effective_dimensionality() const { return dimensionality.empty() ? "1d" : dimensionality; }
+    std::string effective_polarisation() const {
+        if (!polarisation.empty()) {
+            return polarisation;
+        }
+        return effective_radiation_probe() == RadiationProbeEnum::XRAY ? "." : "unpolarised";
+    }
     // Renewed by every Python write, whatever value it leaves.
     detail::Epoch epoch;
     // ADR-0018: the row of this object's non-loop categories.
@@ -3299,6 +3358,11 @@ struct PdDataBase {
     ComputedColumn<double> intensity_calc;
     ComputedColumn<double> intensity_bkg;
     ComputedColumn<std::string> calc_status;
+    // crysta's structure curves (its ADR-0096): each linked structure's calculated curve above the background,
+    // row-major, one value per point and structure in `component_order` (the structures' ids). Empty until a
+    // calculation ran, and when no structure is linked.
+    ComputedColumn<double> component_intensities_net;
+    ComputedColumn<std::string> component_order;
     // ADR-0021 §2: crysta's residual — measured minus calculated on the included rows, NaN on
     // the excluded ones, empty for a calculation-only experiment. Published with the columns
     // above; never saved, and not a Python member.
@@ -3335,6 +3399,8 @@ struct PdDataBase {
         intensity_calc.clear();
         intensity_bkg.clear();
         calc_status.clear();
+        component_intensities_net.clear();
+        component_order.clear();
         residual.clear();
     }
 
@@ -3413,6 +3479,13 @@ struct InstrumentBase {
     // load engages both at upstream's default 0 (K = 0 is no correction); a neutron or TOF experiment
     // never carries them.
     OptionalParameter setup_polarization_coefficient, setup_monochromator_twotheta;
+    // The X-ray CW K-alpha doublet: the second wavelength and its intensity relative to the first,
+    // presence-tracked like the polarization pair (a ratio of 0 is a single wavelength).
+    OptionalParameter setup_wavelength_2, setup_wavelength_2_to_1_ratio;
+    // The instrument and facility that measured the experiment (ADR-0054), text held as
+    // declared and empty until declared; `?` states an unknown one.
+    std::string name;
+    std::string facility;
 
     InstrumentBase();  // attaches the parameter specs (inline below)
 
@@ -3472,6 +3545,55 @@ struct AbsorptionBase {
     detail::Epoch epoch;
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
+};
+
+// A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the type (`none`,
+// `becker-coppens-type-1`, `-type-2` or `-mixed`) and the items of that type alone: the mosaic
+// distribution (`gaussian` or `lorentzian`) and mosaic spread g for types I and mixed, the domain
+// radius for types II and mixed, the crystal radius for all three. Engaged exactly on a single crystal.
+struct ExtinctionBase {
+    std::optional<std::string> type;
+    std::optional<std::string> mosaic_distribution;
+    OptionalParameter domain_radius;
+    OptionalParameter mosaic_spread;
+    OptionalParameter crystal_radius;
+    OptionalParameter coefficient;  // Larson's (type larson-isotropic)
+    // Larson's anisotropic tensor (type larson-anisotropic): x11, x22, x33, x12, x13, x23.
+    OptionalParameter coefficient_11, coefficient_22, coefficient_33, coefficient_12, coefficient_13, coefficient_23;
+
+    std::vector<Parameter*> parameters();
+    detail::RowLink row;
+    detail::Epoch epoch;
+    detail::CategoryRow table_row;
+};
+
+// A single crystal's reflections (diffraction-lib `ReflnDataBase`, the `refln` category of a single
+// crystal): the measured Miller indices, F² and its su, the wavelength of each reflection for time of
+// flight (else empty), and crysta's calculated columns beside them, empty until a calculation.
+struct ReflnDataBase {
+    detail::Written<std::vector<std::int32_t>> index_h;
+    detail::Written<std::vector<std::int32_t>> index_k;
+    detail::Written<std::vector<std::int32_t>> index_l;
+    detail::Written<std::vector<double>> intensity_meas;
+    detail::Written<std::vector<double>> intensity_meas_su;
+    detail::Written<std::vector<double>> wavelength;
+    ComputedColumn<double> d_spacing;
+    ComputedColumn<double> sin_theta_over_lambda;
+    ComputedColumn<double> intensity_calc;
+
+    std::size_t size() const noexcept { return intensity_meas.size(); }
+    // Whether every measured column has one value per reflection (the wavelengths none or one each). A reader that
+    // indexes the columns together asks this first; a calculation refuses columns that are not.
+    bool rectangular() const noexcept {
+        const std::size_t n = size();
+        return index_h.size() == n && index_k.size() == n && index_l.size() == n && intensity_meas_su.size() == n &&
+               (wavelength.size() == 0 || wavelength.size() == n);
+    }
+    void clear_computed() noexcept {
+        d_spacing.clear();
+        sin_theta_over_lambda.clear();
+        intensity_calc.clear();
+    }
 };
 
 // The largest absolute Miller index a texture axis component may take — the loader's bound, held at
@@ -3745,10 +3867,41 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<CarriedLoop> carried_reflections;
     // The reflections crysta computed, beside the `data` node's computed columns.
     PowderReflnDataBase refln;
+    // A single crystal's measured reflections and their calculated F² (engaged exactly on a single
+    // crystal, which has no `data` pattern), and its extinction.
+    std::optional<ReflnDataBase> reflections;
+    ExtinctionBase extinction;
     double dataset_weight = 1.0;  // joint-fit weight from analysis.edi
     // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
     // name without a directory; the data itself is `data`. Empty: none.
     std::string data_file;
+    // Whether a data file was loaded into the experiment in this session, so the app lets the user choose its
+    // facility and instrument (ADR-0054). Never saved or read: a reopened file states its own description.
+    bool description_chosen = false;
+    // The automatic background estimate's settings (`_background_estimate`, ADR-0040), each empty until
+    // declared: the mode (`manual` or `auto`; empty is manual), the method (`auto`, `arpls`, `snip` or
+    // `fabc`; empty is auto), the width, smoothness and point count (empty is derived from the data), the
+    // tolerance in noise units (empty is 2), the rule for points on peaks (`move` or `drop`; empty is move) and
+    // what to do with the calculated peaks (`auto`, `subtract` or `ignore`; empty is auto).
+    std::optional<std::string> background_estimate_mode;
+    std::optional<std::string> background_estimate_method;
+    std::optional<double> background_estimate_width;
+    std::optional<double> background_estimate_smoothness;
+    std::optional<int> background_estimate_n_points;
+    std::optional<double> background_estimate_tolerance;
+    std::optional<std::string> background_estimate_in_peaks;
+    std::optional<std::string> background_estimate_use_model;
+    std::optional<int> background_estimate_max_terms;
+    // A single crystal's observed-reflection threshold (`_reflns`, edi ADR-0050): the multiple n of the su and the
+    // basis (`intensity` or `amplitude`), each absent until set (absent: I > 2u(I)). It decides which reflections the
+    // reported R factors and counts are taken over, never which a fit uses.
+    std::optional<double> reflns_threshold_sigma;
+    std::optional<std::string> reflns_threshold_basis;
+    // In auto mode, a digest of what the points came from (the included measured pattern and the settings; 1 when
+    // the next calculation estimates) and one of the points as auto was chosen, loaded or last estimated; 0 in
+    // manual mode. Saved as `_background_estimate.inputs_digest` and `.points_digest` (ADR-0040).
+    std::uint64_t background_estimate_inputs = 0;
+    std::uint64_t background_estimate_points = 0;
     // This bank's share of the project's last fit (`_fit_result_bank`, beside the project's `_fit_result`;
     // crysta's ExperimentBase carries the same): the points it fitted, its profile, weighted-profile and
     // expected R factors, the two with the background taken out (fractions) and its raw chi-square. Absent
@@ -3761,6 +3914,13 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<double> fit_prof_cr_factor;
     std::optional<double> fit_prof_cwr_factor;
     std::optional<double> fit_chi_square;
+    // Whether the last fit recorded a share for this bank: any of the above, since a factor that was not a number
+    // is none.
+    bool fit_share_held() const {
+        return fit_n_data_points.has_value() || fit_prof_r_factor.has_value() || fit_prof_wr_factor.has_value() ||
+               fit_prof_wr_expected.has_value() || fit_prof_cr_factor.has_value() || fit_prof_cwr_factor.has_value() ||
+               fit_chi_square.has_value();
+    }
 
     // The bank's embedded measured data, parsed from the `.edi` `_data.*` loop.
     // Presence-tracked: `std::nullopt` means the source file declared no `_data` loop at all.
@@ -3794,6 +3954,9 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // (null = never calculated here). A copy shares it, and is never current: see
     // computed_current().
     std::shared_ptr<const detail::ComputedSource> computed_source;
+    // Whether the file it was loaded from held calculated results, which the loader does not keep: a save calculates
+    // them again, as it does results calculated here. Cleared by a calculation.
+    bool carried_calculation = false;
     // This experiment's identity as a calculation input.
     detail::Epoch epoch;
     // Whether `data`'s computed columns and `refln` describe this experiment now: it is still held
@@ -3879,8 +4042,8 @@ struct KeyTraits<BraggPdExperiment> {
 };
 
 // An experiment is a row of the project's `experiments`; its parameter categories are the peak, the
-// instrument and the absorption (its linked-structure, background and texture rows are rows of their
-// own collections).
+// instrument, the absorption and the extinction (its linked-structure, background and texture rows are
+// rows of their own collections).
 template <>
 struct RowTraits<BraggPdExperiment> {
     static void link(BraggPdExperiment& experiment,
@@ -3888,11 +4051,13 @@ struct RowTraits<BraggPdExperiment> {
         experiment.peak.row.link(record);
         experiment.instrument.row.link(record);
         experiment.absorption.row.link(record);
+        experiment.extinction.row.link(record);
     }
     static void unlink(BraggPdExperiment& experiment) noexcept {
         experiment.peak.row.unlink();
         experiment.instrument.row.unlink();
         experiment.absorption.row.unlink();
+        experiment.extinction.row.unlink();
     }
     static const detail::RowLink* primary(const BraggPdExperiment& experiment) noexcept {
         return &experiment.peak.row;
@@ -4000,15 +4165,15 @@ using PreambleCallback = std::function<void(const FitPreamble&)>;
 // One pair of the fit's free parameters and their correlation coefficient, diffraction-lib's
 // `_fit_parameter_correlation` row: its id, how it was computed (`deterministic`: from the covariance), the
 // two unique names (`<datablock>.<category>[.<entry>].<name>`) in the fit's column order (i before j) and the
-// coefficient, in [-1, 1], as the text it was read with, so a loaded loop saves back byte for byte (a computed
-// one is crysta's shortest form; correlation_value reads it). A scan's row also names the file whose fit it came
-// from (`file_path`, the results.csv key); a single or joint fit's leaves it empty.
+// coefficient, in [-1, 1], as a number: text is made only when saving and read only when loading. A scan's row
+// also names the file whose fit it came from (`file_path`, the results.csv key); a single or joint fit's leaves it
+// empty.
 struct FitParameterCorrelation {
     ItemKey id;
     detail::WrittenText source_kind;
     detail::WrittenText parameter_unique_name_i;
     detail::WrittenText parameter_unique_name_j;
-    detail::WrittenText correlation;
+    detail::Written<double> correlation{0.0};
     detail::WrittenText file_path;
 };
 
@@ -4198,6 +4363,16 @@ std::string default_descent();
 //     std::invalid_argument;
 //   - crysta's registry token of a file spelling — the word edi's class registry is keyed by.
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode);
+// crysta's own non-fatal warnings kept for the app instead of printed: once called, each warning is held until
+// take_engine_warnings, one copy of each text. A tensor with a negative eigenvalue and a derived value outside its
+// range are left out: standing_warnings names those that still hold.
+void collect_engine_warnings();
+std::vector<std::string> take_engine_warnings();
+// A single crystal's extinction types and mosaic distributions, crysta's tables in their order.
+std::vector<std::string> extinction_type_tokens();
+std::vector<std::string> mosaic_distribution_tokens();
+// The observed threshold's bases (`intensity`, `amplitude`).
+std::vector<std::string> reflns_threshold_basis_tokens();
 std::string absorption_file_token(BeamModeEnum mode, const std::string& token);
 std::string absorption_registry_token(BeamModeEnum mode, const std::string& file_token);
 // The highest term order a background type admits, from crysta's table: 5 for `polynomial`, 23 for `chebyshev`,
@@ -4214,6 +4389,19 @@ void register_engine_peak_type(const std::string& token, BeamModeEnum mode);
 // structure-factor work counter.
 std::string engine_model_dump(const Project& project);
 bool engine_folds_reflections(const Project& project);
+
+/// A linked structure's Hill-Howard weight fraction (J. Appl. Cryst. 20, 467 (1987)) and its
+/// standard uncertainty, derived from the current model and never an input.
+struct WeightFraction {
+    double value = 0.0;
+    /// Absent when no free scale of the experiment carries an uncertainty.
+    std::optional<double> uncertainty;
+};
+/// The weight fraction of `link` in the experiment that holds it, computed by crysta from the
+/// project's structures, scales and last fit's stored correlations; exactly 1 with no uncertainty for
+/// the only enabled structure. Otherwise absent when the link belongs to no project, takes no part,
+/// or a structure's cell mass is unknown.
+std::optional<WeightFraction> weight_fraction(const LinkedStructure& link);
 std::uint64_t engine_structure_factor_evaluations() noexcept;
 // The chi-square tolerance a fit uses when `_minimizer.chi_square_tolerance` is not declared: the
 // LINKED crysta's default, forwarded like default_descent() (the app shows the value the minimizer
@@ -4398,16 +4586,17 @@ struct FitResultRecord {
     std::string message;
     int iterations = 0;
     double fitting_time = 0.0;  // seconds
-    double reduced_chi_square = 0.0;
+    // The agreement factors: none for one that was not a number (a fit over no weight), which a save leaves out.
+    std::optional<double> reduced_chi_square;
     std::string objective_name;
-    double objective_value = 0.0;
+    std::optional<double> objective_value;
     int n_data_points = 0;
     int n_parameters = 0;
     int n_free_parameters = 0;
     int degrees_of_freedom = 0;
     bool covariance_available = false;
     std::string exit_reason;  // crysta's status label: done, max_iter, no_step, cancelled
-    double prof_wr_factor = 0.0;
+    std::optional<double> prof_wr_factor;
     // The profile and expected R factors over every fitted point, and the two with the background taken out;
     // absent in a result written before them.
     std::optional<double> prof_r_factor;
@@ -4486,6 +4675,15 @@ inline void validate_sequential_data_dir(const std::string& data_dir, const std:
 // The top-level user object. calculate(tof_grid) runs the edi model through the crysta adapter and
 // returns the calculated intensity on the supplied TOF grid (len == tof_grid.size()); the grid is
 // the caller's argument (no measured data needed for a pure forward calculation).
+// The s.u. rule of a project that states none: always two digits (`iucr_99`).
+inline constexpr const char* kDefaultSuRule = "iucr_99";
+// The rule a report and its CIF round by, whatever the project's own: IUCr recommendation 12 (`iucr_19`).
+inline constexpr const char* kReportSuRule = "iucr_19";
+
+// What a calculation does with a due background estimate (ADR-0040): run it first, as a calculation asked for does,
+// or defer it, so the experiment calculates with its own points, as a save's recalculation does.
+enum class DueEstimates { Run, Defer };
+
 class Project : public detail::ProjectAnchor {
    public:
     // A default project holds ONE default structure and ONE default experiment, so the
@@ -4510,7 +4708,7 @@ class Project : public detail::ProjectAnchor {
     // experiment's computed `data` columns and `refln`, never returned alongside the model.
     // Every bank gets its results, or none does. Fails closed (std::invalid_argument -> Python
     // ValueError) on an experiment without a data node.
-    void calculate();
+    void calculate(DueEstimates due = DueEstimates::Run);
 
     // The fit and undo POSTCONDITION: make the stored calculated pattern describe the model it
     // sits beside. Ordinarily `calculate()` at the current state. A model can legitimately have NO
@@ -4521,7 +4719,7 @@ class Project : public detail::ProjectAnchor {
     // the old series would be a stale pattern nothing marks stale and propagating would make a
     // CONVERGED fit raise after writing its values. Absorbs only the declared
     // std::invalid_argument "cannot be calculated" failure; anything else propagates.
-    void refresh_calculated_pattern();
+    void refresh_calculated_pattern(DueEstimates due = DueEstimates::Run);
 
     // THE FIT-COMPLETION CONTRACT, binding on every `fit*` entry below. Completing a fit writes BOTH
     // halves of the model: the fitted values AND the stored calculated pattern beside them. Each fit
@@ -4655,9 +4853,9 @@ class Project : public detail::ProjectAnchor {
     ItemVec<BraggPdExperiment> experiments;
     std::string fitting_mode;
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
-    // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits), by crysta's
-    // rule.
-    std::string su_rule = "iucr_19";
+    // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
+    // recommendation 12), by crysta's rule.
+    std::string su_rule = kDefaultSuRule;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
     // libraries, and the groups the report leaves out (their keys separated by spaces; empty leaves out none). Its
@@ -4670,6 +4868,9 @@ class Project : public detail::ProjectAnchor {
     // turns these and the settings above into a report's options.
     std::optional<double> correlation_threshold;
     std::optional<std::string> pattern_x_axis;
+    // A single-crystal fit's cutoff (`_refine_ls.threshold_sigma`, edi ADR-0050): only reflections with
+    // F² > n su(F²) are fitted; absent, every one is.
+    std::optional<double> refine_ls_threshold_sigma;
     // The directory this project was loaded from / last saved to:
     // `save()` writes here and fails closed when empty; load and save_as set it.
     std::string path;
@@ -4678,6 +4879,9 @@ class Project : public detail::ProjectAnchor {
     // so scan data are read in place and never copied. Forwarded to crysta's
     // Project::scan_data_root; never persisted.
     std::string scan_data_root;
+    // The .zip a project opened from an archive works for (edi ADR-0052): Python's `save()` writes `path` (the
+    // unpacked folder) and then rewrites this archive from it; empty for a project in a folder. Never persisted.
+    std::string archive;
     // diffraction-lib `Project.metadata` / `Project.name`: plain data, mirrored on crysta.
     // `load_project` and the binding's `save_as` keep metadata.path in step.
     ProjectMetadata metadata;
@@ -4767,7 +4971,7 @@ class Project : public detail::ProjectAnchor {
     friend bool unchanged_since(const Project& live, const WorkStamps& stamps);
     friend PublishOutcome publish(Project& live, CalculationResult&& result);
     // calculate()'s body: converts, calculates and publishes every bank, or throws first.
-    void publish_calculation();
+    void publish_calculation(DueEstimates due);
     detail::EditLog edits_;
     // edi ADR-0024: every collection of the project, and every collection inside its structures and
     // experiments, holds the project's record. ProjectTail calls it after a build or an assignment.
@@ -5068,7 +5272,6 @@ struct CellCategory {
     static constexpr const char* name = "_cell";
     static constexpr auto columns = std::tuple{&Cell::length_a, &Cell::length_b, &Cell::length_c, &Cell::angle_alpha, &Cell::angle_beta, &Cell::angle_gamma};
     static constexpr std::array items{"length_a", "length_b", "length_c", "angle_alpha", "angle_beta", "angle_gamma"};
-    static constexpr std::array cif{"_cell_length_a", "_cell_length_b", "_cell_length_c", "_cell_angle_alpha", "_cell_angle_beta", "_cell_angle_gamma"};
 };
 static_assert(detail::one_entry_per_column(CellCategory::columns, CellCategory::items));
 
@@ -5077,7 +5280,6 @@ struct SpaceGroupCategory {
     static constexpr const char* name = "_space_group";
     static constexpr auto columns = std::tuple{&SpaceGroup::name_h_m, &SpaceGroup::coord_system_code, &SpaceGroup::it_number};
     static constexpr std::array items{"name_h_m", "coord_system_code", "it_number"};
-    static constexpr std::array cif{"_space_group_name_H-M_alt", "_symmetry_space_group_name_H-M"};
 };
 static_assert(detail::one_entry_per_column(SpaceGroupCategory::columns, SpaceGroupCategory::items));
 
@@ -5086,7 +5288,6 @@ struct GeomCategory {
     static constexpr const char* name = "_geom";
     static constexpr auto columns = std::tuple{&Geom::min_bond_distance_cutoff, &Geom::bond_distance_inc};
     static constexpr std::array items{"min_bond_distance_cutoff", "bond_distance_inc"};
-    static constexpr std::array cif{"_geom_min_bond_distance_cutoff", "_geom_bond_distance_incr"};
 };
 static_assert(detail::one_entry_per_column(GeomCategory::columns, GeomCategory::items));
 
@@ -5094,8 +5295,8 @@ static_assert(detail::one_entry_per_column(GeomCategory::columns, GeomCategory::
 struct ExperimentTypeCategory {
     using Owner = ExperimentType;
     static constexpr const char* name = "_experiment_type";
-    static constexpr auto columns = std::tuple{&ExperimentType::sample_form, &ExperimentType::beam_mode, &ExperimentType::radiation_probe, &ExperimentType::scattering_type};
-    static constexpr std::array items{"sample_form", "beam_mode", "radiation_probe", "scattering_type"};
+    static constexpr auto columns = std::tuple{&ExperimentType::sample_form, &ExperimentType::beam_mode, &ExperimentType::radiation_probe, &ExperimentType::scattering_type, &ExperimentType::dimensionality, &ExperimentType::polarisation};
+    static constexpr std::array items{"sample_form", "beam_mode", "radiation_probe", "scattering_type", "dimensionality", "polarisation"};
     static constexpr std::array legacy{"_easydiffraction_experiment_type", "_expt_type"};
 };
 static_assert(detail::one_entry_per_column(ExperimentTypeCategory::columns, ExperimentTypeCategory::items));
@@ -5120,8 +5321,8 @@ static_assert(detail::one_entry_per_column(PeakCategory::columns, PeakCategory::
 struct InstrumentCategory {
     using Owner = InstrumentBase;
     static constexpr const char* name = "_instrument";
-    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta};
-    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta"};
+    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta, &InstrumentBase::setup_wavelength_2, &InstrumentBase::setup_wavelength_2_to_1_ratio, &InstrumentBase::name, &InstrumentBase::facility};
+    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta", "setup_wavelength_2", "setup_wavelength_2_to_1_ratio", "name", "facility"};
     static constexpr std::array legacy{"_instr", "_diffrn_radiation_wavelength", "_pd_calib"};
 };
 static_assert(detail::one_entry_per_column(InstrumentCategory::columns, InstrumentCategory::items));
@@ -5135,6 +5336,22 @@ struct AbsorptionCategory {
 };
 static_assert(detail::one_entry_per_column(AbsorptionCategory::columns, AbsorptionCategory::items));
 
+// A single crystal's Becker-Coppens extinction.
+struct ExtinctionCategory {
+    using Owner = ExtinctionBase;
+    static constexpr const char* name = "_extinction";
+    static constexpr auto columns =
+        std::tuple{&ExtinctionBase::type, &ExtinctionBase::mosaic_distribution, &ExtinctionBase::domain_radius,
+                   &ExtinctionBase::mosaic_spread, &ExtinctionBase::crystal_radius, &ExtinctionBase::coefficient,
+                   &ExtinctionBase::coefficient_11, &ExtinctionBase::coefficient_22, &ExtinctionBase::coefficient_33,
+                   &ExtinctionBase::coefficient_12, &ExtinctionBase::coefficient_13, &ExtinctionBase::coefficient_23};
+    static constexpr std::array items{"type",           "mosaic_distribution", "domain_radius",  "mosaic_spread",
+                                      "crystal_radius", "coefficient",         "coefficient_11", "coefficient_22",
+                                      "coefficient_33", "coefficient_12",      "coefficient_13", "coefficient_23"};
+    static constexpr std::array legacy{"_easydiffraction_extinction"};
+};
+static_assert(detail::one_entry_per_column(ExtinctionCategory::columns, ExtinctionCategory::items));
+
 // The selector and constants of the type-switched `_background` category. Its rows are the loop
 // schema of the selected type.
 struct BackgroundCategory {
@@ -5145,6 +5362,16 @@ struct BackgroundCategory {
 };
 static_assert(detail::one_entry_per_column(BackgroundCategory::columns, BackgroundCategory::items));
 
+// A single crystal's observed-reflection threshold.
+struct ReflnsCategory {
+    using Owner = ExperimentBase;
+    static constexpr const char* name = "_reflns";
+    static constexpr auto columns =
+        std::tuple{&ExperimentBase::reflns_threshold_sigma, &ExperimentBase::reflns_threshold_basis};
+    static constexpr std::array items{"threshold_sigma", "threshold_basis"};
+};
+static_assert(detail::one_entry_per_column(ReflnsCategory::columns, ReflnsCategory::items));
+
 struct DataSourceCategory {
     using Owner = ExperimentBase;
     static constexpr const char* name = "_data_source";
@@ -5152,6 +5379,24 @@ struct DataSourceCategory {
     static constexpr std::array items{"file_name"};
 };
 static_assert(detail::one_entry_per_column(DataSourceCategory::columns, DataSourceCategory::items));
+
+// ADR-0040: the automatic background estimate's settings, and the two digests of what the experiment's points
+// came from and were, saved in auto mode so a reload need not estimate again.
+struct BackgroundEstimateCategory {
+    using Owner = ExperimentBase;
+    static constexpr const char* name = "_background_estimate";
+    static constexpr auto columns = std::tuple{
+        &ExperimentBase::background_estimate_mode,       &ExperimentBase::background_estimate_method,
+        &ExperimentBase::background_estimate_width,      &ExperimentBase::background_estimate_smoothness,
+        &ExperimentBase::background_estimate_n_points,   &ExperimentBase::background_estimate_tolerance,
+        &ExperimentBase::background_estimate_in_peaks,   &ExperimentBase::background_estimate_use_model,
+        &ExperimentBase::background_estimate_max_terms,  &ExperimentBase::background_estimate_inputs,
+        &ExperimentBase::background_estimate_points};
+    static constexpr std::array items{"mode",      "method",    "width",     "smoothness",    "n_points",
+                                      "tolerance", "in_peaks",  "use_model", "max_terms",     "inputs_digest",
+                                      "points_digest"};
+};
+static_assert(detail::one_entry_per_column(BackgroundEstimateCategory::columns, BackgroundEstimateCategory::items));
 
 struct JointFitCategory {
     using Owner = ExperimentBase;
@@ -5197,6 +5442,15 @@ struct CorrelationChartCategory {
     static constexpr std::array items{"threshold"};
 };
 static_assert(detail::one_entry_per_column(CorrelationChartCategory::columns, CorrelationChartCategory::items));
+
+// A single-crystal fit's reflection cutoff.
+struct RefineLsCategory {
+    using Owner = Project;
+    static constexpr const char* name = "_refine_ls";
+    static constexpr auto columns = std::tuple{&Project::refine_ls_threshold_sigma};
+    static constexpr std::array items{"threshold_sigma"};
+};
+static_assert(detail::one_entry_per_column(RefineLsCategory::columns, RefineLsCategory::items));
 
 struct PatternChartCategory {
     using Owner = Project;
@@ -5288,8 +5542,8 @@ static_assert(detail::one_entry_per_column(MetadataCategory::columns, MetadataCa
 struct ProjectStateCategory {
     using Owner = Project;
     static constexpr const char* name = "project";
-    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root};
-    static constexpr std::array items{"", ""};
+    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root, &Project::archive};
+    static constexpr std::array items{"", "", ""};
 };
 static_assert(detail::one_entry_per_column(ProjectStateCategory::columns, ProjectStateCategory::items));
 
@@ -5300,6 +5554,14 @@ struct ScatteringLengthCategory {
     static constexpr std::array items{"type_symbol length_fm"};
 };
 static_assert(detail::one_entry_per_column(ScatteringLengthCategory::columns, ScatteringLengthCategory::items));
+
+// How the Structure view shows a structure: its `_structure_view` items by name, in one cell.
+struct StructureViewCategory {
+    static constexpr const char* name = "_structure_view";
+    static constexpr auto columns = std::tuple{&Structure::view};
+    static constexpr std::array items{"adp_probability atom_scale atom_view atoms axes bonds cell colour_scheme labels"};
+};
+static_assert(detail::one_entry_per_column(StructureViewCategory::columns, StructureViewCategory::items));
 
 // An imported file's own `_refln` loop, kept as read: the item names, and each row's cells as
 // written. It is written back until a calculation publishes the computed `_refln` (ReflnCategory).
@@ -5320,6 +5582,21 @@ struct DataCategory {
     static constexpr std::array legacy{"_pd_data", "_pd_meas", "_pd_proc"};
 };
 static_assert(detail::one_entry_per_column(DataCategory::columns, DataCategory::items));
+
+// Each structure's curve: the per-point lists in the `_data` loop and the block's list of the structures they follow,
+// crysta's computed buffers, shared like the other computed columns.
+struct PdCalcCategory {
+    static constexpr const char* name = "_pd_calc";
+    static constexpr auto columns = std::tuple{&PdDataBase::component_intensities_net};
+    static constexpr std::array items{"component_intensities_net"};
+};
+static_assert(detail::one_entry_per_column(PdCalcCategory::columns, PdCalcCategory::items));
+struct PdCalcOverallCategory {
+    static constexpr const char* name = "_pd_calc_overall";
+    static constexpr auto columns = std::tuple{&PdDataBase::component_order};
+    static constexpr std::array items{"component_presentation_order"};
+};
+static_assert(detail::one_entry_per_column(PdCalcOverallCategory::columns, PdCalcOverallCategory::items));
 
 // Categories on file that the model does not store.
 struct FitParameterCategory {
@@ -5377,8 +5654,10 @@ static_assert(detail::one_entry_per_column(CartnTransformCategory::columns, Cart
 
 struct ReflnCategory {
     static constexpr const char* name = "_refln";
-    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position};
-    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight"};
+    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position, &ReflnDataBase::index_h, &ReflnDataBase::index_k, &ReflnDataBase::index_l, &ReflnDataBase::intensity_meas, &ReflnDataBase::intensity_meas_su, &ReflnDataBase::wavelength, &ReflnDataBase::d_spacing, &ReflnDataBase::sin_theta_over_lambda, &ReflnDataBase::intensity_calc};
+    // A powder's computed reflections and a single crystal's measured ones with their calculated
+    // columns: one category on file, as in diffraction-lib, held by two classes.
+    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight", "index_h", "index_k", "index_l", "intensity_meas", "intensity_meas_su", "wavelength", "d_spacing", "sin_theta_over_lambda", "intensity_calc"};
 };
 static_assert(detail::one_entry_per_column(ReflnCategory::columns, ReflnCategory::items));
 
@@ -5511,6 +5790,20 @@ inline std::vector<Parameter*> InstrumentBase::parameters() {
     detail::push_optional(out, calib_sample_transparency);
     detail::push_optional(out, setup_polarization_coefficient);  // , X-ray only
     detail::push_optional(out, setup_monochromator_twotheta);
+    detail::push_optional(out, setup_wavelength_2);  // , X-ray only
+    detail::push_optional(out, setup_wavelength_2_to_1_ratio);
+    return out;
+}
+inline std::vector<Parameter*> ExtinctionBase::parameters() {
+    std::vector<Parameter*> out;
+    detail::push_optional(out, domain_radius);
+    detail::push_optional(out, mosaic_spread);
+    detail::push_optional(out, crystal_radius);
+    detail::push_optional(out, coefficient);
+    for (OptionalParameter* term :
+         {&coefficient_11, &coefficient_22, &coefficient_33, &coefficient_12, &coefficient_13, &coefficient_23}) {
+        detail::push_optional(out, *term);
+    }
     return out;
 }
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
@@ -5531,6 +5824,9 @@ inline std::vector<Parameter*> ExperimentBase::parameters() {
         out.push_back(&link->scale);
     }
     for (Parameter* parameter : absorption.parameters()) {
+        out.push_back(parameter);
+    }
+    for (Parameter* parameter : extinction.parameters()) {
         out.push_back(parameter);
     }
     for (const std::shared_ptr<PrefOrient>& row : preferred_orientation) {
@@ -5627,7 +5923,8 @@ inline void canonicalize_peak_specs(PeakBase& peak) {
 // conversion for calculation, fitting and saving and the free walks refuse a block that does not, so
 // no slot is dropped, read as another profile's, or classed by another slot's metadata.
 inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
-    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
+    // A single crystal has no peak profile.
+    if (experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH || experiment.reflections) {
         return {};
     }
     const std::string declared = effective_peak_type(experiment);
@@ -5666,7 +5963,7 @@ inline std::vector<Parameter*> ExperimentBase::free_parameters() {
     canonicalize_peak_specs(peak);
     require_peak_slots_fit_type(*this);
     std::vector<Parameter*> out = detail::free_of(parameters());
-    // The limit angle is a fixed setting (is_fixed_setting), known by its slot whatever it carries.
+    // The limit angle is a descriptor (ADR-0053), known by its slot whatever it carries.
     if (peak.asym_beba_limit) {
         std::erase(out, &*peak.asym_beba_limit);
     }
@@ -5748,7 +6045,12 @@ inline void point_at_row(Category& category) {
     }
 }
 inline void point_parameters(Cell& cell) { point_at_row(cell); }
-inline void point_parameters(AtomSite& site) { point_at_row(site); }
+inline void point_parameters(AtomSite& site) {
+    point_at_row(site);
+    for (Parameter* parameter : site.parameters()) {
+        parameter->category.held_by(site);
+    }
+}
 inline void point_parameters(AtomSiteAniso& tensor) { point_at_row(tensor); }
 inline void point_parameters(LineSegment& point) { point_at_row(point); }
 inline void point_parameters(PolynomialTerm& term) { point_at_row(term); }
@@ -5769,6 +6071,9 @@ inline void point_parameters(Structure& structure) {
 inline void point_parameters(ExperimentBase& experiment) {
     point_parameters(experiment.peak);
     point_parameters(experiment.instrument);
+    for (Parameter* parameter : experiment.instrument.parameters()) {
+        parameter->category.held_by(experiment);
+    }
     for (const std::shared_ptr<LinkedStructure>& link : experiment.linked_structures) {
         point_parameters(*link);
     }

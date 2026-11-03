@@ -9,14 +9,18 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
+import { checkTutorialFileDownloads } from './web_tutorial_files.mjs';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
-import { beginFitProgress, endFitProgress, advancesLiveFitProgress } from './web_fit_progress.mjs';
-import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
+import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
+import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
-const fileRequestsOnly = process.argv.includes('--file-requests-only');
+const tutorialFilesOnly = process.argv.includes('--tutorial-files-only');
+const saveRouteOnly = process.argv.includes('--save-route-only');
+const exampleOnly = process.argv.includes('--example-only');
+const fileRequestsOnly = saveRouteOnly || process.argv.includes('--file-requests-only');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
 assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
@@ -27,6 +31,8 @@ const reopenControl = process.argv.find(arg => arg.startsWith('--reopen-control=
 assert(!fileRequestsOnly || !reopenControl, 'request-only checks cannot impersonate a reopen control');
 assert(!reopenControl || ['noop', 'refuse'].includes(reopenControl),
   'reopen counterfactual must be the explicit no-op or refused-open case');
+assert(!exampleOnly || (!fileRequestsOnly && !reopenControl && fileRequestCase === 'none'),
+  'The example-only scope must omit file requests, save-only and reopen controls');
 console.log(`browser ${mode}: starting`);
 assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(mode),
   'requires the produced site, an explicit thread case and a persistent output directory');
@@ -115,7 +121,13 @@ try {
   if (mode === 'singlethread') await send('Network.setBlockedURLs', { urls: ['*coi-serviceworker.js*'] });
   const evaluate = async expression => {
     const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
-    assert(!result.exceptionDetails, 'page evaluation must execute without a browser exception');
+    if (result.exceptionDetails) {
+      await writeFile(join(output, `${mode}-evaluation-error.json`), JSON.stringify({
+        expression, exceptionDetails:result.exceptionDetails,
+      }, null, 2));
+    }
+    assert(!result.exceptionDetails, 'page evaluation must execute without a browser exception: ' +
+      (result.exceptionDetails?.exception?.description || result.exceptionDetails?.text || ''));
     return result.result.value;
   };
   const frame = async () => {
@@ -159,15 +171,71 @@ try {
     } while (Date.now() < deadline);
     throw Error('page navigation must finish rendering before the next pointer action');
   };
+  const waitNative = async objectName => {
+    await waitControlGeometry(evaluate,frame,objectName);
+    return controlPointer(evaluate,objectName);
+  };
+  const waitStatusBarFit = async () => {
+    const control = await waitControlGeometry(evaluate,frame,'statusBar.fit.button');
+    const node = await waitAX(/^(?:Fit|Continue|Refit)$/,true,'button');
+    assert.equal(node.description?.value,'Fit the free parameters',
+      'The idle fitting action must expose the status-bar Fit button description');
+    assert.equal(control.text?.trim().split(/\r?\n/).at(-1),node.name?.value,
+      'The accessible fit action must match the actual named status-bar button label');
+    return node;
+  };
   const click = async (regex, role, nativeObjectName, containerName) => {
     await restoreCanvasViewport(evaluate);
+    const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
+      /Open project/.test(regex.source)?'project.open':/Create a new project/.test(regex.source)?'project.create':null;
+    if(projectAction) {
+      const shown=await evaluate(`(() => {const group=window.ediControlGeometry('group.getStarted');
+        const item=window.ediControlGeometry(${JSON.stringify(projectAction)});
+        return item.x>=group.x && item.y>=group.y && item.x+item.width<=group.x+group.width && item.y+item.height<=group.y+group.height;})()`);
+      if(!shown)await click(/Get started$/,'button');
+      nativeObjectName=projectAction;containerName='group.getStarted';
+    }
+    if (role==='radio' && (regex.test('Folder') || regex.test('Zip archive'))) {
+      const opening=await evaluate(`(() => {try {return window.ediControlGeometry('open.folder').visible;}
+        catch(error) {if (/no visible item|no item is named/.test(error.message)) return false; throw error;}})()`);
+      const target=(opening?'open.':'saveAs.')+(regex.test('Folder')?'folder':'zip');
+      await settleRenderedPage();
+      const point=await waitNative(target);
+      console.log(`browser ${mode}: native choice ${target}, pointer ${point.x},${point.y}`);
+      for(const type of ['mousePressed','mouseReleased']) {await send('Input.dispatchMouseEvent',{type,...point,button:'left',clickCount:1});await frame();}
+      return;
+    }
+    if(regex.source==='^OK$') {
+      // The default shortcut activates only after the dialog's entry transition.
+      await settleRenderedPage();
+      console.log(`browser ${mode}: accept real dialog with default Enter`);
+      for(const type of ['keyDown','keyUp'])
+        await send('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+      await frame();return;
+    }
     const node = await waitAX(regex, true, role);
     console.log(`browser ${mode}: click ${node.name?.value}`);
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
     if (node.role?.value === 'tab' && /^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || ''))
       nativeObjectName ||= `appBar.tab.${node.name.value.toLowerCase()}`;
+    const names={'Open project…':'project.open','Save project as…':'project.saveAs','Zip archive':'saveAs.zip'};
+    nativeObjectName ||= names[node.name?.value];
     let x, y;
-    if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
+    const groupName=/(?:^| )Examples$/.test(node.name?.value||'')?'group.examples':
+      /Get started$/.test(node.name?.value||'')?'group.getStarted':
+      /Recent projects$/.test(node.name?.value||'')?'group.recentProjects':null;
+    if (groupName) {
+      const rect=await evaluate(`window.ediControlGeometry(${JSON.stringify(groupName)})`);
+      const model=await send('DOM.getBoxModel',{backendNodeId:node.backendDOMNodeId});
+      assert(rect?.objectName===groupName&&rect.visible===true&&rect.enabled===true&&
+        [rect.x,rect.y,rect.width,rect.height,model.model.width,model.model.height].every(Number.isFinite)&&
+        rect.width>0&&rect.height>0&&model.model.width>0&&model.model.height>0,
+        'The group header pointer must use its fresh native group origin and real button extent');
+      x=rect.x+Math.min(rect.width,model.model.width)/2;
+      y=rect.y+Math.min(rect.height,model.model.height)/2;
+      assert(x>=0&&x<1280&&y>=0&&y<768,
+        'The real group header pointer must lie inside the fixed browser viewport');
+    } else if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
     else {
       const model = await send('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId });
       const q = model.model.content;
@@ -175,8 +243,11 @@ try {
       x = ((rawX % 1280) + 1280) % 1280; y = (q[1]+q[3]+q[5]+q[7])/4;
     }
     console.log(`browser ${mode}: pointer ${x},${y}`);
-    for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent',
-      {type,x,y,button:'left',clickCount:1});
+    await send('Input.dispatchMouseEvent', {type:'mouseMoved',x,y});
+    for (const type of ['mousePressed', 'mouseReleased']) {
+      await send('Input.dispatchMouseEvent', {type,x,y,button:'left',clickCount:1});
+      await frame();
+    }
     await frame();
     if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
     if (node.role?.value === 'tab' && /^(?:Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || '')) {
@@ -196,7 +267,7 @@ try {
     // Filter through real keyboard input so the requested row is materialised and unclipped.
     // Qt's recycled AX name remains a witness; fresh native geometry locates the actual input.
     await restoreCanvasViewport(evaluate);
-    const search = await controlPointer(evaluate, 'examples.search');
+    const search = await waitNative('examples.search');
     for (const type of ['mousePressed', 'mouseReleased'])
       await send('Input.dispatchMouseEvent', {type, ...search, button:'left', clickCount:1});
     for (const type of ['keyDown','keyUp'])
@@ -209,9 +280,25 @@ try {
       exampleId, row:await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`),
       list:await evaluate('window.ediControlGeometry("examples.list")'),
     }, null, 2));
+    const row = await evaluate(`window.ediControlGeometry(${JSON.stringify(`examples.open.${exampleId}`)})`);
+    assert(row && row.visible && row.enabled, `Example precondition: requested bundled row exists and is actionable: ${exampleId}`);
     await click(exampleName, 'button', `examples.open.${exampleId}`, 'examples.list');
   };
   const modalIsDrawn = async () => {
+    // The summary table belongs to the results popup. Use its native rectangle
+    // to sample the surrounding dialog padding; agreement tables may grow below it.
+    const table = await evaluate(`(() => {
+      try { return window.ediControlGeometry('fit.results.list'); }
+      catch (error) {
+        if (String(error).includes('no visible item')) return null;
+        throw error;
+      }
+    })()`);
+    if (table === null) return false;
+    assert(table.visible && table.width > 0 && table.height > 0,
+      'results modal samples require the actually visible summary table');
+    const points = [.25,.75].flatMap(y => [table.x-12,table.x+table.width+12].map(x =>
+      [Math.round(x),Math.round(table.y+table.height*y)]));
     const data = Buffer.from((await send('Page.captureScreenshot', {format:'png'})).data, 'base64');
     const width = data.readUInt32BE(16), height = data.readUInt32BE(20);
     const channels = data[25] === 2 ? 3 : data[25] === 6 ? 4 : 0;
@@ -225,9 +312,11 @@ try {
     }
     const raw = inflateSync(Buffer.concat(compressed)), stride = width * channels;
     assert.equal(raw.length, (stride+1)*height, 'screenshot rows must be complete');
+    assert(points.every(([x,y]) => x >= 0 && x < width && y >= 0 && y < height),
+      'results dialog padding must lie inside the actual screenshot');
     let previous = Buffer.alloc(stride);
     const samples = [];
-    for (let y = 0; y <= Math.round(height*.74); ++y) {
+    for (let y = 0; y <= Math.max(...points.map(point => point[1])); ++y) {
       const filter = raw[y*(stride+1)], row = Buffer.alloc(stride);
       assert(filter <= 4, 'browser PNG row filters must be supported');
       for (let x = 0; x < stride; ++x) {
@@ -236,17 +325,14 @@ try {
         const predictor = filter === 0 ? 0 : filter === 1 ? a : filter === 2 ? b : filter === 3 ? Math.floor((a+b)/2) : pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
         row[x] = (raw[y*(stride+1)+x+1] + predictor) & 255;
       }
-      if ([Math.round(height*.25),Math.round(height*.74)].includes(y)) {
-        for (const fraction of [.28,.72]) {
-          const x = Math.round(width*fraction)*channels;
-          samples.push([...row.subarray(x,x+3)]);
-        }
+      for (const [px,py] of points) {
+        if (py === y) samples.push([...row.subarray(px*channels,px*channels+3)]);
       }
       previous = row;
     }
     // gui-components v0.9.1 Colors.qml: dialogBackground = contentBackground = #f4f4f4 in the light theme.
-    // Sample the two dialog margins: its central results table can have a selected row.
-    // A broad opaque modal covers both the white plotting canvas and sidebar; the ordinary chart cannot satisfy this.
+    // Sample outside both summary-table edges, independent of table height and column layout.
+    // A visible native summary alone is insufficient: these opaque dialog pixels must also exist.
     return samples.length === 4 && samples.every(rgb => rgb.every(value => Math.abs(value-244) <= 2));
   };
   const waitModal = async shown => {
@@ -260,11 +346,15 @@ try {
     await writeFile(join(output, `${mode}-${name}.png`), Buffer.from(png.data, 'base64'));
   };
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `
+    // The download gate explicitly exercises the browser capability fallback.
+    for (const name of ['showDirectoryPicker','showOpenFilePicker','showSaveFilePicker'])
+      Object.defineProperty(window,name,{value:undefined,configurable:true});
     window.__e04FolderCompleted = [];
     let pickerSequence = 0;
+    window.__e04PickerAttempts = [];
     const nativeListen = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
-      if (this instanceof HTMLInputElement && this.type === 'file' && this.id === 'edi-open-folder' && type === 'change') {
+      if (this instanceof HTMLInputElement && this.type === 'file' && ['edi-open-folder','edi-open-project'].includes(this.id) && type === 'change') {
         const original = listener;
         listener = async function(event) {
           try { await original.call(this,event); }
@@ -275,7 +365,11 @@ try {
     };
     const nativeInputClick = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function() {
-      if (this.type === 'file') { this.__e04Picker = ++pickerSequence; window.__e04FileInput = this; }
+      if (this.type === 'file') {
+        this.__e04Picker = ++pickerSequence; window.__e04FileInput = this;
+        window.__e04PickerAttempts.push({sequence:pickerSequence, active:navigator.userActivation.isActive,
+          time:performance.now(), multiple:this.multiple, accept:this.accept});
+      }
       return nativeInputClick.call(this);
     };
     const nativeFocus = HTMLElement.prototype.focus;
@@ -283,7 +377,7 @@ try {
       nativeFocus.call(this, { ...options, preventScroll: true });
     };
   ` });
-  await send('Page.navigate', { url: origin + '/webapp/' });
+  await send('Page.navigate', { url: origin + '/webapp/' + (mode === 'shim' ? '' : '?build=' + mode) });
   let ready = false;
   const readyDeadline = Date.now() + 90000;
   while (!ready && Date.now() < readyDeadline) {
@@ -339,8 +433,13 @@ try {
     () => shot('develop-diagnostics'));
   if (process.argv.includes('--diagnostics-only')) {
     console.log(`${mode}: actual Develop-view diagnostics passed`);
+  } else if (tutorialFilesOnly) {
+    await checkTutorialFileDownloads({ click, event, output, evaluate, send, mode });
+    console.log(`${mode}: actual tutorial-file downloads passed`);
   } else {
   await shot('home');
+  if (!fileRequestsOnly && !exampleOnly)
+    await checkTutorialFileDownloads({ click, event, output, evaluate, send, mode });
   await click(/^Start$/);
   await click(/^Project$/);
   const beforeExample=await send('Accessibility.getFullAXTree');
@@ -348,8 +447,8 @@ try {
     (n.properties || []).some(p=>p.name==='disabled' && p.value.value)),
     'example opening must start without a live project or enabled Analysis tab');
   await click(/Examples$/, 'button');
-  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish.*5bank.*(?:start[- ]?)?5/i : /lbco.*hrpt.*(?:start[- ]?)?4/i;
-  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish-5bank_start-5' : 'pd-neut-cwl_lbco-hrpt_start-4';
+  const exampleName = fitCase === 'ncaf' ? /ncaf.*wish/i : /lbco.*hrpt/i;
+  const exampleId = fitCase === 'ncaf' ? 'pd-neut-tof_ncaf-wish' : 'pd-neut-cwl_lbco-hrpt';
   await openExampleRow(exampleId, exampleName);
   await waitAX(/^Analysis$/,true,'tab');
   await waitAX(/^Save project as/, true, 'button');
@@ -359,14 +458,18 @@ try {
     // A completed event from the first save cannot satisfy the second save.
     lastEvents.delete('Browser.downloadProgress');
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
+    download.catch(()=>{});
     await click(/^Save project as/);
+    // The app's format choice precedes the browser download, including the fallback.
+    await click(/^Zip archive$/,'radio');
+    await click(/^OK$/,'button');
     return join(output, (await download).guid);
   };
   const inspectArchive = archive => {
     const result = spawnSync('python', ['-c', `import hashlib, json, pathlib, re, sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as archive:
     files = {name: archive.read(name) for name in archive.namelist() if not name.endswith('/')}
-roots = [name[:-len('project.edi')] for name in files if name.endswith('/project.edi')]
+roots = [name[:-len('project.edi')] for name in files if name == 'project.edi' or name.endswith('/project.edi')]
 if len(roots) != 1:
     raise SystemExit('saved zip must contain one project root')
 root = roots[0]
@@ -381,13 +484,36 @@ files[root + 'project.edi'] = re.sub(pattern, r'\\1<NORMALIZED-WALL-CLOCK>', pro
 scientific = {name[len(root):]: hashlib.sha256(data).hexdigest() for name, data in files.items()
               if name.startswith(root)}
 print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, archive],
-      {encoding:'utf8',timeout:10000});
+      {encoding:'utf8',timeout:10000,maxBuffer:32*1024*1024});
     assert.equal(result.status, 0, 'each browser save must produce a readable scientific project archive');
     return JSON.parse(result.stdout);
   };
-  if (!fileRequestsOnly) {
+  if (saveRouteOnly) {
+    await click(/^Project$/);
+    const archive = await saveArchive();
+    const state = inspectArchive(archive);
+    assert(Object.keys(state.scientific).includes('project.edi') && Object.keys(state.scientific).includes('analysis/analysis.edi'),
+      'Fallback Save project as must download the complete scientific project');
+    assert.equal(await evaluate('typeof window.showSaveFilePicker'), 'undefined',
+      'The download gate must actually exercise the browser capability fallback');
+    await writeFile(join(output, `${mode}-save-route.json`), JSON.stringify({completed:true, archive, state},null,2));
+    console.log(`${mode}: actual fallback Save project as download passed`);
+  } else {
+  if (!fileRequestsOnly && !exampleOnly) {
   await click(/^Analysis$/);
   await waitModal(false);
+  const fitButtonAX = await waitStatusBarFit();
+  const fitButtonDOM = await send('DOM.resolveNode',{backendNodeId:fitButtonAX.backendDOMNodeId});
+  assert(fitButtonDOM.object?.objectId,
+    'The real status-bar fit action must resolve to its browser accessibility element');
+  const pinnedFitButton = await send('Runtime.callFunctionOn',{
+    objectId:fitButtonDOM.object.objectId,
+    functionDeclaration:'function() { window.__e04FitControl = this; return this.isConnected; }',
+    returnByValue:true,
+  });
+  assert(!pinnedFitButton.exceptionDetails && pinnedFitButton.result?.value === true,
+    'The progress observer must bind the actual connected status-bar fit control');
+  await send('Runtime.releaseObject',{objectId:fitButtonDOM.object.objectId});
   await evaluate(`(() => {
     window.__e04Progress = [];
     const progressKind = (${fittingObservationKind.toString()});
@@ -400,7 +526,13 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
           values.push(node.getAttribute?.('aria-label'), node.textContent);
           for (const child of node.querySelectorAll?.('[aria-label]') || []) values.push(child.getAttribute('aria-label'));
         }
-        for (const value of values) if (progressKind(value)) window.__e04Progress.push(value);
+        for (const value of values) {
+          const kind = progressKind(value);
+          const fromFitControl = record.target === window.__e04FitControl ||
+            window.__e04FitControl.contains(record.target);
+          if (kind === 'iteration' || (kind === 'control' && fromFitControl))
+            window.__e04Progress.push(value);
+        }
       }
     });
     for (const root of roots) observer.observe(root,{subtree:true,attributes:true,attributeOldValue:true,characterData:true,characterDataOldValue:true,childList:true});
@@ -408,34 +540,48 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   })()`);
   const progressBefore = await beginFitProgress(evaluate);
   const fitStarted = await evaluate('performance.now()');
-  await click(/^Start fitting$/);
+  await click(/^(?:Fit|Continue|Refit)$/,'button','statusBar.fit.button');
 
-  await waitAX(/^Success$/);
+  // Qt wasm leaves dialog DOM elements closed; observe the actual native summary instead.
+  const outcome=await waitControlGeometry(evaluate,frame,'fit.results.value.0',{enabled:false});
+  assert.equal(outcome.text,'Success',
+    'The actual rendered fit-results Overall status must report successful fitting');
+  await writeFile(join(output,`${mode}-fit-outcome.json`),JSON.stringify(outcome,null,2));
   const fitElapsedMs = (await evaluate('performance.now()')) - fitStarted;
   assert(Number.isFinite(fitElapsedMs) && fitElapsedMs > 0, 'fit measurement must span the actual browser fitting action'); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
   const nativeProgress = await endFitProgress(evaluate);
   const progressAfter = await evaluate('window.ediFitProgress()');
   const finalIteration = Number(progressAfter.text.match(/\bit\s+(\d+)$/i)?.[1]);
+  // NCAF is the sustained frame-liveness vehicle. The catalogue LBCO fit can
+  // finish its remaining iterations within one frame; frame sampling cannot
+  // establish which individual callbacks that frame coalesced (record 0275560a4).
+  const frameLivenessRequired = fitCase === 'ncaf';
   await writeFile(join(output, `${mode}-progress.json`), JSON.stringify({accessibility:progress,
-    native:nativeProgress,before:progressBefore,after:progressAfter,fitCase,finalIteration,fitElapsedMs},null,2));
+    native:nativeProgress,before:progressBefore,after:progressAfter,fitCase,finalIteration,fitElapsedMs,
+    frameLivenessRequired,frameAdvancementObserved:advancesLiveFitProgress(nativeProgress,finalIteration)},null,2));
   // The live status-bar stripe shows the running fit's current iteration: "fitting · it N".
   const runningProgress = (values,states,final) => values.some(value => fittingObservationKind(value) === 'control') &&
     advancesLiveFitProgress(states,final);
-  assert(hasRunningProgress(['stop-circle Stop fitting', 'fitting · it 2']),
+  assert(hasRunningProgress(['Stop', 'fitting · it 2']),
     'the current named Stop control and live iteration grammar must satisfy the progress oracle');
   assert(!hasRunningProgress(['Maximum iterations 400','Success','Iterations', 'it 20 · 2 s']) &&
-    !hasRunningProgress(['Stop fitting', 'Success', 'Iterations 20']) &&
-    !hasRunningProgress(['Start fitting', 'fitting · it 2']),
+    !hasRunningProgress(['Stop', 'Success', 'Iterations 20']) &&
+    !hasRunningProgress(['Fit', 'fitting · it 2']),
     'settings, completed results and either running observation alone cannot impersonate live fitting progress');
-  assert(runningProgress(['stop-circle Stop fitting'],[1,3].map(iteration =>
+  assert(runningProgress(['Stop'],[1,3].map(iteration =>
     ({running:true,visible:true,text:`fitting · it ${iteration}`})),5),
     'The shipped running control and live status-bar iteration label must satisfy the progress witness');
-  assert(!runningProgress(['Stop fitting'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
-    !runningProgress(['Stop fitting'],[{running:true,visible:true,text:'Success · it 3'}],5),
+  assert(!runningProgress(['Stop'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
+    !runningProgress(['Stop'],[{running:true,visible:true,text:'Success · it 3'}],5),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (mode !== 'singlethread') assert(runningProgress(progress,nativeProgress,finalIteration),
-    'multithread fitting must publish a running control and advance live through intermediate iterations');
+  if (mode !== 'singlethread') {
+    assert(progress.some(value => fittingObservationKind(value) === 'control') &&
+      observesOrderedFitProgress(nativeProgress,finalIteration),
+      'Multithread fitting must expose its actual running control and ordered visible native counters');
+    if (frameLivenessRequired) assert(runningProgress(progress,nativeProgress,finalIteration),
+      'The sustained five-bank NCAF fit must advance live through intermediate frame samples');
+  }
   assert.equal(progressAfter.running,false,
     'The native fit must stop running when the actual successful results popup is displayed');
   await evaluate('window.__e04ProgressObserver.disconnect()');
@@ -445,17 +591,16 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent', {type,key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
   await waitModal(false);
   await click(/^Project$/);
-  await click(/Get started$/, 'button');
   const saved = await saveArchive();
   const before = inspectArchive(saved);
   assertSavedProject(before.name, fitCase);
-  const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/native.json', import.meta.url)));
+  const nativeOracle = JSON.parse(await readFile(new URL('../../fixtures/e04_t11_wasm/catalogue-native.json', import.meta.url)))[fitCase];
   assert(/_fit_result.success\s+true/.test(before.analysis) &&
     /_fit_result.iterations\s+[1-9]\d*/.test(before.analysis),
     'the saved project must contain a successful performed fit, not only the unfitted example');
   const chi = Number(before.analysis.match(/^_fit_result.reduced_chi_square\s+(\S+)/m)?.[1]);
-  const referenceChi = fitCase === 'ncaf' ? 9.50 : nativeOracle.reduced_chi_square;
-  const chiTolerance = fitCase === 'ncaf' ? 0.005 : nativeOracle.absolute_tolerance + nativeOracle.relative_tolerance*Math.abs(referenceChi);
+  const referenceChi = nativeOracle.reduced_chi_square;
+  const chiTolerance = fitCase === 'ncaf' ? 0.005 : 1e-11 + 1e-9*Math.abs(referenceChi);
   assertNativeChi(chi, referenceChi, chiTolerance);
   await writeFile(join(output, `${mode}-saved-fit.json`), JSON.stringify({
     project:before.name, chi, referenceChi, chiTolerance,
@@ -466,8 +611,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     'The successful saved fit must confirm the progress hook\'s actual final iteration');
   const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
   if (fitCase === 'ncaf') {
-    assert(iterations === 5 && Number.isFinite(rwp) && Math.abs(100*rwp-7.69) <= 0.005,
-      'the five-bank browser fit must retain the owner recorded five iterations and Rwp 7.69 percent');
+    assert(iterations === nativeOracle.iterations && Number.isFinite(rwp) && Math.abs(rwp-nativeOracle.rwp)*100 <= 0.005,
+      'the five-bank browser fit must retain the catalogue native parity regression pins for iterations and Rwp');
   }
 
   // The public reset action closes the model. Observe all four actual left toolbar buttons
@@ -497,7 +642,9 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   await shot('empty-before-reopen');
   lastEvents.delete('Page.fileChooserOpened');
   const chooser = event('Page.fileChooserOpened');
-  await click(/^Open an existing project/);
+  await click(/^Open project(?:…|\.\.\.)?$/);
+  await waitNative('open.folder');
+  await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
   const opened = await chooser;
   await writeFile(join(output, `${mode}-reopen-picker.json`), JSON.stringify(opened,null,2));
   const picked = await send('Runtime.evaluate', {expression:'window.__e04FileInput'});
@@ -519,9 +666,9 @@ from tests.fixtures.web_parallel.numeric import scientific, compare_scientific
 actual = scientific(pathlib.Path(sys.argv[1]))
 oracle = json.loads(pathlib.Path(sys.argv[2]).read_text())
 conditioning = json.loads(pathlib.Path(sys.argv[2].replace('-native.json', '-conditioning.json')).read_text())
-compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning)
+compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning, saved_iucr=True)
 pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
-    fileURLToPath(new URL(`../../fixtures/web_parallel/${fitCase}-native.json`, import.meta.url)),
+    fileURLToPath(new URL(`../../fixtures/e04_t11_wasm/catalogue_scientific/${fitCase}-native.json`, import.meta.url)),
     join(output, `${mode}-${fitCase}-scientific.json`)], {encoding:'utf8',timeout:10000});
   assert.equal(numerical.status, 0, 'browser fitted parameters and pattern arrays must agree with the independent native capture: ' + numerical.stderr);
   await writeFile(join(output, `${mode}-${fitCase}-measurement.json`), JSON.stringify({
@@ -537,13 +684,16 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     files: [unpack.stdout.trim()] });
   // Neither a no-op upload nor Session.openProject's refusal can enable this from the proved empty state.
   await waitAX(/^Analysis$/, true, 'tab');
-  const after = inspectArchive(await saveArchive());
-  assert.deepEqual(after, before,
-    'reopened project must retain its identity and every saved scientific byte, including the complete fit state');
+  const reopenedArchive = await saveArchive();
+  const after = inspectArchive(reopenedArchive);
+  const roundtrip = spawnSync('python', ['-m', 'tests.fixtures.e04_t11_wasm.reopen', saved, reopenedArchive],
+    {encoding:'utf8',timeout:10000,maxBuffer:32*1024*1024});
+  assert.equal(roundtrip.status, 0,
+    'reopened project must retain every saved value(s.u.) and fit byte, with derived fields equal to the native written-model calculation: ' + roundtrip.stderr);
   await writeFile(join(output, `${mode}-reopen-roundtrip.json`), JSON.stringify({before,after},null,2));
-  await click(/^Analysis$/); await waitAX(/^Start fitting$/); await shot('reopened');
+  await click(/^Analysis$/); await waitStatusBarFit(); await shot('reopened');
   }
-  if (!reopenControl && fileRequestCase !== 'none') {
+  if (!exampleOnly && !reopenControl && fileRequestCase !== 'none') {
     const inputs = join(scratch,'routing');
     const generator = spawnSync('python', [fileURLToPath(new URL('../../fixtures/e04_t11_wasm/routing.py', import.meta.url)),inputs],
       {encoding:'utf8',timeout:10000});
@@ -578,7 +728,12 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       const nativeObjectName = /Load structure/.test(regex.source) ? 'structures.load' :
         /Load experiment/.test(regex.source) ? 'experiments.load' :
         /Load data/.test(regex.source) ? 'experiments.loadData.0' : undefined;
-      const [chooser] = await Promise.all([opened, click(regex, 'button', nativeObjectName)]);
+      const role = /Load data/.test(regex.source) ? 'StaticText' : 'button';
+      await click(regex, role, nativeObjectName);
+      if (/Open project/.test(regex.source)) {
+        await waitNative('open.folder'); await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
+      }
+      const chooser = await opened;
       await writeFile(join(output, `${mode}-request-picker.json`), JSON.stringify(chooser,null,2));
       assert(chooser.backendNodeId,'each request must expose its actual browser file input');
       const result=await send('DOM.resolveNode',{backendNodeId:chooser.backendNodeId});
@@ -597,7 +752,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     };
     const openFolder = async name => {
       await projectPage();
-      const input=await beginPicker(/^Open an existing project/);
+      const input=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
       await send('DOM.setFileInputFiles',{...input,files:[join(inputs,name)]});
       await waitName(name);
       await settleRenderedPage();
@@ -609,10 +764,9 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       const beforeInput = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-before-input.json`), JSON.stringify(beforeInput,null,2));
       await shot(`create-${name}-before-input`);
-      // Qt omits popup editors from AX, as it omits the fit table. The real rendered name
-      // input at the fixed 1280x768 viewport is recorded in the screenshot; type through native input.
+      const namePointer = await controlPointer(evaluate, 'createProject.name');
       for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent',
-        {type,x:640,y:325,button:'left',clickCount:1});
+        {type,...namePointer,button:'left',clickCount:1});
       for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent',
         {type,key:'a',code:'KeyA',modifiers:2,windowsVirtualKeyCode:65});
       for (const key of name) {
@@ -626,6 +780,13 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       const viewport = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-viewport.json`), JSON.stringify(viewport,null,2));
       await settleRenderedPage();
+    };
+    const createWithStructure = async name => {
+      await createEmpty(name);
+      await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+      const structure=await beginPicker(/^Load structure from file$/);
+      await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
+      await waitAX(/Structures \(1\)/);
     };
     // Capture the browser's actual reads, hold promises, and release on explicit observable states.
     await evaluate(`(() => {
@@ -652,35 +813,45 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       'the actual folder handler must finish before checking its destination');
 
     if (['all','overlap'].includes(fileRequestCase)) {
+    for (const newerFirst of [false,true]) {
+    await openFolder('routing_initial');
     await projectPage(); await armReads();
-    const first=await beginPicker(/^Open an existing project/);
+    const first=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
     const firstId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...first,files:[join(inputs,'routing_a')]});
     await waitBrowser('window.__e04Reads.length===1','first folder read must be pending');
-    const second=await beginPicker(/^Open an existing project/);
+    const second=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
     const secondId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...second,files:[join(inputs,'routing_b')]});
     await waitBrowser('window.__e04Reads.length===2','both folder requests must overlap before either completion');
     await evaluate('window.__e04HoldReads=false; true');
-    await releaseRead(0); await completedPicker(firstId);
-    await releaseRead(1); await completedPicker(secondId);
+    const order=newerFirst?[1,0]:[0,1];
+    const ids=[firstId,secondId];
+    for(const index of order) {
+      await releaseRead(index);await completedPicker(ids[index]);
+      const observed=await snapshot();
+      const expected=newerFirst||index===1?'routing_b':'routing_initial';
+      assert.equal(observed.name,expected,
+        'Only the newest Open intent may publish, even before the other read completes');
+    }
     await waitName('routing_b');
     const overlap=await snapshot();
     assert.equal(overlap.name,'routing_b','a stale completion must not discard or replace the later folder');
+    }
 
     }
     if (['all','replacement'].includes(fileRequestCase)) {
     if (fileRequestCase !== 'all') await openFolder('routing_b');
     // A folder read started for B must not replace a project opened while that read is pending.
     await armReads();
-    const obsolete=await beginPicker(/^Open an existing project/);
+    const obsolete=await beginPicker(/^Open project(?:…|\.\.\.)?$/);
     const obsoleteId=await evaluate('window.__e04FileInput.__e04Picker');
     await send('DOM.setFileInputFiles',{...obsolete,files:[join(inputs,'routing_a')]});
     await waitBrowser('window.__e04Reads.length===1','replacement exercise must reach a pending upload');
     await click(/Get started$/, 'button'); getStartedOpen = false;
     await accessiblePress(/Examples$/);
-    await openExampleRow('pd-neut-cwl_cosio-d20_start-1', /cosio.*d20.*start[- ]?1/i);
-    await waitName('cosio_d20_s1');
+    await openExampleRow('pd-neut-cwl_cosio-d20', /cosio.*d20/i);
+    await waitName('pd-neut-cwl_cosio-d20');
     await settleRenderedPage();
     const replacementBefore=await snapshot();
     assert.notEqual(replacementBefore.name,'routing_b','the replacement control must actually replace the old live project');
@@ -695,8 +866,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     // rather than toggling them closed before the real pointer action.
     // Real cancel events route through Qt. The source seam gate independently checks that no
     // stale receiver makes an unrelated refused call (a refusal can leave archive bytes unchanged).
-    await createEmpty('routing_empty_c');
-    await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+    // Experiment needs a structure (ADR-0017); seed it before testing cancellation.
+    await createWithStructure('routing_empty_c');
     await beginPicker(/^Load structure from file$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must preserve the standalone single-file chooser contract');
@@ -707,23 +878,23 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       'Experiment must retain its batch chooser contract');
     await send('DOM.setFileInputFiles',{...experiment,files:[join(inputs,'blocks/experiment-1.edi'),join(inputs,'blocks/experiment-2.edi')]});
     await waitAX(/Experiments \(2\)/);
-    await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+    await click(/^Structure$/); await waitAX(/Structures \(1\)/);
     }
     if (['all','cancel-experiment'].includes(fileRequestCase)) {
-    await createEmpty('routing_empty_d');
+    await createWithStructure('routing_empty_d');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     await beginPicker(/^Load experiment$/);
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
-    await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+    await click(/^Structure$/); await waitAX(/Structures \(1\)/);
     const structure=await beginPicker(/^Load structure from file$/);
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must keep a single-file chooser after Experiment cancellation');
-    await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
-    await waitAX(/Structures \(1\)/);
+    await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure-2.edi')]});
+    await waitAX(/Structures \(2\)/);
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     }
     if (['all','load-data'].includes(fileRequestCase)) {
-    await createEmpty('routing_empty_data');
+    await createWithStructure('routing_empty_data');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     await click(/^Create experiment$/, 'button', 'experiments.create');
     await waitAX(/Experiments \(1\)/);
@@ -736,9 +907,11 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await writeFile(join(output,`${mode}-file-requests.json`),JSON.stringify({case:fileRequestCase,completed:true},null,2));
   }
   assert.equal(errors.length, 0, 'both browser workflows must complete without runtime exceptions');
-  await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase }, null, 2));
-  if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
+  await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase, exampleOnly }, null, 2));
+  if (exampleOnly) console.log(`${mode}: example-only opening passed; fit/save/reopen checks not run`);
+  else if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
+  }
   }
   }
 } catch (error) {
@@ -749,6 +922,8 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
       await writeFile(join(output, `${mode}-failure.png`), Buffer.from(screenshot.data, 'base64'));
       const tree = await send('Accessibility.getFullAXTree');
       await writeFile(join(output, `${mode}-failure-accessibility.json`), JSON.stringify(tree, null, 2));
+      const picker = await send('Runtime.evaluate', {expression:'window.__e04PickerAttempts || []',returnByValue:true});
+      await writeFile(join(output, `${mode}-failure-pickers.json`), JSON.stringify(picker.result.value,null,2));
     } catch { /* The original failure remains the verdict if the target already closed. */ }
   }
   throw error;

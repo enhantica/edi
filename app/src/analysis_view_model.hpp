@@ -171,6 +171,9 @@ class AnalysisViewModel : public QObject {
     Q_PROPERTY(bool hasMaxIterations READ hasMaxIterations NOTIFY hasMaxIterationsChanged)
     Q_PROPERTY(double chiSquareTolerance READ chiSquareTolerance WRITE setChiSquareTolerance NOTIFY chiSquareToleranceChanged)
     Q_PROPERTY(bool hasChiSquareTolerance READ hasChiSquareTolerance NOTIFY hasChiSquareToleranceChanged)
+    // A single-crystal fit's reflection cutoff n (`_refine_ls.threshold_sigma`, edi ADR-0050): NaN fits every reflection.
+    Q_PROPERTY(double refineLsThresholdSigma READ refineLsThresholdSigma WRITE setRefineLsThresholdSigma NOTIFY
+                   refineLsThresholdSigmaChanged)
     // The tolerance a fit uses when none is declared: crysta's default.
     Q_PROPERTY(double defaultChiSquareTolerance READ defaultChiSquareTolerance CONSTANT)
     // The iteration bound a fit uses when none is declared, shown as the tolerance's.
@@ -201,6 +204,8 @@ class AnalysisViewModel : public QObject {
     bool hasMaxIterations() const { return max_iterations_ > 0; }
     double chiSquareTolerance() const { return chi_square_tolerance_; }
     void setChiSquareTolerance(double tolerance);
+    double refineLsThresholdSigma() const { return refine_ls_threshold_sigma_; }
+    void setRefineLsThresholdSigma(double sigma);
     bool hasChiSquareTolerance() const { return chi_square_tolerance_ > 0.0; }
     double defaultChiSquareTolerance() const { return edi::default_chi_square_tolerance(); }
     int defaultMaxIterations() const { return edi::default_max_iterations(); }
@@ -222,6 +227,7 @@ class AnalysisViewModel : public QObject {
     void hasMaxIterationsChanged();
     void chiSquareToleranceChanged();
     void hasChiSquareToleranceChanged();
+    void refineLsThresholdSigmaChanged();
     void lastErrorChanged();
 
    private:
@@ -233,6 +239,7 @@ class AnalysisViewModel : public QObject {
     QString fitting_mode_, descent_, last_error_;
     int max_iterations_ = 0;
     double chi_square_tolerance_ = 0.0;
+    double refine_ls_threshold_sigma_ = qQNaN();
     OptionListModel* fitting_mode_options_;
     OptionListModel* descent_options_;
     OptionListModel* minimizer_type_options_;

@@ -143,15 +143,16 @@ def test_datablock_rename_preserves_namespace_and_category_tokens(  # noqa: PLR0
         assert before == names, 'The namespace witness must begin with every genuine public alias'
         expected = expected_names
     else:
+        # Legacy input stays readable; saved correlations use two significant figures.
         expected = []
         peer = old_structure + '.cell.length_b' if is_experiment else 'renamed.cell.length_b'
         for name in expected_names:
-            expected.extend([(name, peer, '-.625'), (peer, name, '-.625')])
+            expected.extend([(name, peer, '-0.63'), (peer, name, '-0.63')])
         original = []
         for name in names:
             original.extend([
-                (name, old_structure + '.cell.length_b', '-.625'),
-                (old_structure + '.cell.length_b', name, '-.625'),
+                (name, old_structure + '.cell.length_b', '-0.63'),
+                (old_structure + '.cell.length_b', name, '-0.63'),
             ])
         assert before == original, (
             'Both correlation endpoint directions must be reached before renaming'

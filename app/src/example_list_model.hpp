@@ -7,6 +7,13 @@
 #include "row_table_model.hpp"
 
 namespace edi_app {
+
+// A tag's chip as the Examples list draws it (app/examples/tags.json): its label, its icon glyph and its colour in the
+// light and the dark palette. A family or value the registry does not have gets a neutral chip labelled `fallback`.
+struct TagChip {
+    QString label, glyph, light, dark;
+};
+TagChip tagChip(const QString& family, const QString& value, const QString& fallback);
 class ExampleOptions : public RowTableModel {
    public:
     explicit ExampleOptions(const QStringList& roles, QObject* parent)
@@ -26,8 +33,19 @@ class ExampleListModel : public RowTableModel {
     Q_PROPERTY(edi_app::RowTableModel* filterProperties READ filterProperties CONSTANT)
     Q_PROPERTY(edi_app::RowTableModel* filterOptions READ filterOptions CONSTANT)
    public:
+    // A catalogue entry that is not a bundled example (a tutorial, ADR-0064): its id, title and description, and its
+    // tags as "family:value", which give its chips, in their order, and its values for the filters.
+    struct Item {
+        QString id, title, detail;
+        QStringList tags;
+    };
+    // The bundled examples.
     explicit ExampleListModel(QObject* parent);
+    // Other items, filtered as the examples are.
+    ExampleListModel(const QList<Item>& items, QObject* parent);
     static QStringList bundledIds();
+    // A bundled example's title, its sample and origin as the list shows them; empty for an unknown id.
+    QString titleOf(const QString& id) const;
     QString searchText() const { return search_text_; }
     QString filterProperty() const { return filter_property_; }
     QString filterValue() const { return filter_value_; }
@@ -46,9 +64,12 @@ class ExampleListModel : public RowTableModel {
    private:
     struct Entry {
         QString id, sample, origin, detail, search;
-        QStringList tags, tag_icons;
+        QStringList tags, tag_icons, tag_colors, tag_dark_colors;
         QHash<QString, QStringList> values;
     };
+    void publishProperties();
+    // Adds a chip for `family`'s `value`, once.
+    static void addTag(Entry& entry, const QString& family, const QString& value, const QString& fallback);
     void refresh();
     QList<Entry> entries_;
     ExampleOptions properties_, options_;

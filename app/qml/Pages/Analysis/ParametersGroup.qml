@@ -6,7 +6,6 @@ import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
-import EasyApplication.Gui.Logic as EaLogic
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -18,20 +17,33 @@ import edi.app
 // Minimum and maximum are the admissible range (edi has no user fit bounds), shown "-inf"/"inf" when
 // unbounded. Untitled and fixed open, as the original's group (SideBarBasic.qml): the status bar carries
 // the counts; `last`, as there, keeps the untitled group's border out of its content (note 7).
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property ProjectViewModel project: null
     property ParameterItem selected: null
+    // Some experiment holds measured data: without any, nothing can be fitted (edi ADR-0046), so the free column and its
+    // header menu are hidden (the owner, 2026-10-27) and the free or fixed choice is disabled; the other filters stay
+    // (the owner, 2026-11-02), and values stay editable. The disabled choice goes back to all parameters: one left from
+    // a project with data showed one row under "Atomic displacement (4)" (the owner, 2026-10-27).
+    readonly property bool measured: project !== null && project.fit.measured
+    onMeasuredChanged: {
+        if (!measured)
+            parameterFilter.variability = 0;
+    }
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
     property int selectedRow: -1
     property real tableViewportHeight: 0
-    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11).
+    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11),
+    // and a font size more before the title, so it keeps clear of "max" (the owner, 2026-10-27).
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
+    // The arrow ends where the right-aligned check boxes do: a check box's own padding and the table's spacing before
+    // the column's edge (DataTable.padForFiller).
+    readonly property real freeInset: 0.5 * EaStyle.Sizes.fontPixelSize + EaStyle.Sizes.tableColumnSpacing
     // The free title's word and arrow share one colour, each with the labels' own colour transition.
     property bool freeTitleHovered: false
-    readonly property color freeTitleColor: freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth) + AppSizes.fieldSpacing * 2
+    readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize
 
     TextMetrics {
         id: freeTitleText
@@ -56,20 +68,24 @@ EaElements.GroupBox {
     // shown row, when a project opens, when the experiment changes or when the filters hide the selected row;
     // a row the user selected stays selected while it is shown.
     function ensureSelection() {
-        if (group.selected === null || !filter.shows(group.selected))
-            group.selected = filter.parameterAt(0);
-        group.selectedRow = filter.rowOf(group.selected);
+        if (group.selected === null || !parameterFilter.shows(group.selected))
+            group.selected = parameterFilter.parameterAt(0);
+        group.selectedRow = parameterFilter.rowOf(group.selected);
     }
-    onSelectedChanged: selectedRow = filter.rowOf(selected)
+    onSelectedChanged: selectedRow = parameterFilter.rowOf(selected)
 
     onProjectChanged: {
         group.selected = null;
         group.ensureSelection();
     }
-    Component.onCompleted: group.ensureSelection()
+    Component.onCompleted: {
+        if (!measured)
+            parameterFilter.clearFilters();
+        group.ensureSelection();
+    }
 
     Connections {
-        target: filter
+        target: parameterFilter
         function onRowsInserted() {
             group.ensureSelection();
         }
@@ -89,6 +105,59 @@ EaElements.GroupBox {
             group.ensureSelection();
         }
     }
+    // Whatever changed the shown rows (a filter, a free or fixed edit, a fit, an Undo), the selection follows them.
+    Connections {
+        target: table
+        function onCountChanged() {
+            group.ensureSelection();
+        }
+    }
+
+    // A picker entry's line: a datablock's icon in its colour, a category's icon in the minor colour, a kind heading in
+    // bold, and the title with its parameter count.
+    function datablockSegments(entry) {
+        if (!entry)
+            return [];
+        const title = {
+            "text": entry.title,
+            "elides": true
+        };
+        return entry.icon === "" ? [title] : [
+            {
+                "icon": entry.icon,
+                "color": group.datablockColor(entry.blockKind, entry.blockName)
+            },
+            title];
+    }
+    function categorySegments(entry) {
+        if (!entry)
+            return [];
+        const title = {
+            "text": entry.title,
+            "bold": entry.datablock,
+            "elides": true
+        };
+        return entry.icon === "" ? [title] : [
+            {
+                "icon": entry.icon,
+                "color": EaStyle.Colors.themeForegroundMinor
+            },
+            title];
+    }
+
+    // A datablock's colour, as its icon has it elsewhere: a structure's or an experiment's by its place in the
+    // project's list.
+    function datablockColor(kind, name) {
+        const blocks = group.project ? (kind === "structure" ? group.project.structures : group.project.experiments) : null;
+        let place = 0;
+        for (let row = 0; blocks && row < blocks.count; ++row) {
+            if (blocks.text(row, "name") === name) {
+                place = row;
+                break;
+            }
+        }
+        return kind === "structure" ? AppColors.structure(place) : AppColors.experiment(place);
+    }
 
     function bound(value) {
         return value === Infinity ? "inf" : value === -Infinity ? "-inf" : String(value);
@@ -104,64 +173,188 @@ EaElements.GroupBox {
             font.pixelSize: EaStyle.Sizes.fontPixelSize
             text: "\uf0d7"
         }
-        EaElements.GroupRow {
+        // The filters (edi ADR-0046): datablocks, categories and parameters on the top line, each narrowing the next,
+        // then the name filter and a button clearing all four. Every count is a number of parameters.
+        Column {
             id: filters
-            spacing: AppSizes.inputSpacing
-            EaElements.TextField {
-                objectName: "parameters.nameFilter"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                placeholderText: qsTr("Filter by name")
-                onTextChanged: filter.nameFilter = text
-            }
-            SearchableComboBox {
-                id: categoryPicker
-                objectName: "parameters.category"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                model: filter.categoryGroups
-                textRole: "title"
-                searchThreshold: 1000
-                popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
-                currentIndex: Math.max(0, filter.categories.indexOf(filter.categoryFilter))
-                onActivated: index => filter.categoryFilter = filter.categories[index]
-                delegate: EaElements.MenuItem {
-                    id: categoryEntry
-                    required property int index
-                    required property var modelData
-                    width: categoryPicker.popup.width
-                    height: EaStyle.Sizes.comboBoxHeight
-                    text: modelData.title
-                    highlighted: categoryPicker.highlightedIndex === index
+
+            // Shown with or without measured data: a calculation-only project filters its parameters too.
+            readonly property real third: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
+
+            spacing: AppSizes.groupContentSpacing
+
+            Row {
+                spacing: AppSizes.inputSpacing
+
+                // Each picker shows the filter the table applies: its index, its closed text with the icon and the
+                // parameter count, all read from the filter model. A rebuilt list resets a combo box's index, so the
+                // index follows the filter again after every rebuild and every choice (the owner, 2026-10-21).
+                SearchableComboBox {
+                    id: datablockPicker
+                    readonly property int selectedIndex: Math.max(0, parameterFilter.datablocks.indexOf(parameterFilter.datablockFilter))
+                    readonly property var selected: parameterFilter.datablockGroups[selectedIndex] ?? null
+                    function follow() {
+                        currentIndex = Qt.binding(() => datablockPicker.selectedIndex);
+                    }
+                    objectName: "parameters.datablock"
+                    width: filters.third
+                    model: parameterFilter.datablockGroups
+                    textRole: "title"
+                    searchThreshold: 1000
+                    popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
+                    currentIndex: selectedIndex
+                    displayText: selected ? selected.title : ""
+                    onModelChanged: {
+                        datablockPicker.follow();
+                        Qt.callLater(datablockPicker.follow);
+                    }
+                    onActivated: index => {
+                        parameterFilter.datablockFilter = parameterFilter.datablocks[index];
+                        datablockPicker.follow();
+                    }
                     contentItem: Item {
-                        implicitHeight: categoryLine.implicitHeight
+                        clip: true
                         IconLine {
-                            id: categoryLine
+                            x: EaStyle.Sizes.fontPixelSize * 0.75
                             anchors.verticalCenter: parent.verticalCenter
-                            maximumWidth: parent.width
+                            maximumWidth: Math.max(1, parent.width - x)
                             textColor: EaStyle.Colors.themeForeground
-                            segments: categoryEntry.modelData.icon === "" ? [
-                                {
-                                    text: categoryEntry.modelData.title,
-                                    bold: categoryEntry.modelData.datablock
-                                }
-                            ] : [
-                                {
-                                    icon: categoryEntry.modelData.icon,
-                                    color: EaStyle.Colors.themeForegroundMinor
-                                },
-                                {
-                                    text: categoryEntry.modelData.title,
-                                    bold: categoryEntry.modelData.datablock
-                                }
-                            ]
+                            segments: group.datablockSegments(datablockPicker.selected)
+                        }
+                    }
+                    delegate: EaElements.MenuItem {
+                        id: datablockEntry
+                        required property int index
+                        required property var modelData
+                        width: datablockPicker.popup.width
+                        height: EaStyle.Sizes.comboBoxHeight
+                        text: modelData.title
+                        highlighted: datablockPicker.highlightedIndex === index
+                        contentItem: Item {
+                            implicitHeight: datablockLine.implicitHeight
+                            IconLine {
+                                id: datablockLine
+                                anchors.verticalCenter: parent.verticalCenter
+                                maximumWidth: parent.width
+                                textColor: EaStyle.Colors.themeForeground
+                                segments: group.datablockSegments(datablockEntry.modelData)
+                            }
                         }
                     }
                 }
+                SearchableComboBox {
+                    id: categoryPicker
+                    readonly property int selectedIndex: Math.max(0, parameterFilter.categories.indexOf(parameterFilter.categoryFilter))
+                    readonly property var selected: parameterFilter.categoryGroups[selectedIndex] ?? null
+                    function follow() {
+                        currentIndex = Qt.binding(() => categoryPicker.selectedIndex);
+                    }
+                    objectName: "parameters.category"
+                    width: filters.third
+                    model: parameterFilter.categoryGroups
+                    textRole: "title"
+                    searchThreshold: 1000
+                    popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
+                    currentIndex: selectedIndex
+                    displayText: selected ? selected.title : ""
+                    onModelChanged: {
+                        categoryPicker.follow();
+                        Qt.callLater(categoryPicker.follow);
+                    }
+                    onActivated: index => {
+                        parameterFilter.categoryFilter = parameterFilter.categories[index];
+                        categoryPicker.follow();
+                    }
+                    contentItem: Item {
+                        clip: true
+                        IconLine {
+                            x: EaStyle.Sizes.fontPixelSize * 0.75
+                            anchors.verticalCenter: parent.verticalCenter
+                            maximumWidth: Math.max(1, parent.width - x)
+                            textColor: EaStyle.Colors.themeForeground
+                            segments: group.categorySegments(categoryPicker.selected)
+                        }
+                    }
+                    delegate: EaElements.MenuItem {
+                        id: categoryEntry
+                        required property int index
+                        required property var modelData
+                        width: categoryPicker.popup.width
+                        height: EaStyle.Sizes.comboBoxHeight
+                        text: modelData.title
+                        highlighted: categoryPicker.highlightedIndex === index
+                        contentItem: Item {
+                            implicitHeight: categoryLine.implicitHeight
+                            IconLine {
+                                id: categoryLine
+                                anchors.verticalCenter: parent.verticalCenter
+                                maximumWidth: parent.width
+                                textColor: EaStyle.Colors.themeForeground
+                                segments: group.categorySegments(categoryEntry.modelData)
+                            }
+                        }
+                    }
+                }
+                // A disabled control takes no hover, so the reason it is disabled comes from here.
+                Item {
+                    width: variabilityPicker.width
+                    height: variabilityPicker.height
+
+                    SearchableComboBox {
+                        id: variabilityPicker
+                        readonly property var titles: [qsTr("All parameters (%1)").arg(parameterFilter.variabilityCounts[0]), qsTr("Free parameters (%1)").arg(parameterFilter.variabilityCounts[1]), qsTr("Fixed parameters (%1)").arg(parameterFilter.variabilityCounts[2]), qsTr("Not fittable (%1)").arg(parameterFilter.variabilityCounts[3])]
+                        function follow() {
+                            currentIndex = Qt.binding(() => parameterFilter.variability);
+                        }
+                        objectName: "parameters.variability"
+                        // Free and fixed mean nothing before there are measured data to fit (edi ADR-0046). The reason is
+                        // the picker's own tooltip text, shown by the hover area around it while it is disabled.
+                        enabled: group.measured
+                        ToolTip.text: enabled ? "" : qsTr("Free and fixed parameters apply once an experiment has measured data")
+                        width: filters.third
+                        model: titles
+                        currentIndex: parameterFilter.variability
+                        displayText: titles[parameterFilter.variability]
+                        onModelChanged: {
+                            variabilityPicker.follow();
+                            Qt.callLater(variabilityPicker.follow);
+                        }
+                        onActivated: index => {
+                            parameterFilter.variability = index;
+                            variabilityPicker.follow();
+                        }
+                    }
+                    HoverHandler {
+                        id: variabilityHover
+                    }
+                    EaElements.ToolTip {
+                        text: variabilityPicker.ToolTip.text
+                        visible: !variabilityPicker.enabled && variabilityHover.hovered && EaGlobals.Vars.showToolTips
+                    }
+                }
             }
-            SearchableComboBox {
-                objectName: "parameters.variability"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                model: [qsTr("All parameters (%1)").arg(group.project ? group.project.parameters.count : 0), qsTr("Free parameters (%1)").arg(group.project ? group.project.parameters.freeCount : 0), qsTr("Fixed parameters (%1)").arg(group.project ? group.project.parameters.fixedCount : 0)]
-                onActivated: index => filter.variability = index
+            Row {
+                spacing: AppSizes.inputSpacing
+
+                EaElements.TextField {
+                    id: nameField
+                    objectName: "parameters.nameFilter"
+                    width: EaStyle.Sizes.sideBarContentWidth - AppSizes.inputSpacing - clearButton.width
+                    placeholderText: qsTr("Filter by name")
+                    text: parameterFilter.nameFilter
+                    onTextEdited: parameterFilter.nameFilter = text
+                }
+                EaElements.SideBarButton {
+                    id: clearButton
+                    objectName: "parameters.clearFilters"
+                    width: height
+                    height: nameField.height
+                    property string toolTip: qsTr("Clear all filters")
+                    fontIcon: "eraser"
+                    text: ""
+                    ToolTip.text: toolTip
+                    onClicked: parameterFilter.clearFilters()
+                }
             }
         }
 
@@ -169,59 +362,85 @@ EaElements.GroupBox {
             id: table
             objectName: "parameters.list"
             // Reserve the controls below and half a row as a scroll cue (ADR-0029).
-            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - filters.height - sliderRow.height - 2 * AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
+            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - (filters.visible ? filters.height + AppSizes.groupContentSpacing : 0) - sliderRow.height - AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
             defaultInfoText: qsTr("No parameters")
             sourceModel: ParameterFilterModel {
-                id: filter
+                id: parameterFilter
                 sourceModel: group.project ? group.project.parameters : null
+                // The Settings tab's show-filters, by ParameterItem.FitGroup from NotMeasured (edi ADR-0053).
+                readonly property var wanted: [Preferences.analysisShowNotMeasured, Preferences.analysisShowBySymmetry, Preferences.analysisShowByConstraint, Preferences.analysisShowFixedSettings]
+                function follow() {
+                    for (let i = 0; i < wanted.length; ++i)
+                        setShownGroup(i + 1, wanted[i]);
+                }
+                onWantedChanged: follow()
+                Component.onCompleted: follow()
             }
             marksCurrentRow: true
             currentRow: group.selectedRow
+            onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
-            columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
+            // A layout of its own (the owner, 2026-10-27): the name a little wider than its longest shown name, icons
+            // and text; the units as their text; value, s.u., min and max share the rest equally; free at the right
+            // with a wider gap before it. Value takes what rounding leaves.
+            equalColumns: true
+            readonly property real nameWidth: (fittedWidths[1] ?? 0) + autoColumnPadding + EaStyle.Sizes.fontPixelSize
+            readonly property real unitsWidth: (fittedWidths[3] ?? 0) + autoColumnPadding
+            readonly property real freeWidth: group.measured ? group.freeColumnWidth : 0
+            readonly property real restWidth: Math.max(0, width - numberColumnWidth - nameWidth - unitsWidth - freeWidth - EaStyle.Sizes.tableColumnSpacing * (group.measured ? 7 : 6) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2)
+            columns: [numberColumnWidth, nameWidth, -1, unitsWidth, restWidth * 0.25, restWidth * 0.25, restWidth * 0.25].concat(group.measured ? [freeWidth] : [])
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("name")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("value")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: ""
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("s.u.")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("min")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("max")
                 }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
-                // filters show, as one Undo step (the owner, 2026-10-11). The word and the arrow are centred together
-                // over the checkboxes.
-                EaComponents.TableViewLabel {
+                // filters show, as one Undo step (the owner, 2026-10-11). The arrow ends where the right-aligned check
+                // boxes do; its menu opens centred, so the title is as wide as itself.
+                EaComponents.ListViewLabel {
                     id: freeTitle
+                    // Laid out here, not by the table's alignment rule.
+                    readonly property bool keepsAlignment: true
                     objectName: "parameters.freeHeader"
-                    horizontalAlignment: Text.AlignHCenter
-                    rightPadding: freeArrow.width + group.freeGap
+                    visible: group.measured
+                    horizontalAlignment: Text.AlignRight
+                    rightPadding: freeArrow.width + group.freeGap + group.freeInset
                     color: group.freeTitleColor
                     text: qsTr("free")
 
+                    // Whether the click area that takes the header's input is enabled: it is reparented over the
+                    // header, so the title's own `enabled` does not follow it.
+                    readonly property bool interactionEnabled: freeArea.enabled
+                    // Its menu, whose Free and Fixed a tutorial's Next chooses as the user would (edi ADR-0064).
+                    readonly property FreeHeaderMenu menu: freeMenu
+
                     EaElements.Label {
                         id: freeArrow
-                        x: (freeTitle.width - freeTitle.rightPadding + freeTitle.contentWidth) / 2 + group.freeGap
+                        x: freeTitle.width - freeTitle.rightPadding + group.freeGap
                         anchors.verticalCenter: parent.verticalCenter
                         font: freeArrowProbe.font
                         color: group.freeTitleColor
@@ -237,15 +456,16 @@ EaElements.GroupBox {
                         y: freeTitle.y
                         width: freeTitle.width
                         height: freeTitle.height
+                        enabled: group.measured
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onContainsMouseChanged: group.freeTitleHovered = containsMouse
-                        onClicked: freeMenu.popup()
+                        onClicked: freeMenu.open()
                     }
                     FreeHeaderMenu {
                         id: freeMenu
                         project: group.project
-                        filter: filter
+                        filter: parameterFilter
                     }
                 }
             }
@@ -260,13 +480,9 @@ EaElements.GroupBox {
                 required property real maximum
 
                 objectName: `parameters.row.${index}`
-                TapHandler {
-                    onTapped: group.selected = row.parameter
-                }
-
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    color: EaStyle.Colors.themeForegroundMinor
+                    marksCurrentRow: true
                     text: row.index + 1
                 }
                 // The iconified name on one centre line (edi ADR-0017 §8, §10), with the path in a tooltip on
@@ -274,12 +490,19 @@ EaElements.GroupBox {
                 Item {
                     property int horizontalAlignment: Text.AlignLeft
                     objectName: `parameters.name.${row.index}`
+                    // As wide as its icons and text, which the table fits the column to.
+                    implicitWidth: nameLine.implicitWidth
                     height: parent.height
                     clip: true
 
                     IconLine {
+                        id: nameLine
                         anchors.verticalCenter: parent.verticalCenter
                         segments: ParameterNames.segments(row.parameter)
+                    }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: valueCell.openContextMenu(valueCell)
                     }
                     HoverHandler {
                         id: nameHover
@@ -290,54 +513,88 @@ EaElements.GroupBox {
                     }
                 }
                 ParameterCell {
+                    id: valueCell
                     columnAlignment: Text.AlignRight
                     objectName: `parameters.value.${row.index}`
                     item: row.parameter
+                    // An auto-mode background's values are the estimate's, as in the Experiment page's table.
+                    locked: row.parameter ? row.parameter.estimated : false
                     onActiveFocusChanged: if (activeFocus)
                         group.selected = row.parameter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     color: EaStyle.Colors.themeForegroundMinor
                     horizontalAlignment: Text.AlignLeft
                     text: row.units
                 }
-                EaComponents.TableViewLabel {
+                NumberLabel {
+                    objectName: `parameters.su.${row.index}`
                     horizontalAlignment: Text.AlignRight
-                    text: row.parameter && row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : ""
+                    number: row.parameter ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
+                    narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
+                    full: row.parameter && row.parameter.hasUncertainty ? NumberText.plainFull(row.parameter.uncertainty) : ""
                 }
-                EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignRight
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: group.bound(row.minimum)
-                }
-                EaComponents.TableViewLabel {
+                NumberLabel {
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
-                    text: group.bound(row.maximum)
+                    number: group.bound(row.minimum)
+                    full: NumberText.plainFull(row.minimum)
                 }
-                EaComponents.TableViewCheckBox {
-                    horizontalAlignment: Text.AlignHCenter
-                    objectName: `parameters.free.${row.index}`
-                    checked: row.parameter ? row.parameter.free : false
-                    onToggled: row.parameter.free = checked
+                NumberLabel {
+                    horizontalAlignment: Text.AlignRight
+                    color: EaStyle.Colors.themeForegroundMinor
+                    number: group.bound(row.maximum)
+                    full: NumberText.plainFull(row.maximum)
+                }
+                // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
+                // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053).
+                Item {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    visible: group.measured
+                    height: parent.height
+
+                    EaComponents.ListViewCheckBox {
+                        id: freeBox
+                        anchors.fill: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        objectName: `parameters.free.${row.index}`
+                        enabled: row.parameter !== null && (row.parameter.fittable || row.parameter.free)
+                        checked: row.parameter ? row.parameter.free : false
+                        onToggled: row.parameter.free = checked
+                        ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason) : ""
+                    }
+                    HoverHandler {
+                        id: freeHover
+                    }
+                    EaElements.ToolTip {
+                        text: freeBox.ToolTip.text
+                        visible: text !== "" && freeHover.hovered && EaGlobals.Vars.showToolTips
+                    }
                 }
             }
         }
 
         // The slider of the selected row with its limits in a read-only box on each side (the original's
         // Fittables.qml slider row). The limits are set when a row is selected, when the value changes other
-        // than by the slider, and when the slider is released, as there: a drag moves the value within them.
-        // Shown at the base's default precision; the value keeps its full precision.
+        // than by the slider, and when the slider is released, as there: a drag moves the value within them, by one
+        // unit of the last digit the item's display format shows. The limits show in that format, the value as the
+        // file spells it.
         Row {
             id: sliderRow
 
-            readonly property ParameterItem selected: group.selected
+            // The current row's parameter, and none while the table shows no row (the owner, 2026-10-21): the slider
+            // and its limits are then disabled and empty, and come back for the parameter that becomes current. The row
+            // comes from the filter model, which changes at once; the table's own count follows a frame later.
+            readonly property ParameterItem selected: group.selectedRow >= 0 ? group.selected : null
             property real lower: 0
             property real upper: 1
 
             function updateLimits() {
-                if (!selected)
+                if (!selected) {
+                    lower = 0;
+                    upper = 1;
                     return;
+                }
                 const span = selected.sliderHalfWidth();
                 lower = selected.value - span;
                 upper = selected.value + span;
@@ -359,28 +616,45 @@ EaElements.GroupBox {
                 width: EaStyle.Sizes.fontPixelSize * 6
                 readOnly: true
                 enabled: sliderRow.selected !== null
-                text: sliderRow.selected ? EaLogic.Utils.toDefaultPrecision(slider.from) : ""
+                text: sliderRow.selected ? sliderRow.selected.displayText(slider.from) : ""
             }
             EaElements.Slider {
                 id: slider
                 objectName: "parameters.slider"
                 width: EaStyle.Sizes.sideBarContentWidth - EaStyle.Sizes.fontPixelSize * 14
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: sliderRow.selected !== null
+                // A value symmetry holds and a descriptor row's value are not moved here (edi ADR-0019, ADR-0053).
+                enabled: sliderRow.selected !== null && !sliderRow.selected.estimated && sliderRow.selected.refinable
                 from: sliderRow.lower
                 to: sliderRow.upper
-                value: sliderRow.selected ? sliderRow.selected.value : 0
-                toolTipText: EaLogic.Utils.toDefaultPrecision(value)
+                // Clamped here to the limits, so the value is read again when they move: the slider clamps to the
+                // range it has at the time, and a value read before a newly current parameter's limits would stay
+                // clamped to the old ones.
+                value: sliderRow.selected ? Math.min(Math.max(sliderRow.selected.value, sliderRow.lower), sliderRow.upper) : 0
+                // No thumb while no parameter is current, so the empty slider shows no value.
+                handle.visible: sliderRow.selected !== null
+                stepSize: sliderRow.selected ? sliderRow.selected.sliderStep : 0
+                toolTipText: sliderRow.selected ? sliderRow.selected.fileValue : ""
                 onMoved: sliderRow.selected.value = value
-                onPressedChanged: if (!pressed)
-                    sliderRow.updateLimits()
+                // Held, the pattern charts keep their y range; let go, they fit it again (ProjectViewModel.adjusting).
+                onPressedChanged: {
+                    if (group.project)
+                        group.project.adjusting = pressed;
+                    if (!pressed)
+                        sliderRow.updateLimits();
+                }
+                // A slider gone while held (the page left) holds nothing.
+                Component.onDestruction: {
+                    if (pressed && group.project)
+                        group.project.adjusting = false;
+                }
             }
             EaElements.TextField {
                 objectName: "parameters.slider.to"
                 width: EaStyle.Sizes.fontPixelSize * 6
                 readOnly: true
                 enabled: sliderRow.selected !== null
-                text: sliderRow.selected ? EaLogic.Utils.toDefaultPrecision(slider.to) : ""
+                text: sliderRow.selected ? sliderRow.selected.displayText(slider.to) : ""
             }
         }
     }

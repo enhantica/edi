@@ -1,7 +1,7 @@
-#  independent acceptance inputs
+# independent acceptance inputs
 
 `generate.py` parses every `loop_` in the committed CLI project directories and
- witness projects. `loops.json` records source paths, SHA-256, columns and
+witness projects. `loops.json` records source paths, SHA-256, columns and
 row counts. No app category API or Python edi package supplies that inventory.
 Regenerate with `python tests/fixtures/e04_t2/generate.py` at authoring time only.
 
@@ -11,21 +11,21 @@ Parameters/Fitting groups untitled and non-collapsible; its
 `SideBarBasic/Fittables.qml` puts native limit boxes on each side of the slider.
 `Pages/Model/SideBarText.qml` puts a block selector above the aligned text view.
 The theme tokens come from gui-components' `Gui/Style/Colors.qml`, and bundled
-font families from the owner's committed 2026-09-28 font records.
+font families from the committed font records.
 The absent-value tolerance is 1e-6, from the producer's
 `include/crysta/fit.hpp::kDefaultChiSquareTolerance`, forwarded by
-`core/src/adapter.cpp::default_chi_square_tolerance`. The  editable
+`core/src/adapter.cpp::default_chi_square_tolerance`. The editable
 project omits the tolerance and witnesses that fallback. Separately,
 `docs/user/cli/pd-neut-tof_si-sepd_start-2/project/analysis/analysis.edi`
 declares 1e-4; its loaded value and a subsequent 0.0025 edit witness explicit
-overrides. The packet's 0.0001 Analysis Text example is not the default.
+overrides. The 0.0001 Analysis Text example is an explicit override.
 
 Published test seam: `AppState.platformColorScheme` is writable for the Qt test
 and demo, and normally bound to `Qt.styleHints.colorScheme`. The test selects
 Light/Dark/System through the base `Colors.theme` setting. The seam does not
 claim to test the OS integration on the headless Linux runner.
 
-Category targets retain 's `group.<edi category>` names. Each loop group
+Category targets use `group.<edi category>` names. Each loop group
 contains a real ListView-based base TableView, with header and row delegates;
 its count must equal the input file's row count. A fields-only negative witness
 must be rejected by the same observer. Colour-pair controls reject a fixed
@@ -39,11 +39,11 @@ scanner proves speed or appearance.
 
 Capture evidence map: implementation supplies
 `docs/dev/design/-captures.json`, with a `captures` array. Each entry names
-`image` (basename in the shared edi expected-image set), `notes` (owner note
+`image` (basename in the shared edi expected-image set), `notes` (design note
 numbers), `theme` (`light`, `dark`, `system`), optional `expanded` (category ids)
 and, for Report Text note 13, the pinned `timestamp`. Every visible note 1–14
 is mapped. This is an inventory gate only: normal app-ui-test compares every
-image, and review/conductor still inspect the images against the owner notes.
+image, and visual review compares the images against the design notes.
 
 Note 19's shell check observes evaluated BUILD/PREFIX paths before a controlled
 fetch refusal for app and default environments. It proves the declared path
@@ -56,11 +56,8 @@ uncertainty supplies the precision. The nontrivial witnesses are
 1.2866603586797143 → 1.29 and 0.0025646436261 → 0.00256. Both retain their
 original stored double, including on focus loss without an edit.
 
+## Build sequencing
 
-## Corrected note 20 (owner, 2026-09-29)
-
-Authority: development hub `knowledge/decision-records.md`, "OWNER CORRECTION: 
-note 20 means build once per full run", committed with the amended packet.
 A full sequence builds once before checks; each standalone step builds first
 on every invocation. Freshness detection is no longer an acceptance property.
 
@@ -91,7 +88,7 @@ and both desktop CI matrix platforms. Observer controls reject missing,
 duplicated or late builds and omitted checks. This is a shell sequencing claim,
 not a pixi implementation test or native app/full-suite attestation.
 
-Review-7 adaptation: the dispatcher previously keyed only on the task name,
+The dispatcher previously keyed only on the task name,
 which hid the observed duplicate between inherited and explicitly qualified
 app-build references. It now keeps the declared environment in task identity;
 a dispatcher-level negative witness must produce both builds and fail the
@@ -101,7 +98,7 @@ build dependency and retains the checker and selected environment. Controls
 include the recovery invocation; the normal CI witness still excludes its
 intentional change-scoped rebuild. `merge-tasks` joins the verify aliases.
 
-The retained  gate previously searched all dependency command text for
+The retained gate previously searched all dependency command text for
 task names, losing group-app when it became a direct pytest command. It now
 requires each task to be reachable and to carry its actual checker command,
 including the Python app suite; missing-edge and empty-checker controls fail.
@@ -109,8 +106,8 @@ Both desktop platforms, native app checks and failure-image uploads remain
 required. These changes adapt representation without relaxing build counts,
 ordering, repeated standalone builds or failure propagation.
 
-The retained  CLI wiring gate previously walked only string task dependencies
-and accepted any one matching CI step. The corrected note-20 graph introduced an
+The retained CLI wiring gate previously walked only string task dependencies
+and accepted any one matching CI step. The environment-qualified graph introduced an
 environment-qualified dependency mapping, which raised TypeError during that walk.
 It now resolves task definitions and dependency identity in the declared environment,
 and checks verify, verify-quick and verify-full for the complete registry runner.
@@ -121,7 +118,7 @@ steps, shell guards and project-subset invocations cannot supply that evidence.
 The other retained workflow gates already support the matrices or inspect unaffected
 jobs, so their assertions remain unchanged. No native build is part of this check.
 
-The retained  parameter-column observer previously positioned the ListView,
+The retained parameter-column observer previously positioned the ListView,
 scrolled its row once, then read after one polish/render wait. macOS CI exposed a
 row still outside its enclosing sidebar viewport. It now scrolls and polishes the
 table before positioning the row, then retries row exposure within a bounded wait
@@ -129,3 +126,11 @@ until rendering has settled, scrolling has stopped and every asserted label is
 inside its clipped viewports. It retries geometry only: the same native name,
 units, uncertainty and admissible-bound assertions still run once against the
 independent inputs. Hidden, clipped, blank and incorrect text remain failures.
+
+The doublet and absorption extension uses `generate.py --project pd-xray-cwl_lif_single --project pd-xray-cwl_pbso4-lab_round-robin` updates only those declared loop inputs and
+adds the new project's loops, retaining every unrelated original row. These
+selected rows explicitly authenticate current complete bytes; historical rows
+still authenticate their complete archived/profile-token view. All loops in one
+file must name the same byte view. Numeric plain rows use whitespace tokenization;
+quotes, comments and escapes still use the full lexer. Neither path drops a table
+or permits an incomplete row.

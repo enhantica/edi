@@ -22,7 +22,7 @@ Column {
         spacing: AppSizes.inputSpacing
         SelectorField {
             objectName: "peak.type"
-            label: qsTr("profile")
+            uid: "peak.type"
             options: group.experiment ? group.experiment.peakTypeOptions : null
             token: group.experiment ? group.experiment.peakType : ""
             onSelected: token => group.experiment.peakType = token

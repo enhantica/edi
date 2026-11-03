@@ -1,151 +1,141 @@
-# Colour palettes — provenance
+# Figure palettes — provenance
 
-One table per colour scheme, `<scheme>.tsv`. The core embeds them at build time and reads them through
-`edi::pattern_colour()` and `edi::structure_colour()`, the only source of experiment and structure colours in edi: the
-app's charts and icons, the pattern presentation and the report all take them from there. A report always takes the
-light colours.
+One table per palette, in the order Preferences lists them: Earth (the default), Classic, Soft, Natural and
+Colour-blind safe (ADR-0038). The core embeds them at build time and reads them through `edi::figure_colour()` and
+`edi::role_colour()`, the only source of experiment, structure and chart-role colours in edi: the app's charts,
+legends and icons, the Preferences colour strip, the pattern presentation and the report all take them from there. A
+report and every saved picture take the light colours.
 
-| Column  | Meaning                                                                                |
-| ------- | -------------------------------------------------------------------------------------- |
-| `role`  | `pattern` (an experiment's colour), `gradient` (a stop of the gradient) or `structure` |
-| `index` | The place, from 0, in the order the rows of that role are listed                       |
-| `light` | The colour in the light theme, `#RRGGBB`                                               |
-| `dark`  | The colour in the dark theme, `#RRGGBB`                                                |
+The colours are the ones the owner approved on 2026-10-26 (light values on the palette page's fifth version, dark
+values on the second dark sheet), stored exactly; nothing generates, adapts or retunes them. The approval names were
+edi earth, edi standard, edi soft, edi natural and edi clear. `tools/palettes/check.py` checks each table's shape and
+that the tables below list the same values; it writes nothing.
 
-Up to as many experiments as a scheme has pattern colours each takes its place's colour. With more, every experiment
-takes a colour along the gradient, the first at one end and the last at the other, mixed in the Oklab colour space
-(Björn Ottosson, 2020) between the two stops around it. Structures take the structure colours in turn.
+| Column  | Meaning                                                                                 |
+| ------- | --------------------------------------------------------------------------------------- |
+| `role`  | `figure`, `total_calculation`, `background` or `difference`                             |
+| `index` | The place, from 0, in the palette's colour order; 0 for the three role colours          |
+| `light` | The colour in the light theme, `#RRGGBB`                                                |
+| `dark`  | The colour in the dark theme, `#RRGGBB`                                                 |
 
-## Rules
+Each palette lists eleven figure colours in the order experiments and structures take them. Earth keeps its first
+two for experiments: a structure takes the first free colour from the third on. In the other four an experiment or a
+structure takes the next free colour whatever its kind. Past the eleventh, items take shades between the first and
+the second colour, mixed in the Oklab colour space (Björn Ottosson, 2020): position p of a project using positions up
+to n - 1 at t = (p - 10) / (n - 10).
 
-- **Contrast.** Every colour, and every colour the gradient can give, has a contrast ratio of at least 3:1 against its
-  theme's chart background: `#FFFFFF` in the light theme (the report's too) and `#444444` in the dark one. The ratio is
-  WCAG 2.x's, from relative luminance (W3C, *Web Content Accessibility Guidelines 2.1*, "contrast ratio").
-- **Adapted colours.** A published colour that passes is kept. One that does not keeps its Oklab hue and chroma and
-  moves only its lightness, darker in the light theme and lighter in the dark one, by the smallest step that passes.
-  Where that lightness has no colour of that chroma in sRGB, the chroma shrinks to the gamut's edge.
-- **Distinct colours.** Within one set, in one theme, any two colours are at least 0.08 apart in Oklab. A colour that
-  would come closer to an earlier one moves further from the background until it does not. The closest pairs are 0.080
-  (several sets) to 0.111 (Tableau, light).
-- **Apart from the calculated pattern.** Measured data must not look like the calculated pattern, whose colour is
-  `#F44336` in the light theme and `#EF9A9A` in the dark one. Every gradient colour is at least 0.10 from it in Oklab. A
-  set colour that is closer in either theme goes to the end of its set in both themes, so only the last experiments take
-  it and an experiment keeps its hue when the theme changes. The background, residual and excluded-region colours are
-  not part of this rule.
-- **Gradients.** A gradient keeps the longest run of its published table that passes both rules, in the table's order,
-  and the table lists 17 evenly spaced stops along it (an entry, or the Oklab mix of the two entries around a point
-  between them).
+The dark colours keep each light colour's hue, read at 3:1 or more on the dark chart background (`#444444`), sit in one
+lightness band so none stands out, and keep every pair of a palette at least as far apart in Oklab as in the light
+theme. The calculated curve is the same crimson in all five palettes, `#AD1A6B` light and `#FC4F81` dark, which
+red-green colour-blind viewers see as grey rather than as a palette colour. The background and difference greys are
+edi's own, the same in all five.
 
-`tools/palettes/generate.py` writes the tables from the published values below and checks each rule, every gradient
-colour included; `--check` compares its output with the committed tables. It needs matplotlib (3.11.0 was used) for the
-viridis, cividis, plasma and magma tables.
+Colour-blind safe was chosen for colour-vision differences by comparing simulated protanopia, deuteranopia and
+tritanopia with normal vision; it is no guarantee for every colour-vision deficiency.
 
-## Sources
+## Stored values
 
-| Scheme            | Pattern colours                                               | Gradient                                                           | Structure colours                                 |
-| ----------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------- |
-| Default           | Material Design colours (Google, 2014), the light blue first  | viridis (Stéfan van der Walt and Nathaniel Smith, 2015)            | Material orange, teal and pink                    |
-| Colour-blind safe | Okabe and Ito, *Color Universal Design* (2008), all eight     | cividis (Nuñez, Anderton and Renslow, PLoS ONE 13, e0199239, 2018) | Paul Tol's muted wine, green and indigo           |
-| Tableau           | Tableau 10, as matplotlib's `tab10`                           | plasma (van der Walt and Smith, 2015)                              | matplotlib's `tab20b`, first of indigo, red, gold |
-| Paul Tol          | Paul Tol, *Colour Schemes* (SRON/EPS/TN/09-002, 2021), bright | Paul Tol's iridescent, its 23 colours                              | Paul Tol's high-contrast blue, yellow and red     |
-| Vivid             | ColorBrewer Set1 (Cynthia Brewer, colorbrewer2.org)           | magma (van der Walt and Smith, 2015)                               | ColorBrewer Dark2's first three                   |
+### Earth
 
-viridis, plasma and magma are matplotlib's tables; cividis is the table matplotlib ships from the paper's authors.
+`earth.tsv`. Approved as edi earth.
 
-## Published and adapted values
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#618EC8` | `#6E92CB` |
+| figure | 1 | `#8B9762` | `#94935C` |
+| figure | 2 | `#C58A03` | `#C58901` |
+| figure | 3 | `#C877B7` | `#C375C2` |
+| figure | 4 | `#A27957` | `#C59B77` |
+| figure | 5 | `#9B82E9` | `#9B82E9` |
+| figure | 6 | `#DE7141` | `#E37646` |
+| figure | 7 | `#918706` | `#AAA931` |
+| figure | 8 | `#01A2C5` | `#00ABCC` |
+| figure | 9 | `#4DA091` | `#4E9D91` |
+| figure | 10 | `#49A45F` | `#39A55A` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |
 
-### Default (`default.tsv`)
+### Classic
 
-| Role      | Place | Published | Light               | Dark                |
-| --------- | ----- | --------- | ------------------- | ------------------- |
-| pattern   | 0     | `#03A9F4` | `#009DE4` (adapted) | `#03A9F4`           |
-| pattern   | 1     | `#795548` | `#795548`           | `#AE8779` (adapted) |
-| pattern   | 2     | `#4CAF50` | `#45A849` (adapted) | `#4CAF50`           |
-| pattern   | 3     | `#9C27B0` | `#9C27B0`           | `#D15FE5` (adapted) |
-| pattern   | 4     | `#FFC107` | `#BC8D00` (adapted) | `#FFC107`           |
-| pattern   | 5     | `#3F51B5` | `#3F51B5`           | `#6F88F2` (adapted) |
-| pattern   | 6     | `#00BCD4` | `#009BAF` (adapted) | `#00BCD4`           |
-| pattern   | 7     | `#CDDC39` | `#889200` (adapted) | `#CDDC39`           |
-| structure | 0     | `#FF9800` | `#D78000` (adapted) | `#FF9800`           |
-| structure | 1     | `#009688` | `#009688`           | `#1CA091` (adapted) |
-| structure | 2     | `#E91E63` | `#E91E63`           | `#FF4979` (adapted) |
+`classic.tsv`. Approved as edi standard.
 
-Gradient: entries 0–152 of 256 in the light theme, 145–255 in the dark one.
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#6896CC` | `#6493C9` |
+| figure | 1 | `#D9773A` | `#E17443` |
+| figure | 2 | `#8B9762` | `#879665` |
+| figure | 3 | `#6F5A8F` | `#AE98C2` |
+| figure | 4 | `#2E8F8A` | `#55B1B3` |
+| figure | 5 | `#B8860B` | `#C08C02` |
+| figure | 6 | `#936844` | `#CA9C7B` |
+| figure | 7 | `#8989F7` | `#7D82FC` |
+| figure | 8 | `#8D6FC9` | `#BD8CF8` |
+| figure | 9 | `#5C6BC0` | `#85A7FE` |
+| figure | 10 | `#3F7F4F` | `#72B976` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |
 
-### Colour-blind safe (`colour-blind-safe.tsv`)
+### Soft
 
-| Role      | Place | Published | Light               | Dark                |
-| --------- | ----- | --------- | ------------------- | ------------------- |
-| pattern   | 0     | `#0072B2` | `#0072B2`           | `#3A95D8` (adapted) |
-| pattern   | 1     | `#E69F00` | `#C68900` (adapted) | `#E69F00`           |
-| pattern   | 2     | `#009E73` | `#009E73`           | `#11A377` (adapted) |
-| pattern   | 3     | `#CC79A7` | `#CC79A7`           | `#CC79A7`           |
-| pattern   | 4     | `#56B4E9` | `#3D9DD1` (adapted) | `#56B4E9`           |
-| pattern   | 5     | `#F0E442` | `#948B00` (adapted) | `#F0E442`           |
-| pattern   | 6     | `#000000` | `#000000`           | `#8F8F8F` (adapted) |
-| pattern   | 7     | `#D55E00` | `#D55E00`           | `#E56C1F` (adapted) |
-| structure | 0     | `#882255` | `#882255`           | `#D86B9A` (adapted) |
-| structure | 1     | `#117733` | `#117733`           | `#46A15A` (adapted) |
-| structure | 2     | `#332288` | `#332288`           | `#8483F0` (adapted) |
+`soft.tsv`. Approved as edi soft.
 
-Gradient: entries 0–162 of 256 in the light theme, 154–255 in the dark one. Moved to the end of the set, near the
-calculated colour: `#D55E00`.
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#6896CC` | `#6496CB` |
+| figure | 1 | `#C28B0A` | `#C28305` |
+| figure | 2 | `#6F5A8F` | `#AE9DC4` |
+| figure | 3 | `#8989F7` | `#8384F9` |
+| figure | 4 | `#479F93` | `#47A196` |
+| figure | 5 | `#5E8F5A` | `#7EB77F` |
+| figure | 6 | `#8D6FC9` | `#BF90FB` |
+| figure | 7 | `#8C6A4A` | `#C19D7A` |
+| figure | 8 | `#C877B7` | `#C776B9` |
+| figure | 9 | `#D26E3C` | `#EF7B4B` |
+| figure | 10 | `#918706` | `#99A004` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |
 
-### Tableau (`tableau.tsv`)
+### Natural
 
-| Role      | Place | Published | Light               | Dark                |
-| --------- | ----- | --------- | ------------------- | ------------------- |
-| pattern   | 0     | `#1F77B4` | `#1F77B4`           | `#4295D4` (adapted) |
-| pattern   | 1     | `#2CA02C` | `#2CA02C`           | `#31A430` (adapted) |
-| pattern   | 2     | `#9467BD` | `#9467BD`           | `#A97CD3` (adapted) |
-| pattern   | 3     | `#8C564B` | `#8C564B`           | `#BA8175` (adapted) |
-| pattern   | 4     | `#E377C2` | `#DA6FBA` (adapted) | `#E377C2`           |
-| pattern   | 5     | `#7F7F7F` | `#7F7F7F`           | `#9B9B9B` (adapted) |
-| pattern   | 6     | `#BCBD22` | `#9A9A00` (adapted) | `#BCBD22`           |
-| pattern   | 7     | `#17BECF` | `#00A4B4` (adapted) | `#17BECF`           |
-| pattern   | 8     | `#FF7F0E` | `#EB7300` (adapted) | `#FF7F0E`           |
-| pattern   | 9     | `#D62728` | `#D62728`           | `#FD524A` (adapted) |
-| structure | 0     | `#393B79` | `#393B79`           | `#838ACF` (adapted) |
-| structure | 1     | `#843C39` | `#843C39`           | `#C97A74` (adapted) |
-| structure | 2     | `#8C6D31` | `#8C6D31`           | `#AB8B4F` (adapted) |
+`natural.tsv`. Approved as edi natural.
 
-Gradient: entries 0–131 of 256 in the light theme, 195–255 in the dark one. Moved to the end of the set, near the
-calculated colour: `#FF7F0E`, `#D62728`.
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#7C97B3` | `#888FAC` |
+| figure | 1 | `#D26E3C` | `#EF7B45` |
+| figure | 2 | `#039EDC` | `#039EDC` |
+| figure | 3 | `#958508` | `#B0AD19` |
+| figure | 4 | `#6EA163` | `#6C9C4A` |
+| figure | 5 | `#936844` | `#C4A07A` |
+| figure | 6 | `#479F93` | `#3CA39E` |
+| figure | 7 | `#C28B0A` | `#BE8706` |
+| figure | 8 | `#8989F7` | `#8D7FFB` |
+| figure | 9 | `#71964E` | `#7DBB89` |
+| figure | 10 | `#5C6BC0` | `#9DA2E9` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |
 
-### Paul Tol (`paul-tol.tsv`)
+### Colour-blind safe
 
-| Role      | Place | Published | Light               | Dark                |
-| --------- | ----- | --------- | ------------------- | ------------------- |
-| pattern   | 0     | `#4477AA` | `#4477AA`           | `#5F93C7` (adapted) |
-| pattern   | 1     | `#228833` | `#228833`           | `#41A24C` (adapted) |
-| pattern   | 2     | `#CCBB44` | `#A79506` (adapted) | `#CCBB44`           |
-| pattern   | 3     | `#66CCEE` | `#35A0C1` (adapted) | `#66CCEE`           |
-| pattern   | 4     | `#AA3377` | `#AA3377`           | `#DE64A5` (adapted) |
-| pattern   | 5     | `#BBBBBB` | `#949494` (adapted) | `#BBBBBB`           |
-| pattern   | 6     | `#EE6677` | `#EE6677`           | `#F56C7D` (adapted) |
-| structure | 0     | `#004488` | `#004488`           | `#5691DC` (adapted) |
-| structure | 1     | `#DDAA33` | `#BE8D00` (adapted) | `#DDAA33`           |
-| structure | 2     | `#BB5566` | `#BB5566`           | `#D86F7E` (adapted) |
+`colour-blind-safe.tsv`. Approved as edi clear.
 
-Gradient: entries 16–22 of 23 in the light theme, 0–16 in the dark one. Moved to the end of the set, near the calculated
-colour: `#EE6677`.
-
-### Vivid (`vivid.tsv`)
-
-| Role      | Place | Published | Light               | Dark                |
-| --------- | ----- | --------- | ------------------- | ------------------- |
-| pattern   | 0     | `#377EB8` | `#377EB8`           | `#4E94D0` (adapted) |
-| pattern   | 1     | `#4DAF4A` | `#46A843` (adapted) | `#4DAF4A`           |
-| pattern   | 2     | `#984EA3` | `#984EA3`           | `#BF73CA` (adapted) |
-| pattern   | 3     | `#FFFF33` | `#9A9A00` (adapted) | `#FFFF33`           |
-| pattern   | 4     | `#A65628` | `#A65628`           | `#CD7A4D` (adapted) |
-| pattern   | 5     | `#999999` | `#949494` (adapted) | `#999999`           |
-| pattern   | 6     | `#E41A1C` | `#E41A1C`           | `#FF5045` (adapted) |
-| pattern   | 7     | `#FF7F00` | `#EA7400` (adapted) | `#FF7F00`           |
-| pattern   | 8     | `#F781BF` | `#E16DAB` (adapted) | `#F781BF`           |
-| structure | 0     | `#1B9E77` | `#1B9E77`           | `#22A27B` (adapted) |
-| structure | 1     | `#D95F02` | `#D95F02`           | `#E66B1D` (adapted) |
-| structure | 2     | `#7570B3` | `#7570B3`           | `#8C88CD` (adapted) |
-
-Gradient: entries 0–144 of 256 in the light theme, 219–255 in the dark one. Moved to the end of the set, near the
-calculated colour: `#E41A1C`, `#FF7F00`, `#F781BF`.
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#3F7FBF` | `#69A9EC` |
+| figure | 1 | `#C28B0A` | `#C38801` |
+| figure | 2 | `#8989F7` | `#8989F7` |
+| figure | 3 | `#936844` | `#C59D77` |
+| figure | 4 | `#01A2C5` | `#099EC4` |
+| figure | 5 | `#5E8F5A` | `#879F78` |
+| figure | 6 | `#D26E3C` | `#EC7D49` |
+| figure | 7 | `#479F93` | `#06A48D` |
+| figure | 8 | `#918706` | `#A5AA32` |
+| figure | 9 | `#C877B7` | `#BD7ABF` |
+| figure | 10 | `#3F7F4F` | `#68C08A` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |

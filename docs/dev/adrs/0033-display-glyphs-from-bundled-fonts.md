@@ -2,6 +2,9 @@
 
 Status: Accepted
 
+**Amended 2026-10-24 ([ADR-0051](0051-names-and-numbers-from-the-dictionary.md)):** the census also reads every name
+crysta's dictionary gives the pages (titles, labels, units, option names), since those reach the screen at run time.
+
 ## Context
 
 The app bundles its fonts so text looks the same on every platform (ADR-0015 §10): PT Sans and

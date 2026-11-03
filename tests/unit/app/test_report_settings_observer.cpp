@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <memory>
+#include <QDebug>
 #include <QAnimationDriver>
+#include <QElapsedTimer>
 #include <QPdfWriter>
 #include <QPainter>
 #include <QProcess>
@@ -15,9 +17,13 @@
 #include <QTemporaryDir>
 #include <QDirIterator>
 #include <QScreen>
+#include <QSet>
 #include <QGuiApplication>
 #include <QJSValue>
 #include <QKeyEvent>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QtTest/qtestkeyboard.h>
@@ -34,12 +40,14 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QTextStream>
+#include <QTextLayout>
 #include <QSettings>
 #include <QUrl>
 #include <QVariantMap>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQmlError>
+#include <QScopeGuard>
 #include <QtQml/qqml.h>
 #include "engine_setup.hpp"
 
@@ -76,9 +84,41 @@ private:
 class ReportSettingsProof : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool webAvailable READ webAvailable CONSTANT)
+    Q_PROPERTY(QString webExportError READ webExportError)
 public:
+    explicit ReportSettingsProof(QQmlEngine* engine) : engine_(engine) {}
+    // Public Qt text layout, using the rendered label's own font and available width.
+    // The QML gate checks its line count against the actual label before reading line text.
+    Q_INVOKABLE QVariantList tooltipTextLines(QObject* label, bool word, bool anywhere) const {
+        QVariantList result;
+        if (label == nullptr || !label->property("font").canConvert<QFont>()) {
+            return result;
+        }
+        const QString text = label->property("text").toString();
+        QTextLayout layout(text, label->property("font").value<QFont>());
+        QTextOption option;
+        option.setWrapMode(word && anywhere ? QTextOption::WrapAtWordBoundaryOrAnywhere
+                           : word ? QTextOption::WordWrap
+                           : anywhere ? QTextOption::WrapAnywhere : QTextOption::NoWrap);
+        option.setUseDesignMetrics(true);
+        layout.setTextOption(option);
+        layout.beginLayout();
+        for (;;) {
+            QTextLine line = layout.createLine();
+            if (!line.isValid()) {
+                break;
+            }
+            line.setLineWidth(label->property("width").toDouble() - label->property("leftPadding").toDouble()
+                              - label->property("rightPadding").toDouble());
+            result.append(QVariantMap{{QStringLiteral("text"), text.mid(line.textStart(), line.textLength()).trimmed()},
+                                      {QStringLiteral("width"), line.naturalTextWidth()}});
+        }
+        layout.endLayout();
+        return result;
+    }
     using QObject::QObject;
     bool webAvailable() const { return true; }
+    QString webExportError() const { return web_export_error_; }
     Q_INVOKABLE QObject* creationDialog(QObject* root) const {
         if (!root) return nullptr;
         for (auto* object : root->findChildren<QObject*>())
@@ -92,10 +132,11 @@ public:
     // is supplied by this observer, and this is not a browser-download proof.
     Q_INVOKABLE QObject* webExport(QQuickItem* parent, QObject* report, QObject* preview) const {
         auto* engine = parent ? qmlEngine(parent) : nullptr;
-        if (!engine) return nullptr;
-        const QUrl origin("qrc:/qt/qml/edi/app/Pages/Report/ExportGroup.qml");
-        QFile file(":/qt/qml/edi/app/Pages/Report/ExportGroup.qml");
-        if (!file.open(QIODevice::ReadOnly)) return nullptr;
+        web_export_error_.clear();
+        if (!engine) { web_export_error_ = "Actual parent has no QML engine"; return nullptr; }
+        const QUrl origin("qrc:/qt/qml/edi/app/qml/Pages/Report/ExportGroup.qml");
+        QFile file(":/qt/qml/edi/app/qml/Pages/Report/ExportGroup.qml");
+        if (!file.open(QIODevice::ReadOnly)) { web_export_error_ = "Actual resource cannot be read: " + file.fileName(); return nullptr; }
         auto source = file.readAll();
         source.replace("import edi.app", "import edi.app\nimport ReportAcceptance 1.0 as Platform");
         source.replace("WebFiles.available", "Platform.SettingsProof.webAvailable");
@@ -105,11 +146,58 @@ public:
             {"report", QVariant::fromValue(report)}, {"preview", QVariant::fromValue(preview)}},
             engine->rootContext());
         if (!object) {
-            for (const auto& error : component.errors()) qWarning().noquote() << error.toString();
+            QStringList errors;
+            for (const auto& error : component.errors()) errors.append(error.toString());
+            web_export_error_ = "Actual Export resource creation at " + origin.toString() + ": " + errors.join("; ");
             return nullptr;
         }
         object->setParent(parent);
+        QQmlEngine::setObjectOwnership(object, QQmlEngine::JavaScriptOwnership);
         if (auto* item = qobject_cast<QQuickItem*>(object)) item->setParentItem(parent);
+        return object;
+    }
+    Q_INVOKABLE QVariantList tooltipObjects(QObject* root) const {
+        QVariantList result;
+        QSet<QObject*> visited;
+        std::vector<QObject*> pending{root};
+        while (!pending.empty()) {
+            auto* object = pending.back();
+            pending.pop_back();
+            if (!object || visited.contains(object)) continue;
+            visited.insert(object);
+            if (object->property("opened").isValid()) result.append(QVariant::fromValue(object));
+            for (auto* child : object->children()) pending.push_back(child);
+            if (auto* item = qobject_cast<QQuickItem*>(object))
+                for (auto* child : item->childItems()) pending.push_back(child);
+            if (auto* window = qobject_cast<QQuickWindow*>(object)) pending.push_back(window->contentItem());
+        }
+        return result;
+    }
+    Q_INVOKABLE bool tooltipOwnedBy(QObject* tooltip, QObject* source) const {
+        if (!tooltip || !source) return false;
+        for (auto* owner = tooltip->parent(); owner; owner = owner->parent())
+            if (owner == source) return true;
+        return false;
+    }
+    Q_INVOKABLE QObject* tooltipPlatformMain(QQuickItem* context, bool web, bool disk) const {
+        auto* engine = context ? qmlEngine(context) : nullptr;
+        if (!engine) return nullptr;
+        const QUrl origin("qrc:/qt/qml/edi/app/qml/Main.qml");
+        QFile file(":/qt/qml/edi/app/qml/Main.qml");
+        if (!file.open(QIODevice::ReadOnly)) return nullptr;
+        auto source = file.readAll();
+        // Availability operands alone select the real dialog's platform branches.
+        source.replace("WebFiles.available", web ? "true" : "false");
+        source.replace("WebStorage.diskAccess", disk ? "true" : "false");
+        QQmlComponent component(engine);
+        component.setData(source, origin);
+        auto* object = component.createWithInitialProperties({{"visible", true}, {"width", 1280}, {"height", 720}}, engine->rootContext());
+        if (!object) {
+            for (const auto& error : component.errors()) qWarning().noquote() << error.toString();
+            return nullptr;
+        }
+        object->setParent(context);
+        QQmlEngine::setObjectOwnership(object, QQmlEngine::JavaScriptOwnership);
         return object;
     }
     Q_INVOKABLE QVariantMap htmlFigureFacts(const QString& html) const {
@@ -131,14 +219,90 @@ public:
         return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
     }
     Q_INVOKABLE QVariantMap fileFacts(const QUrl& location, const QString& relative) const {
+        if (!localDirectory(location)) return {{"error", "An absolute local directory URL is required"}};
         QFile file(QDir(location.toLocalFile()).filePath(relative));
-        if (!file.open(QIODevice::ReadOnly)) return {};
+        if (!file.open(QIODevice::ReadOnly)) return {{"error", "The project file cannot be opened"}};
         const auto bytes = file.readAll();
+        if (file.error() != QFileDevice::NoError) return {{"error", "The project file cannot be read"}};
         return {{"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
                 {"bytes", bytes.size()}, {"modified", QFileInfo(file).lastModified().toMSecsSinceEpoch()}};
     }
     Q_INVOKABLE QUrl childUrl(const QUrl& location, const QString& relative) const {
         return QUrl::fromLocalFile(QDir(location.toLocalFile()).filePath(relative));
+    }
+    Q_INVOKABLE QVariantMap htmlModel(const QUrl& location) const {
+        QFile file(location.toLocalFile());
+        if (!file.open(QIODevice::ReadOnly)) return {{"error", "Actual HTML report cannot be opened"}};
+        const auto html = QString::fromUtf8(file.readAll());
+        const QRegularExpression script("<script[^>]*id=[\"']edi-report-model[\"'][^>]*>([\\s\\S]*?)</script>");
+        const auto match = script.match(html);
+        if (!match.hasMatch()) return {{"error", "Actual saved HTML has no report-model JSON script"}};
+        QJsonParseError error;
+        const auto document = QJsonDocument::fromJson(match.captured(1).toUtf8(), &error);
+        if (error.error != QJsonParseError::NoError) return {{"error", error.errorString()}};
+        return document.toVariant().toMap();
+    }
+    Q_INVOKABLE QVariantMap pdfImageColours(const QUrl& location, const QStringList& colours) const {
+        QFile file(location.toLocalFile());
+        if (!file.open(QIODevice::ReadOnly)) return {{"error", "Actual saved PDF cannot be opened"}};
+        const auto pdf = QString::fromLatin1(file.readAll());
+        const QRegularExpression objects("(\\d+)\\s+0\\s+obj\\b([\\s\\S]*?)endobj");
+        auto iterator = objects.globalMatch(pdf);
+        std::vector<QColor> targets;
+        QVariantMap counts, verticalRuns;
+        for (const auto& text : colours) {
+            targets.emplace_back(text);
+            counts.insert(text, 0);
+            verticalRuns.insert(text, 0);
+        }
+        int images = 0;
+        while (iterator.hasNext()) {
+            const auto object = iterator.next().captured(2);
+            if (!object.contains(QRegularExpression("/Subtype\\s*/Image\\b"))) continue;
+            if (object.contains("/DeviceGray")) continue; // alpha masks are not colour figures
+            const int start = object.indexOf("stream"), end = object.lastIndexOf("endstream");
+            if (start < 0 || end <= start) return {{"error", "Actual PDF image lacks its stream"}};
+            auto bytes = object.mid(start + 6, end - start - 6).toLatin1();
+            if (bytes.startsWith("\r\n")) bytes.remove(0, 2);
+            else if (bytes.startsWith('\n')) bytes.remove(0, 1);
+            if (bytes.endsWith("\r\n")) bytes.chop(2);
+            else if (bytes.endsWith('\n')) bytes.chop(1);
+            QImage image;
+            if (object.left(start).contains("/DCTDecode")) image = QImage::fromData(bytes, "JPEG");
+            else if (object.left(start).contains("/FlateDecode")) {
+                const auto width = QRegularExpression("/Width\\s+(\\d+)").match(object).captured(1).toInt();
+                const auto height = QRegularExpression("/Height\\s+(\\d+)").match(object).captured(1).toInt();
+                if (width <= 0 || height <= 0 || !object.contains("/DeviceRGB") ||
+                    !object.contains(QRegularExpression("/BitsPerComponent\\s+8\\b")))
+                    return {{"error", "PDF colour observer requires an eight-bit RGB image"}};
+                const auto size = quint32(width) * quint32(height) * 3;
+                QByteArray framed;
+                for (int shift : {24, 16, 8, 0}) framed.append(char((size >> shift) & 255));
+                framed.append(bytes);
+                const auto raw = qUncompress(framed);
+                if (raw.size() != size) return {{"error", "PDF colour image has unexpected decoded bytes"}};
+                image = QImage(reinterpret_cast<const uchar*>(raw.constData()), width, height, width * 3, QImage::Format_RGB888).copy();
+            } else return {{"error", "PDF colour observer refuses an unsupported image codec"}};
+            if (image.isNull()) return {{"error", "Actual PDF colour image did not decode"}};
+            ++images;
+            std::vector<std::vector<int>> runs(targets.size(), std::vector<int>(image.width(), 0));
+            for (int y = 0; y < image.height(); ++y) for (int x = 0; x < image.width(); ++x) {
+                const auto actual = image.pixelColor(x, y);
+                for (std::size_t i = 0; i < targets.size(); ++i) {
+                    const auto target = targets[i];
+                    // A fixed five encoded-channel bound allows JPEG quantisation;
+                    // source-palette correctness is tested separately, exactly.
+                    if (std::max({std::abs(actual.red()-target.red()), std::abs(actual.green()-target.green()), std::abs(actual.blue()-target.blue())}) <= 5) {
+                        counts[colours[int(i)]] = counts[colours[int(i)]].toInt() + 1;
+                        ++runs[i][x];
+                        verticalRuns[colours[int(i)]] = std::max(verticalRuns[colours[int(i)]].toInt(), runs[i][x]);
+                    } else {
+                        runs[i][x] = 0;
+                    }
+                }
+            }
+        }
+        return {{"images", images}, {"counts", counts}, {"maxVerticalRun", verticalRuns}};
     }
     Q_INVOKABLE QVariantMap pdfFacts(const QUrl& location) const {
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
@@ -158,7 +322,8 @@ public:
         if (python.isEmpty()) return {{"error", "Browser observer requires the runner's Python"}};
         QProcess process;
         process.start(python, {root.filePath("tests/fixtures/report_evolution/observe_browser.py"), location.toLocalFile()});
-        if (!process.waitForFinished(20000)) { process.kill(); return {{"error", "Actual HTML browser did not finish"}}; }
+        // The browser observer allows 60 s for startup/frames and up to 6 s for child cleanup.
+        if (!process.waitForFinished(70000)) { process.kill(); process.waitForFinished(1000); return {{"error", "Actual HTML browser did not finish"}}; }
         const auto json = QJsonDocument::fromJson(process.readAllStandardOutput());
         if (json.isNull()) return {{"error", QString::fromUtf8(process.readAllStandardError())}};
         return json.toVariant().toMap();
@@ -207,7 +372,8 @@ public:
             painter.drawText(QPointF(0, 20), "Second page");
             painter.drawText(QPointF(220, 690), "2");
         }
-        const auto result = pdfFacts(QUrl::fromLocalFile(file));
+        auto result = pdfFacts(QUrl::fromLocalFile(file));
+        result.insert("url", QUrl::fromLocalFile(file));
         directories_.push_back(std::move(directory));
         return result;
     }
@@ -311,33 +477,161 @@ public:
         directories_.push_back(std::move(directory));
         return result;
     }
+    static bool localDirectory(const QUrl& project) {
+        return project.isValid() && project.isLocalFile() &&
+               QDir::isAbsolutePath(project.toLocalFile()) && QFileInfo(project.toLocalFile()).isDir();
+    }
+    Q_INVOKABLE QVariantMap fileObservation(const QUrl& project, const QString& relative) const {
+        if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};
+        const auto path = QDir(project.toLocalFile()).absoluteFilePath(relative);
+        if (!QFileInfo::exists(path)) return {{"exists", false}, {"path", path}};
+        QFile file(path);
+        if (!QFileInfo(path).isFile() || !file.open(QIODevice::ReadOnly))
+            return {{"error", "The project file cannot be opened"}, {"path", path}};
+        const auto bytes = file.readAll();
+        if (file.error() != QFileDevice::NoError)
+            return {{"error", "The project file cannot be read"}, {"path", path}};
+        return {{"exists", true}, {"path", path}, {"text", QString::fromUtf8(bytes)},
+                {"base64", QString::fromLatin1(bytes.toBase64())}};
+    }
     Q_INVOKABLE QString text(const QUrl& project, const QString& relative) const {
-        QFile file(QDir(project.toLocalFile()).filePath(relative));
-        if (!file.open(QIODevice::ReadOnly)) return {};
-        return QString::fromUtf8(file.readAll());
+        const auto observed = fileObservation(project, relative);
+        if (observed.contains("error") || !observed.value("exists").toBool()) {
+            if (auto* engine = qjsEngine(this))
+                engine->throwError(QStringLiteral("SettingsProof.text: %1 (%2)")
+                    .arg(observed.value("error", "The project file is missing").toString(), relative));
+            return {};
+        }
+        return observed.value("text").toString();
+    }
+    Q_INVOKABLE QVariantMap projectBytes(const QUrl& project) const {
+        if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};
+        const QDir root(project.toLocalFile());
+        if (!root.exists()) return {{"error", "The saved project directory is missing"}};
+        QVariantMap result;
+        QDirIterator files(root.absolutePath(), QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+        while (files.hasNext()) {
+            QFile file(files.next());
+            if (!file.open(QIODevice::ReadOnly)) return {{"error", "A saved project file cannot be read"}};
+            auto bytes = file.readAll();
+            if (file.error() != QFileDevice::NoError) return {{"error", "A saved project file cannot be read"}};
+            const auto relative = root.relativeFilePath(file.fileName());
+            if (relative == QStringLiteral("project.edi")) {
+                QString record = QString::fromUtf8(bytes);
+                record.replace(QRegularExpression(QStringLiteral("(?m)^(_metadata\\.(?:created|last_modified)[ \\t]+)[^\\r\\n]+")),
+                               QStringLiteral("\\1<CLOCK>"));
+                bytes = record.toUtf8();
+            }
+            result.insert(relative, QString::fromLatin1(bytes.toBase64()));
+        }
+        return result;
     }
     Q_INVOKABLE bool write(const QUrl& project, const QString& relative, const QString& text) const {
+        if (!localDirectory(project)) return false;
         QFile file(QDir(project.toLocalFile()).filePath(relative));
         if (!QDir().mkpath(QFileInfo(file).absolutePath())) return false;
         return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(text.toUtf8()) == text.toUtf8().size() && file.flush();
     }
     Q_INVOKABLE bool remove(const QUrl& project, const QString& relative) const {
+        if (!localDirectory(project)) return false;
         return QFile::remove(QDir(project.toLocalFile()).filePath(relative));
     }
+    Q_INVOKABLE QUrl copyProjectArchive(const QUrl& source, bool readOnly = false) {
+        const QUrl root = emptyDirectory();
+        const QString path = QDir(root.toLocalFile()).filePath("opened.zip");
+        if (!QFile::copy(source.toLocalFile(), path)) return {};
+        if (readOnly) {
+            const auto read = QFile::ReadOwner | QFile::ReadGroup | QFile::ReadOther;
+            if (!QFile::setPermissions(path, read) ||
+                !QFile::setPermissions(root.toLocalFile(),
+                                       read | QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther))
+                return {};
+        }
+        return QUrl::fromLocalFile(path);
+    }
+    Q_INVOKABLE bool archiveLocationWritable(const QUrl& archive) const {
+        return QFileInfo(archive.toLocalFile()).isWritable() ||
+               QFileInfo(QFileInfo(archive.toLocalFile()).absolutePath()).isWritable();
+    }
+    Q_INVOKABLE QVariantList projectFileDialogs(QObject* root, bool folder) const {
+        QVariantList result;
+        if (!root) return result;
+        const char* selected = folder ? "selectedFolder" : "selectedFile";
+        for (auto* object : root->findChildren<QObject*>())
+            if (object->inherits(folder ? "QQuickFolderDialog" : "QQuickFileDialog") &&
+                object->metaObject()->indexOfProperty(selected) >= 0 &&
+                object->property("visible").toBool())
+                result.append(QVariant::fromValue(object));
+        return result;
+    }
+    Q_INVOKABLE QVariantMap projectDialogFacts(QObject* dialog) const {
+        if (!dialog) return {};
+        return {{"type", QString::fromLatin1(dialog->metaObject()->className())},
+                {"systemFolder", dialog->inherits("QQuickFolderDialog")},
+                {"systemFile", dialog->inherits("QQuickFileDialog")},
+                {"acceptLabel", dialog->property("acceptLabel")},
+                {"options", dialog->property("options")},
+                {"fileMode", dialog->property("fileMode")}};
+    }
+    Q_INVOKABLE bool chooseProjectLocation(QObject* dialog, const QUrl& location,
+                                           bool folder) const {
+        if (!dialog || !dialog->property("visible").toBool()) return false;
+        const char* selected = folder ? "selectedFolder" : "selectedFile";
+        if (!dialog->setProperty(selected, location) ||
+            dialog->property(selected).toUrl() != location)
+            return false;
+        const bool accepted = QMetaObject::invokeMethod(dialog, "accepted", Qt::DirectConnection);
+        QMetaObject::invokeMethod(dialog, "close", Qt::DirectConnection);
+        return accepted;
+    }
+    Q_INVOKABLE bool dropProject(QObject* object, const QUrl& location) const {
+        auto* window = qobject_cast<QQuickWindow*>(object);
+        if (!window) return false;
+        QMimeData mime;
+        mime.setUrls({location});
+        const QPoint point(window->width() / 2, window->height() / 2);
+        QDragEnterEvent enter(point, Qt::CopyAction, &mime, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &enter);
+        if (!enter.isAccepted()) return false;
+        QDropEvent drop(QPointF(point), Qt::CopyAction, &mime, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &drop);
+        return drop.isAccepted();
+    }
+    Q_INVOKABLE QString projectArchiveBytes(const QUrl& location) const {
+        QFile file(location.toLocalFile());
+        return file.open(QIODevice::ReadOnly) ? QString::fromLatin1(file.readAll().toBase64())
+                                              : QString();
+    }
+    Q_INVOKABLE QVariantMap projectFolderBytes(const QUrl& location) const {
+        QVariantMap result;
+        QDir root(location.toLocalFile());
+        QDirIterator files(root.absolutePath(), QDir::Files | QDir::Hidden,
+                           QDirIterator::Subdirectories);
+        while (files.hasNext()) {
+            const QString name = files.next();
+            QFile file(name);
+            if (!file.open(QIODevice::ReadOnly)) return {};
+            result.insert(root.relativeFilePath(name),
+                          QString::fromLatin1(file.readAll().toBase64()));
+        }
+        return result;
+    }
     Q_INVOKABLE QString localPath(const QUrl& location) const { return location.toLocalFile(); }
-    Q_INVOKABLE QVariantMap palette(bool safe) const {
+    Q_INVOKABLE QVariantMap palette(bool safe) const { return paletteForScheme(safe ? "colourBlindSafe" : "default"); }
+    Q_INVOKABLE QVariantMap paletteForScheme(const QString& scheme) const {
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
         root.cd("../../..");
         QDir directory(root.filePath("data/palettes"));
         QVariantMap output;
         for (const auto& name : directory.entryList({"*.tsv"}, QDir::Files, QDir::Name)) {
-            const bool is_default = QFileInfo(name).completeBaseName().toLower() == "default";
-            if (is_default == safe) continue;
+            QString stem = QFileInfo(name).completeBaseName().toLower(), wanted = scheme.toLower();
+            stem.remove(QRegularExpression("[^a-z]")); wanted.remove(QRegularExpression("[^a-z]"));
+            if (stem != wanted) continue;
             QFile file(directory.filePath(name));
             if (!file.open(QIODevice::ReadOnly)) continue;
             QTextStream stream(&file);
             const auto header = stream.readLine().split('\t');
-            QVariantList pattern, structure;
+            QVariantList pattern, structure, gradient;
             while (!stream.atEnd()) {
                 const auto cells = stream.readLine().split('\t');
                 if (cells.size() != header.size()) continue;
@@ -345,9 +639,11 @@ public:
                 for (qsizetype index = 0; index < cells.size(); ++index) row.insert(header[index], cells[index]);
                 if (row.value("role") == "pattern") pattern.append(row);
                 if (row.value("role") == "structure") structure.append(row);
+                if (row.value("role") == "gradient") gradient.append(row);
             }
             output.insert("pattern", pattern);
             output.insert("structure", structure);
+            if (!gradient.isEmpty()) output.insert("gradient", gradient);
             return output;
         }
         return output;
@@ -392,6 +688,11 @@ public:
         settings.sync();
     }
     Q_INVOKABLE QVariantMap restart(const QString& source) const {
+        auto* controller = engine_->incubationController();
+        // The fresh engine borrows the app's controller; return it to the test host afterwards.
+        const auto restore = qScopeGuard([this, controller] {
+            engine_->setIncubationController(controller);
+        });
         QQmlEngine engine;
         edi_app::configure_engine(engine);
         QQmlComponent component(&engine);
@@ -404,6 +705,17 @@ public:
             result.insert("error", errors.join('\n'));
             return result;
         }
+        // A fresh production page may first finish its real calculation. The
+        // optional readiness property is observation only; callers without it
+        // keep the original synchronous snapshot behavior.
+        if (object->metaObject()->indexOfProperty("acceptanceReady") >= 0) {
+            QElapsedTimer deadline;
+            deadline.start();
+            while (!object->property("acceptanceReady").toBool() && deadline.elapsed() < 5000)
+                QTest::qWait(10);
+            if (!object->property("acceptanceReady").toBool())
+                return {{"error", "The fresh production engine did not finish its declared setup"}};
+        }
         const auto meta = object->metaObject();
         for (int index = QObject::staticMetaObject.propertyCount(); index < meta->propertyCount(); ++index) {
             const auto property = meta->property(index);
@@ -415,13 +727,15 @@ public:
         return result;
     }
 private:
+    QQmlEngine* engine_;
+    mutable QString web_export_error_;
     std::unique_ptr<AcceptanceAnimationDriver> animation_driver_;
     std::vector<std::unique_ptr<QTemporaryDir>> directories_;
 };
 
 static void register_report_settings_proof() {
     qmlRegisterSingletonType<ReportSettingsProof>("ReportAcceptance", 1, 0, "SettingsProof",
-        [](QQmlEngine*, QJSEngine*) -> QObject* { return new ReportSettingsProof; });
+        [](QQmlEngine* engine, QJSEngine*) -> QObject* { return new ReportSettingsProof(engine); });
 }
 Q_COREAPP_STARTUP_FUNCTION(register_report_settings_proof)
 #include "test_report_settings_observer.moc"

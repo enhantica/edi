@@ -12,6 +12,7 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.project_save.reference import six_digits
 from tests.integration.py.test_e05_t1_fit_result import projection
 from tests.system.py.test_e05_t1_cli_fit_save import check_banks
 
@@ -91,12 +92,18 @@ def test_independent_named_bank_loop_survives_public_load_save(tmp_path):
         check=False,
     )
     assert result.returncode == 0, ' gate 8 valid distinct banks pass the public CLI load surface'
+    saved_reference = {
+        key: str(six_digits(float(value)))
+        if key.startswith('bank.') and not key.endswith('.n_points')
+        else value
+        for key, value in REFERENCE.items()
+    }
     first = tmp_path / 'first'
     edi.Project.load(source).save_as(first)
-    check_banks(first / 'analysis/analysis.edi', REFERENCE)
+    check_banks(first / 'analysis/analysis.edi', saved_reference)
     second = tmp_path / 'second'
     edi.Project.load(first).save_as(second)
-    check_banks(second / 'analysis/analysis.edi', REFERENCE)
+    check_banks(second / 'analysis/analysis.edi', saved_reference)
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,7 @@
 """Exercise each retained scan, recipe, loop and numeric-input witness through its caller."""
 
 import itertools
+import json
 import shutil
 from pathlib import Path
 
@@ -29,6 +30,11 @@ def test_catalogue_projection_refuses_every_retained_input_escape(
     relative = Path('docs/user/cli') / case / 'project'
     project = tmp_path / relative
     shutil.copytree(ROOT / relative, project)
+    if channel == 'native':
+        catalogue = json.loads((native.FIXTURE / 'catalogue-native.json').read_text())
+        for record in catalogue.values():
+            source = ROOT / record['project']
+            shutil.copytree(source, tmp_path / record['project'])
     monkeypatch.setattr(metadata_bytes, 'ROOT', tmp_path)
     module = {'scan': scan, 'loops': loops, 'native': native}.get(channel)
     if module is not None:

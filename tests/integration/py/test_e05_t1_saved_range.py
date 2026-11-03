@@ -14,6 +14,8 @@ from pathlib import Path
 import edi as model
 import pytest
 
+from tests.fixtures.project_save.reference import expected_pair
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -74,6 +76,15 @@ def test_saved_fitted_ranges_warn_and_preserve_values_and_uncertainties(tmp_path
             for path in source.rglob('*')
             if path.is_file()
         }, ' successful warning admission never rewrites the input project bytes'
+        raw_sites = {site.id: site for site in loaded.structure.atom_sites}
+        assert (raw_sites['Co1'].adp_iso.value, raw_sites['Co1'].adp_iso.uncertainty) == (
+            -1.665546316,
+            0.6071001618,
+        ), 'Load preserves the unrounded legacy fitted value and uncertainty without clamping'
+        assert (raw_sites['O1'].occupancy.value, raw_sites['O1'].occupancy.uncertainty) == (
+            1.047626796,
+            0.08719823489,
+        ), 'Load preserves the unrounded out-of-range occupancy and uncertainty'
         saved = tmp_path / ('with-result' if with_result else 'legacy')
         loaded.save_as(saved)
         capfd.readouterr()
@@ -84,17 +95,22 @@ def test_saved_fitted_ranges_warn_and_preserve_values_and_uncertainties(tmp_path
         assert sum('outside its admissible range' in item for item in messages) == 2, (
             ' save/reopen delivers both warnings for legacy and result-bearing projects'
         )
+        # The two-digit rule rounds the uncertainties up to 0.61 and 0.088.
+        written = (saved / 'structures/cosio.edi').read_text().split()
+        assert '-1.67(61)' in written and '1.048(88)' in written, (
+            'Out-of-range fitted fields use two uncertainty digits without clamping'
+        )
         for project in (loaded, reopened):
             sites = {site.id: site for site in project.structure.atom_sites}
             for parameter, value, uncertainty in (
-                (sites['Co1'].adp_iso, -1.665546316, 0.6071001618),
-                (sites['O1'].occupancy, 1.047626796, 0.08719823489),
+                (sites['Co1'].adp_iso, *expected_pair(-1.665546316, 0.6071001618, None)),
+                (sites['O1'].occupancy, *expected_pair(1.047626796, 0.08719823489, None)),
             ):
                 assert parameter.value == pytest.approx(value, rel=0, abs=1e-12), (
-                    ' loader and writer retain the frozen fitted value without clamping'
+                    'Save adopts the independent rounded value without clamping'
                 )
                 assert parameter.uncertainty == pytest.approx(uncertainty, rel=0, abs=1e-12), (
-                    ' loader and writer retain the frozen fitted uncertainty'
+                    'Save and reopen retain the independent two-digit upward-rounded uncertainty'
                 )
                 assert parameter.free, ' saved free-parameter grammar remains intact'
         if with_result:

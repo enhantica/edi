@@ -100,19 +100,53 @@ def test_workflow_pages_follow_structure_and_experiment_presence(property_name, 
 def test_create_project_passes_the_chosen_location_to_the_session():
     source = text('Pages/Project/GetStartedGroup.qml')
     accepted = body(source, 'onAccepted:')
-    assert re.search(r'Session\.createProject\([^;]*createDialog\.projectLocation', accepted), (
-        'Create project must use the location chosen in its dialog'
+    script = """const queued=[],calls=[];
+    const Qt={callLater:callback=>queued.push(callback)};
+    const EaGlobals={Vars:{showProjectDescriptionDialog:true}};
+    const Preferences={newProjectSuRule:'iucr_99',newReportLibraries:'embedded'};
+    const AppState={createFailed(){throw Error('creation refused')}};
+    const createDialog={projectName:'first',projectDescription:'desc',
+      projectLocation:'/chosen/first',
+      projectTitle:'title',projectAuthors:'author'};
+    const WebFiles={available:false};
+    const Session={createProject(...args){calls.push(args);return true}};
+    function accept(){BODY}accept();
+    const before=calls.length;
+    const flagBeforeCreate=EaGlobals.Vars.showProjectDescriptionDialog;
+    createDialog.projectLocation='/other';createDialog.projectName='changed';
+    createDialog.projectDescription='changed description';
+    createDialog.projectTitle='changed title';createDialog.projectAuthors='changed author';
+    queued.splice(0).forEach(callback=>callback());
+    process.stdout.write(JSON.stringify({before,calls,flagBeforeCreate,
+      flagAfterCreate:EaGlobals.Vars.showProjectDescriptionDialog}));""".replace('BODY', accepted)
+    result = subprocess.run(
+        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
+    )
+    assert result.returncode == 0, (
+        'The actual Create acceptance handler must execute with its captured dialog values: '
+        + result.stderr
+    )
+    observed = json.loads(result.stdout)
+    assert [observed['before'], observed['calls']] == [
+        0,
+        [['first', 'desc', '/chosen/first', 'iucr_99', 'title', 'author', True]],
+    ], 'Create must defer replacement and retain the accepted name, chosen location and metadata'
+    assert observed['flagBeforeCreate'] is False, (
+        'Create acceptance clears the open-dialog flag before the queued project replacement'
+    )
+    assert observed['flagAfterCreate'] is False, (
+        'The queued project creation keeps the Create dialog flag cleared'
     )
 
 
 def test_supported_only_selectors_are_disabled_and_explain_the_reason():
     source = text('Pages/Experiment/ExperimentTypeGroup.qml')
-    for identity in ('sampleForm', 'scatteringType'):
+    for identity in ('scatteringType',):
         marker = source.index('id: ' + identity)
         end = source.find('EaElements.ParamComboBox', marker)
         section = source[marker : end if end >= 0 else len(source)]
         assert re.search(r'enabled:\s*false\b', section), (
-            'Sample form and scattering type must be disabled while only one is supported'
+            'Scattering type must be disabled while only Bragg scattering is supported'
         )
         explains = re.search(r'only|support|available', section, re.IGNORECASE)
         assert 'ToolTip' in section and explains, (
@@ -122,7 +156,7 @@ def test_supported_only_selectors_are_disabled_and_explain_the_reason():
 
 def test_atom_site_position_column_uses_a_choice_with_coordinates():
     source = text('Pages/Structure/AtomSitesGroup.qml')
-    assert 'qsTr("WP")' in source and 'qsTr("WL")' not in source, (
+    assert re.search(r'HeaderLabel\s*\{[^}]*uid:\s*"atom_site.wyckoff_letter"', source), (
         'The atom position column must be labelled WP'
     )
     assert re.search(r'(?:ComboBox|PositionCell)\s*\{', source), (
@@ -155,9 +189,9 @@ def test_experiment_data_header_and_link_are_declared():
         'The experiments table must label its data column Data file'
     )
     marker = source.index('id: loadData')
-    opening = source.rfind('EaComponents.TableViewLabel {', 0, marker)
+    opening = source.rfind('EaComponents.ListViewLabel {', 0, marker)
     assert opening >= 0, 'The load-data cell must be a plain table label'
-    cell = body(source[opening:], 'EaComponents.TableViewLabel')
+    cell = body(source[opening:], 'EaComponents.ListViewLabel')
     assert 'id: loadData' in cell and 'horizontalAlignment: Text.AlignLeft' in cell, (
         'The data-file link must use left-aligned plain text'
     )
@@ -205,20 +239,23 @@ def test_experiment_data_header_and_link_are_declared():
         ['blue', 'Load data…', True],
         ['blue', 'Load data…', True],
     ], 'The existing filename must turn blue on hover and the empty link must stay blue'
-    widths = re.search(r'columnWidths:\s*(\[[^\n]+\])', source)
-    assert widths, 'The Experiments table must declare each column width'
+    widths = re.search(r'(?m)^\s*columns:\s*(\[[^\n]+\])', source)
+    assert widths, 'The Experiments table must declare each column through the shared width rule'
+    common = text('Components/DataTable.qml')
+    filler = re.search(r'(?m)^\s*readonly property int fillerIndex:\s*([^\n]+)', common)
+    assert filler, 'The shared table declares which fitted text column holds the spare width'
     script = (
-        'const numberColumnWidth=20, group={scan:false,scanColumns:[]};'
-        'const AppSizes={iconColumnWidth:25,dataColumnWidth:80};'
-        'const qsTr=value=>value;'
-        'const textColumnWidth=()=>73;'
-        'process.stdout.write(JSON.stringify(' + widths[1] + '));'
+        'const numberColumnWidth=20,group={scan:false,scanColumns:[],fitColumnWidth:35};'
+        'const AppSizes={iconColumnWidth:25,iconOnlyColumnWidth:17,dataColumnWidth:80};'
+        'const columns=(' + widths[1] + ');const equalColumns=false,spreadColumns=[];'
+        'process.stdout.write(JSON.stringify([columns,(' + filler[1] + ')]));'
     )
     result = subprocess.run(['node', '-e', script], capture_output=True, text=True, check=False)
-    assert result.returncode == 0, 'The production Experiments column widths must evaluate'
-    actual = json.loads(result.stdout)
-    assert actual[3] == 73 and actual[4] == -1 and actual.count(-1) == 1, (
-        'Data file must take the sole free width while Datablock takes its measured text width'
+    assert result.returncode == 0, 'The production Experiments column declarations must evaluate'
+    actual, filler_index = json.loads(result.stdout)
+    assert actual == [20, 17, 35, -1, -1, 0.001, 25] and filler_index == 4, (
+        'Datablock and Data file fit their content through the shared table rule; '
+        'Data file holds the spare width before the fixed action column'
     )
 
 
@@ -228,15 +265,14 @@ def test_diagnostics_uses_the_preferences_shared_control_width():
     source = text('Components/AppPreferencesDialog.qml')
     match = re.search(
         r'(?P<kind>(?:EaElements\.)?Button|RowButton)\s*\{\s*'
-        r'objectName:\s*"preferences.diagnostics"(?P<body>[^}]+)', source
+        r'objectName:\s*"preferences.diagnostics"(?P<body>[^}]+)',
+        source,
     )
     assert match and 'qsTr("Show")' in match['body'], (
         'Diagnostics Show remains the actual preferences.diagnostics button'
     )
     declaration = (
-        body(source, 'component RowButton:')
-        if match['kind'] == 'RowButton'
-        else match['body']
+        body(source, 'component RowButton:') if match['kind'] == 'RowButton' else match['body']
     )
     assert 'dialog.controlWidth' in declaration and not re.search(
         r'\bwidth:\s*loggingLevel\.width\b', declaration
@@ -279,7 +315,7 @@ def test_create_location_joins_folder_and_edited_name_once(folder, name, expecte
 def test_save_asks_once_then_uses_the_existing_location():
     source = text('Main.qml')
     script = """let asks=0,saves=0;
-    const WebFiles={available:false};const saveFolder={open(){asks++}};
+    const WebFiles={available:false};const saveAsChoice={open(){asks++}};
     const saveError={open(){throw Error('save failed')}};
     const Session={project:{path:'/chosen/first'},needsSaveAs:true,save(){saves++;return true}};
     """
@@ -295,7 +331,43 @@ def test_save_asks_once_then_uses_the_existing_location():
         'The production Save action must execute through both lifecycle states'
     )
     assert json.loads(result.stdout) == [1, 1], (
-        'Save must ask for a directory once and save later changes in place without another dialog'
+        'Save must open the format dialog once and save later changes in '
+        'place without another dialog'
+    )
+    accepted = body(source[source.index('id: saveAsChoice') :], 'onAccepted:')
+    script = """let calls=[];
+    const saveAsChoice={zip:false,copy:false,diskWritable:true};const WebFiles={available:false};
+    const Session={downloadWebProject(){calls.push(['download'])},
+      saveWebProjectAs(...args){calls.push(['web',...args])},
+      suggestedSaveTarget(zip){return zip?'/chosen/name.zip':'/chosen/name'}};
+    const saveZip={openAt(path){calls.push(['zip',path])}};
+    const saveFolder={openAt(path){calls.push(['folder',path])}};
+    function accept(){with(saveAsChoice){BODY}}
+    for(const browser of [false,true])
+    for(const zip of [false,true])for(const copy of [false,true]){
+      WebFiles.available=browser;Object.assign(saveAsChoice,{zip,copy});accept();}
+    WebFiles.available=true;saveAsChoice.diskWritable=false;accept();
+    process.stdout.write(JSON.stringify(calls));""".replace('BODY', accepted)
+    outcome = subprocess.run(
+        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
+    )
+    assert outcome.returncode == 0, (
+        'The actual Save-as acceptance must execute every desktop and browser destination: '
+        + outcome.stderr
+    )
+    assert json.loads(outcome.stdout) == [
+        ['folder', '/chosen/name'],
+        ['folder', '/chosen/name'],
+        ['zip', '/chosen/name.zip'],
+        ['zip', '/chosen/name.zip'],
+        ['web', 'folder', False],
+        ['web', 'folder', True],
+        ['web', 'zip', False],
+        ['web', 'zip', True],
+        ['download'],
+    ], (
+        'Save-as acceptance must preserve format and copy choices, suggested '
+        'targets and fallback download routing'
     )
 
 

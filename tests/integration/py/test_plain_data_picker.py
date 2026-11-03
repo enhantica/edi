@@ -30,7 +30,7 @@ def by_id(text, name):
     return text[begin:end]
 
 
-def require_picker(text, browser, scenario='accepted'):
+def require_picker(text, browser, scenario='accepted', *, sample_form='powder'):
     control = item(text, 'experiments.loadData.${row.index}')
     chooser = block(text, 'function chooseData(')
     received = block(text, 'function onFilesOpened(')
@@ -42,7 +42,8 @@ def require_picker(text, browser, scenario='accepted'):
     data_filter = property_value(text, 'dataFilter')
     program = """
 let calls=[];
-const initiator={id:'initiator',canLoadData:true,calculationOnly:true};
+const ExperimentViewModel={SingleCrystal:'single crystal'};
+const initiator={id:'initiator',canLoadData:true,calculationOnly:true,sampleForm:SAMPLE_FORM};
 const other={id:'other',canLoadData:true,calculationOnly:true};
 const original={currentExperimentIndex:4,
     loadDataInto:(experiment,file)=>calls.push(['loaded','original',experiment.id,file]),
@@ -63,8 +64,8 @@ function accept() { ACCEPTED }
 RECEIVED
 FAILED
 CANCELLED
-let desktopFilters=FILTERS;
 click();
+let desktopFilters=FILTERS;
 original.currentExperimentIndex=8;
 SCENARIO
 console.log(JSON.stringify({calls,desktopFilters}));
@@ -88,6 +89,7 @@ console.log(JSON.stringify({calls,desktopFilters}));
     }[scenario]
     substitutions = {
         'BROWSER': json.dumps(browser),
+        'SAMPLE_FORM': json.dumps(sample_form),
         'DATA_FILTER': data_filter,
         'CHOOSE': chooser[chooser.index('{') :],
         'ACTION': property_value(control, 'onClicked'),
@@ -101,9 +103,19 @@ console.log(JSON.stringify({calls,desktopFilters}));
     for token, value in substitutions.items():
         program = program.replace(token, value)
     observed = javascript(program)
-    expected = (
-        [['web', '.xye,.xy,.dat,.txt,.csv', False]] if browser else [['desktop', 'initiator']]
-    )
+    if browser:
+        assert observed['calls'] and observed['calls'][0][0] == 'web', (
+            'The real browser click must open its file chooser before routing a result'
+        )
+        assert (
+            {'.xye', '.xy', '.dat', '.txt', '.csv', '.int'}
+            | ({'.hkl'} if sample_form == 'single crystal' else set())
+        ).issubset(set(observed['calls'][0][1].split(','))), (
+            'The browser picker must admit every supported reflection extension, including hkl'
+        )
+        expected = [['web', observed['calls'][0][1], False]]
+    else:
+        expected = [['desktop', 'initiator']]
     if scenario not in {'foreign-project', 'closed-project', 'cancelled', 'failed'}:
         expected.append(['loaded', 'original', 'initiator', 'chosen.dat'])
     assert observed['calls'] == expected, (
@@ -115,7 +127,11 @@ console.log(JSON.stringify({calls,desktopFilters}));
         len(observed['desktopFilters']) == 2
         and all(
             extension in observed['desktopFilters'][0]
-            for extension in ['*.xye', '*.xy', '*.dat', '*.txt', '*.csv']
+            for extension in (
+                ['*.int', '*.hkl', '*.dat', '*.txt']
+                if sample_form == 'single crystal' and not browser
+                else ['*.xye', '*.xy', '*.dat', '*.txt', '*.csv']
+            )
         )
         and '(*)' in observed['desktopFilters'][1]
     ), 'Load data filters: the actual data dialog admits every declared extension and all files'
@@ -240,3 +256,8 @@ def test_picker_observer_rejects_disconnected_and_wrong_target_handlers(
     assert changed != text, 'Load data routing escape: mutate the actual shipped handler'
     with pytest.raises((AssertionError, pytest.fail.Exception)):
         require_picker(changed, browser, scenario)
+
+
+@pytest.mark.parametrize('browser', [False, True])
+def test_single_crystal_picker_retains_int_admission_and_owner_routing(browser):
+    require_picker(source(PATH), browser, sample_form='single crystal')

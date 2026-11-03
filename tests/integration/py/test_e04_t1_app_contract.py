@@ -19,8 +19,14 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.table_display import gui_base
+from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.integration.py.ci_runner_contract import self_hosted_runners
+
+# Frozen from the published gui-components archive; ADR-0015.
+
+GUI_PIN = 'bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1'
+GUI_ARCHIVE_SHA256 = '4a91484651c78fcc639007b0144c349f8c5c87a9d5a98a85dfb8088947204f35'
+GUI_SOURCE_SHA256 = 'c61364b60961098a49cad8b1c1e0c8681ab2e510611f900fa7339c9b3c8984f2'
 
 ROOT = Path(__file__).resolve().parents[3]
 SCREENSHOTS = ROOT / 'docs/dev/design/app-screenshots'
@@ -40,7 +46,52 @@ def without_comments(source):
     return re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.DOTALL)
 
 
-def api_violations(source):
+def report_model_exception_spans(source, relative_path):  # noqa: PLR0911 - each failed identity check refuses independently
+    # OWNER DECISION 2026-10-14, hub 3f2ce1cf6, decision-records.md:
+    # "the report model crosses into the Report page untyped for now".
+    # The planned schema successor removes this sole temporary exception.
+    # Its exact task identity and the owner citation live in the hub acceptance receipt.
+    if relative_path != 'app/src/report_view_model.hpp':
+        return set()
+    classes = []
+    for match in re.finditer(r'\b(?:class|struct)\s+(\w+)[^;{}]*\{', source):
+        depth, end = 1, match.end()
+        while end < len(source) and depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        if depth:
+            return set()
+        classes.append((match[1], match.end(), end))
+    if sum(name == 'ReportViewModel' for name, _, _ in classes) != 1:
+        return set()
+    namespaces = []
+    for match in re.finditer(r'\bnamespace\s*(\w+(?:::\w+)*)?\s*\{', source):
+        depth, end = 1, match.end()
+        while end < len(source) and depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        if depth:
+            return set()
+        namespaces.append((match[1], match.end(), end))
+    properties = list(re.finditer(r'Q_PROPERTY\s*\((.*?)\)', source, re.DOTALL))
+    named = [
+        m
+        for m in properties
+        if re.fullmatch(r'\s*QVariantMap\s+model\s+READ\s+model\s+NOTIFY\s+modelChanged\s*', m[1])
+    ]
+    if len(named) != 1:
+        return set()
+    prop = named[0]
+    enclosing = [name for name, start, end in namespaces if start <= prop.start() < end]
+    if enclosing != ['edi_app']:
+        return set()
+    owners = [entry for entry in classes if entry[1] <= prop.start() < entry[2]]
+    if not owners or min(owners, key=lambda entry: entry[2] - entry[1])[0] != 'ReportViewModel':
+        return set()
+    return {prop.span()}
+
+
+def api_violations(source, relative_path=None):
     source = without_comments(source)
     forbidden = set(FORBIDDEN)
     aliases = re.findall(r'using\s+(\w+)\s*=\s*([^;]+);|typedef\s+([^;]+)\s+(\w+)\s*;', source)
@@ -48,8 +99,13 @@ def api_violations(source):
         for name, value, old_value, old_name in aliases:
             if set(re.findall(r'\w+', value or old_value)) & forbidden:
                 forbidden.add(name or old_name)
-    surfaces = re.findall(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
-    fragments = [' '.join(parts) for parts in surfaces]
+    allowed = report_model_exception_spans(source, relative_path)
+    surfaces = re.finditer(r'Q_PROPERTY\s*\((.*?)\)|Q_INVOKABLE\s+([^;{]+)', source, re.DOTALL)
+    fragments = [
+        ' '.join(part or '' for part in match.groups())
+        for match in surfaces
+        if match.span() not in allowed
+    ]
     fragments += re.findall(
         r'(?:Q_SIGNALS|signals|(?:public|protected|private)\s+(?:Q_SLOTS|slots))\s*:(.*?)(?=\n\s*(?:public|private|protected|signals|Q_SIGNALS)\s*:|\Z)',
         source,
@@ -85,7 +141,7 @@ def test_shipped_view_model_api_is_typed():
     files = list((ROOT / 'app/src').rglob('*.hpp')) + list((ROOT / 'app/src').rglob('*.h'))
     assert files, 'gate 4: the app must declare the typed QObject view-model contract'
     for file in files:
-        assert not api_violations(file.read_text()), (
+        assert not api_violations(file.read_text(), file.relative_to(ROOT).as_posix()), (
             f'I2: no JSON/dictionary state crosses the API in {file.relative_to(ROOT)}'
         )
     for file in (ROOT / 'app/qml').rglob('*.qml'):
@@ -95,12 +151,99 @@ def test_shipped_view_model_api_is_typed():
         ), f'I2: no dictionary round trips or JsonListModel in {file.relative_to(ROOT)}'
 
 
+REPORT_EXCEPTION = (
+    'namespace edi_app { class ReportViewModel : public QObject { '
+    'Q_PROPERTY(QVariantMap model READ model NOTIFY modelChanged) }; }'
+)
+REPORT_HEADER = 'app/src/report_view_model.hpp'
+
+
+def test_report_model_owner_exception_is_exactly_one_named_property():
+    assert not api_violations(REPORT_EXCEPTION, REPORT_HEADER), (
+        'I2 owner decision 3f2ce1cf6 admits only ReportViewModel.model QVariantMap; '
+        'the planned schema successor removes the exception'
+    )
+
+
+@pytest.mark.parametrize(
+    'escape',
+    [
+        'anonymous-namespace',
+        'foreign-namespace',
+        'nested-namespace',
+        'second',
+        'renamed',
+        'other-class',
+        'other-file',
+        'duplicate',
+        'list',
+        'hash',
+        'json',
+        'alias',
+        'nested',
+        'method',
+        'signal',
+        'savedReports',
+        'figures',
+        'suText',
+        'setPoints',
+    ],
+)
+def test_report_model_owner_exception_cannot_widen(escape):
+    source, path = REPORT_EXCEPTION, REPORT_HEADER
+    if escape == 'anonymous-namespace':
+        source = source.replace('namespace edi_app {', 'namespace edi_app { namespace {') + '}'
+    elif escape == 'foreign-namespace':
+        source = source.replace('namespace edi_app', 'namespace other')
+    elif escape == 'nested-namespace':
+        source = (
+            source.replace('namespace edi_app {', 'namespace edi_app { namespace other {') + '}'
+        )
+    elif escape == 'second':
+        source = source.replace('};', 'Q_PROPERTY(QVariantMap second READ second) };')
+    elif escape == 'renamed':
+        source = source.replace('QVariantMap model', 'QVariantMap payload')
+    elif escape == 'other-class':
+        source = source.replace('ReportViewModel', 'OtherViewModel')
+    elif escape == 'other-file':
+        path = 'app/src/other.hpp'
+    elif escape == 'duplicate':
+        source += REPORT_EXCEPTION
+    elif escape in {'list', 'hash', 'json'}:
+        source = source.replace(
+            'QVariantMap',
+            {'list': 'QVariantList', 'hash': 'QVariantHash', 'json': 'QJsonObject'}[escape],
+        )
+    elif escape == 'alias':
+        source = 'using Payload = QVariantMap;' + source.replace(
+            'QVariantMap model', 'Payload model'
+        )
+    elif escape == 'nested':
+        source = source.replace('Q_PROPERTY', 'class OtherViewModel { Q_PROPERTY').replace(
+            ' };', ' }; };'
+        )
+    else:
+        added = {
+            'method': 'Q_INVOKABLE QVariantMap payload();',
+            'signal': 'signals:\n void changed(QVariantList values);',
+            'savedReports': 'Q_PROPERTY(QVariantList savedReports READ savedReports)',
+            'figures': 'Q_INVOKABLE void saveReport(QVariantMap figures);',
+            'suText': 'Q_PROPERTY(QVariantMap suText READ suText)',
+            'setPoints': 'Q_INVOKABLE void setPoints(QVariantList points);',
+        }[escape]
+        source = source.replace('};', added + ' };')
+    assert api_violations(source, path), (
+        'I2: the single temporary model exception refuses second/renamed/foreign '
+        f'properties and every other dictionary, list or JSON crossing; escape={escape}'
+    )
+
+
 def assert_gui_pin(source):
     source = re.sub(r'#[^\n]*', '', source)
     for name, value in (
-        ('SHA', gui_base.PIN),
-        ('ARCHIVE_SHA256', gui_base.ARCHIVE_SHA256),
-        ('SRC_SHA256', gui_base.SOURCE_SHA256),
+        ('SHA', GUI_PIN),
+        ('ARCHIVE_SHA256', GUI_ARCHIVE_SHA256),
+        ('SRC_SHA256', GUI_SOURCE_SHA256),
     ):
         values = re.findall(
             r'set\s*\(\s*EDI_GUI_COMPONENTS_' + name + r'\s+([^\s)]+)\s*\)', source
@@ -134,9 +277,9 @@ def test_gui_pin_rejects_identity_digest_and_declaration_escapes(damage):
     source = (ROOT / 'cmake/EdiGuiBase.cmake').read_text()
     assert_gui_pin(source)
     selected = {
-        'commit': gui_base.PIN,
-        'archive': gui_base.ARCHIVE_SHA256,
-        'source': gui_base.SOURCE_SHA256,
+        'commit': GUI_PIN,
+        'archive': GUI_ARCHIVE_SHA256,
+        'source': GUI_SOURCE_SHA256,
     }
     if damage in selected:
         source = source.replace(selected[damage], '0' * len(selected[damage]))
@@ -145,7 +288,7 @@ def test_gui_pin_rejects_identity_digest_and_declaration_escapes(damage):
             r'(?m)^set\(EDI_GUI_COMPONENTS_SHA ', '# set(EDI_GUI_COMPONENTS_SHA ', source
         )
     else:
-        source += f'\nset(EDI_GUI_COMPONENTS_SHA {gui_base.PIN})\n'
+        source += f'\nset(EDI_GUI_COMPONENTS_SHA {GUI_PIN})\n'
     with pytest.raises(AssertionError, match='upstream GUI commit'):
         assert_gui_pin(source)
 
@@ -202,30 +345,149 @@ def assert_local_app_checks(manifest):
         )
 
 
-def assert_disabled_app_steps(job):
-    for title, task in (
-        ("The app's Qt Quick Test tier", 'app-test'),
-        ('The UI test against the one committed image set', 'app-ui-test'),
-    ):
+NIGHTLY_APP_CONDITION = (
+    "${{ !cancelled() && (github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch') }}"
+)
+APP_GROUP_TITLE = "The app group's Python tests (tests/integration/app)"
+APP_TIER_STEPS = (
+    ("The app's Qt Quick Test tier", 'app-test'),
+    ('The UI test against the one committed image set', 'app-ui-test'),
+)
+APP_IMAGE_UPLOAD_TITLE = "Upload the UI test's images and similarity maps"
+
+
+def assert_nightly_app_steps(job):
+    for title, task in APP_TIER_STEPS:
         steps = [step for step in job['steps'] if step.get('name') == title]
-        assert len(steps) == 1 and steps[0].get('if') is False, (
-            ' owner decisions: each disabled app tier is retained once with literal if: false'
+        assert len(steps) == 1, (
+            f'owner decision: each nightly app tier is present once; title={title!r}, '
+            f'actual count={len(steps)}'
+        )
+        assert steps[0].get('if') == NIGHTLY_APP_CONDITION, (
+            'owner decision: app tiers run only on schedule or manual dispatch, including '
+            f'after earlier failures; title={title!r}, actual if={steps[0].get("if")!r}'
         )
         assert steps[0].get('run') == f'pixi run -e app --skip-deps {task}', (
-            ' owner decisions: retain the manual tier command for owner re-enable'
+            f'owner decision: retain the app tier command; title={title!r}, '
+            f'actual run={steps[0].get("run")!r}'
         )
-    uploads = [
-        step
-        for step in job['steps']
-        if step.get('name') == "Upload the UI test's images and similarity maps"
-    ]
-    assert len(uploads) == 1 and uploads[0].get('if') is False, (
-        ' owner decision: retain the image upload once with literal if: false'
+    uploads = [step for step in job['steps'] if step.get('name') == APP_IMAGE_UPLOAD_TITLE]
+    assert len(uploads) == 1, (
+        f'owner decision: the nightly UI image upload is present once; actual count={len(uploads)}'
     )
+    assert uploads[0].get('if') == NIGHTLY_APP_CONDITION, (
+        'owner decision: image upload has the same schedule/manual and cancellation condition; '
+        f'actual if={uploads[0].get("if")!r}'
+    )
+    assert uploads[0].get('uses') == 'actions/upload-artifact@v4' and set(
+        uploads[0].get('with', {}).get('path', '').split()
+    ) == {'build/app/ui-actual', 'build/app/ui-diff'}, (
+        'owner decision: the nightly upload keeps the actual-image and similarity-map inputs; '
+        f'actual upload={uploads[0]}'
+    )
+    groups = [step for step in job['steps'] if step.get('name') == APP_GROUP_TITLE]
+    assert len(groups) == 1 and groups[0].get('run') == 'pixi run --skip-deps group-app', (
+        'owner decision: keep the group-app command present once before Qt Quick Test; '
+        f'actual group steps={groups}'
+    )
+    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+
+    for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+        assert active(groups[0], event) == (event != 'pull_request'), (
+            'owner decision: app group skips PRs and runs on push, nightly and full dispatch'
+        )
+    titles = [step.get('name') for step in job['steps']]
+    assert titles.index(APP_GROUP_TITLE) < titles.index(APP_TIER_STEPS[0][0]), (
+        'owner decision: group-app runs before Qt Quick Test so a Qt Quick failure cannot skip '
+        f'the Python app group; actual step order={titles}'
+    )
+
+
+def assert_nightly_app_step_escape_controls():
+    # Independent positive policy fixture: these values come from the workflow contract.
+    job = {
+        'steps': [
+            {
+                'name': APP_GROUP_TITLE,
+                'if': "github.event_name != 'pull_request'",
+                'run': 'pixi run --skip-deps group-app',
+            },
+            *[
+                {
+                    'name': title,
+                    'if': NIGHTLY_APP_CONDITION,
+                    'run': f'pixi run -e app --skip-deps {task}',
+                }
+                for title, task in APP_TIER_STEPS
+            ],
+            {
+                'name': APP_IMAGE_UPLOAD_TITLE,
+                'if': NIGHTLY_APP_CONDITION,
+                'uses': 'actions/upload-artifact@v4',
+                'with': {'path': 'build/app/ui-actual\nbuild/app/ui-diff'},
+            },
+        ]
+    }
+    assert_nightly_app_steps(job)
+    for title in [*(title for title, _ in APP_TIER_STEPS), APP_IMAGE_UPLOAD_TITLE]:
+        for condition in (
+            None,
+            False,
+            True,
+            'false',
+            '${{ false }}',
+            '${{ always() }}',
+            '${{ !cancelled() }}',
+            "${{ github.event_name == 'push' }}",
+            "${{ github.event_name == 'pull_request' }}",
+        ):
+            broken = copy.deepcopy(job)
+            step = next(step for step in broken['steps'] if step['name'] == title)
+            if condition is None:
+                step.pop('if')
+            else:
+                step['if'] = condition
+            with pytest.raises(AssertionError, match='owner decision'):
+                assert_nightly_app_steps(broken)
+        for duplicate in (False, True):
+            broken = copy.deepcopy(job)
+            step = next(step for step in broken['steps'] if step['name'] == title)
+            if duplicate:
+                broken['steps'].append(copy.deepcopy(step))
+            else:
+                broken['steps'].remove(step)
+            with pytest.raises(AssertionError, match='owner decision'):
+                assert_nightly_app_steps(broken)
+    for condition in (
+        None,
+        False,
+        True,
+        "github.event_name != 'push'",
+        "github.event_name != 'schedule'",
+        "github.event_name != 'workflow_dispatch'",
+    ):
+        broken = copy.deepcopy(job)
+        if condition is None:
+            broken['steps'][0].pop('if')
+        else:
+            broken['steps'][0]['if'] = condition
+        with pytest.raises(AssertionError, match='owner decision'):
+            assert_nightly_app_steps(broken)
+    broken = copy.deepcopy(job)
+    broken['steps'][0], broken['steps'][1] = broken['steps'][1], broken['steps'][0]
+    with pytest.raises(AssertionError, match='before Qt Quick Test'):
+        assert_nightly_app_steps(broken)
+    for index in (0, 1, 2):
+        broken = copy.deepcopy(job)
+        broken['steps'][index]['run'] = 'true'
+        with pytest.raises(AssertionError, match='owner decision'):
+            assert_nightly_app_steps(broken)
 
 
 @pytest.mark.parametrize('damage', ['missing-edge', 'empty-checker'])
 def test_app_reachability_observer_rejects_missing_group_or_checker(damage):
+    assert_nightly_app_step_escape_controls()
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_local_app_checks(manifest)
     for aggregator in ('app-verify', 'app-gates'):
@@ -263,20 +525,7 @@ def test_local_and_ci_gates_reach_app_tests():
         assert job.get('if') is not False, (
             ' owner decisions: both app jobs remain active and required'
         )
-        assert_disabled_app_steps(job)
-        for title in (
-            "The app's Qt Quick Test tier",
-            'The UI test against the one committed image set',
-        ):
-            for condition in (None, True, 'false', '${{ false }}'):
-                mutant = copy.deepcopy(job)
-                step = next(step for step in mutant['steps'] if step.get('name') == title)
-                if condition is None:
-                    step.pop('if')
-                else:
-                    step['if'] = condition
-                with pytest.raises(AssertionError, match='owner decision'):
-                    assert_disabled_app_steps(mutant)
+        assert_nightly_app_steps(job)
         commands = '\n'.join(
             step.get('run', '') for step in job['steps'] if step.get('if') is not False
         )
@@ -287,13 +536,6 @@ def test_local_and_ci_gates_reach_app_tests():
             'group-app',
         ):
             assert script in commands, f'gate 6/7: {name} invokes the shared {script} task'
-        uploads = [step for step in job['steps'] if 'upload-artifact' in step.get('uses', '')]
-        assert any(
-            step.get('if') is False
-            and 'build/app/ui-actual' in step.get('with', {}).get('path', '')
-            and 'build/app/ui-diff' in step.get('with', {}).get('path', '')
-            for step in uploads
-        ), f' owner decision: {name} retains disabled image upload inputs for re-enable'
 
     assert sorted(app_jobs) == ['Linux', 'macOS'], (
         'gate 7: both desktop platforms execute app checks'
@@ -371,8 +613,31 @@ def test_one_shared_labelled_regression_baseline_and_pairs():
     } <= {p.name for p in numbered}, (
         'gate 7: capture About and the stable TOF report while retaining the monospace Text tabs'
     )
-    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
+    # New catalogue images await the UI tier; retain the historical image inventory.
+    registry = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/retained-projects.json').read_text()
+    )
     example_names = {f'ex-{project["id"]}.png' for project in registry['projects']}
+    oracle = json.loads(
+        (ROOT / 'tests/fixtures/e04_t1/oracle.js')
+        .read_text()
+        .split('var frozen = ', 1)[1]
+        .removesuffix(';\n')
+    )
+    retained_single_crystal = {
+        row['id']
+        for row in oracle['projects']
+        if any(
+            case['project'] == row['path'] and case.get('singleCrystal')
+            for case in oracle['corpus']
+        )
+        and row['metadata']['_metadata.purpose'] != 'verification'
+    }
+    assert retained_single_crystal <= {
+        row['id']
+        for row in yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    }, 'Image subjects from the existing single-crystal fixtures must remain registered'
+    example_names.update(f'ex-{identity}.png' for identity in retained_single_crystal)
     example_names.add('ex-pd-xray-cwl_lif.png')
     captures = json.loads((ROOT / 'docs/dev/design/app-review-captures.json').read_text())[
         'captures'
@@ -435,15 +700,28 @@ def test_adr_records_the_decision_and_comparison_plan():
 
 
 def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
+    # Before: pre-category LBCO input. After: exact manual/arpls addition, with
+    # the original numerical/display expectations retained by adapt_oracles.py.
+    # Before: fixed zero-radius/mosaicity Becker-Coppens (deb6c159). After:
+    # explicit none (f46766cc); adapt_single_crystal_inputs.py retains all reflection bytes.
     text = (ROOT / 'tests/fixtures/e04_t1/oracle.js').read_text()
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     assert oracle['corpus'], 'I7: the independent frozen category corpus cannot be empty'
     for case in oracle['corpus']:
         file = ROOT / case['project'] / 'experiments' / (case['experiment'] + '.edi')
-        assert hashlib.sha256(file.read_bytes()).hexdigest() == case['sha256'], (
+        assert hashlib.sha256(read_previous(file)).hexdigest() == case['sha256'], (
             'I7: a changed fixture requires an independently reviewed expectation update'
         )
-    profiles = {case['peakType'] for case in oracle['corpus']}
+    profiles = {
+        case['peakType'] for case in oracle['corpus'] if not case.get('singleCrystal', False)
+    }
+    assert all(
+        not case['peakType']
+        and case['scalars']['_experiment_type.sample_form'] == 'single crystal'
+        and not any(tag.startswith('_peak.') for tag in case['scalars'])
+        for case in oracle['corpus']
+        if case.get('singleCrystal', False)
+    ), 'I7: declared single-crystal inputs have no powder profile or peak category'
     assert profiles == set(oracle['profiles']), (
         'I7: committed examples cover every declared peak profile'
     )
@@ -455,7 +733,7 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
     )
     assert display['sources'], 'gate 3: displayed-value expectations must name their .edi sources'
     for relative, digest in display['sources'].items():
-        assert hashlib.sha256((ROOT / relative).read_bytes()).hexdigest() == digest, (
+        assert hashlib.sha256(read_previous(ROOT / relative)).hexdigest() == digest, (
             'gate 3: rendered-value oracle retains independently frozen source bytes'
         )
     assert len({case['tag'] for case in display['cases']}) == len(display['cases']), (
@@ -464,10 +742,41 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
 
 
 def test_existing_projects_oracle_covers_the_registry_without_filters():
+    # The manual estimate extension changes only the LBCO experiment source hash;
+    # all project-block values, other files and the complete registry stay pinned.
+    # The Pr2NiO4 deb6c159 -> f46766cc zero-effect extinction normalization is
+    # separately bounded by adapt_single_crystal_inputs.py; all other input pins remain.
     text = (ROOT / 'tests/fixtures/e04_t1/oracle.js').read_text()
     oracle = json.loads(text.split('var frozen = ', 1)[1].removesuffix(';\n'))
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
     ids = [p['id'] for p in registry['projects']]
+    selection = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    expected_app_ids = [row['id'] for row in selection]
+    app_only_ids = []
+    assert oracle['app_only_ids'] == app_only_ids, (
+        'The catalogue form retires every former single-crystal app-only entry'
+    )
+    assert [row['id'] for row in registry['projects'] if row.get('app-only')] == app_only_ids, (
+        'The registry must refuse every app-only entry outside the declared list'
+    )
+    assert oracle['app_ids'] == [*expected_app_ids, *app_only_ids], (
+        'The complete app oracle must be exactly the catalogue followed by '
+        'the declared app-only list'
+    )
+    metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
+    assert list(metadata['examples']) == oracle['app_ids'], (
+        'App metadata must contain every declared catalogue and app-only identity in order'
+    )
+    assert oracle['catalogue_ids'] == expected_app_ids, (
+        'The app oracle must follow the independent owner selection'
+    )
+    assert [
+        row['id'] for row in registry['projects'] if row.get('user-facing')
+    ] == expected_app_ids, (
+        'App membership must agree with the independent catalogue; fixtures remain registered'
+    )
     assert [p['id'] for p in oracle['projects']] == ids, (
         'I19: fixture follows registry order without executing/offline filters'
     )
@@ -482,13 +791,17 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
     )
     for project in oracle['projects']:
         cases = [case for case in display['cases'] if case['path'] == project['path']]
+        corpus = [row for row in oracle['corpus'] if row['project'] == project['path']]
+        data_group = (
+            'extinction' if all(row.get('singleCrystal', False) for row in corpus) else 'data'
+        )
         assert {case['group'] for case in cases} >= {
             'space_group',
             'experiment_type',
-            'data',
+            data_group,
             'engines',
         }, 'gate 3: each frozen project covers every common read-only display family'
-        for group in ('experiment_type', 'data'):
+        for group in ('experiment_type', data_group):
             assert {case['selection'] for case in cases if case['group'] == group} == set(
                 project['experiments']
             ), 'gate 3: read-only displayed values cover every experiment, not only the first'
@@ -508,6 +821,6 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
         )
         for relative, digest in project['files'].items():
             assert (
-                hashlib.sha256((ROOT / project['path'] / relative).read_bytes()).hexdigest()
+                hashlib.sha256(read_previous(ROOT / project['path'] / relative)).hexdigest()
                 == digest
             ), 'I19: all project-block expectations retain input provenance'

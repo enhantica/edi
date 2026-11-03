@@ -14,10 +14,10 @@
 
 include(FetchContent)
 
-set(EDI_GUI_COMPONENTS_SHA 3897d339b60f5707bfe952fed59a20f73340e236)  # head of the edi branch, ADR-0015
-set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 3aebde35ff5f714f83b5f76c03e4a54d40a84c196d766f020d6ce4eb683200e1)
+set(EDI_GUI_COMPONENTS_SHA bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1)  # head of the edi branch, ADR-0015
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 4a91484651c78fcc639007b0144c349f8c5c87a9d5a98a85dfb8088947204f35)
 # Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
-set(EDI_GUI_COMPONENTS_SRC_SHA256 5e6ee5d998c030c0517a0b8adb19f13d22f63e1ea8c199bb5ec2076081db5888)
+set(EDI_GUI_COMPONENTS_SRC_SHA256 c61364b60961098a49cad8b1c1e0c8681ab2e510611f900fa7339c9b3c8984f2)
 
 if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
     message(STATUS "gui-components: fetching the pinned archive ${EDI_GUI_COMPONENTS_SHA} (8 MB, once per build tree)")
@@ -25,7 +25,9 @@ endif()
 FetchContent_Declare(gui_components
     URL https://github.com/easyscience/gui-components/archive/${EDI_GUI_COMPONENTS_SHA}.tar.gz
     URL_HASH SHA256=${EDI_GUI_COMPONENTS_ARCHIVE_SHA256}
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    # Extracted files take the extraction time, not the archive's: after a pin move an existing build tree then embeds
+    # and compiles the new QML, where older times left its resources holding the previous files.
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
     INACTIVITY_TIMEOUT 60
     TIMEOUT 600
     SOURCE_SUBDIR no-cmake-build  # upstream has no CMakeLists.txt; the modules are declared below
@@ -75,8 +77,8 @@ set(EDI_GUI_BASE_DIR ${gui_components_SOURCE_DIR}/src/EasyApplication)
 
 # One base module: its QML types, singletons and JavaScript files, all read from the pinned tree, except
 # the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (Style/Fonts for edi's font set,
-# Components/ListView for Qt selection-model initialization, Elements/TextInput for its focused colour; ADR-0015 §10,
-# ADR-0029).
+# Style/Sizes for a sidebar width the app window sets, Elements/TextInput for its focused colour, Elements/ToolTip for
+# its wrapped text; ADR-0015 §10, ADR-0029).
 function(edi_gui_base_module target uri subdir)
     cmake_parse_arguments(ARG "" "" "TYPES;SINGLETONS;SCRIPTS;REPLACED" ${ARGN})
     set(files)
@@ -113,7 +115,7 @@ endfunction()
 
 edi_gui_base_module(edi_gui_style EasyApplication.Gui.Style Gui/Style
     SINGLETONS Colors Fonts Sizes Times
-    REPLACED Fonts)
+    REPLACED Fonts Sizes)
 edi_gui_base_module(edi_gui_globals EasyApplication.Gui.Globals Gui/Globals
     SINGLETONS Vars)
 # Left out of Logic: Plotting.js, used only by the base's Charts, which edi does not build.
@@ -131,17 +133,18 @@ edi_gui_base_module(edi_gui_elements EasyApplication.Gui.Elements Gui/Elements
           MenuItem ParamComboBox Parameter ParamTextField RadioButton RemotePointer RunningLabel
           ScrollBar ScrollIndicator SideBarButton Slider SliderHandle SpinBox StatusBar
           StatusBarItem TabBar TabButton TextArea TextField TextInput ToolButton ToolTip ToolTipShadow
-    REPLACED ParamTextField TextInput)
+    REPLACED ParamTextField TextInput ToolTip)
 # Left out of Components: BasicReport (QtWebEngine), GuideWindow and GuideWindowContainer (they need a
 # host `Gui.Globals` module), JsonListModel (the dict/JSON model edi does not use).
 edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Components
     TYPES AboutDialog ApplicationWindow AppBarCentralTabs AppBarLeftButtons AppBarRightButtons
           ContentPage ContentArea MainContent SideBar SideBarColumn PreferencesDialog
-          ProjectDescriptionDialog ListView ListViewHeader ListViewDelegate ListViewTextInput
+          ProjectDescriptionDialog ListView ListViewHeader ListViewDelegate ListViewTextInput ListViewLabel
+          ListViewButton ListViewCheckBox ListViewComboBox ListViewParameter
           TableView TableViewHeader TableViewDelegate TableViewLabel
           TableViewAdvancedLabel TableViewTwoRowsAdvancedLabel TableViewParameter TableViewCheckBox
           TableViewComboBox TableViewButton TableViewLabelControl TableViewTextInput
-    REPLACED ListView TableViewParameter ProjectDescriptionDialog)
+    REPLACED ProjectDescriptionDialog)
 
 # The fonts edi's Style/Fonts.qml (app/qml/Base/Gui/Style) loads, placed where its
 # `Qt.resolvedUrl("../Resources/Fonts")` looks: the base's own faces edi keeps, and edi's (ADR-0015 §10).

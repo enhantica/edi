@@ -17,10 +17,24 @@ WorkflowPage {
     readonly property ProjectViewModel project: Session.project
     readonly property AnalysisViewModel analysis: project ? project.analysis : null
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
+    // The Stacked and Map tabs: a scan, or a joint fit of several experiments.
+    readonly property bool patternViews: project !== null && (project.scan || project.scanViews.joint)
+    // A project of several single crystals: the Stacked tab draws all of them on one F²calc-against-F²meas chart, and
+    // there is no Map.
+    readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
+    readonly property bool scanMode: project !== null && project.fit.scanMode
+    // Some experiment holds measured data: without any there is nothing to fit, and what only a fit uses is hidden.
+    readonly property bool measured: project !== null && project.fit.measured
+    // Leaving the scan modes hides Evolution: a page showing it goes back to the pattern.
+    onScanModeChanged: {
+        if (!scanMode)
+            page.showMainTab(0);
+    }
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
             "minimizer": minimizerContent,
+            "refine_ls": refinementContent,
             "fitting_mode": fittingModeContent,
             "alias": aliasesContent,
             "constraint": constraintsContent,
@@ -43,29 +57,76 @@ WorkflowPage {
         IconTabButton {
             objectName: "mainArea.analysis.tab.correlations"
             text: qsTr("Correlations")
+            enabled: page.measured
         },
-        // A fitted parameter across a scan's datasets (edi ADR-0017 §19); a scan project's only.
+        // A fitted parameter across a scan's datasets (edi ADR-0017 §19). Shown only in the sequential and
+        // independent fitting modes, and enabled in a scan project (edi ADR-0046).
         IconTabButton {
             objectName: "mainArea.analysis.tab.evolution"
             text: qsTr("Evolution")
+            visible: page.scanMode
+            // The base tab's own width, and none while hidden, so the tab bar keeps no gap for it.
+            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: page.project !== null && page.project.scan
+        },
+        // Every pattern of a scan, or every experiment of a joint fit, one above another, and the same as a 2D map
+        // (edi ADR-0041; the joint fit's, the owner, 2026-10-22).
+        IconTabButton {
+            objectName: "mainArea.analysis.tab.stacked"
+            text: qsTr("Stacked")
+            enabled: page.patternViews || page.singleCrystals
+        },
+        IconTabButton {
+            objectName: "mainArea.analysis.tab.map"
+            text: qsTr("Map")
+            enabled: page.patternViews && !page.singleCrystals
         }
     ]
     mainItems: [
         ProjectPatternChart {
             id: chartView
-            experiment: page.experiment
+            experiment: page.project ? page.project.currentExperiment : null
             axisProject: page.project
-            settingsPage: "analysis"
+            settingsPage: "pattern"
             shown: page.current && SwipeView.isCurrentItem
         },
         CorrelationChart {
+            id: correlationChart
             project: page.project
             shown: page.current && SwipeView.isCurrentItem
         },
         EvolutionChart {
             id: evolutionChart
             project: page.project
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        Item {
+            id: stackedTab
+
+            readonly property bool shown: page.current && SwipeView.isCurrentItem
+
+            ScanViewChart {
+                id: stackedChart
+                anchors.fill: parent
+                visible: !page.singleCrystals
+                project: page.project
+                mode: "stacked"
+                shown: stackedTab.shown && !page.singleCrystals
+            }
+            SingleCrystalChart {
+                id: stackedCrystals
+                objectName: "singleCrystal.stacked"
+                anchors.fill: parent
+                visible: page.singleCrystals
+                stackedExperiments: page.singleCrystals ? page.project.singleCrystalExperiments : []
+                project: page.project
+                shown: stackedTab.shown && page.singleCrystals
+            }
+        },
+        ScanViewChart {
+            id: mapChart
+            project: page.project
+            mode: "map"
             shown: page.current && SwipeView.isCurrentItem
         }
     ]
@@ -74,14 +135,12 @@ WorkflowPage {
     basicItem: Component {
         EaComponents.SideBarColumn {
             id: analysisSidebar
-            // The fitted inputs are not edited while a fit runs.
+            // The table fills the sidebar down to its value slider: fitting is run from the status bar (the owner,
+            // 2026-10-26). The fitted inputs are not edited while a fit runs.
             ParametersGroup {
-                tableViewportHeight: analysisSidebar.height - fitting.height
+                tableViewportHeight: analysisSidebar.height
                 project: page.project
                 enabled: !(page.project && page.project.fit.running)
-            }
-            FittingGroup {
-                id: fitting
             }
         }
     }
@@ -90,19 +149,26 @@ WorkflowPage {
             Repeater {
                 model: page.analysis ? page.analysis.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.analysis ? page.analysis.text : null
                     shownTier: "Extras"
                     contents: page.contents
+                    measured: page.measured
                 }
             }
         }
     }
-    // The page's view options (edi ADR-0031 §2): its chart's y scale, and how a followed scan redraws.
+    // The page's view options (edi ADR-0031 §2): which rows the parameter table shows, and how a followed scan redraws.
+    // The chart's own choices are on the chart. Both are about fitting, so both are hidden while no experiment has
+    // measured data (edi ADR-0046), as the table's free column is.
     settingsItem: Component {
         EaComponents.SideBarColumn {
-            ChartSettingsGroup {
-                page: "analysis"
+            ShownParametersGroup {
+                visible: page.measured
+                project: page.project
             }
-            PatternUpdatesGroup {}
+            PatternUpdatesGroup {
+                visible: page.measured
+            }
         }
     }
     textItem: Component {
@@ -113,7 +179,8 @@ WorkflowPage {
     // The same selector as the Experiment page's, over the one current experiment the project holds, so
     // choosing here or there is one choice (edi ADR-0017 §7).
     blockSelectorShown: true
-    blockSelectorRightInset: chartView.toolbarRightInset
+    // The row ends where the shown chart's toolbar does, so the two share one centre.
+    blockSelectorRightInset: stackedTab.SwipeView.isCurrentItem ? (page.singleCrystals ? stackedCrystals.toolbarRightInset : stackedChart.toolbarRightInset) : mapChart.SwipeView.isCurrentItem ? mapChart.toolbarRightInset : correlationChart.SwipeView.isCurrentItem ? correlationChart.toolbarRightInset : chartView.toolbarRightInset
     blocks: project ? project.experiments : null
     blocksTextRole: "label"
     blockKind: "experiment"
@@ -132,6 +199,12 @@ WorkflowPage {
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Report)
 
+    Component {
+        id: refinementContent
+        RefinementGroup {
+            analysis: page.analysis
+        }
+    }
     Component {
         id: minimizerContent
         MinimizerGroup {

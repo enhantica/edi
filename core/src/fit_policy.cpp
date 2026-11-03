@@ -5,16 +5,20 @@
 #include <cstddef>
 #include <map>
 #include <tuple>
+#include <utility>
 #include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "crysta/model.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/model.hpp"
 #include "edi/categories.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
+#include "edi/selectors.hpp"
 
 // Lifted verbatim out of adapter.cpp; see the header for what this file is.
 
@@ -148,7 +152,7 @@ int default_max_iterations() { return detail::bounded_max_iterations(0); }
 namespace {
 
 bool has_measured_data(const ExperimentBase& experiment) {
-    return experiment.data.has_value() && !experiment.calculation_only;
+    return (experiment.data.has_value() || experiment.reflections.has_value()) && !experiment.calculation_only;
 }
 
 // Experiments with measured data beside experiments without (a simulation made with Create experiment).
@@ -246,6 +250,7 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
         for (const auto& source : measured.experiments) {
             if (source->name.value() == target->name.value()) {
                 copy_fit_share(*target, *source);
+                record_fitted_background(*target);  // the fitted values are its background now (ADR-0040)
             }
         }
     }
@@ -255,8 +260,62 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
 
 }  // namespace
 
+std::vector<std::size_t> fit_context(const Project& project) {
+    const bool scan = is_scan_fitting_mode(effective_fitting_mode(project));
+    const bool mixed = !scan && mixed_experiments(project);
+    std::vector<std::size_t> fitted;
+    for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+        if (!mixed || has_measured_data(*project.experiments[index])) {
+            fitted.push_back(index);
+        }
+    }
+    return fitted;
+}
+
+namespace {
+// The name a refusal or a note gives a parameter: its unique name, or for one no fit names, its path.
+// In the walks' order, so a load's notes come in the file's order.
+std::vector<std::pair<Parameter*, std::string>> parameter_names(Project& project) {
+    std::vector<std::pair<Parameter*, std::string>> names;
+    std::set<const Parameter*> seen;
+    for (const NamedSlot& slot : named_slots(project)) {
+        if (seen.insert(slot.parameter).second) {
+            names.emplace_back(slot.parameter, slot.unique_name);
+        }
+    }
+    for (const ParameterEntry& entry : parameter_entries(project)) {
+        if (seen.insert(entry.parameter).second) {
+            names.emplace_back(entry.parameter, entry.path);
+        }
+    }
+    return names;
+}
+}  // namespace
+
+void require_fittable_free(Project& project) {
+    refresh_fittability(project);
+    for (const auto& [parameter, name] : parameter_names(project)) {
+        if (parameter->free.get() && !parameter->fit_idle && !free_refusal(*parameter).empty()) {
+            throw std::invalid_argument(name + " " + free_refusal(*parameter));
+        }
+    }
+}
+
+std::vector<std::string> clear_unfittable_free(Project& project) {
+    refresh_fittability(project);
+    std::vector<std::string> notes;
+    for (const auto& [parameter, name] : parameter_names(project)) {
+        if (parameter->free.get() && !parameter->fit_idle && !free_refusal(*parameter).empty()) {
+            notes.push_back(name + " " + free_refusal(*parameter) + "; loaded fixed");
+            parameter->free = false;
+        }
+    }
+    return notes;
+}
+
 FitResultBase Project::fit(const IterationCallback& on_iteration,
                            const PreambleCallback& on_start, const CancelCallback& should_cancel) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // A sequential project reaching the single-bank one-call form would silently fit the
     // TEMPLATE's embedded data once and write no results.csv — a plausible-looking answer to a
     // different question. Refuse by name; the sequential mode has exactly one entry point.
@@ -271,6 +330,7 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
             "' - this entry point serves exactly the 'single' mode; use analysis.fit(), which "
             "routes each declared mode to its own entry");
     }
+    require_fittable_free(*this);  // ADR-0053: a free flag the fit cannot honour is refused by name
     if (mixed_experiments(*this)) {
         return fit_measured_experiments(*this, on_iteration, [&](Project& measured, const IterationCallback& forward) {
             return measured.fit(forward, on_start, should_cancel);
@@ -279,6 +339,9 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
     if (experiment().linked_structures.empty()) {
         throw std::invalid_argument("edi fit: experiment '" + experiment().name +
                                     "' links no structure; link one before fitting");
+    }
+    if (experiment().reflections.has_value()) {  // a single crystal fits its own reflections
+        return fit({}, {}, {}, on_iteration, on_start, should_cancel);
     }
     if (!experiment().data.has_value() || experiment().calculation_only) {
         throw std::invalid_argument("edi fit: experiment() '" + experiment().name +
@@ -296,6 +359,7 @@ FitResultBase Project::fit() { return fit(IterationCallback{}); }
 FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
                                  const PreambleCallback& on_start,
                                  const CancelCallback& should_cancel) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // Review-1 F4: the third native entry point gets the same refusal as fit(). A scan
     // project reaching fit_joint() would fit the template's banks once and write no
     // results.csv — the same wrong-answer-to-a-different-question, one function along.
@@ -305,6 +369,7 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
             "' - this entry point serves exactly the 'joint' mode; use analysis.fit(), which "
             "routes each declared mode to its own entry");
     }
+    require_fittable_free(*this);  // ADR-0053
     if (experiments.empty()) {
         throw std::invalid_argument("edi fit_joint: project has no experiments");
     }
@@ -313,6 +378,9 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
             return measured.fit_joint(forward, on_start, should_cancel);
         });
     }
+    // Single crystals fit together over their one structure from their own reflections: no pattern crosses.
+    const bool single_crystals = std::all_of(experiments.begin(), experiments.end(),
+                                             [](const auto& bank) { return bank->reflections.has_value(); });
     std::vector<PdDataBase> patterns;
     patterns.reserve(experiments.size());
     for (const auto& bank_item : experiments) {
@@ -320,6 +388,14 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
         if (bank.linked_structures.empty()) {
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
                                         "' links no structure; link one before fitting");
+        }
+        if (single_crystals) {
+            continue;
+        }
+        if (bank.reflections.has_value()) {
+            throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +
+                                        "' is a single crystal, which fits only with single crystals; fit the "
+                                        "powder experiments in a project of their own");
         }
         if (!bank.data.has_value() || bank.calculation_only) {
             throw std::invalid_argument("edi fit_joint: experiment '" + bank.name +

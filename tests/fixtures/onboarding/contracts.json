@@ -1,0 +1,65 @@
+{
+  "references": {
+    "payload": "Product feedback contract: POST /feedback; kind, text, app, log; 201, 400, 429",
+    "capture_validator": "enhantica/edi-website-preview website-concepts/checks/gui_capture.py blob b4ce35f1391f32b227567b8fb32080c23e2a8484"
+  },
+  "tutorial_manifest": {
+    "path": "app/tutorials/manifest.json",
+    "root": "tutorials",
+    "ids": [
+      "interface",
+      "simulation",
+      "fitting"
+    ],
+    "step_fields": [
+      "text",
+      "target",
+      "expected"
+    ],
+    "scientific_project": "temporary",
+    "completion": [
+      "keep",
+      "discard"
+    ],
+    "stop": "restore-user-project"
+  },
+  "feedback_form_seam": {
+    "objectName": "feedback.form",
+    "endpoint": "Writable URL; empty disables Send",
+    "transport": "Injectable function(url, payload, completion); completion receives an HTTP status; production must use this transport when supplied",
+    "text_control": "feedback.text",
+    "kind_control": "feedback.kind",
+    "include_control": "feedback.include",
+    "preview_control": "feedback.preview",
+    "send_control": "feedback.send",
+    "preview_text": "feedback.payload"
+  },
+  "payload_module_seam": {
+    "path": "app/feedback/Payload.js",
+    "buildPayload": "buildPayload(kind, text, include, app, log, home, user) returns the wire object",
+    "submit": "submit(endpoint, payload, transport, completed); transport(url, payload, completed) is injected; no endpoint means no call",
+    "format": "A QML JavaScript library, usable from the real form and the standalone Qt engine"
+  },
+  "tutorial_controls": [
+    "tutorials.row.<id>",
+    "tutorial.next",
+    "tutorial.stop",
+    "tutorial.keep",
+    "tutorial.discard",
+    "tutorial.back",
+    "tutorial.pointer"
+  ],
+  "citation_controls": [
+    "citation.copy.text",
+    "citation.copy.bibtex"
+  ],
+  "native_prerequisites": [
+    "python tests/fixtures/onboarding/build_native.py log_probe",
+    "python tests/fixtures/onboarding/build_native.py payload_probe",
+    "python tests/fixtures/onboarding/capture_bundle.py"
+  ],
+  "crash_controls": [
+    "crash.popup",
+    "crash.report"
+  ]
+}

@@ -1,0 +1,244 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 22/10/2026  Time: 21:34:23.719                              
+
+ => PCR file code: fit
+ => DAT file code: fit                  -> Relative contribution: 1.0000                                                            
+ => Title: pd-neut-cwl_hs-hrpt
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => The    5th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Analysis of refinement at the end
+ => Wavelengths:  1.89000 1.89000
+ => Cos(Monochromator angle)=   0.0000
+ => Absorption correction (AC), muR-eff =   0.0000  0.0000
+ => Base of peaks: 2.0*HW*   48.00
+ ==> Angular range, step and number of points:
+     2Thmin:       3.950000  2Thmax:     164.899994  Step:       0.050018  No. of points:   3220
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    3.782 g/cm3
+ => Scor: 2.5344
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:   32
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 hs                                      R -3 m              
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   107  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Zn      0.00000(   0)  0.00000(   0)  0.50000(   0)  0.282( 64)  0.083(  0)    3
+ Cu      0.50000(   0)  0.00000(   0)  0.00000(   0)  1.568( 40)  0.250(  0)    9
+ O       0.20656(  16) -0.20656(  16)  0.06090(  13)  1.127( 39)  0.500(  0)   18
+ Cl      0.00000(   0)  0.00000(   0)  0.19674(  11)  1.462( 39)  0.167(  0)    6
+ H       0.13263(  15) -0.13263(  15)  0.08962(  12)  2.548( 43)  0.500(  0)   18
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              6.86244   0.00041
+                              6.86244   0.00041
+                             14.13864   0.00097
+                             90.00000   0.00000
+                             90.00000   0.00000
+                            120.00000   0.00000
+ 
+ => overall scale factor :  0.5206951     0.2734548E-02
+ => Eta(p-v) or m(p-vii) :    0.40328   0.00947
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.30125   0.00839
+                             -0.29571   0.01699
+                              0.35121   0.00757
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.04284   0.01610
+                              0.03887   0.00417
+                              0.01413   0.03593
+                             -0.03771   0.00932
+ => X and y parameters   :    0.00000   0.00000
+                              0.00000   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     0.1236    0.0067
+ => Background Parameters (linear interpolation)  ==>
+                                 536.451        3.60957    
+                                 425.017        2.37694    
+                                 457.863        2.95120    
+                                 475.003        2.75401    
+                                 497.879        2.82358    
+                                 486.852        2.55313    
+                                 498.366        2.73753    
+                                 528.854        3.44833    
+                                 492.897        4.49251    
+                                 494.638        11.8367    
+ => Cos(2theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:197 => MaxCycle:200
+ => N-P+C:  3188
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  4.23     Rwp:  5.30     Rexp:    3.61 Chi2:  2.15      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  11.8     Rwp:  11.3     Rexp:    7.73 Chi2:  2.15    
+ => Deviance:  0.727E+04     Dev*  :   2.281    
+ => DW-Stat.:    0.9385     DW-exp:     1.9106
+ => N-sigma of the GoF:       45.849
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  3188
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  4.23     Rwp:  5.30     Rexp:    3.61 Chi2:  2.15      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  11.8     Rwp:  11.3     Rexp:    7.73 Chi2:  2.15    
+ => Deviance:  0.727E+04     Dev*  :   2.281    
+ => DW-Stat.:    0.9385     DW-exp:     1.9106
+ => N-sigma of the GoF:       45.849
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   2.15    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     hs
+ => Bragg R-factor:   3.71       Vol:  576.628( 0.063)  Fract(%):  100.00( 0.74)
+ => Rf-factor=  2.94             ATZ:        1304.905   Brindley:  1.0000
+
+
+       ----------------------------------------------------
+       -    ANALYSIS OF THE REFINEMENT FOR PATTERN #  1   -
+       ----------------------------------------------------
+
+
+ => GLOBAL INDICATORS:
+
+    The first and last reflections appears at:
+    2theta(degrees)/T.O.F(microsecs)/Energy(KeV) =>         19.865       171.013
+    s (angstroms-1) =>     0.1825    1.0549
+    D (angstroms  ) =>     5.4787    0.9479
+    sin(theta/lamb) =>     0.0913    0.5275
+    Q (angstroms-1) =>     2.2937   13.2569
+
+    The average FWHM is:   0.9678  Fwhm(av)/step =  19.3555
+
+ => Sum(Yiobs-Yical):     4094.45    1790.08   -2000.88    4671.40 <- Four regions
+            Total ->      8555.04
+
+  Expected Rp (background uncorrected):     2.72 Observed->     4.23
+  Expected cRp(background   corrected):     7.58 Observed->    11.79
+  -> Ratio Rp/Exp=cRp/cExp:     1.56
+  Weighted Average Bragg R-factor:     3.71
+  Weighted Average      RF-factor:     2.94
+  Reduced Chi-square :     2.15
+
+ => Total number of "independent" reflections:    107
+    Effective number (account for resolution) of reflections: 
+                      at level p=1.00  :  65.3
+                      at level p=0.50  :  81.6
+                      at level p=0.25  :  90.0
+
+    A reflection contributes as x/(x+nearest), where "x"  
+    is the fraction of the total area of the current phase and 
+   "nearest" is the number of adjacent reflections verifying the formula:
+
+    Postn-p*FWHM <= Postn(adjacent) <= Postn+p*FWHM 
+
+   "nearest" is weighted by the corresponding "x(s)" 
+
+ =>             Number of global  refined parameters:     11
+                Number of profile refined parameters:     11
+    Number of intensity-affecting refined parameters:     10
+      (Preferred orientation belongs to this class)   
+
+ => (Effective Number of reflections)/(Number of intensity parameters)= refni
+      Ratio ( Optimistic view,p=0.25):    9.0
+      Ratio (Pessimistic view,p=1.00):    6.5
+      Ratio (   Eclectic view,p=0.50):    8.2
+
+ => PHASE DEPENDENT INDICATORS:
+
+ => Positions and FWHM of the sharpest reflection
+
+     Phase  2Theta/TOF  FWHM     Q       DQ      Delta   Dd/d(%)
+
+       1      52.39   0.5279   2.9350  0.02748  0.02384  0.936
+
+   Q ,DQ(FWHM in Q-space) and Delta are given in 1/angstroms
+ Delta is the expected step between consecutive reflections at Q
+
+ Phase    %Cont  Nintdp  Nprofp   Nref      Enref(Effective)
+                                         R:p=1  R:p=1/2  R:p=1/4
+     1  100.00      10      11     107   65.30   81.58   90.00
+                                          6.53    8.16    9.00
+  Where:
+  %Cont: percentage of the total integrated intensity (100x)
+ Nintdp: Number of intensity-affecting refined parameters
+ Nprofp: Number of profile refined parameters
+   Nref: Number "independent" contributing reflections
+  Enref: Effective Number of reflections for each p-value
+R:p=1/n: Ratio Enref(Effective)/Nintdp <- "Solvability Index" 
+
+
+ => ANALYSIS OF STANDARD DEVIATIONS
+
+    Phase:  1 Degrees of freedom for p=1, 1/2, 1/4:            55.30           71.58           80.00
+              Chi2 based on integrated intensities:            33.15           25.61           22.92
+              Calculated with Scott'S FORMULA     :    67.02   52.00   46.64
+
+ => Standard deviations concern the PRECISION of parameters and
+    represent ACCURACY only if there is no systematic errors
+    A better estimate of the accuracy of structural parameters
+    is obtained multiplying sigmas by the parameter SCOR
+ -> SCOR =   2.5344 { Berar'S FORMULA}
+ -> SCOR =   4.3995 {Pawley'S FORMULA}
+ -> Application of modified Scott'S FORMULA
+    SCOR(p=1,1/2,1/4) =             3.93            3.45            3.27
+    SCOR(expected Si) =       5.5854      4.9200      4.6592
+   Warning! Do not take into account Scott'S SCOR
+            These indicators are under test....
+
+ => ANALYSIS OF CORRELATED PARAMETERS 
+
+  -> The parameter:   14 appears   2 times
+  -> The parameter:   19 appears   2 times
+  -> The parameter:   27 appears   3 times
+  -> The number of correlated parameters is :   3
+
+ => Your refinement seems to be very good!
+
+ 
+              CPU Time:    43.828 seconds
+                            0.730 minutes
+
+ => Run finished at:     Date: 22/10/2026  Time: 21:35:07.539                              

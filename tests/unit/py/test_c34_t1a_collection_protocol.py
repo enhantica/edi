@@ -609,9 +609,9 @@ def _leaf_cases(project: edi.Project) -> tuple[tuple[str, object, str], ...]:
         ('LineSegment.intensity', project.experiment.background[0], 'intensity'),
         ('Cell.length_a', project.structure.cell, 'length_a'),
         (
-            'Instrument.setup_twotheta_bank',
+            'Instrument.calib_d_to_tof_offset',
             project.experiment.instrument,
-            'setup_twotheta_bank',
+            'calib_d_to_tof_offset',
         ),
     )
 

@@ -51,3 +51,13 @@ first background point, -0.0174 against 0.025(129), 0.33 of its uncertainty, and
 
 The fitted values are compared with FullProf's, within FullProf's standard uncertainties, by edi's FullProf
 agreement test.
+
+## Pins re-taken with crysta build-3fcc7925
+
+crysta build-3fcc7925 adds the tails of time-of-flight reflections centred just outside the measured range, and
+resumes a descent whose final polish shows it had not converged. Both move this fit, so its regression pins were
+re-taken from `python -m edi fit` with that build. Reference values are unchanged.
+
+| run | quantity | before | after |
+| --- | --- | --- | --- |
+| default | `rwp` | 0.0714737332 | 0.0714737367 |

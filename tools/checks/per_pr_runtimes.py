@@ -6,14 +6,14 @@
 the per-tier bounds and the committed breach baseline (``tests/threshold-breaches.md``, a
 RATCHET) are what the record enforces. retired the measured runtime split (``heavy``) this
 record used to feed: selection now lives in the three named groups
-(``tests/test-groups.json``), all equal on test selection, and this audit additionally
-REFUSES any marker-based deselection returning to a live config surface.
+(``tests/test-groups.json``), with explicitly excluded nightly-only and weekly-only
+cohorts. The audit REFUSES any marker-based deselection returning to a live config surface.
 
 Two subcommands:
 
 ``--check``
     The gate. Asserts the manifest is well-formed, declares a threshold, and covers **every**
-    currently collected test, so no test can be silently absent from the audit (an absent test
+    currently collected PR-group test, retaining optional nightly rows (an absent PR test
     would otherwise default to "fast" without anyone having measured it).
 
 ``--update FILE --fixture-costs FILE``
@@ -181,6 +181,32 @@ class ManifestError(RuntimeError):
     """The manifest is missing, malformed, or does not cover the collected suite."""
 
 
+def nightly_paths() -> set[str]:
+    """Return the files the PR run leaves out (the nightly-only and weekly-only groups).
+
+    Malformed policy refuses the audit.
+    """
+    try:
+        groups = json.loads((ROOT / 'tests/test-groups.json').read_text())['groups']
+        paths = groups['nightly-only']['paths'] + groups['weekly-only']['paths']
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise ManifestError(f'invalid nightly-only or weekly-only group: {exc}') from exc
+    if (
+        not isinstance(paths, list)
+        or not paths
+        or any(
+            not isinstance(path, str)
+            or not path.startswith('tests/')
+            or '..' in Path(path).parts
+            or not path.endswith('.py')
+            for path in paths
+        )
+        or len(paths) != len(set(paths))
+    ):
+        raise ManifestError('nightly paths must be unique test files')
+    return set(paths)
+
+
 def inventory_counts(
     nodeids: Iterable[str], unmeasured: Iterable[str] = frozenset()
 ) -> dict[str, int]:
@@ -216,6 +242,15 @@ def _check_declared_inventory(
     if not declared:
         return
     actual = inventory_counts(runtimes, unmeasured)
+    pr_count = re.search(r'^# inventory_pr_python = (\d+)$', text, re.MULTILINE)
+    if pr_count is not None:
+        excluded = nightly_paths()
+        actual_pr = sum(
+            '.py::' in node and node.split('::', 1)[0] not in excluded
+            for node in set(runtimes) | unmeasured
+        )
+        if int(pr_count.group(1)) != actual_pr:
+            raise ManifestError(f'{path}: PR inventory disagrees with nightly-only selection')
     if declared != actual:
         msg = (
             f'{path}: the declared inventory {declared} does not match the rows {actual} — '
@@ -446,12 +481,20 @@ def load_module_costs(path: Path = MANIFEST) -> dict[str, float]:
     return costs
 
 
-def collect_nodeids() -> list[str]:
+def collect_nodeids(excluded: Iterable[str] = ()) -> list[str]:
     """Ask pytest which tests exist right now (the authority on coverage)."""
     result = subprocess.run(
         # No `-q` here: pyproject's addopts already carries one, and a second would select
         # pytest's `-qq` summary format (`file: count`) instead of the node ids this needs.
-        [sys.executable, '-m', 'pytest', '--collect-only', '-p', 'no:cacheprovider'],
+        [
+            sys.executable,
+            '-m',
+            'pytest',
+            '--collect-only',
+            '-p',
+            'no:cacheprovider',
+            *[f'--ignore={path}' for path in sorted(excluded)],
+        ],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -566,12 +609,13 @@ def render_manifest(
     module_costs: dict[str, float] | None = None,
     unmeasured: dict[str, str] | None = None,
 ) -> str:
+    excluded = nightly_paths()
     lines = [
         '# Measured per-PR runtime audit — the record behind the',
         '# per-tier bounds and the committed breach RATCHET',
         '# (tests/threshold-breaches.md). It selects NOTHING: the retired `heavy` split is',
         '# gone and test selection lives in the three named groups (tests/test-groups.json),',
-        '# all equal on selection; `tools/checks/per_pr_runtimes.py --check` gates coverage.',
+        '# PR coverage leaves out the nightly-only and weekly-only files; their rows are kept.',
         '# Rows are BANKED: an unchanged collection is never',
         '# re-measured; `pixi run per-pr-measure` measures ONLY the added nodes, once, and a',
         '# named node on request. No expiry, no budget. Seconds are setup+call+teardown, serial.',
@@ -597,6 +641,14 @@ def render_manifest(
             f'# inventory_{key} = {value}'
             for key, value in inventory_counts(runtimes, set(unmeasured or {})).items()
         ],
+        '# Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.',
+        '# inventory_pr_python = '
+        + str(
+            sum(
+                '.py::' in node and node.split('::', 1)[0] not in excluded
+                for node in set(runtimes) | set(unmeasured or {})
+            )
+        ),
         '',
     ]
     holes = unmeasured or {}
@@ -808,13 +860,23 @@ def check() -> int:
     try:
         _tiers, runtimes = load_manifest()
         module_costs = load_module_costs()
-        collected = collect_nodeids()
+        excluded = nightly_paths()
+        collected = collect_nodeids(excluded)
     except ManifestError as exc:
         print(f'per-PR runtime audit: FAIL\n  {exc}', file=sys.stderr)
         return 1
 
     declared_holes = load_unmeasured()
-    errors = _integrity_errors(collected, runtimes, module_costs, declared_holes)
+    errors = _integrity_errors(
+        collected,
+        {
+            node: seconds
+            for node, seconds in runtimes.items()
+            if node.split('::', 1)[0] not in excluded
+        },
+        {path: seconds for path, seconds in module_costs.items() if path not in excluded},
+        {node for node in declared_holes if node.split('::', 1)[0] not in excluded},
+    )
 
     if errors:
         joined = '\n  '.join(errors)
@@ -850,7 +912,7 @@ def check() -> int:
 
     over = sorted(node for node, s in runtimes.items() if s >= threshold_for(node))
     print(
-        f'per-tier runtime audit: OK — {len(collected)} tests recorded '
+        f'per-tier runtime audit: OK — {len(collected)} PR-required tests recorded '
         f'({len(declared_holes)} DECLARED UNMEASURED, excluded from the ratchet), '
         f'per-tier thresholds {thresholds_text()}, '
         f'{len(over)} over-bound row(s) carried by the committed ratchet baseline '
@@ -966,6 +1028,10 @@ _PARALLEL_LOG_PATTERNS = (
     re.compile(r'\bdist:\s*\w+', re.IGNORECASE),
 )
 
+# Node ids are removed before the markers are searched: a parametrized id such as
+# `[...:_geom_bond.dist:s0-...]` would otherwise read as a parallel run.
+_NODE_ID_RE = re.compile(r'\S+\.py::\S+')
+
 
 # The measurement records its own conditions (see tools/ci/verify-wall-clock.py). When a log
 # carries that record, the observed worker count is direct evidence about the run that produced
@@ -986,7 +1052,8 @@ def _refuse_parallel_log(log_path: Path, text: str) -> None:
             f'rather than cost and may not write the runtime manifest.'
         )
         raise ManifestError(msg)
-    hits = sorted({p.pattern for p in _PARALLEL_LOG_PATTERNS if p.search(text)})
+    scanned = _NODE_ID_RE.sub('', text)
+    hits = sorted({p.pattern for p in _PARALLEL_LOG_PATTERNS if p.search(scanned)})
     if hits:
         msg = (
             f'{log_path} was produced by a PARALLEL pytest run (markers: {hits}). '

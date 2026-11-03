@@ -27,6 +27,8 @@ def test_app_fixture_prepares_only_the_requested_host(owner, selection, tmp_path
     calls = []
     failed = selection == 'failed-browser-then-desktop'
     selected = 'desktop' if failed else selection
+    receipt_document = {'transport-only': True}
+    receipt_path = tmp_path / 'actual host receipt.json'
 
     class UnavailableBrowserError(RuntimeError):
         pass
@@ -37,7 +39,11 @@ def test_app_fixture_prepares_only_the_requested_host(owner, selection, tmp_path
             raise UnavailableBrowserError('Transport control: browser prerequisite unavailable')
         if backend != selected:
             raise RuntimeError('Transport control: unrequested host was provisioned')
-        return {'receipt': {'transport-only': True}, 'transport-only': True}
+        return {
+            'receipt': receipt_document,
+            'receipt_path': str(receipt_path),
+            'transport-only': True,
+        }
 
     if receipt:
         for harness in module.HOSTS.values():
@@ -61,7 +67,40 @@ def test_app_fixture_prepares_only_the_requested_host(owner, selection, tmp_path
             'an unavailable host must not leave a cached successful observation'
         )
     key = (kind, selected) if receipt else selected
+    if owner == 'screen':
+        assert (
+            all(
+                getattr(module, name)._fixture_function_marker.scope == 'module'
+                and not getattr(module, name)._fixture_function_marker.autouse
+                for name in ('desktop_screen_capture', 'browser_screen_capture')
+            )
+            and module.prepare_screen_capture._fixture_function_marker.scope == 'function'
+            and module.prepare_screen_capture._fixture_function_marker.autouse
+        ), 'Selected screen captures use module setup through automatic per-gate preparation'
+        prepared = []
+
+        def prepare(name):
+            prepared.append(name)
+            fixture = {
+                'desktop_screen_capture': module.desktop_screen_capture,
+                'browser_screen_capture': module.browser_screen_capture,
+            }[name]
+            return fixture.__wrapped__(observations)
+
+        module.prepare_screen_capture.__wrapped__(
+            SimpleNamespace(
+                node=SimpleNamespace(callspec=SimpleNamespace(params={'backend': selected})),
+                getfixturevalue=prepare,
+            )
+        )
+        assert prepared == [selected + '_screen_capture'] and key in observations, (
+            'Screen setup requests only its selected backend module fixture'
+        )
     first = observations[key]
+    if receipt:
+        assert first == (receipt_document, receipt_path), (
+            'compiled receipt fixtures preserve the observed document and its actual path'
+        )
     assert observations[key] is first, (
         'repeated gates reuse the actual completed observation for their selected host'
     )
@@ -87,6 +126,7 @@ def test_configure_fixture_passes_the_provisioned_sdk(system, selection, tmp_pat
         sdk = tmp_path / 'explicit sdk prefix'
         monkeypatch.setenv('CRYSTA_SDK_DIR', str(sdk))
     monkeypatch.setattr(locked_configure, 'system_eigen', lambda *_args: tmp_path / 'external')
+    monkeypatch.setattr(locked_configure, 'macos_sdk', lambda: tmp_path / 'platform sdk')
     commands = []
 
     def dispatch(command, **_kwargs):

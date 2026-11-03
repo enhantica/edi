@@ -71,6 +71,7 @@ def sdk_platform() -> str:
         os.environ.get('RUNNER_ARCH') or platform.machine()
     )
     table = {'linux-64': 'linux-64', 'linux-64-app': 'linux-64', 'osx-arm64': 'osx-arm64'}
+    table |= {'osx-arm64-app': 'osx-arm64'}
     table |= {'Linux-X64': 'linux-64', 'Linux-x86_64': 'linux-64'}
     table |= {'macOS-ARM64': 'osx-arm64', 'Darwin-arm64': 'osx-arm64'}
     return table.get(host) or refuse(f'no edi native platform for {host}')

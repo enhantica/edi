@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.integration.py.test_scan_extended_contract import assert_structure_selector
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -155,6 +157,9 @@ def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
         assert 'WorkflowPage {' in page and 'blockSelectorShown: true' in page, (
             'Every browsing page must enable the shared workflow selector'
         )
+        if page_name == 'Structure':
+            assert_structure_selector(page)
+            continue
         assert f'blocks: project ? project.{collection} : null' in page, (
             'Each browsing page must supply its own complete block collection'
         )

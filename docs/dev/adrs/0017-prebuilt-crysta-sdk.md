@@ -89,6 +89,10 @@ The owner adopted the speed-up plan's stage 4 on 2026-09-30.
    has no release or differs from it. So a paired task pins a crysta head as soon as that head's two `checks` jobs
    have packed, and nothing is published for a head that never ships.
 5. **osx-64 is not built.** edi's platforms are `linux-64` and `osx-arm64`.
+6. **An untested SDK is for a local trial only.** crysta can pack an SDK without its qualification for a desk try of
+   an unfinished change; its manifest records both tiers as `untested`. The fingerprint check refuses it unless
+   `EDI_ALLOW_UNTESTED_SDK=1` is set, and refuses that setting in CI, so no CI run or release builds on one (owner,
+   2026-10-23).
 
 **Supersedes** the earlier decision (2026-09-03) that edi floats on crysta `main`.
 
@@ -110,6 +114,23 @@ The owner adopted the speed-up plan's stage 4 on 2026-09-30.
 - The pin lives in `pixi.toml`, not `pixi.lock`: the lock carries no activation environment, so a pin move leaves it
   untouched.
 - A conda-channel transport would need a later ADR.
+
+## macOS SDK 27 (2026-10-21)
+
+Xcode 27 ships the macOS 27 SDK, and two things in it break the Clang 19 toolchain the Mac builds used:
+
+- With Clang 19's libc++, `<complex>` no longer sees `INFINITY` and `NAN` through the SDK's `math.h`, so the
+  compile fails. Clang and libc++ 23 compile it.
+- The SDK's text stubs (`libSystem.tbd` and the rest) list an `arm64e.x1` slice. ld64 reads stubs through tapi,
+  and tapi 1600.0.11.8 before build 4 refuses the unknown slice, so every link fails. Build 4 skips it
+  (conda-forge tapi-feedstock #21).
+
+So on macOS the default and app environments name the Clang 23 drivers, libc++ 23, compiler-rt 23 and llvm-openmp
+23 directly, with tapi build 4; the `cxx-compiler` metapackage, which holds an older Clang, stays on Linux only, and
+Linux keeps its compilers. crysta's Mac environments take the same family, and the app's exact Mac ABI pins above
+follow crysta's lock, so the app links an SDK built with the same toolchain. An SDK built with the older toolchain
+does not match these pins; the pin moves to a crysta build made with the new one. No SDK header is patched and no
+macro is defined by hand.
 
 ## Alternatives considered
 

@@ -1,0 +1,32 @@
+{
+  "auto-derived": {
+    "settings": {
+      "mode": "auto",
+      "method": "snip",
+      "width": null,
+      "smoothness": null,
+      "n_points": null,
+      "tolerance": 2.0,
+      "in_peaks": "drop",
+      "use_model": "ignore",
+      "max_terms": null
+    },
+    "method": "snip",
+    "variant": "default"
+  },
+  "auto-overrides": {
+    "settings": {
+      "mode": "auto",
+      "method": "arpls",
+      "width": 6.724999999999682,
+      "smoothness": 39829.801470586346,
+      "n_points": 7,
+      "tolerance": 2.0,
+      "in_peaks": "drop",
+      "use_model": "ignore",
+      "max_terms": null
+    },
+    "method": "arpls",
+    "variant": "override"
+  }
+}

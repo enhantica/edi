@@ -30,6 +30,40 @@ def run(command, **kwargs):
     subprocess.run(list(map(str, command)), check=True, **kwargs)
 
 
+def follow_diagnostic(event):
+    return """
+    if (!follow_file_.empty()) {
+        const auto* observed = currentExperiment();
+        ::scan_screen_follow(QJsonObject{
+            {"event", EVENT},
+            {"file", QString::fromStdString(follow_file_)},
+            {"token", static_cast<qint64>(follow_token_)},
+            {"followIndex", follow_index_},
+            {"currentIndex", current_dataset_},
+            {"projectedIndex", projected_dataset_},
+            {"patternShown", patternShown()},
+            {"followBefore", static_cast<qint64>(follow_before_)},
+            {"followGeneration", static_cast<qint64>(follow_generation_)},
+            {"patternGeneration",
+             static_cast<qint64>(observed ? observed->patternGeneration() : 0)},
+            {"presentedGeneration",
+             static_cast<qint64>(observed ? observed->presentedGeneration() : 0)},
+            {"renderSwaps", render_swaps_},
+            {"deadlineActive", render_wait_.isActive()},
+            {"deadlineRemainingMs", render_wait_.remainingTime()}});
+    }
+""".replace('EVENT', event)
+
+
+def worker_diagnostic(event, remaining='-1', file='record.file_name'):
+    return (
+        f'\nscan_screen_worker("{event}", {file}, '
+        'self->frame_wanted.load(std::memory_order_acquire), '
+        'self->wait_patterns.load(std::memory_order_acquire), token.cancelled(), '
+        f'file_frame && file_frame->first == {file}, {remaining});\n'
+    )
+
+
 def observer_sources(source):
     changed = {}
     main = source / 'app/main.cpp'
@@ -58,14 +92,95 @@ def observer_sources(source):
     if len(matches) != 1:
         raise RuntimeError('The screen observer must bind the real completed-file worker callback')
     marker = matches[0].group()
+    text = text.replace(
+        marker,
+        marker.replace('&file_frame]', '&file_frame, &token]')
+        + '\nscan_screen_completed(record.file_name);'
+        + worker_diagnostic('worker-file-complete'),
+        1,
+    )
+    for marker, replacement in (
+        (
+            '#if !EDI_WORKER_OWNER_THREAD\n                    if (self->wait_patterns',
+            worker_diagnostic('worker-frame-emitted', file='file')
+            + '#if !EDI_WORKER_OWNER_THREAD\n                    if (self->wait_patterns',
+        ),
+        (
+            '                        std::unique_lock lock(self->shown_mutex);',
+            worker_diagnostic(
+                'worker-wait-begin',
+                'std::chrono::duration_cast<std::chrono::milliseconds>('
+                'deadline - std::chrono::steady_clock::now()).count()',
+                file='file',
+            )
+            + '                        std::unique_lock lock(self->shown_mutex);',
+        ),
+        (
+            (
+                '                            self->shown.wait_for(lock, '
+                'std::chrono::milliseconds(20));\n                        }'
+            ),
+            '                            self->shown.wait_for(lock, '
+            'std::chrono::milliseconds(20));\n'
+            '                        }'
+            + worker_diagnostic(
+                'worker-wait-end',
+                'std::chrono::duration_cast<std::chrono::milliseconds>('
+                'deadline - std::chrono::steady_clock::now()).count()',
+                file='file',
+            ),
+        ),
+    ):
+        if text.count(marker) != 1:
+            raise RuntimeError('The screen diagnostics must bind each real worker wait once')
+        text = text.replace(marker, replacement, 1)
     changed['core/src/fit_job.cpp'] = (
         '#include <string>\nvoid scan_screen_completed(const std::string&);\n'
-        + text.replace(marker, marker + '\nscan_screen_completed(record.file_name);', 1)
+        'void scan_screen_worker(const char*, const std::string&, bool, bool, bool, bool, long);\n'
+        + text
+    )
+    text = (source / 'app/src/project_view_model.cpp').read_text()
+    for marker, replacement in (
+        (
+            '[this] { followRendered(false); }',
+            '[this] {' + follow_diagnostic('"render-timeout"') + ' followRendered(false); }',
+        ),
+        (
+            '    render_wait_.start(kRenderWaitMs);\n}',
+            '    render_wait_.start(kRenderWaitMs);\n' + follow_diagnostic('"handover"') + '}',
+        ),
+        (
+            '    if (window == nullptr || !presentedFollowed()) {',
+            follow_diagnostic('"await-render"')
+            + '    if (window == nullptr || !presentedFollowed()) {',
+        ),
+        (
+            '    render_wait_.start(kRenderWaitMs);\n    window->update();',
+            '    render_wait_.start(kRenderWaitMs);\n'
+            + follow_diagnostic('"render-wait-armed"')
+            + '    window->update();',
+        ),
+        (
+            '    const std::string file = std::move(follow_file_);',
+            follow_diagnostic('drawn ? "release-drawn" : "release-undrawn"')
+            + '    const std::string file = std::move(follow_file_);',
+        ),
+    ):
+        if text.count(marker) != 1:
+            raise RuntimeError('The screen diagnostics must bind each real handover/deadline once')
+        text = text.replace(marker, replacement, 1)
+    changed['app/src/project_view_model.cpp'] = (
+        '#include <QJsonObject>\nvoid scan_screen_follow(const QJsonObject&);\n' + text
     )
     cmake = source / 'app/CMakeLists.txt'
     changed['app/CMakeLists.txt'] = (
         cmake.read_text() + '\ntarget_sources(edi_app PRIVATE '
-        '${PROJECT_SOURCE_DIR}/tests/fixtures/scan_screen/observe.cpp)\n'
+        """${PROJECT_SOURCE_DIR}/tests/fixtures/scan_screen/observe.cpp)
+set(scan_fixture "${PROJECT_SOURCE_DIR}/docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project")
+file(GLOB_RECURSE scan_fixture_files LIST_DIRECTORIES false "${scan_fixture}/*")
+qt_add_resources(edi_app scan_screen_fixture PREFIX "/test-fixtures/scan-screen"
+                 BASE "${scan_fixture}" FILES ${scan_fixture_files})
+"""
     )
     return changed
 
@@ -77,6 +192,14 @@ def snapshot(root, output, fixture):
         ['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True
     ).strip()
     (output / 'source-sha.txt').write_text(source_sha + '\n')
+    (output / 'source-policy.json').write_text(
+        json.dumps({
+            'kind': 'git-archive',
+            'revision': source_sha,
+            'includes_uncommitted_changes': False,
+        })
+        + '\n'
+    )
     archive = output / 'source.tar'
     with archive.open('wb') as stream:
         run(['git', '-C', root, 'archive', source_sha], stdout=stream)
@@ -207,6 +330,7 @@ def build(root, output, sdk, engine_source, backend):  # noqa: PLR0914 - qualifi
         'production': production,
         'compiled_inputs': {'production': production, 'sdk': compiled_sdk},
         'source_sha': (output / 'source-sha.txt').read_text().strip(),
+        'source_policy': json.loads((output / 'source-policy.json').read_text()),
         'engine_sha': subprocess.check_output(
             ['git', '-C', engine_source, 'rev-parse', 'HEAD'], text=True
         ).strip(),

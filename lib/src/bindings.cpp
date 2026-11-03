@@ -24,15 +24,23 @@
 #include <atomic>
 #include <cmath>
 #include <filesystem>
+#include <limits>
 #include <numeric>
+#include <optional>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
+#include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
+#include "edi/parameter_walk.hpp"
+#include "edi/project_archive.hpp"
 #include "edi/report.hpp"
 #include "edi/report_html.hpp"
 #include "edi/report_model.hpp"
@@ -76,6 +84,24 @@ static nb::object readonly_array(const edi::ComputedColumn<T>& column) {
     const std::vector<T>& values = **owner;
     return nb::cast(
         nb::ndarray<nb::numpy, const T, nb::ndim<1>>(values.data(), {values.size()}, keeper));
+}
+
+// A measured column, copied once into an immutable buffer, as a read-only NumPy array.
+template <typename T>
+static nb::object copied_array(const std::vector<T>& values) {
+    return readonly_array(edi::ComputedColumn<T>(std::make_shared<const std::vector<T>>(values)));
+}
+
+// A row-major computed column of `columns` values per row as a read-only (rows, columns) NumPy array over
+// crysta's buffer, zero-copy as readonly_array; (0, 0) when it is empty.
+static nb::object readonly_matrix(const edi::ComputedColumn<double>& column, std::size_t columns) {
+    using Buffer = edi::ComputedColumn<double>::Buffer;
+    auto* owner = new Buffer(column.buffer() ? column.buffer() : std::make_shared<const std::vector<double>>());
+    nb::capsule keeper(owner, [](void* held) noexcept { delete static_cast<Buffer*>(held); });
+    const std::vector<double>& values = **owner;
+    const std::size_t width = values.empty() ? 0 : columns;
+    const std::size_t rows = width == 0 ? 0 : values.size() / width;
+    return nb::cast(nb::ndarray<nb::numpy, const double, nb::ndim<2>>(values.data(), {rows, width}, keeper));
 }
 
 // A computed text column — `calc_status`, `structure_id` — as `tuple[str, ...]` (ADR-0073 §2).
@@ -240,6 +266,26 @@ static void complete_tensors_of(const edi::detail::RowLink* link) {
     }
 }
 
+// ADR-0040: in auto mode the estimate owns the background's rows, so a write to a point or term an experiment of a
+// project holds refuses (set the mode to manual first). Any other row, and one no project's experiment holds, stays
+// writable.
+static void refuse_estimated(const edi::detail::RowLink* link) {
+    if (link == nullptr || !link->attached()) {
+        return;
+    }
+    const edi::detail::KeyedBase* owner = link->record()->owner;
+    const edi::Project* project = owner->host();
+    if (project == nullptr) {
+        return;
+    }
+    for (const auto& experiment : project->experiments) {
+        if (owner == &experiment->background || owner == &experiment->background_terms) {
+            edi::require_background_edit(*experiment);
+            return;
+        }
+    }
+}
+
 static void assign_parameter_slot(edi::Parameter& field, const ParameterOrNumber& incoming,
                                   const char* name) {
     if (const edi::Parameter* parameter = std::get_if<edi::Parameter>(&incoming)) {
@@ -291,10 +337,14 @@ static void def_parameter_field(nb::class_<Class>& cls, const char* name,
         name,
         [member](Class& self) -> edi::Parameter& {
             (self.*member).category.point_at(self.row);  // X12: the handle's row
+            if constexpr (std::is_same_v<Class, edi::AtomSite>) {
+                (self.*member).category.held_by(self);  // its variant follows the site's type
+            }
             return self.*member;
         },
         [member, name](Class& self, const ParameterOrNumber& incoming) {
             refuse_detached(self.row.detached(), name);
+            refuse_estimated(&self.row);
             assign_parameter_slot(self.*member, incoming, name);
             complete_tensors_of(&self.row);
         },
@@ -327,6 +377,16 @@ static void def_optional_parameter_field(nb::class_<Class>& cls, const char* nam
         nb::rv_policy::reference_internal);
 }
 
+// A view's parameter is held by the view's experiment, whose variants it shows by (an active doublet).
+template <typename View>
+static void held_by_experiment(const View& view, edi::Parameter& parameter) {
+    if constexpr (requires { view.experiment; }) {
+        if (view.experiment != nullptr) {
+            parameter.category.held_by(*view.experiment);
+        }
+    }
+}
+
 // The view-projection twins of the two field helpers above: a concrete family class is a typed lens over
 // the experiment's category storage, so its members project through `View::storage()` with the SAME
 // spec-preserving write-through and range-check semantics.
@@ -337,6 +397,7 @@ static void def_view_parameter_field(nb::class_<View, Extra...>& cls, const char
         name,
         [member](View& self) -> edi::Parameter& {
             (self.storage().*member).category.point_at(self.storage().row);  // X12
+            held_by_experiment(self, self.storage().*member);
             return self.storage().*member;
         },
         [member, name](View& self, const ParameterOrNumber& incoming) {
@@ -358,6 +419,7 @@ static void def_view_optional_parameter_field(nb::class_<View, Extra...>& cls, c
                 return nullptr;
             }
             field->category.point_at(self.storage().row);  // X12: the handle's row
+            held_by_experiment(self, *field);
             return &*field;
         },
         [member, &spec, name](View& self, std::optional<ParameterOrNumber> incoming) {
@@ -593,6 +655,16 @@ static edi::LeastSquaresFitResult fit_with_scan_callbacks(
     return edi::LeastSquaresFitResult(std::move(outcome));
 }
 
+// A parameter as every surface shows it: its dictionary label, value and units for its variant (an ADP by its site's
+// type), by the rule of the project that holds it, with its dependence as the relations are now. Defined below.
+struct ShownParameter {
+    std::string label;
+    std::string value;
+    std::string units;
+};
+using Variants = std::unordered_map<const edi::Parameter*, std::string>;
+static ShownParameter shown_parameter(edi::Parameter& parameter, const Variants* variants = nullptr);
+
 // `parameters` / `free_parameters` on every node — diffraction-lib's spelling (R18). References
 // into the owning node (reference_internal), so
 // `for p in cell.parameters: p.free = True` writes through, and the node outlives every element.
@@ -609,9 +681,39 @@ static void def_parameters(nb::class_<Class>& cls) {
             } else {
                 edi::detail::point_parameters(self);
             }
+            for (edi::Parameter* parameter : self.parameters()) {
+                held_by_experiment(self, *parameter);
+            }
             return self.parameters();
         },
         nb::rv_policy::reference_internal, "The block's parameters in field order (references).");
+    // diffraction-lib's CategoryItem.__str__, `<name (p=v, ...)>`: the category's title and each parameter's label
+    // and value as every surface shows them.
+    cls.def("__str__", [](Class& self) {
+        if constexpr (requires { self.storage(); }) {
+            edi::detail::point_parameters(self.storage());
+        } else {
+            edi::detail::point_parameters(self);
+        }
+        std::string category;
+        std::string fields;
+        // A block of an experiment's view reads its variants from that experiment, held by a project or not.
+        std::optional<Variants> variants;
+        if constexpr (requires { self.experiment; }) {
+            if (self.experiment != nullptr) {
+                variants = edi::parameter_variants(*self.experiment);
+            }
+        }
+        for (edi::Parameter* parameter : self.parameters()) {
+            if (parameter->spec != nullptr && category.empty()) {
+                const std::string uid = edi::uid_of(*parameter->spec);
+                category = edi::category_label(uid.substr(0, uid.find('.')));
+            }
+            const ShownParameter shown = shown_parameter(*parameter, variants ? &*variants : nullptr);
+            fields += (fields.empty() ? "" : ", ") + shown.label + "=" + shown.value;
+        }
+        return "<" + category + " (" + fields + ")>";
+    });
 }
 
 template <typename Class>
@@ -755,10 +857,8 @@ static void save_project_advancing_last_modified(edi::Project& self,
         self.metadata.last_modified = previous;
         throw;
     }
-    // The project then holds what its files hold, as a reopen reads them, and is calculated once from that.
-    if (edi::adopt_saved_values(self, directory)) {
-        self.refresh_calculated_pattern();
-    }
+    // The project then holds what its files hold, as a reopen reads them, calculated from that (edi ADR-0052).
+    edi::adopt_saved_project(self, directory);
 }
 
 static nb::object star_datetime(const std::string& stored) {
@@ -825,7 +925,8 @@ static void relations_changed(edi::Project& project) {
 // The project a parameter handle belongs to, through the row it is attached to (X12); null for one no
 // project holds. The row's collection names the project that adopted it, which may have been destroyed
 // (the link then reads none) or may no longer hold the row (removed, replaced or moved to another
-// project), so the project must still hold this very parameter.
+// project), so the project must still hold this very parameter: in a fit slot or among the values its
+// pages list, a setup value such as a bank angle included (edi ADR-0053).
 static edi::Project* project_of(const edi::Parameter& parameter) {
     const edi::detail::RowLink* link = parameter.category.get();
     const edi::detail::Membership* record = link != nullptr ? link->record() : nullptr;
@@ -836,6 +937,11 @@ static edi::Project* project_of(const edi::Parameter& parameter) {
     }
     for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
         if (slot.parameter == &parameter) {
+            return project;
+        }
+    }
+    for (const edi::ParameterEntry& entry : edi::parameter_entries(*project)) {
+        if (entry.parameter == &parameter) {
             return project;
         }
     }
@@ -854,6 +960,80 @@ static edi::Dependence dependence_now(edi::Parameter& parameter) {
     }
     warn_dependents(*project);
     return parameter.dependence;
+}
+
+// A parameter's fit mark as the project holding it is now (ADR-0053); one no project holds is judged by its
+// dictionary entry alone, a descriptor or not.
+static void fittability_now(edi::Parameter& parameter) {
+    if (edi::Project* project = project_of(parameter); project != nullptr) {
+        edi::refresh_fittability(*project);
+        return;
+    }
+    const bool descriptor =
+        parameter.spec != nullptr && edi::is_descriptor(std::string(parameter.spec->category) + "." + parameter.spec->name);
+    parameter.fit_blocker = descriptor ? edi::FitBlocker::Descriptor : edi::FitBlocker::None;
+    parameter.fit_reason = descriptor ? edi::fit_reason(edi::FitBlocker::Descriptor) : std::string();
+}
+
+// A parameter's name in a refusal: its unique name in the project holding it, or its path there for a value no
+// fit slot names, else its own name.
+static std::string parameter_name(edi::Parameter& parameter) {
+    if (edi::Project* project = project_of(parameter); project != nullptr) {
+        for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
+            if (slot.parameter == &parameter) {
+                return slot.unique_name;
+            }
+        }
+        for (const edi::ParameterEntry& entry : edi::parameter_entries(*project)) {
+            if (entry.parameter == &parameter) {
+                return entry.path;
+            }
+        }
+    }
+    return parameter.spec != nullptr ? parameter.spec->name : std::string("parameter");
+}
+
+// The structure holding the row of a parameter (a site's, a tensor's), in a project or not; null otherwise.
+static const edi::Structure* structure_of(const edi::Parameter& parameter) {
+    const edi::detail::RowLink* link = parameter.category.get();
+    const edi::detail::Membership* record = link != nullptr ? link->record() : nullptr;
+    return record != nullptr && record->owner != nullptr ? record->owner->holder() : nullptr;
+}
+
+// `variants`, when given, are those of the block the parameter is shown in; else they are found through the project
+// holding the parameter, or the structure holding its row.
+static ShownParameter shown_parameter(edi::Parameter& parameter, const Variants* variants) {
+    if (parameter.spec == nullptr || !edi::has_item(edi::uid_of(*parameter.spec))) {
+        return {"Parameter", nb::cast<std::string>(nb::repr(nb::float_(parameter.value.get()))), {}};
+    }
+    (void)dependence_now(parameter);
+    std::string rule = edi::kDefaultSuRule;
+    std::string variant;
+    const auto pick = [&parameter, &variant](const Variants& found_in) {
+        if (const auto found = found_in.find(&parameter); found != found_in.end()) {
+            variant = found->second;
+        }
+    };
+    const edi::Project* project = project_of(parameter);
+    if (project != nullptr) {
+        rule = project->su_rule;
+    }
+    // The variant follows the parameter's owner as its handle reached it, held by a project or not: a site's
+    // isotropic ADP its type, an experiment's wavelength its doublet; else the project or structure holding it.
+    const edi::AtomSite* site = parameter.category.site();
+    if (variants != nullptr) {
+        pick(*variants);
+    } else if (site != nullptr && &site->adp_iso == &parameter) {
+        variant = site->adp_type.value();
+    } else if (const edi::ExperimentBase* experiment = parameter.category.experiment()) {
+        pick(edi::parameter_variants(*experiment));
+    } else if (project != nullptr) {
+        pick(edi::parameter_variants(*project));
+    } else if (const edi::Structure* structure = structure_of(parameter)) {
+        pick(edi::parameter_variants(*structure));
+    }
+    const std::string uid = edi::uid_of(*parameter.spec);
+    return {edi::label(uid, variant), edi::display_text(parameter, rule, variant), edi::units_label(uid, variant)};
 }
 
 // The Python object that owns a parameter's storage: its keyed row (a site, a background point or term,
@@ -922,11 +1102,42 @@ static void relations_changed(const edi::ItemKey& key) {
     }
 }
 
+// A Python `use_model`: auto, subtract or ignore, or a boolean as diffraction-lib passes it (True subtracts the
+// calculated peaks, False ignores them).
+static std::string estimate_model_choice(const nb::object& use_model) {
+    if (PyBool_Check(use_model.ptr())) {
+        return nb::cast<bool>(use_model) ? "subtract" : "ignore";
+    }
+    if (!nb::isinstance<nb::str>(use_model)) {
+        throw std::invalid_argument("use_model must be auto, subtract or ignore, got " +
+                                    nb::cast<std::string>(nb::repr(use_model)) + ".");
+    }
+    return nb::cast<std::string>(use_model);
+}
+
+// A Python `n_points` as diffraction-lib admits it: None or an integer of at least 2 (a ValueError otherwise, as
+// its check raises).
+static std::optional<int> estimate_point_cap(const nb::object& n_points) {
+    if (n_points.is_none()) {
+        return std::nullopt;
+    }
+    if (!PyLong_Check(n_points.ptr())) {
+        throw std::invalid_argument("n_points must be an integer >= 2, got " +
+                                    nb::cast<std::string>(nb::repr(n_points)) + ".");
+    }
+    const long long value = nb::cast<long long>(n_points);
+    if (value < 2 || value > std::numeric_limits<int>::max()) {
+        throw std::invalid_argument("n_points must be an integer >= 2, got " + std::to_string(value) + ".");
+    }
+    return static_cast<int>(value);
+}
+
 namespace edi::views {
 void after_change(const AliasesView& view) { relations_changed(*view.owner); }
 void after_change(const ConstraintsView& view) { relations_changed(*view.owner); }
 // A site added, removed or replaced: the tensor rows follow the sites' types.
 void after_change(const AtomSitesView& view) { sync_atom_site_aniso(*view.owner); }
+
 void after_change(const AtomSiteAnisoView& view) { sync_atom_site_aniso(*view.owner); }
 }  // namespace edi::views
 
@@ -1217,6 +1428,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built =
                 nb::module_::import_("edi").attr("ExperimentFactory").attr("from_cif_str")(cif_str);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
@@ -1228,6 +1441,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built = nb::module_::import_("edi").attr("ExperimentFactory").attr(
                 "from_cif_path")(cif_path);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
@@ -1239,6 +1454,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built = nb::module_::import_("edi").attr("ExperimentFactory").attr(
                 "from_cif_path")(edi_path);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
@@ -1519,6 +1736,100 @@ static void def_collection_views(nb::module_& m) {
             },
             "Print the declared constraints (diffraction-lib Constraints.show).");
 
+    nb::class_<BackgroundEstimateView>(
+        m, "_BackgroundEstimate",
+        "The experiment's automatic background estimate settings (`_background_estimate`): mode, method, width, "
+        "smoothness, n_points, tolerance, in_peaks, use_model and max_terms; model_choice and model_reason say what an estimate "
+        "does with the calculated peaks and why.")
+        .def_prop_rw(
+            "mode", [](const BackgroundEstimateView& self) { return edi::background_estimate_mode(*self.experiment); },
+            [](const BackgroundEstimateView& self, const std::string& mode) {
+                edi::set_background_estimate_mode(*self.experiment, mode);
+            },
+            "manual, or auto: every calculation and fit re-estimates the points when the measured data or these "
+            "settings changed; while auto, editing a point or term is refused (set manual first); freeing or fixing "
+            "one is allowed and reads as manual.")
+        .def_prop_rw(
+            "method",
+            [](const BackgroundEstimateView& self) {
+                return self.experiment->background_estimate_method.value_or("auto");
+            },
+            [](const BackgroundEstimateView& self, const std::string& method) {
+                edi::set_background_estimate_method(*self.experiment, method);
+            },
+            "auto (arpls), snip, arpls or fabc.")
+        .def_prop_rw(
+            "width", [](const BackgroundEstimateView& self) { return self.experiment->background_estimate_width; },
+            [](const BackgroundEstimateView& self, std::optional<double> width) {
+                edi::set_background_estimate_width(*self.experiment, width);
+            },
+            nb::arg("width").none(), "Peak width in points; None derives it from the data.")
+        .def_prop_rw(
+            "smoothness",
+            [](const BackgroundEstimateView& self) { return self.experiment->background_estimate_smoothness; },
+            [](const BackgroundEstimateView& self, std::optional<double> smoothness) {
+                edi::set_background_estimate_smoothness(*self.experiment, smoothness);
+            },
+            nb::arg("smoothness").none(), "The arpls/fabc smoothing penalty; None derives it from the data.")
+        .def_prop_rw(
+            "n_points",
+            [](const BackgroundEstimateView& self) { return self.experiment->background_estimate_n_points; },
+            [](const BackgroundEstimateView& self, const nb::object& n_points) {
+                edi::set_background_estimate_n_points(*self.experiment, estimate_point_cap(n_points));
+            },
+            nb::arg("n_points").none(), "The number of points to place; None lets the tolerance decide.")
+        .def_prop_rw(
+            "tolerance", [](const BackgroundEstimateView& self) { return self.experiment->background_estimate_tolerance; },
+            [](const BackgroundEstimateView& self, std::optional<double> tolerance) {
+                edi::set_background_estimate_tolerance(*self.experiment, tolerance);
+            },
+            nb::arg("tolerance").none(),
+            "How far, in units of the noise, the line between points may stray from the estimated curve; None is 2.")
+        .def_prop_rw(
+            "in_peaks",
+            [](const BackgroundEstimateView& self) {
+                return self.experiment->background_estimate_in_peaks.value_or("move");
+            },
+            [](const BackgroundEstimateView& self, const std::string& in_peaks) {
+                edi::set_background_estimate_in_peaks(*self.experiment, in_peaks);
+            },
+            "move (a point on a peak moves to the nearest point off it) or drop (as diffraction-lib).")
+        .def_prop_rw(
+            "use_model",
+            [](const BackgroundEstimateView& self) {
+                return self.experiment->background_estimate_use_model.value_or("auto");
+            },
+            [](const BackgroundEstimateView& self, const nb::object& use_model) {
+                edi::set_background_estimate_use_model(*self.experiment, estimate_model_choice(use_model));
+            },
+            "The calculated peaks: auto (subtracted when the calculated pattern matches the data), subtract or "
+            "ignore. True and False read as subtract and ignore.")
+        .def_prop_rw(
+            "max_terms",
+            [](const BackgroundEstimateView& self) { return self.experiment->background_estimate_max_terms; },
+            [](const BackgroundEstimateView& self, std::optional<int> max_terms) {
+                edi::set_background_estimate_max_terms(*self.experiment, max_terms);
+            },
+            nb::arg("max_terms").none(),
+            "Polynomial and Chebyshev: the most terms an estimate uses, 1 to 30; None is 12.")
+        .def_prop_ro(
+            "model_choice",
+            [](const BackgroundEstimateView& self) {
+                return edi::background_estimate_defaults(*self.experiment,
+                                                         edi::background_estimate_options(*self.experiment))
+                    .model_choice;
+            },
+            "What an estimate now does with the calculated peaks: subtract or ignore.")
+        .def_prop_ro(
+            "model_reason",
+            [](const BackgroundEstimateView& self) {
+                return edi::background_estimate_defaults(*self.experiment,
+                                                         edi::background_estimate_options(*self.experiment))
+                    .model_reason;
+            },
+            "Why, in a sentence (for auto: the share of the points that fall below the noise once the calculated "
+            "peaks are subtracted).");
+
     nb::class_<BackgroundView> background_view(
         m, "_BackgroundView",
         "Live positional view over an experiment's background points (internal; R12 adapts the "
@@ -1547,7 +1858,80 @@ static void def_collection_views(nb::module_& m) {
                 throw nb::index_error("background index out of range");
             }
             return self.vec()[static_cast<std::size_t>(i)];
-        });
+        })
+        .def_prop_rw(
+            "type", [](const BackgroundView& self) { return self.experiment->background_type; },
+            [](const BackgroundView& self, const std::string& token) {
+                const std::vector<std::string> supported = edi::supported_background_types();
+                if (std::find(supported.begin(), supported.end(), token) == supported.end()) {
+                    throw std::invalid_argument("unknown _background.type '" + token + "'");
+                }
+                if (token != self.experiment->background_type) {
+                    self.experiment->background_type = token;
+                    edi::rebaseline_background_estimate(*self.experiment);  // auto estimates the new type
+                }
+            },
+            "The background type: line-segment, chebyshev or polynomial (the experiment's background_type).")
+        .def(
+            "show_supported",
+            [](const BackgroundView& self) {
+                const nb::object print = nb::module_::import_("builtins").attr("print");
+                print("Supported background types");
+                for (const std::string& token : edi::supported_background_types()) {
+                    print((token == self.experiment->background_type ? "* " : "  ") + token);
+                }
+            },
+            "Print the background types edi computes, marking the active one (diffraction-lib "
+            "SwitchableCategoryBase.show_supported).")
+        .def(
+            "auto_estimate",
+            [](const BackgroundView& self, const std::string& method, std::optional<double> width,
+               std::optional<double> smoothness, const nb::object& n_points, std::optional<double> tolerance,
+               const std::string& in_peaks, const nb::object& use_model, std::optional<int> max_terms) {
+                edi::BackgroundEstimateOptions options;
+                options.method = method;
+                options.width = width;
+                options.smoothness = smoothness;
+                options.n_points = estimate_point_cap(n_points);
+                options.tolerance = tolerance;
+                options.in_peaks = in_peaks;
+                options.use_model = estimate_model_choice(use_model);
+                options.max_terms = max_terms;
+                edi::ExperimentBase& experiment = *self.experiment;
+                const edi::BackgroundEstimate estimate = edi::estimate_background(experiment, options);
+                for (const std::string& warning : estimate.warnings) {
+                    if (PyErr_WarnEx(PyExc_UserWarning, warning.c_str(), 1) != 0) {
+                        throw nb::python_error();
+                    }
+                }
+                if (estimate.points.empty() && estimate.terms.empty()) {
+                    return;  // nothing measured to estimate from: the background stays
+                }
+                const bool line_segment = experiment.background_type == "line-segment";
+                const bool replacing = line_segment ? !experiment.background.empty() : !experiment.background_terms.empty();
+                edi::apply_background_estimate(experiment, estimate, options);
+                const nb::object log = nb::module_::import_("logging").attr("getLogger")("edi");
+                if (replacing) {
+                    log.attr("info")(line_segment ? "Replacing existing background points with a new estimate."
+                                                  : "Replacing existing background terms with a new estimate.");
+                }
+                log.attr("info")(estimate.summary);
+            },
+            nb::kw_only(), nb::arg("method") = "auto", nb::arg("width").none() = nb::none(),
+            nb::arg("smoothness").none() = nb::none(), nb::arg("n_points").none() = nb::none(),
+            nb::arg("tolerance").none() = nb::none(), nb::arg("in_peaks") = "move", nb::arg("use_model") = nb::str("auto"),
+            nb::arg("max_terms").none() = nb::none(),
+            "Replace the points, or a polynomial's or Chebyshev's terms, with fixed ones estimated from the measured "
+            "pattern (after diffraction-lib "
+            "LineSegmentBackground.auto_estimate; ADR-0040). method: auto (arpls), snip, arpls or fabc; width: peak "
+            "width in points; smoothness: the arpls/fabc penalty; n_points: the number of points to place; "
+            "tolerance: how far, in units of the noise, the line may stray from the estimated curve (2 when None); "
+            "in_peaks: move a point that falls on a peak to the nearest point off it, or drop it as diffraction-lib "
+            "does (n_points is then a maximum); use_model: auto (subtract the calculated peaks when the calculated "
+            "pattern matches the data), subtract or ignore, or True / False for subtract / ignore; max_terms: the most "
+            "terms a polynomial or Chebyshev estimate uses (12 when None), adding terms until the series stays within "
+            "the tolerance off the peaks. Each value left None is derived from the data. in_peaks='drop' with "
+            "use_model='subtract' gives diffraction-lib's estimate.");
 }
 
 namespace {
@@ -1570,10 +1954,15 @@ void calculate_for_report(edi::Project& project) {
 }
 
 // ADR-0036 §7: one run's overrides of the report's settings, each checked by crysta's rules as a file states it.
+// The colour scheme and the correlations' experiment are checked against the project when the options are made.
 edi::ReportOverrides report_overrides(std::optional<bool> offline, std::optional<std::string> x_axis,
                                       std::optional<double> correlation_threshold,
-                                      std::optional<std::vector<std::string>> excluded) {
+                                      std::optional<std::vector<std::string>> excluded,
+                                      std::optional<std::string> colour_scheme,
+                                      std::optional<std::string> correlation_experiment) {
     edi::ReportOverrides overrides;
+    overrides.colour_scheme = std::move(colour_scheme);
+    overrides.correlation_experiment = std::move(correlation_experiment);
     overrides.html_offline = offline;
     if (x_axis) {
         edi::check_report_setting("_pattern_chart.x_axis", *x_axis);
@@ -1621,11 +2010,49 @@ NB_MODULE(_edi, m) {
     m.def("_model_dump", &edi::engine_model_dump, "project"_a);
     m.def("_folds_reflections", &edi::engine_folds_reflections, "project"_a);
     m.def("_structure_factor_evaluations", &edi::engine_structure_factor_evaluations);
-    m.def("_structure_from_edi_text",
-          [](const std::string& text) { return edi::structure_from_edi_text(text); });
-    m.def("_experiment_from_edi_text",
-          [](const std::string& text) { return edi::experiment_from_edi_text(text); });
-    // The one plain-data reader (crysta's), for ExperimentFactory.from_data_path: the rows and what it dropped.
+    // `where` names the text in a refusal (the path, for a file); crysta's reports on a CIF are
+    // Python warnings.
+    m.def(
+        "_structure_from_edi_text",
+        [](const std::string& text, const std::string& where) {
+            return edi::structure_from_edi_text(text, where, warn_python);
+        },
+        "text"_a, "where"_a = "<from_cif_str>");
+    m.def(
+        "_experiment_from_edi_text",
+        [](const std::string& text, const std::string& where) {
+            return edi::experiment_from_edi_text(text, where, warn_python);
+        },
+        "text"_a, "where"_a = "<from_cif_str>");
+    // A single crystal for ExperimentFactory: diffraction-lib's defaults (wavelength 1.5406 at
+    // constant wavelength, no extinction, as the loader
+    // gives a block that declares none), and its reflections read from a FullProf .int or a plain
+    // h k l F2 su [wavelength] file by crysta's reader, whose refusal names the line.
+    m.def(
+        "_single_crystal_from_scratch",
+        [](const std::string& name, const std::string& beam_mode) {
+            const bool tof = beam_mode == "time-of-flight";
+            std::string text = "data_" + (name.empty() ? std::string("experiment") : name) +
+                               "\n\n_edi.schema_version 3\n\n";
+            text += "_experiment_type.sample_form \"single crystal\"\n";
+            text += std::string("_experiment_type.beam_mode \"") +
+                    (tof ? "time-of-flight" : "constant wavelength") + "\"\n";
+            text += "_experiment_type.radiation_probe \"neutron\"\n_experiment_type.scattering_type \"bragg\"\n";
+            if (!tof) {
+                text += "\n_instrument.setup_wavelength 1.5406\n";
+            }
+            return edi::experiment_from_edi_text(text);
+        },
+        "name"_a, "beam_mode"_a);
+    m.def(
+        "_single_crystal_with_reflections",
+        [](const edi::BraggPdExperiment& experiment, const std::string& path) {
+            edi::PlainDataLoad load = edi::experiment_with_plain_data(experiment, path, false);
+            return edi::BraggPdExperiment(load.experiment);
+        },
+        "experiment"_a, "path"_a);
+    // The one plain-data reader (crysta's), for ExperimentFactory.from_data_path: the rows and
+    // what it dropped.
     m.def(
         "_read_plain_data",
         [](const std::string& path) {
@@ -1746,6 +2173,7 @@ NB_MODULE(_edi, m) {
             "value", [](const edi::Parameter& p) { return p.value.get(); },
             [](edi::Parameter& p, double value) {
                 refuse_detached(p);
+                refuse_estimated(p.category.get());
                 check_range(p.spec, value, p.spec ? p.spec->name : "value");
                 p.value = value;
                 complete_tensors_of(p.category.get());
@@ -1754,6 +2182,7 @@ NB_MODULE(_edi, m) {
             "uncertainty", [](const edi::Parameter& p) { return p.uncertainty.get(); },
             [](edi::Parameter& p, std::optional<double> uncertainty) {
                 refuse_detached(p);
+                refuse_estimated(p.category.get());
                 p.uncertainty = uncertainty;
             })
         // The persisted pre-fit snapshot (diffraction-lib spelling); None = disengaged,
@@ -1762,23 +2191,25 @@ NB_MODULE(_edi, m) {
             "start_value", [](const edi::Parameter& p) { return p.start_value.get(); },
             [](edi::Parameter& p, std::optional<double> start_value) {
                 refuse_detached(p);
+                refuse_estimated(p.category.get());
                 p.start_value = start_value;
             })
         .def_prop_rw(
             "start_uncertainty", [](const edi::Parameter& p) { return p.start_uncertainty.get(); },
             [](edi::Parameter& p, std::optional<double> start_uncertainty) {
                 refuse_detached(p);
+                refuse_estimated(p.category.get());
                 p.start_uncertainty = start_uncertainty;
             })
         .def_prop_rw(
             "free", [](const edi::Parameter& p) { return p.free.get(); },
             [](edi::Parameter& p, bool free) {
                 refuse_detached(p);
-                if (free && edi::is_fixed_setting(p.spec)) {
-                    throw std::invalid_argument(std::string(p.spec->name) +
-                                                " is a fixed setting, not a refinable parameter");
-                }
                 (void)dependence_now(p);  // the marks as the relations are now
+                fittability_now(p);       // and as the fit rule is now (ADR-0053)
+                if (const std::string refusal = edi::free_refusal(p); free && !refusal.empty()) {
+                    throw std::invalid_argument(parameter_name(p) + " " + refusal);
+                }
                 if (!edi::set_free(p, free)) {
                     const std::string name = p.spec != nullptr ? p.spec->name : std::string("parameter");
                     const std::string message =
@@ -1786,7 +2217,8 @@ NB_MODULE(_edi, m) {
                         (p.dependence == edi::Dependence::Constrained ? "set by a constraint"
                          : p.dependence == edi::Dependence::SymmetryFixed ? "fixed by symmetry"
                                                                           : "constrained by symmetry") +
-                        "; free = True is ignored and it stays dependent";
+                        "; free = True is ignored and it stays dependent" +
+                        (p.fit_reason.empty() ? std::string() : " (cannot be fitted: " + p.fit_reason + ")");
                     if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
                         throw nb::python_error();
                     }
@@ -1810,9 +2242,20 @@ NB_MODULE(_edi, m) {
         .def_prop_ro("name", [](const edi::Parameter& p) { return require_spec(p).name; })
         .def_prop_ro("units", [](const edi::Parameter& p) { return require_spec(p).units; })
         .def_prop_ro("description",
-                     [](const edi::Parameter& p) { return require_spec(p).description; })
+                     [](const edi::Parameter& p) { return edi::description(edi::uid_of(require_spec(p))); })
         .def_prop_ro("min_value", [](const edi::Parameter& p) { return require_spec(p).range.min; })
-        .def_prop_ro("max_value", [](const edi::Parameter& p) { return require_spec(p).range.max; });
+        .def_prop_ro("max_value", [](const edi::Parameter& p) { return require_spec(p).range.max; })
+        // diffraction-lib's shape, `<name = value units (free=...)>`: the dictionary's label, and the value as every
+        // surface shows it, both for the parameter's variant (an ADP by its site's type), by the rule of the project
+        // that holds the parameter, else the default rule, with its dependence as the relations are now.
+        .def("__repr__", [](edi::Parameter& p) {
+            const ShownParameter shown = shown_parameter(p);
+            std::string text = "<" + shown.label + " = " + shown.value;
+            if (!shown.units.empty()) {
+                text += " " + shown.units;
+            }
+            return text + (p.free.get() ? " (free=True)>" : " (free=False)>");
+        });
 
     nb::class_<edi::AtomSite> atom_site(m, "AtomSite", nb::is_weak_referenceable());
     atom_site.def("__setattr__", renewing_setattr<edi::AtomSite>({}, renew_epoch), nb::arg("name"), nb::arg("value").none());
@@ -2183,9 +2626,19 @@ NB_MODULE(_edi, m) {
     background_point.def("__setattr__", renewing_setattr<edi::LineSegment>({}, renew_epoch), nb::arg("name"), nb::arg("value").none());
     background_point
         .def(nb::new_([]() { return std::make_shared<edi::LineSegment>(); }))
+        // Assigning is a rename the background admits, as a term's is.
+        .def_prop_rw(
+            "id", [](const edi::LineSegment& self) { return self.id.value(); },
+            [](edi::LineSegment& self, std::string value) {
+                refuse_estimated(&self.row);
+                self.id = std::move(value);
+            })
         .def_prop_rw(
             "position", [](const edi::LineSegment& self) { return self.position.get(); },
-            [](edi::LineSegment& self, double value) { self.position = value; });
+            [](edi::LineSegment& self, double value) {
+                refuse_estimated(&self.row);
+                self.position = value;
+            });
     def_parameter_walks(background_point);
     def_parameter_field(background_point, "intensity", &edi::LineSegment::intensity);
 
@@ -2195,9 +2648,20 @@ NB_MODULE(_edi, m) {
     background_term.def("__setattr__", renewing_setattr<edi::PolynomialTerm>({}, renew_epoch), nb::arg("name"), nb::arg("value").none());
     background_term
         .def(nb::new_([]() { return std::make_shared<edi::PolynomialTerm>(); }))
+        // Assigning is a rename the background admits (an id another term holds is refused); the aliases and
+        // correlations naming the coefficient follow it.
+        .def_prop_rw(
+            "id", [](const edi::PolynomialTerm& self) { return self.id.value(); },
+            [](edi::PolynomialTerm& self, std::string value) {
+                refuse_estimated(&self.row);
+                self.id = std::move(value);
+            })
         .def_prop_rw(
             "order", [](const edi::PolynomialTerm& self) { return self.order.get(); },
-            [](edi::PolynomialTerm& self, int value) { self.order = value; });
+            [](edi::PolynomialTerm& self, int value) {
+                refuse_estimated(&self.row);
+                self.order = value;
+            });
     def_parameter_walks(background_term);
     def_parameter_field(background_term, "coef", &edi::PolynomialTerm::coef);
 
@@ -2245,7 +2709,28 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "scattering_type",
             [](const edi::ExperimentType& t) { return t.effective_scattering_type(); },
-            [](edi::ExperimentType& t, edi::ScatteringTypeEnum value) { t.scattering_type = value; });
+            [](edi::ExperimentType& t, edi::ScatteringTypeEnum value) { t.scattering_type = value; })
+        // ADR-0054: the description, read as its effective value and set as declared.
+        .def_prop_rw(
+            "dimensionality", [](const edi::ExperimentType& t) { return t.effective_dimensionality(); },
+            [](edi::ExperimentType& t, const std::string& value) {
+                if (value != "1d") {
+                    throw nb::value_error(("dimensionality '" + value + "' is not a known token (expected '1d')").c_str());
+                }
+                t.dimensionality = value;
+            })
+        .def_prop_rw(
+            "polarisation", [](const edi::ExperimentType& t) { return t.effective_polarisation(); },
+            [](edi::ExperimentType& t, const std::string& value) {
+                const bool xray = t.effective_radiation_probe() == edi::RadiationProbeEnum::XRAY;
+                if (value != (xray ? "." : "unpolarised")) {
+                    throw nb::value_error(("polarisation '" + value + "' does not fit " +
+                                           (xray ? "an X-ray experiment (expected '.')"
+                                                 : "a neutron experiment (expected 'unpolarised')"))
+                                              .c_str());
+                }
+                t.polarisation = value;
+            });
 
     // The peak-profile category: typed selector + TOF/CW parameter blocks (CW presence-tracked).
     nb::class_<edi::views::PeakNode> peak(m, "PeakBase");
@@ -2439,6 +2924,19 @@ NB_MODULE(_edi, m) {
     // presence-tracked.
     nb::class_<edi::views::InstrumentNode> instrument(m, "InstrumentBase");
     instrument.def("__setattr__", renewing_setattr<edi::views::InstrumentNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
+    // ADR-0054: the instrument's and its facility's names, `?` when unknown.
+    instrument.def_prop_rw(
+        "name",
+        [](const edi::views::InstrumentNode& self) {
+            return self.storage().name.empty() ? std::string("?") : self.storage().name;
+        },
+        [](edi::views::InstrumentNode& self, const std::string& value) { self.storage().name = value; });
+    instrument.def_prop_rw(
+        "facility",
+        [](const edi::views::InstrumentNode& self) {
+            return self.storage().facility.empty() ? std::string("?") : self.storage().facility;
+        },
+        [](edi::views::InstrumentNode& self, const std::string& value) { self.storage().facility = value; });
 
     nb::class_<edi::views::CwlInstrumentBase, edi::views::InstrumentNode>(m, "CwlInstrumentBase");
     nb::class_<edi::views::CwlPdInstrumentBase, edi::views::CwlInstrumentBase>(
@@ -2497,6 +2995,12 @@ NB_MODULE(_edi, m) {
     def_view_optional_parameter_field(cwl_pd_xray_instrument, "setup_monochromator_twotheta",
                                       &edi::InstrumentBase::setup_monochromator_twotheta,
                                       edi::spec::instrument_monochromator_twotheta);
+    def_view_optional_parameter_field(cwl_pd_xray_instrument, "setup_wavelength_2",
+                                      &edi::InstrumentBase::setup_wavelength_2,
+                                      edi::spec::instrument_wavelength_2);
+    def_view_optional_parameter_field(cwl_pd_xray_instrument, "setup_wavelength_2_to_1_ratio",
+                                      &edi::InstrumentBase::setup_wavelength_2_to_1_ratio,
+                                      edi::spec::instrument_wavelength_2_to_1_ratio);
 
     // One linked structure (phase): the structure it names, its scale and whether it takes part.
     nb::class_<edi::LinkedStructure> linked_structure(m, "LinkedStructure");
@@ -2512,6 +3016,14 @@ NB_MODULE(_edi, m) {
             "Whether the phase takes part: a disabled link is kept and saved, but neither calculated "
             "nor fitted.");
     def_parameter_field(linked_structure, "scale", &edi::LinkedStructure::scale);
+    linked_structure.def_prop_ro(
+        "weight_fraction", [](const edi::LinkedStructure& self) { return edi::weight_fraction(self); },
+        "The phase's Hill-Howard weight fraction in its experiment and its uncertainty, derived from the "
+        "current model; None when it takes no part or belongs to no project.");
+    nb::class_<edi::WeightFraction>(m, "WeightFraction", "A derived weight fraction, read-only.")
+        .def_ro("value", &edi::WeightFraction::value, "The weight fraction, 0 to 1.")
+        .def_ro("uncertainty", &edi::WeightFraction::uncertainty,
+                "Its standard uncertainty, or None when no scale carries one.");
 
     // The experiment's linked structures (phases), keyed by structure_id (R15).
     nb::class_<edi::views::LinkedStructuresView> linked_structures_view(
@@ -2582,6 +3094,41 @@ NB_MODULE(_edi, m) {
 
     nb::class_<edi::views::NoAbsorption, edi::views::AbsorptionNode>(m, "NoAbsorption")
         .def(nb::init<edi::ExperimentBase*>(), "experiment"_a, nb::keep_alive<1, 2>());
+
+    // A single crystal's isotropic Becker-Coppens extinction: its type, mosaic distribution, domain
+    // radius, mosaic spread and crystal radius; a type's setter keeps that type's items alone (edi ADR-0049).
+    nb::class_<edi::views::ExtinctionNode> extinction(m, "BeckerCoppensExtinction");
+    extinction.def_prop_rw(
+        "type", [](edi::views::ExtinctionNode& self) { return self.storage().type.value_or("none"); },
+        [](edi::views::ExtinctionNode& self, const std::string& token) {
+            edi::select_extinction(*self.experiment, token);
+        });
+    extinction.def_prop_rw(
+        "mosaic_distribution",
+        [](edi::views::ExtinctionNode& self) { return self.storage().mosaic_distribution; },
+        [](edi::views::ExtinctionNode& self, const std::string& token) {
+            edi::select_mosaic_distribution(*self.experiment, token);
+        });
+    def_view_optional_parameter_field(extinction, "domain_radius", &edi::ExtinctionBase::domain_radius,
+                                      edi::spec::extinction_domain_radius);
+    def_view_optional_parameter_field(extinction, "mosaic_spread", &edi::ExtinctionBase::mosaic_spread,
+                                      edi::spec::extinction_mosaic_spread);
+    def_view_optional_parameter_field(extinction, "crystal_radius", &edi::ExtinctionBase::crystal_radius,
+                                      edi::spec::extinction_crystal_radius);
+    def_view_optional_parameter_field(extinction, "coefficient", &edi::ExtinctionBase::coefficient,
+                                      edi::spec::extinction_coefficient);
+    def_view_optional_parameter_field(extinction, "coefficient_11", &edi::ExtinctionBase::coefficient_11,
+                                      edi::spec::extinction_coefficient_11);
+    def_view_optional_parameter_field(extinction, "coefficient_22", &edi::ExtinctionBase::coefficient_22,
+                                      edi::spec::extinction_coefficient_22);
+    def_view_optional_parameter_field(extinction, "coefficient_33", &edi::ExtinctionBase::coefficient_33,
+                                      edi::spec::extinction_coefficient_33);
+    def_view_optional_parameter_field(extinction, "coefficient_12", &edi::ExtinctionBase::coefficient_12,
+                                      edi::spec::extinction_coefficient_12);
+    def_view_optional_parameter_field(extinction, "coefficient_13", &edi::ExtinctionBase::coefficient_13,
+                                      edi::spec::extinction_coefficient_13);
+    def_view_optional_parameter_field(extinction, "coefficient_23", &edi::ExtinctionBase::coefficient_23,
+                                      edi::spec::extinction_coefficient_23);
 
     def_parameters(peak);
     def_parameters(instrument);
@@ -2671,6 +3218,15 @@ NB_MODULE(_edi, m) {
                          // Linked to this experiment and kept alive by it, so a retained object is
                          // read against the experiment as it is then.
                          edi::ExperimentBase& self = nb::cast<edi::ExperimentBase&>(self_object);
+                         // A single crystal's reflections are its measured ones with their F2calc.
+                         if (self.reflections) {
+                             nb::object view =
+                                 self.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH
+                                     ? nb::cast(edi::views::ScCwlReflnView(&self))
+                                     : nb::cast(edi::views::ScTofReflnView(&self));
+                             nb::detail::keep_alive(view.ptr(), self_object.ptr());
+                             return view;
+                         }
                          edi::PowderReflnDataBase rows =
                              self.computed_current() ? self.refln : edi::PowderReflnDataBase{};
                          nb::object out =
@@ -2681,6 +3237,16 @@ NB_MODULE(_edi, m) {
                          nb::detail::keep_alive(out.ptr(), self_object.ptr());
                          return out;
                      })
+        // A single crystal's extinction; None for a powder.
+        .def_prop_ro(
+            "extinction",
+            [](edi::ExperimentBase& self) -> nb::object {
+                if (!self.reflections) {
+                    return nb::none();
+                }
+                return nb::cast(edi::views::ExtinctionNode(&self));
+            },
+            nb::keep_alive<0, 1>())
         // Immutable tuple-of-pairs out — no mutable copy can exist; the replacement setter
         // stays (ExcludedRegion items are D8's own task).
         .def_prop_rw(
@@ -2755,9 +3321,14 @@ NB_MODULE(_edi, m) {
                                                 " background holds terms, not line-segment points; "
                                                 "set background_type first");
                 }
+                edi::require_background_edit(self);
                 self.background.assign(std::move(points));
             },
             nb::keep_alive<0, 1>())
+        .def_prop_ro(
+            "background_estimate",
+            [](edi::ExperimentBase& self) { return edi::views::BackgroundEstimateView{&self}; },
+            nb::keep_alive<0, 1>(), "The automatic background estimate settings (`_background_estimate`, ADR-0040).")
         // The declared background model — its selector, its constants and its term rows,
         // the fields the declaration owns.
         .def_prop_rw(
@@ -2767,21 +3338,24 @@ NB_MODULE(_edi, m) {
                 if (std::find(supported.begin(), supported.end(), token) == supported.end()) {
                     throw std::invalid_argument("unknown _background.type '" + token + "'");
                 }
-                self.background_type = token;
+                if (token != self.background_type) {
+                    self.background_type = token;
+                    edi::rebaseline_background_estimate(self);  // auto estimates the new type
+                }
             },
             "The declared background model: line-segment, chebyshev or polynomial.")
         .def_prop_rw(
             "background_origin", [](const edi::ExperimentBase& self) { return self.background_origin; },
             [](edi::ExperimentBase& self, std::optional<double> value) { self.background_origin = value; },
-            "The polynomial background's origin (FullProf Bkpos), or None.")
+            nb::arg("origin").none(), "The polynomial background's origin (FullProf Bkpos), or None.")
         .def_prop_rw(
             "background_x_min", [](const edi::ExperimentBase& self) { return self.background_x_min; },
             [](edi::ExperimentBase& self, std::optional<double> value) { self.background_x_min = value; },
-            "The lower end of the Chebyshev background's domain, or None.")
+            nb::arg("x_min").none(), "The lower end of the Chebyshev background's domain, or None.")
         .def_prop_rw(
             "background_x_max", [](const edi::ExperimentBase& self) { return self.background_x_max; },
             [](edi::ExperimentBase& self, std::optional<double> value) { self.background_x_max = value; },
-            "The upper end of the Chebyshev background's domain, or None.")
+            nb::arg("x_max").none(), "The upper end of the Chebyshev background's domain, or None.")
         .def_prop_rw(
             "background_terms",
             [](edi::ExperimentBase& self) {
@@ -2796,6 +3370,7 @@ NB_MODULE(_edi, m) {
                     throw std::invalid_argument(
                         "a line-segment background holds points, not terms; set background_type first");
                 }
+                edi::require_background_edit(self);
                 self.background_terms.assign(std::move(terms));
             },
             "The polynomial or Chebyshev background's term rows (order, coef).");
@@ -3017,7 +3592,21 @@ NB_MODULE(_edi, m) {
                          return readonly_array(live_data(p).intensity_bkg);
                      })
         .def_prop_ro("calc_status",
-                     [live_data](const edi::PdDataBase& p) { return text_tuple(live_data(p).calc_status); });
+                     [live_data](const edi::PdDataBase& p) { return text_tuple(live_data(p).calc_status); })
+        // crysta's structure curves (its ADR-0096), as crysta-py spells them.
+        .def_prop_ro(
+            "component_intensities_net",
+            [live_data](const edi::PdDataBase& p) {
+                const edi::PdDataBase& data = live_data(p);
+                return readonly_matrix(data.component_intensities_net, data.component_order.size());
+            },
+            "Each linked structure's calculated curve above the background: one row per point, one column per "
+            "structure in component_presentation_order; NaN on an excluded row. The background plus the row's "
+            "values is intensity_calc.")
+        .def_prop_ro(
+            "component_presentation_order",
+            [live_data](const edi::PdDataBase& p) { return text_tuple(live_data(p).component_order); },
+            "The ids of the structures whose curves component_intensities_net holds, in its column order.");
 
     // The data leaves: the axis member lives on the concrete class, upstream's schema; construction
     // takes exactly that axis.
@@ -3090,6 +3679,30 @@ NB_MODULE(_edi, m) {
     nb::class_<edi::PowderCwlReflnData, edi::PowderReflnDataBase>(m, "PowderCwlReflnData")
         .def_prop_ro("two_theta",
                      [live_refln](const edi::PowderReflnDataBase& r) { return readonly_array(live_refln(r).position); });
+    // A single crystal's reflections, by column, as diffraction-lib's CwlReflnData and TofReflnData
+    // give them: the measured columns from the experiment's own loop, d, sin(theta)/lambda and
+    // F2calc from its calculation.
+    nb::class_<edi::views::ScReflnView>(m, "ReflnDataBase")
+        .def_prop_ro("index_h", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_h.get()); })
+        .def_prop_ro("index_k", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_k.get()); })
+        .def_prop_ro("index_l", [](const edi::views::ScReflnView& self) { return copied_array(self.measured().index_l.get()); })
+        .def_prop_ro("intensity_meas",
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().intensity_meas.get()); })
+        .def_prop_ro("intensity_meas_su",
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().intensity_meas_su.get()); })
+        .def_prop_ro("d_spacing",
+                     [](const edi::views::ScReflnView& self) { return readonly_array(self.calculated().d_spacing); })
+        .def_prop_ro("sin_theta_over_lambda",
+                     [](const edi::views::ScReflnView& self) {
+                         return readonly_array(self.calculated().sin_theta_over_lambda);
+                     })
+        .def_prop_ro("intensity_calc",
+                     [](const edi::views::ScReflnView& self) { return readonly_array(self.calculated().intensity_calc); });
+    nb::class_<edi::views::ScCwlReflnView, edi::views::ScReflnView>(m, "CwlReflnData");
+    nb::class_<edi::views::ScTofReflnView, edi::views::ScReflnView>(m, "TofReflnData")
+        .def_prop_ro("wavelength",
+                     [](const edi::views::ScReflnView& self) { return copied_array(self.measured().wavelength.get()); });
+
     nb::class_<edi::PowderTofReflnData, edi::PowderReflnDataBase>(m, "PowderTofReflnData")
         .def_prop_ro("time_of_flight",
                      [live_refln](const edi::PowderReflnDataBase& r) { return readonly_array(live_refln(r).position); });
@@ -3170,11 +3783,14 @@ NB_MODULE(_edi, m) {
           "The minimal machine failure record: no numeric rows, ever.");
     // Streaming seams (edi-owned presentation; the retired post-hoc report composed the same pieces so the live
     // and after-the-fact tables cannot drift).
-    m.def("iteration_line", &edi::iteration_line, "record"_a, "previous_reduced_chi2"_a,
+    m.def("iteration_line", &edi::iteration_line, "record"_a, "previous_reduced_chi2"_a, "variant"_a = "",
           "One per-iteration table row; `change` is computed against the previous reduced χ².");
-    m.def("stream_header", &edi::stream_header, "preamble"_a, "project_name"_a,
+    m.def("stream_header", &edi::stream_header, "preamble"_a, "project_name"_a, "variant"_a = "",
           "The header line + iteration-table header + pre-fit starting row, from a FitPreamble.");
-    m.def("summary_line", &edi::summary_line, "outcome"_a, "The trailing `done · …` summary line.");
+    m.def("summary_line", &edi::summary_line, "outcome"_a, "variant"_a = "",
+          "The trailing `done · …` summary line.");
+    m.def("_metric_variant", &edi::metric_variant, "project"_a,
+          "The sample form a fit's metrics are named by: `single crystal` for a single-crystal fit, else empty.");
     // Scan renderers: the core owns every line; a surface only chooses the emission mode (in
     // place on a TTY, one line per file otherwise) and supplies the injected-clock elapsed.
     m.def("scan_progress_line", &edi::scan_progress_line, "completed"_a,
@@ -3196,8 +3812,14 @@ NB_MODULE(_edi, m) {
           "how many completions "
           "elapsed_seconds covers, so a no-op resume (0) renders no duration at all and a "
           "partial one names its basis.");
-    m.def("parameter_table", &edi::parameter_table, "outcome"_a,
-          "The per-bank + refined-parameter block (the surface prints it only at full verbosity).");
+    m.def(
+        "parameter_table",
+        [](const edi::FitResultBase& outcome, const edi::Project* project) {
+            return edi::parameter_table(outcome, project);
+        },
+        "outcome"_a, "project"_a = nb::none(),
+        "The per-bank + refined-parameter block (the surface prints it only at full verbosity); with the project, "
+        "each ADP by its site's type and each value by its s.u. under the project's rule.");
     m.def("progress_report", &edi::progress_report, "record"_a,
           "The machine streamed record=progress for one iteration (crysta's shared emitter).");
     // The machine calc record, rendered by crysta's shared emitter so `python -m edi calc` and
@@ -3222,7 +3844,7 @@ NB_MODULE(_edi, m) {
         .def_prop_ro("parameter_unique_name_j",
                      [](const edi::FitParameterCorrelation& self) { return self.parameter_unique_name_j.value(); })
         .def_prop_ro("correlation",
-                     [](const edi::FitParameterCorrelation& self) { return edi::correlation_value(self); });
+                     [](const edi::FitParameterCorrelation& self) { return self.correlation.get(); });
 
     nb::class_<edi::FitResultBase>(m, "FitResultBase")
         .def_ro("values", &edi::FitResultBase::values)
@@ -3504,7 +4126,7 @@ NB_MODULE(_edi, m) {
             [](const std::filesystem::path& directory) {
                 // crysta's coded warnings reach Python as warnings led by the code; the loader's
                 // own notes keep their stderr line.
-                return edi::load_project(directory.string(), [](const std::string& message) {
+                edi::Project project = edi::load_project(directory.string(), [](const std::string& message) {
                     if (message.rfind("crysta.", 0) == 0) {
                         if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
                             throw nb::python_error();
@@ -3513,6 +4135,14 @@ NB_MODULE(_edi, m) {
                     }
                     std::cerr << "Warning: " << message << "\n";
                 });
+                // A project opened from a .zip works in the folder it was unpacked into, and save() rewrites the
+                // archive from it (edi ADR-0052): the archive is its location.
+                if (edi::is_project_archive(directory.string())) {
+                    project.path = project.scan_data_root;
+                    project.scan_data_root.clear();
+                    project.archive = std::filesystem::absolute(directory).string();
+                }
+                return project;
             },
             "directory"_a,
             "Load a COMPLETE declarative .edi project directory (structures/, experiments/, "
@@ -3559,41 +4189,48 @@ NB_MODULE(_edi, m) {
         .def(
             "_report_model",
             [](edi::Project& self, std::optional<bool> offline, std::optional<std::string> x_axis,
-               std::optional<double> correlation_threshold, std::optional<std::vector<std::string>> excluded) {
+               std::optional<double> correlation_threshold, std::optional<std::vector<std::string>> excluded,
+               std::optional<std::string> colour_scheme, std::optional<std::string> correlation_experiment) {
                 calculate_for_report(self);
                 const edi::ReportOverrides overrides =
-                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded),
+                                     std::move(colour_scheme), std::move(correlation_experiment));
                 return edi::build_report(self, edi::effective_report_options(self, overrides));
             },
             "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
-            "excluded"_a = nb::none())
+            "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
         .def(
             "_report_html_text",
             [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
                std::optional<std::string> x_axis, std::optional<double> correlation_threshold,
-               std::optional<std::vector<std::string>> excluded) {
+               std::optional<std::vector<std::string>> excluded, std::optional<std::string> colour_scheme,
+               std::optional<std::string> correlation_experiment) {
                 calculate_for_report(self);
                 const edi::ReportOverrides overrides =
-                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded),
+                                     std::move(colour_scheme), std::move(correlation_experiment));
                 const edi::ReportModel model = edi::build_report(self, edi::effective_report_options(self, overrides));
                 return edi::report_html(model, report_libraries(self, overrides, data_dir));
             },
             "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
-            "excluded"_a = nb::none())
+            "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
+        .def("_report_cif_text", [](edi::Project& self) { return edi::cif_report_text(self); })
         .def(
             "_report_save",
             [](edi::Project& self, const std::filesystem::path& data_dir, std::optional<bool> offline,
                std::optional<std::string> x_axis, std::optional<double> correlation_threshold,
-               std::optional<std::vector<std::string>> excluded) {
+               std::optional<std::vector<std::string>> excluded, std::optional<std::string> colour_scheme,
+               std::optional<std::string> correlation_experiment) {
                 calculate_for_report(self);
                 const edi::ReportOverrides overrides =
-                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded));
+                    report_overrides(offline, std::move(x_axis), correlation_threshold, std::move(excluded),
+                                     std::move(colour_scheme), std::move(correlation_experiment));
                 const edi::ReportSaveResult result =
                     edi::save_report(self, overrides, report_libraries(self, overrides, data_dir));
                 return std::make_pair(result.written, result.pdf_left);
             },
             "data_dir"_a, "offline"_a = nb::none(), "x_axis"_a = nb::none(), "correlation_threshold"_a = nb::none(),
-            "excluded"_a = nb::none())
+            "excluded"_a = nb::none(), "colour_scheme"_a = nb::none(), "correlation_experiment"_a = nb::none())
         .def(
             "_report_states",
             [](edi::Project& self, const std::filesystem::path& data_dir) {
@@ -3619,10 +4256,16 @@ NB_MODULE(_edi, m) {
                 save_project_advancing_last_modified(self, directory.string());
                 self.path = directory.string();
                 self.metadata.path = directory.string();
+                self.archive.clear();
             },
             "directory"_a,
             "Write the project out as a .edi project directory and remember it (inverse of "
-            "load). The project then holds the values its files hold, as a reopen reads them.")
+            "load). The project then holds the values its files hold, as a reopen reads them. A project "
+            "opened from a .zip is in that folder from now on, and its archive is left as it was.")
+        .def(
+            "_background_estimates_due",
+            [](const edi::Project& self) { return edi::background_estimates_due(self); },
+            "Internal: whether the next calculation estimates a background (the calc verb saves then).")
         .def(
             "_undo_fit",
             [](edi::Project& self) {
@@ -3655,18 +4298,51 @@ NB_MODULE(_edi, m) {
                 // `directory` (the project's path from here on; a scan's analysis/results*.csv),
                 // while a scan's data are read in place from the directory this project was
                 // loaded from — never copied.
-                if (self.path.empty()) {
+                if (self.path.empty() && self.scan_data_root.empty()) {
                     throw std::invalid_argument(
                         "this project has no directory (never loaded or saved): nothing to run "
                         "dry against");
                 }
-                self.scan_data_root = self.path;
+                // A project opened from an archive already reads its data from the unpacked folder.
+                if (!self.path.empty()) {
+                    self.scan_data_root = self.path;
+                }
                 self.path = directory.string();
                 self.metadata.path = self.path;
+                // A dry run writes nothing back: an archive the project came from is not its output.
+                self.archive.clear();
             },
             "directory"_a,
             "Internal: route this project's fit outputs into `directory` and read scan data in "
             "place (the CLI's --dry).")
+        .def(
+            "_save_as_silent",
+            [](edi::Project& self, const std::filesystem::path& directory) {
+                // The CLI's --output: save_as without the narration line, so the machine channel's
+                // stdout stays the record.
+                save_project_advancing_last_modified(self, directory.string());
+                self.path = directory.string();
+                self.metadata.path = directory.string();
+                self.scan_data_root.clear();
+                self.archive.clear();
+            },
+            "directory"_a, "Internal: save_as without narration (the CLI's --output).")
+        .def(
+            "export_zip",
+            [](edi::Project& self, const std::filesystem::path& archive) {
+                // edi ADR-0052: the project's folder as one .zip, the same archive every surface writes. A project
+                // opened from an archive exports the folder it was unpacked into; one with no folder yet is written
+                // to a temporary folder first.
+                std::string folder = !self.path.empty() ? self.path : self.scan_data_root;
+                if (folder.empty()) {
+                    folder = edi::fresh_archive_directory("export");
+                    edi::save_project(self, folder);
+                }
+                edi::write_project_archive(folder, archive.string());
+            },
+            "archive"_a,
+            "Write the project's folder, as last saved and with its reports, as one .zip archive at `archive` "
+            "(build and cache files left out). Project.load opens it again, as the app's Open does.")
         .def(
             "_save_silent",
             [](edi::Project& self) {
@@ -3679,6 +4355,9 @@ NB_MODULE(_edi, m) {
                         "save_as(directory) first");
                 }
                 save_project_advancing_last_modified(self, self.path);
+                if (!self.archive.empty()) {
+                    edi::write_project_archive(self.path, self.archive);
+                }
             },
             "Internal: write the project back silently (the machine channel's save).")
         .def(
@@ -3690,12 +4369,28 @@ NB_MODULE(_edi, m) {
                         "save_as(directory) first");
                 }
                 nb::module_::import_("builtins").attr("print")(
-                    "Saving project to '" + self.path + "'");
+                    "Saving project to '" + (self.archive.empty() ? self.path : self.archive) + "'");
                 // review-32 F2 +: advance before the write, roll back on failure.
                 save_project_advancing_last_modified(self, self.path);
+                // A project opened from a .zip: the archive is rewritten from the folder it works in (edi ADR-0052).
+                if (!self.archive.empty()) {
+                    edi::write_project_archive(self.path, self.archive);
+                }
             },
-            "Write the project back into its own directory (the one it was loaded from or last "
-            "saved to). The project then holds the values its files hold, as a reopen reads them.")
+            "Write the project back to where it is: the directory it was loaded from or last saved to, or the "
+            ".zip it was loaded from, rewritten whole. The project then holds the values its files hold, as a "
+            "reopen reads them.")
+        .def_prop_ro(
+            "location",
+            [](const edi::Project& self) -> nb::object {
+                const std::string& where = self.archive.empty() ? self.path : self.archive;
+                if (where.empty()) {
+                    return nb::none();
+                }
+                return nb::cast(std::filesystem::path(where));
+            },
+            "Where save() writes, as a Path: the project's directory, or the .zip it was loaded from (edi "
+            "ADR-0052); None for a project never loaded or saved.")
         .def(
             "calculate",
             [](edi::Project& self) {

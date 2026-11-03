@@ -1,0 +1,19 @@
+_edi.schema_version 3
+
+_fitting_mode.type single
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+heidi 1
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+crystal_radius heidi.extinction.crystal_radius
+domain_radius heidi.extinction.domain_radius
+
+loop_
+_constraint.id
+_constraint.expression
+crystal_radius "crystal_radius = domain_radius / 1000"

@@ -5,18 +5,25 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QImage>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <functional>
+#include <optional>
 #include <vector>
 
 class QQuickItem;
 class QQuickWindow;
 
 namespace edi_app {
+
+// Copies the CLI project docs/user/cli/<id>/project of this build's source tree into <into>/<id>/project, for a
+// test project the app does not bundle. Returns the copy's path, or an empty string when it cannot be made.
+QString copy_cli_project(const QString& id, const QDir& into);
 
 // The scripted demo mode: clicks through the app with real mouse events on controls found by
 // objectName, waits for each state to settle, and saves one image per state into <dir>. The UI test
@@ -30,6 +37,8 @@ class DemoDriver : public QObject {
     DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only = QString(),
                QObject* parent = nullptr);
     void start();
+    /// Load a documentation walkthrough; see ADR-0060. Refuses invalid scripts or fixture inputs.
+    bool loadDocumentationScript(const QString& path, QString* error);
 
    private:
     // One image and the actions that lead to it, in order. An action is an objectName to click, or:
@@ -39,6 +48,7 @@ class DemoDriver : public QObject {
     //   choose:<text>            click the open popup's entry showing <text>
     //   load-experiments:<file>  load bundled .edi files through the view-model call the file
     //                            dialog's accept makes (the dialog itself is not driven)
+    //   preference:<name>=<value>   one of edi's Preferences, as its dialog sets it (a string value)
     //   theme:<light|dark|system>   the Preferences theme (the base's Colors.theme)
     //   platform:<light|dark>       the platform appearance "system" follows (AppState's seam; a
     //                               headless runner has none)
@@ -67,6 +77,12 @@ class DemoDriver : public QObject {
     struct Step {
         QString image;
         QStringList actions;
+        QString description{};
+        QString page{};
+        QString sidebar{};
+        QStringList highlights{};
+        bool capture = true;
+        QString fit_phase{};
     };
 
     void run_step();
@@ -85,9 +101,25 @@ class DemoDriver : public QObject {
     bool timed_reset();
     // Polls every few milliseconds until nothing is calculating, then calls `next`.
     void idle_then(std::function<void()> next, int waited_ms = 0);
+    // Waits until a display catching up with a scan has drawn every pattern, then until nothing is calculating.
+    void drawn_then(std::function<void()> next, int waited_ms = 0);
     QString scan_work(int files) const;
     void record_time(const QString& label, qint64 ms);
+    // Waits until a scan view's model has read every dataset, then calls `next`.
+    void wait_scan_then(std::function<void()> next, const QString& mode, int waited_ms = 0);
+    // Applies `change` and waits for the first frame swapped after a scene synchronisation that follows it, and
+    // follows `ready()` turning true when given; the milliseconds from the change to that swap, or -1 when none came.
+    double frame_after(const std::function<void()>& change, const std::function<bool()>& ready = {});
+    // `count` changes of one kind to a scan view (zoom, pan, restyle, select, data), each timed by frame_after; the
+    // samples go to frames.tsv and their median and 95th percentile to timings.tsv.
+    bool timed_frames(const QString& mode, const QString& kind, int count);
+    // `count` steps of the Analysis slider, each timed from the move to the frame after its calculation ended.
+    bool timed_slider(int count);
+    void record_samples(const QString& label, std::vector<double> samples);
     void delay_then_record();
+    std::optional<bool> documentationAction(const QString& action);
+    bool saveDocumentationFrame(const QString& path, QString* error);
+    bool saveDocumentationManifest(const QString& status, const QString& error = {});
 
     QQuickWindow& window_;
     QDir output_dir_;
@@ -100,6 +132,16 @@ class DemoDriver : public QObject {
     QElapsedTimer timer_;
     std::vector<double> pre_fit_values_;
     QString loaded_cli_project_;
+    bool documentation_ = false;
+    bool documentation_skip_ = false;
+    QString documentation_script_;
+    QString documentation_example_;
+    QString documentation_workflow_;
+    QJsonObject documentation_fixture_;
+    QJsonArray documentation_dependencies_;
+    QJsonArray documentation_scenes_;
+    QJsonArray documentation_actions_;
+    QJsonObject documentation_inputs_;
 };
 
 }  // namespace edi_app

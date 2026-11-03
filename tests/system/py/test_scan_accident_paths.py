@@ -199,27 +199,28 @@ def test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo(
     assert observed['first']['completed'] == 1 and not observed['editError'], (
         'Mixed-generation witness: a stopped prefix precedes a real admitted template edit'
     )
-    assert observed['prefixKept'], (
-        'Continue fitting: every retained prefix byte survives the attempt'
+    assert observed['edited']['stale'] and observed['edited']['available'], (
+        'Refit: a template value, free flag or setting edit enables '
+        'replacement of the old generation'
     )
-    continued = observed['continued']
-    assert continued['completed'] == 2 or (
-        edit == 'free'
-        and continued['completed'] == 0
-        and (continued['refusal'] or continued['after']['lastError'])
-    ), (
-        'Continue fitting: compatible value/settings edits fit only missing files; a changed '
-        'free-column schema either completes or names its refusal without replacing old rows'
+    assert observed['continued']['completed'] == 3 and observed['refitted']['completed'] == 3, (
+        'Refit: every edited template refits all files, including a previously fitted prefix'
     )
-    assert not observed['saveError'], 'Mixed generation: Save As of retained results must succeed'
+    assert observed['refitUndoRestored'], (
+        'Refit Undo: the previous prefix and provenance bytes are restored exactly'
+    )
+    for field in ('rows', 'summary', 'template', 'stale', 'evolutionStale'):
+        assert observed['undoRefit'][field] == observed['edited'][field], (
+            'Refit Undo: the previous result rows, summary, template designation '
+            'and stale state restore'
+        )
+    assert not observed['saveError'], 'Refit: Save As of the new results must succeed'
     for name in ('mixed', 'reopened', 'undoReset'):
-        assert observed[name]['stale'] and observed[name]['evolutionStale'], (
-            'Mixed generation: retained old rows keep their out-of-date warning after Continue, '
-            'Save As, reopening and Reset Undo'
+        assert not observed[name]['stale'] and not observed[name]['evolutionStale'], (
+            'Refit: the new generation stays current through Save As, reopen and Reset Undo'
         )
     assert observed['fresh']['completed'] == 3 and not observed['freshState']['stale'], (
-        'Mixed generation: only Reset followed by a complete fresh run clears the old-generation '
-        'warning'
+        'Reset: clearing results still permits a full fresh fit'
     )
 
 
@@ -433,8 +434,22 @@ def test_evolution_rebuild_keeps_whole_range_extrema_and_original_dataset_values
     target = scale_project(harness, root / f'column-{count}', count)
     projection_csv(target, count)
     observed = harness.invoke('evolution', target)
-    assert len(observed['columns']) == 1, 'Evolution rebuild: expose the synthetic fitted column'
-    points = next(axis['points'] for axis in observed['columns'][0]['axes'] if axis['mode'] == 1)
+    columns = {column['name']: column for column in observed['columns']}
+    assert len(observed['columns']) == len(columns) == 2 and set(columns) == {
+        'cosio.cell.length_a',
+        'd20.background.1.intensity',
+    }, 'Evolution rebuild: list all free model parameters once and exclude CSV metadata'
+    assert all(
+        not axis['points'] and axis['count'] == 0
+        for axis in columns['d20.background.1.intensity']['axes']
+    ), 'Evolution rebuild: an unrecorded free parameter must have no fabricated points'
+    assert [column['name'] for column in observed['columns']] == [
+        'd20.background.1.intensity',
+        'cosio.cell.length_a',
+    ], 'Evolution rebuild: free model names precede additional CSV parameter columns'
+    points = next(
+        axis['points'] for axis in columns['cosio.cell.length_a']['axes'] if axis['mode'] == 1
+    )
     indexed = {round(point[0]) - 1: point for point in points}
     assert 0 < len(points) <= 5000, 'Evolution rebuild: retain a bounded nonempty drawn column'
     assert len(indexed) == len(points), 'Evolution rebuild: each drawn dataset occurs once'

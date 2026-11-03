@@ -15,6 +15,9 @@
   declaring `units`, `validator`, `display` and `tags`. A new parameter lands by adding its spec
   row and category field together; a name that exists on one surface only is a defect.
 
+**Amended 2026-10-24 ([ADR-0051](0051-names-and-numbers-from-the-dictionary.md)):** a `ParameterSpec` keeps its identity, units code, range and name lists; its display
+name, display units, description and LaTeX come from crysta's dictionary through the display bridge.
+
 ## Context
 
 (owner-requested) found edi **inconsistent with itself**: the `.edi` format was fully categorised

@@ -1,3 +1,4 @@
+#include "example_list_model.hpp"
 #include <sys/resource.h>
 
 #include <QColor>
@@ -273,7 +274,7 @@ QJsonObject evolution(const std::string& path) {
 
 QJsonObject result_files(const std::string& path) {
     QJsonObject files;
-    for (const char* name : {"results.csv", "results-provenance.csv", "scan-run.json"}) {
+    for (const char* name : {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"}) {
         const QString relative = QStringLiteral("analysis/") + name;
         files[name] =
             QFileInfo::exists(QString::fromStdString(path) + "/" + relative)
@@ -303,12 +304,6 @@ QJsonObject flow(const std::string& path) {
     QJsonObject undone = state(*view);
     auto second = run(*view, "stop-again", 40);
     const QByteArray prefix = contents(path, "analysis/results.csv");
-    if (view->parameters()->count()) {
-        auto* parameter = view->parameters()->get(0, "parameter").value<edi_app::ParameterItem*>();
-        if (parameter) parameter->setValue(parameter->value() + 0.001);
-    }
-    until([&] { return !view->calculating() && !view->currentExperiment()->pattern()->stale(); });
-    const QJsonObject partial_edited = state(*view);
     auto continued = run(*view, "continue", 0);
     const bool retained = contents(path, "analysis/results.csv").startsWith(prefix);
     const QByteArray before_edit = contents(path, "analysis/results.csv");
@@ -341,7 +336,12 @@ QJsonObject flow(const std::string& path) {
     const bool results_visible = !old_fit_rows.isEmpty() &&
                                  old_fit_rows == table(view->fit()->results()) &&
                                  !old_points.isEmpty() && old_points == layer_points;
-    auto blocked = run(*view, "completed-start", 0);
+    const QJsonObject old_files = result_files(path);
+    auto refit = run(*view, "refit", 0);
+    const bool refit_replaced = result_files(path) != old_files;
+    view->undo();
+    const bool refit_undo_restored = result_files(path) == old_files;
+    const bool refit_undo_stale = view->fit()->outOfDate();
     const QJsonObject edited_files = result_files(path);
     view->fit()->reset();
     const QJsonObject edit_reset_files = result_files(path), edit_reset_state = state(*view);
@@ -351,7 +351,6 @@ QJsonObject flow(const std::string& path) {
     view->fit()->reset();
     auto restarted = run(*view, "restart", 0);
     return {{"originalFiles", original},
-            {"partialEdited", partial_edited},
             {"fitted", fitted},
             {"resetFiles", reset_files},
             {"resetState", reset_state},
@@ -369,7 +368,10 @@ QJsonObject flow(const std::string& path) {
             {"staleFit", stale_fit},
             {"staleEvolution", stale_evolution},
             {"oldResultsVisible", results_visible},
-            {"blocked", blocked},
+            {"refit", refit},
+            {"refitReplaced", refit_replaced},
+            {"refitUndoRestored", refit_undo_restored},
+            {"refitUndoStale", refit_undo_stale},
             {"editResetFiles", edit_reset_files},
             {"editResetState", edit_reset_state},
             {"editResetRestored", edit_reset_restored},
@@ -416,6 +418,8 @@ QJsonObject tree_hashes(const QString& root) {
 QJsonObject bundle(const std::string& id, const std::string& destination, bool readonly = false) {
     const QString source = readonly ? QString::fromStdString(id)
                                     : QString::fromStdString(":/edi/examples/" + id + "/project");
+    if (!readonly && !edi_app::ExampleListModel::bundledIds().contains(QString::fromStdString(id)))
+        return {{"opened", false}, {"error", "Example precondition: requested scan id must be bundled"}};
     const QJsonObject original = tree_hashes(source);
     edi_app::Session session;
     const bool opened = readonly ? session.openProject(QUrl::fromLocalFile(source))

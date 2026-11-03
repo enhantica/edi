@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Window
+import QtQml.Models
 import QtGraphs
 
 import EasyApplication.Gui.Style as EaStyle
@@ -30,8 +31,8 @@ Item {
     // Set: the x axis is this project's `_pattern_chart.x_axis` (the Analysis page's chart, which the report follows),
     // an undoable edit saved with the project; else the chart's own choice.
     property ProjectViewModel axisProject: null
-    // The page whose settings keep the chart's view options (edi ADR-0031 §2): "analysis" (the y scale) or
-    // "experiment" (the y scale and the x axis); none for a report figure, whose options are its own.
+    // "pattern" for the app's one pattern chart, whose y scale is an app setting (edi ADR-0031 §2); none for a report
+    // figure, whose options are its own.
     property string settingsPage: ""
     // The y scale's tokens as the settings keep them, in PatternChartController.YScale's order.
     readonly property var scaleTokens: ["linear", "sqrt", "log"]
@@ -70,7 +71,7 @@ Item {
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar ends at the plot areas' right border, one em above the main one. A report figure has no toolbar; its
     // plot starts no closer to the frame's top than to its sides (the owner, 2026-10-13).
-    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbar.height + belowToolbar
+    readonly property real topHeight: chart.report ? Math.max(sideMargin, rightMargin) + (chart.reliability !== "" ? Math.round(em * 1.5) : 0) : topMargin + toolbarLines.height + belowToolbar
     // A report figure's reliability text (edi::reliability_text), above its main plot at the left; the app's own
     // charts show it in the page's selector line.
     readonly property string reliability: chart.report && chart.report.model ? chart.report.reliability(chart.reportExperiment) : ""
@@ -154,7 +155,8 @@ Item {
             mainAxisHeight = under(mainView);
         const mainAxis = mainView.plotArea.x - mainView.marginLeft;
         const residualAxis = residualView.visible ? residualView.plotArea.x - residualView.marginLeft : 0;
-        const edge = Math.round(sideMargin + titleGutter + Math.max(mainAxis, residualAxis, yLabelsRoom));
+        // Far enough right for the y titles and labels, and for the longest structure name of the tick rows (4.8).
+        const edge = Math.round(Math.max(sideMargin + titleGutter + Math.max(mainAxis, residualAxis, yLabelsRoom), sideMargin + braggLabelsRoom + braggLabelGap));
         const set = (view, margin) => {
             if (Math.abs(view.marginLeft - margin) > 0.5)
                 view.marginLeft = margin;
@@ -164,27 +166,10 @@ Item {
         set(braggView, edge - (braggView.plotArea.x - braggView.marginLeft));
     }
 
-    // A pane's theme: Qt Graphs draws the series and nothing else. The chart draws the background, each pane's
-    // grid and each pane's border itself (below). Qt Graphs' own tick marks, axis lines and grid are shader
-    // effects two pixels wide, over the labels and the measured points; they are transparent here, on every
-    // axis of every pane, the Bragg rows' included. (The offscreen platform's software renderer never draws
-    // them, so only a capture on an OpenGL platform shows whether they are gone.) The font is the size the
-    // axis keeps room for; the labels themselves are `AxisLabel`s. The colour scheme is fixed: every colour the
-    // chart shows is its own and follows the app's theme, while a scheme change makes Qt Graphs restore its own
-    // axis colours, and the tick marks appeared after a switch of the app's theme (the owner, 2026-10-02).
-    component PaneTheme: GraphsTheme {
-        colorScheme: GraphsTheme.ColorScheme.Light
-        backgroundVisible: false
-        plotAreaBackgroundVisible: false
+    // A pane's theme (ChartTheme): the labels themselves are `AxisLabel`s; the theme's font is the size the axis keeps
+    // room for.
+    component PaneTheme: ChartTheme {
         labelTextColor: chart.colors.chartLabels
-        labelFont.family: EaStyle.Fonts.fontFamily
-        labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
-        axisX.mainColor: "transparent"
-        axisX.subColor: "transparent"
-        axisY.mainColor: "transparent"
-        axisY.subColor: "transparent"
-        grid.mainColor: "transparent"
-        grid.subColor: "transparent"
     }
 
     // An axis label: the app's label, in the app's font and size (easydiffractionbeta's chart labels), placed
@@ -318,9 +303,15 @@ Item {
         experiment: chart.experiment
         report: chart.report
         colourScheme: Preferences.colourScheme
-        // The Analysis chart follows the project's x axis, the Experiment chart its page's setting.
-        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : chart.settingsPage === "experiment" ? Preferences.experimentXAxis === "d_spacing" : false
-        yScale: chart.settingsPage === "analysis" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.analysisYScale)) : chart.settingsPage === "experiment" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.experimentYScale)) : PatternChartController.Linear
+        // Each structure's curve, a report figure never (edi ADR-0017 §15).
+        structureCurves: !chart.report && Preferences.structureCurves
+        // Hiding a curve from the legend keeps the y range, or fits it to the curves still shown (Preferences).
+        hiddenFitsRange: Preferences.chartHiddenRange === "fit"
+        // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
+        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
+        includedOnly: !chart.report && Preferences.chartIncludedOnly
+        subtractBackground: !chart.report && Preferences.chartSubtractBackground
+        yScale: chart.settingsPage === "pattern" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.patternYScale)) : PatternChartController.Linear
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
         plotWidth: mainView.plotArea.width
@@ -334,9 +325,8 @@ Item {
         calculatedSeries: calculatedLine
         backgroundSeries: backgroundLine
         residualSeries: residualLine
-        braggSeries0: bragg0
-        braggSeries1: bragg1
-        braggSeries2: bragg2
+        // How the measured pattern is drawn, one app setting for every pattern chart; a report's chart keeps its own.
+        measuredStyle: Preferences.patternMeasuredStyle
     }
 
     // An x label is centred under its tick; a y label ends beside the plot area.
@@ -417,57 +407,80 @@ Item {
     // How far the plot areas' right border is from the chart's edge: the block selector row above ends there too.
     readonly property real toolbarRightInset: width - (mainView.x + mainView.plotArea.x + mainView.plotArea.width)
 
-    // The toolbar line, centred under the block selector row (the owner, 2026-10-11): the y scale, linear, square
-    // root or log, and the x axis, the experiment's own (2θ or time-of-flight) or d-spacing (owner, 2026-10-05), then
-    // the buttons, a toolbar group's spacing apart.
-    Row {
-        x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
+    // The toolbar, the one rule of every chart's (ToolbarLines; the owner, 2026-10-24): every control on one line,
+    // centred under the block selector row, when they fit; else the comboboxes above and the buttons below. The
+    // comboboxes: the y scale, linear, square root or log, the x axis, the experiment's own (2θ or time-of-flight) or
+    // d-spacing (owner, 2026-10-05), and how the measured data are drawn; the buttons, the chart toolbar's.
+    ToolbarLines {
+        id: toolbarLines
+
+        x: 0
         y: chart.topMargin
+        width: chart.width
+        height: implicitHeight
         visible: !chart.report
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+        leftEdge: chart.toolbarLeft
+        rightEdge: chart.width - chart.toolbarRightInset
 
-        Row {
-            spacing: AppSizes.toolbarSpacing
+        ToolbarComboBox {
+            objectName: "chart.toolbar.yscale"
+            toolTip: qsTr("Y scale")
+            model: [qsTr("Linear"), qsTr("Square root"), qsTr("Log")]
+            // The closed box names its axis (owner, 2026-10-05), its value capitalised (the owner, 2026-10-27).
+            closedTexts: [qsTr("y: Linear"), qsTr("y: Square root"), qsTr("y: Log")]
+            shownIndex: controller.yScale
+            onActivated: index => {
+                if (chart.settingsPage === "pattern")
+                    Preferences.patternYScale = chart.scaleTokens[index];
+                else
+                    controller.yScale = index;
+            }
+        }
+        ToolbarComboBox {
+            objectName: "chart.toolbar.xaxis"
+            // d can be chosen once a calculation has given the experiment its d column (the owner, 2026-10-22);
+            // the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing" in both
+            // (the owner, 2026-10-22). The axis names are the dictionary's.
+            enabled: chart.experiment !== null && controller.dAvailable
+            toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
+            readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))]
+            model: entries
+            closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
+            shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
+            onActivated: index => {
+                if (chart.axisProject)
+                    chart.axisProject.patternDSpacing = index === 1;
+                else
+                    controller.dSpacing = index === 1;
+            }
+        }
+        // How the measured pattern is drawn (the owner, 2026-10-22), one box of four choices named as the axis boxes
+        // name theirs: the band of measured ± s.u., the default, with the residual drawn the same way; the line; the
+        // points with their error bars; or both.
+        ToolbarComboBox {
+            readonly property var tokens: ["band", "line", "points", "linePoints"]
+            readonly property var entries: [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points")]
 
-            ToolbarComboBox {
-                objectName: "chart.toolbar.yscale"
-                toolTip: qsTr("Y scale")
-                model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
-                // The closed box names its axis (owner, 2026-10-05).
-                closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
-                currentIndex: controller.yScale
-                onActivated: index => {
-                    if (chart.settingsPage === "analysis")
-                        Preferences.analysisYScale = chart.scaleTokens[index];
-                    else if (chart.settingsPage === "experiment")
-                        Preferences.experimentYScale = chart.scaleTokens[index];
-                    else
-                        controller.yScale = index;
-                }
-            }
-            ToolbarComboBox {
-                objectName: "chart.toolbar.xaxis"
-                enabled: chart.experiment !== null
-                toolTip: qsTr("X axis")
-                model: [chart.nativeAxis === "timeOfFlight" ? qsTr("time-of-flight") : qsTr("2θ"), qsTr("d-spacing")]
-                closedTexts: [chart.nativeAxis === "timeOfFlight" ? qsTr("x: TOF") : qsTr("x: 2θ"), qsTr("x: d")]
-                currentIndex: controller.dSpacing ? 1 : 0
-                onActivated: index => {
-                    if (chart.axisProject)
-                        chart.axisProject.patternDSpacing = index === 1;
-                    else if (chart.settingsPage === "experiment")
-                        Preferences.experimentXAxis = index === 1 ? "d_spacing" : "native";
-                    else
-                        controller.dSpacing = index === 1;
-                }
-            }
+            objectName: "chart.toolbar.measuredStyle"
+            visible: !chart.report
+            toolTip: qsTr("How the measured data are drawn")
+            model: entries
+            closedTexts: entries.map(text => qsTr("meas: %1").arg(text))
+            shownIndex: Math.max(0, tokens.indexOf(controller.measuredStyle))
+            onActivated: index => Preferences.patternMeasuredStyle = tokens[index]
         }
         ChartToolbar {
             id: toolbar
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
+            structureCurvesAvailable: !chart.report && controller.hasCalculated
+            includedOnly: Preferences.chartIncludedOnly
+            subtractBackground: Preferences.chartSubtractBackground
+            backgroundAvailable: controller.backgroundAvailable
             onResetClicked: controller.reset()
+            onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
+            onSubtractBackgroundToggled: Preferences.chartSubtractBackground = !Preferences.chartSubtractBackground
         }
     }
 
@@ -511,6 +524,28 @@ Item {
             labelDelegate: mainYLabel
         }
 
+        // The measured band: measured ± s.u., a soft fill between two thin lines (the band style).
+        AreaSeries {
+            id: measuredBand
+            objectName: "chart.series.meas.band"
+            color: Qt.alpha(controller.measuredColor, 0.3)
+            borderWidth: 0
+            upperSeries: LineSeries {}
+            lowerSeries: LineSeries {}
+            Component.onCompleted: controller.setBandSeries(0, measuredBand.upperSeries, measuredBand.lowerSeries, measuredBandTop, measuredBandBottom)
+        }
+        LineSeries {
+            id: measuredBandTop
+            objectName: "chart.series.meas.band.top"
+            color: controller.measuredColor
+            width: 1
+        }
+        LineSeries {
+            id: measuredBandBottom
+            objectName: "chart.series.meas.band.bottom"
+            color: controller.measuredColor
+            width: 1
+        }
         LineSeries {
             id: measuredLine
             objectName: "chart.series.meas"
@@ -522,12 +557,125 @@ Item {
             objectName: "chart.series.bkg"
             color: controller.backgroundColor
             width: 1
+            // Dashed, as the style table's `line+dash` says (the owner, 2026-10-22).
+            strokeStyle: LineSeries.StrokeStyle.DashLine
+            dashPattern: [4, 3]
         }
         LineSeries {
             id: calculatedLine
             objectName: "chart.series.calc"
             color: controller.calculatedColor
             width: 2
+        }
+    }
+
+    // A page's chart follows the app's one pattern view (edi ADR-0017 §15): its ranges and its toolbar's choices. Only
+    // the shown chart writes them, so a chart being made or a hidden one never moves the others.
+    readonly property bool followsSharedView: chart.settingsPage === "pattern"
+    Binding {
+        target: controller
+        property: "viewRanges"
+        value: AppState.patternViewRanges
+        when: chart.followsSharedView
+    }
+    Binding {
+        target: controller
+        property: "viewRangesAxis"
+        value: AppState.patternViewAxis
+        when: chart.followsSharedView
+    }
+    Binding {
+        target: toolbar
+        property: "legendShown"
+        value: Preferences.patternLegendShown
+        when: chart.followsSharedView
+    }
+    Binding {
+        target: toolbar
+        property: "hoverShown"
+        value: Preferences.patternHoverShown
+        when: chart.followsSharedView
+    }
+    Binding {
+        target: toolbar
+        property: "pointerMode"
+        value: Preferences.patternPointerMode
+        when: chart.followsSharedView
+    }
+    Connections {
+        target: controller
+        enabled: chart.followsSharedView && chart.shown
+        // Only different ranges are written: the view this chart was just given comes straight back, and writing it
+        // again inside that binding is a loop. The axis the ranges are on goes with them.
+        function sameRanges(a, b) {
+            if (a.length !== b.length)
+                return false;
+            for (let i = 0; i < a.length; ++i) {
+                if (a[i] !== b[i] && !(isNaN(a[i]) && isNaN(b[i])))
+                    return false;
+            }
+            return true;
+        }
+        function onViewRangesChanged() {
+            if (!sameRanges(controller.viewRanges, AppState.patternViewRanges)) {
+                AppState.patternViewAxis = controller.viewRangesAxis;
+                AppState.patternViewRanges = controller.viewRanges;
+            }
+        }
+    }
+    Connections {
+        target: toolbar
+        enabled: chart.followsSharedView && chart.shown
+        function onLegendShownChanged() {
+            Preferences.patternLegendShown = toolbar.legendShown;
+        }
+        function onHoverShownChanged() {
+            Preferences.patternHoverShown = toolbar.hoverShown;
+        }
+        function onPointerModeChanged() {
+            Preferences.patternPointerMode = toolbar.pointerMode;
+        }
+    }
+
+    // Each structure's curve (edi ADR-0017 §15): a soft fill from the background up to the curve and an outline, in
+    // its structure's colour, drawn under the other series and not stacked. The chart keeps one area per structure it
+    // has drawn; one not drawn now holds no points and no colour. Qt Graphs kept the last drawing of an area it hid or
+    // removed (the owner's Mac, 2026-10-21), so none is.
+    // A chart made while the curves are on has its colours before this handler is connected: it counts them once made.
+    property int structureCurveSlots: 0
+    Connections {
+        target: controller
+        function onStructureCurveColorsChanged() {
+            chart.structureCurveSlots = Math.max(chart.structureCurveSlots, controller.structureCurveColors.length);
+        }
+        Component.onCompleted: onStructureCurveColorsChanged()
+    }
+    Instantiator {
+        model: chart.structureCurveSlots
+        delegate: AreaSeries {
+            id: area
+
+            required property int index
+            readonly property bool drawn: controller.structureCurves && area.index < controller.structureCurveColors.length
+            readonly property color lineColour: controller.structureCurveColors[index] ?? "transparent"
+            readonly property color fillColour: controller.structureCurveFills[index] ?? "transparent"
+            property LineSeries outline: LineSeries {
+                objectName: "chart.series.structure.outline." + area.index
+                color: area.drawn ? area.lineColour : "transparent"
+                width: 1.5
+            }
+
+            objectName: "chart.series.structure." + area.index
+            color: area.drawn ? area.fillColour : "transparent"
+            borderWidth: 0
+            upperSeries: LineSeries {}
+            lowerSeries: LineSeries {}
+
+            Component.onCompleted: {
+                mainView.insertSeries(0, area.outline);
+                mainView.insertSeries(0, area);
+                controller.setStructureSeries(area.index, area.upperSeries, area.lowerSeries, area.outline);
+            }
         }
     }
 
@@ -571,24 +719,29 @@ Item {
             gridVisible: false
             subGridVisible: false
         }
+    }
 
-        LineSeries {
-            id: bragg0
-            objectName: "chart.series.bragg.0"
-            color: controller.braggColor0
-            width: 1  // edi::pattern_style_table's `bragg.0` (ADR-0017 §15)
+    // One tick series per structure (edi::pattern_style_table's `bragg.<place>` rows, 1 px; ADR-0017 §15), each in
+    // its structure's colour, made as structures are added and handed to the controller to fill.
+    Instantiator {
+        model: controller.braggColors.length
+        delegate: LineSeries {
+            required property int index
+            objectName: "chart.series.bragg." + index
+            color: controller.braggColors[index] ?? "transparent"
+            width: 1
         }
-        LineSeries {
-            id: bragg1
-            objectName: "chart.series.bragg.1"
-            color: controller.braggColor1
-            width: 1  // edi::pattern_style_table's `bragg.1` (ADR-0017 §15)
+        onObjectAdded: (index, series) => {
+            braggView.addSeries(series);
+            controller.setBraggSeries(index, series);
         }
-        LineSeries {
-            id: bragg2
-            objectName: "chart.series.bragg.2"
-            color: controller.braggColor2
-            width: 1  // edi::pattern_style_table's `bragg.2` (ADR-0017 §15)
+        // A series removed or emptied can keep its last drawing, so it holds one undrawable point first.
+        onObjectRemoved: (index, series) => {
+            controller.setBraggSeries(index, null);
+            const ticks = series as LineSeries;
+            ticks.clear();
+            ticks.append(NaN, NaN);
+            braggView.removeSeries(ticks);
         }
     }
 
@@ -639,6 +792,28 @@ Item {
             color: controller.residualColor
             width: 1  // edi::pattern_style_table's `resid` (ADR-0017 §15)
         }
+        // The residual's band in the band style: (meas − calc) ± s.u., as the measured band.
+        AreaSeries {
+            id: residualBand
+            objectName: "chart.series.resid.band"
+            color: Qt.alpha(controller.residualColor, 0.3)
+            borderWidth: 0
+            upperSeries: LineSeries {}
+            lowerSeries: LineSeries {}
+            Component.onCompleted: controller.setBandSeries(1, residualBand.upperSeries, residualBand.lowerSeries, residualBandTop, residualBandBottom)
+        }
+        LineSeries {
+            id: residualBandTop
+            objectName: "chart.series.resid.band.top"
+            color: controller.residualColor
+            width: 1
+        }
+        LineSeries {
+            id: residualBandBottom
+            objectName: "chart.series.resid.band.bottom"
+            color: controller.residualColor
+            width: 1
+        }
     }
 
     PaneTitle {
@@ -647,26 +822,42 @@ Item {
         text: controller.yTitle
         visible: controller.hasData
     }
-    // Each Bragg row's label at its left (edi::BraggRowLabel): the structure's icon and name in its colour.
+    // Each Bragg row's label at its left (edi::BraggRowLabel): the structure's icon and name in its colour. The widest
+    // label sets how far right the panes' shared left edge must be (alignPanes), so a long name never runs into them.
+    readonly property real braggLabelGap: Math.round(chart.em * 0.4)
+    readonly property real braggLabelsRoom: {
+        let widest = 0;
+        for (let i = 0; i < braggLabelRepeater.count; ++i) {
+            const label = braggLabelRepeater.itemAt(i);
+            if (label && label.visible)
+                widest = Math.max(widest, label.width);
+        }
+        return Math.ceil(widest);
+    }
+    onBraggLabelsRoomChanged: Qt.callLater(alignPanes)
     Repeater {
+        id: braggLabelRepeater
         model: controller.braggLabels
         delegate: IconLine {
             required property var modelData
 
+            // Disabled with its ticks hidden from the legend, as the legend's entry is.
+            readonly property color ink: modelData.hidden ? chart.colors.themeForegroundDisabled : modelData.color
+
             objectName: "chart.bragg.label"
             visible: braggView.visible
             height: AppSizes.legendRowHeight
-            textColor: modelData.color
+            textColor: ink
             segments: [
                 {
                     "icon": "layer-group",
-                    "color": modelData.color
+                    "color": ink
                 },
                 {
                     "text": modelData.text
                 }
             ]
-            x: Math.max(0, braggView.x + braggView.plotArea.x - width - Math.round(chart.em * 0.4))
+            x: Math.max(0, braggView.x + braggView.plotArea.x - width - chart.braggLabelGap)
             y: braggView.y + braggView.plotArea.y + (1 - modelData.centre / Math.max(1, controller.braggRows)) * braggView.plotArea.height - height / 2
         }
     }
@@ -697,18 +888,25 @@ Item {
         x: mainView.x + mainView.plotArea.x
         y: Math.max(0, mainView.y + mainView.plotArea.y - height - Math.round(chart.em * 0.25))
         color: chart.colors.chartLabels
-        text: chart.reliability
+        textFormat: Text.RichText
+        text: FactorText.rich(chart.reliability)
     }
 
     // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
     // where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
+        id: chartLegend
+
         objectName: "chart.legend"
+        // Over the pointer's area for its hover cue; a click reaches the pointer area, which passes it back.
+        z: 1
         colors: chart.colors
         x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
         y: mainView.y + mainView.plotArea.y + chart.em
         visible: toolbar.legendShown && controller.hasData
         entries: controller.legend
+        toggles: !chart.report
+        onToggled: key => controller.toggleSeries(key)
     }
 
     // The pointer over the main plot area: a box zoom or a pan by dragging, a zoom about the pointer by the
@@ -744,6 +942,10 @@ Item {
                 hoverLabel.show("", 0, 0);
         }
         onReleased: mouse => {
+            // A click, not a drag, on a legend row hides or shows its curve.
+            const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
+            if (mouse.button === Qt.LeftButton && still && chartLegend.toggleAt(pointer, mouse.x, mouse.y))
+                return;
             if (mouse.button === Qt.RightButton)
                 controller.reset();
             else if (toolbar.pointerMode === "zoom")

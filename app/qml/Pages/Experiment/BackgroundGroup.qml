@@ -5,28 +5,69 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// `background`: the type selector over the
-// core's supported types, then that type's content — for `line-segment` the point list (position,
-// intensity), with append and remove, and a reset to the autodetected background (disabled); for `polynomial`
-// its origin and for `chebyshev` its domain, then the term list (order, coefficient), with append and remove.
+// `background`: one line with the type selector over the core's supported types, the manual/auto choice of the
+// estimate and, for `polynomial`, its origin or, for `chebyshev`, its domain; then that type's table — for
+// `line-segment` the point list (id, position, intensity), for the others the term list (id, order, coefficient),
+// each with append and remove. Every type has Estimate, from the measured pattern with the settings in Extras
+// (BackgroundExtrasGroup, ADR-0040).
 // Another type replaces the background, as diffraction-lib's does: the new type starts empty, so a background that
 // holds rows asks first.
 Column {
     id: group
 
+    objectName: "background.rows"
     property ExperimentViewModel experiment: null
     readonly property BackgroundListModel points: experiment ? experiment.background : null
     readonly property BackgroundTermListModel terms: experiment ? experiment.backgroundTerms : null
+    // In auto estimation mode the estimate owns the points or terms: the table stays scrollable but reads only,
+    // and the buttons below it are disabled until the mode is manual (the owner, 2026-10-20).
+    readonly property bool automatic: experiment !== null && experiment.backgroundEstimateMode === "auto"
+    // Estimate works on the measured pattern: without one it is disabled, its tooltip saying why (the owner, 2026-10-27).
+    readonly property bool measured: experiment !== null && !experiment.calculationOnly
+    readonly property string needsDataTip: qsTr("Estimate needs measured data: load data into this experiment first")
+
+    // Estimate, below the points or the terms. A disabled button takes no hover, so its tooltip, which then says why,
+    // hangs on the item around it.
+    component EstimateButton: Item {
+        id: holder
+
+        property string toolTip: ""
+        property bool active: true
+
+        implicitWidth: estimate.implicitWidth
+        implicitHeight: estimate.implicitHeight
+
+        EaElements.SideBarButton {
+            id: estimate
+            objectName: "background.estimate"
+            width: holder.width
+            enabled: holder.active
+            fontIcon: "magic"
+            text: qsTr("Estimate")
+            ToolTip.text: holder.toolTip
+            onClicked: Session.project.estimateBackground()
+
+            EaElements.ToolTip {
+                text: holder.toolTip
+                visible: disabledHover.hovered && !estimate.enabled && EaGlobals.Vars.showToolTips && text !== ""
+            }
+        }
+        HoverHandler {
+            id: disabledHover
+            enabled: !estimate.enabled
+        }
+    }
     // A background type's content by token: a new type needs only its layout here.
     readonly property var layouts: ({
             "line-segment": lineSegmentLayout,
-            "polynomial": polynomialLayout,
-            "chebyshev": chebyshevLayout
+            "polynomial": termsTable,
+            "chebyshev": termsTable
         })
 
     // The type a choice names, applied now when nothing would be removed, else after the question.
@@ -43,15 +84,63 @@ Column {
 
     spacing: AppSizes.groupContentSpacing
 
+    // One line above the table (the owner, 2026-10-20): the type and the estimation mode, then a polynomial's origin
+    // or a Chebyshev series' domain, all of one width.
     EaElements.GroupRow {
+        id: settingsRow
+
+        readonly property string kind: group.experiment ? group.experiment.backgroundType : ""
+        readonly property int fields: kind === "chebyshev" ? 4 : kind === "polynomial" ? 3 : 2
+        readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - (fields - 1) * spacing) / fields
+
         spacing: AppSizes.inputSpacing
         SelectorField {
             id: typeSelector
+            width: settingsRow.fieldWidth
             objectName: "background.type"
-            label: qsTr("type")
+            uid: "background.type"
             options: group.experiment ? group.experiment.backgroundTypeOptions : null
             token: group.experiment ? group.experiment.backgroundType : ""
             onSelected: token => group.chooseType(token)
+        }
+        // Manual keeps the points or terms as they are and lets them be edited; auto re-estimates them when the data
+        // or the estimate settings change, and keeps them from hand edits (ADR-0040).
+        SelectorField {
+            objectName: "background_estimate.mode"
+            width: settingsRow.fieldWidth
+            uid: "background_estimate.mode"
+            options: group.experiment ? group.experiment.backgroundEstimateModes : null
+            token: group.experiment ? group.experiment.backgroundEstimateMode : ""
+            onSelected: token => group.experiment.backgroundEstimateMode = token
+            helpToolTip: true
+            ToolTip.text: qsTr("Manual: the background is yours to edit, and Estimate replaces it when you ask. Auto: the background is estimated again whenever the measured data or the settings in Extra change, so the table only shows it; choose manual to edit it.")
+        }
+        ValueField {
+            objectName: "background.origin"
+            visible: settingsRow.kind === "polynomial"
+            width: settingsRow.fieldWidth
+            uid: "background.origin"
+            accepts: "number"
+            fieldValue: group.experiment ? group.experiment.backgroundOrigin : ""
+            onCommitted: text => group.experiment.backgroundOrigin = Number(text)
+        }
+        ValueField {
+            objectName: "background.xMin"
+            visible: settingsRow.kind === "chebyshev"
+            width: settingsRow.fieldWidth
+            uid: "background.x_min"
+            accepts: "number"
+            fieldValue: group.experiment ? group.experiment.backgroundXMin : ""
+            onCommitted: text => group.experiment.backgroundXMin = Number(text)
+        }
+        ValueField {
+            objectName: "background.xMax"
+            visible: settingsRow.kind === "chebyshev"
+            width: settingsRow.fieldWidth
+            uid: "background.x_max"
+            accepts: "number"
+            fieldValue: group.experiment ? group.experiment.backgroundXMax : ""
+            onCommitted: text => group.experiment.backgroundXMax = Number(text)
         }
     }
 
@@ -94,61 +183,65 @@ Column {
                 defaultInfoText: qsTr("No background points")
                 sourceModel: group.points
 
-                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", qsTr("id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
+                columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
-                    EaComponents.TableViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignLeft
-                        text: qsTr("id")
+                        uid: "background.id"
                     }
-                    EaComponents.TableViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("position")
+                        uid: "background.position"
                     }
-                    EaComponents.TableViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("intensity")
+                        uid: "background.intensity"
                     }
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                 }
 
-                delegate: EaComponents.ListViewDelegate {
+                delegate: TableRow {
                     id: row
 
-                    required property int index
                     required property var model
                     required property real position
                     required property ParameterItem intensity
 
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        color: EaStyle.Colors.themeForegroundMinor
+                        marksCurrentRow: true
                         text: row.index + 1
                     }
                     TextCell {
+                        locked: group.automatic
                         horizontalAlignment: Text.AlignLeft
                         objectName: `background.id.${row.index}`
                         value: row.model.id
                         onCommitted: text => group.points.setId(row.index, text)
                     }
                     TextCell {
+                        locked: group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.position.${row.index}`
+                        uid: "background.position"
                         value: row.position
                         accepts: "number"
                         onCommitted: text => group.points.setPosition(row.index, Number(text))
                     }
                     ParameterCell {
+                        locked: group.automatic
                         columnAlignment: Text.AlignHCenter
                         objectName: `background.intensity.${row.index}`
                         item: row.intensity
                     }
-                    EaComponents.TableViewButton {
+                    EaComponents.ListViewButton {
+                        enabled: !group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.remove.${row.index}`
                         fontIcon: "minus-circle"
@@ -159,8 +252,7 @@ Column {
             }
 
             // Append; name every point by its position, rounded as strongly as keeps the names apart (the owner,
-            // 2026-10-11); and reset to the autodetected background — not implemented yet, so disabled (edi
-            // ADR-0017 §4). Three at equal widths.
+            // 2026-10-11); and Estimate, the points from the measured pattern (edi ADR-0040). Three at equal widths.
             Row {
                 id: pointButtons
 
@@ -174,79 +266,26 @@ Column {
                     fontIcon: "plus-circle"
                     text: qsTr("Add point")
                     ToolTip.text: qsTr("Append new point")
+                    enabled: !group.automatic
                     onClicked: group.points.append()
                 }
                 EaElements.SideBarButton {
                     objectName: "background.namePoints"
                     width: pointButtons.buttonWidth
-                    enabled: Session.project !== null && group.points !== null && group.points.count > 0
+                    enabled: !group.automatic && Session.project !== null && group.points !== null && group.points.count > 0
                     fontIcon: "tag"
-                    text: qsTr("Ids from positions")
+                    text: qsTr("Id from position")
                     ToolTip.text: qsTr("Name points by position: each point takes its position, rounded, as its name")
                     onClicked: Session.project.namePointsByPosition()
                 }
-                EaElements.SideBarButton {
-                    objectName: "background.autodetect"
+                EstimateButton {
                     width: pointButtons.buttonWidth
-                    enabled: false
-                    fontIcon: "magic"
-                    text: qsTr("Autodetect")
-                    ToolTip.text: qsTr("Reset to autodetected background")
+                    active: group.measured && !group.automatic
+                    toolTip: group.measured ? qsTr("Estimate the points from the measured pattern, with the settings in Extras") : group.needsDataTip
                 }
             }
         }
     }
-    Component {
-        id: polynomialLayout
-
-        Column {
-            spacing: AppSizes.groupContentSpacing
-
-            EaElements.GroupRow {
-                spacing: AppSizes.inputSpacing
-                ValueField {
-                    objectName: "background.origin"
-                    label: qsTr("origin")
-                    accepts: "number"
-                    fieldValue: group.experiment ? group.experiment.backgroundOrigin : ""
-                    onCommitted: text => group.experiment.backgroundOrigin = Number(text)
-                }
-            }
-            Loader {
-                sourceComponent: termsTable
-            }
-        }
-    }
-
-    Component {
-        id: chebyshevLayout
-
-        Column {
-            spacing: AppSizes.groupContentSpacing
-
-            EaElements.GroupRow {
-                spacing: AppSizes.inputSpacing
-                ValueField {
-                    objectName: "background.xMin"
-                    label: qsTr("x min")
-                    accepts: "number"
-                    fieldValue: group.experiment ? group.experiment.backgroundXMin : ""
-                    onCommitted: text => group.experiment.backgroundXMin = Number(text)
-                }
-                ValueField {
-                    objectName: "background.xMax"
-                    label: qsTr("x max")
-                    accepts: "number"
-                    fieldValue: group.experiment ? group.experiment.backgroundXMax : ""
-                    onCommitted: text => group.experiment.backgroundXMax = Number(text)
-                }
-            }
-            Loader {
-                sourceComponent: termsTable
-            }
-        }
-    }
-
     // A polynomial's or Chebyshev series' terms, as the line-segment points: the order editable, the coefficient
     // a parameter, a row removed by its button, a term appended at the lowest order not held.
     Component {
@@ -262,38 +301,50 @@ Column {
                 defaultInfoText: qsTr("No background terms")
                 sourceModel: group.terms
 
-                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("order", qsTr("order")), width * 0.25), -1, AppSizes.iconColumnWidth]
+                columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
-                    EaComponents.TableViewLabel {
-                        horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("order")
+                    HeaderLabel {
+                        horizontalAlignment: Text.AlignLeft
+                        uid: "background.id"
                     }
-                    EaComponents.TableViewLabel {
+                    HeaderLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("coefficient")
+                        uid: "background.order"
                     }
-                    EaComponents.TableViewLabel {
+                    HeaderLabel {
+                        horizontalAlignment: Text.AlignHCenter
+                        uid: "background.coef"
+                    }
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                 }
 
-                delegate: EaComponents.ListViewDelegate {
+                delegate: TableRow {
                     id: termRow
 
-                    required property int index
+                    required property var model
                     required property int order
                     required property ParameterItem coef
 
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
-                        color: EaStyle.Colors.themeForegroundMinor
+                        marksCurrentRow: true
                         text: termRow.index + 1
                     }
                     TextCell {
+                        locked: group.automatic
+                        horizontalAlignment: Text.AlignLeft
+                        objectName: `background.termId.${termRow.index}`
+                        value: termRow.model.id
+                        onCommitted: text => group.terms.setId(termRow.index, text)
+                    }
+                    TextCell {
+                        locked: group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.order.${termRow.index}`
                         value: termRow.order
@@ -301,11 +352,13 @@ Column {
                         onCommitted: text => group.terms.setOrder(termRow.index, Number(text))
                     }
                     ParameterCell {
+                        locked: group.automatic
                         columnAlignment: Text.AlignHCenter
                         objectName: `background.coef.${termRow.index}`
                         item: termRow.coef
                     }
-                    EaComponents.TableViewButton {
+                    EaComponents.ListViewButton {
+                        enabled: !group.automatic
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `background.removeTerm.${termRow.index}`
                         fontIcon: "minus-circle"
@@ -315,14 +368,39 @@ Column {
                 }
             }
 
-            // As wide as the table, as the line-segment points' buttons together are (owner, 2026-10-11).
-            EaElements.SideBarButton {
-                objectName: "background.appendTerm"
-                width: EaStyle.Sizes.sideBarContentWidth
-                fontIcon: "plus-circle"
-                text: qsTr("Add term")
-                ToolTip.text: qsTr("Append new term")
-                onClicked: group.terms.append()
+            // Append; name every term by its order, as the points by their position; and Estimate the terms from the
+            // measured pattern (edi ADR-0040). Three at equal widths, together as wide as the table, as the
+            // line-segment points' buttons are (owner, 2026-10-11).
+            Row {
+                id: termButtons
+
+                readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+
+                spacing: EaStyle.Sizes.fontPixelSize
+
+                EaElements.SideBarButton {
+                    objectName: "background.appendTerm"
+                    width: termButtons.buttonWidth
+                    fontIcon: "plus-circle"
+                    text: qsTr("Add term")
+                    ToolTip.text: qsTr("Append new term")
+                    enabled: !group.automatic
+                    onClicked: group.terms.append()
+                }
+                EaElements.SideBarButton {
+                    objectName: "background.nameTerms"
+                    width: termButtons.buttonWidth
+                    enabled: !group.automatic && Session.project !== null && group.terms !== null && group.terms.count > 0
+                    fontIcon: "tag"
+                    text: qsTr("Id from order")
+                    ToolTip.text: qsTr("Name terms by order: each term takes its order as its name")
+                    onClicked: Session.project.nameTermsByOrder()
+                }
+                EstimateButton {
+                    width: termButtons.buttonWidth
+                    active: group.measured && !group.automatic
+                    toolTip: group.measured ? qsTr("Estimate the terms from the measured pattern, with the settings in Extras") : group.needsDataTip
+                }
             }
         }
     }

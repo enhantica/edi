@@ -1,7 +1,6 @@
 """Effective consumers for the owner's committed 2026-10-06 scan adjustments."""
 
 import re
-from itertools import starmap
 
 import pytest
 
@@ -15,69 +14,97 @@ from tests.integration.py.test_scan_app_contract import (
 )
 
 
-def button_states(text):
-    start, reset = item(text, 'fitting.start'), item(text, 'fitting.reset')
+def fit_button_states(text):
     result = evaluate(
-        '[null,{running:false,available:true,continuable:false,canReset:false},'
-        '{running:false,available:true,continuable:true,canReset:true},'
-        '{running:false,available:false,continuable:false,canReset:true},'
-        '{running:true,available:false,continuable:true,canReset:false}].map(fit=>{'
-        'group.fit=fit;return ['
-        + ','.join(
-            starmap(property_value, [(start, 'text'), (start, 'enabled'), (reset, 'enabled')])
-        )
+        '[null,{running:false,available:true,continuable:false},'
+        '{running:false,available:true,continuable:true},'
+        '{running:false,available:false,continuable:false},'
+        '{running:true,available:false,continuable:true,outOfDate:true},'
+        '{running:false,available:true,continuable:false,outOfDate:true},'
+        '{running:false,available:true,continuable:true,outOfDate:true}].map(fit=>{'
+        'const running=!!fit&&fit.running;return ['
+        + property_value(text, 'valueText')
+        + ','
+        + property_value(text, 'clickable')
         + '];})',
-        'const qsTr=s=>s;const group={fit:null};',
+        'const qsTr=s=>s;',
     )
     assert result == [
-        ['Start fitting', False, False],
-        ['Start fitting', True, False],
-        ['Continue fitting', True, True],
-        ['Start fitting', False, True],
-        ['Stop fitting', True, False],
-    ], 'Fit buttons: no, partial, complete and running fits determine labels and availability'
-    position = text.index('objectName: "fitting.reset"')
-    parents = sorted(
-        ((a, b) for a, b in spans(text) if a < position < b), key=lambda span: span[1] - span[0]
+        ['Fit', False],
+        ['Fit', True],
+        ['Continue', True],
+        ['Fit', False],
+        ['Stop', True],
+        ['Refit', True],
+        ['Refit', True],
+    ], (
+        'Status Fit labels and availability follow absent, idle, partial, '
+        'complete, running and outdated fits'
     )
-    row = text[parents[1][0] : parents[1][1]]
-    reset_visibility = evaluate(
-        '[null,{scan:false},{scan:true}].map(project=>{Session.project=project;'
-        'buttons.scan=('
-        + property_value(row, 'scan')
-        + ');return ('
-        + property_value(reset, 'visible')
-        + ');})',
-        'const Session={project:null},buttons={scan:false};',
+
+
+def button_states(text):
+    fit_button_states(source('qml/Components/StatusBarFitButton.qml'))
+    reset = item(text, 'statusBar.fit.reset')
+    enabled = 'clickable' if re.search(r'(?m)^\s*clickable:', reset) else 'enabled'
+    shown = 'shown' if re.search(r'(?m)^\s*shown:', reset) else 'visible'
+    group_state = ''
+    if property_value(reset, shown) == 'fitButtons.scanMode':
+        position = text.index('id: fitButtons')
+        begin, end = min(
+            ((a, b) for a, b in spans(text) if a < position < b),
+            key=lambda span: span[1] - span[0],
+        )
+        group_state = (
+            'const fitButtons={scanMode:(' + property_value(text[begin:end], 'scanMode') + ')};'
+        )
+    result = evaluate(
+        '[null,{scanMode:false,canReset:false},{scanMode:false,canReset:true},'
+        '{scanMode:true,canReset:false},{scanMode:true,canReset:true}].map(fit=>{'
+        'const bar={fit};'
+        + group_state
+        + 'return ['
+        + property_value(reset, shown)
+        + ','
+        + property_value(reset, enabled)
+        + '];})',
     )
-    assert reset_visibility == [False, False, True], (
-        'Reset fits: the actual row shows its reset action only for a declared scan project'
-    )
+    assert result == [
+        [False, False],
+        [False, False],
+        [False, True],
+        [True, False],
+        [True, True],
+    ], 'Status Reset is scan-only and its availability follows retained results'
     calls = evaluate(
         '(()=>{(' + property_value(reset, 'onClicked') + ');return calls;})()',
-        'let calls=[];const group={fit:{reset:()=>calls.push("reset")}};',
+        'let calls=[];const bar={fit:{reset:()=>calls.push("reset")}};',
     )
-    assert calls == ['reset'], 'Reset fits: the displayed button clears its own fit model'
+    assert calls == ['reset'], 'Status Reset input clears its own fit model'
     positions = [
-        text.index('objectName: "fitting.' + name + '"') for name in ('start', 'reset', 'follow')
+        text.index('objectName: "statusBar.fit.' + name + '"')
+        for name in ('progress', 'reset', 'follow', 'button')
     ]
-    assert positions == sorted(positions), 'Reset fits: its button sits between Fit and Follow'
+    assert positions == sorted(positions), (
+        'Status actions follow progress in Reset, Follow, Fit order'
+    )
 
 
 def test_fit_and_reset_buttons_follow_effective_fit_state():
-    button_states(source('qml/Pages/Analysis/FittingGroup.qml'))
+    button_states(source('qml/Components/StatusBar.qml'))
 
 
 def progress_edge(text):
     area = item(text, 'statusBar.fit')
-    progress = item(area, 'statusBar.fit.progress')
     assert property_value(area, 'anchors.right') == 'parent.right', (
-        'Status progress: the fit area is anchored at the status bar right edge'
+        'The fit group remains anchored at the status bar right edge'
     )
     children = [(a, b) for a, b in spans(area) if a > 0]
     direct = [(a, b) for a, b in children if not any(c < a < b < d for c, d in children)]
-    assert direct and area[direct[-1][0] : direct[-1][1]] == progress, (
-        'Status progress: the progress bar is the last displayed child of the right-anchored row'
+    button = item(area, 'statusBar.fit.button')
+    start = area.index(button)
+    assert direct and direct[-1][0] <= start < start + len(button) <= direct[-1][1], (
+        'Fit belongs to the last displayed item after progress, Reset and Follow'
     )
 
 
@@ -85,25 +112,37 @@ def test_progress_remains_at_the_status_bar_far_right():
     progress_edge(source('qml/Components/StatusBar.qml'))
 
 
-def steady_marker(text):
+def steady_marker(text, line=None):
     marker = item(text, 'evolution.current')
+    line = source('qml/Components/SelectedPatternLine.qml') if line is None else line
+    assert 'SelectedPatternLine ' + marker in text, (
+        'Evolution uses the shared selected-pattern line whose effective geometry is observed'
+    )
     observed = evaluate(
         '[17,17,17,18].map((index,i)=>{chart.project.currentExperimentIndex=index;'
         'chart.evolution.count=[162,0,1,162][i];chart.project.calculating=i===1;'
         'const at=('
         + property_value(marker, 'at')
-        + ');return [at,('
-        + property_value(marker, 'visible')
+        + ');const position=('
+        + property_value(marker, 'position')
+        + '),vertical=('
+        + property_value(marker, 'vertical')
+        + '),thickness=('
+        + property_value(line, 'thickness')
+        + '),span=plot.width,start=('
+        + property_value(line, 'start')
+        + ');return [at,position,('
+        + property_value(line, 'visible')
         + '),('
-        + property_value(marker, 'x')
+        + property_value(line, 'x')
         + ')];})',
         'const chart={project:{currentExperimentIndex:17,calculating:false},'
         'evolution:{count:162,xMode:0,datasetX:index=>137.25+index}};'
         'const axisX={min:120,max:220},plot={width:500};',
     )
-    assert observed == [[154.25, True, 171]] * 3 + [[155.25, True, 176]], (
+    assert observed == [[154.25, 171.25, True, 169]] * 3 + [[155.25, 176.25, True, 174]], (
         'Evolution marker: the shown dataset stays visible at its own x while results rebuild; '
-        'only a changed selection moves it'
+        'only a changed selection moves its centre, with the shared four-pixel line geometry'
     )
 
 
@@ -268,16 +307,16 @@ def test_project_page_displays_bounded_names_and_the_middle_ellipsis():
 def test_owner_observers_reject_live_disconnected_or_constant_consumers(channel):
     path, observer, old, new = {
         'button': (
-            'qml/Pages/Analysis/FittingGroup.qml',
-            button_states,
-            'group.fit.continuable',
+            'qml/Components/StatusBarFitButton.qml',
+            fit_button_states,
+            'fit.continuable',
             'false',
         ),
         'reset': (
-            'qml/Pages/Analysis/FittingGroup.qml',
+            'qml/Components/StatusBar.qml',
             button_states,
-            'onClicked: group.fit.reset()',
-            'onClicked: 0',
+            'fit.reset()',
+            'fit.disconnected()',
         ),
         'progress': (
             'qml/Components/StatusBar.qml',
@@ -288,8 +327,8 @@ def test_owner_observers_reject_live_disconnected_or_constant_consumers(channel)
         'marker': (
             'qml/Components/EvolutionChart.qml',
             steady_marker,
-            'visible: !isNaN(at)',
-            'visible: chart.evolution.count > 0',
+            'chart.evolution.datasetX(chart.project.currentExperimentIndex)',
+            '137.25',
         ),
         'wheel': (
             'qml/Components/EvolutionChart.qml',
@@ -330,3 +369,13 @@ def test_owner_observers_reject_live_disconnected_or_constant_consumers(channel)
     )
     with pytest.raises(AssertionError):
         observer(changed)
+    if channel == 'marker':
+        line = source('qml/Components/SelectedPatternLine.qml')
+        for old, new in [
+            ('visible: !isNaN(position)', 'visible: false'),
+            ('x: vertical ? start : 0', 'x: 0'),
+        ]:
+            changed = line.replace(old, new)
+            assert changed != line, 'The shared marker escape reaches its effective component'
+            with pytest.raises(AssertionError):
+                steady_marker(good, changed)

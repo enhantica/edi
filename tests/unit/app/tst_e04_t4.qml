@@ -1,6 +1,8 @@
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Controls
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import EdiAcceptance 1.0
 import EasyApplication.Gui.Style as Style
@@ -43,10 +45,18 @@ TestCase {
             Ui.click(test, Probe, appWindow, "appBar.tab." + page);
         tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 2000, " gate 1: selected page reaches the viewport");
         const tab = Ui.control(Probe, appWindow, "sideBar.tab." + tier);
-        if (tab && !tab.checked)
+        verify(tab !== null && tab.enabled, "The sidebar witness reaches its requested enabled tab");
+        if (!tab.checked)
             Ui.click(test, Probe, appWindow, "sideBar.tab." + tier);
+        tryCompare(tab, "checked", true, 2000, "The requested sidebar tab is actually selected before observing groups");
         verify(waitForPolish(appWindow, 2000), " gate 1: sidebar layout settles");
-        tryVerify(() => Review.descendants(Ui.page(appWindow)).filter(item => item.visible && item.interactive === false && item.count === 3 && item.currentItem).every(view => Math.abs(view.currentItem.mapToItem(view, 0, 0).x) < 0.1), 2000, " gate 1: selected sidebar pane reaches the viewport");
+        const tabCount = Review.descendants(Ui.page(appWindow)).filter(item => item.objectName.startsWith("sideBar.tab.")).length;
+        const views = Review.descendants(Ui.page(appWindow)).filter(item => item.visible && item.interactive === false && item.count === tabCount && item.currentItem && item.currentItem.sourceComponent !== undefined && item.contentItem && item.contentItem.currentItem === item.currentItem);
+        compare(views.length, 1, "The sidebar witness finds one actual view matching its real tab inventory");
+        const index = tab.TabBar.index;
+        verify(index >= 0 && index < tabCount, "The requested sidebar tab has its actual toolkit position in the full tab inventory");
+        tryCompare(views[0], "currentIndex", index, 2000, "The sidebar view displays the requested tab rather than the previous one");
+        tryVerify(() => Math.abs(views[0].currentItem.mapToItem(views[0], 0, 0).x) < 0.1, 2000, "The requested sidebar pane reaches its viewport before group observations");
     }
     function group(name) {
         const found = Review.findGroup(Ui.page(appWindow), "group." + name);
@@ -135,12 +145,12 @@ TestCase {
                 pane(page, tier);
                 const groups = Review.descendants(Ui.page(appWindow)).filter(item => item.visible && item.objectName.startsWith("group.") && Ui.inPane(Ui.target(item)));
                 verify(groups.length > 0, "ideas 10/11: active pane has observable groups");
-                groups.forEach(item => {
-                    if (item.collapsible)
-                        compare(item.collapsed, true, "idea 10 withdrawn: every foldable group starts folded");
-                });
-                compare(groups[groups.length - 1].last, true, "idea 11: last visible group suppresses its bottom border");
-                groups.slice(0, -1).filter(item => item.collapsible).forEach(item => compare(item.last, false, "idea 11: preceding foldable categories retain their separators"));
+                for (const parent of new Set(groups.map(item => item.parent))) {
+                    const siblings = groups.filter(item => item.parent === parent).sort((a, b) => a.mapToItem(appWindow.contentItem, 0, 0).y - b.mapToItem(appWindow.contentItem, 0, 0).y);
+                    siblings.filter(item => item.collapsible).forEach(item => compare(item.collapsed, item !== siblings[0], "The first group starts unfolded and subsequent foldable groups retain their closed default"));
+                    compare(siblings[siblings.length - 1].last, true, "The last shown group in each actual sidebar column suppresses its bottom border");
+                    siblings.slice(0, -1).filter(item => item.collapsible).forEach(item => compare(item.last, false, "Preceding foldable groups in the same shown sidebar column retain their separators"));
+                }
             });
         });
     }
@@ -238,13 +248,13 @@ TestCase {
         const structureIcon = named(group("structures"), "structures.color.0");
         compare(structureIcon.icon, "layer-group", "idea 12: structure table has a datablock icon");
         const structureColor = String(structureIcon.iconColor);
-        // Independent gui-components v0.9.1 Colors.qml model palette: orange.
-        compare(structureColor.toLowerCase(), Style.Colors.isDarkPalette ? "#ffcc80" : "#ff9800", "idea 12: first structure uses the upstream model orange");
+        // Before: one upstream orange shade. After: shared published structure palette.
+        compare(structureColor.toLowerCase(), Approved.colours(Probe, Approved.getScheme(Preferences), "structures", Math.max(Session.project.structures.count, 1), Style.Colors.isDarkPalette)[0], "idea 12: first structure follows its published contrast-safe palette shade");
         pane("experiment", "basic");
         const experimentIcon = named(group("experiments"), "experiments.color.0");
         compare(experimentIcon.icon, "microscope", "idea 12: experiment table has a datablock icon");
-        // Independent gui-components v0.9.1 chartForegroundsExtra[2]: light blue.
-        compare(String(experimentIcon.iconColor).toLowerCase(), Style.Colors.isDarkPalette ? "#81d4fa" : "#03a9f4", "idea 12: first experiment uses the upstream measured-data blue");
+        // Before: one upstream blue shade. After: shared published experiment palette.
+        compare(String(experimentIcon.iconColor).toLowerCase(), Approved.colours(Probe, Approved.getScheme(Preferences), "measured", Math.max(Session.project.experiments.count, 1), Style.Colors.isDarkPalette)[0], "idea 12: first experiment follows its published contrast-safe palette shade");
         verify(String(experimentIcon.iconColor) !== structureColor, "idea 12: structure and experiment colours are distinct");
         pane("analysis", "basic");
         const rows = Probe.rows(Session.project.parameters);
@@ -323,8 +333,10 @@ TestCase {
         tryVerify(() => list.contentY > 0, 2000, "final Messages feedback: overflowing messages can actually scroll");
     }
     function test_demo_example_has_three_messages() {
-        verify(Session.openExample("pd-neut-tof_fe_pseudo-voigt"), "idea 26: the intentionally unsupported bundled example opens");
+        verify(Examples.fixture(Session, "pd-neut-tof_fe_pseudo-voigt"), "idea 26: the intentionally unsupported retained fixture opens");
         verify(Session.loadWarnings.count >= 3, "idea 26 final widening: example has calculator, minimizer and another unsupported-value message");
+        Session.closeProject();
+        verify(Examples.bundled(this, Session, "pd-neut-cwl_lbco-hrpt"), "The first-Save check opens a bundled measured example");
         verify(Session.needsSaveAs, "final saving feedback: an example's first Save requires Save as");
     }
     function test_messages_status_counts_unviewed_messages() {

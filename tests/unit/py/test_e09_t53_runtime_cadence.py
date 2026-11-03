@@ -88,11 +88,11 @@ def test_owner_cadence_has_only_quick_and_full_entry_points() -> None:
     }
     assert len(quick) == 1, 'the cadence needs exactly one quick/CI-PR group'
     assert len(full) == 1, 'the cadence needs exactly one full/merge group'
-    assert set(groups) == quick | full | {'app', 'nightly-only'}, (
-        'Quick/full retain cadence; app and the exclusive nightly cohort name execution groups'
+    assert set(groups) == quick | full | {'app', 'nightly-only', 'weekly-only'}, (
+        'Quick/full retain cadence; app, nightly and weekly cohorts name execution groups'
     )
-    assert groups['nightly-only']['tiers'] == ['system'], (
-        'the nightly supplement retains the system tier without inventing another cadence'
+    assert groups['nightly-only']['tiers'] == ['integration/py', 'system'], (
+        'the nightly cohort retains its declared integration and system tiers'
     )
     assert {
         'tests/system/py/test_scan_app_execution.py',
@@ -107,6 +107,25 @@ def test_owner_cadence_has_only_quick_and_full_entry_points() -> None:
     assert groups['nightly-only']['task'] == 'group-nightly-only', (
         'the nightly supplement retains its declared executable entry point'
     )
+    assert (
+        groups['weekly-only']['tiers'],
+        groups['weekly-only']['paths'],
+        groups['weekly-only']['task'],
+    ) == (
+        ['integration/py'],
+        ['tests/integration/py/test_cif_import_contract.py'],
+        'group-weekly-only',
+    ), 'The weekly group names exactly the CIF matrix and its integration entry point'
+    assert not set(groups['weekly-only']['paths']) & set(groups['nightly-only']['paths']), (
+        'The weekly CIF matrix stays outside the nightly cohort'
+    )
+    assert tasks['group-weekly-only'] == {'depends-on': ['weekly-only-tests']}, (
+        'The weekly group executes its declared test task'
+    )
+    assert tasks['weekly-only-tests'] == {
+        'cmd': ['python', '-m', 'pytest', *groups['weekly-only']['paths'], '-q'],
+        'depends-on': ['core-build'],
+    }, 'The weekly entry point builds core and collects the complete CIF matrix without selectors'
     assert groups['app']['tiers'] == ['integration/app'], (
         ': only app-dependent Python integration tests belong to the app group'
     )

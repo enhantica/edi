@@ -2,28 +2,54 @@
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
 // One editable text cell (the base's ListViewTextInput): shows `value`; `committed` carries what the
 // user typed, which the owner writes through its model (the value then comes back from the model). A
-// number the cell accepts as a number is shown at the base's default three significant digits, as a
-// field is; the model keeps it whole and an unedited cell commits nothing. Names, tokens and whole
-// numbers are shown as they are. A refused commit (text that is not of the kind the cell `accepts`, or
+// number of a `.edi` item (`uid`) is shown as the project file spells it (edi ADR-0051); the model keeps it
+// whole and an unedited cell commits nothing. Names, tokens and whole numbers are shown as they are. A refused commit (text that is not of the kind the cell `accepts`, or
 // a value the core refuses) returns the cell to the model's value and shows why, as ParameterField
 // does.
 EaComponents.ListViewTextInput {
     id: cell
 
+    // The base takes its row's height; a cell made or dropped without a row yet has none.
+    height: parent ? parent.height : 0
+
     property var value: ""
-    // A number by the app's one rule for numbers in cells (NumberText).
-    readonly property string shown: accepts === "number" && typeof value === "number" && isFinite(value) ? NumberText.plain(value, 8) : String(value)
+    // The item a numeric cell shows, `category.name`.
+    property string uid: ""
+    // A number as the file spells it (by the app's rule for numbers without an item), in scientific notation when
+    // that would not fit the cell (NumberText.fitted; the owner, 2026-10-22), with the file's spelling, or the number
+    // in full without an item, on hover.
+    readonly property bool numeric: accepts === "number" && typeof value === "number" && isFinite(value)
+    // A read-only value the program computed (an output category's) is shown by its item's display format instead, as
+    // every read-only surface is (edi ADR-0051): rounded, so a value within rounding of zero reads as zero.
+    property bool displayed: false
+    readonly property string written: numeric ? (uid !== "" ? (displayed ? Session.display(uid, value) : Session.written(uid, value)) : NumberText.plain(value, 8)) : String(value)
+    readonly property string shown: numeric ? NumberText.fitted(written, width - leftPadding - rightPadding, metrics) : written
+    // As wide as the whole number, not the shown text: a cell no table has sized (DataTable's measuring rows) takes this
+    // width, and a width that followed `shown` would feed back into it.
+    implicitWidth: Math.ceil(metrics.advanceWidth(written)) + leftPadding + rightPadding
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.
     property string refusal: ""
+    // Read-only but shown as usual, not greyed (an auto-estimated background; the owner, 2026-10-20): nothing can be
+    // typed or committed.
+    property bool locked: false
     signal committed(string text)
+
+    readOnly: locked
+    activeFocusOnPress: !locked
+    activeFocusOnTab: !locked
+    // The base's colours, with a locked cell kept in the normal colour rather than the read-only grey.
+    color: enterFlash ? EaStyle.Colors.themeForeground : warned ? EaStyle.Colors.red : !enabled || (readOnly && !locked) || minored ? EaStyle.Colors.themeForegroundMinor : activeFocus || selected || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
 
     text: shown
     warned: refusal !== ""
@@ -32,14 +58,24 @@ EaComponents.ListViewTextInput {
         text: cell.refusal
         visible: text !== "" && (cell.hovered || cell.activeFocus)
     }
+    FontMetrics {
+        id: metrics
+        font: cell.font
+    }
+    EaElements.ToolTip {
+        text: cell.uid !== "" && !cell.displayed ? cell.written : NumberText.plainFull(cell.value)
+        visible: cell.shown !== cell.written && cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
+    }
     onValueChanged: refusal = ""
     onAccepted: commit()
     onEditingFinished: commit()
 
     // Return and leaving the cell both commit; the second of the two finds nothing new.
     function commit() {
-        if (text === shown)
+        if (locked || text === shown) {
+            text = Qt.binding(() => cell.shown);
             return;
+        }
         refusal = TypedInput.refusal(text, accepts);
         if (refusal === "") {
             committed(text);

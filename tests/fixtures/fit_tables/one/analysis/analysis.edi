@@ -1,0 +1,30 @@
+_edi.schema_version 4
+_fitting_mode.type single
+_fit_result.result_kind deterministic
+_fit_result.success true
+_fit_result.iterations 17
+_fit_result.fitting_time 1.3
+_fit_result.reduced_chi_square 9.496649949814639
+_fit_result.prof_r_factor 0.1203068010293729
+_fit_result.prof_wr_factor 0.04649127530396326
+_fit_result.prof_wr_expected 0.04447496642479732
+_fit_result.prof_cr_factor 0.2940820699053651
+_fit_result.prof_cwr_factor 0.1534004697650872
+
+loop_
+_fit_result_bank.experiment_id
+_fit_result_bank.n_data_points
+_fit_result_bank.prof_r_factor
+_fit_result_bank.prof_wr_factor
+_fit_result_bank.prof_wr_expected
+_fit_result_bank.prof_cr_factor
+_fit_result_bank.prof_cwr_factor
+_fit_result_bank.chi_square
+wish_1_10 3758 0.1203068010293729 0.04649127530396326 0.04447496642479732 0.2940820699053651 0.1534004697650872 3895.571639117351
+
+loop_
+_fit_result_phase.experiment_id
+_fit_result_phase.structure_id
+_fit_result_phase.bragg_r_factor
+_fit_result_phase.f_r_factor
+wish_1_10 ncaf 0.02 0.01

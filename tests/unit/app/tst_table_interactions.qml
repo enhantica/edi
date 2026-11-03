@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import "ExampleProjects.js" as Examples
 import EasyApplication.Gui.Components as EaComponents
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Style as EaStyle
@@ -55,16 +56,16 @@ Item {
     TestCase {
         name: "TableInteractions"
         when: windowShown
-        property string savedRecentPaths
+        property var savedRecentPaths
         function init() {
             failOnWarning(/.*/);
-            savedRecentPaths = RecentProjects.settings.paths;
+            savedRecentPaths = RecentProjects.settings.recent.slice();
             Session.closeProject();
-            RecentProjects.settings.paths = "[]";
+            RecentProjects.settings.recent = [];
         }
         function cleanup() {
             Session.closeProject();
-            RecentProjects.settings.paths = savedRecentPaths;
+            RecentProjects.settings.recent = savedRecentPaths;
             RecentProjects.refresh();
         }
         function click(control, button) {
@@ -90,12 +91,12 @@ Item {
             tryVerify(() => Math.abs(group.height - (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < 0.01);
         }
         function test_recent_open_missing_and_remove_use_real_input() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), Session.lastError);
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), Session.lastError);
             verify(Session.saveAs(files.directory()), Session.lastError);
             const found = Session.projectLocation;
             const missing = found + "/missing-project";
             Session.closeProject();
-            RecentProjects.settings.paths = JSON.stringify([missing, found]);
+            RecentProjects.settings.recent = [missing, found];
             RecentProjects.refresh();
             const group = createTemporaryObject(recentComponent, surface);
             verify(group !== null);
@@ -118,7 +119,7 @@ Item {
             tryCompare(Session, "hasProject", true);
             compare(Session.projectLocation, found, "Opening the second row uses its directory");
             Session.closeProject();
-            RecentProjects.settings.paths = JSON.stringify([missing, found]);
+            RecentProjects.settings.recent = [missing, found];
             RecentProjects.refresh();
             tryCompare(table, "count", 2);
             clickNamed(group, "recentProjects.remove.1");
@@ -130,7 +131,7 @@ Item {
             tryCompare(table, "count", 0);
         }
         function test_measured_table_hide_detach_and_reattach() {
-            verify(Session.openExample("pd-neut-cwl_cosio-d20_start-1"), Session.lastError);
+            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), Session.lastError);
             const group = createTemporaryObject(rangeComponent, surface, {
                 experiment: Session.project.currentExperiment
             });

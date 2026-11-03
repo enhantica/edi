@@ -1,11 +1,13 @@
 """Joint weights are persisted only in the mode that uses them."""
 
+import os
 import runpy
 import shlex
 from pathlib import Path
 
 import edi as engine
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -63,13 +65,30 @@ def test_gui_fitting_modes_use_the_owner_descriptions():
         ROOT / 'core/src/selectors.cpp',
         ROOT / 'app/qml/Pages/Analysis/FittingModeGroup.qml',
     ]
+    document = yaml.safe_load(
+        (
+            Path(os.environ.get('CRYSTA_CONSUMER_SRC', ROOT / 'build/crysta-src'))
+            / 'data/dictionary/parameters.yaml'
+        ).read_text()
+    )
+    row = next(
+        row
+        for row in document['parameters'] + document.get('items', [])
+        if row['uid'] == 'fitting_mode.type'
+    )
     source = '\n'.join(path.read_text() for path in files)
+    assert 'setItemOptions("fitting_mode.type", modes, modes.front())' in source, (
+        'The actual selector model resolves applicable fitting-mode names through the dictionary'
+    )
+    assert 'uid: "fitting_mode.type"' in source and 'row.analysis.fittingModeOptions' in source, (
+        'The real selector consumes the fitting-mode dictionary and its guarded options'
+    )
     for label in [
         'Single experiment',
         'Joint: all experiments at once',
         'Sequential: each from the previous',
         'Independent: each from the same start',
     ]:
-        assert label in source, (
+        assert label in {option['display_name'] for option in row['options']}, (
             'The fitting-mode selector must declare each owner-approved display name'
         )

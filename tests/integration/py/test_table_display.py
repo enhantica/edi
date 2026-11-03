@@ -1,13 +1,12 @@
 """Exercise the app's real QML arithmetic against the owner's declared display rules."""
 
 import json
-import re
-import shlex
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 from tests.integration.py.test_scan_app_contract import (
     object_id,
@@ -19,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[3]
 RUNNER = ROOT / 'tests/fixtures/table_display/run_functions.cjs'
 
 
-def run_functions(source, names, calls, *, fit=None, consumer=None):
+def run_functions(source, names, calls, *, fit=None, consumer=None, bridge=None):
     node = shutil.which('node')
     assert node, 'Scientific display gates require the declared Node runtime'
     request = {
@@ -28,6 +27,7 @@ def run_functions(source, names, calls, *, fit=None, consumer=None):
         'calls': calls,
         'fit': fit,
         'consumer': consumer,
+        'bridge': bridge,
     }
     result = subprocess.run(
         [node, str(RUNNER)],
@@ -92,14 +92,14 @@ def test_sequential_count_colours_follow_zero_and_nonzero_state():
 )
 def test_fullprof_comparison_projects_retain_verification_purpose(project):
     # The declared FullProf comparison corpus is an input independent of the app filter.
-    text = (ROOT / f'docs/user/cli/{project}/project/project.edi').read_text()
-    match = re.search(r'(?m)^_metadata\.purpose\s+(\S+)', text)
-    assert match and shlex.split(match[1]) == ['verification'], (
-        'FullProf comparison projects retain verification as their stored purpose'
+    rows = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    row = next(row for row in rows if row['id'] == project)
+    assert row.get('verification') is True, (
+        'ADR-0054 keeps FullProf verification in the registry after retiring project purpose'
     )
     metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
-    assert metadata['examples'][project]['values']['purpose'] == ['verification'], (
-        'The app catalogue preserves verification metadata so it can exclude that workflow'
+    assert project not in metadata['examples'], (
+        'Verification fixtures retain their stored purpose and stay outside the app catalogue'
     )
 
 
@@ -107,6 +107,7 @@ def test_fullprof_comparison_projects_retain_verification_purpose(project):
 @pytest.mark.parametrize(('ok', 'failed'), [(0, 0), (7, 0), (0, 3), (7, 3)])
 def test_displayed_sequential_counts_consume_state_colours(summary, ok, failed):
     fit = {
+        'outOfDate': False,
         'scanOk': ok,
         'scanFailed': failed,
         'scanning': not summary,

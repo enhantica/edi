@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/edits.hpp"
 #include "edi/selectors.hpp"
 #include "project_editor.hpp"
@@ -273,9 +274,11 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       aliases_(new AliasListModel(project, editor, this)),
       constraints_(new ConstraintListModel(project, editor, this)),
       categories_(new CategoryListModel(this)),
-      text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this)) {
-    descent_options_->setOptions(edi::supported_descents(), edi::default_descent());
-    minimizer_type_options_->setOptions(edi::supported_minimizer_types());
+      text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this,
+                          [] { return std::string("analysis/analysis.edi"); }, {},
+                          [saved] { return saved.discovered("analysis/analysis.edi"); })) {
+    descent_options_->setItemOptions("minimizer.descent", edi::supported_descents(), edi::default_descent());
+    minimizer_type_options_->setItemOptions("minimizer.type", edi::supported_minimizer_types());
     sync();
 }
 
@@ -311,6 +314,15 @@ void AnalysisViewModel::setChiSquareTolerance(double tolerance) {
     setLastError(editor_.apply_setting(edi::Edit::chi_square_tolerance(project, tolerance)));
 }
 
+void AnalysisViewModel::setRefineLsThresholdSigma(double sigma) {
+    const std::optional<double> value = qIsNaN(sigma) ? std::nullopt : std::optional<double>(sigma);
+    if (value == project_.refine_ls_threshold_sigma) {
+        return;
+    }
+    edi::Project& project = project_;
+    setLastError(editor_.apply_setting(edi::Edit::refine_ls_threshold_sigma(project, value)));
+}
+
 void AnalysisViewModel::setLastError(const QString& error) {
     if (error != last_error_) {
         last_error_ = error;
@@ -325,11 +337,7 @@ void AnalysisViewModel::sync() {
     const std::vector<std::string> modes = edi::applicable_fitting_modes(project_);
     if (modes != fitting_modes_) {
         fitting_modes_ = modes;
-        std::vector<std::string> labels;
-        for (const std::string& token : modes) {
-            labels.push_back(edi::fitting_mode_label(token));
-        }
-        fitting_mode_options_->setOptions(modes, modes.front(), labels);
+        fitting_mode_options_->setItemOptions("fitting_mode.type", modes, modes.front());
     }
     if (std::find(modes.begin(), modes.end(), edi::effective_fitting_mode(project_)) == modes.end()) {
         QMetaObject::invokeMethod(
@@ -368,13 +376,19 @@ void AnalysisViewModel::sync() {
             emit hasChiSquareToleranceChanged();
         }
     }
+    const double cutoff = project_.refine_ls_threshold_sigma.value_or(qQNaN());
+    if (qIsNaN(cutoff) != qIsNaN(refine_ls_threshold_sigma_) ||
+        (!qIsNaN(cutoff) && cutoff != refine_ls_threshold_sigma_)) {
+        refine_ls_threshold_sigma_ = cutoff;
+        emit refineLsThresholdSigmaChanged();
+    }
     joint_weights_->sync();
     sequential_fit_->sync();
     sequential_extract_->sync();
     fit_start_->sync();
     aliases_->sync();
     constraints_->sync();
-    categories_->setCategories(edi::analysis_categories(project_));
+    categories_->setCategories(edi::analysis_categories(project_), [this] { return text_->discoveryText().toStdString(); });
 }
 
 }  // namespace edi_app

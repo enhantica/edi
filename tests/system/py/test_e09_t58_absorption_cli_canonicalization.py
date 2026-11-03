@@ -18,6 +18,7 @@ from conftest import (
     project_record_without_fields,
     project_tree_parts,
 )
+from tests.fixtures.saved_spelling.reference import with_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -102,12 +103,11 @@ def test_both_clis_write_one_typed_none_absorption_tree(
         'the disengaged crysta CLI must carry its partial project record byte-for-byte apart '
         'from the required schema reconciliation'
     )
-    assert (
-        project_record_without_fields(edi_record, 'created', 'last_modified', 'timestamp')
-        == crysta_record
-    ), (
-        'edi must enrich the carried project record only with its three previously absent owned '
-        'metadata fields, never rebaseline or discard the carried bytes'
+    assert project_record_without_fields(
+        edi_record, 'created', 'last_modified', 'timestamp'
+    ) == with_default_rule(crysta_record), (
+        'edi adds only the three owned metadata fields and the exact default uncertainty '
+        'rule, preserving every other carried record byte'
     )
     assert project_record_value(edi_record, 'timestamp') == b'?', (
         'the enriched record must retain the loaded project timestamp default as the STAR sentinel'

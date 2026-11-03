@@ -11,20 +11,22 @@ import edi.app
 // What the report holds besides what it always does (the owner, 2026-10-13): a box for each optional group, the
 // charts, the correlations, the reflections, the data (left out by default) and, for a scan, the evolution. The
 // correlation level and the x axis come from the Analysis page.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     // Only the top group opens on first view, as on the other pages; each remembers its state.
     readonly property string openKey: "Main:reportContents"
     property ReportViewModel report: null
-    readonly property var items: report && report.model.contents ? report.model.contents : []
+    // Whether the group is on screen; reading the model builds the report, so a hidden group reads nothing.
+    property bool shown: true
+    readonly property var items: report && shown && report.model.contents ? report.model.contents : []
     readonly property var hidden: report ? report.hidden : []
 
     objectName: "group.reportContents"
     title: qsTr("Contents")
     icon: "list"
-    collapsed: !SideBarGroups.isOpen(openKey)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
     enabled: report !== null
 

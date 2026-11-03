@@ -1,0 +1,525 @@
+{
+  "purpose": "Local diagnostic evidence; never read as a correctness oracle",
+  "provenance": "tests-quality-settled.log",
+  "native_sha256": [
+    "0597e2ba38540b8010df6712b8b63a4d69ce7c592f05d7266da9ce975cdaa3a8"
+  ],
+  "reported_native_build": [
+    "26314d7a74fc9be6efbee5d51e53c32152d0c1e1-dirty"
+  ],
+  "cost": "Eight explicit redraw requests per path; includes event delivery and frame waits",
+  "rows": [
+    {
+      "mode": "gpu",
+      "shape": "peak",
+      "dpr": 1,
+      "reference": "line-quality-gpu-peak-1-pattern.png",
+      "candidate": "line-quality-gpu-peak-1-stacked.png",
+      "colour": "#829db9",
+      "width": 416,
+      "height": 384,
+      "points": [
+        [
+          10,
+          0
+        ],
+        [
+          40,
+          255
+        ],
+        [
+          80,
+          0
+        ]
+      ],
+      "input_count": 4098,
+      "reference_count": 1553,
+      "backend": {
+        "api": "OpenGL",
+        "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)"
+      },
+      "pattern_frame_delivery_ms": [
+        16,
+        18,
+        16,
+        19,
+        18,
+        15,
+        18,
+        19
+      ],
+      "stacked_frame_delivery_ms": [
+        19,
+        19,
+        17,
+        18,
+        17,
+        18,
+        18,
+        17
+      ],
+      "metrics": {
+        "width_ratio": 0.9955916338058245,
+        "local_width_error": 0.006352368304559652,
+        "coverage_error": 0.01551085912522196,
+        "missing_core_pixels": 0,
+        "missing_join_pixels": 0,
+        "join_excess_alpha": 0.0
+      },
+      "pattern_frame_delivery_median_ms": 18.0,
+      "stacked_frame_delivery_median_ms": 18.0
+    },
+    {
+      "mode": "gpu",
+      "shape": "needle",
+      "dpr": 1,
+      "reference": "line-quality-gpu-needle-1-pattern.png",
+      "candidate": "line-quality-gpu-needle-1-stacked.png",
+      "colour": "#829db9",
+      "width": 416,
+      "height": 384,
+      "points": [
+        [
+          10,
+          0
+        ],
+        [
+          44.931640625,
+          0
+        ],
+        [
+          45.0341796875,
+          255
+        ],
+        [
+          45.13671875,
+          0
+        ],
+        [
+          80,
+          0
+        ]
+      ],
+      "input_count": 4097,
+      "reference_count": 1554,
+      "backend": {
+        "api": "OpenGL",
+        "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)"
+      },
+      "pattern_frame_delivery_ms": [
+        16,
+        19,
+        19,
+        18,
+        19,
+        18,
+        18,
+        18
+      ],
+      "stacked_frame_delivery_ms": [
+        35,
+        18,
+        18,
+        16,
+        15,
+        16,
+        18,
+        19
+      ],
+      "metrics": {
+        "width_ratio": 0.9996814659228092,
+        "local_width_error": 0.0,
+        "coverage_error": 0.03929624368766565,
+        "missing_core_pixels": 0,
+        "missing_join_pixels": 0,
+        "join_excess_alpha": 0.0
+      },
+      "pattern_frame_delivery_median_ms": 18.0,
+      "stacked_frame_delivery_median_ms": 18.0
+    },
+    {
+      "mode": "software",
+      "shape": "peak",
+      "dpr": 1,
+      "reference": "line-quality-software-peak-1-pattern.png",
+      "candidate": "line-quality-software-peak-1-stacked.png",
+      "colour": "#829db9",
+      "width": 416,
+      "height": 384,
+      "points": [
+        [
+          10,
+          0
+        ],
+        [
+          40,
+          255
+        ],
+        [
+          80,
+          0
+        ]
+      ],
+      "input_count": 4098,
+      "reference_count": 1553,
+      "backend": {
+        "api": "OpenGL",
+        "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)"
+      },
+      "pattern_frame_delivery_ms": [
+        16,
+        16,
+        19,
+        20,
+        19,
+        19,
+        19,
+        19
+      ],
+      "stacked_frame_delivery_ms": [
+        27,
+        27,
+        25,
+        27,
+        27,
+        27,
+        27,
+        28
+      ],
+      "metrics": {
+        "width_ratio": 1.0013740891473815,
+        "local_width_error": 0.007602626361834064,
+        "coverage_error": 0.00956057276810041,
+        "missing_core_pixels": 0,
+        "missing_join_pixels": 0,
+        "join_excess_alpha": 0.0
+      },
+      "pattern_frame_delivery_median_ms": 19.0,
+      "stacked_frame_delivery_median_ms": 27.0
+    },
+    {
+      "mode": "software",
+      "shape": "needle",
+      "dpr": 1,
+      "reference": "line-quality-software-needle-1-pattern.png",
+      "candidate": "line-quality-software-needle-1-stacked.png",
+      "colour": "#829db9",
+      "width": 416,
+      "height": 384,
+      "points": [
+        [
+          10,
+          0
+        ],
+        [
+          44.931640625,
+          0
+        ],
+        [
+          45.0341796875,
+          255
+        ],
+        [
+          45.13671875,
+          0
+        ],
+        [
+          80,
+          0
+        ]
+      ],
+      "input_count": 4097,
+      "reference_count": 1554,
+      "backend": {
+        "api": "OpenGL",
+        "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)"
+      },
+      "pattern_frame_delivery_ms": [
+        16,
+        15,
+        18,
+        18,
+        16,
+        17,
+        17,
+        35
+      ],
+      "stacked_frame_delivery_ms": [
+        29,
+        29,
+        27,
+        28,
+        28,
+        25,
+        28,
+        28
+      ],
+      "metrics": {
+        "width_ratio": 1.0107363213530887,
+        "local_width_error": 0.0,
+        "coverage_error": 0.0378325080060403,
+        "missing_core_pixels": 0,
+        "missing_join_pixels": 0,
+        "join_excess_alpha": 0.0
+      },
+      "pattern_frame_delivery_median_ms": 17.0,
+      "stacked_frame_delivery_median_ms": 28.0
+    },
+    {
+      "mode": "gpu",
+      "shape": "peak",
+      "dpr": 2,
+      "reference": "line-quality-gpu-peak-2-pattern.png",
+      "candidate": "line-quality-gpu-peak-2-stacked.png",
+      "colour": "#829db9",
+      "width": 416,
+      "height": 384,
+      "points": [
+        [
+          10,
+          0
+        ],
+        [
+          40,
+          255
+        ],
+        [
+          80,
+          0
+        ]
+      ],
+      "input_count": 4098,
+      "reference_count": 4098,
+      "backend": {
+        "api": "OpenGL",
+        "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)"
+      },
+      "pattern_frame_delivery_ms": [
+        19,
+        22,
+        20,
+        20,
+        24,
+        24,
+        19,
+        20
+      ],
+      "stacked_frame_delivery_ms": [
+        24,
+        22,
+        21,
+        24,
+        22,
+        25,
+        24,
+        23
+      ],
+      "metrics": {
+        "width_ratio": 0.9982571723862266,
+        "local_width_error": 0.005818315189303758,
+        "coverage_error": 0.008847018029553046,
+        "missing_core_pixels": 0,
+        "missing_join_pixels": 0,
+        "join_excess_alpha": 0.0
+      },
+      "pattern_frame_delivery_median_ms": 20.0,
+      "stacked_frame_delivery_median_ms": 23.5
+    },
+    {
+      "mode": "gpu",
+      "shape": "needle",
+      "dpr": 2,
+      "reference": "line-quality-gpu-needle-2-pattern.png",
+      "candidate": "line-quality-gpu-needle-2-stacked.png",
+      "colour": "#829db9",
+      "width": 416,
+      "height": 384,
+      "points": [
+        [
+          10,
+          0
+        ],
+        [
+          44.9658203125,
+          0
+        ],
+        [
+          45.01708984375,
+          255
+        ],
+        [
+          45.068359375,
+          0
+        ],
+        [
+          80,
+          0
+        ]
+      ],
+      "input_count": 4097,
+      "reference_count": 4097,
+      "backend": {
+        "api": "OpenGL",
+        "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)"
+      },
+      "pattern_frame_delivery_ms": [
+        21,
+        20,
+        19,
+        19,
+        19,
+        20,
+        19,
+        25
+      ],
+      "stacked_frame_delivery_ms": [
+        23,
+        24,
+        25,
+        24,
+        24,
+        24,
+        22,
+        22
+      ],
+      "metrics": {
+        "width_ratio": 1.010434384000425,
+        "local_width_error": 0.0,
+        "coverage_error": 0.03326302320858185,
+        "missing_core_pixels": 0,
+        "missing_join_pixels": 0,
+        "join_excess_alpha": 0.0
+      },
+      "pattern_frame_delivery_median_ms": 19.5,
+      "stacked_frame_delivery_median_ms": 24.0
+    },
+    {
+      "mode": "software",
+      "shape": "peak",
+      "dpr": 2,
+      "reference": "line-quality-software-peak-2-pattern.png",
+      "candidate": "line-quality-software-peak-2-stacked.png",
+      "colour": "#829db9",
+      "width": 416,
+      "height": 384,
+      "points": [
+        [
+          10,
+          0
+        ],
+        [
+          40,
+          255
+        ],
+        [
+          80,
+          0
+        ]
+      ],
+      "input_count": 4098,
+      "reference_count": 4098,
+      "backend": {
+        "api": "OpenGL",
+        "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)"
+      },
+      "pattern_frame_delivery_ms": [
+        19,
+        20,
+        18,
+        19,
+        22,
+        21,
+        21,
+        19
+      ],
+      "stacked_frame_delivery_ms": [
+        39,
+        37,
+        34,
+        34,
+        33,
+        31,
+        32,
+        31
+      ],
+      "metrics": {
+        "width_ratio": 1.0143448640217196,
+        "local_width_error": 0.01732728253625715,
+        "coverage_error": 0.18529926006606798,
+        "missing_core_pixels": 0,
+        "missing_join_pixels": 0,
+        "join_excess_alpha": 0.0
+      },
+      "pattern_frame_delivery_median_ms": 19.5,
+      "stacked_frame_delivery_median_ms": 33.5
+    },
+    {
+      "mode": "software",
+      "shape": "needle",
+      "dpr": 2,
+      "reference": "line-quality-software-needle-2-pattern.png",
+      "candidate": "line-quality-software-needle-2-stacked.png",
+      "colour": "#829db9",
+      "width": 416,
+      "height": 384,
+      "points": [
+        [
+          10,
+          0
+        ],
+        [
+          44.9658203125,
+          0
+        ],
+        [
+          45.01708984375,
+          255
+        ],
+        [
+          45.068359375,
+          0
+        ],
+        [
+          80,
+          0
+        ]
+      ],
+      "input_count": 4097,
+      "reference_count": 4097,
+      "backend": {
+        "api": "OpenGL",
+        "renderer": "llvmpipe (LLVM 23.1.1, 256 bits)"
+      },
+      "pattern_frame_delivery_ms": [
+        19,
+        18,
+        18,
+        19,
+        19,
+        19,
+        18,
+        21
+      ],
+      "stacked_frame_delivery_ms": [
+        32,
+        36,
+        32,
+        32,
+        34,
+        36,
+        30,
+        34
+      ],
+      "metrics": {
+        "width_ratio": 1.0166142877430662,
+        "local_width_error": 0.0,
+        "coverage_error": 0.13174236421957794,
+        "missing_core_pixels": 0,
+        "missing_join_pixels": 0,
+        "join_excess_alpha": 0.0
+      },
+      "pattern_frame_delivery_median_ms": 19.0,
+      "stacked_frame_delivery_median_ms": 33.0
+    }
+  ]
+}

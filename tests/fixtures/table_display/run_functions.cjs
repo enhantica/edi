@@ -56,6 +56,36 @@ if (request.consumer === "scan") {
             color: vm.runInContext(binding("numberText", "color"), context)};
     });
     console.log(JSON.stringify(result));
+} else if (request.consumer === "fraction") {
+    const cell = fs.readFileSync(path.resolve(path.dirname(request.source), "../Pages/Experiment/LinkedStructureGroup.qml"), "utf8");
+    const start = cell.indexOf("id: fraction");
+    if (start < 0) throw new Error("The real fraction cell must exist");
+    const body = cell.slice(start);
+    const parameter = /parameter:\s*([\s\S]*?)\n\s*color:/.exec(body);
+    if (!parameter) throw new Error("The real fraction parameter binding must exist");
+    // Execute the real native core for both bindings; a wrong uid or value
+    // reaches that formatter and its independently checked output.
+    function nativeFraction(uid, value, su) {
+        if (!request.bridge) throw new Error("The fraction requires its native formatter");
+        const text = require("node:child_process").execFileSync(
+            request.bridge, [uid, String(value), String(su)], {encoding: "utf8"});
+        return text.split("\t");
+    }
+    context.Session = {
+        valueText: (uid, value, su) => nativeFraction(uid, value, su)[0],
+        suText: (uid, value, su) => nativeFraction(uid, value, su)[1]
+    };
+    const result = request.calls.map(call => {
+        context.row = {weightFraction: call.args[0] === null ? {} : {value: call.args[0], uncertainty: call.args[1]}};
+        for (const name of ["known", "fractionValue", "fractionError"]) {
+            const expression = new RegExp("readonly property (?:bool|real) " + name + ":([^\\n]+)").exec(body);
+            if (!expression) throw new Error("The real fraction property must exist: " + name);
+            context[name] = vm.runInContext(expression[1], context);
+        }
+        const value = vm.runInContext("(" + parameter[1] + ")", context);
+        return {value: value.value, error: value.error};
+    });
+    console.log(JSON.stringify(result));
 } else {
     console.log(JSON.stringify(request.calls.map(call => context[call.name](...call.args))));
 }

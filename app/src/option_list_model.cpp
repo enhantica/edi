@@ -2,6 +2,9 @@
 #include "option_list_model.hpp"
 
 #include <cstddef>
+#include <stdexcept>
+
+#include "edi/display.hpp"
 
 namespace edi_app {
 
@@ -28,6 +31,20 @@ void OptionListModel::setOptions(const std::vector<std::string>& tokens, const s
     if (count_changed) {
         emit countChanged();
     }
+}
+
+void OptionListModel::setItemOptions(const std::string& uid, const std::vector<std::string>& tokens,
+                                     const std::string& default_token) {
+    std::vector<std::string> labels;
+    labels.reserve(tokens.size());
+    for (const std::string& token : tokens) {
+        try {
+            labels.push_back(edi::option_label(uid, token));
+        } catch (const std::invalid_argument&) {
+            labels.push_back(token);
+        }
+    }
+    setOptions(tokens, default_token, labels);
 }
 
 int OptionListModel::rowCount(const QModelIndex& parent) const {

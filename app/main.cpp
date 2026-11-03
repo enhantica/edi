@@ -2,6 +2,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QScreen>
+#include <QSettings>
 #include <QQuickWindow>
 #include <QStyleHints>
 #include <QSurfaceFormat>
@@ -16,6 +17,7 @@
 #include "demo_driver.hpp"
 #include "web_page_hooks.hpp"
 #include "engine_setup.hpp"
+#include "run_log.hpp"
 #include "test_observer.hpp"
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
@@ -44,16 +46,24 @@ int main(int argc, char* argv[]) {
     // `--demo <dir>`: the scripted click-through that saves one image per page state; `--demo-only <prefix>`
     // runs just the steps whose image name starts with the prefix.
     const qsizetype demo_flag = arguments.indexOf(QStringLiteral("--demo"));
-    const bool demo = demo_flag >= 0;
-    if (demo && demo_flag + 1 >= arguments.size()) {
-        std::fprintf(stderr, "usage: edi_app --demo <output-directory>\n");
+    const qsizetype docs_flag = arguments.indexOf(QStringLiteral("--docs-capture"));
+    const qsizetype script_flag = arguments.indexOf(QStringLiteral("--docs-script"));
+    const bool documentation = docs_flag >= 0;
+    const bool demo = demo_flag >= 0 || documentation;
+    const qsizetype capture_flag = documentation ? docs_flag : demo_flag;
+    if ((demo_flag >= 0 && documentation) || (script_flag >= 0 && !documentation) ||
+        (demo && (capture_flag + 1 >= arguments.size() || arguments.at(capture_flag + 1).startsWith("--"))) ||
+        (script_flag >= 0 && (script_flag + 1 >= arguments.size() || arguments.at(script_flag + 1).startsWith("--")))) {
+        std::fprintf(stderr, "usage: edi_app --demo <output-directory>\n"
+                             "       edi_app --docs-capture <output-directory> [--docs-script <walkthrough.js>]\n");
         return 2;
     }
     if (demo) {
         // The images are 1280x768 at a device-pixel ratio of 1 on every platform: a Retina screen (2) is
         // scaled back by QT_SCALE_FACTOR, which Qt reads only at start, so the demo restarts itself once.
+        // EDI_DEMO_ANY_RATIO keeps the screen's ratio, for a look at a high-DPI screen's drawing (`--demo-only lines-`).
         const qreal ratio = QGuiApplication::primaryScreen()->devicePixelRatio();
-        if (!qFuzzyCompare(ratio, 1.0)) {
+        if (!qFuzzyCompare(ratio, 1.0) && qEnvironmentVariableIsEmpty("EDI_DEMO_ANY_RATIO")) {
 #if defined(Q_OS_UNIX)
             if (qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR")) {
                 qputenv("QT_SCALE_FACTOR", QByteArray::number(1.0 / ratio));
@@ -74,6 +84,18 @@ int main(int argc, char* argv[]) {
         ApplicationInfo::useDemoIdentity();
         edi_app::use_fresh_settings();  // never the machine's saved settings
     }
+    // Every message of this run to the terminal and its log file (ADR-0062), at the level Preferences keeps.
+    edi_app::RunLog run_log({edi_app::run_log_directory()});
+    const QSettings settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
+                             QStringLiteral("EasyDiffraction"));
+    run_log.setLevel(settings.value(QStringLiteral("develop/loggingLevel"), QStringLiteral("Info")).toString());
+    edi_app::RunLog::install(&run_log);
+    if (!run_log.start(edi_app::run_log_header()) && !edi_app::run_log_directory().isEmpty()) {
+        qWarning("cannot write the run log in %s; this run logs to the terminal only",
+                 qPrintable(edi_app::run_log_directory()));
+    }
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, &run_log, &edi_app::RunLog::finish);
+    edi_app::quit_on_termination_signals();
     QQmlApplicationEngine engine;
     edi_app::configure_engine(engine);
     edi_app::configure_test_observer(engine);
@@ -89,10 +111,19 @@ int main(int argc, char* argv[]) {
         if (window == nullptr) {
             return -1;
         }
-        window->resize(1280, 768);  // the originals' logical window size
+        window->resize(documentation ? 1480 : 1280, documentation ? 800 : 768);
         const qsizetype only_flag = arguments.indexOf(QStringLiteral("--demo-only"));
-        driver = std::make_unique<edi_app::DemoDriver>(*window, arguments.at(demo_flag + 1),
+        driver = std::make_unique<edi_app::DemoDriver>(*window, arguments.at(capture_flag + 1),
                                                        only_flag >= 0 ? arguments.value(only_flag + 1) : QString());
+        if (documentation) {
+            QString error;
+            const auto script = script_flag >= 0 ? arguments.at(script_flag + 1)
+                                                 : QStringLiteral(":/edi/docs/y2o3-spodi.js");
+            if (!driver->loadDocumentationScript(script, &error)) {
+                std::fprintf(stderr, "edi_app --docs-capture: %s\n", qPrintable(error));
+                return 2;
+            }
+        }
         driver->start();
     }
     return QGuiApplication::exec();

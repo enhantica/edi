@@ -6,6 +6,8 @@ import QtQuick
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
+import edi.app
+
 // One line of icons and text on one visual centre line (edi ADR-0017 §10): every place an icon precedes a name
 // draws it through this, so icon and name cannot sit at different heights. The text pieces share the line's
 // baseline; each icon is placed so the middle of its drawn glyph lies on the middle of a capital's height of
@@ -15,11 +17,12 @@ import EasyApplication.Gui.Elements as EaElements
 Item {
     id: line
 
-    // The pieces, in order: {icon: <Font Awesome name>, color, slot, ring}, {text, color, bold, elides} or {mark,
-    // color, width}; a piece without a colour takes `textColor`, an icon with `slot` is one icon wide, drawn or not
+    // The pieces, in order: {icon: <Font Awesome name>, color, slot, ring}, {text, color, bold, elides, rich, factors}
+    // or {mark, color, width}; a piece without a colour takes `textColor`, an icon with `slot` is one icon wide, drawn or not
     // (a fit-outcome column), and one with `ring` is drawn as a hollow circle of the icons' size (FitOutcomes' "Not
     // fitted"). A mark is a drawn shape, never a character, so it looks the same on every platform (edi ADR-0033):
-    // "line" a horizontal line `width` pixels thick, "tick" a vertical one.
+    // "line" a horizontal line `width` pixels thick, "dash" two dashes of one, "tick" a vertical one. A `rich`
+    // piece's text is styled text (coloured spans in one label, spaced as the text itself).
     property var segments: []
     property real pixelSize: EaStyle.Sizes.fontPixelSize
     property color textColor: EaStyle.Colors.themeForeground
@@ -34,13 +37,24 @@ Item {
         const marked = segments.findIndex(segment => segment.elides === true);
         return marked >= 0 ? marked : segments.length - 1;
     }
+    // A piece's width uncut. otherWidth sums these, never the pieces' `width`, so the elided piece's cut cannot feed
+    // back into the room it is given while the segments change.
+    function naturalWidth(segment, piece) {
+        const fixed = fixedWidth(segment);
+        return fixed !== undefined ? fixed : piece.implicitWidth;
+    }
+    // A slot's or a mark's set width; undefined for a text, which takes its own.
+    function fixedWidth(segment) {
+        const mark = segment ? segment.mark ?? "" : "";
+        return segment && segment.slot ? pixelSize * 1.15 : mark === "dash" ? pixelSize * 1.2 : mark !== "" ? pixelSize * 0.6 : undefined;
+    }
     // The width of every other piece, with their spacing: what the elided piece leaves room for.
     readonly property real otherWidth: {
         let width = 0;
         for (let i = 0; i < pieces.count; ++i) {
             const piece = pieces.itemAt(i);
             if (i !== elidedIndex)
-                width += piece ? piece.width + spacing : 0;
+                width += piece ? line.naturalWidth(segments[i], piece) + spacing : 0;
         }
         return width;
     }
@@ -72,12 +86,14 @@ Item {
 
         Repeater {
             id: pieces
-            model: line.segments
+            // By count, so a change of a piece's text or colour updates the pieces in place; only a change of how many
+            // there are makes them again.
+            model: line.segments.length
             delegate: EaElements.Label {
                 id: piece
 
                 required property int index
-                required property var modelData
+                readonly property var modelData: line.segments[index] ?? ({})
                 readonly property bool elided: line.maximumWidth > 0 && !isIcon && index === line.elidedIndex
                 readonly property bool isIcon: modelData.icon !== undefined
                 readonly property string mark: modelData.mark ?? ""
@@ -89,8 +105,14 @@ Item {
                 font.styleName: !isIcon && modelData.bold ? "Bold" : ""
                 font.pixelSize: line.pixelSize
                 color: modelData.color ?? line.textColor
-                text: isIcon ? modelData.icon : mark !== "" ? "" : modelData.text
-                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : modelData.slot ? line.pixelSize * 1.15 : mark !== "" ? line.pixelSize * 0.6 : implicitWidth
+                // A piece with `factors` writes its agreement factors with their subscripts (FactorText).
+                readonly property bool factors: !isIcon && modelData.factors === true && FactorText.has(modelData.text)
+                textFormat: factors ? Text.RichText : modelData.rich === true ? Text.StyledText : Text.AutoText
+                // A piece past a shortened line's end reads no segment until its delegate goes: it shows nothing.
+                text: isIcon ? modelData.icon : mark !== "" ? "" : factors ? FactorText.rich(modelData.text) : modelData.text ?? ""
+                // A text not cut keeps its own width (undefined resets it to the implicit width), so a piece changed
+                // in place never reads its own layout while it is laid out again.
+                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : line.fixedWidth(modelData)
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 
@@ -111,12 +133,32 @@ Item {
                 Rectangle {
                     readonly property real thickness: piece.modelData.width ?? 1
 
-                    visible: piece.mark !== ""
+                    visible: piece.mark !== "" && piece.mark !== "dash"
                     width: piece.mark === "tick" ? thickness : piece.width
                     height: piece.mark === "line" ? thickness : line.pixelSize
                     x: (piece.width - width) / 2
                     y: line.centreY - piece.y - height / 2
                     color: piece.color
+                }
+
+                // A dashed series' sample: two dashes with a gap, as the series is drawn.
+                Row {
+                    id: dashes
+
+                    readonly property real thickness: piece.modelData.width ?? 1
+
+                    visible: piece.mark === "dash"
+                    y: line.centreY - piece.y - thickness / 2
+                    spacing: piece.width * 0.2
+
+                    Repeater {
+                        model: 2
+                        delegate: Rectangle {
+                            width: piece.width * 0.4
+                            height: dashes.thickness
+                            color: piece.color
+                        }
+                    }
                 }
 
                 TextMetrics {

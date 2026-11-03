@@ -31,9 +31,28 @@ def screens(tmp_path_factory):
     return Observations(observe)
 
 
+# Separate module fixtures account for setup and isolate an unavailable host.
+@pytest.fixture(scope='module')
+def desktop_screen_capture(screens):
+    return screens['desktop']
+
+
+@pytest.fixture(scope='module')
+def browser_screen_capture(screens):
+    return screens['browser']
+
+
+@pytest.fixture(autouse=True)
+def prepare_screen_capture(request):
+    backend = request.node.callspec.params['backend']
+    request.getfixturevalue(backend + '_screen_capture')
+
+
 def shown(item):
     names = {measured_hash(path): path.name for path in files(FULL)}
-    template = columns_hash(template_measured(FULL / 'experiments/d20.edi'))
+    template_columns = template_measured(FULL / 'experiments/d20.edi')
+    template = columns_hash(template_columns)
+    pending_template = columns_hash(measured(files(FULL)[0])[: len(template_columns)])
     records = []
     last = None
     raw = {path.name: {x: y for x, y, _ in measured(path)} for path in files(FULL)}
@@ -41,16 +60,29 @@ def shown(item):
     initial_series = (initial.get('drawnMeasured'), initial.get('drawnCalculated'))
     for frame in item['frames']:
         identity = names.get(frame['modelMeasured'])
-        assert identity or frame['modelMeasured'] == template, (
+        assert (
+            identity
+            or frame['modelMeasured'] == template
+            or (
+                frame is initial
+                and not frame['running']
+                and frame['modelMeasured'] == pending_template
+                and frame['drawnPoints'] == [[x, y] for x, y, _ in template_columns]
+            )
+        ), (
             'Scan chart: every synchronized model must identify independently saved '
-            'measured columns'
+            'measured columns, including the exact initial lazy-read transition'
         )
         if identity:
             assert frame['drawnPoints'] and all(
                 raw[identity].get(round(x, 4)) == y for x, y in frame['drawnPoints']
             ), (
                 'Scan chart: the measured points actually synchronized to the screen '
-                'must belong to the independently identified file'
+                'must belong to the independently identified file; '
+                f'file={identity}, model={frame["modelMeasured"]}, '
+                f'pattern_generation={frame.get("patternGeneration")}, '
+                f'presented_generation={frame.get("presentedGeneration")}, '
+                f'first_points={frame["drawnPoints"][:3]}'
             )
         if (frame['drawnMeasured'], frame['drawnCalculated']) == initial_series:
             assert frame['modelMeasured'] == initial['modelMeasured'], (
@@ -118,8 +150,25 @@ def test_adaptive_draws_changed_pattern_while_scan_running(screens, backend):
 
 @pytest.mark.parametrize('backend', ['desktop', 'browser'])
 @pytest.mark.parametrize('mode', MODES)
-def test_scan_pattern_mode_draws_its_promised_files(screens, backend, mode):
+def test_scan_pattern_mode_draws_its_promised_files(screens, backend, mode, request):
     item = screens[backend]['results'][mode]
+    request.node.add_report_section(
+        'call',
+        'scan chart diagnostics',
+        json.dumps(
+            {
+                'backend': backend,
+                'mode': mode,
+                'error': item.get('error'),
+                'followEvents': item.get('followEvents', 'unavailable in this capture'),
+                'frames': [
+                    {key: value for key, value in frame.items() if key != 'drawnPoints'}
+                    for frame in item['frames']
+                ],
+            },
+            indent=2,
+        ),
+    )
     assert not item.get('error'), (
         'Scan chart: each selected mode must complete through the actual app worker'
     )
@@ -165,11 +214,26 @@ def test_extras_choice_defaults_adaptive_and_survives_host_restart(screens, back
     assert item['extras'] and item['label'] and item['selectorUsable'], (
         'Scan preferences: Extras must expose the Pattern updates during a scan selector'
     )
-    options = [option.lower() for option in item['options']]
-    assert len(options) == 4 and all(
-        any(word in option for option in options)
-        for word in ('every pattern', 'second', 'adaptive', 'end')
-    ), 'Scan preferences: the selector must offer exactly the four owner-requested modes'
+    options = item['options']
+    expected = {
+        'Adaptive',
+        'About once a second',
+        'Every pattern, fit waits for the display',
+        'Every pattern, display catches up',
+        'Only at the end',
+    }
+    assert len(options) == len(expected) and set(options) == expected, (
+        'Scan preferences: the selector offers all five distinct owner-requested modes'
+    )
+    expected_mode = {
+        'adaptive': 'Adaptive',
+        'second': 'About once a second',
+        'every': 'Every pattern, fit waits for the display',
+        'end': 'Only at the end',
+    }[mode]
+    assert item['selected'] == expected_mode, (
+        'Scan preferences: the observer selects the promised mode by its exact displayed label'
+    )
     assert 'adaptive' in item['initial'].lower(), (
         'Scan preferences: a fresh machine must default to adaptive updates'
     )

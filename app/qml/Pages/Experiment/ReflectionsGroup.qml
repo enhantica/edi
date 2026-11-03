@@ -18,65 +18,70 @@ DataTable {
     property ExperimentViewModel experiment: null
     readonly property bool timeOfFlight: experiment !== null && experiment.beamMode === ExperimentViewModel.TimeOfFlight
 
-    // A reflection's values by the app's one rule for numbers (NumberText).
-    function shown(value) {
-        return value === undefined || isNaN(value) ? "" : NumberText.plain(value, 10);
+    // A reflection's position on the experiment's axis.
+    readonly property string positionItem: timeOfFlight ? "refln.time_of_flight" : "refln.two_theta"
+
+    // A reflection's values, each in its item's display format.
+    function shown(uid, value) {
+        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
     }
 
     objectName: "reflections.list"
     defaultInfoText: qsTr("No reflections")
     sourceModel: experiment ? experiment.reflections : null
 
-    columnWidths: [numberColumnWidth, -1, -1, -1, -1]
+    columns: [numberColumnWidth, -1, -1, -1, -1]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: qsTr("h k l")
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("d (Å)")
+        HeaderLabel {
+            uid: "refln.d_spacing"
+            withUnits: true
         }
-        EaComponents.TableViewLabel {
-            horizontalAlignment: Text.AlignHCenter
-            text: table.timeOfFlight ? qsTr("TOF (µs)") : qsTr("2θ (°)")
+        HeaderLabel {
+            uid: table.positionItem
+            withUnits: true
         }
-        EaComponents.TableViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("F² calc")
+            uid: "refln.f_squared_calc"
         }
     }
 
-    delegate: EaComponents.ListViewDelegate {
+    delegate: TableRow {
         id: row
 
-        required property int index
         required property var model
 
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            color: EaStyle.Colors.themeForegroundMinor
+            marksCurrentRow: true
             text: row.index + 1
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
             text: row.model.hkl
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.dSpacing)
+            number: table.shown("refln.d_spacing", row.model.dSpacing)
+            full: NumberText.plainFull(row.model.dSpacing)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.position)
+            number: table.shown(table.positionItem, row.model.position)
+            full: NumberText.plainFull(row.model.position)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.fSquaredCalc)
+            number: table.shown("refln.f_squared_calc", row.model.fSquaredCalc)
+            full: NumberText.plainFull(row.model.fSquaredCalc)
         }
     }
 }

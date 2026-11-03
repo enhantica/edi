@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_registry.hpp"
 
+#include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/parameter_walk.hpp"
 #include "parameter_item.hpp"
 #include "project_editor.hpp"
@@ -40,6 +42,34 @@ void ParameterRegistry::rebuild(edi::Project& project) {
         items.append(item);
         by_key.emplace(key, item);
     }
+    // Each descriptor that is no parameter after the last row of its block's category, else at its block's end.
+    for (const edi::DescriptorEntry& entry : edi::model_descriptors(project)) {
+        const auto key = std::make_pair(static_cast<const edi::Parameter*>(nullptr),
+                                        entry.path + '\n' + entry.block_name);
+        auto found = by_key_.find(key);
+        ParameterItem* item = nullptr;
+        if (found != by_key_.end()) {
+            item = found->second;
+            by_key_.erase(found);
+        } else {
+            item = new ParameterItem(entry, editor_, this);
+        }
+        const auto& indices = entry.block_kind == "structure" ? structure_index : experiment_index;
+        const auto place = indices.find(entry.block_name);
+        item->setBlockIndex(place != indices.end() ? place->second : -1);
+        const auto same_block = [&entry](const ParameterItem* other) {
+            return other->blockKind().toStdString() == entry.block_kind &&
+                   other->blockName().toStdString() == entry.block_name;
+        };
+        qsizetype at = -1;
+        for (qsizetype i = 0; i < items.size(); ++i) {
+            if (same_block(items[i]) && (at < 0 || items[i]->category().toStdString() == entry.category)) {
+                at = i;
+            }
+        }
+        items.insert(at < 0 ? items.size() : at + 1, item);
+        by_key.emplace(key, item);
+    }
     const bool changed = !by_key_.empty() || items != items_;
     QList<ParameterItem*> removed;
     for (const auto& [key, item] : by_key_) {
@@ -49,9 +79,15 @@ void ParameterRegistry::rebuild(edi::Project& project) {
     by_key_ = std::move(by_key);
     by_parameter_.clear();
     for (ParameterItem* item : items_) {
-        by_parameter_.emplace(item->parameter(), item);
+        if (!item->isDescriptorValue()) {
+            by_parameter_.emplace(item->parameter(), item);
+        }
     }
     refreshElements(project);
+    refreshFittability(project);
+    refreshEstimated(project);
+    refreshSpelling(project);
+    refreshDefiniteness(project);
     if (changed) {
         emit itemsChanged();
     }
@@ -65,26 +101,23 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
     // without changing the set of parameters: it is read again at every publish, never kept from a rebuild.
     // Likewise an ADP parameter's symbol and units, which follow its site's declared type.
     std::unordered_map<const edi::Parameter*, std::string> element;
-    std::unordered_map<const edi::Parameter*, edi::AdpDisplay> adp;
     for (const auto& structure : project.structures) {
         for (const auto& site : structure->atom_sites) {
             for (const edi::Parameter* parameter :
                  {&site->fract_x, &site->fract_y, &site->fract_z, &site->occupancy, &site->adp_iso}) {
                 element.emplace(parameter, site->type_symbol);
             }
-            adp.emplace(&site->adp_iso, edi::adp_display(site->adp_type.value(), "iso"));
             for (const auto& tensor : structure->atom_site_aniso) {
                 if (tensor->id.value() == site->id.value()) {
-                    const char* const components[] = {"11", "22", "33", "12", "13", "23"};
-                    const auto parameters = tensor->parameters();
-                    for (std::size_t i = 0; i < parameters.size(); ++i) {
-                        element.emplace(parameters[i], site->type_symbol);
-                        adp.emplace(parameters[i], edi::adp_display(site->adp_type.value(), components[i]));
+                    for (const edi::Parameter* parameter : tensor->parameters()) {
+                        element.emplace(parameter, site->type_symbol);
                     }
                 }
             }
         }
     }
+    // An ADP's label and units for its site's declared type, from the dictionary's variants.
+    const std::unordered_map<const edi::Parameter*, std::string> variants = edi::parameter_variants(project);
     // A phase's scale and texture take the colour of the structure they belong to, when there are several.
     std::unordered_map<const edi::Parameter*, int> phase;
     if (project.structures.size() > 1) {
@@ -114,9 +147,16 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
         item->setElementSymbol(site != element.end() ? QString::fromStdString(site->second) : QString());
         const auto owner = phase.find(item->parameter());
         item->setPhaseIndex(owner != phase.end() ? owner->second : -1);
-        if (const auto label = adp.find(item->parameter()); label != adp.end()) {
-            item->setLabel(QString::fromStdString(label->second.short_name),
-                           QString::fromStdString(label->second.display_units));
+        if (const auto variant = variants.find(item->parameter()); variant != variants.end()) {
+            const std::string uid = item->uid().toStdString();
+            item->setLabel(QString::fromStdString(edi::label(uid, variant->second)),
+                           QString::fromStdString(edi::units_label(uid, variant->second)));
+            item->setVariant(QString::fromStdString(variant->second));
+        } else if (!item->variant().isEmpty()) {
+            // A variant the parameter no longer has (a doublet switched off) gives back the item's own label.
+            const std::string uid = item->uid().toStdString();
+            item->setLabel(QString::fromStdString(edi::label(uid)), QString::fromStdString(edi::units_label(uid)));
+            item->setVariant(QString());
         }
     }
 }
@@ -146,14 +186,95 @@ void ParameterRegistry::refreshRefinable(edi::Project& project) {
         }
     }
     for (ParameterItem* item : items_) {
+        if (item->isDescriptorValue()) {
+            continue;  // shown read-only, never typed
+        }
         const auto found = refinable.find(item->parameter());
         item->setRefinable(found == refinable.end() || found->second);
+    }
+}
+
+void ParameterRegistry::refreshFittability(edi::Project& project) {
+    // The marks crysta's rule gave each parameter at the last load or edit (edi ADR-0053); a descriptor row's value
+    // as the model holds it now.
+    std::unordered_map<std::string, double> values;
+    for (const edi::DescriptorEntry& entry : edi::model_descriptors(project)) {
+        values.emplace(entry.path + '\n' + entry.block_name, entry.value);
+    }
+    for (ParameterItem* item : items_) {
+        if (item->isDescriptorValue()) {
+            const auto found = values.find(item->path().toStdString() + '\n' + item->blockName().toStdString());
+            if (found != values.end()) {
+                item->setDescriptorValue(found->second);
+            }
+            continue;
+        }
+        const edi::Parameter& parameter = *item->parameter();
+        // The show-filters' groups (edi ADR-0053 §7). A value crysta cannot vary yet goes with those this fit's data
+        // cannot determine: symmetry allows both, and only this fit keeps them fixed.
+        const int group = [&parameter] {
+            switch (parameter.fit_blocker) {
+                case edi::FitBlocker::Data:
+                case edi::FitBlocker::Capability: return ParameterItem::NotMeasured;
+                case edi::FitBlocker::Symmetry: return ParameterItem::BySymmetry;
+                case edi::FitBlocker::Constraint: return ParameterItem::ByConstraint;
+                case edi::FitBlocker::Descriptor: return ParameterItem::FixedSetting;
+                case edi::FitBlocker::None: break;
+            }
+            return ParameterItem::NoGroup;
+        }();
+        item->setFittability(parameter.fit_blocker == edi::FitBlocker::None,
+                             QString::fromStdString(parameter.fit_reason), group);
+    }
+}
+
+void ParameterRegistry::refreshEstimated(const edi::Project& project) {
+    // An auto-mode background's values (ADR-0040) follow its mode, which an edit changes without changing the set of
+    // parameters.
+    std::unordered_set<const edi::Parameter*> estimated;
+    for (const auto& experiment : project.experiments) {
+        for (const edi::Parameter* parameter : edi::estimated_background_values(*experiment)) {
+            estimated.insert(parameter);
+        }
+    }
+    for (ParameterItem* item : items_) {
+        item->setEstimated(estimated.contains(item->parameter()));
+    }
+}
+
+void ParameterRegistry::refreshSpelling(const edi::Project& project) {
+    // A field shows a value as the save writes it, exactly where the save does: a cell that rounded would not
+    // load, or every value. That follows any edit, so it is read again with the rule at every publish.
+    const edi::SaveSpelling spelling = edi::save_spelling(project);
+    for (ParameterItem* item : items_) {
+        item->setSpelling(project.su_rule, edi::written_exactly(spelling, project, *item->parameter()));
+    }
+}
+
+void ParameterRegistry::refreshDefiniteness(const edi::Project& project) {
+    // A tensor with a negative eigenvalue is kept and shown red, each of its components naming why (the owner,
+    // 2026-10-23).
+    std::unordered_map<const edi::Parameter*, QString> warned;
+    for (const edi::AdpDefinitenessWarning& warning : edi::adp_definiteness_warnings(project)) {
+        const edi::AtomSiteAniso& tensor = *warning.tensor;
+        for (const edi::Parameter* component : {&tensor.adp_11, &tensor.adp_22, &tensor.adp_33, &tensor.adp_12,
+                                                &tensor.adp_13, &tensor.adp_23}) {
+            warned[component] = QString::fromStdString(warning.message);
+        }
+    }
+    for (ParameterItem* item : items_) {
+        const auto found = warned.find(item->parameter());
+        item->setDomainWarning(found != warned.end() ? found->second : QString());
     }
 }
 
 void ParameterRegistry::publish(edi::Project& project) {
     refreshElements(project);
     refreshRefinable(project);
+    refreshFittability(project);
+    refreshEstimated(project);
+    refreshSpelling(project);
+    refreshDefiniteness(project);
     for (ParameterItem* item : items_) {
         item->publish();
     }

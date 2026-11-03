@@ -28,6 +28,10 @@ Item {
     property var reportSeries: null
     readonly property bool fromReport: reportSeries !== null
     readonly property var reportPoints: fromReport ? reportSeries.points : []
+    // The report model's pattern styles: a report's points take its measured row (`meas.0`), as the HTML report draws
+    // them, never the app's colour scheme or project.
+    property var reportStyles: []
+    readonly property var reportMeasured: (reportStyles ?? []).find(style => style.key === "meas.0") ?? null
     // The theme's colours, or the light ones a PDF's copy is drawn in.
     property FigureColors colors: FigureColors {}
     readonly property EvolutionViewModel evolution: project && !fromReport ? project.evolution : null
@@ -65,6 +69,52 @@ Item {
         return [xMin - xPad, xMax + xPad, yMin - yPad, yMax + yPad];
     }
 
+    // The tick labels in the app's label font and size, as the pattern chart's axes (the owner, 2026-10-22).
+    Component {
+        id: xTickLabel
+
+        Item {
+            id: xTick
+
+            property string text: ""
+
+            implicitWidth: xTickText.implicitWidth
+            implicitHeight: xTickText.implicitHeight
+
+            EaElements.Label {
+                id: xTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: xTick.text
+            }
+        }
+    }
+    Component {
+        id: yTickLabel
+
+        Item {
+            id: yTick
+
+            property string text: ""
+
+            implicitWidth: yTickText.implicitWidth
+            implicitHeight: yTickText.implicitHeight
+
+            EaElements.Label {
+                id: yTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: yTick.text
+            }
+        }
+    }
+
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
     function niceStep(span, count) {
         if (!(span > 0))
@@ -90,9 +140,11 @@ Item {
         visible: !chart.fromReport
         enabled: chart.evolution !== null && chart.evolution.xModes.length > 1 && chart.project.scanColumns.length > 0
         toolTip: qsTr("X axis")
-        model: chart.evolution ? chart.evolution.xModes : []
-        closedTexts: chart.evolution ? chart.evolution.xModes.map(mode => qsTr("x: %1").arg(mode)) : []
-        currentIndex: chart.evolution ? chart.evolution.xMode : 0
+        // Each value capitalised after the lower-case prefix (the owner, 2026-10-27).
+        readonly property var entries: chart.evolution ? chart.evolution.xModes.map(mode => mode.length > 0 ? mode.charAt(0).toUpperCase() + mode.slice(1) : mode) : []
+        model: entries
+        closedTexts: entries.map(mode => qsTr("x: %1").arg(mode))
+        shownIndex: chart.evolution ? chart.evolution.xMode : 0
         onActivated: index => chart.evolution.xMode = index
     }
 
@@ -135,19 +187,8 @@ Item {
         marginRight: chart.sideMargin
         marginTop: 0
         marginBottom: 0
-        theme: GraphsTheme {
-            colorScheme: GraphsTheme.ColorScheme.Light
-            backgroundVisible: false
-            plotAreaBackgroundVisible: false
+        theme: ChartTheme {
             labelTextColor: chart.colors.chartLabels
-            labelFont.family: EaStyle.Fonts.fontFamily
-            labelFont.pixelSize: EaStyle.Sizes.fontPixelSize
-            axisX.mainColor: "transparent"
-            axisX.subColor: "transparent"
-            axisY.mainColor: "transparent"
-            axisY.subColor: "transparent"
-            grid.mainColor: "transparent"
-            grid.subColor: "transparent"
         }
         axisX: ValueAxis {
             id: axisX
@@ -156,6 +197,7 @@ Item {
             tickInterval: chart.niceStep(max - min, chart.xTicks)
             tickAnchor: 0
             lineVisible: false
+            labelDelegate: xTickLabel
             gridVisible: false
             subGridVisible: false
         }
@@ -166,6 +208,7 @@ Item {
             tickInterval: chart.niceStep(max - min, chart.yTicks)
             tickAnchor: 0
             lineVisible: false
+            labelDelegate: yTickLabel
             gridVisible: false
             subGridVisible: false
         }
@@ -220,28 +263,27 @@ Item {
                 color: chart.colors.chartGridLine
             }
         }
-        // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does.
-        Rectangle {
-            readonly property real at: chart.evolution && chart.project && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
-
-            objectName: "evolution.current"
-            visible: !isNaN(at)
-            x: Math.round((at - axisX.min) / (axisX.max - axisX.min) * plot.width)
-            width: 1
-            height: plot.height
-            color: EaStyle.Colors.themeForegroundMinor
-        }
         MeasuredLayer {
             id: layer
 
             objectName: "evolution.points"
             anchors.fill: parent
-            color: AppColors.experiment(0, chart.colors.isDarkPalette)
+            color: !chart.fromReport ? AppColors.experiment(0, chart.colors.isDarkPalette) : chart.reportMeasured ? (chart.colors.isDarkPalette ? chart.reportMeasured.dark : chart.reportMeasured.light) : chart.colors.themeForeground
             markerSize: 6
             xMin: axisX.min
             xMax: axisX.max
             yMin: axisY.min
             yMax: axisY.max
+        }
+        // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does. The
+        // Stacked and Map charts mark it with the same look. Over the points, so the line shows across a marker too.
+        SelectedPatternLine {
+            readonly property real at: chart.evolution && chart.project && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
+
+            objectName: "evolution.current"
+            vertical: true
+            dark: chart.colors.isDarkPalette
+            position: (at - axisX.min) / (axisX.max - axisX.min) * plot.width
         }
         Rectangle {
             anchors.fill: parent
@@ -385,14 +427,18 @@ Item {
             chart.zoom = [];
         }
     }
-    // A report's points go to the layer whenever its series changes.
+    // A report's points go to the layer whenever its series changes, each with its s.u. bar (none without a finite
+    // s.u.).
+    function drawReportPoints() {
+        layer.setPoints(reportPoints.map(point => point.x), reportPoints.map(point => point.y), reportPoints.map(point => typeof point.su === "number" ? point.su : NaN));
+    }
     onReportPointsChanged: {
         if (fromReport)
-            layer.setPoints(reportPoints);
+            drawReportPoints();
     }
     Component.onCompleted: {
         if (fromReport)
-            layer.setPoints(reportPoints);
+            drawReportPoints();
     }
 
     // The layer is the model's to fill while the tab is shown.

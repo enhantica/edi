@@ -19,7 +19,7 @@ import edi.app
 // data, a simulation). A row made with Create experiment reads Load data… in its Data file cell until data is loaded
 // into it: a plain two- or three-column file whose rows become its measured data. Clicking a file name loads another
 // file in its place. Create, Load and Load data are each one undoable step.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property ProjectViewModel project: null
@@ -30,8 +30,9 @@ EaElements.GroupBox {
     // by their place among the header's, so the header and each row repeat over the same list.
     readonly property var scanColumns: project ? project.experiments.columns : []
     // The Fit column is as wide as its title or its icon, so the Fit icon sits as close to the colour icon as the
-    // Structures table's icon to its name: one margin between them, not each column's own (the owner, 2026-10-11).
-    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15))
+    // Structures table's icon to its name: one margin between them, not each column's own (the owner, 2026-10-11). A
+    // right margin as wide as a table's edge margin then keeps the datablock names off it (the owner, 2026-10-24).
+    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15)) + EaStyle.Sizes.tableColumnSpacing
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -57,25 +58,29 @@ EaElements.GroupBox {
             sourceModel: group.project ? group.project.experiments : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentExperimentIndex : -1
+            onRowActivated: row => {
+                if (group.project)
+                    group.project.currentExperimentIndex = row;
+            }
 
-            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                 }
-                EaComponents.TableViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignLeft
                     text: qsTr("Fit")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Datablock")
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Data file")
                 }
@@ -95,7 +100,7 @@ EaElements.GroupBox {
                                 property int horizontalAlignment: Text.AlignHCenter
                                 width: AppSizes.dataColumnWidth * 1.4
                                 height: EaStyle.Sizes.tableRowHeight
-                                EaComponents.TableViewLabel {
+                                EaComponents.ListViewLabel {
                                     anchors.fill: parent
                                     horizontalAlignment: column.horizontalAlignment
                                     text: column.modelData
@@ -104,7 +109,7 @@ EaElements.GroupBox {
                         }
                     }
                 }
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     visible: !group.scan
                 }
@@ -121,13 +126,9 @@ EaElements.GroupBox {
                 required property bool isTemplate
 
                 objectName: `experiments.row.${index}`
-                TapHandler {
-                    onTapped: group.project.currentExperimentIndex = row.index
-                }
-
-                EaComponents.TableViewLabel {
+                EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
-                    color: EaStyle.Colors.themeForegroundMinor
+                    marksCurrentRow: true
                     text: row.index + 1
                 }
                 // The block's icon in its colour (easydiffractionbeta's colour column; ADR-0017 §8).
@@ -141,7 +142,7 @@ EaElements.GroupBox {
                 }
                 // How the project's last fit ended on this experiment; "Not fitted" when it took no part.
                 IconCell {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignLeft
                     objectName: `experiments.fit.${row.index}`
                     icon: FitOutcomes.icon(row.fitOutcome)
                     iconColor: String(FitOutcomes.color(row.fitOutcome))
@@ -172,14 +173,14 @@ EaElements.GroupBox {
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
                         visible: !loadData.visible
 
-                        EaComponents.TableViewLabel {
+                        EaComponents.ListViewLabel {
                             width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideMiddle
                             text: row.file
                         }
-                        EaComponents.TableViewLabel {
+                        EaComponents.ListViewLabel {
                             id: templateTag
                             objectName: `experiments.template.${row.index}`
                             visible: group.scan && row.isTemplate
@@ -187,13 +188,13 @@ EaElements.GroupBox {
                             height: parent.height
                             elide: Text.ElideNone
                             color: EaStyle.Colors.themeAccent
-                            text: qsTr("template")
+                            text: Session.label("sequential_fit.template_file")
                         }
                     }
                     // The file name as left-aligned text that loads another file in its place: the accent blue and a
                     // pointing hand on hover, and "Load data…" in the accent blue before any data (the owner,
                     // 2026-10-11). Every experiment but a scan's dataset can load data.
-                    EaComponents.TableViewLabel {
+                    EaComponents.ListViewLabel {
                         id: loadData
 
                         readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
@@ -239,16 +240,16 @@ EaElements.GroupBox {
                                 property int horizontalAlignment: Text.AlignHCenter
                                 width: AppSizes.dataColumnWidth * 1.4
                                 height: EaStyle.Sizes.tableRowHeight
-                                EaComponents.TableViewLabel {
+                                NumberLabel {
                                     anchors.fill: parent
                                     horizontalAlignment: value.horizontalAlignment
-                                    text: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
+                                    number: row.extracted && row.extracted.length > value.index ? row.extracted[value.index] : ""
                                 }
                             }
                         }
                     }
                 }
-                EaComponents.TableViewButton {
+                EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `experiments.remove.${row.index}`
                     visible: !group.scan
@@ -280,13 +281,13 @@ EaElements.GroupBox {
                 enabled: group.project !== null
                 fontIcon: "upload"
                 text: qsTr("Load experiment")
-                ToolTip.text: qsTr("Load experiments from .edi files, each with its type, data and parameters")
+                ToolTip.text: qsTr("Load experiments from CIF or .edi files, each with its type, data and parameters")
                 // In the browser the files come through the page (edi ADR-0023).
                 onClicked: {
                     if (WebFiles.available) {
                         group.webRequestProject = group.project;
                         group.webDataExperiment = null;
-                        group.webRequest = WebFiles.openFiles(".edi", true);
+                        group.webRequest = WebFiles.openFiles(".cif,.edi", true);
                     } else {
                         loadDialog.open();
                     }
@@ -317,7 +318,7 @@ EaElements.GroupBox {
 
     // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to
     // that experiment wherever its row is by then, and is refused if it has gone.
-    readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv"
+    readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv,.int,.hkl"
     function chooseData(experiment) {
         if (WebFiles.available) {
             group.webRequestProject = group.project;
@@ -368,9 +369,9 @@ EaElements.GroupBox {
 
     FileDialog {
         id: loadDialog
-        title: qsTr("Load experiments from .edi block files")
+        title: qsTr("Load experiments from CIF or .edi files")
         fileMode: FileDialog.OpenFiles
-        nameFilters: [qsTr("edi block files (*.edi)")]
+        nameFilters: [qsTr("Experiment files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
         onAccepted: group.project.loadExperiments(selectedFiles)
     }
 
@@ -380,8 +381,8 @@ EaElements.GroupBox {
         id: dataDialog
         property var experiment: null
         property var project: null
-        title: qsTr("Load measured data from a plain two- or three-column file")
-        nameFilters: [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
+        title: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? qsTr("Load measured reflections from FullProf's .int or a plain h k l F² su file (.hkl, .dat or any other)") : qsTr("Load measured data from a plain two- or three-column file")
+        nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
         onAccepted: {
             if (dataDialog.project !== null && dataDialog.project === group.project)
                 group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile);

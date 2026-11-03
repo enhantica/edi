@@ -1,0 +1,6 @@
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_cosio-d20_scan
+_metadata.title "Co₂SiO₄ [Pnma] · D20 @ ILL"
+_metadata.description "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out"
+_metadata.authors .

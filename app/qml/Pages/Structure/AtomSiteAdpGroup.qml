@@ -51,63 +51,64 @@ Column {
                 beta = group.adps.text(row, "adpType") === "beta";
             if (!beta)
                 return -1;  // without a beta row no value is measured
-            let widest = advance(qsTr("iso/eq"));
+            let widest = advance(Session.label("atom_site.adp_iso"));
             for (let row = 0; row < count; ++row) {
                 const item = group.adps.item(row, "adpIso") as ParameterItem;
                 if (item)
-                    widest = Math.max(widest, advance(NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 5)));
+                    widest = Math.max(widest, advance(item.fileValue !== "" ? item.fileValue : NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 5)));
             }
             return Math.ceil(widest) + AppSizes.fieldSpacing * 2;
         }
-        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
+        // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
+        equalColumns: true
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), isoWidth, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("id")
+                uid: "atom_site.id"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("type")
+                uid: "atom_site.adp_type"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
                 // B iso or U iso, editable, or a tensor's read-only equivalent B eq or U eq (owner, 2026-10-12).
-                text: qsTr("iso/eq")
+                uid: "atom_site.adp_iso"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "11"
+                uid: "atom_site_aniso.adp_11"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "22"
+                uid: "atom_site_aniso.adp_22"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "33"
+                uid: "atom_site_aniso.adp_33"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "12"
+                uid: "atom_site_aniso.adp_12"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "13"
+                uid: "atom_site_aniso.adp_13"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "23"
+                uid: "atom_site_aniso.adp_23"
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string label
             required property string adpType
             required property ParameterItem adpIso
@@ -119,24 +120,21 @@ Column {
             required property var ani23
             readonly property bool anisotropic: adpType === "Bani" || adpType === "Uani" || adpType === "beta"
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
+            // An atom's id is edited in the Atom sites table only (the owner, 2026-10-23).
             TextCell {
                 objectName: `atomSiteAdp.label.${row.index}`
                 horizontalAlignment: Text.AlignLeft
+                readOnly: true
                 value: row.label
-                onCommitted: text => group.structure.atomSites.setText(row.index, "label", text)
             }
-            Item {
-                property int horizontalAlignment: Text.AlignHCenter
-                height: parent.height
+            ComboCell {
                 SearchableComboBox {
-                    width: Math.min(parent.width, implicitWidth)
-                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignLeft
                     objectName: `atomSiteAdp.type.${row.index}`
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
@@ -154,16 +152,16 @@ Column {
                 }
             }
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its
-            // tensor, is shown disabled.
+            // tensor, and a value a constraint sets are shown disabled.
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteAdp.iso.${row.index}`
                 item: row.adpIso
-                enabled: !row.anisotropic
+                enabled: !row.anisotropic && refinable
                 ToolTip.text: row.adpIso ? (row.anisotropic ? qsTr("Equivalent isotropic displacement %1, %2 (%3)") : qsTr("Isotropic displacement %1, %2 (%3)")).arg(row.adpIso.shortName).arg(row.adpIso.displayUnits).arg("_atom_site.adp_iso") : ""
                 // Help, hidden while the cell shows why its value is red.
-                ToolTip.visible: hovered && !warned && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -174,7 +172,7 @@ Column {
                 item: row.ani11 ? row.ani11 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_11") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -185,7 +183,7 @@ Column {
                 item: row.ani22 ? row.ani22 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_22") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -196,7 +194,7 @@ Column {
                 item: row.ani33 ? row.ani33 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_33") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -207,7 +205,7 @@ Column {
                 item: row.ani12 ? row.ani12 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_12") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -218,7 +216,7 @@ Column {
                 item: row.ani13 ? row.ani13 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_13") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -229,7 +227,7 @@ Column {
                 item: row.ani23 ? row.ani23 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_23") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
         }
     }

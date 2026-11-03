@@ -17,60 +17,61 @@ DataTable {
 
     property AnalysisViewModel analysis: null
 
-    // A start value by the app's one rule for numbers in cells (NumberText); the model keeps it whole.
-    function shown(value) {
-        return value === undefined ? "" : NumberText.plain(value, 8);
+    // A start value or error in its item's display format; the model keeps it whole.
+    function shown(uid, value) {
+        return value === undefined ? "" : Session.display(uid, value);
     }
 
     objectName: "fitStart.list"
     defaultInfoText: qsTr("No fit start state")
     sourceModel: analysis ? analysis.fitStart : null
 
-    columnWidths: [numberColumnWidth, textColumnWidth("id", qsTr("parameter")), -1, -1]
+    columns: [numberColumnWidth, -1, -1, -1]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
-        EaComponents.TableViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignLeft
-            text: qsTr("parameter")
+            uid: "fit_parameter.id"
         }
-        EaComponents.TableViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("start value")
+            uid: "fit_parameter.start_value"
         }
-        EaComponents.TableViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("start error")
+            uid: "fit_parameter.start_uncertainty"
         }
     }
 
-    delegate: EaComponents.ListViewDelegate {
+    delegate: TableRow {
         id: row
 
-        required property int index
         // The roles by the model: `id` cannot be a property name.
         required property var model
 
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            color: EaStyle.Colors.themeForegroundMinor
+            marksCurrentRow: true
             text: row.index + 1
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignLeft
             elide: Text.ElideMiddle
             text: row.model.id
             ToolTip.text: row.model.id
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.startValue)
+            number: table.shown("fit_parameter.start_value", row.model.startValue)
+            full: NumberText.plainFull(row.model.startValue)
         }
-        EaComponents.TableViewLabel {
+        NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: table.shown(row.model.startUncertainty)
+            number: table.shown("fit_parameter.start_uncertainty", row.model.startUncertainty)
+            full: NumberText.plainFull(row.model.startUncertainty)
         }
     }
 }

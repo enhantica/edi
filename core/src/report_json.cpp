@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
+#include "edi/model.hpp"
 #include "edi/report_model.hpp"
 #include "json.hpp"
 
@@ -106,11 +109,33 @@ std::vector<ReportCategory> categories_of(const Value& value, const char* what) 
     return out;
 }
 
-// A count or an index: a whole number from 0 to 2^53.
-std::size_t index_of(const Value& value, const char* what) {
+// A whole number from `low` to `high`, checked before it is converted: a JSON number can be fractional or too
+// large, and null reads as NaN.
+double whole_number(const Value& value, const char* what, double low, double high) {
     const double number = value.number(what);
-    if (!(number >= 0.0) || number > 9007199254740992.0 || std::floor(number) != number) {
-        throw std::invalid_argument(std::string("report JSON: ") + what + " is not a whole number");
+    if (!(number >= low && number <= high) || std::floor(number) != number) {
+        throw std::invalid_argument(std::string("report JSON: ") + what + " is not a whole number from " +
+                                    std::to_string(static_cast<long long>(low)) + " to " +
+                                    std::to_string(static_cast<long long>(high)));
+    }
+    return number;
+}
+
+template <typename Integer>
+Integer integer_of(const Value& value, const char* what) {
+    return static_cast<Integer>(whole_number(value, what, static_cast<double>(std::numeric_limits<Integer>::min()),
+                                             static_cast<double>(std::numeric_limits<Integer>::max())));
+}
+
+// A count or an index: a whole number from 0 to 2^53, JSON's largest exact one, or to the largest std::size_t where
+// that is smaller (32-bit WebAssembly).
+std::size_t index_of(const Value& value, const char* what) {
+    static const double largest =
+        std::min(9007199254740992.0, static_cast<double>(std::numeric_limits<std::size_t>::max()));
+    const double number = value.number(what);
+    if (!(number >= 0.0 && number <= largest) || std::floor(number) != number) {
+        throw std::invalid_argument(std::string("report JSON: ") + what + " is not a whole number from 0 to " +
+                                    std::to_string(static_cast<long long>(largest)));
     }
     return static_cast<std::size_t>(number);
 }
@@ -157,11 +182,12 @@ Enum enum_of(const Value& value, const std::array<std::pair<Enum, const char*>, 
     throw std::invalid_argument(std::string("report JSON: unknown ") + what + " '" + text + "'");
 }
 
-constexpr std::array<std::pair<SeriesKind, const char*>, 5> kKinds{{{SeriesKind::Measured, "measured"},
+constexpr std::array<std::pair<SeriesKind, const char*>, 6> kKinds{{{SeriesKind::Measured, "measured"},
                                                                     {SeriesKind::Calculated, "calculated"},
                                                                     {SeriesKind::Background, "background"},
                                                                     {SeriesKind::Residual, "residual"},
-                                                                    {SeriesKind::BraggTicks, "bragg"}}};
+                                                                    {SeriesKind::BraggTicks, "bragg"},
+                                                                    {SeriesKind::StructureCurve, "structure"}}};
 constexpr std::array<std::pair<Pane, const char*>, 3> kPanes{
     {{Pane::Main, "main"}, {Pane::Bragg, "bragg"}, {Pane::Residual, "residual"}}};
 constexpr std::array<std::pair<YScale, const char*>, 3> kScales{
@@ -261,6 +287,51 @@ Value pattern_json(const ReportPattern& pattern) {
                   {"series", std::move(series)}, {"excluded", std::move(excluded)},
                   {"layout", std::move(layout)}, {"hover", std::move(hover)},
                   {"bragg_labels", std::move(labels)}, {"title", pattern.title}, {"legend", pattern.legend}};
+}
+
+Value single_crystal_json(const ReportSingleCrystal& crystal) {
+    const auto indices = [](const std::vector<int>& values) {
+        return numbers(std::vector<double>(values.begin(), values.end()));
+    };
+    return Object{{"h", indices(crystal.h)},         {"k", indices(crystal.k)},       {"l", indices(crystal.l)},
+                  {"meas", numbers(crystal.meas)},     {"su", numbers(crystal.su)},     {"calc", numbers(crystal.calc)},
+                  {"title", crystal.title},            {"name", crystal.name},          {"x_title", crystal.x_title},
+                  {"y_title", crystal.y_title},        {"hover", strings(crystal.hover)}};
+}
+
+ReportSingleCrystal single_crystal_of(const Value& value) {
+    ReportSingleCrystal crystal;
+    const auto indices = [&value](const char* key) {
+        std::vector<int> out;
+        for (const Value& item : value.at(key).array(key)) {
+            out.push_back(static_cast<int>(whole_number(item, key, -1e6, 1e6)));
+        }
+        return out;
+    };
+    crystal.h = indices("h");
+    crystal.k = indices("k");
+    crystal.l = indices("l");
+    crystal.meas = numbers_of(value.at("meas"), "meas");
+    crystal.su = numbers_of(value.at("su"), "su");
+    crystal.calc = numbers_of(value.at("calc"), "calc");
+    crystal.title = value.at("title").string("title");
+    // A report written before the chart carried its labels and hover has none of them: they are made from its numbers
+    // as a report makes them, by the dictionary and the report's IUCr rule.
+    const Value& hover = value.get("hover");
+    if (hover.is_null()) {
+        label_single_crystal(crystal, kReportSuRule);
+    } else {
+        crystal.name = value.at("name").string("name");
+        crystal.x_title = value.at("x_title").string("x_title");
+        crystal.y_title = value.at("y_title").string("y_title");
+        crystal.hover = strings_of(hover, "hover");
+    }
+    const std::size_t count = crystal.meas.size();
+    if (crystal.h.size() != count || crystal.k.size() != count || crystal.l.size() != count ||
+        crystal.su.size() != count || (!crystal.calc.empty() && crystal.calc.size() != count)) {
+        throw std::invalid_argument("report JSON: a single crystal's columns differ in length");
+    }
+    return crystal;
 }
 
 ReportPattern pattern_of(const Value& value) {
@@ -403,7 +474,7 @@ SceneAtom atom_of(const Value& value) {
     SceneAtom atom;
     atom.centre = vec_of(value.at("centre"));
     atom.row = index_of(value.at("row"), "row");
-    atom.cluster_id = static_cast<std::int32_t>(value.at("cluster_id").number("cluster_id"));
+    atom.cluster_id = integer_of<std::int32_t>(value.at("cluster_id"), "cluster_id");
     atom.table_radius = value.at("table_radius").number("table_radius");
     atom.radius = value.at("radius").number("radius");
     atom.radius_substituted = value.at("radius_substituted").boolean("radius_substituted");
@@ -631,6 +702,67 @@ std::vector<SceneStyle> structure_styles_of(const Value& value) {
     return out;
 }
 
+// The model's indices, as build_report makes them: each names an entry of the collection it addresses, and a series'
+// per-point arrays are as long as its points. Renderers index with them, so a model that breaks one is refused here
+// rather than read out of bounds there.
+void check_indices(const ReportModel& model) {
+    const auto refuse = [](const std::string& what) { throw std::invalid_argument("report JSON: " + what); };
+    for (const ReportStructure& structure : model.structures) {
+        const std::size_t atoms = structure.scene.atoms.size();
+        const auto check_atom = [atoms, &refuse](std::size_t atom, const char* what) {
+            if (atom >= atoms) {
+                refuse(std::string(what) + " names atom " + std::to_string(atom) + " of " + std::to_string(atoms));
+            }
+        };
+        for (const SceneAtom& atom : structure.scene.atoms) {
+            if (atom.major >= atom.parts.size()) {
+                refuse("an atom's major part " + std::to_string(atom.major) + " is not one of its " +
+                       std::to_string(atom.parts.size()) + " parts");
+            }
+        }
+        for (const SceneBond& bond : structure.scene.bonds) {
+            check_atom(bond.atom_1, "a bond");
+            check_atom(bond.atom_2, "a bond");
+        }
+        for (const SceneLabel& label : structure.scene.labels) {
+            check_atom(label.atom, "a scene label");
+        }
+        for (const SceneLabel& label : structure.labels) {
+            check_atom(label.atom, "a label");
+        }
+        for (const SceneInstance& sphere : structure.drawing.spheres) {
+            check_atom(sphere.atom, "a sphere");
+        }
+        for (const std::size_t site : structure.drawing.shared) {
+            check_atom(site, "a shared site");
+        }
+        // A structure the viewer draws (its scene current, a sphere or shared site to draw) offers a view along each
+        // axis, so it has all three; another has three or none (a report without its figures).
+        const bool drawn =
+            structure.scene.current && structure.drawing.spheres.size() + structure.drawing.shared.size() > 0;
+        if (structure.along.size() != 3 && (drawn || !structure.along.empty())) {
+            refuse("a structure's views along the axes are not three");
+        }
+    }
+    for (const ReportExperiment& experiment : model.experiments) {
+        for (const PatternSeries& series : experiment.pattern.presentation.series) {
+            // A measured series has a data row and both bar ends for every point; another series' bars are none or
+            // one per point.
+            const std::size_t points = series.points.size();
+            const bool measured = series.kind == SeriesKind::Measured;
+            const auto per_point = [points, measured](std::size_t size) {
+                return size == points || (!measured && size == 0);
+            };
+            if (!per_point(series.bar_low.size()) || !per_point(series.bar_high.size()) ||
+                (measured && series.rows.size() != points)) {
+                refuse("series '" + series.id + "' has " + std::to_string(series.bar_low.size()) + " and " +
+                       std::to_string(series.bar_high.size()) + " error bars and " +
+                       std::to_string(series.rows.size()) + " rows for " + std::to_string(points) + " points");
+            }
+        }
+    }
+}
+
 }  // namespace
 
 std::string report_to_json(const ReportModel& model) {
@@ -696,9 +828,14 @@ std::string report_to_json(const ReportModel& model) {
     }
     Array experiments;
     for (const ReportExperiment& experiment : model.experiments) {
-        experiments.emplace_back(Object{{"id", experiment.id},
-                                        {"categories", categories(experiment.categories)},
-                                        {"pattern", pattern_json(experiment.pattern)}});
+        Object item{{"id", experiment.id},
+                    {"categories", categories(experiment.categories)},
+                    {"pattern", pattern_json(experiment.pattern)}};
+        // Only a single crystal carries its chart.
+        if (experiment.single_crystal) {
+            item.emplace_back("single_crystal", single_crystal_json(*experiment.single_crystal));
+        }
+        experiments.emplace_back(std::move(item));
     }
     const Object document{{"schema_version", model.schema_version},
                           {"generated", model.generated},
@@ -780,7 +917,8 @@ ReportModel report_from_json(const std::string& text) {
         matrix.labels = strings_of(correlations.at("labels"), "labels");
         matrix.values = numbers_of(correlations.at("values"), "values");
         matrix.level = correlations.at("level").number("level");
-        matrix.available = static_cast<int>(correlations.at("available").number("available"));
+        matrix.available = static_cast<int>(whole_number(correlations.at("available"), "available", 0.0,
+                                                         static_cast<double>(std::numeric_limits<int>::max())));
         matrix.empty_text = correlations.at("empty_text").string("empty_text");
         model.correlations = std::move(matrix);
     }
@@ -798,11 +936,16 @@ ReportModel report_from_json(const std::string& text) {
         model.structures.push_back(std::move(structure));
     }
     for (const Value& item : document.at("experiments").array("experiments")) {
-        model.experiments.push_back(
-            {item.at("id").string("id"), categories_of(item.at("categories"), "categories"), pattern_of(item.at("pattern"))});
+        ReportExperiment experiment{item.at("id").string("id"), categories_of(item.at("categories"), "categories"),
+                                    pattern_of(item.at("pattern")), std::nullopt};
+        if (const Value& crystal = item.get("single_crystal"); !crystal.is_null()) {
+            experiment.single_crystal = single_crystal_of(crystal);
+        }
+        model.experiments.push_back(std::move(experiment));
     }
     model.pattern_styles = pattern_styles_of(document.at("pattern_styles"));
     model.structure_styles = structure_styles_of(document.at("structure_styles"));
+    check_indices(model);
     return model;
 }
 

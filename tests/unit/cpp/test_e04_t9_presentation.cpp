@@ -6,6 +6,7 @@
 #include <set>
 #include <tuple>
 #include "e04_t9_support.hpp"
+#include "edi/palette.hpp"
 
 TEST_CASE("E04-T9 D3 generator preserves endpoints and linear interpolation") {
     const auto out = e04_t9_fixture::interpolate({10, 20, 40}, {2, 6, 8}, {10, 15, 20, 30, 40});
@@ -78,8 +79,11 @@ std::set<std::size_t> oracle(const std::vector<double>& x, const std::vector<dou
     }
     auto first = std::find_if(x.begin(), x.end(), [&](double v) { return v >= left; });
     auto end = std::find_if(x.begin(), x.end(), [&](double v) { return v > right; });
-    if (first != x.begin()) keep.insert(static_cast<std::size_t>(first - x.begin() - 1));
-    if (end != x.end()) keep.insert(static_cast<std::size_t>(end - x.begin()));
+    const auto keep_neighbour = [&](std::size_t row) {
+        if (!std::isnan(low[row]) && !std::isnan(high[row])) keep.insert(row);
+    };
+    if (first != x.begin()) keep_neighbour(static_cast<std::size_t>(first - x.begin() - 1));
+    if (end != x.end()) keep_neighbour(static_cast<std::size_t>(end - x.begin()));
     return keep;
 }
 void exercise_decimator(const std::vector<double>& x, const std::vector<double>& lo,
@@ -92,6 +96,9 @@ void exercise_decimator(const std::vector<double>& x, const std::vector<double>&
         CHECK_MESSAGE((std::is_sorted(actual.begin(), actual.end())), " I17 kept rows are ascending");
         const std::set<std::size_t> retained(actual.begin(), actual.end());
         CHECK_MESSAGE((retained.size() == actual.size()), " I17 a retained row appears only once");
+        CHECK_MESSAGE((std::all_of(actual.begin(), actual.end(), [&](auto row) {
+            return row < x.size() && !std::isnan(lo[row]) && !std::isnan(hi[row]);
+        })), " ADR-0021 excluded NaN rows are gaps, including outside viewport edges");
         // The invariant chooses an extremum value, not an arbitrary tied row.
         // Require bin/run first and last rows separately, then compare all extrema.
         std::map<std::pair<int,int>,std::vector<std::size_t>> bins;
@@ -138,20 +145,58 @@ TEST_CASE("E04-T9 gate 1 every CLI presentation equals crysta's independently lo
             const auto source = edi::capture_pattern(project, b);
             const auto p = edi::present_pattern(source, {});
             REQUIRE_MESSAGE((p.current), " I22 successful calculation presents current columns");
+            const auto& live = *project.experiments[b];
+            if (live.experiment_type.effective_sample_form() == edi::SampleFormEnum::SINGLE_CRYSTAL) {
+                REQUIRE_MESSAGE((!live.data && live.reflections),
+                                "A declared single crystal has measured reflections and no powder pattern");
+                REQUIRE_MESSAGE((experiment.reflections.get()),
+                                "The independent single-crystal load retains its measured reflections");
+                const auto& rows = *live.reflections;
+                const auto& input = *experiment.reflections.get();
+                const auto& expected = computed.refln().intensity_calc;
+                REQUIRE_MESSAGE((rows.size() > 0 && rows.size() == input.size()),
+                                "Single-crystal presentation covers every independently loaded reflection");
+                REQUIRE_MESSAGE((source.refln_calc && source.refln_calc->size() == rows.size() &&
+                                 expected.size() == rows.size()),
+                                "Single-crystal capture retains every calculated reflection in input order");
+                CHECK_MESSAGE((!source.x && !source.meas && !source.su && !source.calc &&
+                               !source.bkg && !source.resid && p.series.empty()),
+                              "Single-crystal capture does not invent powder curves");
+                for (std::size_t r = 0; r < rows.size(); ++r) {
+                    CHECK_MESSAGE((rows.index_h[r] == input.index_h[r] &&
+                                   rows.index_k[r] == input.index_k[r] && rows.index_l[r] == input.index_l[r]),
+                                  "Single-crystal Miller indices retain the independent input order");
+                    CHECK_MESSAGE((identical(rows.intensity_meas[r], input.intensity[r]) &&
+                                   identical(rows.intensity_meas_su[r], input.sigma[r])),
+                                  "Single-crystal measured values and uncertainties retain independent input bits");
+                    CHECK_MESSAGE((identical((*source.refln_calc)[r], expected[r]) &&
+                                   identical(rows.intensity_calc[r], expected[r])),
+                                  "Captured single-crystal values retain the independent calculated bits");
+                }
+                continue;
+            }
+            REQUIRE_MESSAGE((experiment.data.get() && live.data),
+                            "Every declared powder project retains its pattern before category access");
             const auto& data = *experiment.data;
-            compare_points(series(p, edi::SeriesKind::Measured), data.grid, data.intensity);
             compare_points(series(p, edi::SeriesKind::Calculated), data.grid, computed.data().intensity_calc);
             compare_points(series(p, edi::SeriesKind::Background), data.grid, computed.data().intensity_bkg);
-            compare_points(series(p, edi::SeriesKind::Residual), data.grid, crysta::residual(experiment));
-            const auto& measured = series(p, edi::SeriesKind::Measured);
-            REQUIRE_MESSAGE((measured.bar_low.size() == measured.points.size() && measured.bar_high.size() == measured.points.size()),
-                            " I16 uncertainty ends remain aligned with measured provenance");
-            for (std::size_t i = 0; i < measured.rows.size(); ++i) {
-                auto r = measured.rows[i];
-                CHECK_MESSAGE((identical(measured.bar_low[i], data.intensity[r] - data.sigma[r])),
-                              " I16 lower bar is the independent measured minus one su");
-                CHECK_MESSAGE((identical(measured.bar_high[i], data.intensity[r] + data.sigma[r])),
-                              " I16 upper bar is the independent measured plus one su");
+            if (experiment.calculation_only) {
+                CHECK_MESSAGE((std::none_of(p.series.begin(), p.series.end(), [](const auto& s) {
+                    return s.kind == edi::SeriesKind::Measured || s.kind == edi::SeriesKind::Residual;
+                })), " I16 a calculation has no measured or residual presentation series");
+            } else {
+                compare_points(series(p, edi::SeriesKind::Measured), data.grid, data.intensity);
+                compare_points(series(p, edi::SeriesKind::Residual), data.grid, crysta::residual(experiment));
+                const auto& measured = series(p, edi::SeriesKind::Measured);
+                REQUIRE_MESSAGE((measured.bar_low.size() == measured.points.size() && measured.bar_high.size() == measured.points.size()),
+                                " I16 uncertainty ends remain aligned with measured provenance");
+                for (std::size_t i = 0; i < measured.rows.size(); ++i) {
+                    auto r = measured.rows[i];
+                    CHECK_MESSAGE((identical(measured.bar_low[i], data.intensity[r] - data.sigma[r])),
+                                  " I16 lower bar is the independent measured minus one su");
+                    CHECK_MESSAGE((identical(measured.bar_high[i], data.intensity[r] + data.sigma[r])),
+                                  " I16 upper bar is the independent measured plus one su");
+                }
             }
             std::set<std::size_t> tick_rows;
             for (const auto& s : p.series) if (s.kind == edi::SeriesKind::BraggTicks)
@@ -161,11 +206,18 @@ TEST_CASE("E04-T9 gate 1 every CLI presentation equals crysta's independently lo
                     tick_rows.insert(s.rows[i]);
                 }
             std::set<std::size_t> visible_ticks;
-            for (std::size_t r=0;r<computed.refln().size();++r)
-                if (computed.refln().position[r]>=data.grid[0] && computed.refln().position[r]<=data.grid[data.grid.size()-1])
+            const auto exclusions = crysta::excluded_region_ranges(experiment.excluded_regions);
+            for (std::size_t r=0;r<computed.refln().size();++r) {
+                const double position = computed.refln().position[r];
+                const bool excluded = std::any_of(exclusions.begin(), exclusions.end(), [=](const auto& bounds) {
+                    return position >= std::min(bounds.first, bounds.second) &&
+                           position <= std::max(bounds.first, bounds.second);
+                });
+                if (position>=data.grid[0] && position<=data.grid[data.grid.size()-1] && !excluded)
                     visible_ticks.insert(r);
+            }
             CHECK_MESSAGE((tick_rows == visible_ticks),
-                          " gate 1 full-resolution Bragg ticks cover every reflection within the full data viewport");
+                          " gate 1 full-resolution Bragg ticks cover exactly the viewport reflections outside excluded regions (ADR-0044)");
         }
     }
 }
@@ -177,11 +229,43 @@ TEST_CASE("E04-T9 gate 2 independent pixel extrema over corpus and stress measur
         INFO(path);
         auto project = path == "D3" ? e04_t9_fixture::stress() : edi::load_project(path);
         project.calculate();
+        const auto reference = crysta::load_project(path == "D3" ? e04_t9_fixture::echidna : path);
+        REQUIRE_MESSAGE((project.experiments.size() == reference.experiments.size()),
+                        " gate 2 independently loaded experiment modes cover every bank");
         for (std::size_t b = 0; b < project.experiments.size(); ++b) {
             const auto s = edi::capture_pattern(project, b);
-            REQUIRE_MESSAGE((s.x && s.meas && s.su && s.calc && s.bkg && s.resid),
-                            " gate 2 fixture exposes every calculated and measured curve");
-            for (auto column : {s.meas, s.calc, s.bkg, s.resid}) exercise_decimator(*s.x, *column, *column);
+            const auto& experiment = *project.experiments[b];
+            if (experiment.experiment_type.effective_sample_form() == edi::SampleFormEnum::SINGLE_CRYSTAL) {
+                REQUIRE_MESSAGE((!experiment.data && experiment.reflections),
+                                "A declared single crystal exposes reflections instead of a powder pattern");
+                const auto& rows = *experiment.reflections;
+                REQUIRE_MESSAGE((s.current && s.refln_calc && rows.size() > 0 &&
+                                 s.refln_calc->size() == rows.size()),
+                                "Single-crystal capture retains a current value for every measured reflection");
+                for (int width : {1, 7, 400, 1200, 2400}) {
+                    edi::PatternView view;
+                    view.columns = width;
+                    const auto shown = edi::present_pattern(s, view);
+                    CHECK_MESSAGE((shown.current && shown.series.empty()),
+                                  "Every pixel width retains single-crystal currency without creating powder curves");
+                }
+                for (std::size_t r = 0; r < rows.size(); ++r)
+                    CHECK_MESSAGE((std::isfinite((*s.refln_calc)[r]) &&
+                                   identical((*s.refln_calc)[r], rows.intensity_calc[r])),
+                                  "Every single-crystal calculated reflection survives capture without decimation");
+                continue;
+            }
+            REQUIRE_MESSAGE((s.x && s.calc && s.bkg),
+                            " gate 2 every fixture exposes its axis and calculated curves");
+            for (auto column : {s.calc, s.bkg}) exercise_decimator(*s.x, *column, *column);
+            if (reference.experiments[b].calculation_only) {
+                CHECK_MESSAGE((!s.meas && !s.su && !s.resid),
+                              " gate 2 calculation-only experiments have no measured, su or residual curve");
+                continue;
+            }
+            REQUIRE_MESSAGE((s.meas && s.su && s.resid),
+                            " gate 2 measured fixtures expose every measured, su and residual curve");
+            for (auto column : {s.meas, s.resid}) exercise_decimator(*s.x, *column, *column);
             auto low = *s.meas, high = low;
             for (std::size_t i = 0; i < low.size(); ++i) { low[i] -= (*s.su)[i]; high[i] += (*s.su)[i]; }
             exercise_decimator(*s.x, low, high);
@@ -212,7 +296,7 @@ TEST_CASE("E04-T9 gaps uncertainty panes freshness and phase placement") {
     s.x = col({10,20,30,40,50}); s.meas = col({100,4,2,3,5}); s.su = col({10,9,1,1,1});
     s.calc = col({80,nan,nan,2,4}); s.bkg = col({1,nan,nan,1,1}); s.resid = col({20,nan,nan,1,1});
     s.current = true; s.excluded = {{20,30}};
-    s.phases = {{"a","Alpha",0,col({20}),{}},{"b","Beta",1,col({40}),{}}};
+    s.phases = {{"a","Alpha",0,col({20,30,35}),{}},{"b","Beta",1,col({25,40}),{}}};
     edi::PatternView view; view.y_scale = edi::YScale::Sqrt;
     const auto p = edi::present_pattern(s, view);
     const auto& m = series(p, edi::SeriesKind::Measured);
@@ -231,12 +315,28 @@ TEST_CASE("E04-T9 gaps uncertainty panes freshness and phase placement") {
                   " seam 15 two phases reserve two 18px rows");
     CHECK_MESSAGE((p.layout[2].pane == edi::Pane::Residual && p.layout[2].stretch == .3),
                   " I24 residual is the bottom pane");
-    for (const auto& tick : p.series) if (tick.kind == edi::SeriesKind::BraggTicks) {
-        REQUIRE_MESSAGE((tick.points.size() >= 2), " I24 tick has two endpoints");
-        const double low = tick.id == "bragg/a" ? 1.15 : .15;
-        CHECK_MESSAGE((tick.points[0].y == doctest::Approx(low) && tick.points[1].y == doctest::Approx(low + .7)),
-                      " seam 15 first structure is above the second, ticks cover central seventy percent");
+    for (const bool included_only : {false, true}) {
+        view.included_only = included_only;
+        const auto ticks = edi::present_pattern(s, view);
+        for (const auto& [id, position, row, low] :
+             std::vector<std::tuple<std::string,double,std::size_t,double>>{
+                 {"bragg/a",35,2,1.15},{"bragg/b",40,1,.15}}) {
+            const auto it = std::find_if(ticks.series.begin(), ticks.series.end(),
+                                         [&](const auto& candidate) { return candidate.id == id; });
+            REQUIRE_MESSAGE((it != ticks.series.end()), " I24 both phase rows remain present in both toggle states");
+            const auto& tick = *it;
+            REQUIRE_MESSAGE((tick.points.size() == 3),
+                            " ADR-0044 only the included tick's two endpoints and gap survive in either toggle state");
+            CHECK_MESSAGE((tick.points[0].x == position && tick.points[1].x == position &&
+                           std::isnan(tick.points[2].x) && std::isnan(tick.points[2].y)),
+                          " ADR-0044 excluded boundaries and interior ticks are hidden while every included tick remains");
+            REQUIRE_MESSAGE((tick.rows.size() == tick.points.size()), " I16 tick endpoints retain aligned row provenance");
+            CHECK_MESSAGE((tick.rows[0] == row), " I16 included ticks keep their original reflection row after masking");
+            CHECK_MESSAGE((tick.points[0].y == doctest::Approx(low) && tick.points[1].y == doctest::Approx(low + .7)),
+                          " seam 15 first structure is above the second, ticks cover central seventy percent");
+        }
     }
+    view.included_only = false;
     view.y_scale = edi::YScale::Log10;
     const auto log = edi::present_pattern(s, view);
     CHECK_MESSAGE((std::isnan(series(log, edi::SeriesKind::Measured).bar_low[1])), " I21 nonpositive lower log error end stays NaN");
@@ -253,20 +353,28 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
     const std::vector<double> disorder{10,13,11,14,12,15};
     CHECK_MESSAGE((edi::decimate_min_max(disorder,y,y,10,15,1) == all), " I17 nonmonotonic axes retain all visible rows");
     CHECK_MESSAGE((edi::decimate_min_max(x,y,y,10,15,2) == all), " I17 pixel columns with at most four rows retain every row");
-    auto project = edi::load_project(e04_t9_fixture::silicon); project.calculate();
-    const auto p = edi::present_pattern(edi::capture_pattern(project,0),{});
+    // Styling is a unit property: hand-authored columns reach every renderer role.
+    // Full physical capture and calculation remain exercised by the corpus integration case above.
+    auto col = [](std::vector<double> values) { return std::make_shared<const std::vector<double>>(std::move(values)); };
+    edi::PatternSource source;
+    source.x = col(x); source.meas = col(y); source.su = col({1,1,1,1,1,1});
+    source.calc = col({1,7,0,6,3,5}); source.bkg = col({1,1,1,1,1,1}); source.resid = col({1,1,1,1,1,1});
+    source.phases = {{"phase","Phase",0,col({11,13}),{}}}; source.current = true;
+    const auto p = edi::present_pattern(source,{});
     // Owner 2026-10-02,  item 7 requests thinner residual and Bragg lines.
     // Their 1-px values below are labelled regression pins of the chosen style;
     // the positive/thinner invariant separately proves the owner requirement.
     CHECK_MESSAGE(p.y_residual.title == "Residual",
                   " owner chart item 4 names the residual presentation axis Residual");
+    // Owner colours: tests/fixtures/chart_controls/owner.json. ADR-0038 assigns this default
+    // table three experiments, so the first spare Bragg row takes Earth position 3.
     const auto& styles = edi::pattern_style_table();
     for (const auto& [kind, light, dark, width] : std::vector<std::tuple<edi::SeriesKind,std::string,std::string,double>>{
-        {edi::SeriesKind::Measured,"#03A9F4","#81D4FA",2},
-        {edi::SeriesKind::Calculated,"#F44336","#EF9A9A",2},
-        {edi::SeriesKind::Background,"#607D8B","#B0BEC5",1},
-        {edi::SeriesKind::Residual,"#8BC34A","#C5E1A5",1},
-        {edi::SeriesKind::BraggTicks,"#FF9800","#FFCC80",1}}) {
+        {edi::SeriesKind::Measured,"#618EC8","#6E92CB",2},
+        {edi::SeriesKind::Calculated,"#AD1A6B","#FC4F81",2},
+        {edi::SeriesKind::Background,"#8A8A8A","#969696",1},
+        {edi::SeriesKind::Residual,"#737373","#B0B0B0",1},
+        {edi::SeriesKind::BraggTicks,"#C877B7","#C375C2",1}}) {
         const auto& s = series(p,kind);
         const auto style = std::find_if(styles.begin(),styles.end(),[&](const auto& v){return v.key==s.style;});
         REQUIRE_MESSAGE(style != styles.end(), " I23 every series resolves to the one authoritative style table");
@@ -276,7 +384,7 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
                           " owner chart item 7 keeps lines visible and thinner than their prior widths");
         }
         CHECK_MESSAGE((style->light == light && style->dark == dark && style->width_px == width),
-                      " I23 independent palettes and prior widths match;  one-pixel widths are labelled regression pins");
+                      " I23 role styles follow the shared published palette and retained widths; one-pixel widths are labelled regression pins");
         if (kind == edi::SeriesKind::Measured)
             CHECK_MESSAGE(style->marker_px == 5,
                           " I23 ADR-0017 section 15 measured markers have the owner-reviewed size");

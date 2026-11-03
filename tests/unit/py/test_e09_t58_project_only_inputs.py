@@ -324,7 +324,11 @@ def _assert_packet_module_routes() -> None:
 
 def test_survey_is_complete_and_model_state_cannot_reenter_signatures() -> None:
     """Derive the whole public inventory, classify it, then inspect model operations."""
-    _assert_model_operation_overloads(_assert_public_inventory_is_classified())
+    classifications = _assert_public_inventory_is_classified()
+    assert classifications['BraggPdExperiment.background_estimate'] == 'other-public', (
+        'Saved background estimate settings are model state rather than a calculation entry point'
+    )
+    _assert_model_operation_overloads(classifications)
     _assert_packet_module_routes()
 
 

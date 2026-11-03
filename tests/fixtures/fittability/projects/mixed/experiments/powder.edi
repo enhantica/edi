@@ -1,0 +1,42 @@
+data_powder
+_edi.schema_version 3
+_experiment_type.sample_form "powder"
+_experiment_type.scattering_type bragg
+_experiment_type.radiation_probe neutron
+_experiment_type.beam_mode "constant wavelength"
+_instrument.setup_wavelength 1.6
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+_linked_structure.enabled
+phase 2.3 true
+_peak.type cwl-pseudo-voigt-berar-baldinozzi
+_peak.broad_gauss_u .03
+_peak.broad_gauss_v -.01
+_peak.broad_gauss_w .15
+_peak.mixing_eta_0 .37
+_peak.mixing_eta_1 .001
+_peak.asym_beba_a0 0
+_peak.asym_beba_b0 0
+_peak.asym_beba_a1 0
+_peak.asym_beba_b1 0
+_peak.asym_beba_limit 150
+_peak.cutoff_fwhm 5
+_instrument.calib_twotheta_offset 0
+_background.type line-segment
+loop_
+_background.id
+_background.position
+_background.intensity
+a 20 3
+b 100 9
+loop_
+_data.two_theta
+_data.intensity_meas
+_data.intensity_meas_su
+30 10 1
+40 12 1
+50 9 1
+60 8 1
+70 10 1
+80 11 1

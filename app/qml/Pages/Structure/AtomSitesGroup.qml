@@ -44,49 +44,53 @@ Column {
         defaultInfoText: qsTr("No atom sites defined")
         sourceModel: group.sites
 
-        columnWidths: [numberColumnWidth, textColumnWidth("label", qsTr("id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+        // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
+
+        equalColumns: true
+
+        // The type's combo box as wide as its widest type, its icon and arrow (the owner, 2026-10-27).
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("id")
+                uid: "atom_site.id"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("type")
+                uid: "atom_site.type_symbol"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "x"
+                uid: "atom_site.fract_x"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "y"
+                uid: "atom_site.fract_y"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "z"
+                uid: "atom_site.fract_z"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("WP")
+                uid: "atom_site.wyckoff_letter"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("occ")
+                uid: "atom_site.occupancy"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string label
             required property string typeSymbol
             required property string wyckoffLetter
@@ -95,9 +99,9 @@ Column {
             required property ParameterItem fractZ
             required property ParameterItem occupancy
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             TextCell {
@@ -108,12 +112,8 @@ Column {
             }
             // The type picked from the element table or typed into the list's search field (the owner,
             // 2026-10-06); a type outside the table, as a file may declare it ("Co2+", "157Gd"), is shown as it is.
-            Item {
-                property int horizontalAlignment: Text.AlignLeft
-                height: parent.height
+            ComboCell {
                 SearchableComboBox {
-                    width: Math.min(parent.width, implicitWidth)
-                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
                     horizontalAlignment: Text.AlignLeft
                     objectName: `atomSite.typeSymbol.${row.index}`
                     inTable: true
@@ -126,13 +126,12 @@ Column {
                     // The site's atom icon in its element's colour just before the type, as the Analysis page's parameter
                     // names carry it (the owner, 2026-10-03 and 2026-10-06).
                     contentItem: Item {
-                        implicitWidth: typeLine.implicitWidth + EaStyle.Sizes.fontPixelSize * 0.5
+                        implicitWidth: typeLine.implicitWidth
                         clip: true
 
                         IconLine {
                             id: typeLine
                             objectName: `atomSite.icon.${row.index}`
-                            x: EaStyle.Sizes.fontPixelSize * 0.5
                             anchors.verticalCenter: parent.verticalCenter
                             segments: [
                                 {
@@ -168,13 +167,13 @@ Column {
             }
             // The Wyckoff position, chosen among the space group's: its multiplicity, letter and coordinates
             // (the owner, 2026-10-08). A letter the group does not know is shown as it is.
-            Item {
-                property int horizontalAlignment: Text.AlignHCenter
-                height: parent.height
+            ComboCell {
+                // The column is sized to the position names (wyckoffWidth); the list's longer coordinates open in a popup.
+                fills: true
                 SearchableComboBox {
                     readonly property int letterIndex: group.sites ? group.sites.wyckoffLetters.indexOf(row.wyckoffLetter) : -1
 
-                    width: parent.width
+                    horizontalAlignment: Text.AlignLeft
                     objectName: `atomSite.wyckoffLetter.${row.index}`
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
@@ -194,7 +193,7 @@ Column {
                 objectName: `atomSite.occupancy.${row.index}`
                 item: row.occupancy
             }
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `atomSite.remove.${row.index}`
                 fontIcon: "minus-circle"

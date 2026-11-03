@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-11
 - **Implementation:** 🟡 Partially implemented — the desktop store and its one-time carry-over, the Settings tab on
-  every page (the Analysis and Experiment charts' options and "Pattern updates during a scan"), the shown path with
+  every page ("Pattern updates during a scan" on the Analysis page), the shown path with
   Open folder and Reset, the window's geometry, the recent and last projects and each project's selection; the
   browser keeps local storage until its measurement (4)
 - **Priority:** Medium
@@ -34,7 +34,9 @@ to know where Qt puts it.
    - each page's Settings tab (2);
    - the window's size and position;
    - the last open project and the recent projects;
-   - for each project, the structure and the experiment last selected in it, keyed by the project's path.
+   - for each project, the structure and the experiment last selected in it, keyed by the project's path;
+   - for each project, its scan views' Stacked spacing and Map direction (edi ADR-0041), keyed the same way, so a
+     project reopens with them (the owner, 2026-10-26).
 
    A project opened on another machine, or by someone else, opens with that machine's settings, and changing a
    setting never marks a project modified. The report's settings are project data, not app settings (ADR-0036 §7):
@@ -44,8 +46,13 @@ to know where Qt puts it.
    holds that page's options that only change what the app shows or how it behaves, in groups, as Main and Extras hold
    project data. They are kept in the app-settings store under the page's name and apply to that page, unlike the app
    bar's settings, which apply to the whole app. The Analysis page's Settings tab is the first: "Pattern updates during
-   a scan" moves there from Analysis, Extras, and the pattern chart's y-axis type (linear, square root or log) joins
-   it, so the chosen scale is kept.
+   a scan" moves there from Analysis, Extras. A page with no such options has its Settings tab disabled, as an empty
+   Extras tab is (the owner, 2026-10-14).
+
+   A choice made on a chart lives on the chart only, never also in Settings (the owner, 2026-10-21): each choice has
+   one place. The pattern chart's y-axis type (linear, square root or log) and the Experiment chart's x axis are on the
+   chart's own selectors. The chart still keeps them in the app-settings store under the page's name (7), so the chosen
+   scale is kept. The Experiment page has no other view options, so its Settings tab is disabled.
 3. **One ini file on the desktop.** The store is `QSettings` in `IniFormat` on every desktop platform, one file named
    after the organisation and the application: `~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS,
    `%APPDATA%\EasyScience\EasyDiffraction.ini` on Windows. Not the native formats (a property list on macOS, the
@@ -60,11 +67,18 @@ to know where Qt puts it.
    a confirmation. In the web app the path reads "stored in this browser" and there is no "Open folder".
 6. A demo capture or a test run keeps its own fresh settings folder (as now), so it never reads or writes the user's
    settings.
-7. **The groups.** The store's groups are named for what holds them: `Appearance` (the colour scheme), `Projects`
+7. **The groups.** The store's groups are named for what holds them: `Appearance` (`colourScheme`, the one figure palette since
+   2026-10-26, edi ADR-0038; a stored `patternColourScheme` of 2026-10-22 is read into it once and cleared; the Stacked
+   and Map colours are chosen beside it in the dialog and kept in `ScanViews`), `Projects`
    (the defaults for new projects, `recent` and `last`), `Window` (`x`, `y`, `width`, `height` in logical pixels; a
-   position on no screen is moved onto the primary screen), one group per page (`Analysis`: `yScale`,
-   `scanPatternUpdates`; `Experiment`: `yScale`, `xAxis`) and `Selections` (each project's structure, experiment and
-   scan dataset file, keyed by the project's folder). Today's `settings.ini` is carried over once: a key the store
+   position on no screen is moved onto the primary screen), one group per page (`Analysis`: `scanPatternUpdates`),
+   `PatternChart` for the one pattern chart every page shows (`yScale`, `structureCurves`, `legendShown`,
+   `hoverShown`, `pointerMode`, `measuredStyle`; amended 2026-10-21: the Analysis and Experiment charts' y scales and the Experiment
+   chart's x axis merged into it, the x axis being the project's own for every page, edi ADR-0017 §15), `ScanViews`
+   for the Stacked and Map views (`stackedPalette`, `mapColours`, `mapSmooth`, `stackedReversed`; edi ADR-0041; the included range only is `Charts/includedOnly`, every pattern chart's), `Selections` (each project's structure, experiment and
+   scan dataset file, keyed by the project's folder) and `ProjectViews` (each project's `stackedSpacing` and
+   `mapDirection`, keyed by its folder; written when changed and at every save, so a project saved to a new folder
+   takes them along). Today's `settings.ini` is carried over once: a key the store
    holds is never overwritten, the keys that moved go to their groups, and a marker keeps a later start from carrying
    anything again.
 
@@ -86,4 +100,5 @@ to know where Qt puts it.
 | Native `QSettings` formats (a property list on macOS, the registry on Windows) | Rejected: a different store per platform, not one text file a user can read, copy, remove or attach to a report. |
 | A user selector between the ini file and the native store | Not taken: the choice would itself have to be read from a fixed file before the settings are, switching would need the settings moved from one store to the other, and the web app has no choice to offer. |
 | Page settings among each page's Extras | Rejected: Extras holds project data written to `.edi`, so options there look like part of the project. |
+| A chart's display choices also in the page's Settings tab | Rejected by the owner: one choice in two places, and the chart already shows it. |
 | View settings in the project's `.edi` files | Rejected: they would travel with a project to another machine and person, and a change of view would mark the project modified. |

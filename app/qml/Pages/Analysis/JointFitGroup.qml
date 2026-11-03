@@ -23,35 +23,34 @@ DataTable {
 
     // The common table design (edi ADR-0017 §8): No., the experiment's icon in its colour, its name, then the
     // weight, a number centred at display precision as every table's numbers.
-    columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8]
+    columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, -1]
 
     header: EaComponents.ListViewHeader {
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignLeft
             text: qsTr("experiment")
         }
-        EaComponents.TableViewLabel {
+        HeaderLabel {
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("weight")
+            uid: "joint_fit.weight"
         }
     }
 
-    delegate: EaComponents.ListViewDelegate {
+    delegate: TableRow {
         id: row
 
-        required property int index  // the base delegate's row colour reads it
         required property string name
         required property ExperimentViewModel experiment
 
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignHCenter
-            color: EaStyle.Colors.themeForegroundMinor
+            marksCurrentRow: true
             text: row.index + 1
         }
         IconCell {
@@ -61,13 +60,14 @@ DataTable {
             iconColor: AppColors.experiment(row.index)
             toolTip: qsTr("Measured pattern color")
         }
-        EaComponents.TableViewLabel {
+        EaComponents.ListViewLabel {
             horizontalAlignment: Text.AlignLeft
             text: row.name
         }
         TextCell {
             horizontalAlignment: Text.AlignHCenter
             objectName: `jointFit.weight.${row.index}`
+            uid: "joint_fit.weight"
             accepts: "number"
             value: row.experiment ? row.experiment.datasetWeight : ""
             onCommitted: text => row.experiment.datasetWeight = Number(text)

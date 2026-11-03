@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use EasyDiffraction in your work, please cite it as below."
+# Placeholder until the first archived release has a DOI. The app's How to cite reads this file.
+title: "EasyDiffraction"
+type: software
+authors:
+  - name: "The EasyDiffraction developers"
+version: "placeholder"
+doi: "10.5281/zenodo.0000000"
+date-released: "2026-01-01"
+url: "https://enhantica.github.io/edi"
+repository-code: "https://github.com/enhantica/edi"
+license: BSD-3-Clause

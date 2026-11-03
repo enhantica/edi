@@ -1,12 +1,25 @@
 // Protocol controls only; synthetic states are never application evidence.
 import assert from 'node:assert/strict';
+import {fittingObservationKind,hasRunningProgress} from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 import {runInNewContext} from 'node:vm';
-import {beginFitProgress,endFitProgress,isLiveFitProgress,advancesLiveFitProgress} from './web_fit_progress.mjs';
+import {beginFitProgress,endFitProgress,isLiveFitProgress,advancesLiveFitProgress,observesOrderedFitProgress} from './web_fit_progress.mjs';
 
 const idle={running:false,visible:false,text:''};
 const live={running:true,visible:true,text:'fitting · it 3'};
 let count=0;
 const iterations = values => values.map(value => ({...live,text:`fitting · it ${value}`}));
+for (const values of [[0,4],[0,1],[0]]) {
+  assert(observesOrderedFitProgress(iterations(values),8),
+    'A fast fit retains genuine running-counter observations without promising a frame per iteration');count++;
+  assert(!advancesLiveFitProgress(iterations(values),8),
+    'Coalesced fast-fit counters cannot impersonate the sustained frame-liveness proof');count++;
+}
+for (const [states,final] of [[iterations([4,1]),8],[iterations([9]),8],
+  [iterations([0]),NaN],[iterations([0]),0],[[],8],
+  [[idle],8],[[{...live,visible:false}],8],[[{...live,text:'Success · it 4'}],8]]) {
+  assert(!observesOrderedFitProgress(states,final),
+    'Fast-fit sampling still refuses reversed, out-of-range, absent, hidden and completed counters');count++;
+}
 for (const values of [[0,1,1,2,5],[1,3,4,5]]) {
   assert(advancesLiveFitProgress(iterations(values),5),
     'The indicator must advance through distinct intermediate values while actually running');count++;
@@ -60,3 +73,19 @@ await beginFitProgress(evaluate);
 await assert.rejects(endFitProgress(evaluate),/without a page-hook exception/,
   'A failed native progress read must refuse rather than reuse old samples');count++;
 console.log(`${count} progress protocol controls green; no application fit green claimed`);
+
+for (const text of ['Stop','stop-circle Stop']) {
+  assert.equal(fittingObservationKind(text),'control',
+    'The status-bar running button exposes Stop, with or without its icon text');
+  assert(hasRunningProgress([text,'fitting · it 2']),
+    'The current Stop label and a live iteration together satisfy progress observation');
+}
+for (const text of ['Fit','Continue','Refit','Start fitting','Stop fitting','Cancel fitting','Stop search','Unstoppable']) {
+  assert.equal(fittingObservationKind(text),null,
+    'Idle actions, retired labels and unrelated stop text cannot impersonate the current fit control');
+  assert(!hasRunningProgress([text,'fitting · it 2']),
+    'Live iteration text alone cannot replace the actual running fit control');
+}
+assert(!hasRunningProgress(['Stop','Success','Iterations 20']),
+  'The current Stop control without a live iteration cannot impersonate running progress');
+console.log('status-bar fitting label controls green; no application fit green claimed');

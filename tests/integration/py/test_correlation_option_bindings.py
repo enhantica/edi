@@ -77,8 +77,29 @@ def test_label_toggle_controls_each_actual_axis_delegate(axis):
         + '));'
         + 'process.stdout.write(JSON.stringify(observations));'
     )
-    assert evaluate(script) == [False, True, False], (
-        'The actual labels toggle must hide, show and hide each axis through its real binding'
+    assert evaluate(script) == [True, True, True], (
+        'Both axes retain ticks when the control switches between numbers and names'
+    )
+
+    assert source.count('text: chart.edgeText(index)') == 2, (
+        'Both retained axes draw the production number-or-name binding'
+    )
+    numbers = body(source, 'readonly property var numbers:')
+    edge = body(source, 'function edgeText(')
+    script = (
+        'const labels=["alpha","beta"];'
+        'const Session={project:{parameterNumber:label=>({alpha:7,beta:23})[label]}};'
+        f'const chart={{{name}:false}};'
+        f'const numbers=(()=>{{{numbers}}})();'
+        f'function edgeText(index){{with(chart){{{edge}}}}}'
+        'const seen=[[0,1].map(edgeText)];'
+        + handler
+        + ';seen.push([0,1].map(edgeText));'
+        + handler
+        + ';seen.push([0,1].map(edgeText));process.stdout.write(JSON.stringify(seen));'
+    )
+    assert evaluate(script) == [['7', '23'], ['alpha', 'beta'], ['7', '23']], (
+        'Tick text reversibly uses Analysis row numbers, including nonconsecutive filtered rows'
     )
 
 
@@ -117,13 +138,15 @@ def test_toggles_disable_for_unfitted_and_filtered_empty_matrices():
     assert all(expressions), 'Both actual toggle buttons must bind their enabled state'
     bindings = re.findall(r'(?:readonly )?property (?:bool|int|var) (\w+):\s*([^\n]+)', source)
     setup = ''.join(
-        f'Object.defineProperty(chart,{json.dumps(name)},{{get:()=>({expr})}});'
+        f'Object.defineProperty(chart,{json.dumps(name)},'
+        f'{{get(){{with(chart){{return ({expr});}}}}}});'
         for name, expr in bindings
-        if name in {'available', 'count', 'labels'}
+        if name in {'available', 'count', 'labels', 'showsAny'}
     )
     script = 'const observations=[];'
     script += (
-        'for(const correlations of [null,{available:3,labels:["a","b","c"]},'
+        'for(const correlations of [null,{available:1,labels:["a","b","c"]},'
+        '{available:3,labels:["a","b","c"]},{available:3,labels:["a"]},'
         '{available:3,labels:[]},{available:3,labels:["a","b","c"]}]){'
     )
     script += 'const chart={correlations};' + setup
@@ -133,7 +156,14 @@ def test_toggles_disable_for_unfitted_and_filtered_empty_matrices():
         + ']);}'
     )
     script += 'process.stdout.write(JSON.stringify(observations));'
-    assert evaluate(script) == [[False, False], [True, True], [False, False], [True, True]], (
+    assert evaluate(script) == [
+        [False, False],
+        [False, False],
+        [True, True],
+        [False, False],
+        [False, False],
+        [True, True],
+    ], (
         'Both toggles must disable whenever no correlations are displayed, including a filter '
         'hiding every pair, and re-enable when pairs return'
     )

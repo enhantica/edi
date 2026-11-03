@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtQuick.Controls
 import QtTest
+import "ExampleProjects.js" as Examples
 import edi.app
 import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
@@ -34,17 +36,25 @@ Item {
         name: "ExperimentColourIdentity"
         when: windowShown
         property int oldTheme
-        property string oldScheme
+        property var reference: Approved.reference(SettingsProof)
+        property var oldScheme
         function initTestCase() {
             oldTheme = Style.Colors.theme;
-            oldScheme = Preferences.colourScheme;
+            try {
+                oldScheme = Approved.getScheme(Preferences);
+            } catch (error) {
+                oldScheme = null;
+            }
             surface.Window.window.width = surface.width;
             surface.Window.window.height = surface.height;
         }
         function cleanup() {
             Session.closeProject();
             Style.Colors.theme = oldTheme;
-            Preferences.colourScheme = oldScheme;
+            if (oldScheme)
+                Approved.setScheme(Preferences, oldScheme);
+            else
+                Preferences.resetToDefaults();
         }
         function icon(root) {
             return Render.descendants(root).find(item => item.isIcon === true && item.modelData.icon === ParameterNames.blockIcon("experiment"));
@@ -56,36 +66,38 @@ Item {
             const subjects = [
                 {
                     kind: "single",
-                    example: "pd-neut-cwl_lbco-hrpt_start-2",
+                    example: "pd-neut-cwl_lbco-hrpt",
                     count: 1
                 },
                 {
                     kind: "joint",
                     example: "pd-neut-tof_ncaf-wish-3bank_start-5",
+                    fixture: true,
                     count: 3
                 },
                 {
                     kind: "scan",
                     example: "pd-neut-cwl_cosio-d20_scan-162f",
+                    fixture: true,
                     count: 162
                 }
             ];
             const rows = [];
             for (const subject of subjects)
-                for (const safe of [false, true])
+                for (const scheme of reference.schemes)
                     for (const dark of [false, true])
                         rows.push(Object.assign({}, subject, {
-                            tag: subject.kind + (safe ? "-safe" : "-default") + (dark ? "-dark" : "-light"),
-                            safe: safe,
+                            tag: subject.kind + ("-" + scheme.id) + (dark ? "-dark" : "-light"),
+                            scheme: scheme.id,
                             dark: dark
                         }));
             return rows;
         }
         function test_one_experiment_colour_across_pages(data) {
-            verify(Session.openExample(data.example), "The colour witness opens the real single, joint or 162-file scan example: " + data.example);
+            verify(Examples.open(this, Session, data.example, data.fixture === true), "The colour witness opens the real single, joint or 162-file scan example: " + data.example);
             tryCompare(Session.project, "calculating", false, 15000, "The opened colour witness settles its initial calculation");
             compare(Session.project.experiments.count, data.count, "Each colour witness reaches its independently declared experiment or dataset count");
-            Preferences.colourScheme = data.safe ? "colourBlindSafe" : "default";
+            Approved.setScheme(Preferences, data.scheme);
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             const project = createTemporaryObject(projectFactory, surface, {
                 width: surface.width,
@@ -103,14 +115,13 @@ Item {
                 verify(row !== undefined && icon(row) !== undefined, "The Project list materializes the requested experiment place " + position);
                 expected[position] = ink(icon(row).color);
             }
-            const palette = SettingsProof.palette(data.safe).pattern;
-            const theme = data.dark ? "dark" : "light";
-            compare(expected[0], palette[data.count > palette.length ? palette.length - 2 : 0][theme].toLowerCase(), "The Project list starts at its independent short-palette row or declared gradient endpoint");
-            if (data.count > 11)
-                compare(expected[data.count - 1], palette[palette.length - 1][theme].toLowerCase(), "The 162-file Project gradient reaches the independent last palette endpoint");
-            else
-                for (const position of positions)
-                    compare(expected[position], palette[position][theme].toLowerCase(), "The few-experiment Project list uses its independent palette place " + position);
+            const approved = Approved.colours(SettingsProof, data.scheme, "measured", data.count, data.dark, {
+                scan: data.kind === "scan",
+                experiments: data.kind === "scan" ? 1 : data.count,
+                structures: Session.project.structures.count
+            });
+            for (const position of positions)
+                compare(expected[position], approved[position], "The Project icon equals its independently frozen approved place for the full experiment count");
             project.visible = false;
             const failures = [];
             for (const consumer of ["Experiment", "Analysis", "Evolution"]) {

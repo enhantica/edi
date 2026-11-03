@@ -64,7 +64,7 @@ const std::vector<double>& CorrelationViewModel::numbers(
         for (const auto& row : rows) {
             kept.rows.push_back(row.get());
             kept.written.push_back(row->correlation.written());
-            kept.values.push_back(edi::correlation_value(*row));
+            kept.values.push_back(row->correlation.get());
         }
     }
     return kept.values;

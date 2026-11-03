@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
@@ -10,16 +11,22 @@ import edi.app
 // A category's type selector: the base's ParamComboBox over the core's supported options for the
 // block's type, showing the stored token. `selected` carries the token the user chose; the owner
 // writes it through the view-model's core call. A refused choice returns the selector to the
-// stored token and shows the core's message, as ParameterField does.
+// stored token and shows the core's message, as ParameterField does. A selector of a `.edi` item names it by `uid`:
+// its label comes from crysta's dictionary and its tooltip names the item and the token stored (edi ADR-0051).
 EaElements.ParamComboBox {
     id: selector
 
     required property OptionListModel options
-    property string label: ""
+    property string uid: ""
+    property string label: uid !== "" ? Session.label(uid) : ""
     property string token: ""
     property bool writable: true
     // Why the last choice was refused; empty once a choice takes or the token changes.
     property string refusal: ""
+    // What `auto` resolves to, shown after it in grey ("auto · arpls"); empty shows the choice alone.
+    property string resolved: ""
+    // A help text set as `ToolTip.text` shows in the app's tooltip on hover, unless a refusal is shown.
+    property bool helpToolTip: false
     signal selected(string token)
 
     // Shares the row's width with its siblings at the input spacing, as ParamTextField does (the base's
@@ -31,13 +38,20 @@ EaElements.ParamComboBox {
         })
     model: options
     textRole: "label"
+    displayText: resolved !== "" && token === "auto" ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${resolved}</font>` : currentText
     valueRole: "token"
     enabled: writable && options !== null && options.count > 0
     currentIndex: options ? options.indexOf(token) : -1
-    ToolTip.text: refusal
+    ToolTip.text: uid !== "" ? Session.optionTooltip(uid, token) : ""
+    ToolTip.visible: ToolTip.text !== "" && hovered && refusal === "" && EaGlobals.Vars.showToolTips
     WarningToolTip {
         text: selector.refusal
         visible: text !== "" && selector.hovered
+    }
+    // The app's tooltip, never the attached one Qt draws in its own style.
+    EaElements.ToolTip {
+        text: selector.ToolTip.text
+        visible: selector.helpToolTip && text !== "" && selector.refusal === "" && selector.hovered && EaGlobals.Vars.showToolTips
     }
 
     onTokenChanged: refusal = ""

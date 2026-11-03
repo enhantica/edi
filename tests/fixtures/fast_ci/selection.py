@@ -9,7 +9,7 @@ import sys
 from tests.fixtures.e09_t75_workflow import active
 
 
-def shard_selection(root, scratch, event, platform, workflow):
+def shard_selection(root, scratch, event, platform, workflow, *, core_only=False):
     scripts = scratch / 'tools/ci'
     scripts.mkdir(parents=True)
     shutil.copy2(root / 'tools/ci/system-tests-part.sh', scripts)
@@ -44,7 +44,11 @@ def shard_selection(root, scratch, event, platform, workflow):
                     continue
                 if '${{' in str(value):
                     expression = str(value).replace('matrix.platform', repr(platform))
-                    resolved = 'true' if active({'if': expression}, event) else 'false'
+                    resolved = (
+                        'true'
+                        if active({'if': expression}, event, core_only=core_only)
+                        else 'false'
+                    )
                 else:
                     resolved = str(value)
                 env[key] = resolved

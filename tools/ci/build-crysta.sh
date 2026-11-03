@@ -33,6 +33,7 @@ case "$ENV_NAME" in default | "") ENV_SUFFIX="" ;; *) ENV_SUFFIX="-$ENV_NAME" ;;
 case "${PIXI_PLATFORM:-${RUNNER_OS:-$(uname -s)}-${RUNNER_ARCH:-$(uname -m)}}" in
   linux-64 | linux-64-app | Linux-X64 | Linux-x86_64) PLATFORM=linux-64 ;;
   osx-arm64 | macOS-ARM64 | Darwin-arm64) PLATFORM=osx-arm64 ;;
+  osx-arm64-app) PLATFORM=osx-arm64 ;;  # the app environment's macOS platform (macOS 14)
   *) echo "ERROR: no crysta SDK is built for ${PIXI_PLATFORM:-$(uname -s)-$(uname -m)} (edi ADR-0017: linux-64, osx-arm64)" >&2; exit 1 ;;
 esac
 

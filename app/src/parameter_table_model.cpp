@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_table_model.hpp"
 
+#include <algorithm>
+
 #include "category_list_model.hpp"
 #include "parameter_item.hpp"
 #include "parameter_registry.hpp"
@@ -10,7 +12,7 @@ namespace edi_app {
 namespace {
 const QStringList kRoles{"parameter", "path",  "blockKind", "blockName", "category", "rowLabel", "name",
                          "displayName", "value", "uncertainty", "hasUncertainty", "free", "minimum",
-                         "maximum", "units", "refinable"};
+                         "maximum", "units", "refinable", "fittable", "fitReason", "fitGroup"};
 // One predicate serves menu counts and filtering, so parent groups include all their children.
 bool matches_group(const QString& group, const QString& kind, const QString& category, const QString& name) {
     if (group.isEmpty()) return true;
@@ -40,23 +42,28 @@ void ParameterTableModel::setExperimentScope(const QString& experiment) {
 void ParameterTableModel::sync() {
     QList<Row> rows;
     int free_count = 0;
+    int not_fittable_count = 0;
+    QList<int> group_counts{0, 0, 0, 0};
     for (ParameterItem* item : registry_.items()) {
-        if (!item->isRefinable() || !item->isFittable()) {
-            continue;  // symmetry fixes or ties it, or a fixed setting: shown on its page, never fitted
-        }
         if (!experiment_scope_.isEmpty() && item->blockKind() == QLatin1String("experiment") &&
             item->blockName() != experiment_scope_) {
             continue;  // a scan mode fits one experiment at a time: another experiment's parameter
         }
         free_count += item->isFree() ? 1 : 0;
+        not_fittable_count += !item->isFree() && !item->isFittable() ? 1 : 0;
         rows.append({item,
                      {QVariant::fromValue<QObject*>(item), item->path(), item->blockKind(), item->blockName(),
                       item->category(), item->rowLabel(), item->name(), item->displayName(), item->value(),
                       item->uncertainty(), item->hasUncertainty(), item->isFree(), item->minimum(), item->maximum(),
-                      item->displayUnits(), item->isRefinable()}});
+                      item->displayUnits(), item->isRefinable(), item->isFittable(), item->fitReason(),
+                      item->fitGroup()}});
+        if (!item->isFree() && item->fitGroup() > 0) {
+            ++group_counts[item->fitGroup() - 1];
+        }
     }
     setTableRows(rows);
-    const int fixed_count = count() - free_count;
+    // Free, fixed (could be freed) and not fittable partition the rows (edi ADR-0053).
+    const int fixed_count = count() - free_count - not_fittable_count;
     if (free_count != free_count_) {
         free_count_ = free_count;
         emit freeCountChanged();
@@ -65,6 +72,23 @@ void ParameterTableModel::sync() {
         fixed_count_ = fixed_count;
         emit fixedCountChanged();
     }
+    if (not_fittable_count != not_fittable_count_) {
+        not_fittable_count_ = not_fittable_count;
+        emit notFittableCountChanged();
+    }
+    if (group_counts != group_counts_) {
+        group_counts_ = group_counts;
+        emit groupCountsChanged();
+    }
+}
+
+int ParameterTableModel::numberOf(const ParameterItem* parameter) const {
+    for (int row = 0; parameter != nullptr && row < count(); ++row) {
+        if (keyAt(row) == parameter) {
+            return row + 1;
+        }
+    }
+    return 0;
 }
 
 bool ParameterTableModel::setRole(int row, const QString& role, const QVariant& value) {
@@ -91,40 +115,106 @@ void ParameterFilterModel::setSourceModel(QAbstractItemModel* source) {
     source_connections_.clear();
     QSortFilterProxyModel::setSourceModel(source);
     if (source != nullptr) {
-        source_connections_.append(connect(source, &QAbstractItemModel::modelReset, this, &ParameterFilterModel::refreshCategories));
-        source_connections_.append(connect(source, &QAbstractItemModel::rowsInserted, this, &ParameterFilterModel::refreshCategories));
-        source_connections_.append(connect(source, &QAbstractItemModel::rowsRemoved, this, &ParameterFilterModel::refreshCategories));
-        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this, &ParameterFilterModel::refreshCategories));
+        source_connections_.append(connect(source, &QAbstractItemModel::modelReset, this, &ParameterFilterModel::refresh));
+        source_connections_.append(connect(source, &QAbstractItemModel::rowsInserted, this, &ParameterFilterModel::refresh));
+        source_connections_.append(connect(source, &QAbstractItemModel::rowsRemoved, this, &ParameterFilterModel::refresh));
+        source_connections_.append(connect(source, &QAbstractItemModel::dataChanged, this, &ParameterFilterModel::refresh));
     }
-    refreshCategories();
+    refresh();
 }
 
-void ParameterFilterModel::refreshCategories() {
-    struct Row { QString kind, category, name; };
+namespace {
+
+// A datablock entry's key: its kind and name.
+QString datablock_key(const QString& kind, const QString& name) { return kind + QLatin1Char(':') + name; }
+
+bool matches_datablock(const QString& key, const QString& kind, const QString& name) {
+    return key.isEmpty() || key == datablock_key(kind, name);
+}
+
+}  // namespace
+
+void ParameterFilterModel::refresh() {
+    // Only the rows the show-filters leave, so every picker counts what the table can show. A count is of the rows the
+    // table lists: what the name and the free/fixed filters leave as well (`listed`). Which entries there are follows
+    // every row, so typing a name never takes away the category chosen.
+    struct Row {
+        QString kind, block, category, name;
+        bool free = false;
+        bool fittable = true;
+        bool named = true;
+        bool listed = true;
+    };
     QList<Row> rows;
     if (sourceModel() != nullptr) {
         const auto roles = sourceModel()->roleNames();
         const auto value = [&](int row, const char* role) {
-            return sourceModel()->data(sourceModel()->index(row, 0), roles.key(role)).toString();
+            return sourceModel()->data(sourceModel()->index(row, 0), roles.key(role));
         };
         for (int row = 0; row < sourceModel()->rowCount(); ++row) {
-            rows.append({value(row, "blockKind"), value(row, "category"), value(row, "name")});
+            const bool free = value(row, "free").toBool();
+            const bool fittable = value(row, "fittable").toBool();
+            if (!shownByGroup(free, value(row, "fitGroup").toInt())) {
+                continue;
+            }
+            const bool named = name_filter_.isEmpty() ||
+                               value(row, "path").toString().contains(name_filter_, Qt::CaseInsensitive) ||
+                               value(row, "displayName").toString().contains(name_filter_, Qt::CaseInsensitive);
+            const bool kept = variability_ == All || (variability_ == Free && free) ||
+                              (variability_ == Fixed && !free && fittable) ||
+                              (variability_ == NotFittable && !free && !fittable);
+            rows.append({value(row, "blockKind").toString(), value(row, "blockName").toString(),
+                         value(row, "category").toString(), value(row, "name").toString(), free, fittable, named,
+                         named && kept});
         }
     }
+
+    // The datablocks: all, then every structure, then every experiment, in page order.
+    QStringList datablocks;
+    QList<CategoryGroup> datablock_groups;
+    datablocks.append(QString());
+    const auto listed = static_cast<int>(std::count_if(rows.begin(), rows.end(), [](const Row& row) { return row.listed; }));
+    datablock_groups.append(CategoryGroup{{}, tr("All datablocks (%1)").arg(listed), {}, false, listed, {}, {}});
+    for (const QString& kind : {QStringLiteral("structure"), QStringLiteral("experiment")}) {
+        for (const Row& row : rows) {
+            const QString key = datablock_key(kind, row.block);
+            if (row.kind != kind || datablocks.contains(key)) continue;
+            const auto count = std::count_if(rows.begin(), rows.end(), [&](const Row& other) {
+                return other.listed && other.kind == kind && other.block == row.block;
+            });
+            datablocks.append(key);
+            datablock_groups.append(CategoryGroup{key, QStringLiteral("%1 (%2)").arg(row.block).arg(count),
+                                                  kind == QLatin1String("structure") ? QStringLiteral("layer-group")
+                                                                                     : QStringLiteral("microscope"),
+                                                  false, static_cast<int>(count), kind, row.block});
+        }
+    }
+    if (!datablocks.contains(datablock_filter_)) {
+        beginFilterChange();
+        datablock_filter_.clear();
+        endFilterChange(Direction::Rows);
+        emit datablockFilterChanged();
+    }
+    QList<Row> scoped;
+    for (const Row& row : rows) {
+        if (matches_datablock(datablock_filter_, row.kind, row.block)) scoped.append(row);
+    }
+
+    // The categories of the selected datablocks.
     QStringList categories;
     QList<CategoryGroup> groups;
-    const auto countGroup = [&](const QString& key) {
+    const auto countGroup = [&](const QString& key, bool only_listed = false) {
         int count = 0;
-        for (const Row& row : rows) {
-            count += matches_group(key, row.kind, row.category, row.name) ? 1 : 0;
+        for (const Row& row : scoped) {
+            count += (!only_listed || row.listed) && matches_group(key, row.kind, row.category, row.name) ? 1 : 0;
         }
         return count;
     };
     const auto add = [&](const QString& key, const QString& title, const QString& icon, bool datablock = false) {
-        const int count = countGroup(key);
-        if (count == 0 && !key.isEmpty()) return;
+        if (countGroup(key) == 0 && !key.isEmpty()) return;
+        const int count = countGroup(key, true);
         categories.append(key);
-        groups.append(CategoryGroup{key, title + QStringLiteral(" (%1)").arg(count), icon, datablock, count});
+        groups.append(CategoryGroup{key, title + QStringLiteral(" (%1)").arg(count), icon, datablock, count, {}, {}});
     };
     // A subset must narrow its category; otherwise its second menu entry adds no choice.
     const auto addSubset = [&](const QString& parent, const QString& key, const QString& title, const QString& icon) {
@@ -135,23 +225,25 @@ void ParameterFilterModel::refreshCategories() {
         add(QLatin1Char('@') + kind, kind == QLatin1String("structure") ? tr("Structure") : tr("Experiment"),
             kind == QLatin1String("structure") ? QStringLiteral("layer-group") : QStringLiteral("microscope"), true);
         QStringList seen;
-        for (const Row& row : rows) {
+        for (const Row& row : scoped) {
             if (row.kind != kind || seen.contains(row.category)) continue;
             seen.append(row.category);
             if (row.category == QLatin1String("atom_site") || row.category == QLatin1String("atom_site_aniso")) {
                 if (seen.contains(QStringLiteral("@atoms"))) continue;
                 seen.append(QStringLiteral("@atoms"));
-                add(QStringLiteral("@atoms"), tr("Atom sites"), QStringLiteral("atom"));
+                add(QStringLiteral("@atoms"), category_presentation(QStringLiteral("atom_site")).title,
+                    category_presentation(QStringLiteral("atom_site")).icon);
                 addSubset(QStringLiteral("@atoms"), QStringLiteral("@coordinates"), tr("Atomic coordinates"), QStringLiteral("map-marker-alt"));
                 addSubset(QStringLiteral("@atoms"), QStringLiteral("@occupancies"), tr("Atomic occupancies"), QStringLiteral("fill"));
-                addSubset(QStringLiteral("@atoms"), QStringLiteral("@displacement"), tr("Atomic displacement"), QStringLiteral("arrows-alt"));
+                addSubset(QStringLiteral("@atoms"), QStringLiteral("@displacement"),
+                          category_presentation(QStringLiteral("atom_site_aniso")).title,
+                          category_presentation(QStringLiteral("atom_site_aniso")).icon);
                 continue;
             }
             const auto presentation = category_presentation(row.category);
-            QString title = QString::fromUtf8(presentation.title);
-            if (row.category == QLatin1String("cell")) title = tr("Unit cell");
+            QString title = presentation.title;
             if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
-            add(row.category, title, QString::fromUtf8(presentation.icon));
+            add(row.category, title, presentation.icon);
             if (row.category == QLatin1String("peak")) {
                 addSubset(row.category, QStringLiteral("@peakBroadening"), tr("Peak broadening"), QStringLiteral("arrows-alt-h"));
                 addSubset(row.category, QStringLiteral("@peakMixing"), tr("Peak mixing"), QStringLiteral("shapes"));
@@ -160,21 +252,52 @@ void ParameterFilterModel::refreshCategories() {
         }
     }
     // Any additional block kind remains selectable when the parameter walk grows.
-    for (const Row& row : rows) {
+    for (const Row& row : scoped) {
         if (row.kind == QLatin1String("structure") || row.kind == QLatin1String("experiment") || categories.contains(row.category)) continue;
         const auto presentation = category_presentation(row.category);
-        QString title = QString::fromUtf8(presentation.title);
+        QString title = presentation.title;
         if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
-        add(row.category, title, QString::fromUtf8(presentation.icon));
+        add(row.category, title, presentation.icon);
     }
+    if (!categories.contains(category_filter_)) {
+        beginFilterChange();
+        category_filter_.clear();
+        endFilterChange(Direction::Rows);
+        emit categoryFilterChanged();
+    }
+
+    // The parameters the datablock, the category and the name leave: all, free, fixed (could be freed), not fittable.
+    QList<int> counts{0, 0, 0, 0};
+    for (const Row& row : scoped) {
+        if (!row.named || !matches_group(category_filter_, row.kind, row.category, row.name)) continue;
+        ++counts[0];
+        ++counts[row.free ? 1 : row.fittable ? 2 : 3];
+    }
+
+    const bool datablocks_changed = datablocks != datablocks_;
+    const bool datablock_groups_changed = datablock_groups != datablock_groups_;
     const bool keys_changed = categories != categories_;
     const bool groups_changed = groups != category_groups_;
+    const bool counts_changed = counts != variability_counts_;
+    datablocks_ = std::move(datablocks);
+    datablock_groups_ = std::move(datablock_groups);
     categories_ = std::move(categories);
     category_groups_ = std::move(groups);
+    variability_counts_ = std::move(counts);
+    if (datablocks_changed) emit datablocksChanged();
+    if (datablock_groups_changed) emit datablockGroupsChanged();
     if (keys_changed) emit categoriesChanged();
     if (groups_changed) emit categoryGroupsChanged();
-    if (!categories_.contains(category_filter_)) {
-        setCategoryFilter({});
+    if (counts_changed) emit variabilityCountsChanged();
+}
+
+void ParameterFilterModel::setDatablockFilter(const QString& datablock) {
+    if (datablock != datablock_filter_) {
+        beginFilterChange();
+        datablock_filter_ = datablock;
+        endFilterChange(Direction::Rows);
+        emit datablockFilterChanged();
+        refresh();
     }
 }
 
@@ -184,7 +307,15 @@ void ParameterFilterModel::setCategoryFilter(const QString& category) {
         category_filter_ = category;
         endFilterChange(Direction::Rows);
         emit categoryFilterChanged();
+        refresh();
     }
+}
+
+void ParameterFilterModel::clearFilters() {
+    setNameFilter({});
+    setVariability(All);
+    setCategoryFilter({});
+    setDatablockFilter({});
 }
 
 QString ParameterFilterModel::text(int row, const QString& role) const {
@@ -200,6 +331,7 @@ void ParameterFilterModel::setNameFilter(const QString& filter) {
         name_filter_ = filter;
         endFilterChange(Direction::Rows);
         emit nameFilterChanged();
+        refresh();
     }
 }
 
@@ -227,12 +359,29 @@ bool ParameterFilterModel::shows(ParameterItem* parameter) const {
     return rowOf(parameter) >= 0;
 }
 
+bool ParameterFilterModel::shownByGroup(bool free, int group) const {
+    // What a fit can vary is always shown, and so is a value marked free (the owner, 2026-10-26).
+    return free || group <= 0 || group > static_cast<int>(shown_groups_.size()) || shown_groups_[group - 1];
+}
+
+void ParameterFilterModel::setShownGroup(int group, bool shown) {
+    if (group <= 0 || group > static_cast<int>(shown_groups_.size()) || shown_groups_[group - 1] == shown) {
+        return;
+    }
+    beginFilterChange();
+    shown_groups_[group - 1] = shown;
+    endFilterChange(Direction::Rows);
+    emit shownGroupsChanged();
+    refresh();
+}
+
 void ParameterFilterModel::setVariability(Variability variability) {
     if (variability != variability_) {
         beginFilterChange();
         variability_ = variability;
         endFilterChange(Direction::Rows);
         emit variabilityChanged();
+        refresh();
     }
 }
 
@@ -240,11 +389,17 @@ bool ParameterFilterModel::filterAcceptsRow(int source_row, const QModelIndex& s
     const QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
     const QHash<int, QByteArray> roles = sourceModel()->roleNames();
     const auto value = [&](const char* name) { return sourceModel()->data(index, roles.key(name)); };
-    if (!matches_group(category_filter_, value("blockKind").toString(), value("category").toString(), value("name").toString())) {
+    if (!matches_datablock(datablock_filter_, value("blockKind").toString(), value("blockName").toString()) ||
+        !matches_group(category_filter_, value("blockKind").toString(), value("category").toString(), value("name").toString())) {
         return false;
     }
     const bool free = value("free").toBool();
-    if ((variability_ == Free && !free) || (variability_ == Fixed && free)) {
+    const bool fittable = value("fittable").toBool();
+    if (!shownByGroup(free, value("fitGroup").toInt())) {
+        return false;
+    }
+    if ((variability_ == Free && !free) || (variability_ == Fixed && (free || !fittable)) ||
+        (variability_ == NotFittable && (free || fittable))) {
         return false;
     }
     return name_filter_.isEmpty() || value("path").toString().contains(name_filter_, Qt::CaseInsensitive) ||

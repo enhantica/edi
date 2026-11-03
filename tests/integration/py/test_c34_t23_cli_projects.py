@@ -1,7 +1,7 @@
 #  adaptation: seed inputs/pins were byte-identical and three seeds non-executing.
 #  additionally requires the seven declared imported minimizers to be crysta.
-# Only those declarations, analysis descent/tolerance additions and scan pins may change;
-# all seeds execute. Every other original blob and every deferred-seed expected.json stay pinned.
+# Only those declarations, analysis settings, scan pins and validated excluded cells may change;
+# all seeds execute. Other original blobs stay pinned; four exact re-taken pins are restored below.
 """CLI project plane: independent source identity and consumed-model semantics.
 
 The source object inventory was measured from crysta origin/main, independently of edi.
@@ -15,6 +15,7 @@ import importlib.util
 import json
 import re
 import shutil
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -23,9 +24,13 @@ import pytest
 import yaml
 from mkdocs.config import load_config
 
+from tests.fixtures.c34_t23_cli_projects.retaken_pins import SEEDS as RETAKEN_SEEDS
+from tests.fixtures.c34_t23_cli_projects.retaken_pins import retained_pin_bytes
 from tests.fixtures.constraint_expressions.cosio_seed_bytes import legacy_seed
 from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical_followers
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.example_catalogue.retained_bytes import retained_bytes
+from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -36,11 +41,57 @@ IDS = json.loads((FIXTURES / 'project-ids.json').read_text())
 PROJECT_IDS = IDS['source_to_project']
 
 
-def blob_id(path):
-    raw = original_tokens(path.read_bytes())
+def content_id(raw):
     return hashlib.sha1(
         b'blob ' + str(len(raw)).encode() + b'\0' + raw, usedforsecurity=False
     ).hexdigest()
+
+
+def blob_id(path):
+    return content_id(original_tokens(path.read_bytes()))
+
+
+def retained_seed_bytes(name, raw, expected):
+    # Keep the imported blob pins; validate excluded cells before reversing their new spelling.
+    if content_id(raw) == expected:
+        return raw
+    return historical_excluded_bytes(name.removeprefix('project/'), raw)
+
+
+def require_estimate_cli_extension(path, name, live_directory):
+    extension = json.loads(
+        (ROOT / 'tests/fixtures/c13_t4_march/regression-pins.json').read_text()
+    )['sha256']
+    fixture = ROOT / 'tests/fixtures/background_estimate'
+    baseline = fixture / (
+        'cli-before.edi' if name.endswith('hrpt.edi') else 'cli-expected-before.json'
+    )
+    assert (
+        hashlib.sha256(original_tokens(baseline.read_bytes())).hexdigest()
+        == extension[(live_directory / name).relative_to(ROOT).as_posix()]
+    ), 'The estimate extension must retain the independently pinned prior CLI witness'
+    if name.endswith('hrpt.edi'):
+        allowed = tuple(
+            '_background_estimate.' + field + ' '
+            for field in ('mode', 'method', 'width', 'smoothness', 'n_points', 'use_model')
+        )
+        retained = [
+            line
+            for line in original_tokens(path.read_bytes()).decode().splitlines()
+            if line.strip() and not line.startswith(allowed)
+        ]
+        before = [
+            line
+            for line in original_tokens(baseline.read_bytes()).decode().splitlines()
+            if line.strip()
+        ]
+        assert retained == before, (
+            'The LBCO input may add six estimate settings while retaining other nonblank lines'
+        )
+        return
+    assert path.read_bytes() == baseline.read_bytes(), (
+        'The manual estimate category must preserve every byte of the existing fit regression pins'
+    )
 
 
 def checker():
@@ -59,6 +110,38 @@ def registry():
     rows = yaml.safe_load(path.read_text())['projects']
     assert len({row['id'] for row in rows}) == len(rows), ' project ids must be unique'
     return rows
+
+
+def restore_retaken_pin(project_id, name, path):
+    if project_id not in RETAKEN_SEEDS or name != 'expected.json':
+        return
+    raw = path.read_bytes()
+    retained = retained_pin_bytes(project_id, raw)
+    for changed in (
+        retained,
+        raw + b' ',
+        raw.replace(b'"regression-pin"', b'"reference"', 1),
+        raw.replace(b'"tol_abs"', b'"unexpected_tolerance"', 1),
+    ):
+        with pytest.raises(AssertionError, match='every reviewed source byte'):
+            retained_pin_bytes(project_id, changed)
+    other = next(seed for seed in sorted(RETAKEN_SEEDS) if seed != project_id)
+    with pytest.raises(AssertionError, match='every reviewed source byte'):
+        retained_pin_bytes(other, raw)
+    path.write_bytes(retained)
+
+
+def restore_seed_pin(project_id, live_directory, path):
+    assert path.is_file() and not path.is_symlink(), (
+        'Expected regression pins must remain materialized regular files'
+    )
+    raw = path.read_bytes()
+    retained = retained_bytes((live_directory / 'expected.json').relative_to(ROOT), raw)
+    if retained != raw:
+        # The catalogue replacement already restores the original seed, before main's retake.
+        path.write_bytes(retained)
+    else:
+        restore_retaken_pin(project_id, 'expected.json', path)
 
 
 @pytest.mark.parametrize('project_id', sorted(SOURCE['projects']))
@@ -82,6 +165,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
     assert set(paths) == set(expected), (
         ' seed file inventory must equal the independent source tree'
     )
+    restore_seed_pin(project_id, live_directory, paths['expected.json'])
     public_metadata = json.loads(
         (ROOT / 'tests/fixtures/e04_t12_public_release/project-metadata.json').read_text()
     )
@@ -146,13 +230,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
             'expected.json',
             'project/experiments/hrpt.edi',
         }:
-            extension = json.loads(
-                (ROOT / 'tests/fixtures/c13_t4_march/regression-pins.json').read_text()
-            )['sha256']
-            assert (
-                hashlib.sha256(original_tokens(path.read_bytes())).hexdigest()
-                == extension[(live_directory / name).relative_to(ROOT).as_posix()]
-            ), ' only the reviewed March extension bytes replace the original LBCO seed'
+            require_estimate_cli_extension(path, name, live_directory)
             continue
         if project_id in {
             'cosio-d20-s1',
@@ -166,11 +244,9 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
             raw = original_tokens(path.read_bytes()).replace(
                 b'_calculator.type crysta', b'_calculator.type cryspy'
             )
-            restored = hashlib.sha1(
-                b'blob ' + str(len(raw)).encode() + b'\0' + raw, usedforsecurity=False
-            ).hexdigest()
-            assert restored == expected[name], (
-                ' calculator adaptation retains every other byte of the original seed'
+            raw = retained_seed_bytes(name, raw, expected[name])
+            assert content_id(raw) == expected[name], (
+                'Calculator and validated excluded-cell adaptations retain every other seed byte'
             )
             continue
         if (project_id, name) in {
@@ -187,8 +263,60 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                 'only the declared Co Biso or NCAF follower flags may alter a seed structure'
             )
             continue
-        assert blob_id(path) == expected[name], (
-            ' seed bytes must retain source blob ids and regression-pin kinds'
+        raw = retained_seed_bytes(name, original_tokens(path.read_bytes()), expected[name])
+        assert content_id(raw) == expected[name], (
+            'Seed bytes retain source blob ids and regression-pin kinds after the validated '
+            'excluded-cell convention reversal'
+        )
+
+
+@pytest.mark.parametrize('project_id', sorted(RETAKEN_SEEDS))
+@pytest.mark.parametrize('defect', ['value', 'kind', 'tolerance', 'input', 'extra', 'missing'])
+def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
+    project_id, defect, tmp_path, monkeypatch
+):
+    from tests.fixtures.table_display import metadata_bytes  # noqa: PLC0415
+
+    directory = tmp_path / 'docs/user/cli' / PROJECT_IDS[project_id]
+    shutil.copytree(CLI / PROJECT_IDS[project_id], directory)
+    (tmp_path / 'tests').mkdir()
+    (tmp_path / 'tests/fixtures').symlink_to(ROOT / 'tests/fixtures', target_is_directory=True)
+    monkeypatch.setattr(sys.modules[__name__], 'ROOT', tmp_path)
+    monkeypatch.setattr(sys.modules[__name__], 'CLI', directory.parent)
+    monkeypatch.setattr(metadata_bytes, 'ROOT', tmp_path)
+    test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
+        project_id, tmp_path / 'positive'
+    )
+    expected_file = directory / 'expected.json'
+    if defect in {'value', 'kind', 'tolerance'}:
+        data = json.loads(expected_file.read_text())
+        quantity = next(iter(next(iter(data['variants'].values()))['quantities'].values()))
+        assert quantity['kind'] == 'regression-pin', (
+            'The mutation control must reach an existing numerical regression pin'
+        )
+        field, replacement = {
+            'value': ('value', quantity['value'] + 0.125),
+            'kind': ('kind', 'reference'),
+            'tolerance': ('tol_abs', 0.125),
+        }[defect]
+        quantity[field] = replacement
+        expected_file.write_text(json.dumps(data, indent=2) + '\n')
+    elif defect == 'input':
+        path = directory / 'project/project.edi'
+        path.write_bytes(path.read_bytes() + b'\n# unexpected project byte\n')
+    elif defect == 'extra':
+        (directory / 'project/extra.edi').write_text('unexpected extra input\n')
+    else:
+        expected_file.unlink()
+    with pytest.raises(
+        AssertionError,
+        match=(
+            r'pinned|blob ids|source tree|regular files|archived source|'
+            r'reviewed source byte|exact committed'
+        ),
+    ):
+        test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
+            project_id, tmp_path / 'negative'
         )
 
 
@@ -210,9 +338,9 @@ def test_registry_executes_owner_declared_set_and_retains_every_seed():
         ' every registry project must explicitly declare executing membership'
     )
     assert all(
-        re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){2}', row['id'])
+        re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){1,2}', row['id'])
         for row in rows
-    ), ' every registered id needs three lowercase kebab parts separated by underscores'
+    ), ' every registered id needs two or three lowercase kebab parts separated by underscores'
 
 
 def nav_paths(value):
@@ -233,7 +361,13 @@ def test_effective_docs_navigation_has_descriptive_project_pages():
     for row in rows:
         prefix = f'user/cli/{row["id"]}/'
         candidates = [ROOT / 'docs' / path for path in paths if path.startswith(prefix)]
-        assert candidates, ' every project must appear in effective docs navigation'
+        if not row.get('user-facing', False):
+            assert not candidates, 'Retained fixture pages must leave the user navigation'
+            assert (CLI / row['id'] / 'project').is_dir(), (
+                'Non-public fixtures must retain their materialized project'
+            )
+            continue
+        assert candidates, 'Every user-facing case must appear in effective docs navigation'
         descriptions = []
         for path in candidates:
             assert path.is_file(), ' each project nav link must resolve to a page'
@@ -253,7 +387,16 @@ def task_commands(manifest, name, environment='default', seen=None):
     if identity in seen:
         return []
     seen.add(identity)
-    features = manifest['environments'][environment]
+    environments = manifest.get('environments', {})
+    # The default feature is implicit when no default environment is declared.
+    # Named environments must still resolve explicitly; no fallback may hide one.
+    if environment == 'default' and environment not in environments:
+        features = []
+    else:
+        assert environment in environments, (
+            'Task reachability requires a declared named environment: ' + environment
+        )
+        features = environments[environment]
     if isinstance(features, dict):
         tasks = {} if features.get('no-default-feature') else dict(manifest['tasks'])
         features = features['features']
@@ -261,6 +404,12 @@ def task_commands(manifest, name, environment='default', seen=None):
         tasks = dict(manifest['tasks'])
     for feature in features:
         tasks.update(manifest['feature'][feature].get('tasks', {}))
+    assert name in tasks, (
+        'Task reachability requires the task in its effective environment: '
+        + environment
+        + '/'
+        + name
+    )
     task = tasks[name]
     if isinstance(task, str):
         return [task]
@@ -280,6 +429,39 @@ def task_commands(manifest, name, environment='default', seen=None):
 
 
 def test_pull_request_ci_and_verify_execute_the_complete_registry():
+    # Independent task-graph controls retain implicit default, qualified edges,
+    # explicit default features and named-environment isolation in the resolver.
+    control = {
+        'tasks': {
+            'root-only': 'root command',
+            'qualified': {'depends-on': [{'task': 'feature-only', 'environment': 'app'}]},
+        },
+        'environments': {'app': {'features': ['app'], 'no-default-feature': True}},
+        'feature': {'app': {'tasks': {'feature-only': 'feature command'}}},
+    }
+    assert task_commands(control, 'root-only') == ['root command'], (
+        'An omitted default environment must retain the root default-feature tasks'
+    )
+    assert list(filter(None, task_commands(control, 'qualified'))) == ['feature command'], (
+        'An implicit default must follow an explicitly environment-qualified dependency'
+    )
+    with pytest.raises(AssertionError, match='declared named environment'):
+        task_commands(control, 'root-only', environment='missing')
+    with pytest.raises(AssertionError, match='effective environment'):
+        task_commands(control, 'root-only', environment='app')
+    control['environments']['default'] = {'features': ['app'], 'no-default-feature': True}
+    assert task_commands(control, 'feature-only') == ['feature command'], (
+        'An explicit isolated default must retain its declared feature tasks'
+    )
+    with pytest.raises(AssertionError, match='effective environment'):
+        task_commands(control, 'root-only')
+    control['environments']['default'] = ['app']
+    assert task_commands(control, 'root-only') == ['root command'], (
+        'An explicit feature-list default must continue to inherit the root tasks'
+    )
+    assert task_commands(control, 'feature-only') == ['feature command'], (
+        'An explicit feature-list default must retain its declared feature tasks'
+    )
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     assert_registry_wiring(
         manifest, yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
@@ -441,7 +623,7 @@ def test_loaded_settings_keep_multiple_occurrences_distinguishable(project_copy,
     [
         'cosio-d20-s1',
         'pd-neut-tof-diamond-dream',
-        'pd-neut-cwl_lif',
+        'pd-neut-cwl',
         'pd_neut_cwl_lif_single',
         'pd-neut-cwl__single',
         'pd-neut-cwl_LiF_single',
@@ -465,6 +647,7 @@ def test_executing_registry_refuses_obsolete_and_malformed_ids(tmp_path, project
 @pytest.mark.parametrize(
     'project_id',
     [
+        'pd-neut-cwl_lif',
         'pd-neut-tof_diamond-dream_basic',
         'pd-xray-cwl_lif_single',
         'pd-neut-cwl_yap_3k',
@@ -536,3 +719,39 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
         job['strategy']['matrix']['include'][1]['runner'] = 'ubuntu-24.04'
     with pytest.raises(AssertionError):
         assert_registry_wiring(manifest, workflow)
+
+
+@pytest.mark.parametrize('template', ['latp_312.dat', 'latp_304.dat'])
+def test_settings_cli_exposes_loaded_sequential_conditions_by_item_name(tmp_path, template):
+    target = tmp_path / 'project'
+    shutil.copytree(CLI / 'pd-xray-cwl_latp-bm01_scan/project', target)
+    analysis = target / 'analysis/analysis.edi'
+    analysis.write_text(
+        analysis.read_text().replace('latp_312.dat', template)
+        + '\n# _sequential_fit.phantom_sequence ignored\n'
+        + '_sequential_fit.unknown_condition ignored\n'
+    )
+    result = subprocess.run(
+        [sys.executable, str(ROOT / 'tools/checks/cli_projects.py'), '--settings', str(target)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, 'The settings CLI must load and report a real scan project'
+    settings = json.loads(result.stdout)
+    for item, value in {
+        'data_dir': 'experiments/bm01_scan',
+        'file_pattern': '*.dat',
+        'reverse': 'true',
+        'template_file': template,
+    }.items():
+        assert settings.get(item) == {
+            f'analysis/analysis.edi:_sequential_fit.{item}': {'value': value}
+        }, 'Loaded sequential conditions use item-named tokens with exact saved values'
+    assert template not in settings, (
+        'A sequential file name is a value rather than an exercise token'
+    )
+    assert 'phantom_sequence' not in settings and 'unknown_condition' not in settings, (
+        'Comments and sequential fields ignored by the real loader cannot become exercise tokens'
+    )

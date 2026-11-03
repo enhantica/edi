@@ -7,7 +7,7 @@
 #include <QQuickWindow>
 #include <QSGImageNode>
 #include <QSGTexture>
-#include <QVariantMap>
+#include <algorithm>
 #include <cmath>
 
 namespace edi_app {
@@ -51,19 +51,15 @@ void MeasuredLayer::setData(const QList<QPointF>& points, const QList<double>& l
     update();
 }
 
-void MeasuredLayer::setPoints(const QVariantList& points) {
+void MeasuredLayer::setPoints(const QList<double>& x, const QList<double>& y, const QList<double>& su) {
+    const qsizetype count = std::min({x.size(), y.size(), su.size()});
     QList<QPointF> at;
     QList<double> low, high;
-    for (const QVariant& point : points) {
-        const QVariantMap map = point.toMap();
-        const double x = map.value(QStringLiteral("x")).toDouble();
-        const double y = map.value(QStringLiteral("y")).toDouble();
-        const QVariant su = map.value(QStringLiteral("su"));
-        const double error = su.isValid() && !su.isNull() ? su.toDouble() : 0.0;
-        const double bar = std::isfinite(error) ? error : 0.0;
-        at.append(QPointF(x, y));
-        low.append(y - bar);
-        high.append(y + bar);
+    for (qsizetype i = 0; i < count; ++i) {
+        const double bar = std::isfinite(su[i]) ? su[i] : 0.0;
+        at.append(QPointF(x[i], y[i]));
+        low.append(y[i] - bar);
+        high.append(y[i] + bar);
     }
     setData(at, low, high);
 }

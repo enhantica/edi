@@ -18,12 +18,12 @@ def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeyp
             'sourceModel: group.project ? group.project.experiments : null',
             'sourceModel: null',
         ),
-        'number-width': ('columnWidths: [numberColumnWidth,', 'columnWidths: [0,'),
+        'number-width': ('columns: [numberColumnWidth,', 'columns: [0,'),
         'number-label': (
-            'header: EaComponents.ListViewHeader {\n                EaComponents.TableViewLabel {',
+            'header: EaComponents.ListViewHeader {\n                EaComponents.ListViewLabel {',
             (
                 'header: EaComponents.ListViewHeader {\n'
-                '                EaComponents.TableViewLabel {\n'
+                '                EaComponents.ListViewLabel {\n'
                 '                    text: "unexpected"'
             ),
         ),
@@ -62,7 +62,7 @@ def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(mon
         'layer': ('value: chart.shown ? layer : null', 'value: null'),
         'coordinates': ('axisY.max - mouse.y / height', 'axisY.min + mouse.y / height'),
         'selection': ('currentExperimentIndex = dataset', 'currentExperimentIndex = 0'),
-        'axis-bounds': ('min: chart.evolution ? chart.evolution.xMin : 0', 'min: 2'),
+        'axis-bounds': ('chart.evolution ? chart.evolution.xMin : 0', 'chart.evolution ? 2 : 0'),
     }[channel]
     changed = good.replace(old, new)
     assert changed != good, (
@@ -72,17 +72,11 @@ def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(mon
         contract.assert_evolution_bindings(changed)
 
 
-@pytest.mark.parametrize('consumer', ['chart', 'status'])
-def test_actual_stale_markers_reject_constant_or_other_result_state(consumer):
-    good = (
-        contract.evolution_component()
-        if consumer == 'chart'
-        else item(source('qml/Components/StatusBar.qml'), 'statusBar.fit')
-    )
+@pytest.mark.parametrize('_consumer', ['chart'])
+def test_actual_stale_markers_reject_constant_or_other_result_state(_consumer):
+    good = contract.evolution_component()
     contract.assert_stale_marker(good)
-    marker = item(
-        good, 'evolution.outOfDate' if consumer == 'chart' else 'statusBar.fit.outOfDate'
-    )
+    marker = item(good, 'evolution.outOfDate')
     visible = property_value(marker, 'visible')
     for wrong in (
         'true',

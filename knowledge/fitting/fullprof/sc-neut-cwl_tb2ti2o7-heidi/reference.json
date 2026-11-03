@@ -1,0 +1,133 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "same_start": true,
+  "start_project": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project",
+  "project_sha256": {
+    "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+    "experiments/heidi.edi": "83d055394bed5e3e403a9c7fef9758e71101330a81749bda12d44c8967d1438a",
+    "project.edi": "40e0e4326cb334009d65754838d2e0811d31b9317d8c2f2ad014b196245903d8",
+    "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
+  },
+  "scope": "fit",
+  "converged": true,
+  "cycles": 15,
+  "n_free": 11,
+  "n_points_fitted": 220,
+  "r_wp": 0.0298,
+  "chi2": 1.41,
+  "exit": 24,
+  "artifacts_sha256": {
+    "start.pcr": "02e7665fdec261f03fc09ccc9c357f5bdb899ffb8d9ed3a4f9396209cb3218a8",
+    "start.int": "874e13be93bf127da728d84923c45de53d1f3f2ff0c04ed9cdfe3d8c13490043",
+    "fit.pcr": "44d68e5baf9000ca47ee8ee3e5f9d86035bf3a24fa9d656461d2ef68ed0330ff",
+    "fit.out": "c52931fad65a7a35935f15e94b1d96046ecd2bb435d789783f75a9568e7a5602",
+    "fit.sum": "aeef2a3e6a78472fa10f65220df85f9852f225d9edfc76adb7bf222d34231efb",
+    "fit.prf": "8f328d86920305a9865747b52a63fd1e75d18553000bbcc6d8468ff26de376de",
+    "run.log": "bfc796a8382c25c35205c49a31f87f246ed5e3220c03404ca9fb0ed55c0fd1f3"
+  },
+  "fullprof_parameters": {
+    "1": {
+      "symbol": "bet11_Tb",
+      "value": 0.0013450868,
+      "uncertainty": 1.5422425e-05
+    },
+    "2": {
+      "symbol": "bet12_Tb",
+      "value": -0.00043660327,
+      "uncertainty": 1.3520144e-05
+    },
+    "3": {
+      "symbol": "bet11_Ti",
+      "value": 0.0011803955,
+      "uncertainty": 2.4240439e-05
+    },
+    "4": {
+      "symbol": "bet12_Ti",
+      "value": -6.5621491e-05,
+      "uncertainty": 2.9952709e-05
+    },
+    "5": {
+      "symbol": "X_O1",
+      "value": 0.32798448,
+      "uncertainty": 3.0322815e-05
+    },
+    "6": {
+      "symbol": "bet11_O1",
+      "value": 0.001414548,
+      "uncertainty": 2.1749756e-05
+    },
+    "7": {
+      "symbol": "bet22_O1",
+      "value": 0.0010636732,
+      "uncertainty": 1.5136357e-05
+    },
+    "8": {
+      "symbol": "bet23_O1",
+      "value": 0.00036719171,
+      "uncertainty": 1.6284823e-05
+    },
+    "9": {
+      "symbol": "bet11_O2",
+      "value": 0.00084120117,
+      "uncertainty": 2.0537882e-05
+    },
+    "10": {
+      "symbol": "Scale1",
+      "value": 6.0031009,
+      "uncertainty": 0.039338272
+    },
+    "11": {
+      "symbol": "Ext1",
+      "value": 2.9371808,
+      "uncertainty": 0.08760646
+    }
+  },
+  "report_values": {
+    "Tb.adp_11": {
+      "value": 0.00699261247146264,
+      "uncertainty": 8.017552576918994e-05
+    },
+    "Tb.adp_12": {
+      "value": -0.002269740117056662,
+      "uncertainty": 7.028626520635754e-05
+    },
+    "Ti.adp_11": {
+      "value": 0.006136442863433334,
+      "uncertainty": 0.0001260171433286903
+    },
+    "Ti.adp_12": {
+      "value": -0.00034114204106573155,
+      "uncertainty": 0.00015571313799785357
+    },
+    "O1.fract_x": {
+      "value": 0.32798448,
+      "uncertainty": 3.0322815e-05
+    },
+    "O1.adp_11": {
+      "value": 0.007353715750004042,
+      "uncertainty": 0.00011306899677914422
+    },
+    "O1.adp_22": {
+      "value": 0.005529646476257574,
+      "uncertainty": 7.86883632570856e-05
+    },
+    "O1.adp_23": {
+      "value": 0.0019088948986516656,
+      "uncertainty": 8.465881637182199e-05
+    },
+    "O2.adp_11": {
+      "value": 0.004373096065139414,
+      "uncertainty": 0.00010676890875044502
+    },
+    "scale": {
+      "value": 6.0031009,
+      "uncertainty": 0.039338272
+    },
+    "fullprof_extinction_1": {
+      "value": 2.9371808,
+      "uncertainty": 0.08760646
+    }
+  },
+  "models_differ": "extinction: edi fits Becker-Coppens mixed with the crystal path, FullProf its empirical model 1"
+}

@@ -43,23 +43,35 @@ struct ReportOptions {
     bool residual = true;                     ///< the residual pane
     bool bragg_ticks = true;                  ///< the Bragg tick rows
     std::string generated;                    ///< the report's time; empty: now, in UTC
-    ColourScheme colour_scheme = ColourScheme::Default;  ///< the experiments' and structures' colours
+    ColourScheme colour_scheme = kDefaultColourScheme;  ///< the experiments' and structures' palette
+    /// The experiments' positions in the palette, then the structures' (the app's, edi::colour_positions); empty, a
+    /// project's with none held.
+    std::vector<std::size_t> colour_positions;
+    ColorScheme element_colours = ColorScheme::Jmol;  ///< the structure figures' element colours, the app's view's
     /// The HTML writer's choice, not the model's: whether a saved file carries the chart libraries.
     bool embed_libraries = false;
 };
 
-/// One run's choices over a project's report settings (the CLI's flags, Python's keywords): an absent one keeps the
-/// stored setting, a given one replaces it for the run. Nothing is written to the project.
+/// One run's choices over a project's report settings (the CLI's flags, Python's keywords, the app's): an absent one
+/// keeps the stored setting, a given one replaces it for the run. Nothing is written to the project. The colour scheme
+/// and the correlations' experiment are the surface's choices, not project settings: the app gives its Preferences'
+/// scheme and the experiment the Analysis page shows.
 struct ReportOverrides {
     std::optional<bool> html_offline;
     std::optional<double> correlation_threshold;
     std::optional<std::string> x_axis;  ///< "native" or "d_spacing"
     std::optional<std::vector<std::string>> excluded;
+    std::optional<std::string> colour_scheme;  ///< a token of colour_scheme_from_name; absent, the default scheme
+    /// In a fit of several experiments, the name of the one whose parameters the correlation chart shows; absent, the
+    /// first.
+    std::optional<std::string> correlation_experiment;
 };
 
 /// The options a report of `project` is made with (ADR-0036 §7): its report settings (`reports/report.edi`) and the
-/// correlation threshold and x axis (`analysis/analysis.edi`), each replaced by a given override. With no `excluded` the data are left out; with no threshold the correlations follow diffraction-lib's
-/// automatic rule; with no x axis the charts are on their own.
+/// correlation threshold and x axis (`analysis/analysis.edi`), each replaced by a given override, and the given colour
+/// scheme and correlations' experiment. With no `excluded` the data are left out; with no threshold the correlations
+/// follow diffraction-lib's automatic rule; with no x axis the charts are on their own. Throws std::invalid_argument
+/// for an unknown scheme or experiment name.
 ReportOptions effective_report_options(const Project& project, const ReportOverrides& overrides = {});
 
 /// A number as the report shows it: its value, its s.u. when it has one, and its text (the project's s.u. rule).
@@ -169,10 +181,29 @@ struct ReportPattern {
     bool legend = false;
 };
 
+/// A single crystal's chart (edi ADR-0049), as the app draws it: per reflection its Miller indices, its measured F²
+/// and s.u., and its calculated F², which is empty before a calculation; F²meas against F²calc with the y = x line.
+struct ReportSingleCrystal {
+    std::vector<int> h, k, l;
+    std::vector<double> meas, su, calc;
+    /// The experiment's reliability text (reliability_text); empty with no fit.
+    std::string title;
+    /// The points' series name and the axes' titles, and each point's hover text, by the dictionary (edi ADR-0051).
+    std::string name, x_title, y_title;
+    std::vector<std::string> hover;
+};
+
+/// Gives a single crystal's chart its series name and axis titles from the dictionary and each point's hover from its
+/// numbers, measured values by `su_rule` (edi ADR-0051); the numbers stay as they are. A report written before the
+/// chart carried these gets them so.
+void label_single_crystal(ReportSingleCrystal& crystal, const std::string& su_rule);
+
 struct ReportExperiment {
     std::string id;
     std::vector<ReportCategory> categories;
+    /// A powder experiment's chart; empty for a single crystal, whose chart is `single_crystal`.
     ReportPattern pattern;
+    std::optional<ReportSingleCrystal> single_crystal;
 };
 
 /// A project's report (ADR-0036).
@@ -200,8 +231,9 @@ struct ReportModel {
 };
 
 /// The reliability of the experiment at `experiment` in the project's last fit, as every pattern plot shows it:
-/// "Rwp 16.35 % · χ² 75.62", the weighted-profile R factor in per cent and the reduced χ², both with two decimals,
-/// as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
+/// "Rwp 16.35 % · reduced χ² 75.62", the weighted-profile R factor in per cent and the reduced χ², both by their
+/// dictionary labels, units and formats, as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
+/// A single crystal's fit is over F²: "R(F²) 5.12 % · wR(F²) 4.25 % · χ² 9.78".
 std::string reliability_text(const Project& project, std::size_t experiment);
 
 /// The report of `project` as `options` ask: the only function that reads a project (ADR-0036 §2).

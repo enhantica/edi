@@ -245,6 +245,9 @@ def test_c34_t1c_add_from_loader_populates_a_live_collection(
     }
     args, kwargs = sources[collection_name, method_name]
     project = edi.Project()
+    if collection_name == 'experiments' and method_name != 'add_from_data_path':
+        project.structures.clear()
+        project.structures.create(name='ncaf' if method_name == 'add_from_edi_path' else 'Si')
     collection = getattr(project, collection_name)
     collection.clear()
 

@@ -15,6 +15,7 @@ import yaml
 from generate import ROOT, measured_range, scalars, tables
 
 IDENTITIES = {
+    'R -3 m': (166, 'trigonal'),
     'P m -3 m': (221, 'cubic'),
     'F m -3 m': (225, 'cubic'),
     'F d -3 m': (227, 'cubic'),
@@ -29,6 +30,8 @@ IDENTITIES = {
     # ITA conventional numbers/systems for the owner's FullProf LATP phases.
     'C 2 2 21': (20, 'orthorhombic'),
     'P 63 m c': (186, 'hexagonal'),
+    'P 21/c': (14, 'monoclinic'),
+    'F m m m': (69, 'orthorhombic'),
 }
 
 
@@ -45,6 +48,8 @@ DEFAULT_COORDINATE_CODES = {
     225: '1',
     227: '2',
     229: '1',
+    14: 'b1',
+    69: 'abc',
 }
 
 
@@ -54,7 +59,9 @@ def scalar_text(value):
 
 def displayed_steps(path):
     """Owner  idea 16: adjacent-step bounds at the independent 3-digit display precision."""
-    data = tables(path, ('_data',))['data']
+    data = tables(path, ('_data',)).get('data', [])
+    if not data:
+        return measured_range(path)[2], 'number'
     axis = 'two_theta' if 'two_theta' in data[0] else 'time_of_flight'
     values = [row[axis]['value'] for row in data]
     steps = [right - left for left, right in zip(values, values[1:], strict=False)]
@@ -64,14 +71,18 @@ def displayed_steps(path):
     return f'{low:g}\u2013{high:g}', 'readonly'
 
 
-def generate(added_project=None):
+def generate(added_project=None, updated_project=None, output_dir=None, *, catalogue=False):
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
     projects = [ROOT / 'docs/user/cli' / entry['id'] / 'project' for entry in registry]
     projects += [
         Path(__file__).parent / (name + '-project') for name in ('xray', 'editable', 'warning')
     ]
-    if added_project is not None:
-        projects = [project for project in projects if project.parent.name == added_project]
+    if (added_project or updated_project) is not None:
+        projects = [
+            project
+            for project in projects
+            if project.parent.name == (added_project or updated_project)
+        ]
         if len(projects) != 1:
             raise ValueError('Display addition requires exactly one registered project')
     cases = []
@@ -94,7 +105,10 @@ def generate(added_project=None):
         })
 
     for project in projects:
-        for structure in sorted((project / 'structures').glob('*.edi')):
+        for structure in sorted([
+            *(project / 'structures').glob('*.edi'),
+            *(project / 'structures').glob('*.cif'),
+        ]):
             values = read(structure)
             name = values['_space_group.name_h_m']
             number, system = IDENTITIES[name]
@@ -124,7 +138,7 @@ def generate(added_project=None):
             )
         for experiment in sorted((project / 'experiments').glob('*.edi')):
             values = read(experiment)
-            mode = (
+            mode = values.get('_experiment_type.beam_mode') or (
                 'time-of-flight'
                 if values['_peak.type'].startswith('tof-')
                 else 'constant wavelength'
@@ -150,6 +164,31 @@ def generate(added_project=None):
                 ],
                 experiment.stem,
             )
+            if values.get('_experiment_type.sample_form') == 'single crystal':
+                add(
+                    project,
+                    'experiment',
+                    'basic',
+                    'extinction',
+                    [
+                        ['extinction.' + name, values['_extinction.' + name]['value'], 'parameter']
+                        for name in {
+                            'none': (),
+                            'becker-coppens': ('radius', 'mosaicity'),
+                            'becker-coppens-mixed': (
+                                'domain_radius',
+                                'mosaic_spread',
+                                'crystal_radius',
+                            ),
+                            'larson-anisotropic': tuple(
+                                'coefficient_' + component
+                                for component in ('11', '22', '33', '12', '13', '23')
+                            ),
+                        }[values['_extinction.type']]
+                    ],
+                    experiment.stem,
+                )
+                continue
             add(
                 project,
                 'experiment',
@@ -197,7 +236,7 @@ def generate(added_project=None):
                 ['statusBar.minimizer', 'crysta', 'label'],
             ],
         )
-    output = Path(__file__).with_name('display_oracle.js')
+    output = (Path(output_dir) if output_dir else Path(__file__).parent) / 'display_oracle.js'
     if added_project is not None:
         retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
         path = str(projects[0].relative_to(ROOT))
@@ -207,13 +246,37 @@ def generate(added_project=None):
             raise ValueError('Display addition cannot replace an old input hash')
         sources = {**retained['sources'], **sources}
         cases = [*retained['cases'], *cases]
+    if updated_project is not None or catalogue:
+        sources, cases = update_project_display(
+            output, projects[0], cases, sources, catalogue=catalogue
+        )
     output.write_text(
         '// Generated by generate_display.py; .edi + ITA identities, never app output.\n'
         'var frozen = ' + json.dumps({'sources': sources, 'cases': cases}, indent=2) + ';\n'
     )
 
 
+def update_project_display(output, project, cases, sources, *, catalogue=False):
+    if catalogue:
+        from catalogue_oracle import merge_display  # noqa: PLC0415
+
+        return merge_display(output, sources, cases)
+    retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
+    path = str(project.relative_to(ROOT))
+    fresh = {case['tag']: case for case in cases}
+    previous = {case['tag'] for case in retained['cases'] if case['path'] == path}
+    if previous != set(fresh) or not previous:
+        raise ValueError('Display update must preserve every existing project witness')
+    cases = [fresh.get(case['tag'], case) for case in retained['cases']]
+    sources = {**retained['sources'], **sources}
+    return sources, cases
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--add-project', metavar='PROJECT_ID')
-    generate(parser.parse_args().add_project)
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument('--catalogue', action='store_true')
+    selection.add_argument('--add-project', metavar='PROJECT_ID')
+    selection.add_argument('--update-project', metavar='PROJECT_ID')
+    args = parser.parse_args()
+    generate(args.add_project, args.update_project, catalogue=args.catalogue)

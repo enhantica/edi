@@ -9,28 +9,26 @@ import edi.app
 
 // `experiment_type` (easydiffractionbeta's Diffraction radiation group), in the Experiments explorer under its
 // table: the selected experiment's four type axes, editable while it has no measured data and fixed once it has
-// (its data sets them), and two placeholders, disabled until they are implemented: dimensionality (1D) and
-// polarization (None, for a neutron probe only). A choice makes the experiment anew with that type
-// (ProjectViewModel.setExperimentType). Each box binds its index to the value's position in its permitted list:
-// the base binds currentIndex to indexOfValue(value), which runs before the model is populated and re-runs only
-// when the value changes, so a value that never changes stayed at -1 and showed nothing. A grid three wide, so
-// each name fits (edi ADR-0017 §2): each box sets its own width, as the base's divides the row by its parent's
-// children.
+// (its data sets them), and its dimensionality and polarisation, each with the one value it admits (ADR-0054). A choice makes the experiment anew with that type
+// (ProjectViewModel.setExperimentType). The four axes show their values by the dictionary's names (edi ADR-0051).
+// A grid three wide, so each name fits (edi ADR-0017 §2): each box sets its own width, as the base's divides the
+// row by its parent's children.
 Grid {
     id: row
 
     property ProjectViewModel project: null
     property ExperimentViewModel experiment: null
     property int experimentIndex: -1
+    // The type axes may change while nothing measured is held: a calculation grid, or a single crystal with no
+    // reflections loaded yet.
     readonly property bool editable: experiment !== null && experiment.calculationOnly
+    readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
     readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
 
-    // A choice on one axis: the experiment made anew, or the box back at the stored value.
-    function choose(box, axis, index) {
-        const token = box.permittedValues[index];
-        if (token !== box.value && row.project)
+    // A choice on one axis makes the experiment anew; the selector returns to the stored value otherwise.
+    function choose(axis, token) {
+        if (row.project)
             row.project.setExperimentType(row.experimentIndex, axis, token);
-        box.currentIndex = Qt.binding(() => box.permittedValues.indexOf(box.value));
     }
 
     objectName: "experimentType"
@@ -38,61 +36,49 @@ Grid {
     columnSpacing: AppSizes.inputSpacing
     rowSpacing: AppSizes.groupContentSpacing
 
-    // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
-    // the tool tip is the cell's, since a disabled box takes no hover.
-    Item {
+    SelectorField {
+        id: sampleForm
+        objectName: "experimentType.sampleForm"
         width: row.cellWidth
-        height: sampleForm.height
-
-        EaElements.ParamComboBox {
-            id: sampleForm
-            objectName: "experimentType.sampleForm"
-            width: row.cellWidth
-            Component.onCompleted: FieldTitles.align(sampleForm)
-            enabled: false
-            currentIndex: permittedValues.indexOf(value)
-            parameter: ({
-                    "value": row.experiment ? row.experiment.sampleFormToken : "",
-                    "shortPrettyName": qsTr("sample form"),
-                    "permittedValues": ["powder", "single crystal"]
-                })
-            onActivated: index => row.choose(sampleForm, "sampleForm", index)
-        }
-        HoverHandler {
-            id: sampleFormHover
-        }
-        EaElements.ToolTip {
-            text: qsTr("Only powder samples are supported for now")
-            visible: sampleFormHover.hovered && EaGlobals.Vars.showToolTips
-        }
+        uid: "experiment_type.sample_form"
+        options: row.experiment ? row.experiment.sampleFormOptions : null
+        token: row.experiment ? row.experiment.sampleFormToken : ""
+        enabled: row.editable
+        onSelected: token => row.choose("sampleForm", token)
     }
-    EaElements.ParamComboBox {
+    SelectorField {
         id: beamMode
         objectName: "experimentType.beamMode"
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(beamMode)
+        uid: "experiment_type.beam_mode"
+        options: row.experiment ? row.experiment.beamModeOptions : null
+        token: row.experiment ? row.experiment.beamModeToken : ""
         enabled: row.editable
-        currentIndex: permittedValues.indexOf(value)
-        parameter: ({
-                "value": row.experiment ? row.experiment.beamModeToken : "",
-                "shortPrettyName": qsTr("beam mode"),
-                "permittedValues": ["constant wavelength", "time-of-flight"]
-            })
-        onActivated: index => row.choose(beamMode, "beamMode", index)
+        onSelected: token => row.choose("beamMode", token)
     }
-    EaElements.ParamComboBox {
-        id: radiationProbe
-        objectName: "experimentType.radiationProbe"
+    // A single crystal is computed for neutrons only for now: its probe box is fixed, with a tool tip saying so
+    // (the owner, 2026-10-22).
+    Item {
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(radiationProbe)
-        enabled: row.editable
-        currentIndex: permittedValues.indexOf(value)
-        parameter: ({
-                "value": row.experiment ? row.experiment.radiationProbeToken : "",
-                "shortPrettyName": qsTr("probe"),
-                "permittedValues": ["neutron", "xray"]
-            })
-        onActivated: index => row.choose(radiationProbe, "radiationProbe", index)
+        height: radiationProbe.height
+
+        SelectorField {
+            id: radiationProbe
+            objectName: "experimentType.radiationProbe"
+            width: row.cellWidth
+            uid: "experiment_type.radiation_probe"
+            options: row.experiment ? row.experiment.radiationProbeOptions : null
+            token: row.experiment ? row.experiment.radiationProbeToken : ""
+            enabled: row.editable && !row.singleCrystal
+            onSelected: token => row.choose("radiationProbe", token)
+        }
+        HoverHandler {
+            id: radiationProbeHover
+        }
+        EaElements.ToolTip {
+            text: qsTr("Single crystals are neutron only for now")
+            visible: row.singleCrystal && row.editable && radiationProbeHover.hovered && EaGlobals.Vars.showToolTips
+        }
     }
     // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
     // the tool tip is the cell's, since a disabled box takes no hover.
@@ -100,19 +86,15 @@ Grid {
         width: row.cellWidth
         height: scatteringType.height
 
-        EaElements.ParamComboBox {
+        SelectorField {
             id: scatteringType
             objectName: "experimentType.scatteringType"
             width: row.cellWidth
-            Component.onCompleted: FieldTitles.align(scatteringType)
+            uid: "experiment_type.scattering_type"
+            options: row.experiment ? row.experiment.scatteringTypeOptions : null
+            token: row.experiment ? row.experiment.scatteringTypeToken : ""
             enabled: false
-            currentIndex: permittedValues.indexOf(value)
-            parameter: ({
-                    "value": row.experiment ? row.experiment.scatteringTypeToken : "",
-                    "shortPrettyName": qsTr("scattering type"),
-                    "permittedValues": ["bragg", "total"]
-                })
-            onActivated: index => row.choose(scatteringType, "scatteringType", index)
+            onSelected: token => row.choose("scatteringType", token)
         }
         HoverHandler {
             id: scatteringTypeHover
@@ -122,31 +104,24 @@ Grid {
             visible: scatteringTypeHover.hovered && EaGlobals.Vars.showToolTips
         }
     }
-    EaElements.ParamComboBox {
+    // One admitted value each, so the boxes show it and take no choice: the dimensionality, and the polarisation of
+    // the probe (ADR-0054).
+    SelectorField {
         id: dimensionality
         objectName: "experimentType.dimensionality"
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(dimensionality)
+        uid: "experiment_type.dimensionality"
+        options: row.experiment ? row.experiment.dimensionalityOptions : null
+        token: row.experiment ? row.experiment.dimensionalityToken : ""
         enabled: false
-        currentIndex: 0
-        parameter: ({
-                "value": "1D",
-                "shortPrettyName": qsTr("dimensionality"),
-                "permittedValues": ["1D"]
-            })
     }
-    EaElements.ParamComboBox {
-        id: polarization
-        objectName: "experimentType.polarization"
+    SelectorField {
+        id: polarisation
+        objectName: "experimentType.polarisation"
         width: row.cellWidth
-        Component.onCompleted: FieldTitles.align(polarization)
-        visible: row.experiment !== null && row.experiment.radiationProbe === ExperimentViewModel.Neutron
+        uid: "experiment_type.polarisation"
+        options: row.experiment ? row.experiment.polarisationOptions : null
+        token: row.experiment ? row.experiment.polarisationToken : ""
         enabled: false
-        currentIndex: 0
-        parameter: ({
-                "value": "None",
-                "shortPrettyName": qsTr("polarization"),
-                "permittedValues": ["None"]
-            })
     }
 }

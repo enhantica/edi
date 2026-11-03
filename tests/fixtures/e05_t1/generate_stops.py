@@ -1,12 +1,14 @@
 """Freeze actual CLI MaxIter and NoStep reports on explicitly derived inputs.
 
-MaxIter changes only max_iterations to one. NoStep fixes every parameter except
-one atom's ADP and sets occupancies to zero, so the free ADP cannot improve chi2.
-Both cases use the same registered lbco input and the normal CLI entry point.
+MaxIter changes only max_iterations to one. NoStep couples a free driver to a
+constant background and a bounded March fraction: every improving trial leaves
+the domain. Both use the registered LBCO input and the normal CLI entry point.
 """
 
+import argparse
 import hashlib
 import json
+import runpy
 import shutil
 import subprocess
 import sys
@@ -33,19 +35,31 @@ runpy.run_module('edi', run_name='__main__')
 
 
 def main():
-    cases = []
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--only', choices=('maxiter', 'nostep'))
+    args = parser.parse_args()
+    manifest = json.loads((HERE / 'stops.json').read_text()) if args.only else {}
+    cases = {row['id']: row for row in manifest.get('cases', [])}
+    materialize = runpy.run_path(str(HERE / 'stop_projects.py'))['materialize']
     original = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
     for kind, expected in [('maxiter', 'max_iter'), ('nostep', 'no_step')]:
+        if args.only and kind != args.only:
+            continue
         project = HERE / ('stop-' + kind) / 'project'
-        if project.exists():
-            shutil.rmtree(project)
-        shutil.copytree(original, project, ignore=shutil.ignore_patterns('README.md'))
+        if kind == 'nostep':
+            materialize(edi, original, project, stalled=True)
+        else:
+            if project.exists():
+                shutil.rmtree(project)
+            shutil.copytree(original, project, ignore=shutil.ignore_patterns('README.md'))
         metadata = project / 'project.edi'
         lines = metadata.read_text().splitlines()
         metadata.write_text(
             '\n'.join(
                 '_metadata.title "CLI stop witness"'
                 if line.startswith('_metadata.title')
+                else '_metadata.purpose "fit"'
+                if line.startswith('_metadata.purpose')
                 else line
                 for line in lines
             )
@@ -58,14 +72,6 @@ def main():
                     '_minimizer.max_iterations 1000', '_minimizer.max_iterations 1'
                 )
             )
-        else:
-            p = edi.Project.load(str(project))
-            for parameter in p.parameters:
-                parameter.free = False
-            for site in p.structure.atom_sites:
-                site.occupancy.value = 0
-            p.structure.atom_sites[0].adp_iso.free = True
-            p.save()
         hashes = {
             p.relative_to(project).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sorted(project.rglob('*'))
@@ -94,7 +100,7 @@ def main():
         record = dict(line.split('=', 1) for line in run.stdout.splitlines())
         if run.returncode or record.get('status') != expected:
             raise RuntimeError('CLI stop witness did not reach ' + expected + ': ' + run.stderr)
-        cases.append({
+        case = {
             'id': 'stop-' + kind,
             'path': project.relative_to(ROOT).as_posix(),
             'mode': 'single',
@@ -102,16 +108,40 @@ def main():
             'inputs_sha256': hashes,
             'minimizer': 'crysta (' + record['descent'] + ')',
             'parameters': json.loads(capture.read_text()),
-        })
+        }
+        if kind == 'nostep':
+            case['producer'] = {
+                'edi_sha': subprocess.check_output(
+                    ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True
+                ).strip(),
+                'crysta_sdk': (
+                    Path(sys.modules['edi._edi'].__file__).resolve().parents[2]
+                    / '.crysta-linked-sha'
+                )
+                .read_text()
+                .strip(),
+            }
+            case['closed_form'] = {
+                'driver_start': 0.0,
+                'observed': [-1.0, -1.0, -1.0],
+                'calculated': [0.0, 0.0, 0.0],
+                'jacobian': [1.0, 1.0, 1.0],
+                'chi_square': 3.0,
+                'predicted_gain': 3.0,
+                'chi_square_tolerance': 1e-6,
+                'blocked_by': 'march_random_fract = driver, domain [0, 1]',
+            }
+        cases[case['id']] = case
         capture.unlink()
         (HERE / ('stop-' + kind + '.record')).write_text(run.stdout)
-    manifest = {
-        'edi_sha': subprocess.check_output(
-            ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True
-        ).strip(),
-        'source': original.relative_to(ROOT).as_posix(),
-        'cases': cases,
-    }
+    if not args.only:
+        manifest = {
+            'edi_sha': subprocess.check_output(
+                ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True
+            ).strip(),
+            'source': original.relative_to(ROOT).as_posix(),
+        }
+    manifest['cases'] = list(cases.values())
     (HERE / 'stops.json').write_text(json.dumps(manifest, indent=2) + '\n')
 
 

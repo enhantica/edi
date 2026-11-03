@@ -169,6 +169,8 @@ AppDialog {
         clip: true
         // A gap between the pages, so no tab's controls reach into the shown one.
         spacing: EaStyle.Sizes.fontPixelSize * 2
+        // A tab shows at once, without the swipe's slide, so its columns are where every other tab has them.
+        Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
         // Prompts, as the base's
         RowGrid {
@@ -179,6 +181,18 @@ AppDialog {
                 objectName: "preferences.toolTips"
                 checked: Preferences.toolTips
                 onToggled: Preferences.toolTips = checked
+            }
+
+            // Fitting works from every page's status bar, so whether a fit opens its results is an app preference
+            // (the owner, 2026-10-26).
+            RowLabel {
+                text: qsTr("Show fit results after fitting") + ":"
+            }
+            RowCheckBox {
+                objectName: "preferences.showFitResults"
+                checked: Preferences.showFitResults
+                onToggled: Preferences.showFitResults = checked
+                ToolTip.text: qsTr("Open the results window when a fit ends; the fit status in the status bar opens it too")
             }
 
             RowLabel {
@@ -219,7 +233,7 @@ AppDialog {
             }
         }
 
-        // Appearance: the theme, the colour scheme, the sidebar's side and auto collapse; no 1D plotting row.
+        // Appearance: the theme, the colour scheme, the sidebar's side and whether one sidebar group is open at a time; no 1D plotting row.
         RowGrid {
             RowLabel {
                 id: themeLabel
@@ -237,18 +251,65 @@ AppDialog {
                 }
             }
 
+            // The figure palette, one for experiments and structures (the owner, 2026-10-26), the palettes' tokens and
+            // names (edi::colour_scheme_names) in the order the core lists them, with its colour order under it; then
+            // the Stacked view's lines and the Map's colour map, as their charts offer them.
             RowLabel {
-                text: qsTr("Colour scheme") + ":"
+                text: qsTr("Palette") + ":"
+            }
+            Column {
+                spacing: dialog.stackSpacing
+
+                RowBox {
+                    readonly property var schemes: ApplicationInfo.colourSchemes
+
+                    objectName: "preferences.colours"
+                    model: ApplicationInfo.colourSchemeTitles
+                    currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)))
+                    onActivated: index => Preferences.colourScheme = schemes[index]
+                    ToolTip.text: qsTr("The colours of experiments and structures: their icons, patterns, Bragg ticks and curves")
+                }
+                PaletteStrip {
+                    objectName: "preferences.colourOrder"
+                }
+            }
+            RowLabel {
+                text: qsTr("Stacked") + ":"
             }
             RowBox {
-                // The schemes' tokens (data/palettes), in the order the box lists them.
-                readonly property var schemes: ["default", "colourBlindSafe", "tableau", "paulTol", "vivid"]
+                readonly property var choices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
+                // Empty follows the palette.
+                readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme
 
-                objectName: "preferences.colourScheme"
-                model: [qsTr("Default"), qsTr("Colour-blind safe"), qsTr("Tableau"), qsTr("Paul Tol"), qsTr("Vivid")]
-                currentIndex: Math.max(0, schemes.indexOf(Preferences.colourScheme))
-                onActivated: index => Preferences.colourScheme = schemes[index]
-                ToolTip.text: qsTr("The experiments' and structures' colours in every chart and icon")
+                objectName: "preferences.stackedColours"
+                model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
+                currentIndex: Math.max(0, choices.indexOf(current))
+                onActivated: index => Preferences.scanStackedPalette = choices[index]
+                ToolTip.text: qsTr("The Stacked view's patterns")
+            }
+            RowLabel {
+                text: qsTr("Map") + ":"
+            }
+            RowBox {
+                readonly property var choices: ApplicationInfo.scanColourMaps
+
+                objectName: "preferences.mapColours"
+                model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
+                currentIndex: Math.max(0, choices.indexOf(Preferences.scanMapColours))
+                onActivated: index => Preferences.scanMapColours = choices[index]
+                ToolTip.text: qsTr("The Map's colour map, also chosen on the Map's toolbar")
+            }
+            RowLabel {
+                text: qsTr("When a curve is hidden") + ":"
+            }
+            RowBox {
+                readonly property list<string> choices: ["keep", "fit"]
+
+                objectName: "preferences.hiddenRange"
+                model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
+                currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
+                onActivated: index => Preferences.chartHiddenRange = choices[index]
+                ToolTip.text: qsTr("What the pattern chart's y range does when a click on its legend hides or shows a curve")
             }
 
             RowLabel {
@@ -262,13 +323,30 @@ AppDialog {
             }
 
             RowLabel {
-                text: qsTr("Auto collapse") + ":"
+                text: qsTr("One sidebar group open at a time") + ":"
             }
             RowCheckBox {
                 objectName: "preferences.autoCollapse"
                 checked: Preferences.autoCollapse
                 onToggled: Preferences.autoCollapse = checked
-                ToolTip.text: qsTr("Auto collapse for side bar groups")
+                ToolTip.text: qsTr("Opening a group in the sidebar closes the other open groups")
+            }
+
+            RowLabel {
+                text: qsTr("Text tab shows") + ":"
+            }
+            RowBox {
+                readonly property list<string> choices: ["editable", "everything"]
+
+                objectName: "preferences.textShow"
+                model: [qsTr("Editable"), qsTr("Everything")]
+                currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
+                // Through the Text tabs, which settle an unapplied edit first; until then the box shows the setting.
+                onActivated: index => {
+                    AppState.setTextShow(choices[index]);
+                    currentIndex = Qt.binding(() => Math.max(0, choices.indexOf(Preferences.textShow)));
+                }
+                ToolTip.text: qsTr("What every Text tab shows: the categories you can edit, or also the measured data and results, read-only")
             }
         }
 
@@ -325,25 +403,29 @@ AppDialog {
             }
         }
 
-        // Develop, as the base's
+        // Develop, as the base's. The run log goes to the terminal and to a file of each run (edi ADR-0062).
         RowGrid {
-            RowLabel {
-                enabled: false
-                text: qsTr("Logging to") + ":"
-            }
-            RowBox {
-                enabled: false
-                model: ["Disabled", "Terminal", "File"]
-                currentIndex: 1
-            }
-
             RowLabel {
                 text: qsTr("Logging level") + ":"
             }
             RowBox {
+                objectName: "preferences.loggingLevel"
                 model: ["Debug", "Info", "Error", "Disabled"]
-                currentIndex: model.indexOf(EaGlobals.Vars.loggingLevel)
-                onActivated: EaGlobals.Vars.loggingLevel = currentValue
+                currentIndex: model.indexOf(Preferences.loggingLevel)
+                onActivated: Preferences.loggingLevel = currentValue
+            }
+
+            // Help and feedback's service (edi ADR-0063): empty keeps Send off.
+            RowLabel {
+                text: qsTr("Feedback address") + ":"
+            }
+            EaElements.TextField {
+                objectName: "preferences.feedbackEndpoint"
+                width: dialog.controlWidth
+                horizontalAlignment: TextInput.AlignLeft
+                placeholderText: qsTr("Not set up")
+                text: Preferences.feedbackEndpoint
+                onEditingFinished: Preferences.feedbackEndpoint = text.trim()
             }
 
             // The engine's threads for every fill: Auto (the engine's policy) or a count, saved per machine.
@@ -366,6 +448,32 @@ AppDialog {
                     if (ApplicationInfo.engineThreadsSelectable)
                         Preferences.engineThreads = index;
                 }
+            }
+
+            // What Qt draws with (edi ADR-0041): its graphics API and renderer, read in the first frame, and whether that
+            // means no GPU.
+            RowLabel {
+                text: qsTr("Graphics") + ":"
+            }
+            EaElements.Label {
+                objectName: "preferences.graphics"
+                width: dialog.controlWidth
+                topPadding: dialog.lineOffset
+                wrapMode: Text.Wrap
+                text: !RenderingInfo.detected ? qsTr("Not detected yet") : (RenderingInfo.renderer !== "" ? RenderingInfo.api + ", " + RenderingInfo.renderer : RenderingInfo.api) + " · " + (RenderingInfo.software ? qsTr("software rendering, no GPU") : qsTr("GPU"))
+            }
+
+            // How the Stacked view draws its lines: on the GPU, or painted, which is faster without one; Automatic takes
+            // the graphics above. Saved per machine.
+            RowLabel {
+                text: qsTr("Scan views") + ":"
+            }
+            RowBox {
+                objectName: "preferences.scanRenderer"
+                readonly property var values: ["auto", "gpu", "software"]
+                model: [qsTr("Automatic"), qsTr("GPU"), qsTr("Software painter")]
+                currentIndex: Math.max(0, values.indexOf(Preferences.scanRenderer))
+                onActivated: index => Preferences.scanRenderer = values[index]
             }
 
             // What the app runs on and with, to read and to copy (the owner, 2026-10-06).

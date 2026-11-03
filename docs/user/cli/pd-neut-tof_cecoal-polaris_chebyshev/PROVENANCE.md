@@ -47,3 +47,15 @@ sigma of every parameter in `ls-fit.sum` and within 1.71 of every background coe
 | `n_free` | reference | `ls-fit.sum`'s number of fitted parameters, 32 |
 | `param.<name>.value`, `param.background[<m>].value` | reference, tolerance 4 sigma | `fullprof/ls-fit.sum` |
 | `iterations`, `reduced_chi_square`, `rwp` | regression pin | the check run above |
+
+## Pins re-taken with crysta build-3fcc7925
+
+crysta build-3fcc7925 adds the tails of time-of-flight reflections centred just outside the measured range, and
+resumes a descent whose final polish shows it had not converged. Both move this fit, so its regression pins were
+re-taken from `python -m edi fit` with that build. Reference values are unchanged.
+
+| run | quantity | before | after |
+| --- | --- | --- | --- |
+| default | `iterations` | 4.0 | 3.0 |
+| default | `reduced_chi_square` | 2.869451006 | 2.852896023 |
+| default | `rwp` | 0.02088086078 | 0.02082053872 |

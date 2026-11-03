@@ -15,7 +15,8 @@ import edi.app
 // background at 0 to blue at 1, with lines between the cells, a frame, the parameters' names along both edges and a
 // colour bar. A cell shows its value when there is room, and as a tool tip. The toolbar sets the smallest absolute
 // correlation shown and the most parameters shown (CorrelationViewModel); two toggles after them show the names along
-// the edges with the colour bar (both hidden at the start; the tool tip still names both parameters) and the full
+// the edges with the colour bar (both hidden at the start, the edges then numbered by the Analysis table's rows; the
+// tool tip still names both parameters) and the full
 // matrix instead of the lower triangle (the full matrix mirrors it, the diagonal still blank). Every toolbar control is
 // disabled while there are no correlations, and the space below the matrix equals the space above it (owner,
 // 2026-10-12 and 2026-10-13).
@@ -32,7 +33,7 @@ Item {
     readonly property bool available: correlations !== null && correlations.available >= 2
     // The two toggles change only how shown correlations look: disabled whenever the filter shows none (owner,
     // 2026-10-13).
-    readonly property bool showsAny: available && count >= 2
+    readonly property bool showsAny: available && correlations.labels.length >= 2
     // The toolbar's two toggles.
     property bool namesShown: false
     property bool fullMatrix: false
@@ -45,9 +46,37 @@ Item {
     readonly property color negativeColor: "#d73027"
     readonly property color positiveColor: "#4575b4"
 
-    readonly property var labels: correlations ? correlations.labels : []
-    readonly property var values: correlations ? correlations.values : []
+    // The cells drawn follow the model while the tab is shown. Hidden, the chart keeps what it drew and catches up
+    // when shown again, so the end of a fit does not rebuild cells nobody sees; on the web each new cell is also a
+    // new accessible element, and that rebuild held the window for most of a second.
+    property var labels: []
+    property var values: []
+    Binding {
+        target: chart
+        property: "values"
+        value: chart.correlations ? chart.correlations.values : []
+        when: chart.shown
+        restoreMode: Binding.RestoreNone
+    }
+    Binding {
+        target: chart
+        property: "labels"
+        value: chart.correlations ? chart.correlations.labels : []
+        when: chart.shown
+        restoreMode: Binding.RestoreNone
+    }
     readonly property int count: labels.length
+    // With the names hidden, each parameter's number in the Analysis table labels its ticks (the owner, 2026-10-27).
+    readonly property var numbers: {
+        const project = Session.project;
+        return labels.map(label => {
+            const number = project ? project.parameterNumber(label) : 0;
+            return number > 0 ? String(number) : "";
+        });
+    }
+    function edgeText(index: int): string {
+        return (namesShown ? labels[index] : numbers[index]) ?? "";
+    }
 
     // A cell's value; NaN outside the values, which can trail the labels by one change. Above the diagonal, the full
     // matrix shows the cell mirrored below it.
@@ -90,7 +119,7 @@ Item {
             label: qsTr("Correlation level:")
             toolTip: qsTr("Shows the parameters with a correlation of at least this size, 0 to 1, and every pair among them")
             widestText: "0.00"
-            shown: chart.correlations ? chart.correlations.level.toFixed(2) : ""
+            shown: chart.correlations ? Session.display("correlation_chart.threshold", chart.correlations.level) : ""
             validator: DoubleValidator {
                 bottom: 0
                 top: 1
@@ -254,17 +283,17 @@ Item {
         readonly property real widestLabel: {
             let widest = 0;
             for (let i = 0; i < chart.count; ++i)
-                widest = Math.max(widest, metrics.advanceWidth(chart.labels[i]));
+                widest = Math.max(widest, metrics.advanceWidth(chart.edgeText(i)));
             return Math.ceil(widest);
         }
-        readonly property real rowLabelWidth: chart.namesShown ? Math.min(widestLabel, width * 0.4) + chart.em * 0.5 : 0
+        readonly property real rowLabelWidth: Math.min(widestLabel, width * 0.4) + chart.em * 0.5
         readonly property real colourBarWidth: chart.namesShown ? chart.em * 4.5 : 0
         readonly property real flatLabelHeight: chart.em * 2
         readonly property real gridWidth: width - rowLabelWidth - colourBarWidth
         readonly property real flatCell: chart.count > 0 ? Math.floor(Math.min(gridWidth, height - flatLabelHeight) / chart.count) : 0
         // The column names stand level when each fits its cell, else at 45 degrees, as long as the widest needs.
         readonly property bool slanted: widestLabel > flatCell * 0.95
-        readonly property real columnLabelHeight: !chart.namesShown ? 0 : slanted ? Math.min(widestLabel, width * 0.4) * Math.SQRT1_2 + chart.em * 1.5 : flatLabelHeight
+        readonly property real columnLabelHeight: slanted ? Math.min(widestLabel, width * 0.4) * Math.SQRT1_2 + chart.em * 1.5 : flatLabelHeight
         readonly property real cell: chart.count > 0 ? Math.max(0, Math.floor(Math.min(gridWidth, height - columnLabelHeight) / chart.count)) : 0
         readonly property real side: cell * chart.count
         // Every k-th name on each axis, k as small as keeps neighbours a line apart: a row's names stand a cell apart,
@@ -295,6 +324,7 @@ Item {
                     readonly property int column: index % chart.count
                     readonly property real value: chart.valueAt(index)
 
+                    objectName: `correlations.cell.${row}.${column}`
                     x: column * area.cell
                     y: row * area.cell
                     width: area.cell
@@ -305,7 +335,7 @@ Item {
                         anchors.centerIn: parent
                         visible: !isNaN(parent.value) && area.cell >= chart.em * 2.6
                         color: Math.abs(parent.value) >= 0.5 ? "#f5f5f5" : EaStyle.Colors.chartLabels
-                        text: isNaN(parent.value) ? "" : parent.value.toFixed(2)
+                        text: isNaN(parent.value) ? "" : Session.display("fit_parameter_correlation.correlation", parent.value)
                     }
                 }
             }
@@ -356,7 +386,7 @@ Item {
                     EaElements.ToolTip {
                         objectName: "correlations.toolTip"
                         visible: pointer.containsMouse && !isNaN(pointer.value)
-                        text: visible ? qsTr("%1\n%2\ncorrelation: %3").arg(chart.labels[pointer.column]).arg(chart.labels[pointer.row]).arg(pointer.value.toFixed(2)) : ""
+                        text: visible ? qsTr("%1\n%2\ncorrelation: %3").arg(chart.labels[pointer.column]).arg(chart.labels[pointer.row]).arg(Session.display("fit_parameter_correlation.correlation", pointer.value)) : ""
                     }
                 }
             }
@@ -367,14 +397,14 @@ Item {
             model: chart.count
             delegate: EaElements.Label {
                 required property int index
-                visible: chart.namesShown && index % area.rowLabelStep === 0
+                visible: index % area.rowLabelStep === 0
                 x: grid.x - width - chart.em * 0.5
                 y: grid.y + (index + 0.5) * area.cell - height / 2
                 width: Math.min(implicitWidth, area.rowLabelWidth - chart.em * 0.5)
                 elide: Text.ElideLeft
                 horizontalAlignment: Text.AlignRight
                 color: EaStyle.Colors.chartLabels
-                text: chart.labels[index] ?? ""
+                text: chart.edgeText(index)
             }
         }
         // The columns' names below the matrix, level or slanted down to the left from under their cell.
@@ -382,11 +412,11 @@ Item {
             model: chart.count
             delegate: EaElements.Label {
                 required property int index
-                visible: chart.namesShown && index % area.columnLabelStep === 0
+                visible: index % area.columnLabelStep === 0
                 width: Math.min(implicitWidth, area.width * 0.4)
                 elide: Text.ElideLeft
                 color: EaStyle.Colors.chartLabels
-                text: chart.labels[index] ?? ""
+                text: chart.edgeText(index)
                 transformOrigin: Item.TopRight
                 rotation: area.slanted ? -45 : 0
                 x: area.slanted ? grid.x + (index + 0.5) * area.cell - width : grid.x + (index + 0.5) * area.cell - width / 2

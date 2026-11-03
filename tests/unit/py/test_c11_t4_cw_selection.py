@@ -14,6 +14,8 @@ import edi
 
 from conftest import project_record_datetime, tree_bytes_with_normalized_project_metadata
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.project_categories.historical_bytes import check_project_spacing, prior_bytes
+from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -144,7 +146,14 @@ def test_c11_t4_beam_mode_matrix_defaults_and_quoted_round_trip(tmp_path: Path) 
         for line in saved_lines
         if line.startswith(tuple(dictionary_tags))
     }
-    assert saved_tag_lines == source_tag_lines
+    from tests.fixtures.report_units.iucr_reference import saved_record  # noqa: PLC0415
+
+    expected = {
+        tag: saved_record(line.encode()).decode() for tag, line in source_tag_lines.items()
+    }
+    assert saved_tag_lines == expected, (
+        'Selector round trip retains every tag and independently rounds saved numeric values'
+    )
 
 
 def test_c11_t57_formerly_reserved_cw_rungs_load_and_unknown_still_refuses(tmp_path: Path) -> None:
@@ -238,6 +247,7 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
     for index, (source, golden) in enumerate(cases):
         destination = tmp_path / f'tof-{index}'
         edi.Project.load(source).save_as(destination)
+        check_project_spacing(destination)
         actual = _tree_bytes(destination)
         record = actual.pop('project.edi', None)
         assert record is not None, (
@@ -247,22 +257,33 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
         actual['analysis/analysis.edi'] = historical_analysis(
             source, actual['analysis/analysis.edi']
         )
-        actual = {name: without_calculator(name, data) for name, data in actual.items()}
-        assert actual == _tree_bytes(golden), (
+        actual = {
+            name: historical_single_fraction(name, without_calculator(name, data))
+            for name, data in actual.items()
+        }
+        from tests.fixtures.report_units.iucr_reference import saved_record  # noqa: PLC0415
+
+        expected = {name: saved_record(data) for name, data in _tree_bytes(golden).items()}
+        assert {
+            name: prior_bytes(data, expected.get(name, b''), name=name)
+            for name, data in actual.items()
+        } == expected, (
             'adding project identity must leave every pre-existing canonical TOF golden path '
-            'and byte unchanged apart from the checked  calculator block'
+            'and byte unchanged apart from the checked calculator block '
+            'and independent saved tokens and the checked unity fraction column'
         )
         normalized = tree_bytes_with_normalized_project_metadata(
             destination, 'created', 'last_modified'
         )['project.edi'].decode()
         assert re.fullmatch(
-            r'_edi\.schema_version 3\n\n'
             r'_metadata\.name +untitled_project\n'
             r'_metadata\.title +"Untitled Project"\n'
             r'_metadata\.description +\?\n'
             r'_metadata\.created +<NORMALIZED-WALL-CLOCK>\n'
             r'_metadata\.last_modified +<NORMALIZED-WALL-CLOCK>\n'
-            r'_metadata\.timestamp +\?\n',
+            r'_metadata\.timestamp +\?\n'
+            r'\n_su_format\.rule iucr_99\n\n'
+            r'_edi\.schema_version 3\n',
             normalized,
         ), (
             'the new TOF golden artifact must be exactly the schema-3 default identity record; '

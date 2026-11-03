@@ -75,7 +75,7 @@ void exercise(std::size_t n, const std::string& mode) {
         auto row = std::make_shared<Row>();
         if constexpr (std::is_same_v<Row, edi::FitParameterCorrelation>) {
             row->id = "row-" + std::to_string(10000000 + i);
-            row->correlation = "0.50";
+            row->correlation = .50;
         }
         rows.push_back(row);
     }

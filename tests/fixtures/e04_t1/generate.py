@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import re
+import runpy
 import shlex
 import shutil
 import subprocess
@@ -21,6 +23,10 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
+REFERENCE = ROOT / 'tests/fixtures/report_units/iucr_reference.py'
+SPEC = importlib.util.spec_from_file_location('display_rounding_reference', REFERENCE)
+IUCR = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(IUCR)
 CW = ['broad_gauss_u', 'broad_gauss_v', 'broad_gauss_w', 'broad_lorentz_x', 'broad_lorentz_y']
 GAUSS = [
     'broad_gauss_sigma_0',
@@ -92,9 +98,18 @@ def numeric(token):
     return {'value': value, 'free': digits is not None, 'uncertainty': uncertainty}
 
 
+def edi_text(path):
+    reader = runpy.run_path(str(Path(__file__).with_name('cif_structure.py')))['edi_text']
+    return reader(path)
+
+
+def fixture_text(path):
+    return edi_text(path) if path.suffix == '.cif' else path.read_text()
+
+
 def scalars(path):
     result = {}
-    for line in path.read_text().splitlines():
+    for line in fixture_text(path).splitlines():
         if line.startswith('_'):
             tokens = shlex.split(line, comments=True)
             if len(tokens) == 2:
@@ -113,7 +128,7 @@ def tables(path, extra=()):
     wanted.update(extra)
     # The owner's ASCII records contain CR as an in-row field separator.
     # LF ends a record; universal-newline decoding would invent another row.
-    lines = path.read_bytes().decode().split('\n')
+    lines = (edi_text(path) if path.suffix == '.cif' else path.read_bytes().decode()).split('\n')
     result = {}
     index = 0
     while index < len(lines):
@@ -149,7 +164,13 @@ def tables(path, extra=()):
 def measured_range(path):
     data = tables(path, ('_data',)).get('data', [])
     if not data:
-        return []
+        values = scalars(path)
+        axis = 'two_theta' if '_data_range.two_theta_min' in values else 'time_of_flight'
+        keys = [f'_data_range.{axis}_{field}' for field in ('min', 'max', 'step')]
+        if not all(key in values for key in keys):
+            return []
+        low, high, step = [values[key]['value'] for key in keys]
+        return [low, high, step, round((high - low) / step) + 1]
     axis = 'two_theta' if 'two_theta' in data[0] else 'time_of_flight'
     values = [row[axis]['value'] for row in data]
     return [values[0], values[-1], (values[-1] - values[0]) / (len(values) - 1), len(values)]
@@ -198,7 +219,7 @@ def scan_inputs(project, analysis):
                 {
                     'index': index,
                     'values': [
-                        round(rows[index][0], 4),
+                        rows[index][0],
                         rows[index][1],
                         1.0 if rows[index][2] < 0.0001 else rows[index][2],
                     ],
@@ -244,13 +265,50 @@ def profile_fixtures():
     return projects
 
 
-def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one capture retains old witnesses
+def report_cell(file):
+    values = scalars(file)
+    fields = ('length_a', 'length_b', 'length_c', 'angle_alpha', 'angle_beta', 'angle_gamma')
+    shown = [
+        IUCR.rounded_pair(values['_cell.' + key]['value'], values['_cell.' + key]['uncertainty'])[
+            0
+        ]
+        for key in fields
+    ]
+    group = values['_space_group.name_h_m']
+    if group in {'P m -3 m', 'F m -3 m', 'F d -3 m', 'I m -3 m', 'I a -3', 'I 21 3'}:
+        shown[1:3] = [shown[0], shown[0]]
+    elif group.startswith(('R ', 'P 6')):
+        shown[1] = shown[0]
+    return shown
+
+
+def app_only_ids(registry):
+    identities = [row['id'] for row in registry if row.get('app-only')]
+    if identities:
+        message = 'Every user example now has its catalogue form; app-only rows are retired'
+        raise ValueError(message)
+    return identities
+
+
+def generate(  # noqa: PLR0912, PLR0914, PLR0915 - one input capture retains old witnesses
+    warning_project=None,
+    added_project=None,
+    updated_project=None,
+    output_dir=None,
+    *,
+    catalogue=False,
+):
+    new_ids = [added_project] if isinstance(added_project, str) else (added_project or [])
+    selected_project = new_ids or updated_project
     projects = []
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    app_only = app_only_ids(registry)
     selected = [
-        entry for entry in registry if added_project is None or entry['id'] == added_project
+        entry
+        for entry in registry
+        if selected_project is None or entry['id'] in new_ids or entry['id'] == updated_project
     ]
-    if added_project is not None and len(selected) != 1:
+    if selected_project is not None and len(selected) != (len(new_ids) or 1):
         raise ValueError('Project addition requires exactly one registered project')
     for entry in selected:
         project = ROOT / 'docs/user/cli' / entry['id'] / 'project'
@@ -259,6 +317,7 @@ def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one c
                 'name': file.stem,
                 'atoms': len(tables(file)['atom_site']),
                 'cellA': scalars(file)['_cell.length_a']['value'],
+                'displayCell': report_cell(file),
                 'spaceGroup': scalars(file)['_space_group.name_h_m'],
                 'cell': [
                     scalars(file)['_cell.' + field]['value']
@@ -272,10 +331,16 @@ def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one c
                     )
                 ],
             }
-            for file in sorted((project / 'structures').glob('*.edi'))
+            for file in sorted([
+                *(project / 'structures').glob('*.edi'),
+                *(project / 'structures').glob('*.cif'),
+            ])
         ]
         files = sorted(project.glob('*.edi'))
-        files += sorted((project / 'structures').glob('*.edi'))
+        files += sorted([
+            *(project / 'structures').glob('*.edi'),
+            *(project / 'structures').glob('*.cif'),
+        ])
         files += sorted((project / 'experiments').glob('*.edi'))
         files += sorted((project / 'analysis').glob('*.edi'))
         analysis = project / 'analysis/analysis.edi'
@@ -300,13 +365,27 @@ def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one c
         })
     corpus = []
     corpus_projects = (
-        [ROOT / 'docs/user/cli' / added_project / 'project']
-        if added_project is not None
+        [ROOT / 'docs/user/cli' / entry['id'] / 'project' for entry in selected]
+        if selected_project is not None
         else [*sorted((ROOT / 'docs/user/cli').glob('*/project')), *profile_fixtures()]
     )
     for project in corpus_projects:
         for file in sorted((project / 'experiments').glob('*.edi')):
             fields = scalars(file)
+            if fields.get('_experiment_type.sample_form') == 'single crystal':
+                corpus.append({
+                    'project': str(project.relative_to(ROOT)),
+                    'experiment': file.stem,
+                    'sha256': hashlib.sha256(file.read_bytes()).hexdigest(),
+                    'singleCrystal': True,
+                    'mode': 'tof'
+                    if fields['_experiment_type.beam_mode'] == 'time-of-flight'
+                    else 'cwl',
+                    'peakType': '',
+                    'scalars': fields,
+                    'loops': tables(file, ('_refln',)),
+                })
+                continue
             profile = fields['_peak.type']
             mode = 'cwl' if profile.startswith('cwl-') else 'tof'
             expected = list(PROFILES[profile])
@@ -439,12 +518,12 @@ def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one c
         'projects': projects,
         'corpus': corpus,
     }
-    output = Path(__file__).parent / 'oracle.js'
+    output = (Path(output_dir) if output_dir else Path(__file__).parent) / 'oracle.js'
     if warning_project is not None:
         data = warning_only_oracle(output, projects, warning_project)
     if added_project is not None:
         retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
-        if any(row['id'] == added_project for row in retained['projects']):
+        if any(row['id'] in new_ids for row in retained['projects']):
             # Re-run an uncommitted addition from its committed prior fixture;
             # never refresh a previously committed project's expectations.
             prior = subprocess.check_output(
@@ -452,7 +531,7 @@ def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one c
                 text=True,
             )
             retained = json.loads(prior.split('var frozen = ', 1)[1].rsplit(';', 1)[0])
-            if any(row['id'] == added_project for row in retained['projects']):
+            if any(row['id'] in new_ids for row in retained['projects']):
                 raise ValueError('Project addition cannot replace a committed oracle row')
         by_id = {row['id']: row for row in [*retained['projects'], *projects]}
         if set(by_id) != {entry['id'] for entry in registry}:
@@ -460,11 +539,72 @@ def generate(warning_project=None, added_project=None):  # noqa: PLR0914 - one c
         retained['projects'] = [by_id[entry['id']] for entry in registry]
         retained['corpus'].extend(corpus)
         data = retained
+    data = update_project_oracle(
+        output, projects, corpus, updated_project, data, catalogue=catalogue
+    )
+    catalogue_ids = data.get('catalogue_ids') or [
+        row['id']
+        for row in json.loads(
+            (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+        )['cases']
+    ]
+    data['app_only_ids'] = app_only
+    data['app_ids'] = [*catalogue_ids, *app_only]
+    if catalogue:
+        metadata = json.loads((ROOT / 'app/examples/metadata.json').read_text())
+        if list(metadata['examples']) != data['app_ids']:
+            raise ValueError(
+                'Regenerate app metadata for the declared catalogue and app-only list'
+            )
+    extend_xray_instrument_oracle(data)
     output.write_text(
         '// Independent category oracle. Regenerate only with generate.py.\nvar frozen = '
         + json.dumps(data, indent=2, ensure_ascii=False)
         + ';\n'
     )
+
+
+def update_project_oracle(output, projects, corpus, project_id, data, *, catalogue=False):
+    if catalogue:
+        from catalogue_oracle import merge_category  # noqa: PLC0415
+
+        return merge_category(output, data)
+    if project_id is None:
+        return data
+    retained = json.loads(output.read_text().split('var frozen = ', 1)[1].rsplit(';', 1)[0])
+    if sum(row['id'] == project_id for row in retained['projects']) != 1:
+        raise ValueError('Project update requires exactly one existing oracle row')
+    retained['projects'] = [
+        projects[0] if row['id'] == project_id else row for row in retained['projects']
+    ]
+    target = projects[0]['path']
+    fresh = {row['experiment']: row for row in corpus}
+    previous = {row['experiment'] for row in retained['corpus'] if row['project'] == target}
+    if previous != set(fresh):
+        raise ValueError('Project update must preserve the declared experiment population')
+    retained['corpus'] = [
+        fresh[row['experiment']] if row['project'] == target else row for row in retained['corpus']
+    ]
+    return retained
+
+
+def extend_xray_instrument_oracle(data):
+    # The doublet adds two X-ray slots, with exact fixed-zero defaults when absent.
+    # This declaration view changes no original input digest or numerical output.
+    for row in data['corpus']:
+        fields = row['scalars']
+        if fields.get('_experiment_type.radiation_probe') == 'xray':
+            for name in ('setup_wavelength_2', 'setup_wavelength_2_to_1_ratio'):
+                if name not in row['instrumentFields']:
+                    row['instrumentFields'].append(name)
+                fields.setdefault(
+                    '_instrument.' + name,
+                    {
+                        'value': 0.0,
+                        'free': False,
+                        'uncertainty': None,
+                    },
+                )
 
 
 def warning_only_oracle(output, projects, project_id):
@@ -513,9 +653,19 @@ def loader_warning(analysis, experiments, metadata, project_id=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--catalogue', action='store_true')
     parser.add_argument('--loader-warning-only', metavar='PROJECT_ID')
-    parser.add_argument('--add-project', metavar='PROJECT_ID')
+    parser.add_argument('--add-project', metavar='PROJECT_ID', nargs='+')
+    parser.add_argument('--update-project', metavar='PROJECT_ID')
     args = parser.parse_args()
-    if args.loader_warning_only and args.add_project:
+    if (
+        sum(
+            bool(value)
+            for value in (args.loader_warning_only, args.add_project, args.update_project)
+        )
+        > 1
+    ):
         parser.error('warning adaptation and project addition are separate operations')
-    generate(args.loader_warning_only, args.add_project)
+    generate(
+        args.loader_warning_only, args.add_project, args.update_project, catalogue=args.catalogue
+    )

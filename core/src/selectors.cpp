@@ -13,8 +13,11 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
+#include "edi/background_estimate.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 
 namespace edi {
@@ -80,24 +83,6 @@ std::string default_peak_profile(BeamModeEnum mode) {
     return mode == BeamModeEnum::CONSTANT_WAVELENGTH ? "cwl-tch-pseudo-voigt" : "tof-jorgensen";
 }
 
-std::string peak_profile_label(const std::string& token) {
-    static const std::vector<std::pair<std::string, std::string>> labels{
-        {"cwl-gaussian", "Gaussian"},
-        {"cwl-lorentzian", "Lorentzian"},
-        {"cwl-pseudo-voigt", "Pseudo-Voigt"},
-        {"cwl-pseudo-voigt-berar-baldinozzi", "Pseudo-Voigt + Bérar-Baldinozzi asymmetry"},
-        {"cwl-tch-pseudo-voigt", "Thompson-Cox-Hastings pseudo-Voigt (TCH)"},
-        {"cwl-tch-pseudo-voigt-fcj",
-         "Thompson-Cox-Hastings pseudo-Voigt (TCH) + Finger-Cox-Jephcoat asymmetry (FCJ)"},
-    };
-    for (const auto& [known, label] : labels) {
-        if (known == token) {
-            return label;
-        }
-    }
-    return token;
-}
-
 std::vector<std::string> supported_absorption_families(BeamModeEnum mode) {
     // crysta's vocabulary table, in its order (ADR-0017): edi keeps no list of its own.
     return absorption_file_tokens(mode);
@@ -121,21 +106,6 @@ std::vector<std::string> applicable_fitting_modes(const Project& project) {
         return {"joint"};
     }
     return {"single"};
-}
-
-std::string fitting_mode_label(const std::string& token) {
-    static const std::vector<std::pair<std::string, std::string>> labels{
-        {"single", "Single experiment"},
-        {"joint", "Joint: all experiments at once"},
-        {"sequential", "Sequential: each from the previous"},
-        {"independent", "Independent: each from the same start"},
-    };
-    for (const auto& [known, label] : labels) {
-        if (known == token) {
-            return label;
-        }
-    }
-    return token;
 }
 
 void select_peak_profile(ExperimentBase& experiment, const std::string& token) {
@@ -183,6 +153,60 @@ void select_absorption(ExperimentBase& experiment, const std::string& value) {
                             absorption_file_token(experiment.effective_beam_mode(), value));
 }
 
+// Each value of a selector by its dictionary name (edi ADR-0051).
+static std::vector<std::string> option_labels(std::string_view uid, const std::vector<std::string>& tokens) {
+    std::vector<std::string> labels;
+    for (const std::string& token : tokens) {
+        labels.push_back(option_label(uid, token));
+    }
+    return labels;
+}
+
+std::vector<std::string> extinction_type_labels() {
+    return option_labels("extinction.type", extinction_type_tokens());
+}
+
+std::vector<std::string> extinction_type_choice_labels() {
+    std::vector<std::string> labels = extinction_type_labels();
+    const std::vector<std::string> tokens = extinction_type_tokens();
+    for (std::size_t index = 0; index < tokens.size(); ++index) {
+        if (tokens[index].starts_with("becker-coppens-")) {
+            labels[index] += " (analytical)";
+        } else if (tokens[index].starts_with("larson-")) {
+            labels[index] += " (empirical)";
+        }
+    }
+    return labels;
+}
+
+std::vector<std::string> mosaic_distribution_labels() {
+    return option_labels("extinction.mosaic_distribution", mosaic_distribution_tokens());
+}
+
+void select_extinction(ExperimentBase& experiment, const std::string& token) {
+    if (!experiment.reflections.has_value()) {
+        throw std::invalid_argument("extinction belongs to a single crystal");
+    }
+    apply_extinction_type(experiment.extinction, token);
+}
+
+std::vector<std::string> reflns_threshold_basis_labels() {
+    return option_labels("reflns.threshold_basis", reflns_threshold_basis_tokens());
+}
+
+void select_mosaic_distribution(ExperimentBase& experiment, const std::string& token) {
+    const std::vector<std::string> distributions = mosaic_distribution_tokens();
+    if (std::find(distributions.begin(), distributions.end(), token) == distributions.end()) {
+        throw std::invalid_argument("mosaic distribution '" + token + "' is not supported (expected 'gaussian' or "
+                                    "'lorentzian')");
+    }
+    if (!experiment.extinction.mosaic_distribution) {
+        throw std::invalid_argument("extinction type '" + experiment.extinction.type.value_or("none") +
+                                    "' has no mosaic distribution");
+    }
+    experiment.extinction.mosaic_distribution = token;
+}
+
 void select_background_type(ExperimentBase& experiment, const std::string& token) {
     const std::vector<std::string> types = supported_background_types();
     if (std::find(types.begin(), types.end(), token) == types.end()) {
@@ -220,6 +244,7 @@ void select_background_type(ExperimentBase& experiment, const std::string& token
         experiment.background_x_min = low;
         experiment.background_x_max = high;
     }
+    rebaseline_background_estimate(experiment);  // ADR-0040: auto estimates the new type, never a hand edit
 }
 
 PolynomialTerm next_background_term(const ExperimentBase& experiment) {
@@ -287,33 +312,78 @@ std::vector<std::string> position_point_ids(const ExperimentBase& experiment) {
     return ids;
 }
 
-void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids) {
-    if (ids.size() != experiment.background.size()) {
-        throw std::invalid_argument("background point ids: " + std::to_string(ids.size()) + " ids for " +
-                                    std::to_string(experiment.background.size()) + " points");
+namespace {
+// A background table's rows renamed to `ids`, in their order. Two passes, so no rename meets an id another row
+// still holds: first to names no row holds, then to the ids asked for.
+template <class Row>
+void rename_rows(ItemVec<Row>& rows, const std::vector<std::string>& ids, const std::string& what) {
+    if (ids.size() != rows.size()) {
+        throw std::invalid_argument("background " + what + " ids: " + std::to_string(ids.size()) + " ids for " +
+                                    std::to_string(rows.size()) + " " + what + "s");
     }
     const std::set<std::string> distinct(ids.begin(), ids.end());
     if (distinct.size() != ids.size() || distinct.contains(std::string())) {
-        throw std::invalid_argument("background point ids must be distinct and not empty");
+        throw std::invalid_argument("background " + what + " ids must be distinct and not empty");
     }
-    // Two passes, so no rename meets an id another point still holds: first to names no point holds, then to the
-    // ids asked for.
     std::set<std::string> held;
-    for (const auto& point : experiment.background) {
-        held.insert(point->id.value());
+    for (const auto& row : rows) {
+        held.insert(row->id.value());
     }
     held.insert(ids.begin(), ids.end());
     std::size_t counter = 0;
-    for (const auto& point : experiment.background) {
+    for (const auto& row : rows) {
         std::string spare;
         do {
             spare = "renaming-" + std::to_string(++counter);
         } while (held.contains(spare));
-        point->id = spare;
+        row->id = spare;
     }
     for (std::size_t i = 0; i < ids.size(); ++i) {
-        experiment.background[i]->id = ids[i];
+        rows[i]->id = ids[i];
     }
+}
+}  // namespace
+
+void set_background_point_ids(ExperimentBase& experiment, const std::vector<std::string>& ids) {
+    rename_rows(experiment.background, ids, "point");
+}
+
+std::vector<std::string> order_term_ids(const ExperimentBase& experiment) {
+    std::vector<std::string> ids;
+    ids.reserve(experiment.background_terms.size());
+    for (const auto& term : experiment.background_terms) {
+        ids.push_back(std::to_string(term->order.get()));
+    }
+    return ids;
+}
+
+void set_background_term_ids(ExperimentBase& experiment, const std::vector<std::string>& ids) {
+    rename_rows(experiment.background_terms, ids, "term");
+}
+
+void set_background_points(ExperimentBase& experiment, const std::vector<LineSegment>& points) {
+    if (experiment.background_type != "line-segment") {
+        throw std::invalid_argument("a " + experiment.background_type +
+                                    " background holds terms, not line-segment points; set background_type first");
+    }
+    std::vector<std::shared_ptr<LineSegment>> rows;
+    rows.reserve(points.size());
+    for (const LineSegment& point : points) {
+        rows.push_back(std::make_shared<LineSegment>(point));
+    }
+    experiment.background.assign(std::move(rows));
+}
+
+void set_background_terms(ExperimentBase& experiment, const std::vector<PolynomialTerm>& terms) {
+    if (experiment.background_type == "line-segment") {
+        throw std::invalid_argument("a line-segment background holds points, not terms; set background_type first");
+    }
+    std::vector<std::shared_ptr<PolynomialTerm>> rows;
+    rows.reserve(terms.size());
+    for (const PolynomialTerm& term : terms) {
+        rows.push_back(std::make_shared<PolynomialTerm>(term));
+    }
+    experiment.background_terms.assign(std::move(rows));
 }
 
 void set_background_term_order(ExperimentBase& experiment, PolynomialTerm& term, int order) {

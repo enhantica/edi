@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "ApprovedPalette.js" as Approved
 import QtTest
 import QtQuick.Controls
 import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
+import ReportBoundaryAcceptance 1.0
 import "RenderedTable.js" as Render
 
 Rectangle {
@@ -21,8 +23,21 @@ Rectangle {
         property var page
         property var location
         property var webGroup
+        SignalSpy {
+            id: saveStarts
+            signalName: "calculationStarted"
+        }
+        SignalSpy {
+            id: saveFinishes
+            signalName: "calculationFinished"
+        }
+        SignalSpy {
+            id: savePublishes
+            signalName: "recalculated"
+        }
         property var reference: JSON.parse(SettingsProof.repoText("tests/fixtures/report_storage/reference.json"))
         function cleanup() {
+            BoundaryProof.clearFailure();
             if (webGroup)
                 webGroup.destroy();
             webGroup = null;
@@ -32,7 +47,8 @@ Rectangle {
             page = null;
         }
         function prepare(text, input) {
-            location = SettingsProof.copyProject(Probe.repoUrl(input || "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project"));
+            const requested = input || "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project";
+            location = SettingsProof.copyProject(String(requested).startsWith("file:") ? requested : Probe.repoUrl(requested));
             if (text !== undefined)
                 verify(SettingsProof.write(location, "reports/report.edi", text), "The export witness independently declares the new report file before loading");
             verify(Session.openProject(location), "The export gate opens the actual lbco project through Session: " + Session.lastError);
@@ -110,8 +126,159 @@ Rectangle {
             }
             return value;
         }
+
+        SignalSpy {
+            id: publicationFailed
+            signalName: "saveFailed"
+        }
+        function browserBoundary() {
+            const desktop = findChild(page, "group.reportExport");
+            verify(desktop !== null, "The browser witness starts at the actual Export group");
+            desktop.visible = false;
+            webGroup = SettingsProof.webExport(page, Session.project.report, findChild(page, "report.preview"));
+            verify(webGroup !== null && waitForPolish(webGroup), "The actual Export resource reaches its browser capability branch: " + SettingsProof.webExportError);
+        }
+        function test_named_report_paths_follow_current_output_identity_data() {
+            const cases = [];
+            for (const browser of [false, true])
+                for (const format of ["html", "pdf", "cif"])
+                    cases.push({
+                        tag: (browser ? "browser-" : "desktop-") + format,
+                        browser,
+                        format
+                    });
+            return cases;
+        }
+        function test_named_report_paths_follow_current_output_identity(data) {
+            prepare("_edi.schema_version 3\n_report.html true\n_report.pdf false\n_report.html_offline false\n");
+            const report = Session.project.report;
+            Session.project.name = "former";
+            tryVerify(() => BoundaryProof.fullModel(report).name === "former", 2000, "The actual project rename reaches the report model before adding history");
+            for (const name of ["former", "middle"])
+                verify(SettingsProof.write(location, "reports/" + name + "." + data.format, "independent retained bytes " + name) && BoundaryProof.referenceRow(Session.project, data.format, name + "." + data.format), "The row-identity witness retains two distinct names of one typed format");
+            if (data.browser)
+                browserBoundary();
+            const failures = [];
+            function expected(label, name) {
+                const field = pathField(data.format), text = String(field.text);
+                const wanted = name ? (data.browser ? name : "reports/" + name) : "";
+                if (text !== wanted || (!name && !/not saved yet/i.test(field.placeholderText)))
+                    failures.push(label + " path=" + text + "; expected=" + wanted);
+            }
+            Session.project.name = "current";
+            tryVerify(() => BoundaryProof.fullModel(report).name === "current", 2000, "The renamed project changes the filename this Save report would write");
+            expected("rename before save", null);
+            if (data.format === "cif") {
+                verify(!box("CIF").enabled, "The retained CIF row gate preserves the unavailable writer's disabled control");
+                verify(SettingsProof.write(location, "reports/current.cif", "independent future-format bytes") && BoundaryProof.referenceRow(Session.project, "cif", "current.cif"), "A valid stored CIF row reaches the same selector without enabling its writer");
+            } else {
+                report.writesPdf = data.format === "pdf";
+                group().saveReport();
+                tryVerify(() => report.savedReports.some(row => row.name === "current." + data.format), 15000, "The actual Save report adds the current filename's row beside the older names");
+            }
+            expected("after save with several rows", "current." + data.format);
+            verify(SettingsProof.remove(location, "reports/former." + data.format), "The historical file is genuinely removed beside the saved current report");
+            report.active = false;
+            report.active = true;
+            expected("missing old file beside current new", "current." + data.format);
+            if (pathIsRed(data.format))
+                failures.push("A missing old row marks the present current output red");
+            const selected = report.savedReports.find(row => row.name === "current." + data.format);
+            if (!String(pathField(data.format).ToolTip.text).includes(selected.saved))
+                failures.push("The path tooltip shows another named row's time");
+            Session.project.name = "next";
+            tryVerify(() => BoundaryProof.fullModel(report).name === "next", 2000, "Rename after save changes the current output identity again");
+            expected("rename after save", null);
+            for (const name of ["former", "middle", "current"])
+                if (!report.savedReports.some(row => row.name === name + "." + data.format))
+                    failures.push("A retained named row was deleted: " + name);
+            compare(failures.length, 0, "Every format and platform selects by the current output name across both renames, multiple retained rows, missing history and the current tooltip; actual " + failures.join("; "));
+        }
+        function test_app_failed_publication_preserves_bytes_and_successful_rows_data() {
+            const cases = [];
+            for (const browser of [false, true])
+                for (const kind of ["html", "pdf", "settings"])
+                    cases.push({
+                        tag: (browser ? "browser-" : "desktop-") + kind,
+                        browser,
+                        kind
+                    });
+            return cases;
+        }
+        function modelDifferences(left, right, path = "") {
+            if (path === ".generated")
+                return [];
+            if (left !== null && right !== null && typeof left === "object" && typeof right === "object") {
+                const keys = Array.from(new Set([...Object.keys(left), ...Object.keys(right)]));
+                let differences = [];
+                for (const key of keys)
+                    differences = differences.concat(modelDifferences(left[key], right[key], path + "." + key));
+                return differences;
+            }
+            return left === right ? [] : [path + ": " + JSON.stringify(left) + " -> " + JSON.stringify(right)];
+        }
+        function test_app_failed_publication_preserves_bytes_and_successful_rows(data) {
+            const scheme = Approved.getScheme(Preferences);
+            Approved.setScheme(Preferences, "earth");
+            prepare("_edi.schema_version 3\n_report.html true\n_report.pdf true\n_report.html_offline false\n");
+            const report = Session.project.report;
+            if (data.browser)
+                browserBoundary();
+            group().saveReport();
+            tryVerify(() => ["html", "pdf"].every(format => SettingsProof.fileFacts(location, reportName(format)).bytes > 100), 15000, "The failure witness starts with actually saved HTML and PDF bytes");
+            const html = SettingsProof.fileFacts(location, reportName("html")), pdf = SettingsProof.fileFacts(location, reportName("pdf"));
+            const original = report.savedReports.map(row => ({
+                        name: row.name,
+                        state: row.state
+                    }));
+            Session.project.title = "Changed content before a late publication failure";
+            tryVerify(() => BoundaryProof.fullModel(report).title === Session.project.title, 2000, "The unsaved change reaches the actual report before the failure is armed");
+            verify(Session.save(), "The changed report input is persisted before comparing live and reopened tracking states");
+            tryCompare(Session.project, "calculating", false, 15000, "Save adoption settles before the late publication failure");
+            const beforeDifferences = modelDifferences(BoundaryProof.fullModel(report), BoundaryProof.reopenedModel(location));
+            compare(beforeDifferences.length, 0, "The failure witness has identical live and freshly loaded report inputs after project Save; actual " + beforeDifferences.slice(0, 5).join("; "));
+            const settings = SettingsProof.text(location, "reports/report.edi");
+            publicationFailed.target = report;
+            publicationFailed.clear();
+            BoundaryProof.armFailure(location, data.kind);
+            group().saveReport();
+            tryCompare(publicationFailed, "count", 1, 15000, "The real Export action reports the forced late failure");
+            BoundaryProof.clearFailure();
+            const receipt = SettingsProof.text(location, "failure-receipt");
+            verify(receipt.includes(data.kind === "settings" ? "settings-rename" : "write-after-open"), "The app failure reaches its actual post-open write or staged settings rename: " + receipt);
+            const afterHtml = SettingsProof.fileFacts(location, reportName("html")), afterPdf = SettingsProof.fileFacts(location, reportName("pdf"));
+            const disk = BoundaryProof.reopenedStates(location);
+            const changedInputs = modelDifferences(BoundaryProof.fullModel(report), BoundaryProof.reopenedModel(location));
+            const failures = [];
+            if (changedInputs.length)
+                failures.push("After publication, live -> reopened input differences: " + changedInputs.slice(0, 5).join("; "));
+            if (data.kind === "html" && (afterHtml.sha256 !== html.sha256 || afterPdf.sha256 !== pdf.sha256))
+                failures.push("A failed first-format replacement changed prior report bytes");
+            if (data.kind === "pdf") {
+                if (afterPdf.sha256 !== pdf.sha256)
+                    failures.push("A failed PDF replacement changed its old bytes");
+                if (afterHtml.sha256 !== html.sha256 && !disk.some(row => row.name === reportName("html").split('/').pop() && row.state === "current"))
+                    failures.push("Successful HTML before failed PDF has no current persisted row");
+            }
+            if (data.kind === "settings" && SettingsProof.text(location, "reports/report.edi") !== settings)
+                failures.push("Failed row publication changed the prior settings bytes");
+            const live = report.savedReports.map(row => ({
+                        name: row.name,
+                        state: row.state
+                    }));
+            if (JSON.stringify(live) !== JSON.stringify(disk))
+                failures.push("Live and reopened row states differ: " + JSON.stringify(live) + " versus " + JSON.stringify(disk));
+            if (live.length !== original.length)
+                failures.push("A failure duplicated or dropped named tracking rows");
+            Approved.setScheme(Preferences, scheme);
+            publicationFailed.target = null;
+            compare(failures.length, 0, "Desktop and browser export preserve failed-format bytes, retain each successful format's row or roll back, and keep live/persisted state coherent on tracking failure; actual " + failures.join("; "));
+        }
         function test_export_path_rows_show_the_saved_file_state_data() {
-            return ["not-saved", "current", "out-of-date", "missing", "unticked"].map(state => ({tag: state, state: state}));
+            return ["not-saved", "current", "out-of-date", "missing", "unticked"].map(state => ({
+                        tag: state,
+                        state: state
+                    }));
         }
         function test_export_path_rows_show_the_saved_file_state(data) {
             prepare(undefined, "tests/fixtures/report_options/pairs");
@@ -160,7 +327,11 @@ Rectangle {
             Session.closeProject();
             verify(Session.openProject(location), "The stale or missing saved report is reopened from its real project folder");
             tryCompare(Session.project, "calculating", false, 15000, "Reopening settles before reading the saved report path state");
-            page = pageFactory.createObject(parent, {width: 1300, height: 1000, current: true});
+            page = pageFactory.createObject(parent, {
+                width: 1300,
+                height: 1000,
+                current: true
+            });
             verify(page !== null && waitForPolish(page), "The reopened Report page constructs its actual path rows");
             tryVerify(() => pathIsRed("html"), 2000, "The reopened stale or missing HTML report keeps its relative path and red state");
             compare(String(pathField("html").text), reportName("html"), "A missing or stale output retains the saved path rather than deleting its row");
@@ -169,8 +340,31 @@ Rectangle {
             saveReport();
             tryVerify(() => ["html", "pdf"].every(format => String(pathField(format).color) === String(EaStyle.Colors.themeForeground)), 15000, "Save report rewrites missing or stale files and returns both path rows to normal text");
         }
+        function test_path_field_geometry_accepts_a_disabled_dimmed_cif_control() {
+            webGroup = Qt.createQmlObject(`import QtQuick; import QtQuick.Controls
+                Rectangle { width: 260; height: 120; property bool collapsed: false
+                    Column { Repeater { model: ["HTML", "PDF", "CIF"]
+                        delegate: Item { required property string modelData
+                            width: 260; height: 40
+                            CheckBox { objectName: "report.writes" + (modelData === "HTML" ? "Html" : modelData === "PDF" ? "Pdf" : "Cif")
+                                width: 260; height: 40; text: modelData; enabled: modelData !== "CIF" }
+                            TextField { x: 60; y: 4; width: 200; height: 32; readOnly: true
+                                enabled: modelData !== "CIF"; opacity: 0.5
+                                placeholderText: "not saved yet"; placeholderTextColor: "#888888" }
+                        }
+                    } }
+                }`, parent);
+            verify(webGroup !== null && waitForPolish(webGroup), "The independent Qt control reaches three read-only fields including a genuinely disabled dimmed CIF control");
+            for (const format of ["html", "pdf", "cif"])
+                compare(pathField(format).x, 60, "The geometry observer reads the visible checkbox ink, allowing a wider unused logical click item: " + format);
+            compare(pathField("cif").enabled, false, "The independent CIF geometry control remains disabled");
+            compare(pathField("cif").opacity, 0.5, "The independent unticked CIF control remains visibly dimmed");
+        }
         function test_browser_path_rows_use_the_session_file_state_data() {
-            return ["not-saved", "current", "out-of-date"].map(state => ({tag: state, state: state}));
+            return ["not-saved", "current", "out-of-date"].map(state => ({
+                        tag: state,
+                        state: state
+                    }));
         }
         function test_browser_path_rows_use_the_session_file_state(data) {
             prepare(undefined, "tests/fixtures/report_options/pairs");
@@ -179,7 +373,7 @@ Rectangle {
             verify(desktop !== null, "The browser capability seam starts with the actual app's Report group and model");
             desktop.visible = false;
             webGroup = SettingsProof.webExport(page, Session.project.report, findChild(page, "report.preview"));
-            verify(webGroup !== null && SettingsProof.webAvailable, "The browser UI gate compiles the real resource with only its WebFiles.available capability operand set true");
+            verify(webGroup !== null && SettingsProof.webAvailable, "The web path-state seam creates the actual Export resource and real report model with browser capability true; actual error=" + SettingsProof.webExportError);
             verify(waitForPolish(webGroup), "The actual Export resource lays out under the browser capability seam");
             const html = pathField("html");
             compare(String(html.text), "", "A fresh browser session reads no saved path before an actual report save");
@@ -252,10 +446,15 @@ Rectangle {
             const charts = allCharts.filter(item => item.visible);
             const failures = [];
             if (charts.length !== (data.included ? witness.order.length : 0))
-                failures.push("recursive report.evolution items=" + allCharts.length + "; visible charts=" + charts.length + "; expected=" + (data.included ? witness.order.length : 0) + "; records=" + JSON.stringify(allCharts.map(item => ({visible: item.visible, width: item.width, height: item.height, series: item.reportSeries || item.reportShown}))));
+                failures.push("recursive report.evolution items=" + allCharts.length + "; visible charts=" + charts.length + "; expected=" + (data.included ? witness.order.length : 0) + "; records=" + JSON.stringify(allCharts.map(item => ({
+                            visible: item.visible,
+                            width: item.width,
+                            height: item.height,
+                            series: item.reportSeries || item.reportShown
+                        }))));
             for (let i = 0; i < charts.length; ++i) {
                 const chart = charts[i];
-                const series = chart.reportSeries || chart.reportShown;
+                const series = chart.reportSeries && typeof chart.reportSeries.name === "string" ? chart.reportSeries : chart.reportShown;
                 if (!series || series.name !== witness.order[i])
                     failures.push("chart " + i + " actual reportSeries parameter=" + JSON.stringify(series));
                 const points = chart.reportPoints;
@@ -268,19 +467,27 @@ Rectangle {
                 const at = chart.mapToItem(preview.contentItem, 0, 0);
                 if (i > 0) {
                     const previous = charts[i - 1].mapToItem(preview.contentItem, 0, 0);
-                    if (data.narrow && !(at.y >= previous.y + charts[i - 1].height - 1))
-                        failures.push("narrow chart " + i + " is not on the next whole row");
-                    if (!data.narrow && i % 2 === 1 && (Math.abs(at.y - previous.y) > 1 || at.x < previous.x + charts[i - 1].width - 1 || Math.abs(chart.width - charts[i - 1].width) > 1))
-                        failures.push("wide chart pair " + i + " does not share a row with equal half-column widths");
-                    if (!data.narrow && i % 2 === 0 && at.y <= previous.y)
-                        failures.push("wide chart " + i + " does not start the next row");
+                    if (at.y < previous.y + charts[i - 1].height - 1 || Math.abs(at.x - previous.x) > 1 || Math.abs(chart.width - charts[i - 1].width) > 1)
+                        failures.push("chart " + i + " does not occupy the next aligned whole row");
                 }
             }
-            compare(failures.length, 0, "The scan preview shows every free parameter's evolution in tab order, retains titles, axes, points and s.u. bars, uses two charts per wide row or one per narrow row, and leaves Evolution out only when excluded; actual " + failures.join("; "));
+            compare(failures.length, 0, "The scan preview shows every free parameter's evolution in tab order, retains titles, axes, points and s.u. bars, uses one chart per row at every width, and leaves Evolution out only when excluded; actual " + failures.join("; "));
         }
-        function test_browser_observer_reaches_independent_plot_geometry() {
+        function test_browser_observer_reaches_independent_plot_geometry_data() {
+            return [
+                {
+                    tag: "nested",
+                    file: "browser-positive.html"
+                },
+                {
+                    tag: "figure-root",
+                    file: "browser-positive-root.html"
+                }
+            ];
+        }
+        function test_browser_observer_reaches_independent_plot_geometry(data) {
             const reference = JSON.parse(SettingsProof.repoText("tests/fixtures/report_evolution/reference.json"));
-            const observed = SettingsProof.htmlEvolutionFacts(Probe.repoUrl("tests/fixtures/report_evolution/browser-positive.html"));
+            const observed = SettingsProof.htmlEvolutionFacts(Probe.repoUrl("tests/fixtures/report_evolution/" + data.file));
             verify(!observed.error, "The browser observer reaches the independent six-box HTML control: " + observed.error);
             for (const view of ["wide", "narrow"]) {
                 const facts = observed[view];
@@ -321,7 +528,7 @@ Rectangle {
             const failures = [];
             for (const view of ["wide", "narrow"]) {
                 const facts = observed[view];
-                verify(facts !== undefined && typeof facts.plots.length === "number", "The browser proves the " + view + " saved report's actual DOM and Plotly plot inventory");
+                verify(facts !== undefined && typeof facts.plots.length === "number", "The browser proves the " + view + " saved report's actual DOM and Plotly plot inventory; actual=" + JSON.stringify(observed));
                 if (facts.selectors !== 0)
                     failures.push(view + " parameter selectors=" + facts.selectors);
                 const plots = facts.plots, names = [];
@@ -334,8 +541,8 @@ Rectangle {
                     const plot = plots[i], trace = plot.traces[0], expected = witness.reference.points[i];
                     if (plot.traces.length !== 1 || !expected || expected.some((point, index) => ["x", "y"].some(key => Math.abs(trace[key][index] - point[key]) > 1e-9) || Math.abs((trace.error_y.array || [])[index] - point.su) > 1e-9) || !trace.error_y.visible)
                         failures.push(view + " chart " + i + " numeric coordinates/s.u. bars=" + JSON.stringify(plot.traces));
-                    if (!plot.xTitle || !plot.xTitle.includes("K") || !plot.yTitle)
-                        failures.push(view + " chart " + i + " axis name/temperature units=" + JSON.stringify([plot.xTitle, plot.yTitle]));
+                    if (!plot.xTitle || !plot.xTitle.includes("K") || (plot.title || plot.yTitle) !== witness.titles[i])
+                        failures.push(view + " chart " + i + " actual title=" + plot.title + "; y-axis title=" + plot.yTitle + "; expected parameter title=" + witness.titles[i] + "; x-axis/temperature units=" + plot.xTitle);
                     const box = plot.box;
                     if (box[2] <= 0 || box[3] <= 0 || plot.svgCount <= 0)
                         failures.push(view + " chart " + i + " has no nonempty actual vector/canvas drawing");
@@ -343,16 +550,12 @@ Rectangle {
                         failures.push(view + " chart " + i + " leaves the actual text viewport " + JSON.stringify(box));
                     if (i > 0) {
                         const previous = plots[i - 1].box;
-                        if (view === "narrow" && box[1] < previous[1] + previous[3] - 1)
-                            failures.push("narrow chart " + i + " does not occupy its own row");
-                        if (view === "wide" && i % 2 === 1 && (Math.abs(box[1] - previous[1]) > 1 || box[0] < previous[0] + previous[2] - 1 || Math.abs(box[2] - previous[2]) > 1))
-                            failures.push("wide chart pair " + i + " does not occupy equal half columns");
-                        if (view === "wide" && i % 2 === 0 && box[1] <= previous[1])
-                            failures.push("wide chart " + i + " does not start the next row");
+                        if (box[1] < previous[1] + previous[3] - 1 || Math.abs(box[0] - previous[0]) > 1 || Math.abs(box[2] - previous[2]) > 1)
+                            failures.push(view + " chart " + i + " does not occupy the next aligned whole row");
                     }
                 }
             }
-            compare(failures.length, 0, "The real saved HTML shows every included scan parameter in Evolution tab order with named axes and uncertainty bars, no parameter selector, two equal wide columns or one narrow column, and no excluded charts; actual " + failures.join("; "));
+            compare(failures.length, 0, "The real saved HTML shows every included scan parameter in Evolution tab order with named axes and uncertainty bars, no parameter selector, one chart per row at every width, and no excluded charts; actual " + failures.join("; "));
         }
         function test_pdf_keeps_all_evolution_charts_whole_data() {
             return [
@@ -388,18 +591,18 @@ Rectangle {
                 const draw = draws[i], image = draw.image, b = image.bounds, clip = image.clip;
                 if (b[0] < 25 * mm - 1 || b[2] > 185 * mm + 1 || b[1] < 25 * mm - 1 || b[3] > draw.box[3] - 25 * mm + 1 || b[0] < clip[0] - 0.1 || b[1] < clip[1] - 0.1 || b[2] > clip[2] + 0.1 || b[3] > clip[3] + 0.1)
                     failures.push("chart " + i + " is cut across a page/body clip: " + JSON.stringify(draw));
-                if (image.edge_width > 80 * mm + 1)
-                    failures.push("chart " + i + " exceeds its half of the 160 mm column");
+                if (image.edge_width > 160 * mm + 1)
+                    failures.push("chart " + i + " exceeds the 160 mm text column");
                 const pixel = Math.max(image.edge_width / image.pixels[0], image.edge_height / image.pixels[1]);
                 if (Math.abs(image.edge_width - image.edge_height * image.pixels[0] / image.pixels[1]) > 2 * pixel)
                     failures.push("chart " + i + " lost its actual raster aspect");
-                if (i % 2 === 1) {
+                if (i > 0) {
                     const previous = draws[i - 1];
-                    if (draw.page !== previous.page || Math.abs(b[1] - previous.image.bounds[1]) > 1 || b[0] < previous.image.bounds[2] - 1)
-                        failures.push("chart pair " + i + " is not kept whole together in two half-width columns");
+                    if (draw.page < previous.page || (draw.page === previous.page && (b[1] < previous.image.bounds[3] - 1 || Math.abs(b[0] - previous.image.bounds[0]) > 1)))
+                        failures.push("chart " + i + " does not occupy the next whole row or page");
                 }
             }
-            compare(failures.length, 0, "The saved scan PDF contains every included evolution chart, two per row, each whole within its page, preserving aspect, and no evolution images when excluded; actual " + failures.join("; "));
+            compare(failures.length, 0, "The saved scan PDF contains every included evolution chart, one per row, each whole within its page, preserving aspect, and no evolution images when excluded; actual " + failures.join("; "));
         }
         function test_export_rows_default_formats_and_disabled_actions() {
             prepare();
@@ -605,6 +808,42 @@ Rectangle {
             saveReport();
             tryVerify(() => SettingsProof.fileFacts(location, reportName("html")).bytes > 100, 15000, "I40 the geometry gate consumes an actual saved HTML report");
             checkHtmlGeometry(SettingsProof.text(location, reportName("html")));
+        }
+        function test_report_after_project_save_adopts_rounded_values_and_stays_current() {
+            const input = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project"));
+            const structureFile = "structures/lbco.edi";
+            const original = SettingsProof.text(input, structureFile);
+            verify(original.includes("_cell.length_a 3.88()"), "The save-adoption witness reaches the real authored cell token before changing it");
+            verify(SettingsProof.write(input, structureFile, original.replace("_cell.length_a 3.88()", "_cell.length_a 5.03641(0.0692616)")), "A hand-declared fitted cell has nontrivial IUCr rounding, independent of any fit output");
+            prepare("_edi.schema_version 3\n_report.html true\n_report.pdf false\n_report.html_offline false\n", input);
+            const project = Session.project, parameter = project.currentStructure.cell.lengthA;
+            compare(parameter.value, 5.03641, "The app first loads the unrounded authored cell value");
+            const undoBefore = project.canUndo;
+            [saveStarts, saveFinishes, savePublishes].forEach(spy => {
+                spy.target = project;
+                spy.clear();
+            });
+            verify(saveStarts.valid && saveFinishes.valid && savePublishes.valid, "The save observer reaches actual worker start/finish and publication signals, without using busy state as a count proxy");
+            verify(Session.save(), "The actual app project Save succeeds before saving its report");
+            tryCompare(project, "calculating", false, 15000, "The one post-save calculation settles before taking the report");
+            compare(parameter.value, 5.04, "The already-open cell view adopts the independent file-rounded value; actual=" + parameter.value);
+            compare(parameter.uncertainty, 0.07, "The already-open cell view adopts the upward IUCr s.u.; actual=" + parameter.uncertainty);
+            compare(saveStarts.count, 1, "Successful project Save starts exactly one real calculation; actual=" + saveStarts.count);
+            compare(saveFinishes.count, 1, "Successful project Save finishes exactly one real calculation; actual=" + saveFinishes.count);
+            compare(savePublishes.count, 1, "Successful project Save publishes its coherent saved-value calculation once; actual=" + savePublishes.count);
+            compare(project.modified, false, "File-value adoption leaves the project saved, rather than introducing a new edit");
+            compare(project.canUndo, undoBefore, "File-value adoption introduces no extra undo step");
+            saveReport();
+            tryVerify(() => SettingsProof.fileFacts(location, reportName("html")).bytes > 100, 15000, "The app really saves HTML immediately after the project Save");
+            const name = reportName("html"), savedLocation = location;
+            page.destroy();
+            page = null;
+            Session.closeProject();
+            prepare(undefined, savedLocation);
+            compare(Session.project.currentStructure.cell.lengthA.value, 5.04, "The reopened app sees precisely the saved cell used by its report");
+            tryVerify(() => !pathIsRed("html"), 2000, "The actual saved report remains current after reopening; actual path colour=" + pathField("html").color);
+            verify(SettingsProof.fileFacts(location, name).bytes > 100, "The current mark describes a real saved HTML file rather than a missing-file placeholder");
+            [saveStarts, saveFinishes, savePublishes].forEach(spy => spy.target = null);
         }
         function test_unsaved_content_edits_mark_saved_reports_stale_then_reopen_keeps_the_mark() {
             prepare();

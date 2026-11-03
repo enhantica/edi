@@ -11,7 +11,9 @@
 #include <QTimer>
 #include <QString>
 #include <QUrl>
+#include <QtQml/qqmllist.h>
 #include <QtQml/qqmlregistration.h>
+#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
@@ -24,13 +26,16 @@
 
 #include "analysis_view_model.hpp"
 #include "block_text.hpp"
+#include "category_list_model.hpp"
 #include "edi/edit.hpp"
 #include "edi/live_preview.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/model.hpp"
 #include "edi/scan.hpp"
 #include "edi/worker.hpp"
 #include "correlation_view_model.hpp"
 #include "evolution_view_model.hpp"
+#include "scan_view_model.hpp"
 #include "scan_session.hpp"
 #include "experiment_view_model.hpp"
 #include "fit_view_model.hpp"
@@ -42,6 +47,22 @@
 #include "structure_view_options.hpp"
 
 namespace edi_app {
+
+// A value and its standard uncertainty as the project's rule writes them, for QML: the value's text, the s.u.'s text
+// in the value's last digits, and the bracket; all empty when there is no s.u. to write.
+struct UncertaintyText {
+    Q_GADGET
+    QML_VALUE_TYPE(uncertaintyText)
+    Q_PROPERTY(QString value MEMBER value CONSTANT)
+    Q_PROPERTY(QString su MEMBER su CONSTANT)
+    Q_PROPERTY(QString bracket MEMBER bracket CONSTANT)
+
+   public:
+    QString value;
+    QString su;
+    QString bracket;
+    bool operator==(const UncertaintyText&) const = default;
+};
 
 class ParameterRegistry;
 
@@ -138,6 +159,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Start fitting, its progress and its result.
     Q_PROPERTY(edi_app::FitViewModel* fit READ fit CONSTANT)
     Q_PROPERTY(edi_app::BlockText* metadataText READ metadataText CONSTANT)
+    // `project.edi`'s categories with no designed group, each with a group made from the dictionary on the Project
+    // page's Extras (CategoryListModel).
+    Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
+    // The categories of the report's own file, reports/report.edi, for the Report page's groups.
+    Q_PROPERTY(edi_app::CategoryListModel* reportCategories READ reportCategories CONSTANT)
     // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0036 §7).
     Q_PROPERTY(edi_app::BlockText* reportText READ reportText CONSTANT)
     Q_PROPERTY(edi_app::BlockText* projectText READ projectText CONSTANT)
@@ -159,6 +185,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
     // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
     Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
+    // A scan's stacked patterns and 2D map (edi ADR-0041).
+    Q_PROPERTY(edi_app::ScanViewModel* scanViews READ scanViews CONSTANT)
+    // A project of several single crystals and nothing else: its experiments, in order, for the Stacked chart; empty
+    // otherwise.
+    Q_PROPERTY(QQmlListProperty<edi_app::ExperimentViewModel> singleCrystalExperiments READ
+                   singleCrystalExperimentList NOTIFY experimentModelsChanged)
     // The Correlations tab: the last fit's parameter correlations for the shown experiment.
     Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -168,12 +200,35 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A calculation is in flight or owed (edi ADR-0020): the pattern, the texts and the report show the last
     // published one until `recalculated`.
     Q_PROPERTY(bool calculating READ calculating NOTIFY calculatingChanged)
+    // A parameter's slider is held (the owner, 2026-10-25): the pattern charts hold their y range, widening it only
+    // when the calculated curve leaves it, and fit it once again when the slider is let go. A typed value or a
+    // spin-box step fits it at once.
+    Q_PROPERTY(bool adjusting READ adjusting WRITE setAdjusting NOTIFY adjustingChanged)
     // ADR-0017 §16: the structure view's options, one object for the open project, shared by the toolbar, the
     // Appearance group and every structure's view; a new project starts at the defaults.
     Q_PROPERTY(edi_app::StructureViewOptions* structureViewOptions READ structureViewOptions CONSTANT)
+    // ADR-0038: the palette the project's experiments and structures take their colours from (a token of
+    // edi::colour_scheme_from_name, the app's Preferences), and each block's position in it (edi::colour_positions):
+    // kept while the block exists, a new block taking the next free one, a loaded project's experiments first. The
+    // count is one past the last position in use, at least 1.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
+    Q_PROPERTY(QList<int> experimentColourPositions READ experimentColourPositions NOTIFY
+                   experimentColourPositionsChanged)
+    Q_PROPERTY(QList<int> structureColourPositions READ structureColourPositions NOTIFY
+                   structureColourPositionsChanged)
+    Q_PROPERTY(int colourPositionCount READ colourPositionCount NOTIFY colourPositionCountChanged)
+    // ADR-0031, ADR-0041: the scan views' settings a project keeps (the owner, 2026-10-26), in the app's settings keyed
+    // by its folder as its selection is, so it reopens with them: the Stacked spacing (a name of
+    // edi::stacked_spacing_names, Wide when none is kept) and the Map's direction (a name of
+    // edi::scan_map_direction_names, Auto when none is kept; the choice, never the direction it resolves to). A project
+    // not saved yet keeps them from its first save.
+    Q_PROPERTY(QString stackedSpacing READ stackedSpacing WRITE setStackedSpacing NOTIFY stackedSpacingChanged)
+    Q_PROPERTY(QString mapDirection READ mapDirection WRITE setMapDirection NOTIFY mapDirectionChanged)
 
    public:
-    ProjectViewModel(edi::Project project, QObject* parent);
+    // `colourScheme` is the palette the blocks first take their positions in: the one selected when the project opens,
+    // so an opened project's positions are those of that palette (ADR-0038).
+    ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme = QStringLiteral("earth"));
     ~ProjectViewModel() override;
 
     QString name() const;
@@ -195,19 +250,49 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setReportFormat(const QString& format, bool on);
     // Save report's record (ADR-0036 §7): the rows of the reports it wrote, each replacing the row of the same name,
     // then `reports/report.edi` written alone. Not an edit: no model value changes and nothing is marked modified.
-    // Throws when the file cannot be written.
+    // Throws when the file cannot be written, the open project's rows then as they were.
     void recordReportFiles(std::vector<edi::ReportFile> rows);
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;
     void setPatternDSpacing(bool on);
-    // A value and its standard uncertainty as the project's rule writes them: `value`, `su` and `bracket`
-    // texts; empty for a non-finite value or a zero or non-finite s.u.
-    Q_INVOKABLE QVariantMap suText(double value, double su) const;
+    // A value and its standard uncertainty as the project's rule writes them; empty texts for a non-finite value or a
+    // zero or non-finite s.u.
+    Q_INVOKABLE edi_app::UncertaintyText suText(double value, double su) const;
     QString path() const { return QString::fromStdString(project_->path); }
     bool modified() const { return modified_; }
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
     // project's directory; an empty string on success, else the core's message (also `lastError`).
     QString saveTo(const QString& directory);
+    // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
+    // (edi ADR-0052). Not a save and not an edit.
+    void workIn(const QString& folder);
+    // Why the project cannot be saved now (a fit is running), or empty.
+    QString saveRefusal() const;
+    // The project takes a save already written into `directory` (by itself, which wrote `metadata`): it works there
+    // and holds what the files hold. An empty string, else why not (also `lastError`).
+    QString adoptSave(const QString& directory, const edi::ProjectMetadata& metadata);
+    // What a scan project reads of a staged save's folder, read before the save is published: the folder's listing
+    // (its datasets, index and run) and the shown dataset's values over the staged copy.
+    struct StagedScan {
+        std::shared_ptr<ScanSession> listing;
+        QString refusal;  // why the listing refused, if it did: the scan shows it, the save goes ahead
+        std::optional<std::vector<edi::Edit::ScanValue>> shown;
+    };
+    // A processed scan's results written into a staged save's `directory`, and what the project will read there read
+    // into `scan`, before the save is published. Why not, or empty.
+    QString stageScan(const QString& directory, const edi::Project& staged, StagedScan& scan);
+    // The project takes a published staged save: `staged` is the staged copy, which already wrote `directory`. It works
+    // there and holds the staged values and results, and a scan the listing `scan` read. Reads and writes no file.
+    void takeStaged(const QString& directory, const edi::Project& staged, StagedScan scan);
+    // After a save adopted the template: a dataset read in flight took its values before, so it is dropped and the
+    // selected dataset read again over the adopted template; `shown` when the shown one was not built again already.
+    void viewAfterSave(bool shown);
+    // The model a save writes: a scan's template while a dataset is shown, else the project.
+    const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
+    // The project holds changes its place does not (the web app's kept unsaved state, reopened).
+    void markUnsaved() { setModified(true); }
+    // How many edits the project has had: a save that finishes later knows whether the project changed meanwhile.
+    quint64 revision() const { return revision_; }
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
@@ -215,6 +300,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     AnalysisViewModel* analysis() const { return analysis_; }
     FitViewModel* fit() const { return fit_; }
     BlockText* metadataText() const { return metadata_text_; }
+    CategoryListModel* categories() const { return categories_; }
+    CategoryListModel* reportCategories() const { return report_categories_; }
     BlockText* reportText() const { return report_text_; }
     BlockText* projectText() const { return project_text_; }
     ReportViewModel* report() const { return report_; }
@@ -230,11 +317,31 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan() const { return scan_; }
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
+    ScanViewModel* scanViews() const { return scan_views_; }
+    QList<ExperimentViewModel*> singleCrystalExperiments() const;
+    QQmlListProperty<ExperimentViewModel> singleCrystalExperimentList();
     CorrelationViewModel* correlations() const { return correlations_; }
     int templateIndex() const;
     QString lastError() const { return last_error_; }
     bool calculating() const { return calculating_; }
+    bool adjusting() const { return adjusting_; }
+    void setAdjusting(bool adjusting);
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
+    QList<int> experimentColourPositions() const { return experiment_colour_positions_; }
+    QList<int> structureColourPositions() const { return structure_colour_positions_; }
+    int colourPositionCount() const;
+    // The experiments' positions, then the structures'.
+    std::vector<std::size_t> colourPositions() const;
+    // A parameter's number in the Analysis table, from 1, by its unique name, as a correlation names it
+    // (`tb2ti2o7.atom_site.O1.fract_x`); 0 when the table does not list it. The correlation chart labels its ticks by
+    // these when the names are hidden (the owner, 2026-10-27).
+    Q_INVOKABLE int parameterNumber(const QString& uniqueName) const;
+    QString stackedSpacing() const { return stacked_spacing_; }
+    void setStackedSpacing(const QString& spacing);
+    QString mapDirection() const { return map_direction_; }
+    void setMapDirection(const QString& direction);
     const QList<StructureViewModel*>& structureModels() const { return structure_models_; }
     const QList<ExperimentViewModel*>& experimentModels() const { return experiment_models_; }
     const edi::Project& project() const { return *project_; }
@@ -243,10 +350,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void pinTimestamps(const QString& timestamp);
     // The files a save of the project writes (path relative to the project, text), from one save
     // per change; a writer refusal is thrown as its message.
+    struct SavedFiles {
+        std::vector<std::pair<std::string, std::string>> files;
+        std::string refusal;
+    };
     const std::vector<std::pair<std::string, std::string>>& savedFiles() const;
     std::string savedFile(const std::string& relative) const;
+    // The same file as a save writes it without calculating: what finds the generated groups.
+    std::string discoveredFile(const std::string& relative) const;
     SavedFile savedFileFunction() const;
 
+    // A Stacked view or Map says whether it is on screen: with every pattern waited for, a followed scan shows each
+    // file on it as the current dataset (edi ADR-0029, 8).
+    Q_INVOKABLE void setScanViewShown(QObject* view, bool shown);
     // D12: add blocks from `.edi` files; on a refusal nothing changes and `refused` names the reason.
     Q_INVOKABLE bool loadStructure(const QUrl& file);
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
@@ -266,6 +382,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Name points by position: the current experiment's line-segment points take ids from their positions
     // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
     Q_INVOKABLE bool namePointsByPosition();
+    // Id from order: the current experiment's polynomial or Chebyshev terms take their orders as ids
+    // (edi::order_term_ids), every reference following, as one edit with one Undo step.
+    Q_INVOKABLE bool nameTermsByOrder();
+    // Estimate: the current experiment's line-segment points replaced by crysta's estimate with the experiment's
+    // `_background_estimate` settings (edi::estimate_background, ADR-0040), numbered and fixed, as one edit with
+    // one Undo step. The summary and any warning go to the messages.
+    Q_INVOKABLE bool estimateBackground();
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
@@ -294,6 +417,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
     Q_INVOKABLE void undo();
+    // A Text tab's apply (edi ADR-0017 §7): the project file `file` replaced by `text`, read as opening the project
+    // reads it, on a copy (edi::project_with_file_text); the read project replaces this one in one Undo step. The
+    // refusal, with nothing changed, or empty.
+    Q_INVOKABLE QString applyText(const QString& file, const QString& text);
 
     // , the fit's three owner-thread steps (FitViewModel): the project took a fit's result — every view
     // publishes it, the pattern included, in one step; a frame of a running fit is drawn; the patterns go back
@@ -321,6 +448,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
     // again (edi ADR-0029).
     void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
+    // Every pattern with no pattern chart shown (the Stacked or the Map view): the file is presented by becoming the
+    // current dataset, counted once a frame is synchronised with it.
+    void followScanSelection(const std::string& file, std::uint64_t token);
+    // A Stacked view or Map is on screen (setScanViewShown).
+    bool scanViewShown() const { return !scan_views_shown_.empty(); }
+    // No dataset read is in flight or waits to be applied.
+    bool viewSettled() const { return !view_reading_ && view_applied_ == view_request_; }
     // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
     void releaseFollow() { followRendered(false); }
     // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
@@ -339,9 +473,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scanProcessed() const;
     // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
     void scanEnded(edi::FitStatus status, double seconds);
+    // Every pattern, display catches up: the patterns of a scan that ended are all drawn, and the shown dataset is
+    // shown as its row gives it (scanEnded waits for this).
+    void scanCaughtUp();
     // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
     QString scanRefusal() const;
     QString apply_setting(const edi::Edit& change) override;
+    QString apply_unread(const edi::Edit& change) override;
+    QString value_refusal(const edi::Parameter& parameter) const override;
+    QString free_refusal() const override;
+    QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
+                                  bool structural) override;
     // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
     QString apply_report_setting(const edi::Edit& change);
     // Writes report settings through the preview's settings door and publishes what they change.
@@ -363,25 +505,42 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentExperimentChanged();
     void canLoadStructureChanged();
     void canCreateExperimentChanged();
+    void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
+    // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
+    void edited();
     void refused(const QString& message);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
     void message(const QString& text);
+    // An information entry for the Messages: why an estimate with the calculated peaks set to auto subtracted or
+    // ignored them (the owner, 2026-10-20).
+    void information(const QString& text);
     void pathChanged();
     void modifiedChanged();
     // A calculation was published; each experiment's pattern holds its outcome (Session's message list).
     void recalculated();
     void calculatingChanged();
+    void adjustingChanged();
     // A calculation began, and ended, on the worker (edi::LivePreview's `calculating` and `calculated` hooks):
     // every one it runs, a superseded one included, in order, each before its publication or rejection. What
     // counts the calculations an input costs (the owner's one-calculation rule).
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void colourSchemeChanged();
+    void experimentColourPositionsChanged();
+    void structureColourPositionsChanged();
+    void colourPositionCountChanged();
+    // Any of the three changed: what the report and the experiments follow.
+    void colourPositionsChanged();
+    void stackedSpacingChanged();
+    void mapDirectionChanged();
     void calculationFinished();
 
    private:
+    // The information entry for an estimate with the calculated peaks set to auto (none for another setting).
+    void postAutoModelReason(const std::string& experiment, const std::string& reason);
     void publish(bool structural);
     // Each of these signals only what changed since it was last published (the owner's per-property
     // rule).
@@ -438,10 +597,16 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct FreeFlags {
         std::vector<std::pair<std::string, bool>> before;
     };
-    // Name points by position: the experiment's background point ids as they were, in order.
+    // Id from position or Id from order: the experiment's background point or term ids as they were, in order.
     struct PointIds {
         const edi::ExperimentBase* experiment = nullptr;
         std::vector<std::string> before;
+        bool terms = false;
+    };
+    // Estimate: the experiment's line-segment points, mode and their record as they were.
+    struct BackgroundPoints {
+        const edi::ExperimentBase* experiment = nullptr;
+        edi::BackgroundState before;
     };
     // A structure's or an experiment's rename: the block by its new name, and the name it had. The scan's results
     // before and after it, so its Undo puts back the same shared results rather than renamed copies.
@@ -452,8 +617,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         decltype(edi::FitResultRecord::scan_results) results_before;
         decltype(edi::FitResultRecord::scan_results) results_after;
     };
+    // A Text tab's apply: the project as it was.
+    struct AppliedText {
+        std::shared_ptr<const edi::Project> before;
+    };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
-                                    edi::StructuresUndo, FreeFlags, PointIds, BlockName, edi::ReportSettingsState>;
+                                    edi::StructuresUndo, FreeFlags, PointIds, BackgroundPoints, BlockName,
+                                    edi::ReportSettingsState, AppliedText>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.
@@ -487,6 +657,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool can_undo_ = false;
     void syncUndo();
     BlockText* metadata_text_;
+    CategoryListModel* categories_ = nullptr;
+    CategoryListModel* report_categories_ = nullptr;
+    void syncCategories();
+    // Every block's category list against its saved text as it is now.
+    void refreshCategories();
+    // The Structure view's options are the shown structure's: set from it when it is shown, saved to it on a change.
+    void showStructureView();
+    void keepStructureView();
+    bool showing_view_ = false;
     BlockText* report_text_ = nullptr;
     BlockText* project_text_;
     ReportViewModel* report_;
@@ -501,15 +680,28 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool scan_ = false;
     QString scan_refusal_;
     EvolutionViewModel* evolution_ = nullptr;
+    ScanViewModel* scan_views_ = nullptr;
     CorrelationViewModel* correlations_ = nullptr;
     // ADR-0034: each file's results as the run reports them go into the fit record (the model's, and the template's
     // while a dataset is shown), where the Correlations tab, Undo and a save find them; nothing keeps a second copy.
     void adoptScanFileResult(const std::string& file, const std::shared_ptr<const edi::ScanFileResult>& result);
     // The Correlations tab follows the last fit and the shown experiment.
     void syncCorrelations();
-    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's).
+    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's) and the positions
+    // its chart's style table takes.
     void syncPatternColours();
+    // Every block's position in the palette, after the blocks or the palette changed.
+    void syncColourPositions();
+    QString colour_scheme_ = QStringLiteral("earth");
+    QHash<const QObject*, std::size_t> colour_positions_;  // by the block's view-model
+    QList<int> experiment_colour_positions_, structure_colour_positions_;
+    // The scan views' kept settings: read when the project opens, written when changed and at every save.
+    void restoreViewSettings();
+    void storeViewSettings() const;
+    QString stacked_spacing_ = QStringLiteral("wide");
+    QString map_direction_ = QStringLiteral("auto");
     QStringList scan_columns_;
+    std::string scan_declaration_;  // what the session was listed from (scanDeclaration)
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;
     std::optional<edi::Project> scan_template_;
@@ -523,9 +715,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
     std::optional<std::pair<int, edi::FitFrame>> follow_frame_;
     // A followed file handed over while a scan runs, its dataset and name, until the chart is drawn with it: once
-    // its dataset is applied, the main window's second frame swap after that (the first may already have been
-    // under way); or never, when the read or the application fails, or the read or the drawing takes longer than
-    // kRenderWaitMs (edi ADR-0029).
+    // its dataset is applied, the main window's first frame synchronised after that, which draws it; or never, when
+    // the read or the application fails, or the read or the drawing takes longer than kRenderWaitMs (edi ADR-0029).
     // The receipt is bound to what was drawn: the followed dataset still in the model, and a shown chart that has
     // presented the pattern generation its application set (or a later one). Any other view request releases it.
     int follow_index_ = -1;
@@ -534,9 +725,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t follow_before_ = 0;  // the pattern generation when it was handed over
     std::uint64_t follow_generation_ = 0;
     bool follow_issuing_ = false;  // the followed file's own view request is being made
-    int render_swaps_ = -1;  // frame swaps still to see, -1 while nothing waits for one
+    bool follow_selection_ = false;  // the followed file is presented as the current dataset (followScanSelection)
+    std::set<const QObject*> scan_views_shown_;
+    int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
+    // Set while a followed file waits for its frame; cleared at the start of the next frame (QQuickWindow::afterAnimating).
+    std::atomic<bool> render_armed_{false};
+    // Set at the start of the frame that takes a followed file's points; the render thread clears it once that frame is
+    // synchronised, and the receipt follows on this thread.
+    std::atomic<bool> render_synced_{false};
+    // The hand-over that frame takes: the receipt carries it and counts only while it is still the current one.
+    std::atomic<std::uint64_t> render_token_{0};
     QTimer render_wait_;
     QMetaObject::Connection render_connection_;
+    QMetaObject::Connection render_sync_connection_;
     void handFollowed(int index, const std::string& file, std::uint64_t token);
     void awaitRender();
     bool presentedFollowed() const;
@@ -551,6 +752,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A Continue's earlier provenance (its rows stay), for the run's own at its end.
     std::optional<ScanSession::Run> previous_run_;
     void loadScan();
+    // The scan declaration (_sequential_fit and its extraction rules) as one string, and the result columns it names.
+    static std::string scanDeclaration(const edi::Project& project);
+    static QStringList scanColumns(const edi::Project& project);
+    void makeScanSession();
+    // A changed declaration lists, reads and admits the scan again (publish).
+    void followScanDeclaration();
     // Re-derives whether the scan modes can run (a single template experiment and a listed scan).
     void syncScanAdmission();
     // Shows a dataset: its projection is read off the GUI thread and applied when ready. `refresh`: again, even
@@ -569,6 +776,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void applyDatasetView(std::uint64_t request, int index, DatasetView view);
     // The values a dataset is shown with: the template's, with its results row's over them.
     std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row) const;
+    // The same over `from`, read with `index`'s columns.
+    std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
+                                                    const edi::ScanResultIndex& index) const;
     void syncDatasets();
     // One dataset's row in the lists (its outcome, extracted values, template tag).
     void syncDataset(int index);
@@ -578,11 +788,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The results' outdated state, from their provenance against the template.
     void syncOutOfDate();
     void markTemplateChanged();
-    struct SavedFiles {
-        std::vector<std::pair<std::string, std::string>> files;
-        std::string refusal;
-    };
     mutable std::optional<SavedFiles> saved_files_;
+    mutable std::optional<SavedFiles> discovered_files_;  // a save of a copy: nothing calculated (discoveredFile)
     // ADR-0020: the calculation runs on the worker; every edit goes through the preview, which publishes a
     // result only if no newer request exists. Deliveries arrive here by a queued call, so every model write
     // and every signal of a publication happens on this object's (the GUI) thread. The preview goes first
@@ -591,7 +798,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::unique_ptr<edi::LivePreview> preview_;
     bool pending_structural_ = false;
     bool calculating_ = false;
+    bool adjusting_ = false;
     bool modified_ = false;
+    quint64 revision_ = 0;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;

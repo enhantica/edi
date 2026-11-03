@@ -8,8 +8,12 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+#include "edi/project_archive.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
+#include "edi/fittability.hpp"
 #include "edi/validation.hpp"
 
 #include "edi/parameter_spec.hpp"
@@ -19,6 +23,7 @@
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
+#include "number_token.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -31,6 +36,7 @@
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -52,6 +58,16 @@ namespace fs = std::filesystem;
 
 namespace edi {
 namespace {
+
+// "'a', 'b' or 'c'", for a refusal naming the tokens a field admits.
+std::string spelled_tokens(const std::vector<std::string>& tokens) {
+    std::string spelled;
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        spelled += i == 0 ? "" : (i + 1 == tokens.size() ? " or " : ", ");
+        spelled += "'" + tokens[i] + "'";
+    }
+    return spelled;
+}
 
 // ---- STAR/CIF parsing -----------------------------------------------------------------------------
 
@@ -254,10 +270,56 @@ struct Token {
     bool quoted = false;
 };
 
+// A CIF2 list value, `[a b [c d]]`, read from its opening `[` at `index` to its matching `]` as one token: brackets
+// nest, quoted strings inside are skipped whole, and line ends and comments are white space between its values (the
+// CIF2 grammar). Only a CIF 2.0 file, whose first line is `#\#CIF_2.0`, may hold one: in CIF 1.1 `[` cannot open a
+// value. The token keeps the list's text; edi reads the categories that carry lists (crysta's per-structure
+// curves) as unmodelled.
+Token list_token(const std::string& text, std::size_t& index, bool cif2, const std::string& where) {
+    if (!cif2) {
+        fail_syntax(where, "list-without-cif2-heading",
+                    "a value opening with [ is a CIF2 list, which needs the CIF 2.0 heading #\\#CIF_2.0 on the "
+                    "file's first line");
+    }
+    const std::size_t begin = index;
+    const std::size_t size = text.size();
+    int depth = 0;
+    while (index < size) {
+        const char character = text[index];
+        if (character == '\'' || character == '"') {
+            const std::size_t close = text.find(character, index + 1);
+            if (close == std::string::npos) {
+                break;
+            }
+            index = close + 1;
+            continue;
+        }
+        if (character == '#' && (text[index - 1] == '[' || is_space(text[index - 1]))) {
+            while (index < size && text[index] != '\n') {
+                ++index;
+            }
+            continue;
+        }
+        if (character == '[') {
+            ++depth;
+        } else if (character == ']' && --depth == 0) {
+            ++index;
+            if (index < size && !is_space(text[index])) {
+                fail_syntax(where, "list-runs-into-value",
+                            "a list value runs into '" + text.substr(index, 20) + "' after its closing ]");
+            }
+            return {text.substr(begin, index - begin), false};
+        }
+        ++index;
+    }
+    fail_syntax(where, "unterminated-list", "a list value opened with [ does not close");
+}
+
 std::vector<Token> tokenize(const std::string& text, const std::string& where) {
     std::vector<Token> tokens;
     std::size_t index = 0;
     const std::size_t size = text.size();
+    const bool cif2 = text.starts_with("#\\#CIF_2.0") && (size == 10 || is_space(text[10]));
     while (index < size) {
         const char character = text[index];
         // A `;` in the first column of a line opens a CIF multi-line text field; its value runs to
@@ -311,6 +373,10 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
             tokens.push_back({token, true});
             continue;
         }
+        if (character == '[') {
+            tokens.push_back(list_token(text, index, cif2, where));
+            continue;
+        }
         std::string token;  // bare token
         while (index < size && !is_space(text[index])) {
             token += text[index++];
@@ -338,10 +404,29 @@ bool is_tag(const Token& token) {
 
 // Parse a file's single `data_` block. A second `data_` header ends the parse (these files are one
 // block each). Any dangling tag/row (truncation) fails closed. `require_data` is relaxed for the
-// analysis section, which is a headerless STAR body (no `data_` line).
-Block parse_block(const std::string& text, const std::string& where, bool require_data = true) {
+// analysis section, which is a headerless STAR body (no `data_` line). An older spelling of a name
+// is read as the current one, and with `every_name` (a structure or experiment block) any name crysta's
+// dictionary lists, `.edi` or CIF, in either notation, as crysta reads it. Two spellings of one item are
+// refused, naming both; with `every_name` so is one name repeated with another value, or a repeated
+// loop column. Other files keep their own precedence for a repeated line, and a repeated schema line
+// reads as before.
+Block parse_block(const std::string& text, const std::string& where, bool require_data = true,
+                  bool every_name = false) {
     const std::vector<Token> tokens = tokenize(text, where);
     Block block;
+    // The spelling each item was first given in, and a single item's value, by its lowercase current name.
+    std::map<std::string, std::pair<std::string, std::optional<std::string>>> given;
+    const auto current = [&where, &given, every_name](const std::string& tag, const std::optional<std::string>& value) {
+        std::string name = detail::current_edi_name(tag, every_name);
+        std::string key = name;
+        std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        const auto [first, added] = given.emplace(std::move(key), std::pair{tag, value});
+        const bool other_value = !value.has_value() || first->second.second != value;
+        if (!added && first->first != "_edi.schema_version" && (first->second.first != tag || (every_name && other_value))) {
+            fail_syntax(where, "both-spellings", "a block carries both " + first->second.first + " and " + tag + ", one item");
+        }
+        return name;
+    };
     bool have_data = false;
     std::size_t index = 0;
     const std::size_t size = tokens.size();
@@ -363,7 +448,7 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             std::vector<std::string> tags;
             std::vector<std::vector<std::string>> rows;
             while (index < size && is_tag(tokens[index])) {
-                tags.push_back(tokens[index].text);
+                tags.push_back(current(tokens[index].text, std::nullopt));
                 ++index;
             }
             if (tags.empty()) {
@@ -383,13 +468,12 @@ Block parse_block(const std::string& text, const std::string& where, bool requir
             }
             block.loops.emplace_back(std::move(tags), std::move(rows), where);
         } else if (is_tag(token)) {
-            const std::string tag = token.text;
-            ++index;
-            if (index >= size || is_control(tokens[index])) {
-                fail_syntax(where, "tag-without-value", "tag " + tag + " has no value (truncated)");
+            if (index + 1 >= size || is_control(tokens[index + 1])) {
+                fail_syntax(where, "tag-without-value", "tag " + token.text + " has no value (truncated)");
             }
-            block.items.emplace_back(tag, tokens[index].text);
-            ++index;
+            const std::string tag = current(token.text, tokens[index + 1].text);
+            block.items.emplace_back(tag, tokens[index + 1].text);
+            index += 2;
         } else {
             fail_syntax(where, "unexpected-token", "unexpected token '" + token.text + "'");
         }
@@ -418,30 +502,19 @@ int fractional_digits(const std::string& mantissa) {
     return digits;
 }
 
-// Parse a complete numeric token into a double, locale-independently AND portably.
-//
-// An istringstream imbued with the classic ("C") locale always reads a '.' decimal separator
-// whatever the process locale is, so the same project bytes parse identically under, say, a
-// comma-decimal de_DE — the bug the previous std::stod implementation carried, since strtod follows
-// LC_NUMERIC and would have rejected `449.2719` there. Requiring eof() means the WHOLE token was
-// consumed, so trailing characters (including a `(su)` suffix, which is a model-parameter grammar and
-// never valid in a data column) fail rather than silently truncating.
-//
-// Deliberately NOT std::from_chars: libc++ (Apple/macOS AppleClang) `= delete`s the floating-point
-// overload, so that call does not compile there — it broke crysta's own macOS CI (PR #21), and edi
-// ships osx-arm64/osx-64. This mirrors crysta's `parse_double` (src/core/edi.cpp) device-for-device,
-// which also means the accepted grammar (leading '+', exponents, `.5`, `1.`) is identical by
-// construction rather than by argument.
+// Parse a complete numeric token into a double, the same value on every platform and in every locale
+// (number_token.hpp, the engine loader's rule): the whole token is read, so trailing characters
+// (including a `(su)` suffix, which is a model-parameter grammar and never valid in a data column) fail
+// rather than silently truncating. A subnormal value reads as itself; a nonzero value below the
+// smallest double is refused, as is one beyond the largest.
 double to_double(const std::string& text, const std::string& where) {
     double value = 0.0;
-    std::istringstream stream(text);
-    stream.imbue(std::locale::classic());
-    stream >> value;
-    if (stream.fail() || !stream.eof()) {
-        fail_schema(where, "invalid-number", "invalid number '" + text + "'");
+    const detail::NumberToken read = detail::read_number(text, value);
+    if (read == detail::NumberToken::underflow) {
+        fail_domain(where, "number-underflow", "the value of '" + text + "' is below the smallest double");
     }
-    if (!std::isfinite(value)) {
-        fail_domain(where, "non-finite-number", "non-finite number '" + text + "'");
+    if (read != detail::NumberToken::ok) {
+        fail_schema(where, "invalid-number", "invalid number '" + text + "'");
     }
     return value;
 }
@@ -605,6 +678,7 @@ const std::string& loop_cell(const Loop& loop, const std::vector<std::string>& r
 // reject nothing across every `.edi` in the acceptance vehicle and in edi's fixtures.
 const std::set<std::string>& covered_categories() {
     static const std::set<std::string> categories{"absorption", "atom_site", "atom_site_aniso", "background",
+                                                  "extinction",
                                                   "cell",       "data_range",       "experiment_type",
                                                   "instrument",  "linked_structure",
                                                   "fit_parameter", "peak", "preferred_orientation",
@@ -616,6 +690,10 @@ const std::set<std::string>& known_covered_tags() {
     static const std::set<std::string> tags{
         // _absorption
         "_absorption.abscor1", "_absorption.abscor2", "_absorption.mu_r", "_absorption.type",
+        // _extinction (a single crystal's)
+        "_extinction.type", "_extinction.mosaic_distribution", "_extinction.domain_radius",
+        "_extinction.mosaic_spread", "_extinction.crystal_radius", "_extinction.coefficient",
+        "_extinction.coefficient_11", "_extinction.coefficient_22", "_extinction.coefficient_33", "_extinction.coefficient_12", "_extinction.coefficient_13", "_extinction.coefficient_23",
         // _atom_site
         "_atom_site.adp_iso", "_atom_site.adp_type", "_atom_site.fract_x", "_atom_site.fract_y",
         "_atom_site.fract_z", "_atom_site.id", "_atom_site.multiplicity", "_atom_site.occupancy",
@@ -636,20 +714,30 @@ const std::set<std::string>& known_covered_tags() {
         "_data_range.time_of_flight_max", "_data_range.time_of_flight_min",
         "_data_range.time_of_flight_step", "_data_range.two_theta_max",
         "_data_range.two_theta_min", "_data_range.two_theta_step",
-        // _experiment_type (the four typed axes)
+        // _experiment_type (the four typed axes and the description, ADR-0054)
         "_experiment_type.beam_mode", "_experiment_type.radiation_probe",
         "_experiment_type.sample_form", "_experiment_type.scattering_type",
+        "_experiment_type.dimensionality", "_experiment_type.polarisation",
         // _instrument
         "_instrument.calib_d_to_tof_linear", "_instrument.calib_d_to_tof_offset",
         "_instrument.calib_d_to_tof_quadratic", "_instrument.calib_d_to_tof_reciprocal",
         "_instrument.calib_sample_displacement", "_instrument.calib_sample_transparency",
         "_instrument.calib_twotheta_offset", "_instrument.setup_monochromator_twotheta",
         "_instrument.setup_polarization_coefficient", "_instrument.setup_twotheta_bank",
-        "_instrument.setup_wavelength",
+        "_instrument.setup_wavelength", "_instrument.setup_wavelength_2",
+        "_instrument.setup_wavelength_2_to_1_ratio", "_instrument.name", "_instrument.facility",
         // _data_source (the plain-data file the measured data was read from)
         "_data_source.file_name",
+        // _background_estimate (the automatic background estimate's settings, ADR-0040)
+        "_background_estimate.in_peaks", "_background_estimate.inputs_digest", "_background_estimate.max_terms",
+        "_background_estimate.method", "_background_estimate.mode", "_background_estimate.n_points",
+        "_background_estimate.points_digest",
+        "_background_estimate.smoothness", "_background_estimate.tolerance", "_background_estimate.use_model",
+        "_background_estimate.width",
         // _linked_structure
         "_linked_structure.enabled", "_linked_structure.scale", "_linked_structure.structure_id",
+        // The derived Hill-Howard weight fraction crysta's writer adds: never read back.
+        "_linked_structure.weight_fraction",
         // _preferred_orientation (diffraction-lib's category, CW only)
         "_preferred_orientation.index_h", "_preferred_orientation.index_k",
         "_preferred_orientation.index_l", "_preferred_orientation.march_r",
@@ -716,6 +804,16 @@ void validate_known_tags(const Block& block, const std::string& where) {
 Structure structure_from_block(const Block& block, const std::string& where) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
+    // The cell, the space group and the bond search are one row each: such an item written as a loop column would be
+    // dropped on read.
+    for (const Loop& loop : block.loops) {
+        for (const std::string& tag : loop.tags) {
+            const std::string category = detail::one_row_category(tag);
+            if (category == "_cell" || category == "_space_group" || category == "_geom") {
+                fail_schema(where, "scalar-item-in-loop", tag + " is a scalar item, not a loop column");
+            }
+        }
+    }
     Structure structure;
     structure.name = block.name;
     structure.space_group.name_h_m = block.require("_space_group.name_h_m", where);
@@ -889,6 +987,18 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         }
         structure.scattering_lengths_fm = std::move(declared);
     }
+    // How the Structure view shows it, as saved: each value one its dictionary entry admits, as crysta reads it.
+    std::map<std::string, std::string> view;
+    for (const auto& [tag, value] : block.items) {
+        if (tag.starts_with("_structure_view.")) {
+            const std::string item = tag.substr(std::string_view("_structure_view.").size());
+            if (const std::string why = detail::structure_view_refusal(item, value); !why.empty()) {
+                fail_schema(where, "invalid-structure-view", why);
+            }
+            view[item] = value;
+        }
+    }
+    structure.view = std::move(view);
     return structure;
 }
 
@@ -969,12 +1079,13 @@ constexpr std::array<const char*, 19> kTofFamilyTags{{
     "_instrument.calib_d_to_tof_offset", "_instrument.calib_d_to_tof_linear",
     "_instrument.calib_d_to_tof_quadratic", "_instrument.calib_d_to_tof_reciprocal",
 }};
-constexpr std::array<const char*, 13> kCwlFamilyTags{{
+constexpr std::array<const char*, 15> kCwlFamilyTags{{
     "_peak.broad_gauss_u", "_peak.broad_gauss_v", "_peak.broad_gauss_w", "_peak.broad_lorentz_x",
     "_peak.broad_lorentz_y", "_peak.mixing_eta_0", "_peak.mixing_eta_1",
     "_instrument.setup_wavelength", "_instrument.calib_twotheta_offset",
     "_instrument.calib_sample_displacement", "_instrument.calib_sample_transparency",
     "_instrument.setup_polarization_coefficient", "_instrument.setup_monochromator_twotheta",
+    "_instrument.setup_wavelength_2", "_instrument.setup_wavelength_2_to_1_ratio",
 }};
 
 const char* family_name(BeamModeEnum mode) {
@@ -1043,12 +1154,14 @@ ResolvedExperimentKind resolve_experiment_kind(const Block& block, const std::st
 // restricted to the implementations edi-core reads.
 void validate_experiment_selectors(const Block& block, const std::string& peak_type,
                                    BeamModeEnum mode, const std::string& where) {
-    // A `_peak` item is one value. Written as a loop column it would be dropped on read, and a
-    // profile's declaration would vanish before the rules below see it.
+    // An item of a one-row category (a peak coefficient, an instrument value) is one value. Written as a loop column it
+    // would be dropped on read, and a declaration would vanish before the rules below see it.
     for (const Loop& loop : block.loops) {
         for (const std::string& tag : loop.tags) {
-            if (tag.rfind("_peak.", 0) == 0) {
-                fail_schema(where, "peak-item-in-loop", tag + " is a scalar item, not a loop column");
+            const std::string category = detail::one_row_category(tag);
+            if (!category.empty()) {
+                fail_schema(where, category == "_peak" ? "peak-item-in-loop" : "scalar-item-in-loop",
+                            tag + " is a scalar item, not a loop column");
             }
         }
     }
@@ -1203,6 +1316,10 @@ void validate_experiment_selectors(const Block& block, const std::string& peak_t
         }
         const Loop* position_loop = block.loop_with("_background.position");
         const Loop* intensity_loop = block.loop_with("_background.intensity");
+        // No point loop at all is an empty background, as crysta writes and reads one.
+        if (position_loop == nullptr && intensity_loop == nullptr) {
+            return;
+        }
         if (position_loop == nullptr || intensity_loop == nullptr) {
             fail_schema(where, "background-loop-incomplete",
                         "line-segment background requires a loop declaring both "
@@ -1245,9 +1362,13 @@ void validate_experiment_selectors(const Block& block, const std::string& peak_t
                                    : "chebyshev background cannot declare the polynomial "
                                      "_background.origin");
         }
+        // An automatic estimate derives an absent origin or domain end from the data on its first
+        // calculation (ADR-0040), so only a manual background must declare them.
+        const std::string* estimate_mode = block.find("_background_estimate.mode");
+        const bool derived = estimate_mode != nullptr && *estimate_mode == "auto";
         const char* const required[] = {"_background.origin", "_background.x_min", "_background.x_max"};
         for (const char* tag : polynomial ? std::span(required, 1) : std::span(required + 1, 2)) {
-            if (block.find(tag) == nullptr) {
+            if (!derived && block.find(tag) == nullptr) {
                 fail_schema(where, "missing-background-constant",
                             *background_type + " background requires " + tag);
             }
@@ -1347,7 +1468,32 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     axis_values.reserve(loop->rows.size());
     intensity_meas.reserve(loop->rows.size());
     intensity_meas_su.reserve(loop->rows.size());
+    // An excluded row has no calculated or background value and writes `.` there, with its real
+    // d-spacing (ADR-0044); an older file's `0.` would read as a real zero.
+    const int status_column = loop->column("_data.calc_status");
+    std::size_t row_number = 0;
     for (const std::vector<std::string>& row : loop->rows) {
+        ++row_number;
+        if (status_column >= 0 && row[static_cast<std::size_t>(status_column)] == "excl") {
+            for (const char* tag : {"_data.intensity_calc", "_data.intensity_bkg"}) {
+                const int column = loop->column(tag);
+                if (column >= 0 && row[static_cast<std::size_t>(column)] != ".") {
+                    fail_schema(where, "excluded-row-value",
+                                "_data row " + std::to_string(row_number) + " is excluded but has " + tag +
+                                    " '" + row[static_cast<std::size_t>(column)] +
+                                    "'; an excluded row writes '.' there");
+                }
+            }
+            const int d_column = loop->column("_data.d_spacing");
+            if (d_column >= 0) {
+                const std::string& d = row[static_cast<std::size_t>(d_column)];
+                if (d != "." && !(to_double(d, where) > 0.0)) {
+                    fail_schema(where, "excluded-row-value",
+                                "_data row " + std::to_string(row_number) + " is excluded but has _data.d_spacing '" +
+                                    d + "'; an excluded row writes its d-spacing there");
+                }
+            }
+        }
         const double sigma = to_double(loop_cell(*loop, row, kDataSigma, where), where);
         // A non-positive sigma is an infinite (or negative) weight: it would poison the fit silently
         // rather than fail, so it is rejected at the boundary like any other unusable measurement.
@@ -1369,9 +1515,340 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
     return data;
 }
 
+// ADR-0040: the `_background_estimate` settings. A blank (absent, `.` or `?`) item is the default; any other
+// value is checked as the Python setters check it.
+// ADR-0054: an experiment's description, each item as declared: `1d` the only
+// dimensionality, `unpolarised` the polarisation of a neutron experiment and `.` that of an X-ray
+// one, the instrument and facility any text (`?` an unknown one).
+void read_description(const Block& block, ExperimentBase& experiment, const std::string& where) {
+    if (const std::string* dimensionality = block.find("_experiment_type.dimensionality")) {
+        if (*dimensionality != "1d") {
+            fail_schema(where, "unknown-dimensionality",
+                        "_experiment_type.dimensionality '" + *dimensionality + "' is not a known token (expected '1d')");
+        }
+        experiment.experiment_type.dimensionality = *dimensionality;
+    }
+    if (const std::string* polarisation = block.find("_experiment_type.polarisation")) {
+        const bool xray = experiment.experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
+        if (*polarisation != (xray ? "." : "unpolarised")) {
+            fail_schema(where, "unknown-polarisation",
+                        "_experiment_type.polarisation '" + *polarisation + "' does not fit " +
+                            (xray ? "an X-ray experiment (expected '.')" : "a neutron experiment (expected 'unpolarised')"));
+        }
+        experiment.experiment_type.polarisation = *polarisation;
+    }
+    if (const std::string* name = block.find("_instrument.name")) {
+        experiment.instrument.name = *name;
+    }
+    if (const std::string* facility = block.find("_instrument.facility")) {
+        experiment.instrument.facility = *facility;
+    }
+}
+
+void read_background_estimate(const Block& block, ExperimentBase& experiment, const std::string& where) {
+    const auto item = [&block](const char* tag) -> std::optional<std::string> {
+        const std::string* value = block.find(tag);
+        if (value == nullptr || *value == "." || *value == "?") {
+            return std::nullopt;
+        }
+        return *value;
+    };
+    const auto refuse = [&where](const char* tag, const std::string& value, const char* need) {
+        throw IoError(std::string(tag) + " is '" + value + "' (need " + need + "): " + where);
+    };
+    const auto positive = [&](const char* tag) -> std::optional<double> {
+        const std::optional<std::string> value = item(tag);
+        if (!value) {
+            return std::nullopt;
+        }
+        char* end = nullptr;
+        const double number = std::strtod(value->c_str(), &end);
+        if (end == value->c_str() || *end != '\0' || !(number > 0.0) || !std::isfinite(number)) {
+            refuse(tag, *value, "a positive number");
+        }
+        return number;
+    };
+    if (const std::optional<std::string> mode = item("_background_estimate.mode")) {
+        if (*mode != "manual" && *mode != "auto") {
+            refuse("_background_estimate.mode", *mode, "manual or auto");
+        }
+        experiment.background_estimate_mode = *mode;
+    }
+    if (const std::optional<std::string> method = item("_background_estimate.method")) {
+        const std::vector<std::string> methods = background_estimator_methods();
+        if (std::find(methods.begin(), methods.end(), *method) == methods.end()) {
+            refuse("_background_estimate.method", *method, "auto, snip, arpls or fabc");
+        }
+        experiment.background_estimate_method = *method;
+    }
+    // Then the setters' checks: finite, and a width every window computed from it can hold.
+    const auto setting = [&](const char* tag, const auto& set) {
+        try {
+            set();
+        } catch (const std::invalid_argument& error) {
+            throw IoError(std::string(tag) + ": " + error.what() + ": " + where);
+        }
+    };
+    const std::optional<double> width = positive("_background_estimate.width");
+    setting("_background_estimate.width", [&] { set_background_estimate_width(experiment, width); });
+    const std::optional<double> smoothness = positive("_background_estimate.smoothness");
+    setting("_background_estimate.smoothness",
+            [&] { set_background_estimate_smoothness(experiment, smoothness); });
+    const std::optional<double> tolerance = positive("_background_estimate.tolerance");
+    setting("_background_estimate.tolerance", [&] { set_background_estimate_tolerance(experiment, tolerance); });
+    if (const std::optional<std::string> in_peaks = item("_background_estimate.in_peaks")) {
+        if (*in_peaks != "move" && *in_peaks != "drop") {
+            refuse("_background_estimate.in_peaks", *in_peaks, "move or drop");
+        }
+        experiment.background_estimate_in_peaks = *in_peaks;
+    }
+    if (const std::optional<std::string> n_points = item("_background_estimate.n_points")) {
+        char* end = nullptr;
+        const long long count = std::strtoll(n_points->c_str(), &end, 10);
+        if (end == n_points->c_str() || *end != '\0' || count < 2 || count > std::numeric_limits<int>::max()) {
+            refuse("_background_estimate.n_points", *n_points, "an integer of at least 2");
+        }
+        experiment.background_estimate_n_points = static_cast<int>(count);
+    }
+    if (const std::optional<std::string> max_terms = item("_background_estimate.max_terms")) {
+        char* end = nullptr;
+        const long long count = std::strtoll(max_terms->c_str(), &end, 10);
+        if (end == max_terms->c_str() || *end != '\0' || count < 1 || count > 30) {
+            refuse("_background_estimate.max_terms", *max_terms, "an integer from 1 to 30");
+        }
+        experiment.background_estimate_max_terms = static_cast<int>(count);
+    }
+    // auto, subtract or ignore; a file saved when the item was a boolean reads true as subtract and false as ignore.
+    if (const std::optional<std::string> use_model = item("_background_estimate.use_model")) {
+        const std::string choice = *use_model == "true" ? "subtract" : *use_model == "false" ? "ignore" : *use_model;
+        if (choice != "auto" && choice != "subtract" && choice != "ignore") {
+            refuse("_background_estimate.use_model", *use_model, "auto, subtract or ignore");
+        }
+        experiment.background_estimate_use_model = choice;
+    }
+    // What the points came from and were; settle_loaded_background_estimate reads them once the points are loaded.
+    const auto digest = [&](const char* tag) -> std::uint64_t {
+        const std::optional<std::string> value = item(tag);
+        if (!value) {
+            return 0;
+        }
+        try {
+            return parse_background_digest(*value);
+        } catch (const std::invalid_argument&) {
+            refuse(tag, *value, "16 lowercase hex digits");
+        }
+        return 0;
+    };
+    experiment.background_estimate_inputs = digest("_background_estimate.inputs_digest");
+    experiment.background_estimate_points = digest("_background_estimate.points_digest");
+}
+
+// The `_linked_structure` loop of a powder or a single crystal: every row a linked structure with its scale and an
+// optional enabled flag (absent = taking part).
+std::vector<std::shared_ptr<LinkedStructure>> read_linked_structures(const Block& block, const std::string& where) {
+    const Loop* linked = block.loop_with("_linked_structure.structure_id");
+    std::vector<std::shared_ptr<LinkedStructure>> links;
+    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
+        auto link = std::make_shared<LinkedStructure>();
+        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
+        read_into(link->scale,
+                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
+                                  where),
+                  where);
+        if (linked->column("_linked_structure.enabled") >= 0) {
+            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
+            if (token != "true" && token != "false") {
+                fail_schema(where, "invalid-linked-structure-enabled",
+                            "_linked_structure.enabled is '" + token + "', expected true or false");
+            }
+            link->enabled = token == "true";
+        }
+        links.push_back(std::move(link));
+    }
+    return links;
+}
+
+// A single crystal's block: its type axes, the wavelength (constant wavelength), the extinction,
+// the linked structure and the measured `_refln` rows. It has no profile, background or pattern.
+BraggPdExperiment single_crystal_from_block(const Block& block, const std::string& where) {
+    BraggPdExperiment experiment;
+    experiment.name = block.name;
+    experiment.experiment_type.sample_form = SampleFormEnum::SINGLE_CRYSTAL;
+    const std::string* beam = block.find("_experiment_type.beam_mode");
+    if (beam == nullptr || (*beam != kBeamModeTof && *beam != kBeamModeCwl)) {
+        fail_schema(where, "unknown-beam-mode",
+                    "a single crystal declares _experiment_type.beam_mode 'constant wavelength' or "
+                    "'time-of-flight'");
+    }
+    const bool cw = *beam == kBeamModeCwl;
+    experiment.experiment_type.beam_mode =
+        cw ? BeamModeEnum::CONSTANT_WAVELENGTH : BeamModeEnum::TIME_OF_FLIGHT;
+    // A category only a powder pattern has is refused by name before anything is read, as crysta refuses it; it would
+    // otherwise be dropped silently and lost on save.
+    const auto refuse_pattern_category = [&where](const std::string& tag) {
+        if (const std::string found = single_crystal_forbidden_tag(tag); !found.empty()) {
+            fail_schema(where, "pattern-category-on-single-crystal",
+                        found + " on a single crystal, which has no powder pattern");
+        }
+    };
+    for (const auto& item : block.items) {
+        refuse_pattern_category(item.first);
+    }
+    for (const Loop& loop : block.loops) {
+        for (const std::string& tag : loop.tags) {
+            refuse_pattern_category(tag);
+        }
+    }
+    if (const std::string* probe = block.find("_experiment_type.radiation_probe")) {
+        if (*probe != "neutron") {
+            fail_schema(where, "unknown-radiation-probe",
+                        "a single crystal is a neutron experiment; _experiment_type.radiation_probe is '" +
+                            *probe + "'");
+        }
+        experiment.experiment_type.radiation_probe = RadiationProbeEnum::NEUTRON;
+    }
+    if (const std::string* scattering = block.find("_experiment_type.scattering_type")) {
+        if (*scattering != "bragg") {
+            fail_schema(where, "unknown-scattering-type",
+                        "a single crystal is a Bragg experiment; _experiment_type.scattering_type is '" +
+                            *scattering + "'");
+        }
+        experiment.experiment_type.scattering_type = ScatteringTypeEnum::BRAGG;
+    }
+    if (const std::string* source = block.find("_scattering_source.neutron_scattering_length")) {
+        experiment.neutron_scattering_length = *source;
+    }
+    read_description(block, experiment, where);
+    if (cw) {
+        experiment.instrument.setup_wavelength =
+            require_spec_parameter(block, spec::instrument_wavelength, where);
+        if (const std::string domain =
+                detail::wavelength_domain_message(experiment.instrument.setup_wavelength->value);
+            !domain.empty()) {
+            fail_domain(where, "wavelength-domain", domain);
+        }
+    }
+    // The type, none without one, then the items of that type alone (edi ADR-0049).
+    const std::string* type = block.find("_extinction.type");
+    const std::string extinction_type = type != nullptr ? *type : "none";
+    const std::vector<std::string> types = extinction_type_tokens();
+    if (std::find(types.begin(), types.end(), extinction_type) == types.end()) {
+        fail_schema(where, "unknown-extinction-type",
+                    "_extinction.type '" + extinction_type + "' is not a known type (expected " +
+                        spelled_tokens(types) + ")");
+    }
+    apply_extinction_type(experiment.extinction, extinction_type);
+    // The observed-reflection threshold (edi ADR-0050), each item absent until declared.
+    try {
+        if (const std::string* sigma = block.find("_reflns.threshold_sigma")) {
+            experiment.reflns_threshold_sigma = detail::read_threshold_sigma(*sigma, "_reflns.threshold_sigma");
+        }
+        if (const std::string* basis = block.find("_reflns.threshold_basis")) {
+            experiment.reflns_threshold_basis = detail::read_threshold_basis(*basis);
+        }
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "reflns-threshold", error.what());
+    }
+    if (const std::string* distribution = block.find("_extinction.mosaic_distribution")) {
+        const std::vector<std::string> distributions = mosaic_distribution_tokens();
+        if (std::find(distributions.begin(), distributions.end(), *distribution) == distributions.end()) {
+            fail_schema(where, "unknown-mosaic-distribution",
+                        "_extinction.mosaic_distribution '" + *distribution + "' is not known (expected " +
+                            spelled_tokens(distributions) + ")");
+        }
+        if (!experiment.extinction.mosaic_distribution) {
+            fail_schema(where, "extinction-item-of-another-type",
+                        "_extinction.mosaic_distribution is not an item of _extinction.type '" + extinction_type + "'");
+        }
+        experiment.extinction.mosaic_distribution = *distribution;
+    }
+    for (const auto& [field, specification] :
+         {std::pair{&experiment.extinction.domain_radius, &spec::extinction_domain_radius},
+          std::pair{&experiment.extinction.mosaic_spread, &spec::extinction_mosaic_spread},
+          std::pair{&experiment.extinction.crystal_radius, &spec::extinction_crystal_radius},
+          std::pair{&experiment.extinction.coefficient, &spec::extinction_coefficient},
+          std::pair{&experiment.extinction.coefficient_11, &spec::extinction_coefficient_11},
+          std::pair{&experiment.extinction.coefficient_22, &spec::extinction_coefficient_22},
+          std::pair{&experiment.extinction.coefficient_33, &spec::extinction_coefficient_33},
+          std::pair{&experiment.extinction.coefficient_12, &spec::extinction_coefficient_12},
+          std::pair{&experiment.extinction.coefficient_13, &spec::extinction_coefficient_13},
+          std::pair{&experiment.extinction.coefficient_23, &spec::extinction_coefficient_23}}) {
+        std::optional<Parameter> found = find_spec_parameter(block, *specification, where);
+        if (!found) {
+            continue;
+        }
+        if (!field->has_value()) {
+            fail_schema(where, "extinction-item-of-another-type",
+                        std::string(specification->edi_names[0]) + " is not an item of _extinction.type '" +
+                            extinction_type + "'");
+        }
+        // The tensor's cross terms x12, x13 and x23 multiply hk, hl and kl and may be negative.
+        const bool signed_term = field == &experiment.extinction.coefficient_12 ||
+                                 field == &experiment.extinction.coefficient_13 ||
+                                 field == &experiment.extinction.coefficient_23;
+        const double value = found->value.get();
+        if (!std::isfinite(value) || (!signed_term && !(value >= 0.0))) {
+            fail_domain(where, "extinction-domain",
+                        std::string(specification->edi_names[0]) +
+                            (signed_term ? " must be finite" : " must be finite and not negative"));
+        }
+        *field = *found;
+    }
+    try {
+        experiment.linked_structures.assign(read_linked_structures(block, where));
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "duplicate-id", error.what());
+    }
+    // A single crystal without reflection rows (no `_refln` loop, or one without rows) is data-free, as a powder
+    // one that declares no measured column is; loading its reflections makes it measured.
+    const Loop* refln = block.loop_with("_refln.index_h");
+    ReflnDataBase rows;
+    if (refln == nullptr || refln->rows.empty()) {
+        experiment.reflections = std::move(rows);
+        experiment.calculation_only = true;
+        return experiment;
+    }
+    const auto index = [&](const std::vector<std::string>& row, const char* tag) {
+        const std::string& text = loop_cell(*refln, row, tag, where);
+        const double value = to_double(text, where);
+        if (value != std::floor(value) || std::abs(value) > 1.0e6) {
+            fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+        }
+        return static_cast<std::int32_t>(value);
+    };
+    std::vector<std::int32_t> h;
+    std::vector<std::int32_t> k;
+    std::vector<std::int32_t> l;
+    std::vector<double> meas;
+    std::vector<double> su;
+    std::vector<double> wavelength;
+    for (const std::vector<std::string>& row : refln->rows) {
+        h.push_back(index(row, "_refln.index_h"));
+        k.push_back(index(row, "_refln.index_k"));
+        l.push_back(index(row, "_refln.index_l"));
+        meas.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas", where), where));
+        su.push_back(to_double(loop_cell(*refln, row, "_refln.intensity_meas_su", where), where));
+        if (!cw) {
+            wavelength.push_back(to_double(loop_cell(*refln, row, "_refln.wavelength", where), where));
+        }
+    }
+    rows.index_h = std::move(h);
+    rows.index_k = std::move(k);
+    rows.index_l = std::move(l);
+    rows.intensity_meas = std::move(meas);
+    rows.intensity_meas_su = std::move(su);
+    rows.wavelength = std::move(wavelength);
+    experiment.reflections = std::move(rows);
+    return experiment;
+}
+
 BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
+    if (const std::string* form = block.find("_experiment_type.sample_form");
+        form != nullptr && *form == "single crystal") {
+        return single_crystal_from_block(block, where);
+    }
     BraggPdExperiment experiment;
     experiment.name = block.name;
     // Resolve the experiment kind from the `_peak.type` family cross-validated against
@@ -1443,9 +1920,11 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
          : item == ScatteringSourceItem::XRAY_DISPERSION ? experiment.xray_dispersion
                                                          : experiment.neutron_scattering_length) = *value;
     }
+    read_description(block, experiment, where);
     if (const std::string* file = block.find("_data_source.file_name")) {
         experiment.data_file = *file;
     }
+    read_background_estimate(block, experiment, where);
     validate_experiment_selectors(block, resolved.peak_type, resolved.mode, where);
     experiment.peak.cutoff_fwhm = to_double(block.require("_peak.cutoff_fwhm", where), where);
 
@@ -1531,18 +2010,25 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         // loader refuses it.
         const bool xray =
             experiment.experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
+        // The K-alpha doublet's pair follows the same rule.
         for (const auto& [slot, polarization_spec] :
              {std::pair{&experiment.instrument.setup_polarization_coefficient,
                         &spec::instrument_polarization_coefficient},
               std::pair{&experiment.instrument.setup_monochromator_twotheta,
-                        &spec::instrument_monochromator_twotheta}}) {
+                        &spec::instrument_monochromator_twotheta},
+              std::pair{&experiment.instrument.setup_wavelength_2, &spec::instrument_wavelength_2},
+              std::pair{&experiment.instrument.setup_wavelength_2_to_1_ratio,
+                        &spec::instrument_wavelength_2_to_1_ratio}}) {
             std::optional<Parameter> found = find_spec_parameter(block, *polarization_spec, where);
             if (!xray) {
                 if (found) {
+                    const bool doublet = polarization_spec == &spec::instrument_wavelength_2 ||
+                                         polarization_spec == &spec::instrument_wavelength_2_to_1_ratio;
                     fail_schema(where, "xray-instrument-on-non-xray",
                                 std::string(polarization_spec->edi_names[0]) +
-                                    " is declared on a non-X-ray experiment — the monochromator "
-                                    "polarization is X-ray only");
+                                    " is declared on a non-X-ray experiment — the " +
+                                    (doublet ? "K-alpha doublet" : "monochromator polarization") +
+                                    " is X-ray only");
                 }
                 continue;
             }
@@ -1574,6 +2060,26 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
                 fail_domain(where, "polarization-domain",
                             "_instrument.setup_monochromator_twotheta is " + shown(monochromator) +
                                 ", outside its domain [0, 180] degrees");
+            }
+            // The doublet's domain, in crysta's words: the ratio in [0, 1], the second wavelength
+            // finite and not negative, and positive whenever the ratio is not 0.
+            const double wavelength_2 = experiment.instrument.setup_wavelength_2->value;
+            const double ratio = experiment.instrument.setup_wavelength_2_to_1_ratio->value;
+            if (!(ratio >= 0.0 && ratio <= 1.0)) {
+                fail_domain(where, "doublet-domain",
+                            "_instrument.setup_wavelength_2_to_1_ratio is " + shown(ratio) +
+                                ", outside its domain [0, 1]");
+            }
+            if (!(wavelength_2 >= 0.0) || !std::isfinite(wavelength_2)) {
+                fail_domain(where, "doublet-domain",
+                            "_instrument.setup_wavelength_2 is " + shown(wavelength_2) +
+                                ", outside its domain [0, inf) angstroms");
+            }
+            if (ratio != 0.0 && wavelength_2 == 0.0) {
+                fail_domain(where, "doublet-domain",
+                            "_instrument.setup_wavelength_2_to_1_ratio is " + shown(ratio) +
+                                " but _instrument.setup_wavelength_2 is 0: a second component needs "
+                                "a wavelength");
             }
         }
     } else {
@@ -1688,30 +2194,10 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         }
     }
 
-    // Every row is a linked structure (phase) with its scale and an optional enabled flag (absent
-    // = taking part). No loop: the experiment links no structure (one made before any structure existed, or whose
-    // structures were removed); it calculates as background alone and cannot be fitted.
-    const Loop* linked = block.loop_with("_linked_structure.structure_id");
-    std::vector<std::shared_ptr<LinkedStructure>> links;
-    for (const std::vector<std::string>& row : linked != nullptr ? linked->rows : std::vector<std::vector<std::string>>{}) {
-        auto link = std::make_shared<LinkedStructure>();
-        link->structure_id = loop_cell(*linked, row, "_linked_structure.structure_id", where);
-        read_into(link->scale,
-                  parse_parameter(loop_cell(*linked, row, spec::linked_structure_scale.edi_names[0], where),
-                                  where),
-                  where);
-        if (linked->column("_linked_structure.enabled") >= 0) {
-            const std::string token = loop_cell(*linked, row, "_linked_structure.enabled", where);
-            if (token != "true" && token != "false") {
-                fail_schema(where, "invalid-linked-structure-enabled",
-                            "_linked_structure.enabled is '" + token + "', expected true or false");
-            }
-            link->enabled = token == "true";
-        }
-        links.push_back(std::move(link));
-    }
+    // No loop: the experiment links no structure (one made before any structure existed, or whose structures were
+    // removed); it calculates as background alone and cannot be fitted.
     try {
-        experiment.linked_structures.assign(std::move(links));
+        experiment.linked_structures.assign(read_linked_structures(block, where));
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "duplicate-id", error.what());
     }
@@ -1816,6 +2302,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         experiment.excluded_regions.assign(std::move(regions));
     }
 
+    experiment.carried_calculation =
+        block_has_tag(block, "_data.intensity_calc") || block_has_tag(block, "_refln.intensity_calc");
+
     // The file's reflections, kept as read (model.hpp ExperimentBase::carried_reflections).
     if (const Loop* refln = block.loop_with("_refln.id"); refln != nullptr) {
         CarriedLoop carried;
@@ -1849,6 +2338,11 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
                     "_background.x_min must be below _background.x_max");
     }
     if (const Loop* terms = block.loop_with("_background.coef"); terms != nullptr) {
+        // Every term row carries its id, as every loop row does; the id names the coefficient.
+        if (terms->column("_background.id") < 0) {
+            fail_domain(where, "background-term-id-missing",
+                        "the background term loop declares no _background.id: an id is required on every term row");
+        }
         std::set<int> orders;
         for (const auto& row : terms->rows) {
             PolynomialTerm term;
@@ -1871,9 +2365,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             read_into(term.coef,
                       parse_parameter(loop_cell(*terms, row, spec::background_coef.edi_names[0], where), where),
                       where);
-            // The term's id names its coefficient; a file without ids gives each its ordinal, as crysta's reader does.
-            term.id = terms->column("_background.id") >= 0 ? loop_cell(*terms, row, "_background.id", where)
-                                                            : std::to_string(experiment.background_terms.size() + 1);
+            term.id = loop_cell(*terms, row, "_background.id", where);
             experiment.background_terms.push_back(std::move(term));
         }
     }
@@ -1947,24 +2439,8 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
             experiment.calculation_only = true;
         }
     }
+    settle_loaded_background_estimate(experiment);  // ADR-0040: once the points and data are loaded
     return experiment;
-}
-
-std::vector<fs::path> sorted_edi_files(const fs::path& directory) {
-    std::vector<fs::path> files;
-    if (!fs::is_directory(directory)) {
-        return files;
-    }
-    for (const auto& entry : fs::directory_iterator(directory)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".edi") {
-            files.push_back(entry.path());
-        }
-    }
-    std::sort(files.begin(), files.end(),
-              [](const fs::path& left, const fs::path& right) {
-                  return left.filename().string() < right.filename().string();
-              });
-    return files;
 }
 
 // ---- .edi writing ---------------------------------------------------------------------------------
@@ -1981,13 +2457,11 @@ std::string format_fixed(double value, int ndec) {
     return std::string(buffer);
 }
 
-// Parse a fixed-point string back to a double, locale-independently (the round-trip probe below).
+// Parse a fixed-point string back to a double as the loader reads it (the round-trip probe below), so a
+// subnormal value round-trips at the same decimals on every platform.
 double parse_fixed(const std::string& text) {
     double out = 0.0;
-    std::istringstream stream(text);
-    stream.imbue(std::locale::classic());
-    stream >> out;
-    return (stream.fail() || !stream.eof()) ? std::numeric_limits<double>::quiet_NaN() : out;
+    return detail::read_number(text, out) == detail::NumberToken::ok ? out : std::numeric_limits<double>::quiet_NaN();
 }
 
 // Minimal number of decimals for which `format_fixed(value, ndec)` round-trips `value` exactly —
@@ -2165,14 +2639,17 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
                 instrument("setup_wavelength", &*experiment.instrument.setup_wavelength);
             }
             // Crysta's instrument[2]/[3], after the pair (its storage order);: then the X-ray
-            // polarization pair, its instrument[4]/[5].
+            // polarization pair, its instrument[4]/[5], and the K-alpha doublet, [6]/[7].
             for (const auto& [name, shift] :
                  {Named{"calib_sample_displacement", &experiment.instrument.calib_sample_displacement},
                   Named{"calib_sample_transparency", &experiment.instrument.calib_sample_transparency},
                   Named{"setup_polarization_coefficient",
                         &experiment.instrument.setup_polarization_coefficient},
                   Named{"setup_monochromator_twotheta",
-                        &experiment.instrument.setup_monochromator_twotheta}}) {
+                        &experiment.instrument.setup_monochromator_twotheta},
+                  Named{"setup_wavelength_2", &experiment.instrument.setup_wavelength_2},
+                  Named{"setup_wavelength_2_to_1_ratio",
+                        &experiment.instrument.setup_wavelength_2_to_1_ratio}}) {
                 if (*shift) {
                     instrument(name, &**shift);
                 }
@@ -2191,6 +2668,30 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         }
         if (experiment.absorption.mu_r) {
             absorption("mu_r", &*experiment.absorption.mu_r);
+        }
+        // A single crystal's extinction, after absorption (crysta fit_state.hpp's order).
+        if (experiment.extinction.domain_radius) {
+            add(prefix + "domain_radius", prefix + "extinction.domain_radius", &*experiment.extinction.domain_radius);
+        }
+        if (experiment.extinction.mosaic_spread) {
+            add(prefix + "mosaic_spread", prefix + "extinction.mosaic_spread", &*experiment.extinction.mosaic_spread);
+        }
+        if (experiment.extinction.crystal_radius) {
+            add(prefix + "crystal_radius", prefix + "extinction.crystal_radius", &*experiment.extinction.crystal_radius);
+        }
+        if (experiment.extinction.coefficient) {
+            add(prefix + "coefficient", prefix + "extinction.coefficient", &*experiment.extinction.coefficient);
+        }
+        for (const auto& [name, term] :
+             {std::pair{"coefficient_11", &experiment.extinction.coefficient_11},
+              std::pair{"coefficient_22", &experiment.extinction.coefficient_22},
+              std::pair{"coefficient_33", &experiment.extinction.coefficient_33},
+              std::pair{"coefficient_12", &experiment.extinction.coefficient_12},
+              std::pair{"coefficient_13", &experiment.extinction.coefficient_13},
+              std::pair{"coefficient_23", &experiment.extinction.coefficient_23}}) {
+            if (*term) {
+                add(prefix + name, prefix + "extinction." + name, &**term);
+            }
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
@@ -2370,537 +2871,135 @@ std::string element_from_type_symbol(const std::string& type_symbol) {
     return end == 0 ? type_symbol : type_symbol.substr(0, end);
 }
 
-// Classic IUCr CIF structure reader (`_cell_*` / `_atom_site_*` underscore tags) — the core
-// reader this task's necessity sweep removed with its binding, RESTORED per review-32 F1 with
-// two task-era adaptations: `esd` is spelled `uncertainty`, and each site keeps the ADP type the
-// file gives it.
-Structure structure_from_cif_block(const Block& block, const std::string& where) {
-    Structure structure;
-    structure.name = block.name;
-    // A CIF spells the bond increment `incr`; the model and a
-    // `.edi` file spell it `inc`. Both CIF forms are read: the DDLm data name and its classic alias.
-    for (const auto& [dotted, classic, field] :
-         {std::tuple<const char*, const char*, detail::Written<std::optional<double>> Geom::*>{
-              "_geom.min_bond_distance_cutoff", "_geom_min_bond_distance_cutoff",
-              &Geom::min_bond_distance_cutoff},
-          {"_geom.bond_distance_incr", "_geom_bond_distance_incr", &Geom::bond_distance_inc}}) {
-        const std::string* text = block.find(dotted);
-        if (text == nullptr) {
-            text = block.find(classic);
-        }
-        if (text != nullptr) {
-            const double value = to_double(*text, where);
-            if (value < 0.0) {
-                fail_domain(where, "out-of-range",
-                            std::string(dotted) + " '" + *text + "' must be finite and >= 0");
-            }
-            structure.geom.*field = value;
-        }
-    }
-    if (const std::string* symbol = block.find("_space_group_name_H-M_alt")) {
-        structure.space_group.name_h_m = *symbol;
-    } else {
-        structure.space_group.name_h_m = block.require("_symmetry_space_group_name_H-M", where);
-    }
-    read_into(structure.cell.length_a,
-              parse_parameter(block.require("_cell_length_a", where), where), where);
-    read_into(structure.cell.length_b,
-              parse_parameter(block.require("_cell_length_b", where), where), where);
-    read_into(structure.cell.length_c,
-              parse_parameter(block.require("_cell_length_c", where), where), where);
-    read_into(structure.cell.angle_alpha,
-              parse_parameter(block.require("_cell_angle_alpha", where), where), where);
-    read_into(structure.cell.angle_beta,
-              parse_parameter(block.require("_cell_angle_beta", where), where), where);
-    read_into(structure.cell.angle_gamma,
-              parse_parameter(block.require("_cell_angle_gamma", where), where), where);
-    require_realizable_cell(structure.cell, where);
-
-    const Loop* loop = block.loop_with("_atom_site_label");
-    if (loop == nullptr) {
-        throw IoError(where + ": missing _atom_site loop (not a CIF structure)");
-    }
-
-    // The tensors, in the form the loop spells (U_ij, B_ij or beta_ij), keyed by site label;
-    // a site with one keeps it in that type (ADR-0027).
-    struct CifTensor {
-        std::string type;
-        AtomSiteAniso tensor;
-    };
-    std::map<std::string, CifTensor> tensors;
-    static const std::array<std::pair<const char*, std::array<const char*, 6>>, 3> kForms{{
-        {"Uani",
-         {"_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33",
-          "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23"}},
-        {"Bani",
-         {"_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33",
-          "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23"}},
-        {"beta",
-         {"_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33",
-          "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"}},
-    }};
-    // A tensor column is the label or any component the three forms spell.
-    const auto is_tensor = [](const std::string& tag) {
-        if (tag == "_atom_site_aniso_label") {
-            return true;
-        }
-        return std::any_of(kForms.begin(), kForms.end(), [&tag](const auto& form) {
-            return std::find(form.second.begin(), form.second.end(), tag) != form.second.end();
-        });
-    };
-    if (const Loop* aniso = block.tensor_loop(is_tensor, "_atom_site_aniso_label", where)) {
-        bool found_form = false;
-        for (const auto& [type, tags] : kForms) {
-            if (aniso->column(tags[0]) < 0) {
-                continue;
-            }
-            found_form = true;
-            for (const auto& row : aniso->rows) {
-                const std::string& label = loop_cell(*aniso, row, "_atom_site_aniso_label", where);
-                CifTensor held{type, AtomSiteAniso{}};
-                held.tensor.id = label;
-                // The three diagonal columns are required; an off-diagonal column the file leaves
-                // out is zero.
-                const std::vector<Parameter*> components = held.tensor.parameters();
-                for (std::size_t k = 0; k < 6; ++k) {
-                    const std::string cell = k >= 3 && aniso->column(tags[k]) < 0
-                                                 ? std::string("0")
-                                                 : loop_cell(*aniso, row, tags[k], where);
-                    read_into(*components[k], parse_parameter(cell, where), where);
-                }
-                tensors.emplace(label, std::move(held));
-            }
-            break;
-        }
-        if (!found_form) {
-            throw IoError(where + ": the _atom_site_aniso loop has no U_11, B_11 or beta_11 column");
-        }
-    }
-
-    std::vector<std::pair<std::string, std::string>> declared_types;
-    std::set<std::string> consumed;
-    for (const auto& row : loop->rows) {
-        AtomSite site;
-        site.id = loop_cell(*loop, row, "_atom_site_label", where);
-        site.type_symbol =
-            element_from_type_symbol(loop_cell(*loop, row, "_atom_site_type_symbol", where));
-        const int wyckoff = loop->column("_atom_site_Wyckoff_symbol");
-        if (wyckoff >= 0) {
-            site.wyckoff_letter = row[static_cast<std::size_t>(wyckoff)];
-        }
-        read_into(site.fract_x,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_x", where), where),
-                  where);
-        read_into(site.fract_y,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_y", where), where),
-                  where);
-        read_into(site.fract_z,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_z", where), where),
-                  where);
-        read_into(site.occupancy,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_occupancy", where), where),
-                  where);
-        // The site takes the type _atom_site_adp_type declares, its numbers converted to it from the
-        // form the file spells them in (below, once the structure is complete). A site that declares
-        // none takes its tensor row's form (the row states the type), else the default, Biso, a
-        // U_iso_or_equiv value converted to B.
-        // A declared type outside the five, an anisotropic type without a tensor row, an isotropic
-        // type with one, and a tensor row naming no site refuse (ADR-0027).
-        const int b_iso_column = loop->column("_atom_site_B_iso_or_equiv");
-        const int u_iso_column = loop->column("_atom_site_U_iso_or_equiv");
-        const int type_column = loop->column("_atom_site_adp_type");
-        const auto given = [&row](int column) {
-            return column >= 0 && row[static_cast<std::size_t>(column)] != "?" &&
-                   row[static_cast<std::size_t>(column)] != ".";
-        };
-        std::string type = "Biso";
-        if (given(b_iso_column)) {
-            read_into(site.adp_iso,
-                      parse_parameter(row[static_cast<std::size_t>(b_iso_column)], where), where);
-        } else if (given(u_iso_column)) {
-            read_into(site.adp_iso,
-                      parse_parameter(row[static_cast<std::size_t>(u_iso_column)], where), where);
-            type = "Uiso";
-        }
-        const std::string label = site.id.value();
-        const std::string declared =
-            given(type_column) ? row[static_cast<std::size_t>(type_column)] : std::string();
-        const auto tensor = tensors.find(label);
-        if (!declared.empty()) {
-            const std::string at = where + ": site '" + label + "'";
-            if (!is_adp_type(declared)) {
-                throw IoError(at + " declares _atom_site_adp_type '" + declared +
-                              "', which is not one of Biso, Uiso, Bani, Uani or beta");
-            }
-            if (is_anisotropic_adp_type(declared) && tensor == tensors.end()) {
-                throw IoError(at + " declares the anisotropic type '" + declared +
-                              "' but has no _atom_site_aniso row");
-            }
-            if (!is_anisotropic_adp_type(declared) && tensor != tensors.end()) {
-                throw IoError(at + " declares the isotropic type '" + declared +
-                              "' but has an _atom_site_aniso row");
-            }
-            declared_types.emplace_back(label, declared);
-        } else if (tensor == tensors.end() && type != "Biso") {
-            declared_types.emplace_back(label, "Biso");  // the default; the column gave U
-        }
-        if (tensor != tensors.end()) {
-            type = tensor->second.type;
-            structure.atom_site_aniso.push_back(tensor->second.tensor);
-            consumed.insert(label);
-        }
-        site.adp_type = type;
-        structure.atom_sites.push_back(std::move(site));
-    }
-    for (const auto& [label, tensor] : tensors) {
-        if (!consumed.contains(label)) {
-            throw IoError(where + ": the _atom_site_aniso row '" + label + "' names no _atom_site row");
-        }
-    }
-    // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it. Then
-    // each declared type, converted from the form the file spells it in, uncertainties with it.
-    if (!structure.atom_site_aniso.empty()) {
-        sync_atom_site_aniso(structure);
-    }
-    for (const auto& [label, declared] : declared_types) {
-        for (const auto& site : structure.atom_sites) {
-            if (site->id.value() == label) {
-                change_adp_type(structure, *site, declared);
-            }
-        }
-    }
-    return structure;
-}
-
-Structure structure_from_edi_text(const std::string& text) {
-    const std::string where = "<from_cif_str>";
-    const Block block = parse_block(text, where);
-    // Vocabulary dispatch: the dot-form `.edi` schema and classic IUCr CIF are both accepted,
-    // exactly one per document, decided by which cell vocabulary is present.
-    if (block.find("_cell.length_a") != nullptr) {
-        return structure_from_block(block, where);
-    }
-    if (block.find("_cell_length_a") != nullptr) {
-        return structure_from_cif_block(block, where);
-    }
-    throw IoError(where +
-                  ": neither `.edi` (_cell.length_a) nor CIF (_cell_length_a) cell vocabulary "
-                  "present");
-}
-
-// ---- classic-CIF experiment translation (experiment half) ----------------------------
+// ---- One way in for structure and experiment files ------------------------------------------
 //
-// The classic vocabulary is diffraction-lib's own `cif_names` tables at the frozen anchor
-// (`datablocks/experiment/categories/*` — every TagSpec pairs the dot-form `.edi` spelling with its
-// classic CIF spellings). Translation is mechanical: each classic item/loop-column is rewritten to
-// its `.edi` tag and the block then flows through the ONE experiment builder, so the CIF branch can
-// never drift from the `.edi` semantics. Classic tags with no `.edi` schema counterpart (the
-// double-exponential peak terms, the CW wavelength-2 family) are dropped exactly as the `.edi`
-// reader ignores unmodelled categories.
+// Every structure text and every experiment text edi reads goes through edi_text_block, and
+// nothing else parses one. Before any name is read as another, crysta decides from the names edi's
+// reader reads, as written, whether the text is a CIF: a CIF is read by crysta, which writes the
+// `.edi` text a save would write for what it builds, and edi's reader reads that text; any other
+// text goes to edi's reader as it is. No file suffix decides anything.
 
-struct CifExperimentItemRule {
-    const char* edi;                    // the `.edi` tag the builder reads
-    std::vector<const char*> classic;   // classic spellings, upstream priority order (first wins)
-    // Which selector family requires this tag, and the upstream-declared default that fills it
-    // when the CIF omits it (diffraction-lib AttributeSpec defaults at the frozen anchor):
-    // "" = never filled; "cwl" / "tof" = the family's concrete classes; "tof-jvd" = only the
-    // Lorentzian-carrying tof-jorgensen-von-dreele (TofJorgensen has no Lorentzian mixin, and a
-    // default there would change which profile the block means).
-    const char* family = "";
-    const char* fallback = nullptr;
-};
-
-const std::vector<CifExperimentItemRule>& experiment_cif_item_rules() {
-    static const std::vector<CifExperimentItemRule> rules{
-        {"_experiment_type.sample_form",
-         {"_easydiffraction_experiment_type.sample_form", "_expt_type.sample_form"}},
-        {"_experiment_type.beam_mode",
-         {"_easydiffraction_experiment_type.beam_mode", "_expt_type.beam_mode"}},
-        {"_experiment_type.radiation_probe",
-         {"_easydiffraction_experiment_type.radiation_probe", "_expt_type.radiation_probe"}},
-        {"_experiment_type.scattering_type",
-         {"_easydiffraction_experiment_type.scattering_type", "_expt_type.scattering_type"}},
-        {"_peak.type", {"_easydiffraction_peak.type"}},
-        {"_peak.cutoff_fwhm", {"_easydiffraction_peak.cutoff_fwhm"}},
-        {"_background.type", {"_easydiffraction_background.type"}},
-        // CW broadening (cwl_mixins)
-        {"_peak.broad_gauss_u", {"_easydiffraction_peak.broad_gauss_u"}, "cwl", "0.01"},
-        {"_peak.broad_gauss_v", {"_easydiffraction_peak.broad_gauss_v"}, "cwl", "-0.01"},
-        {"_peak.broad_gauss_w", {"_easydiffraction_peak.broad_gauss_w"}, "cwl", "0.02"},
-        {"_peak.broad_lorentz_x", {"_easydiffraction_peak.broad_lorentz_x"}, "cwl-tch", "0.0"},
-        {"_peak.broad_lorentz_y", {"_easydiffraction_peak.broad_lorentz_y"}, "cwl-tch", "0.0"},
-        // The CW asymmetry mixins, filled only on the rung that carries them.
-        // The pseudo-Voigt mixing: the loader reads an absent one as 0, so no fallback is filled.
-        {"_peak.mixing_eta_0", {"_easydiffraction_peak.mixing_eta_0"}},
-        {"_peak.mixing_eta_1", {"_easydiffraction_peak.mixing_eta_1"}},
-        {"_peak.asym_fcj_1", {"_easydiffraction_peak.asym_fcj_1"}, "cwl-fcj", "0.0"},
-        {"_peak.asym_fcj_2", {"_easydiffraction_peak.asym_fcj_2"}, "cwl-fcj", "0.0"},
-        {"_peak.asym_beba_a0", {"_easydiffraction_peak.asym_beba_a0"}, "cwl-beba", "0.0"},
-        {"_peak.asym_beba_b0", {"_easydiffraction_peak.asym_beba_b0"}, "cwl-beba", "0.0"},
-        {"_peak.asym_beba_a1", {"_easydiffraction_peak.asym_beba_a1"}, "cwl-beba", "0.0"},
-        {"_peak.asym_beba_b1", {"_easydiffraction_peak.asym_beba_b1"}, "cwl-beba", "0.0"},
-        // The limit angle: the loader reads an absent one as 180, so no fallback is filled.
-        {"_peak.asym_beba_limit", {"_easydiffraction_peak.asym_beba_limit"}},
-        // TOF broadening (tof_mixins)
-        {"_peak.broad_gauss_sigma_0", {"_easydiffraction_peak.broad_gauss_sigma_0"}, "tof",
-         "7.0"},
-        {"_peak.broad_gauss_sigma_1", {"_easydiffraction_peak.broad_gauss_sigma_1"}, "tof",
-         "0.0"},
-        {"_peak.broad_gauss_sigma_2", {"_easydiffraction_peak.broad_gauss_sigma_2"}, "tof",
-         "0.0"},
-        {"_peak.broad_gauss_size", {"_easydiffraction_peak.broad_gauss_size"}, "tof", "0.0"},
-        {"_peak.broad_gauss_strain", {"_easydiffraction_peak.broad_gauss_strain"}, "tof", "0.0"},
-        {"_peak.broad_lorentz_gamma_0", {"_easydiffraction_peak.broad_lorentz_gamma_0"},
-         "tof-jvd", "0.0"},
-        {"_peak.broad_lorentz_gamma_1", {"_easydiffraction_peak.broad_lorentz_gamma_1"},
-         "tof-jvd", "0.0"},
-        {"_peak.broad_lorentz_gamma_2", {"_easydiffraction_peak.broad_lorentz_gamma_2"},
-         "tof-jvd", "0.0"},
-        {"_peak.broad_lorentz_size", {"_easydiffraction_peak.broad_lorentz_size"}, "tof-jvd",
-         "0.0"},
-        {"_peak.broad_lorentz_strain", {"_easydiffraction_peak.broad_lorentz_strain"}, "tof-jvd",
-         "0.0"},
-        {"_peak.rise_alpha_0", {"_easydiffraction_peak.rise_alpha_0"}, "tof", "0.0"},
-        {"_peak.rise_alpha_1", {"_easydiffraction_peak.rise_alpha_1"}, "tof", "0.2"},
-        {"_peak.decay_beta_0", {"_easydiffraction_peak.decay_beta_0"}, "tof", "0.04"},
-        {"_peak.decay_beta_1", {"_easydiffraction_peak.decay_beta_1"}, "tof", "0.0"},
-        // CW instrument
-        {"_instrument.setup_wavelength",
-         {"_diffrn_radiation_wavelength.value", "_instr.wavelength"},
-         "cwl",
-         "1.5406"},
-        {"_instrument.calib_twotheta_offset",
-         {"_pd_calib.2theta_offset", "_instr.2theta_offset"},
-         "cwl",
-         "0.0"},
-        // Optional line shifts, translated when present and never filled
-        {"_instrument.calib_sample_displacement", {"_instr.sample_displacement"}},
-        {"_instrument.calib_sample_transparency", {"_instr.sample_transparency"}},
-        // The X-ray polarization pair, translated when present and never filled
-        {"_instrument.setup_polarization_coefficient", {"_instr.polarization_coefficient"}},
-        {"_instrument.setup_monochromator_twotheta", {"_instr.monochromator_twotheta"}},
-        // TOF instrument
-        {"_instrument.setup_twotheta_bank", {"_instr.2theta_bank"}, "tof", "150.0"},
-        {"_instrument.calib_d_to_tof_offset", {"_instr.d_to_tof_offset"}, "tof", "0.0"},
-        {"_instrument.calib_d_to_tof_linear", {"_instr.d_to_tof_linear"}, "tof", "10000.0"},
-        {"_instrument.calib_d_to_tof_quadratic", {"_instr.d_to_tof_quad"}, "tof", "0.0"},
-        {"_instrument.calib_d_to_tof_reciprocal", {"_instr.d_to_tof_recip"}, "tof", "0.0"},
-    };
-    return rules;
-}
-
-// The declared-range items translate ONLY when the document carries no measured loop: in a real
-// pdCIF the `_pd_meas.*_range_*` summary rides BESIDE the data, and translating it there would
-// declare data and range at once — the exact contradiction the one-loader ruling refuses.
-const std::vector<CifExperimentItemRule>& experiment_cif_range_rules() {
-    static const std::vector<CifExperimentItemRule> rules{
-        {"_data_range.two_theta_min", {"_pd_meas.2theta_range_min"}},
-        {"_data_range.two_theta_max", {"_pd_meas.2theta_range_max"}},
-        {"_data_range.two_theta_step", {"_pd_meas.2theta_range_inc"}},
-        {"_data_range.time_of_flight_min", {"_pd_meas.time_of_flight_range_min"}},
-        {"_data_range.time_of_flight_max", {"_pd_meas.time_of_flight_range_max"}},
-        {"_data_range.time_of_flight_step", {"_pd_meas.time_of_flight_range_inc"}},
-    };
-    return rules;
-}
-
-const std::map<std::string, std::string>& experiment_cif_loop_key_map() {
-    static const std::map<std::string, std::string> map{
-        {"_pd_background.id", "_background.id"},
-        {"_pd_background.line_segment_X", "_background.position"},
-        {"_pd_background_line_segment_X", "_background.position"},
-        {"_pd_background.line_segment_intensity", "_background.intensity"},
-        {"_pd_background_line_segment_intensity", "_background.intensity"},
-        {"_pd_phase_block.id", "_linked_structure.structure_id"},
-        {"_pd_phase_block.scale", "_linked_structure.scale"},
-        {"_easydiffraction_excluded_region.id", "_excluded_region.id"},
-        {"_easydiffraction_excluded_region.start", "_excluded_region.start"},
-        {"_easydiffraction_excluded_region.end", "_excluded_region.end"},
-        {"_pd_data.point_id", "_data.id"},
-        {"_pd_meas.2theta_scan", "_data.two_theta"},
-        {"_pd_proc.2theta_scan", "_data.two_theta"},
-        {"_pd_meas.time_of_flight", "_data.time_of_flight"},
-        {"_pd_meas.intensity_total", "_data.intensity_meas"},
-        {"_pd_proc.intensity_norm", "_data.intensity_meas"},
-        {"_pd_meas.intensity_total_su", "_data.intensity_meas_su"},
-        {"_pd_proc.intensity_norm_su", "_data.intensity_meas_su"},
-    };
-    return map;
-}
-
-bool experiment_block_is_classic_cif(const Block& block) {
-    static const std::set<std::string> classic = [] {
-        std::set<std::string> tags;
-        for (const auto& rule : experiment_cif_item_rules()) {
-            tags.insert(rule.classic.begin(), rule.classic.end());
-        }
-        for (const auto& rule : experiment_cif_range_rules()) {
-            tags.insert(rule.classic.begin(), rule.classic.end());
-        }
-        for (const auto& [cif, edi] : experiment_cif_loop_key_map()) {
-            tags.insert(cif);
-        }
-        return tags;
-    }();
-    for (const auto& item : block.items) {
-        if (classic.contains(item.first)) {
-            return true;
-        }
-    }
-    for (const Loop& loop : block.loops) {
-        for (const std::string& tag : loop.tags) {
-            if (classic.contains(tag)) {
-                return true;
+// An ADP column spelled by a name of some site types only (`_atom_site_U_iso_or_equiv` holds a U value) must match
+// the type of every site it gives a value for, declared or the default Biso, or the value would be read in the wrong
+// representation; such a column is refused. Checked on the names as written.
+static void refuse_adp_spellings(const Block& written, const std::string& where) {
+    const auto column_of = [](const Loop& loop, const std::string& name) {
+        for (std::size_t index = 0; index < loop.tags.size(); ++index) {
+            if (detail::current_edi_name(loop.tags[index], true) == name) {
+                return static_cast<int>(index);
             }
         }
-    }
-    return false;
-}
-
-Block translate_experiment_cif(const Block& in) {
-    // The peak category is one row in either vocabulary. A peak item written as a loop column has
-    // no translation, and dropping it would let a profile's foreign or supplied coefficients vanish
-    // before the profile rules see them, so it is refused.
-    for (const Loop& loop : in.loops) {
-        for (const std::string& tag : loop.tags) {
-            if (starts_with(tag, "_peak.") || starts_with(tag, "_easydiffraction_peak.")) {
-                fail_schema("classic CIF experiment block '" + in.name + "'", "peak-item-in-loop",
-                            tag + " is a scalar item, not a loop column");
-            }
-        }
-    }
-    Block out;
-    out.name = in.name;
-    out.items.emplace_back("_edi.schema_version", "3");
-    const auto translate_items = [&in, &out](const std::vector<CifExperimentItemRule>& rules) {
-        for (const CifExperimentItemRule& rule : rules) {
-            const std::string* value = nullptr;
-            for (const char* classic : rule.classic) {
-                value = in.find(classic);
-                if (value != nullptr) {
-                    break;  // upstream priority order: the first declared spelling wins
+        return -1;
+    };
+    const auto lower = [](std::string text) {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return text;
+    };
+    // Each site's type as the site reader reads it: Biso when the file declares none or gives `.`, a
+    // type it does not read left to its own refusal. Site ids are exact.
+    std::map<std::string, std::optional<std::string>> site_types;
+    for (const Loop& loop : written.loops) {
+        const int id = column_of(loop, "_atom_site.id");
+        const int type = column_of(loop, "_atom_site.adp_type");
+        for (const auto& row : id < 0 ? std::vector<std::vector<std::string>>{} : loop.rows) {
+            std::optional<std::string> read = std::string("Biso");
+            if (type >= 0) {
+                const std::string& token = row[static_cast<std::size_t>(type)];
+                if (token != "." && !token.empty()) {
+                    read = is_adp_type(token) ? std::optional<std::string>(token) : std::nullopt;
                 }
             }
-            // A peak item in the dot-form spelling is the same declaration, so it is carried
-            // rather than dropped (a profile's coefficients never fall back to defaults).
-            if (value == nullptr && starts_with(rule.edi, "_peak.")) {
-                value = in.find(rule.edi);
-            }
-            if (value != nullptr) {
-                out.items.emplace_back(rule.edi, *value);
-            }
+            site_types[row[static_cast<std::size_t>(id)]] = read;
         }
-    };
-    translate_items(experiment_cif_item_rules());
-    bool have_data_loop = false;
-    const std::string translated_where = "classic CIF experiment block '" + in.name + "'";
-    for (const Loop& loop : in.loops) {
-        std::vector<std::string> tags;
-        std::vector<std::size_t> keep;
-        for (std::size_t index = 0; index < loop.tags.size(); ++index) {
-            const auto found = experiment_cif_loop_key_map().find(loop.tags[index]);
-            if (found != experiment_cif_loop_key_map().end()) {
-                tags.push_back(found->second);
-                keep.push_back(index);
-            }
-        }
-        if (tags.empty()) {
-            continue;  // no `.edi` counterpart in this loop (publication metadata etc.)
-        }
-        std::vector<std::vector<std::string>> rows;
-        rows.reserve(loop.rows.size());
-        for (const std::vector<std::string>& row : loop.rows) {
-            std::vector<std::string> cells;
-            cells.reserve(keep.size());
-            for (const std::size_t index : keep) {
-                cells.push_back(row[index]);
-            }
-            rows.push_back(std::move(cells));
-        }
-        for (const std::string& tag : tags) {
-            have_data_loop = have_data_loop || starts_with(tag, kDataCategory);
-        }
-        out.loops.emplace_back(std::move(tags), std::move(rows), translated_where);
     }
-    if (!have_data_loop) {
-        translate_items(experiment_cif_range_rules());
-    }
-    // A CIF with no phase block keeps diffraction-lib's default linked structure (structure_id
-    // 'Si', scale 1.0 — the reference constructs the category and overrides only what the CIF
-    // carries), so the builder's required loop is synthesized when absent.
-    bool have_linked = false;
-    for (const Loop& loop : out.loops) {
-        have_linked = have_linked || loop.column("_linked_structure.scale") >= 0;
-    }
-    if (!have_linked) {
-        out.loops.emplace_back(
-            std::vector<std::string>{"_linked_structure.structure_id", "_linked_structure.scale"},
-            std::vector<std::vector<std::string>>{{"Si", "1.0"}}, translated_where);
-    }
-    // A `_pd_background` line-segment loop declares its own type by shape (upstream's
-    // line-segment class matches exactly these cif columns), so the `.edi` selector the builder
-    // requires is synthesized when the CIF spells none.
-    if (out.find("_background.type") == nullptr) {
-        for (const Loop& loop : out.loops) {
-            if (loop.column("_background.position") >= 0) {
-                out.items.emplace_back("_background.type", "line-segment");
-                break;
+    for (const Loop& loop : written.loops) {
+        int id = column_of(loop, "_atom_site.id");
+        if (id < 0) {
+            id = column_of(loop, "_atom_site_aniso.id");
+        }
+        for (std::size_t column = 0; id >= 0 && column < loop.tags.size(); ++column) {
+            const std::vector<std::string> variants = detail::name_variants(loop.tags[column]);
+            // An anisotropic site's isotropic value is its tensor's equivalent, derived from the
+            // tensor, so its column is never read.
+            const bool isotropic_value = detail::current_edi_name(loop.tags[column], true) == "_atom_site.adp_iso";
+            for (const auto& row : variants.empty() ? std::vector<std::vector<std::string>>{} : loop.rows) {
+                const std::string& site = row[static_cast<std::size_t>(id)];
+                const auto found = site_types.find(site);
+                if (found != site_types.end() && !found->second.has_value()) {
+                    continue;
+                }
+                const std::string type = found != site_types.end() ? *found->second : std::string("Biso");
+                const std::string form = lower(type);
+                if (isotropic_value && (form == "uani" || form == "bani" || form == "beta")) {
+                    continue;
+                }
+                if (std::none_of(variants.begin(), variants.end(),
+                                 [&](const std::string& token) { return lower(token) == lower(type); })) {
+                    std::string allowed = variants.front();
+                    for (std::size_t index = 1; index < variants.size(); ++index) {
+                        allowed += " or " + variants[index];
+                    }
+                    fail_schema(where, "adp-name-disagrees-with-type",
+                                "site '" + site + "' is " + type + ", but its column " + loop.tags[column] +
+                                    " holds a value for " + allowed + ": the type and the name disagree");
+                }
             }
         }
     }
-    // Upstream defaults, mirrored where our builder is stricter than the reference: the peak type
-    // follows the declared beam mode's family default when the CIF names none, and the cutoff
-    // carries diffraction-lib's declared default (0.0).
-    if (out.find("_peak.type") == nullptr) {
-        if (const std::string* beam = out.find("_experiment_type.beam_mode")) {
-            if (*beam == kBeamModeCwl) {
-                out.items.emplace_back("_peak.type", kPeakCwlDefault);
-            } else if (*beam == kBeamModeTof) {
-                out.items.emplace_back("_peak.type", kPeakJorgensen);
-            }
-        }
-    }
-    if (out.find("_peak.cutoff_fwhm") == nullptr) {
-        out.items.emplace_back("_peak.cutoff_fwhm", "0");
-    }
-    // A parameter the CIF omits keeps diffraction-lib's declared default (the reference builds
-    // the concrete class first, then overrides only what the CIF carries), so the builder's
-    // required-item reads are satisfied exactly as upstream satisfies them — scoped to the
-    // block's own selector family, because emitting another family's tags would change what the
-    // block declares.
-    const std::string* type_item = out.find("_peak.type");
-    const std::string selector = type_item != nullptr ? *type_item : "";
-    const bool fills_cwl = selector.rfind("cwl-", 0) == 0;
-    const bool fills_tof = selector.rfind("tof-", 0) == 0;
-    // The TOF pseudo-Voigt carries the Lorentzian mixin too.
-    const bool fills_jvd = selector == "tof-jorgensen-von-dreele" || selector == kPeakTofPseudoVoigt;
-    for (const CifExperimentItemRule& rule : experiment_cif_item_rules()) {
-        if (rule.fallback == nullptr || out.find(rule.edi) != nullptr) {
-            continue;
-        }
-        const std::string family = rule.family;
-        // A CW rule fills only a slot the selector's profile carries.
-        const CwlProfileSlots slots = cwl_profile_slots(selector);
-        if ((family == "cwl" && fills_cwl) || (family == "tof" && fills_tof) ||
-            (family == "tof-jvd" && fills_jvd) ||
-            (family == "cwl-tch" && fills_cwl && slots.lorentz_xy) ||
-            (family == "cwl-fcj" && slots.fcj) || (family == "cwl-beba" && slots.beba)) {
-            out.items.emplace_back(rule.edi, rule.fallback);
-        }
-    }
-    return out;
 }
 
-BraggPdExperiment experiment_from_edi_text(const std::string& text) {
-    const std::string where = "<from_cif_str>";
-    const Block block = parse_block(text, where);
-    // Vocabulary dispatch: a block spelling any tag of the classic diffraction-lib
-    // `cif_names` vocabulary is translated to the dot-form `.edi` tags and built by the one
-    // experiment builder; everything else takes the `.edi` path exactly as before.
-    if (experiment_block_is_classic_cif(block)) {
-        return experiment_from_block(translate_experiment_cif(block), where);
+// crysta's code for what a CIF import leaves unread or does not keep, which leads each report as it
+// leads crysta's own warnings, so a caller tells them from the loader's notes.
+constexpr const char* kCifReport = "crysta.schema.cif_items_not_read: ";
+
+// What crysta reports about a CIF it read: to `on_warning`, else to stderr as the loader's other
+// warnings go.
+static void report_notes(const std::vector<std::string>& notes, const WarningSink& on_warning) {
+    for (const std::string& note : notes) {
+        if (on_warning) {
+            on_warning(kCifReport + note);
+        } else {
+            std::cerr << "Warning: " << kCifReport << note << "\n";
+        }
     }
-    return experiment_from_block(block, where);
+}
+
+// A structure or experiment text as a block for edi's reader: a CIF through crysta, any other
+// text as it is.
+static Block edi_text_block(const std::string& text, const std::string& where, bool experiment,
+                            const WarningSink& on_warning) {
+    std::vector<std::string> tags;
+    for (const Token& token : tokenize(text, where)) {
+        if (is_tag(token)) {
+            tags.push_back(token.text);
+        }
+    }
+    if (detail::is_cif_names(tags)) {
+        std::vector<std::string> notes;
+        std::string written;
+        try {
+            written = detail::cif_to_edi(text, experiment, where, notes);
+        } catch (const std::exception& error) {
+            throw IoError(error.what());
+        }
+        report_notes(notes, on_warning);
+        return parse_block(written, where, true, true);
+    }
+    if (std::any_of(tags.begin(), tags.end(), [](const std::string& tag) { return !detail::name_variants(tag).empty(); })) {
+        refuse_adp_spellings(parse_block(text, where, true, false), where);
+    }
+    return parse_block(text, where, true, true);
+}
+
+Structure structure_from_edi_text(const std::string& text, const std::string& where,
+                                  const WarningSink& on_warning) {
+    return structure_from_block(edi_text_block(text, where, false, on_warning), where);
+}
+
+BraggPdExperiment experiment_from_edi_text(const std::string& text, const std::string& where,
+                                           const WarningSink& on_warning) {
+    return experiment_from_block(edi_text_block(text, where, true, on_warning), where);
 }
 
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
@@ -2912,6 +3011,29 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
                                         const std::vector<std::string>& structure_ids) {
     const bool constant_wavelength = type.beam_mode == "constant wavelength";
+    if (type.sample_form == "single crystal") {
+        // A single crystal: its wavelength (constant wavelength), no extinction and no reflections until its data
+        // are loaded.
+        if (type.radiation_probe != "neutron") {
+            throw std::invalid_argument("a single crystal is a neutron experiment; choose neutron first");
+        }
+        std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
+        text += "_experiment_type.sample_form \"single crystal\"\n";
+        text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
+        text += "_experiment_type.radiation_probe \"neutron\"\n";
+        text += "_experiment_type.scattering_type \"bragg\"\n\n";
+        if (constant_wavelength) {
+            text += "_instrument.setup_wavelength 1.\n\n";
+        }
+        text += "_extinction.type none\n";
+        if (!structure_ids.empty()) {
+            text += "\nloop_\n_linked_structure.structure_id\n_linked_structure.scale\n";
+            for (const std::string& structure_id : structure_ids) {
+                text += structure_id + " 1.\n";
+            }
+        }
+        return experiment_from_edi_text(text);
+    }
     std::string text = "data_" + name + "\n\n_edi.schema_version 3\n\n";
     text += "_experiment_type.sample_form \"" + type.sample_form + "\"\n";
     text += "_experiment_type.beam_mode \"" + type.beam_mode + "\"\n";
@@ -2954,18 +3076,6 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
 
 namespace {
 
-// The block of a `.edi` block file: the extension and the project format's schema are checked
-// before anything is built.
-Block edi_file_block(const std::string& path) {
-    if (fs::path(path).extension() != ".edi") {
-        throw IoError(path + ": not a .edi file - structures and experiments load from .edi block "
-                             "files only");
-    }
-    Block block = parse_block(read_file(path), path);
-    require_edi_schema(block, path);
-    return block;
-}
-
 // ADR-0016: compared by canonical key — the comparison the collection itself makes when it admits
 // the experiment — so this friendlier early refusal can never disagree with it.
 bool holds_experiment(const Project& project, const std::string& name) {
@@ -2980,12 +3090,21 @@ bool holds_experiment(const Project& project, const std::string& name) {
 
 }  // namespace
 
-Structure load_structure_edi_file(const std::string& path) {
-    return structure_from_block(edi_file_block(path), path);
+Structure load_structure_file(const std::string& path, const WarningSink& on_warning) {
+    const Block block = edi_text_block(read_file(path), path, false, on_warning);
+    require_edi_schema(block, path);
+    return structure_from_block(block, path);
 }
 
-BraggPdExperiment load_experiment_edi_file(const std::string& path) {
-    const Block block = edi_file_block(path);
+Structure load_structure_edi_file(const std::string& path) { return load_structure_file(path); }
+
+Structure load_structure_cif_file(const std::string& path) { return load_structure_file(path); }
+
+BraggPdExperiment load_experiment_edi_file(const std::string& path) { return load_experiment_file(path); }
+
+BraggPdExperiment load_experiment_file(const std::string& path, const WarningSink& on_warning) {
+    const Block block = edi_text_block(read_file(path), path, true, on_warning);
+    require_edi_schema(block, path);
     // The file must say what it is: all four type axes, read from the block itself, because the
     // builder would supply an absent one (beam mode from `_peak.type`, the others by default).
     std::string missing;
@@ -3001,17 +3120,13 @@ BraggPdExperiment load_experiment_edi_file(const std::string& path) {
     }
     // A declared type edi's experiment class does not implement is refused by axis (an unknown
     // token is left to the builder's own message).
-    if (*block.find("_experiment_type.sample_form") == "single crystal") {
-        throw IoError(path + ": _experiment_type.sample_form 'single crystal' is not implemented - "
-                             "edi experiments are powder + bragg");
-    }
     if (*block.find("_experiment_type.scattering_type") == "total") {
         throw IoError(path + ": _experiment_type.scattering_type 'total' is not implemented - edi "
                              "experiments are powder + bragg");
     }
     BraggPdExperiment experiment = experiment_from_block(block, path);
     // load_project's rule for every experiment of a project: measured data or a calculation grid.
-    if (!experiment.data.has_value()) {
+    if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
         throw IoError(path + ": experiment '" + experiment.name +
                       "' declares neither an embedded _data loop nor a _data_range grid - an "
                       "experiment must say what it computes over");
@@ -3020,14 +3135,16 @@ BraggPdExperiment load_experiment_edi_file(const std::string& path) {
 }
 
 std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
-                                                         const std::vector<std::string>& paths) {
+                                                         const std::vector<std::string>& paths,
+                                                         const WarningSink& on_warning) {
     std::vector<BraggPdExperiment> loaded;
     std::set<std::string> names;
     for (const auto& item : project.experiments) {
         names.insert(KeyTraits<BraggPdExperiment>::canonical(item->name));
     }
     for (const std::string& path : paths) {
-        BraggPdExperiment experiment = load_experiment_edi_file(path);
+        BraggPdExperiment experiment = load_experiment_file(path, on_warning);
+        require_held_links(project, experiment, path + ": ");
         if (!names.insert(KeyTraits<BraggPdExperiment>::canonical(experiment.name)).second) {
             throw IoError(path + ": an experiment named '" +
                           detail::printable_id(experiment.name) + "' is already " +
@@ -3050,11 +3167,28 @@ void add_loaded_structure(Project& project, Structure structure) {
     project.structures.push_back(std::move(structure));
 }
 
+void require_held_links(const Project& project, const BraggPdExperiment& experiment, const std::string& where,
+                        const std::string& source) {
+    // An empty id spells `structure`, as crysta's loader reads it.
+    const auto spelled = [](const std::string& id) { return id.empty() ? std::string("structure") : id; };
+    for (const auto& link : experiment.linked_structures) {
+        const std::string wanted = spelled(link->structure_id.value());
+        const bool held = std::any_of(project.structures.begin(), project.structures.end(),
+                                      [&](const auto& structure) { return spelled(structure->name.value()) == wanted; });
+        if (!held) {
+            throw IoError(where + "experiment '" + experiment.name + "'" + (source.empty() ? "" : " (" + source + ")") +
+                          " links the structure '" + detail::printable_id(wanted) +
+                          "' (_linked_structure.structure_id), which the project does not hold");
+        }
+    }
+}
+
 void add_loaded_experiment(Project& project, BraggPdExperiment experiment) {
     if (holds_experiment(project, experiment.name)) {
         throw IoError("an experiment named '" + detail::printable_id(experiment.name) +
                       "' is already in the project");
     }
+    require_held_links(project, experiment);
     project.experiments.push_back(std::move(experiment));
 }
 
@@ -3170,7 +3304,14 @@ std::vector<std::string> registered_peak_types() {
     return tokens;
 }
 
-Project load_project(const std::string& directory, const WarningSink& on_warning) {
+// `whole` holds the loader's rules for a project as a whole: one structure or more, one experiment or more, each
+// declaring what it computes over and linking structures the project holds. A save's readback lifts them, since a save
+// writes a project still being built too, and its values must still be adopted (edi ADR-0052).
+std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
+
+// `data_root`, when given, is where a scan's data files are, for a project read from a scratch save of one.
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true,
+                                   const std::string& data_root = {}) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3183,8 +3324,17 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     if (!fs::is_directory(root)) {
         throw IoError("not a project directory: " + directory);
     }
-    const std::vector<fs::path> structure_files = sorted_edi_files(root / "structures");
-    if (structure_files.empty()) {
+    // crysta's rule: each `.edi` and `.cif`, the suffix in any case, a `.cif` beside a `.edi` of its
+    // name reported and not read; any other file is passed over.
+    std::vector<std::string> hidden;
+    const std::vector<std::string> structure_files =
+        detail::project_structure_files((root / "structures").string(), &hidden);
+    const std::vector<std::string> experiment_files =
+        detail::project_structure_files((root / "experiments").string(), &hidden);
+    for (const std::string& path : hidden) {
+        warn(kCifReport + path + " not read: " + fs::path(path).stem().string() + ".edi in the same folder is read");
+    }
+    if (structure_files.empty() && whole) {
         throw IoError("project has no structures/*.edi: " + directory);
     }
     Project project;
@@ -3193,9 +3343,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     project.structures.clear();
     project.experiments.clear();
     // Every structure file is a structure (phase), in file order; two declaring one name refuse.
-    for (const fs::path& file : structure_files) {
-        Structure structure =
-            structure_from_block(parse_block(read_file(file.string()), file.string()), file.string());
+    // Each is read as crysta reads one, so a CIF written in one is refused.
+    for (const std::string& path : structure_files) {
+        const fs::path file(path);
+        Structure structure = load_structure_file(file.string(), on_warning);
         if (std::any_of(project.structures.begin(), project.structures.end(),
                         [&](const std::shared_ptr<Structure>& held) {
                             return datablock_key(held->name, "structure") ==
@@ -3214,36 +3365,49 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     // value, exactly as the minimizer below does, and the calculation runs with crysta. The category is
     // not modelled, so the value is not kept.
     std::set<std::string> warned_calculators;
-    for (const fs::path& file : sorted_edi_files(root / "experiments")) {
-        const Block experiment_block = parse_block(read_file(file.string()), file.string());
+    // crysta's rule, as for structures.
+    for (const std::string& path : experiment_files) {
+        const fs::path file(path);
+        const Block experiment_block = edi_text_block(read_file(file.string()), file.string(), true, on_warning);
         if (const std::string* calculator = experiment_block.find("_calculator.type")) {
             if (*calculator != "crysta" && warned_calculators.insert(*calculator).second) {
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");
             }
         }
         BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string());
+        // A time-of-flight single crystal has no instrument category: its calculation reads none. Items a file
+        // carries for one are read past, and said so (the owner, 2026-10-23).
+        if (experiment.reflections.has_value() &&
+            experiment.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT) {
+            std::vector<std::string> ignored;
+            for (const auto& item : experiment_block.items) {
+                // The instrument's name and facility describe it, and are kept.
+                if (item.first.starts_with("_instrument.") && item.first != "_instrument.name" &&
+                    item.first != "_instrument.facility") {
+                    ignored.push_back(item.first);
+                }
+            }
+            if (!ignored.empty()) {
+                std::string list;
+                for (const std::string& tag : ignored) {
+                    list += (list.empty() ? "" : ", ") + tag;
+                }
+                warn("experiment '" + experiment.name + "': a time-of-flight single crystal has no instrument; " +
+                     list + " ignored");
+            }
+        }
         // The file's own contents declare its category — a `_data` loop means measured data
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
         // (declaring both already refused inside the parser).
-        if (!experiment.data.has_value()) {
+        if (!experiment.data.has_value() && !experiment.reflections.has_value() && whole) {
             throw IoError("project " + directory + ": experiment '" + experiment.name +
                           "' (" + file.string() +
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
                           "project must say what it computes over");
         }
-        // Every linked structure names a structure of the project, as crysta's loader requires (an empty
-        // id spells `structure`).
-        const auto spelled = [](const std::string& id) { return id.empty() ? std::string("structure") : id; };
-        for (const auto& link : experiment.linked_structures) {
-            const std::string wanted = spelled(link->structure_id.value());
-            const bool held = std::any_of(project.structures.begin(), project.structures.end(),
-                                          [&](const auto& structure) { return spelled(structure->name.value()) == wanted; });
-            if (!held) {
-                throw IoError("project " + directory + ": experiment '" + experiment.name + "' (" + file.string() +
-                              ") links the structure '" + detail::printable_id(wanted) +
-                              "', which the project does not hold");
-            }
+        if (whole) {
+            require_held_links(project, experiment, "project " + directory + ": ", file.string());
         }
         project.experiments.push_back(std::move(experiment));
     }
@@ -3300,6 +3464,10 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             }
             if (const std::string* axis = block.find("_pattern_chart.x_axis")) {
                 project.pattern_x_axis = detail::read_pattern_x_axis(*axis);
+            }
+            // A single-crystal fit's cutoff (edi ADR-0050).
+            if (const std::string* cutoff = block.find("_refine_ls.threshold_sigma")) {
+                project.refine_ls_threshold_sigma = detail::read_threshold_sigma(*cutoff, "_refine_ls.threshold_sigma");
             }
         } catch (const std::invalid_argument& error) {
             throw IoError(std::string(error.what()) + ": " + analysis_file.string());
@@ -3520,25 +3688,24 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             result.message = text("_fit_result.message");
             result.iterations = count("_fit_result.iterations");
             result.fitting_time = number("_fit_result.fitting_time");
-            result.reduced_chi_square = number("_fit_result.reduced_chi_square");
+            // An agreement factor is absent when it was not a number, or in a result written before it.
+            const auto factor = [&block, &number](const char* tag) {
+                return block.find(tag) != nullptr ? std::optional<double>(number(tag)) : std::nullopt;
+            };
+            result.reduced_chi_square = factor("_fit_result.reduced_chi_square");
             result.objective_name = text("_fit_result.objective_name");
-            result.objective_value = number("_fit_result.objective_value");
+            result.objective_value = factor("_fit_result.objective_value");
             result.n_data_points = count("_fit_result.n_data_points");
             result.n_parameters = count("_fit_result.n_parameters");
             result.n_free_parameters = count("_fit_result.n_free_parameters");
             result.degrees_of_freedom = count("_fit_result.degrees_of_freedom");
             result.covariance_available = flag("_fit_result.covariance_available");
             result.exit_reason = text("_fit_result.exit_reason");
-            result.prof_wr_factor = number("_fit_result.prof_wr_factor");
-            // Absent in a result written before them.
-            for (const auto& [tag, field] : {std::pair{"_fit_result.prof_r_factor", &result.prof_r_factor},
-                                             std::pair{"_fit_result.prof_wr_expected", &result.prof_wr_expected},
-                                             std::pair{"_fit_result.prof_cr_factor", &result.prof_cr_factor},
-                                             std::pair{"_fit_result.prof_cwr_factor", &result.prof_cwr_factor}}) {
-                if (block.find(tag) != nullptr) {
-                    *field = number(tag);
-                }
-            }
+            result.prof_wr_factor = factor("_fit_result.prof_wr_factor");
+            result.prof_r_factor = factor("_fit_result.prof_r_factor");
+            result.prof_wr_expected = factor("_fit_result.prof_wr_expected");
+            result.prof_cr_factor = factor("_fit_result.prof_cr_factor");
+            result.prof_cwr_factor = factor("_fit_result.prof_cwr_factor");
             result.profile_function = text("_fit_result.profile_function");
             result.background_function = text("_fit_result.background_function");
             result.descent = text("_fit_result.descent");
@@ -3573,8 +3740,8 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                         }
                         bank->fit_n_data_points = static_cast<int>(value);
                     }
-                    bank->fit_prof_wr_factor =
-                        to_double(loop_cell(*banks, row, "_fit_result_bank.prof_wr_factor", where), where);
+                    loop_cell(*banks, row, "_fit_result_bank.prof_wr_factor", where);
+                    bank->fit_prof_wr_factor = cell(*banks, row, "_fit_result_bank.prof_wr_factor");
                     bank->fit_chi_square = cell(*banks, row, "_fit_result_bank.chi_square");
                     bank->fit_prof_r_factor = cell(*banks, row, "_fit_result_bank.prof_r_factor");
                     bank->fit_prof_wr_expected = cell(*banks, row, "_fit_result_bank.prof_wr_expected");
@@ -3641,7 +3808,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
                                   "' outside [-1, 1]: " + where);
                 }
-                pair->correlation = text;
+                pair->correlation = value;
                 if (per_file) {
                     pair->file_path = loop_cell(*correlations, row, "_fit_parameter_correlation.file_path", where);
                 }
@@ -3715,7 +3882,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     // finite values, positive sigma — was enforced during parsing) or a declared calculation
     // grid. A project with no experiments at all declares neither, so it refuses here for the
     // same reason.
-    if (project.experiments.empty()) {
+    if (project.experiments.empty() && whole) {
         throw IoError("project has no experiments/*.edi: " + directory);
     }
 
@@ -3821,6 +3988,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         // How the project writes values with a standard uncertainty.
         std::optional<std::string> declared_su_rule;
         std::map<std::string, std::string> restored;
+        std::vector<std::pair<std::string, std::string>> retired;
         {
             std::istringstream record_lines(record_text);
             std::string line;
@@ -3844,6 +4012,13 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     declared_su_rule = lexical_value(line, su_rule_tag.size(), su_rule_tag);
                     continue;
                 }
+                // A retired description tag (ADR-0054) converts below, once, and is never
+                // written back.
+                if (const std::string tag = line.substr(0, line.find_first_of(" \t\r"));
+                    detail::is_retired_metadata_tag(tag)) {
+                    retired.emplace_back(tag, lexical_value(line, tag.size(), tag));
+                    continue;
+                }
                 for (const char* field : kMetadataFields) {
                     const std::string tag = std::string("_metadata.") + field;
                     if (!is_tag_line(line, tag)) {
@@ -3854,6 +4029,31 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                     if (restored.count(tag) != 0) {
                         throw IoError("project.edi declares " + tag +
                                       " more than once: " + record_where);
+                    }
+                    // A long description is a semicolon text field after its tag, as crysta writes it (crysta's
+                    // ADR on display metadata, item 12): a line break inside a paragraph is a space, and an empty
+                    // line a paragraph break.
+                    if (line.find_first_not_of(" \t\r", tag.size()) == std::string::npos) {
+                        std::string opening;
+                        if (std::getline(record_lines, opening) && opening.starts_with(';')) {
+                            std::vector<std::string> field;
+                            field.push_back(opening.substr(1));
+                            bool closed = false;
+                            for (std::string next; std::getline(record_lines, next);) {
+                                if (next.starts_with(';')) {
+                                    closed = true;
+                                    break;
+                                }
+                                field.push_back(next);
+                            }
+                            if (!closed) {
+                                throw IoError("project.edi " + tag + " has an unterminated text field: " +
+                                              record_where);
+                            }
+                            restored.emplace(tag, text_field_paragraphs(field));
+                            break;
+                        }
+                        throw IoError("project.edi " + tag + " has no value: " + record_where);
                     }
                     restored.emplace(tag, lexical_value(line, tag.size(), tag));
                     break;
@@ -3901,6 +4101,17 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                 into = found->second;
             }
         };
+        if (!retired.empty()) {
+            std::vector<std::string> notices;
+            try {
+                notices = detail::apply_legacy_metadata(retired, project);
+            } catch (const std::invalid_argument& refusal) {
+                throw IoError(std::string("project.edi: ") + refusal.what() + ": " + record_where);
+            }
+            for (const std::string& notice : notices) {
+                warn(notice);
+            }
+        }
         restore("name", project.metadata.name);
         restore("title", project.metadata.title);
         restore("description", project.metadata.description);
@@ -3983,6 +4194,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
 
     project.path = directory;
     project.metadata.path = directory;
+    project.scan_data_root = data_root;
     // A declared template dataset must be one of the scan's files.
     if (!project.sequential_fit.template_file.empty()) {
         check_scan_template_file(project, project.sequential_fit.template_file);
@@ -4007,7 +4219,55 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
     // dependent saved with its s.u.).
     refresh_relations(project, warn, true);
+    // A free mark a fit could not honour (a descriptor, a value this fit's data cannot determine, one crysta cannot
+    // differentiate) loads fixed, its value and s.u. kept, and is said (ADR-0053).
+    for (const std::string& note : clear_unfittable_free(project)) {
+        warn("crysta.domain.unfittable_free_ignored: " + note);
+    }
     return project;
+}
+
+// A semicolon text field's lines as one text: a line break inside a paragraph is a space, an empty line a
+// paragraph break (crysta's ADR on display metadata, item 12).
+std::string text_field_paragraphs(const std::vector<std::string>& lines) {
+    std::string text;
+    std::size_t breaks = 0;
+    for (std::string line : lines) {
+        while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) {
+            line.pop_back();
+        }
+        if (line.empty()) {
+            breaks += text.empty() ? 0 : 1;
+            continue;
+        }
+        if (!text.empty()) {
+            text += breaks > 0 ? std::string(breaks, '\n') : std::string(" ");
+        }
+        breaks = 0;
+        text += line;
+    }
+    return text;
+}
+
+Project load_project(const std::string& path, const WarningSink& on_warning) {
+    // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
+    std::error_code error;
+    const fs::path given(path);
+    if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
+        const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");
+        return load_project_folder(folder.string(), on_warning);
+    }
+    if (is_project_archive(path)) {
+        const std::string folder = unpack_project_archive(read_file(path), fresh_archive_directory("open"));
+        Project project = load_project_folder(folder, on_warning);
+        // The unpacked folder is temporary: the project has no directory of its own until it is saved somewhere, and
+        // reads its scan data from the unpacked folder meanwhile.
+        project.scan_data_root = folder;
+        project.path.clear();
+        project.metadata.path.clear();
+        return project;
+    }
+    return load_project_folder(path, on_warning);
 }
 
 double parse_edi_double(const std::string& text, const std::string& where) {
@@ -4015,6 +4275,46 @@ double parse_edi_double(const std::string& text, const std::string& where) {
     // finite, full-token, classic-locale (the loader's own to_double), so the new column can
     // never re-open the numeric seam the products already resolved.
     return to_double(text, where);
+}
+
+void apply_extinction_type(ExtinctionBase& extinction, const std::string& token) {
+    const std::vector<std::string> types = extinction_type_tokens();
+    if (std::find(types.begin(), types.end(), token) == types.end()) {
+        throw std::invalid_argument("extinction type '" + token + "' is not supported (expected " +
+                                    spelled_tokens(types) + ")");
+    }
+    extinction.type = token;
+    const bool spread = token == "becker-coppens-type-1" || token == "becker-coppens-mixed";
+    const auto keep = [](OptionalParameter& field, bool wanted, const ParameterSpec& spec, const char* start) {
+        if (!wanted) {
+            field.reset();
+        } else if (!field.has_value()) {
+            Parameter started = parse_parameter(start, "<extinction-type-default>");
+            started.spec = &spec;
+            field = started;
+        }
+    };
+    const bool domain = token == "becker-coppens-type-2" || token == "becker-coppens-mixed";
+    keep(extinction.domain_radius, domain, spec::extinction_domain_radius, "0");
+    keep(extinction.mosaic_spread, spread, spec::extinction_mosaic_spread, "0");
+    const bool larson = token == "larson-isotropic";
+    const bool tensor = token == "larson-anisotropic";
+    // 1 mm until the crystal's own radius is given (the owner, 2026-10-23).
+    keep(extinction.crystal_radius, token != "none" && !larson && !tensor, spec::extinction_crystal_radius, "1");
+    keep(extinction.coefficient, larson, spec::extinction_coefficient, "0");
+    keep(extinction.coefficient_11, tensor, spec::extinction_coefficient_11, "0");
+    keep(extinction.coefficient_22, tensor, spec::extinction_coefficient_22, "0");
+    keep(extinction.coefficient_33, tensor, spec::extinction_coefficient_33, "0");
+    keep(extinction.coefficient_12, tensor, spec::extinction_coefficient_12, "0");
+    keep(extinction.coefficient_13, tensor, spec::extinction_coefficient_13, "0");
+    keep(extinction.coefficient_23, tensor, spec::extinction_coefficient_23, "0");
+    // Every Becker-Coppens type has a distribution: it selects the secondary extinction's coefficients, type II's
+    // included, as in cryspy.
+    if (!spread && !domain) {
+        extinction.mosaic_distribution.reset();
+    } else if (!extinction.mosaic_distribution) {
+        extinction.mosaic_distribution = "gaussian";
+    }
 }
 
 void apply_absorption_family(AbsorptionBase& absorption, const std::string& token) {
@@ -4106,6 +4406,9 @@ UndoFitOutcome undo_fit(Project& project) {
         // Measured before the fix (LBCO/HRPT, 8 parameters restored): the stored pattern
         // disagreed with a fresh calculate by 2.679e+03 counts. Inside the was_no_op guard and
         // last, exactly as the fit tail: an undo that restores NOTHING still changes nothing.
+        for (const auto& experiment : project.experiments) {
+            record_fitted_background(*experiment);  // the restored points are the background again
+        }
         project.refresh_calculated_pattern();
     }
     return outcome;
@@ -4152,6 +4455,7 @@ void copy_fit_result(Project& to, const Project& from) {
     to.fit_result = from.fit_result;
     for (std::size_t index = 0; index < to.experiments.size() && index < from.experiments.size(); ++index) {
         copy_fit_share(*to.experiments[index], *from.experiments[index]);
+        record_fitted_background(*to.experiments[index]);  // the fitted points, written before (ADR-0040)
     }
 }
 
@@ -4186,14 +4490,6 @@ void clear_fit_share(ExperimentBase& experiment) {
         link->fit_bragg_r_factor.reset();
         link->fit_f_r_factor.reset();
     }
-}
-
-double correlation_value(const FitParameterCorrelation& row) {
-    double value = 0.0;
-    std::istringstream stream(row.correlation.value());
-    stream.imbue(std::locale::classic());
-    stream >> value;
-    return stream.fail() || !stream.eof() ? std::numeric_limits<double>::quiet_NaN() : value;
 }
 
 std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
@@ -4291,16 +4587,23 @@ void save_project_as(Project& project, const std::string& directory) {
     project.scan_data_root.clear();
 }
 
+namespace {
+
+// What a save wrote to `directory`, read as a reopen reads it, a project still being built included. The reopen's
+// warnings were the save's own concern.
+Project read_saved_project(const std::string& directory) {
+    return load_project_folder(directory, [](const std::string&) {}, false);
+}
+
+}  // namespace
+
 bool adopt_saved_values(Project& project, const std::string& directory) {
-    // The reopen's warnings were the save's own concern; a project the loader refuses, such as one saved before it
-    // has a structure, keeps its values as they are.
-    std::optional<Project> reopened;
-    try {
-        reopened.emplace(load_project(directory, [](const std::string&) {}));
-    } catch (const IoError&) {
-        return false;
-    }
-    const Project& saved = *reopened;
+    return adopt_values(project, read_saved_project(directory));
+}
+
+bool adopt_values(Project& project, const Project& saved) {
+    // Every bank's values round like any other's, a bank whose background estimate is due included; its estimate is
+    // not run (ADR-0040).
     bool changed = false;
     std::map<std::string, const Parameter*> held;
     for (const auto& slot : parameter_slots(saved)) {
@@ -4321,33 +4624,211 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
             changed = true;
         }
     }
+    // An auto background's record of its points follows the rounded values the file holds, so the saved points are
+    // still the estimate's (ADR-0040) and a changed setting estimates again rather than refusing them as edited.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& held : saved.experiments) {
+            if (held->name.value() == experiment->name.value() &&
+                (experiment->background_estimate_inputs != held->background_estimate_inputs ||
+                 experiment->background_estimate_points != held->background_estimate_points)) {
+                experiment->background_estimate_inputs = held->background_estimate_inputs;
+                experiment->background_estimate_points = held->background_estimate_points;
+                changed = true;
+            }
+        }
+    }
+    // A time-of-flight bank angle is a setting, not a fit parameter: the project takes the six digits its file holds.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& held : saved.experiments) {
+            Parameter& bank = experiment->instrument.setup_twotheta_bank;
+            const double written = held->instrument.setup_twotheta_bank.value.get();
+            if (held->name.value() == experiment->name.value() && bank.value.get() != written) {
+                bank.value = written;
+                changed = true;
+            }
+        }
+    }
     // The correlation rows a save wrote, by their two parameters and file, take the saved coefficients. A scan's
     // template then reads its pairs from those rows, as a reopened project does, not from its fit's table.
     using RowKey = std::tuple<std::string, std::string, std::string>;
     const auto key_of = [](const FitParameterCorrelation& row) {
         return RowKey{row.parameter_unique_name_i.value(), row.parameter_unique_name_j.value(), row.file_path.value()};
     };
-    std::map<RowKey, std::string> written;
+    std::map<RowKey, double> written;
     for (const auto& row : saved.fit_result.correlations) {
-        written.emplace(key_of(*row), row->correlation.value());
+        written.emplace(key_of(*row), row->correlation.get());
     }
-    auto& rows = project.fit_result.correlations;
-    for (std::size_t i = 0; i < rows.size(); ++i) {
-        const auto found = written.find(key_of(*rows[i]));
-        if (found != written.end() && rows[i]->correlation.value() != found->second) {
-            auto row = std::make_shared<FitParameterCorrelation>(*rows[i]);
-            row->correlation = found->second;
-            rows.replace_at(i, std::move(row));
-            changed = true;
+    // Assigned once: replacing one row at a time copies and checks the whole table each time, minutes for the
+    // correlations of a few hundred free parameters.
+    std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows(project.fit_result.correlations.begin(),
+                                                            project.fit_result.correlations.end());
+    bool rows_changed = false;
+    for (auto& row : rows) {
+        const auto found = written.find(key_of(*row));
+        if (found != written.end() && row->correlation.get() != found->second) {
+            auto adopted = std::make_shared<FitParameterCorrelation>(*row);
+            adopted->correlation = found->second;
+            row = std::move(adopted);
+            rows_changed = true;
         }
     }
-    for (const auto& [key, text] : written) {
+    if (rows_changed) {
+        project.fit_result.correlations.assign(std::move(rows));
+        changed = true;
+    }
+    for (const auto& [key, coefficient] : written) {
         const auto table = project.fit_result.scan_results.find(std::get<2>(key));
         if (!std::get<2>(key).empty() && table != project.fit_result.scan_results.end() && table->second &&
             table->second->correlations) {
             project.fit_result.scan_results.erase(table);
             changed = true;
         }
+    }
+    // The fit's agreement records the save recomputed from the rounded values: each bank's, its phases' and every
+    // bank's together.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& written : saved.experiments) {
+            if (written->name.value() != experiment->name.value()) {
+                continue;
+            }
+            const auto record = std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor,
+                                         experiment->fit_prof_wr_factor, experiment->fit_prof_wr_expected,
+                                         experiment->fit_prof_cr_factor, experiment->fit_prof_cwr_factor,
+                                         experiment->fit_chi_square);
+            const auto kept = std::tie(written->fit_n_data_points, written->fit_prof_r_factor,
+                                       written->fit_prof_wr_factor, written->fit_prof_wr_expected,
+                                       written->fit_prof_cr_factor, written->fit_prof_cwr_factor,
+                                       written->fit_chi_square);
+            if (record != kept) {
+                std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor, experiment->fit_prof_wr_factor,
+                         experiment->fit_prof_wr_expected, experiment->fit_prof_cr_factor,
+                         experiment->fit_prof_cwr_factor, experiment->fit_chi_square) = kept;
+                changed = true;
+            }
+            const std::size_t links = std::min(experiment->linked_structures.size(), written->linked_structures.size());
+            for (std::size_t index = 0; index < links; ++index) {
+                LinkedStructure& link = *experiment->linked_structures[index];
+                const LinkedStructure& held_link = *written->linked_structures[index];
+                if (link.fit_bragg_r_factor != held_link.fit_bragg_r_factor ||
+                    link.fit_f_r_factor != held_link.fit_f_r_factor) {
+                    link.fit_bragg_r_factor = held_link.fit_bragg_r_factor;
+                    link.fit_f_r_factor = held_link.fit_f_r_factor;
+                    changed = true;
+                }
+            }
+        }
+    }
+    FitResultRecord& result = project.fit_result;
+    const FitResultRecord& kept = saved.fit_result;
+    const auto pooled = std::tie(result.prof_wr_factor, result.prof_r_factor, result.prof_wr_expected,
+                                 result.prof_cr_factor, result.prof_cwr_factor, result.reduced_chi_square,
+                                 result.objective_value, result.n_data_points, result.degrees_of_freedom);
+    const auto pooled_kept = std::tie(kept.prof_wr_factor, kept.prof_r_factor, kept.prof_wr_expected, kept.prof_cr_factor,
+                                      kept.prof_cwr_factor, kept.reduced_chi_square, kept.objective_value,
+                                      kept.n_data_points, kept.degrees_of_freedom);
+    if (!result.result_kind.empty() && pooled != pooled_kept) {
+        std::tie(result.prof_wr_factor, result.prof_r_factor, result.prof_wr_expected, result.prof_cr_factor,
+                 result.prof_cwr_factor, result.reduced_chi_square, result.objective_value, result.n_data_points,
+                 result.degrees_of_freedom) = pooled_kept;
+        changed = true;
+    }
+    return changed;
+}
+
+namespace {
+
+// What a save's recalculation rewrites, as it was: the fit's agreement records, each bank's calculated columns and
+// each structure's geometry, every one as a step that puts it back.
+std::vector<std::function<void()>> hold_calculation(Project& project) {
+    std::vector<std::function<void()>> back;
+    const auto keep = [&back](auto& field) { back.emplace_back([&field, value = field] { field = value; }); };
+    FitResultRecord& result = project.fit_result;
+    keep(result.prof_wr_factor);
+    keep(result.prof_r_factor);
+    keep(result.prof_wr_expected);
+    keep(result.prof_cr_factor);
+    keep(result.prof_cwr_factor);
+    keep(result.reduced_chi_square);
+    keep(result.objective_value);
+    keep(result.n_data_points);
+    keep(result.degrees_of_freedom);
+    for (const auto& experiment : project.experiments) {
+        keep(experiment->fit_n_data_points);
+        keep(experiment->fit_prof_r_factor);
+        keep(experiment->fit_prof_wr_factor);
+        keep(experiment->fit_prof_wr_expected);
+        keep(experiment->fit_prof_cr_factor);
+        keep(experiment->fit_prof_cwr_factor);
+        keep(experiment->fit_chi_square);
+        for (const auto& link : experiment->linked_structures) {
+            keep(link->fit_bragg_r_factor);
+            keep(link->fit_f_r_factor);
+        }
+        if (experiment->data.has_value()) {
+            PdDataBase& data = *experiment->data;
+            keep(data.d_spacing);
+            keep(data.intensity_calc);
+            keep(data.intensity_bkg);
+            keep(data.calc_status);
+            keep(data.component_intensities_net);
+            keep(data.component_order);
+            keep(data.residual);
+        }
+        if (experiment->reflections.has_value()) {
+            keep(experiment->reflections->d_spacing);
+            keep(experiment->reflections->sin_theta_over_lambda);
+            keep(experiment->reflections->intensity_calc);
+        }
+        keep(experiment->refln);
+        keep(experiment->computed_source);
+        keep(experiment->carried_calculation);
+    }
+    for (const auto& structure : project.structures) {
+        keep(structure->geometry);
+        keep(structure->geometry_source);
+    }
+    return back;
+}
+
+}  // namespace
+
+bool adopt_saved_project(Project& project, const std::string& directory) {
+    // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one holding
+    // results, calculated here or read from its file, is calculated again from those values and written once more, so
+    // its calculated pattern and R factors describe the values beside them.
+    // A project still being built (no structure yet, or an experiment without data) is read back too: its values are
+    // adopted like any other's. A save that cannot be read back is a failed save.
+    const bool changed = adopt_values(project, read_saved_project(directory));
+    // A calculation made here, current or stale, is known by its source as well as by its values: one that was not a
+    // result is held calculated with no values, and its records still need the refresh below.
+    const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
+        return item->carried_calculation || item->computed_source != nullptr ||
+               (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+               (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
+    });
+    if (!calculated) {
+        // Written once more from the values it took, so what a save derives from them (weight fractions, the
+        // isotropic mirror of an anisotropic ADP) is derived from what the files hold, and the next save writes the
+        // same bytes.
+        if (changed) {
+            save_project(project, directory);
+        }
+        return changed;
+    }
+    // Calculated again with its due background estimates deferred (ADR-0040): every other bank's results describe its
+    // rounded values, in the open project and in the file, and a due bank keeps and writes its own points.
+    const std::vector<std::function<void()>> before = hold_calculation(project);
+    try {
+        project.refresh_calculated_pattern(DueEstimates::Defer);
+        refresh_agreement_records(project);
+        save_project(project, directory);
+    } catch (...) {
+        // The recalculation, the records or the second write refused: the project holds what the first write
+        // left, the values it took with the results and records that write carried, and the save fails.
+        for (const auto& step : before) {
+            step();
+        }
+        throw;
     }
     return changed;
 }
@@ -4360,7 +4841,11 @@ namespace {
 // A save of the project into a fresh scratch directory, removed when this object goes.
 class ScratchSave {
    public:
-    explicit ScratchSave(const Project& project) {
+    // A read of the scratch save is as complete as the project (one still being built has no structure or experiment
+    // yet), and a scan's data files are read where the project's are.
+    explicit ScratchSave(const Project& project)
+        : whole_(!project.structures.empty() && !project.experiments.empty()),
+          data_root_(project.scan_data_root.empty() ? project.path : project.scan_data_root) {
         std::random_device random;
         for (int attempt = 0; root_.empty(); ++attempt) {
             const fs::path candidate =
@@ -4380,10 +4865,17 @@ class ScratchSave {
             std::error_code absent;
             fs::copy_file(fs::path(project.path) / "project.edi", source / "project.edi", absent);
         }
-        Project unseeded = project;
-        unseeded.path = source.string();
-        unseeded.scan_data_root.clear();
-        save_project(unseeded, (root_ / "project").string());
+        // The project itself, not a copy: a copy is never calculated, so its computed columns and categories would
+        // be left out of the texts. Its files come from the source folder, with no scan data, through the writer a
+        // save delegates to (save_project).
+        const std::string from = source.string();
+        try {
+            save_project_via_crysta(project, (root_ / "project").string(), &from);
+        } catch (const IoError&) {
+            throw;
+        } catch (const std::exception& error) {
+            throw IoError(error.what());
+        }
     }
     ~ScratchSave() {
         std::error_code ignored;
@@ -4398,7 +4890,37 @@ class ScratchSave {
         return fs::is_regular_file(path) ? read_file(path.string()) : std::string();
     }
 
+    // The saved project with the file at `relative` holding `text`, read back as an open reads it. The
+    // report's settings file may be one the save did not write, as the project stated none yet.
+    Project load_with(const std::string& relative, const std::string& text, const WarningSink& on_warning) const {
+        const fs::path path = root_ / "project" / relative;
+        fs::create_directories(path.parent_path());
+        detail::replace_file((root_ / "project").string(), path.string(), text);
+        // A refusal or a warning names the project's own file, never the scratch folder.
+        const std::string folder = (root_ / "project").string() + "/";
+        const auto local = [&folder](std::string message) {
+            for (std::size_t at = message.find(folder); at != std::string::npos; at = message.find(folder, at)) {
+                message.erase(at, folder.size());
+            }
+            return message;
+        };
+        try {
+            return load_project_folder(
+                (root_ / "project").string(),
+                [&on_warning, &local](const std::string& warning) {
+                    if (on_warning) {
+                        on_warning(local(warning));
+                    }
+                },
+                whole_, data_root_);
+        } catch (const std::exception& refusal) {
+            throw IoError(local(refusal.what()));
+        }
+    }
+
    private:
+    bool whole_;
+    std::string data_root_;
     fs::path root_;
 };
 
@@ -4421,6 +4943,53 @@ std::vector<std::string> saved_file_order(const Project& project) {
 
 }  // namespace
 
+namespace {
+// Every item `text` gives, scalar items and loop columns, as the reader's tokenizer finds them (several on a line, a loop
+// header anywhere), each by its current name in lower case and as often as it is given.
+std::vector<std::string> given_item_names(const std::string& text, bool every_name) {
+    std::vector<std::string> names;
+    for (const Token& token : tokenize(text, "text")) {
+        if (is_tag(token)) {
+            std::string name = detail::current_edi_name(token.text, every_name);
+            std::ranges::transform(name, name.begin(),
+                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            names.push_back(std::move(name));
+        }
+    }
+    return names;
+}
+}  // namespace
+
+UnappliedItems unapplied_items(const Project& read, const std::string& relative, const std::string& text,
+                               const std::string& current) {
+    const bool block = relative.starts_with("structures/") || relative.starts_with("experiments/");
+    const std::string written =
+        relative == "reports/report.edi" ? report_settings_text(read) : ScratchSave(read).text(relative);
+    const std::vector<std::string> kept = given_item_names(written, block);
+    const std::vector<std::string> held = given_item_names(current, block);
+    const auto among = [](const std::vector<std::string>& names, const std::string& name) {
+        return std::ranges::find(names, name) != names.end();
+    };
+    UnappliedItems refused;
+    std::set<std::string> seen;
+    for (const std::string& name : given_item_names(text, block)) {
+        // The header's version is the one item a text may repeat, as the reader allows.
+        if (!seen.insert(name).second) {
+            if (name != "_edi.schema_version" && !among(refused.repeated, name)) {
+                refused.repeated.push_back(name);
+            }
+            continue;
+        }
+        // An output the file holds now is kept as it is, though a read nobody calculated writes none; any other item
+        // must be one the read writes back.
+        const bool output = category_is_output(name.substr(1, name.find('.') - 1));
+        if (!among(kept, name) && !(output && among(held, name))) {
+            refused.unknown.push_back(name);
+        }
+    }
+    return refused;
+}
+
 std::string block_edi_text(const Project& project, BlockKind kind, const std::string& name) {
     const ScratchSave save(project);
     switch (kind) {
@@ -4430,6 +4999,29 @@ std::string block_edi_text(const Project& project, BlockKind kind, const std::st
         case BlockKind::ANALYSIS: break;
     }
     return save.text("analysis/analysis.edi");
+}
+
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const WarningSink& on_warning) {
+    const std::vector<std::string> files = saved_file_order(project);
+    if (std::find(files.begin(), files.end(), relative) == files.end()) {
+        throw IoError("the project has no file " + relative);
+    }
+    const ScratchSave save(project);
+    Project read = save.load_with(relative, text, on_warning);
+    // The copy lives where the project does, so a later save writes back to it, and keeps what the scratch save
+    // stamped: the project's record is the project's unless the edit is of it, and its times always are.
+    read.path = project.path;
+    read.scan_data_root = project.scan_data_root;
+    if (relative != "project.edi") {
+        read.metadata = project.metadata;
+    } else {
+        read.metadata.path = project.metadata.path;
+        read.metadata.created = project.metadata.created;
+        read.metadata.last_modified = project.metadata.last_modified;
+        read.metadata.timestamp = project.metadata.timestamp;
+    }
+    return read;
 }
 
 std::vector<std::pair<std::string, std::string>> project_edi_files(const Project& project) {

@@ -34,6 +34,26 @@ QtObject {
         value: AppState.platformColorScheme
     }
 
+    // The pattern charts' one view (edi ADR-0017 §15): the Structure, Experiment and Analysis pages each show a chart,
+    // and every one follows these ranges (PatternChartController.viewRanges) and the toolbar's choices, which are app
+    // settings (Preferences.patternLegendShown, patternHoverShown, patternPointerMode, structureCurves).
+    // [x min, x max, y min, y max], NaN for the data's own range, and the x axis they are on.
+    property list<real> patternViewRanges: [NaN, NaN, NaN, NaN]
+    property string patternViewAxis: ""
+    // The Stacked and Map views' zoom, one per view and shared by the pages that show them (edi ADR-0041):
+    // {stacked: {x, y}, map: {x, y}}, each [min, max] or empty for the whole range.
+    property var scanZoom: ({})
+    // A project opened, reset or closed starts with its full view (no range set, as a chart writes it); the toolbar's
+    // choices stay.
+    property Connections patternViewReset: Connections {
+        target: Session
+        function onProjectChanged() {
+            AppState.patternViewRanges = [NaN, NaN, NaN, NaN];
+            AppState.patternViewAxis = "";
+            AppState.scanZoom = {};
+        }
+    }
+
     // The furthest page the user has opened with Start or Continue; an open project opens every page
     // (easydiffractionbeta: loading a project enables the workflow pages together).
     property int reached: AppState.Page.Home
@@ -55,8 +75,85 @@ QtObject {
     // Save as, asked for from a page (Get started); the window's folder dialog answers (Main.qml; edi
     // ADR-0017 §13).
     signal saveAsRequested
+    // That Save as ended: saved at the place chosen, or cancelled or refused.
+    signal saveAsFinished(bool saved)
+    // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are
+    // dealt with: at once when there are none, else after the window asks to save or discard them.
+    signal changesQuestion(var action)
+    // The same question about the user's own project while a tutorial holds it aside (edi ADR-0064).
+    signal setAsideChangesQuestion(var action)
+    // An action that replaces the project runs on the next turn of the event loop, never inside the handler that asked
+    // for it: replacing the project rebuilds the pages, and the page holding that handler with them.
+    // `creating`: the action is Create a new project, which in a tutorial without a project of its own yet makes the
+    // tutorial's project; it never touches the user's project held aside, so it asks nothing about it.
+    // Opening, closing and quitting still do.
+    function afterChanges(action, creating) {
+        if (textEdit !== null) {
+            textEdit.settleEdit(() => afterChanges(action, creating));
+            return;
+        }
+        // At once: the action only opens the dialog, which replaces nothing.
+        if (creating === true && Session.hasProjectSetAside && Session.project === null && tutorialRunning) {
+            action();
+            return;
+        }
+        // A tutorial's project is never what an open, a new project, a close or a quit leaves behind (edi ADR-0064).
+        // When the user's own project waits aside with unsaved changes, the window asks about them first: Cancel goes
+        // on with the tutorial, Save or Discard brings that project back before the action. Otherwise the user's
+        // project comes back first, on the next turn, and the action then runs as always.
+        if (Session.hasProjectSetAside && Session.projectSetAsideModified) {
+            setAsideChangesQuestion(action);
+            return;
+        }
+        // A tutorial that has set the user's project aside and has none of its own yet is making it (a new project): the
+        // action makes the tutorial's project.
+        if (Session.hasProjectSetAside && Session.project === null && tutorialRunning) {
+            Qt.callLater(action);
+            return;
+        }
+        if (Session.hasProjectSetAside) {
+            Qt.callLater(() => {
+                Session.restoreProjectSetAside();
+                tutorialEnded();
+                afterChanges(action);
+            });
+            return;
+        }
+        if (Session.project !== null && Session.project.modified)
+            changesQuestion(action);
+        else
+            Qt.callLater(action);
+    }
+    // The Text tab holding an edit not yet applied, or null. What would replace what it shows (another project,
+    // closing the window, another Show choice) settles the edit first, as leaving the tab does (TextTab.settleEdit).
+    property var textEdit: null
+    // Every Text tab shows `choice` ("editable" or "everything") once an unapplied edit is settled.
+    function setTextShow(choice) {
+        if (Preferences.textShow === choice)
+            return;
+        if (textEdit !== null)
+            textEdit.settleEdit(() => Preferences.textShow = choice);
+        else
+            Preferences.textShow = choice;
+    }
+    // A created project that could not be saved at its location stays open, unsaved: the window says why.
+    signal createFailed
     // The Analysis page's Evolution tab, asked for from the results window after a scan (edi ADR-0017 §19).
     signal evolutionRequested
+    // Help and feedback, asked for from Home, About or the crash popup: the window's form opens on `kind` ("feedback",
+    // "question", "problem" or "idea"), with `log` attached instead of this run's when it is not empty (Main.qml).
+    signal feedbackRequested(string kind, string log)
+    // What's new, asked for from Home (Main.qml).
+    signal whatsNewRequested
+    // A built-in tutorial to run (its manifest entry), asked for from Home's Tutorials; the window's panel runs it.
+    signal tutorialRequested(var tutorial)
+    // A tutorial is running (TutorialPanel); while it is, no other starts.
+    // A fit's results window: open now, and how often it has opened (a tutorial waits for it to open and close).
+    property bool fitResultsOpen: false
+    property int fitResultsShown: 0
+    property bool tutorialRunning: false
+    // A replacement or a quit brought the user's set-aside project back, which ends the running tutorial.
+    signal tutorialEnded
 
     function open(page) {
         reached = Math.max(reached, page);

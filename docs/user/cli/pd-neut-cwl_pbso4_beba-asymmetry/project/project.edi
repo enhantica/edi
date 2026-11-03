@@ -6,8 +6,3 @@ _metadata.description "Rietveld round-robin data · Bérar-Baldinozzi asymmetry 
 _metadata.created          "26 Sep 2026 10:28:28"
 _metadata.last_modified    "26 Sep 2026 10:28:29"
 _metadata.timestamp        ?
-_metadata.purpose "refinement"
-_metadata.dimensionality "1D"
-_metadata.instrument "D1A"
-_metadata.facility "ILL"
-_metadata.polarisation "none"

@@ -9,6 +9,7 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.chart_controls.reference import PALETTES, role_colours
 from tests.integration.py.test_report_iucr_persistence import project
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -69,9 +70,9 @@ _fit_result.descent ladder
 """
     )
     _, document = model(source)
-    assert 'Rwp 16.35 % · χ² 75.62' in document['experiments'][0]['pattern']['title'], (
+    assert 'Rwp 16.35 % · reduced χ² 75.62' in document['experiments'][0]['pattern']['title'], (
         'Every pattern report title carries percent Rwp and reduced '
-        'chi-square with the dialog precision'
+        'chi-square with the dictionary label and precision'
     )
 
 
@@ -82,6 +83,14 @@ def test_default_pattern_titles_are_coloured_segments_with_unstyled_separators(t
     assert hasattr(loaded, 'report'), 'The coloured-title seam reaches the production report'
     document = json.loads(loaded.report.model().to_json())
     pattern = document['experiments'][0]['pattern']
+    styles = {row['key']: row for row in document['pattern_styles']}
+    for theme in ('light', 'dark'):
+        assert styles['meas.0'][theme] == PALETTES[0][theme][0], (
+            'The actual default report starts with the recorded Earth colour in each theme'
+        )
+        assert styles['calc'][theme] == role_colours(theme)['total_calculation'], (
+            'The actual default report uses the recorded common calc red in each theme'
+        )
     main = pattern['y_main']['segments']
     residual = pattern['y_residual']['segments']
     assert [(part['text'], part['style']) for part in main] == [
@@ -103,40 +112,48 @@ def test_default_pattern_titles_are_coloured_segments_with_unstyled_separators(t
 
 @pytest.mark.parametrize('dark', [False, True])
 def test_palette_rows_are_data_with_default_first_colour_and_valid_hex(dark):
-    directory = ROOT / 'data/palettes'
-    paths = sorted(directory.glob('*.tsv'))
-    assert len(paths) == 2, 'The app ships exactly Default and Colour-blind safe palettes as data'
-    schemes = {}
-
-    for path in paths:
-        rows = list(csv.DictReader(path.open(), delimiter='\t'))
+    theme = 'dark' if dark else 'light'
+    paths = sorted((ROOT / 'data/palettes').glob('*.tsv'))
+    assert len(paths) == len(PALETTES), (
+        'The report inputs ship exactly the five approved palette tables'
+    )
+    for palette in PALETTES:
+        path = ROOT / 'data/palettes' / (palette['name'].lower().replace(' ', '-') + '.tsv')
+        with path.open() as stream:
+            rows = list(csv.DictReader(stream, delimiter='\t'))
         assert all(set(row) == {'role', 'index', 'light', 'dark'} for row in rows), (
-            'Each palette row declares role, index and both theme colours'
+            'Each palette input declares its role, index and both theme colours'
         )
         assert all(
-            re.fullmatch(r'#[0-9a-fA-F]{6}', row[theme])
-            for row in rows
-            for theme in ['light', 'dark']
-        ), 'Palette colours are complete RGB hex values in both themes'
-        pattern = [row for row in rows if row['role'] == 'pattern']
-        structure = [row for row in rows if row['role'] == 'structure']
-        assert len(pattern) >= 10 and structure, (
-            'Each scheme has at least ten pattern colours and its own structure palette'
+            re.fullmatch(r'#[0-9a-fA-F]{6}', row[t]) for row in rows for t in ('light', 'dark')
+        ), 'Every report palette coordinate is valid complete sRGB hex'
+        selected = [row for row in rows if row['role'] == 'figure']
+        assert [int(row['index']) for row in selected] == list(range(11)), (
+            'The shared figure pool retains all eleven consecutive approved positions'
         )
-        assert [int(row['index']) for row in pattern] == list(range(len(pattern))), (
-            'Pattern palette rows have contiguous indices in their declared order'
+        assert [row[theme] for row in selected] == palette[theme], (
+            'Report inputs retain the exact recorded shared figure order in both themes'
         )
-        theme = 'dark' if dark else 'light'
-        assert len({row[theme].lower() for row in pattern}) == len(pattern), (
-            'Every declared distinct pattern colour differs within a theme'
+        assert {row['role'] for row in rows} == {
+            'figure',
+            'total_calculation',
+            'background',
+            'difference',
+        }, 'The shared figure pool and three chart roles replace separate per-kind groups'
+        assert len({row[theme] for row in selected}) == 11, (
+            'The shared categorical pool keeps eleven distinct entries in each theme'
         )
-        forbidden = {'#f44336', '#607d8b', '#8bc34a', '#8c8c8c'}
-        assert not forbidden.intersection(row[theme].lower() for row in rows), (
-            'No data colour can collide with calculated, background, residual or excluded roles'
-        )
-        schemes[path.stem.lower()] = pattern
-    default = schemes.get('default')
-    assert default is not None, 'The Default palette retains an explicit stable scheme identity'
-    assert default[0]['dark' if dark else 'light'].lower() == ('#81d4fa' if dark else '#03a9f4'), (
-        'Default keeps the existing first measured-series colour in each theme'
+        for role, expected in role_colours(theme).items():
+            role_rows = [row for row in rows if row['role'] == role]
+            assert len(role_rows) == 1 and role_rows[0][theme] == expected, (
+                'Each common report role retains exactly one independently recorded colour'
+            )
+    assert [palette['name'] for palette in PALETTES] == [
+        'Earth',
+        'Classic',
+        'Soft',
+        'Natural',
+        'Colour-blind safe',
+    ] and [palette['default'] for palette in PALETTES] == [True, False, False, False, False], (
+        'The recorded report palette names and order put Earth alone first as the default'
     )

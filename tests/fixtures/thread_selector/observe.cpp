@@ -17,6 +17,7 @@
 #include "edi/threading.hpp"
 #include "engine_observer.hpp"
 #include "session.hpp"
+#include "example_list_model.hpp"
 #if defined(Q_OS_WASM)
 #include <emscripten.h>
 EM_JS_DEPS(thread_selector, "$stringToNewUTF8,$UTF8ToString");
@@ -131,7 +132,12 @@ void thread_selector_install(QQmlApplicationEngine& engine) {
         result["reportedWorkers"] = edi::engine_threading().workers;
         result["environment"] = QString::fromUtf8(qgetenv("OMP_NUM_THREADS"));
         if (dialog) QMetaObject::invokeMethod(dialog, "close");
-        if (!session->openExample("pd-neut-cwl_cosio-d20_start-1")) {
+        if (!edi_app::ExampleListModel::bundledIds().contains("pd-neut-cwl_cosio-d20")) {
+            result["error"] = "Example precondition: the selector's measured CW vehicle must be bundled";
+            publish(result);
+            return;
+        }
+        if (!session->openExample("pd-neut-cwl_cosio-d20")) {
             result["error"] = session->lastError();
             publish(result);
             return;

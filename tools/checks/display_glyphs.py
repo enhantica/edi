@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: BSD-3-Clause
-"""Every non-ASCII character the app can display, and the bundled font that draws it.
+r"""Every non-ASCII character the app can display, and the bundled font that draws it.
 
 Every character the app shows comes from a bundled font, at the face it is drawn with; none comes
 from the platform (edi ADR-0033). The app draws text in PT Sans and PT Mono, with the bundled Noto
@@ -10,8 +10,11 @@ of the chain has sends Qt to the system's fonts; on macOS that search goes throu
 logs "Failed to create FreeType font engine". Legend marks are drawn shapes, not characters.
 
 The census reads the string literals of the app's QML and C++ and of the core (whose messages
-and units the app shows), with their escapes decoded. For each character it records where it is
-used, the font chain that draws it and the font of that chain that has it. --write regenerates
+and units the app shows), with their escapes decoded: \u and \U, UTF-8 bytes written as \x,
+and HTML numeric references, and every name crysta's dictionary gives the pages (edi ADR-0051),
+read from crysta's source: CRYSTA_CONSUMER_SRC when set, else the pinned fetch in build/crysta-src.
+For each character it records where it is used, the font chain that draws it and the font of
+that chain that has it. --write regenerates
 data/display-glyphs.json from the sources and the fonts, failing on a character no font of its
 chain has. --check scans the sources again and fails when a character or a site is not in the
 census, or when a character is in no font of its chain. Each character's row also records the
@@ -26,10 +29,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import struct
 import sys
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 CENSUS = ROOT / 'data' / 'display-glyphs.json'
@@ -70,12 +76,20 @@ SITE_FONTS = {
     # The fit's change arrow, split out of the status text and drawn by its own Text.
     ('app/qml/Components/StatusBar.qml', '\u2192'): ('Encode Sans',),
     ('app/src/fit_view_model.cpp', '\u2192'): ('Encode Sans',),
+    # The arrow between two values, drawn in Encode Sans while the digits keep the value's font.
+    ('app/qml/Components/DigitText.qml', '\u2192'): ('Encode Sans',),
 }
-# The sources whose strings never reach the app's pages: the terminal report and progress line.
-NOT_SHOWN = {'core/src/report.cpp'}
+# The dictionary's names reach the pages at run time, through the display bridge.
+DICTIONARY = 'data/dictionary/parameters.yaml'
+DICTIONARY_SITE = f'crysta:{DICTIONARY}'
+# The sources whose strings never reach the app's pages: the terminal report and progress line,
+# and the JSON writer, whose line separators are escapes, never shown.
+NOT_SHOWN = {'core/src/report.cpp', 'core/src/json.cpp'}
 
 LITERAL = re.compile(r'"(?:[^"\\\n]|\\.)*"' + r"|'(?:[^'\\\n]|\\.)*'" + r'|`(?:[^`\\]|\\.)*`')
 ESCAPE = re.compile(r'\\u([0-9a-fA-F]{4})|\\U([0-9a-fA-F]{8})')
+BYTES = re.compile(r'(?:\\x[0-9a-fA-F]{2})+')
+ENTITY = re.compile(r'&#(?:x([0-9a-fA-F]+)|([0-9]+));')
 QCHAR = re.compile(r'QChar\(\s*0x([0-9a-fA-F]+)\s*\)')
 METRICS = re.compile(r'\b(?:TextMetrics|FontMetrics)\s*\{')
 COPIED_FONT = re.compile(r'^\s*font:\s*([\w.]+\.font)\s*$', re.MULTILINE)
@@ -109,9 +123,19 @@ def strip_comments(text: str) -> str:
     return ''.join(out)
 
 
+def utf8(run: str) -> str:
+    r"""A run of \x escapes as the UTF-8 bytes the compiler stores; as written if not UTF-8."""
+    try:
+        return bytes(int(run[i + 2 : i + 4], 16) for i in range(0, len(run), 4)).decode('utf-8')
+    except UnicodeDecodeError:
+        return run
+
+
 def decoded(literal: str) -> str:
-    r"""A literal's characters with its \u and \U escapes decoded."""
-    return ESCAPE.sub(lambda m: chr(int(m.group(1) or m.group(2), 16)), literal)
+    r"""A literal's characters, its \u, \U and \x escapes and HTML numeric references decoded."""
+    text = ESCAPE.sub(lambda m: chr(int(m.group(1) or m.group(2), 16)), literal)
+    text = BYTES.sub(lambda m: utf8(m.group(0)), text)
+    return ENTITY.sub(lambda m: chr(int(m.group(1), 16) if m.group(1) else int(m.group(2))), text)
 
 
 def fonts_of(relative: str, ch: str) -> tuple[str, ...]:
@@ -120,9 +144,42 @@ def fonts_of(relative: str, ch: str) -> tuple[str, ...]:
     return SITE_FONTS.get((relative, ch), SITE_FONTS.get(relative, ('PT Sans',)))
 
 
+def crysta_source() -> Path:
+    """The crysta source whose dictionary the app links."""
+    named = os.environ.get('CRYSTA_CONSUMER_SRC')
+    return Path(named) if named else ROOT / 'build/crysta-src'
+
+
+def dictionary_characters() -> set[str]:
+    """The non-ASCII characters of the dictionary's titles, labels, units and option names."""
+    path = crysta_source() / DICTIONARY
+    try:
+        data = yaml.safe_load(path.read_text(encoding='utf-8'))
+    except (OSError, yaml.YAMLError) as error:
+        sys.exit(f"display_glyphs: cannot read crysta's dictionary at {path}: {error}")
+    texts = []
+    for category in data.get('categories') or []:
+        texts += [category.get('title'), category.get('loop_title')]
+    for entry in list(data.get('parameters') or []) + list(data.get('items') or []):
+        texts += [entry.get('display_name'), entry.get('display_units')]
+        texts += [option.get('display_name') for option in entry.get('options') or []]
+        for variant in (entry.get('variants') or {}).values():
+            if isinstance(variant, dict):
+                texts += [variant.get('display_name'), variant.get('display_units')]
+    return {ch for text in texts if text for ch in str(text) if ord(ch) >= 128}
+
+
 def scan() -> dict[str, dict]:
     """Each non-ASCII displayed character, by its drawing font, with the files using it."""
     found: dict[str, dict] = {}
+    for ch in sorted(dictionary_characters()):
+        code = f'U+{ord(ch):04X}'
+        found[f'{code} PT Sans'] = {
+            'char': ch,
+            'code': code,
+            'font': 'PT Sans',
+            'sites': [DICTIONARY_SITE],
+        }
     for directory, suffixes in SOURCES:
         for path in sorted((ROOT / directory).rglob('*')):
             relative = path.relative_to(ROOT).as_posix()

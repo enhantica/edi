@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -26,7 +27,7 @@ EaComponents.ContentPage {
     property alias extrasItem: extrasLoader.sourceComponent
     property alias textItem: textLoader.sourceComponent
     // The page's Settings tab (edi ADR-0031 §2): its view options, kept in the app's settings under the page's name,
-    // never in the project. A page with none says so.
+    // never in the project. A page with none has the tab disabled, as an empty Extra tab is.
     property Component settingsItem: null
     property bool extrasEnabled: false
     property bool textEnabled: false
@@ -52,14 +53,25 @@ EaComponents.ContentPage {
     signal blockActivated(int index)
 
     // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
+    // The main area's shown tab.
+    readonly property int mainTabIndex: mainContent.children.length > 0 ? mainContent.children[0].currentIndex : 0
+
     function showMainTab(index) {
         mainContent.children[0].currentIndex = index;
+    }
+    // The run log's line for a main-view tab chosen on the shown page (edi ADR-0062).
+    onMainTabIndexChanged: {
+        if (page.current)
+            RunLog.note(`${page.pageName} main tab: ${page.mainTabs[page.mainTabIndex]?.objectName ?? page.mainTabIndex}`);
     }
 
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
     // names it nowhere, so it is found as the SideBar's child with a gradient.
     Component.onCompleted: {
+        // The page's regions by name, for the documentation captures and the user guides.
+        sideBar.parent.objectName = "workflow." + page.pageName + ".sidebarHost";
+        mainContent.parent.objectName = "workflow." + page.pageName + ".mainContent";
         for (let i = 0; i < sideBar.children.length; ++i) {
             const child = sideBar.children[i];
             if (child.gradient)
@@ -113,6 +125,52 @@ EaComponents.ContentPage {
         }
     }
 
+    // The Text tab knows whether it is shown and which block the page shows, so leaving an edit not yet applied asks
+    // first; kept, the page, the tab and the block come back (edi ADR-0017 §7).
+    property int pageIndex: -1
+    // The Text tab's edit is not yet applied: its loader stays active until the user discards it. Set from the tab's
+    // signal, so the loader's `active` never reads its own item.
+    property bool textDirty: false
+    onCurrentChanged: {
+        if (current)
+            page.pageIndex = EaGlobals.Vars.appBarCurrentIndex;
+    }
+    Binding {
+        target: textLoader.item
+        property: "shown"
+        value: page.current && textLoader.SwipeView.isCurrentItem
+        when: textLoader.item !== null
+    }
+    Binding {
+        target: textLoader.item
+        property: "blockIndex"
+        value: page.blockIndex
+        when: textLoader.item !== null
+    }
+    // The run log's line for a sidebar tab chosen on the shown page.
+    Connections {
+        target: textTabButton.TabBar.tabBar
+        function onCurrentIndexChanged() {
+            if (page.current)
+                RunLog.note(`${page.pageName} sidebar tab: ${["basic", "extras", "text", "settings"][textTabButton.TabBar.tabBar.currentIndex] ?? textTabButton.TabBar.tabBar.currentIndex}`);
+        }
+    }
+    Connections {
+        target: textLoader.item
+        ignoreUnknownSignals: true
+        function onDirtyChanged() {
+            page.textDirty = (textLoader.item as TextTab)?.dirty ?? false;
+        }
+        function onStayRequested() {
+            if (page.pageIndex >= 0)
+                EaGlobals.Vars.appBarCurrentIndex = page.pageIndex;
+            textTabButton.TabBar.tabBar.currentIndex = textTabButton.TabBar.index;
+        }
+        function onBlockRequested(index) {
+            page.blockActivated(index);
+        }
+    }
+
     mainView: EaComponents.MainContent {
         id: mainContent
 
@@ -143,6 +201,7 @@ EaComponents.ContentPage {
 
     sideBar: EaComponents.SideBar {
         id: sideBar
+        objectName: "workflow." + page.pageName + ".manualSidebar"
 
         tabs: [
             EaElements.TabButton {
@@ -155,6 +214,7 @@ EaComponents.ContentPage {
                 enabled: page.extrasEnabled
             },
             EaElements.TabButton {
+                id: textTabButton
                 objectName: "sideBar.tab.text"
                 text: qsTr("Text")
                 enabled: page.textEnabled
@@ -162,6 +222,7 @@ EaComponents.ContentPage {
             EaElements.TabButton {
                 objectName: "sideBar.tab.settings"
                 text: qsTr("Settings")
+                enabled: page.settingsItem !== null
             }
         ]
 
@@ -172,14 +233,16 @@ EaComponents.ContentPage {
             Loader {
                 id: extrasLoader
             },
-            // Text is loaded only while its tab is shown: a block's text can be the whole data loop.
+            // Text is loaded only while its tab is shown, a block's text can be the whole data loop, or while it
+            // holds an edit not yet applied, until the user discards it.
             Loader {
                 id: textLoader
-                active: SwipeView.isCurrentItem
+                active: SwipeView.isCurrentItem || page.textDirty
+                onItemChanged: page.textDirty = (item as TextTab)?.dirty === true
             },
             Loader {
                 id: settingsLoader
-                sourceComponent: page.settingsItem ? page.settingsItem : noSettings
+                sourceComponent: page.settingsItem
             }
         ]
 
@@ -203,17 +266,6 @@ EaComponents.ContentPage {
             property: "bottomMargin"
             when: textLoader.SwipeView.isCurrentItem
             value: page.continueShown ? -(sideBar.continueButton.height + sideBar.continueButton.anchors.bottomMargin) : 0
-        }
-    }
-
-    Component {
-        id: noSettings
-        EaElements.Label {
-            objectName: "sideBar.settings.none"
-            topPadding: EaStyle.Sizes.fontPixelSize
-            leftPadding: EaStyle.Sizes.fontPixelSize
-            color: EaStyle.Colors.themeForegroundMinor
-            text: qsTr("This page has no settings yet")
         }
     }
 }

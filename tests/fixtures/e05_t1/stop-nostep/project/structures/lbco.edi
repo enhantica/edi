@@ -27,7 +27,7 @@ _atom_site.multiplicity
 _atom_site.occupancy
 _atom_site.adp_iso
 _atom_site.adp_type
-La La 0 0 0 a 1 0 0.5() Biso
+La La 0 0 0 a 1 0 0() Biso
 Ba Ba 0 0 0 a 1 0 0.5 Biso
 Co Co 0.5 0.5 0.5 b 1 0 0.5 Biso
 O O 0 0.5 0.5 c 3 0 0.5 Biso

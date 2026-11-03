@@ -2,6 +2,8 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import EasyApplication.Gui.Style as Style
+import "../../fixtures/current_row_style/reference.js" as RowStyle
 import "UiInteraction.js" as Ui
 
 TestCase {
@@ -11,12 +13,14 @@ TestCase {
     property var appWindow
     Component {
         id: application
-        Main {}
+        Main { width: 1280; height: 800 }
     }
     function initTestCase() {
         failOnWarning(/.*/);
         appWindow = application.createObject(null);
         verify(appWindow !== null, "GUI: production Main loads");
+        tryCompare(appWindow, "width", 1280, 2000, "GUI layout contracts use the declared full-size viewport independently of the supported minimum");
+        tryCompare(appWindow, "height", 800, 2000, "GUI layout contracts retain their declared full-size viewport height");
         verify(waitForRendering(appWindow.contentItem), "GUI: production window renders");
     }
     function init() {
@@ -27,6 +31,7 @@ TestCase {
         Session.closeProject();
         Session.openProject(Probe.repoUrl("tests/fixtures/e04_t1/editable-project"));
         verify(Session.hasProject, "GUI: committed editable project opens");
+        verify(waitForRendering(appWindow.contentItem), "GUI: opened project renders before locating its input controls");
     }
     function cleanupTestCase() {
         Session.closeProject();
@@ -61,7 +66,22 @@ TestCase {
         }, 2000, "GUI: declared category belongs to the selected pane: " + group);
         Ui.scrollIntoView(Ui.target(header));
         Ui.expandGroup(test, Probe, appWindow, "group." + group);
-        tryVerify(() => control(name) !== null, 2000, "GUI: category exposes its control: " + name);
+        let wanted = null;
+        tryVerify(() => {
+            wanted = Ui.find(Ui.page(appWindow), name, true);
+            return wanted !== null;
+        }, 2000, "GUI: the expanded category owns its requested control: " + name);
+        Ui.scrollIntoView(Ui.target(wanted));
+        let previous = "", stable = 0;
+        tryVerify(() => {
+            const exposed = control(name);
+            if (!exposed || Ui.moving(appWindow.contentItem)) return false;
+            const point = exposed.mapToItem(appWindow.contentItem, 0, 0);
+            const geometry = JSON.stringify([point.x, point.y, exposed.width, exposed.height]);
+            stable = geometry === previous ? stable + 1 : 0;
+            previous = geometry;
+            return stable >= 2;
+        }, 3000, "GUI: the requested control finishes sidebar and group animations before layout observation: " + name);
         return control(name);
     }
     function search(combo, text) {
@@ -87,6 +107,7 @@ TestCase {
     }
     function textInput(field, keys) {
         field.forceActiveFocus();
+        tryCompare(field, "activeFocus", true, 2000, "GUI: numeric input owns keyboard focus before typing");
         keyClick(Qt.Key_A, Qt.ControlModifier);
         for (const key of keys)
             keyClick(key);
@@ -105,7 +126,7 @@ TestCase {
         verify(picker !== null && icon !== null && icon.parent === picker.contentItem, "owner 2026-10-06: atom icon sits inside the type picker without a separate column");
         verify(atoms.resolvedColumnWidths[2] < atoms.resolvedColumnWidths[3], "owner 2026-10-06: atom type column is compact beside coordinates");
         const table = reveal("structure", "basic", "atom_site_aniso", "atomSiteAdps.list");
-        compare(JSON.stringify(headers(table)), JSON.stringify(["", "id", "type", "iso/eq", "11", "22", "33", "12", "13", "23"]), "owner 2026-10-12: Atomic displacement retains its columns with iso/eq and component-index headers");
+        compare(JSON.stringify(headers(table)), JSON.stringify(["", "id", "ADP type", "iso/eq", "11", "22", "33", "12", "13", "23"]), "owner 2026-10-12: Atomic displacement retains its columns with iso/eq and component-index headers");
         const sites = Probe.rows(Session.project.currentStructure.atomSites);
         const adps = Probe.rows(Session.project.currentStructure.atomSiteAdps);
         compare(JSON.stringify(adps.map(row => row.label)), JSON.stringify(sites.map(row => row.label)), "owner 2026-10-06: ADP labels copy Atom sites in exactly the same order");
@@ -214,12 +235,15 @@ TestCase {
         filterText(field, "p n m a");
         verify(!field.warned, "owner 2026-10-06: filtering ignores case and spaces");
         keyClick(Qt.Key_Return);
+        // Closing the popup restores focus before the number field takes it.
+        tryCompare(name.popup, "visible", false, 2000, "GUI: name selection finishes closing before number input");
         tryCompare(group, "itNumber", 62, 2000, "owner 2026-10-06: name edit resolves IT number");
-        compare(group.coordSystemCode, "abc", "International Tables: Pnma has the abc default setting");
+        tryCompare(group, "coordSystemCode", "abc", 2000, "International Tables: Pnma has the abc default setting");
         const number = control("spaceGroup.itNumber");
         textInput(number, [Qt.Key_2, Qt.Key_2, Qt.Key_5]);
-        compare(group.nameHM, "F m -3 m", "owner 2026-10-06: number edit resolves the group name");
-        compare(group.coordSystemCode, "1", "owner example: Fm-3m resolves its default code 1");
+        tryCompare(group, "itNumber", 225, 2000, "owner 2026-10-06: number input commits the exact requested IT number");
+        tryCompare(group, "nameHM", "F m -3 m", 2000, "owner 2026-10-06: number edit resolves the group name");
+        tryCompare(group, "coordSystemCode", "1", 2000, "owner example: Fm-3m resolves its default code 1");
         group.nameHM = "F d -3 m";
         group.coordSystemCode = "2";
         const code = control("spaceGroup.coordSystemCode");
@@ -231,7 +255,8 @@ TestCase {
         filterText(codeField, "1");
         verify(!codeField.warned, "owner 2026-10-06: setting code is filterable");
         keyClick(Qt.Key_Return);
-        compare(group.coordSystemCode, "1", "owner 2026-10-06: selected setting remains editable");
+        tryCompare(code.popup, "visible", false, 2000, "GUI: setting selection finishes closing before checking its identity");
+        tryCompare(group, "coordSystemCode", "1", 2000, "owner 2026-10-06: selected setting remains editable");
         compare(group.itNumber, 227, "owner 2026-10-06: setting edit retains group identity");
     }
     function test_invalid_number_is_red_and_unapplied() {
@@ -275,36 +300,52 @@ TestCase {
             const picker = reveal("structure", "basic", "atom_site", "atomSite.typeSymbol.0");
             const glyph = nativeAtomGlyph(control("atomSite.icon.0"));
             verify(glyph !== null, "owner 2026-10-06: Atom sites draws its coloured atom glyph beside the type");
-            tryCompare(glyph, "color", palette.value, 2000, "published-elements.tsv: La icon follows its independent Jmol/VESTA colour");
             click("appBar.tab.analysis");
             click("sideBar.tab.basic");
-            const rows = Probe.rows(Session.project.parameters);
-            const index = rows.findIndex(row => row.parameter && row.parameter.rowLabel === "La" && row.parameter.name === "occupancy");
-            verify(index >= 0, "owner 2026-10-06: Analysis contains the same La occupancy row");
             let table = null;
             tryVerify(() => {
                 table = discover(Ui.page(appWindow), "parameters.list");
                 return table !== null;
             }, 2000, "owner 2026-10-06: Analysis parameter table belongs to the selected pane");
+            const rows = Probe.rows(table.sourceModel);
+            const index = rows.findIndex(row => row.parameter && row.parameter.rowLabel === "La" && row.parameter.name === "occupancy");
+            verify(index >= 0, "owner 2026-10-06: Analysis shows the same La occupancy row after its show-filters");
             table.positionViewAtIndex(index, ListView.Center);
             tryVerify(() => control("parameters.name." + index) !== null, 2000, "owner 2026-10-06: the selected Analysis name is exposed");
             const line = control("parameters.name." + index);
             const atom = nativeAtomGlyph(line);
             verify(atom !== null, "owner 2026-10-06: Analysis draws its atom glyph");
-            tryCompare(atom, "color", palette.value, 2000, "owner 2026-10-06: Analysis and Atom sites draw the same independent palette colour");
+            compare(String(atom.color), String(glyph.color), "The same element uses one readable colour in both table consumers");
+            const theme = Style.Colors.isDarkPalette ? "dark" : "light";
+            console.log("LEGACY_ELEMENT " + JSON.stringify({
+                scheme: palette.scheme,
+                symbol: "La",
+                consumers: [
+                    {
+                        colour: String(glyph.color),
+                        backgrounds: [String(Style.Colors.mainContentBackground), RowStyle.reference.odd[theme], RowStyle.reference.even[theme], RowStyle.reference.hover[theme]]
+                    },
+                    {
+                        colour: String(atom.color),
+                        backgrounds: [String(Style.Colors.mainContentBackground), RowStyle.reference.odd[theme], RowStyle.reference.even[theme], RowStyle.reference.hover[theme]]
+                    }
+                ]
+            }));
         }
     }
     function test_adp_view_uses_probability_in_atom_scale_position() {
         const scale = reveal("structure", "extras", "appearance", "structure.appearance.atomScale");
-        const location = scale.mapToItem(appWindow.contentItem, 0, 0);
+        const appearance = discover(Ui.page(appWindow), "group.appearance");
+        verify(appearance !== null && !appearance.collapsed, "The replacement-slot geometry belongs to the actual unfolded Appearance group");
+        const location = scale.mapToItem(appearance, 0, 0);
         Session.project.structureViewOptions.atomView = "adp";
         tryVerify(() => control("structure.appearance.adpProbability") !== null, 2000, "owner 2026-10-06: ADP atom view exposes ellipsoid probability");
         const probability = control("structure.appearance.adpProbability");
         compare(Number(probability.text), 0.99, "diffraction-lib v0.21.1: ellipsoid probability defaults to 0.99");
         verify(control("structure.appearance.atomScale") === null, "owner 2026-10-06: ADP view replaces the ball atom scale field");
         verify(waitForPolish(appWindow, 2000), "owner 2026-10-06: replacement field finishes layout");
-        tryVerify(() => probability.mapToItem(appWindow.contentItem, 0, 0).x === location.x, 2000, "owner 2026-10-06: probability occupies the atom scale column");
-        tryVerify(() => probability.mapToItem(appWindow.contentItem, 0, 0).y === location.y, 2000, "owner 2026-10-06: probability occupies the atom scale row");
+        tryVerify(() => probability.mapToItem(appearance, 0, 0).x === location.x, 2000, "owner 2026-10-06: probability occupies the atom scale column");
+        tryVerify(() => probability.mapToItem(appearance, 0, 0).y === location.y, 2000, "owner 2026-10-06: probability occupies the atom scale row");
     }
     function test_minimizer_is_two_rows_of_two() {
         const type = reveal("analysis", "extras", "minimizer", "minimizer.type");

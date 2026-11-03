@@ -1,10 +1,20 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_view_model.hpp"
 
-#include <algorithm>
-#include <filesystem>
+#include <QStringList>
 
+#include <algorithm>
+#include <array>
+#include <exception>
+#include <filesystem>
+#include <iterator>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 #include "edi/selectors.hpp"
 #include "parameter_registry.hpp"
@@ -13,6 +23,16 @@
 namespace edi_app {
 
 namespace {
+
+// The values a selector of `uid` takes, in the dictionary's order.
+std::vector<std::string> option_tokens(const char* uid) {
+    std::vector<std::string> tokens;
+    for (const edi::DisplayOption& option : edi::options(uid)) {
+        tokens.push_back(option.token);
+    }
+    return tokens;
+}
+
 // A peak field's family, its sidebar row (edi ADR-0017 §5): 0 the back-to-back exponentials, 1 the Gaussian
 // broadening with the CW profile's two shape fields (U V W, then X Y or eta0 eta1, on one row), 2 the TOF
 // Lorentzian, 3 any other.
@@ -29,6 +49,79 @@ int peak_family(const std::string& name) {
     }
     return 3;
 }
+
+// The instrument fields in the sidebar's order (display only; the file and the parameter paths keep the
+// core's): the wavelengths first, then the corrections, so an X-ray CW group reads Wavelength, Wavelength 2,
+// Intensity ratio 2/1 on one row and 2θ offset, Polarization coefficient, Monochromator 2θ on the next.
+std::vector<edi::CategoryField> instrument_display_order(std::vector<edi::CategoryField> fields) {
+    static constexpr const char* order[] = {"setup_wavelength",
+                                            "setup_wavelength_2",
+                                            "setup_wavelength_2_to_1_ratio",
+                                            "calib_twotheta_offset",
+                                            "setup_polarization_coefficient",
+                                            "setup_monochromator_twotheta"};
+    const auto rank = [](const std::string& name) {
+        const auto* found = std::find(std::begin(order), std::end(order), name);
+        return static_cast<int>(found - std::begin(order));
+    };
+    std::stable_sort(fields.begin(), fields.end(), [&rank](const edi::CategoryField& a, const edi::CategoryField& b) {
+        return rank(a.name) < rank(b.name);
+    });
+    return fields;
+}
+
+// The facilities and instruments the selectors offer (the owner, 2026-10-27): every instrument of edi's and
+// diffraction-lib's examples, and common laboratory diffractometers, each with the sample form it measures.
+struct KnownInstrument {
+    const char* facility;
+    const char* name;
+    bool single_crystal;
+};
+constexpr std::array<KnownInstrument, 28> kKnownInstruments{{
+    {"PSI", "HRPT", false},
+    {"ILL", "D1A", false},
+    {"ILL", "D20", false},
+    {"ISIS", "PEARL", false},
+    {"ISIS", "POLARIS", false},
+    {"ISIS", "WISH", false},
+    {"ANSTO", "ECHIDNA", false},
+    {"MLZ", "SPODI", false},
+    {"MLZ", "HEiDi", true},
+    {"J-PARC", "SENJU", true},
+    {"LLB", "5C2", true},
+    {"ESS", "BEER", false},
+    {"ESS", "DREAM", false},
+    {"Argonne", "SEPD", false},
+    {"SNS", "NOMAD", false},
+    {"ESRF", "BM01", false},
+    {"PETRA III", "P02.1", false},
+    {"Laboratory", "Bruker D8 Advance", false},
+    {"Laboratory", "Bruker D2 Phaser", false},
+    {"Laboratory", "Malvern Panalytical Empyrean", false},
+    {"Laboratory", "Malvern Panalytical X'Pert3 Powder", false},
+    {"Laboratory", "Malvern Panalytical Aeris", false},
+    {"Laboratory", "Rigaku SmartLab", false},
+    {"Laboratory", "Rigaku MiniFlex", false},
+    {"Laboratory", "STOE STADI P", false},
+    {"Laboratory", "Bruker D8 Venture", true},
+    {"Laboratory", "Rigaku XtaLAB Synergy", true},
+    {"Laboratory", "STOE IPDS", true},
+}};
+
+// A selector's options: "Not specified" (the empty token) first, then `names`, and `held` too when the file states a
+// name the list does not have, so the selector shows it.
+void set_description_options(OptionListModel* options, std::vector<std::string> names, const std::string& held) {
+    if (!held.empty() && std::find(names.begin(), names.end(), held) == names.end()) {
+        names.push_back(held);
+    }
+    std::vector<std::string> tokens{""};
+    std::vector<std::string> labels{QObject::tr("Not specified").toStdString()};
+    for (const std::string& name : names) {
+        tokens.push_back(name);
+        labels.push_back(name);
+    }
+    options->setOptions(tokens, "", labels);
+}
 }  // namespace
 
 ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
@@ -36,37 +129,71 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     : QObject(parent),
       project_(project),
       experiment_(experiment),
+      made_for_(experiment.experiment_type),
       editor_(editor),
       registry_(registry),
+      sample_form_options_(new OptionListModel(this)),
+      beam_mode_options_(new OptionListModel(this)),
+      radiation_probe_options_(new OptionListModel(this)),
+      scattering_type_options_(new OptionListModel(this)),
+      dimensionality_options_(new OptionListModel(this)),
+      polarisation_options_(new OptionListModel(this)),
       peak_type_options_(new OptionListModel(this)),
       absorption_type_options_(new OptionListModel(this)),
+      facility_options_(new OptionListModel(this)),
+      instrument_options_(new OptionListModel(this)),
+      extinction_type_options_(new OptionListModel(this)),
+      mosaic_distribution_options_(new OptionListModel(this)),
+      reflns_threshold_basis_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
+      background_estimate_methods_(new OptionListModel(this)),
+      background_estimate_modes_(new OptionListModel(this)),
+      background_estimate_models_(new OptionListModel(this)),
       categories_(new CategoryListModel(this)),
-      instrument_(new ParameterListModel([this] { return category("instrument").fields; }, registry, this)),
+      instrument_(new ParameterListModel([this] { return instrument_display_order(category("instrument").fields); },
+                                          registry, this)),
       peak_(new ParameterListModel([this] { return category("peak").fields; }, registry, this)),
       peak_asymmetry_(new ParameterListModel([this] { return category("peak").asymmetry; }, registry, this)),
       absorption_(new ParameterListModel([this] { return category("absorption").fields; }, registry, this)),
+      extinction_(new ParameterListModel([this] { return category("extinction").fields; }, registry, this)),
       background_(new BackgroundListModel(experiment, editor, registry, this)),
       background_terms_(new BackgroundTermListModel(experiment, editor, registry, this)),
       excluded_regions_(new ExcludedRegionListModel(experiment, editor, this)),
       reflections_(new ReflectionListModel(experiment, this)),
+      single_crystal_reflections_(new SingleCrystalReflectionModel(experiment, project, this)),
       preferred_orientation_(new PrefOrientListModel(experiment, editor, registry, this)),
       linked_structures_(new LinkedStructureListModel(project, experiment, editor, registry, this)),
       scattering_source_(new ScatteringSourceViewModel(experiment, editor, this)),
       measured_range_(new RangeViewModel(experiment, this)),
       pattern_(new PatternModel(experiment, this)),
-      text_(new BlockText([saved, &experiment] { return saved(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); }, this)) {
+      text_(new BlockText([saved, &experiment] { return saved(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); }, this,
+                          [&experiment] { return std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string(); },
+                          [&experiment] { return edi::fixed_categories(experiment); },
+                          [saved, &experiment] { return saved.discovered(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); })) {
     capturePattern();  // the measured data shows before the first calculation is published
     // The options follow the experiment's type, which is read-only, so they are set once.
     const edi::BeamModeEnum mode = experiment_.effective_beam_mode();
-    const std::vector<std::string> profiles = edi::supported_peak_profiles(mode);
-    std::vector<std::string> profile_labels;
-    for (const std::string& profile : profiles) {
-        profile_labels.push_back(edi::peak_profile_label(profile));
+    for (const auto& [options, uid] : {std::pair{sample_form_options_, "experiment_type.sample_form"},
+                                       std::pair{beam_mode_options_, "experiment_type.beam_mode"},
+                                       std::pair{radiation_probe_options_, "experiment_type.radiation_probe"},
+                                       std::pair{scattering_type_options_, "experiment_type.scattering_type"},
+                                       std::pair{dimensionality_options_, "experiment_type.dimensionality"},
+                                       std::pair{polarisation_options_, "experiment_type.polarisation"}}) {
+        options->setItemOptions(uid, option_tokens(uid));
     }
-    peak_type_options_->setOptions(profiles, edi::default_peak_profile(mode), profile_labels);
-    absorption_type_options_->setOptions(edi::supported_absorption_families(mode));
-    background_type_options_->setOptions(edi::supported_background_types());
+    peak_type_options_->setItemOptions("peak.type", edi::supported_peak_profiles(mode), edi::default_peak_profile(mode));
+    absorption_type_options_->setItemOptions("absorption.type", edi::supported_absorption_families(mode));
+    extinction_type_options_->setOptions(edi::extinction_type_tokens(), "none", edi::extinction_type_choice_labels());
+    mosaic_distribution_options_->setOptions(edi::mosaic_distribution_tokens(), "gaussian",
+                                             edi::mosaic_distribution_labels());
+    reflns_threshold_basis_options_->setOptions(edi::reflns_threshold_basis_tokens(), "intensity",
+                                                edi::reflns_threshold_basis_labels());
+    background_type_options_->setItemOptions("background.type", edi::supported_background_types());
+    sync_description();
+    background_estimate_methods_->setItemOptions("background_estimate.method", edi::background_estimator_methods());
+    background_estimate_modes_->setItemOptions("background_estimate.mode", option_tokens("background_estimate.mode"));
+    background_estimate_models_->setItemOptions("background_estimate.use_model",
+                                                option_tokens("background_estimate.use_model"));
     for (int family = 0; family < 4; ++family) {
         peak_families_[family] = new ParameterListModel(
             [this, family] {
@@ -88,7 +215,26 @@ edi::Category ExperimentViewModel::category(const char* id) const {
         return edi::peak_category(experiment_);
     }
     if (std::string(id) == "instrument") {
+        // A time-of-flight single crystal has no instrument category (its wavelength band is shown instead).
+        if (experiment_.reflections.has_value() &&
+            experiment_.effective_beam_mode() == edi::BeamModeEnum::TIME_OF_FLIGHT) {
+            return edi::Category{"instrument"};
+        }
         return edi::instrument_category(experiment_);
+    }
+    if (std::string(id) == "extinction") {
+        edi::Category extinction{"extinction"};
+        edi::detail::add_optional(extinction.fields, "crystal_radius", experiment_.extinction.crystal_radius);
+        edi::detail::add_optional(extinction.fields, "domain_radius", experiment_.extinction.domain_radius);
+        edi::detail::add_optional(extinction.fields, "mosaic_spread", experiment_.extinction.mosaic_spread);
+        edi::detail::add_optional(extinction.fields, "coefficient", experiment_.extinction.coefficient);
+        edi::detail::add_optional(extinction.fields, "coefficient_11", experiment_.extinction.coefficient_11);
+        edi::detail::add_optional(extinction.fields, "coefficient_22", experiment_.extinction.coefficient_22);
+        edi::detail::add_optional(extinction.fields, "coefficient_33", experiment_.extinction.coefficient_33);
+        edi::detail::add_optional(extinction.fields, "coefficient_12", experiment_.extinction.coefficient_12);
+        edi::detail::add_optional(extinction.fields, "coefficient_13", experiment_.extinction.coefficient_13);
+        edi::detail::add_optional(extinction.fields, "coefficient_23", experiment_.extinction.coefficient_23);
+        return extinction;
     }
     return edi::absorption_category(experiment_);
 }
@@ -118,7 +264,179 @@ QString ExperimentViewModel::radiationProbeToken() const {
 QString ExperimentViewModel::scatteringTypeToken() const {
     return QString::fromUtf8(edi::token(experiment_.experiment_type.effective_scattering_type()));
 }
+QString ExperimentViewModel::dimensionalityToken() const {
+    return QString::fromStdString(experiment_.experiment_type.effective_dimensionality());
+}
+QString ExperimentViewModel::polarisationToken() const {
+    return QString::fromStdString(experiment_.experiment_type.effective_polarisation());
+}
+// The instrument's and facility's names; an unknown one, declared `?` or left out, is empty.
+QString ExperimentViewModel::instrumentName() const {
+    const std::string& name = experiment_.instrument.name;
+    return name == "?" ? QString() : QString::fromStdString(name);
+}
+QString ExperimentViewModel::facility() const {
+    const std::string& facility = experiment_.instrument.facility;
+    return facility == "?" ? QString() : QString::fromStdString(facility);
+}
+
+// The selectors' state from the experiment: its names, the instruments of its facility for its sample form, and
+// whether they can be chosen, which they can once a data file was loaded into it in this session. The saved data file
+// name is not that: it comes back when the project is reopened, and then the file's description stands.
+void ExperimentViewModel::sync_description() {
+    const std::string held_facility = facility().toStdString();
+    const std::string held_instrument = instrumentName().toStdString();
+    const bool single_crystal = experiment_.experiment_type.effective_sample_form() != edi::SampleFormEnum::POWDER;
+    std::vector<std::string> facilities;
+    std::vector<std::string> instruments;
+    for (const KnownInstrument& known : kKnownInstruments) {
+        if (std::find(facilities.begin(), facilities.end(), known.facility) == facilities.end()) {
+            facilities.emplace_back(known.facility);
+        }
+        if (held_facility == known.facility && known.single_crystal == single_crystal) {
+            instruments.emplace_back(known.name);
+        }
+    }
+    const QString facility_token = QString::fromStdString(held_facility);
+    const QString instrument_token = QString::fromStdString(held_instrument);
+    const bool editable = experiment_.description_chosen;
+    const bool facility_changed = facility_token != facility_token_;
+    const bool instrument_changed = instrument_token != instrument_token_;
+    const bool editable_changed = editable != description_editable_;
+    if (!facility_changed && !instrument_changed && !editable_changed && facility_options_->count() != 0) {
+        return;
+    }
+    set_description_options(facility_options_, facilities, held_facility);
+    set_description_options(instrument_options_, instruments, held_instrument);
+    facility_token_ = facility_token;
+    instrument_token_ = instrument_token;
+    description_editable_ = editable;
+    if (facility_changed) {
+        emit facilityTokenChanged();
+    }
+    // The instrument options follow the facility, so the instrument selector looks again when either changes.
+    if (facility_changed || instrument_changed) {
+        emit instrumentTokenChanged();
+    }
+    if (editable_changed) {
+        emit descriptionEditableChanged();
+    }
+}
+
+// A facility chosen: its instrument stays when the new facility has it, else it becomes "Not specified".
+void ExperimentViewModel::setFacility(const QString& facility) {
+    if (facility == facility_token_) {
+        return;
+    }
+    std::string instrument = instrument_token_.toStdString();
+    const bool kept = std::any_of(kKnownInstruments.begin(), kKnownInstruments.end(), [&](const KnownInstrument& known) {
+        return facility.toStdString() == known.facility && instrument == known.name;
+    });
+    if (!kept) {
+        instrument.clear();
+    }
+    setLastError(editor_.apply(edi::Edit::instrument_description(experiment_,
+                                                                 facility.isEmpty() ? "?" : facility.toStdString(),
+                                                                 instrument.empty() ? "?" : instrument),
+                               false));
+}
+
+void ExperimentViewModel::setInstrument(const QString& instrument) {
+    if (instrument == instrument_token_) {
+        return;
+    }
+    setLastError(editor_.apply(
+        edi::Edit::instrument_description(experiment_, facility_token_.isEmpty() ? "?" : facility_token_.toStdString(),
+                                          instrument.isEmpty() ? "?" : instrument.toStdString()),
+        false));
+}
 // The declared model, now that edi computes more than one.
+ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_settings() const {
+    EstimateSettings out;
+    out.mode = QString::fromStdString(edi::background_estimate_mode(experiment_));
+    out.method = QString::fromStdString(experiment_.background_estimate_method.value_or("auto"));
+    out.width = experiment_.background_estimate_width.value_or(qQNaN());
+    out.smoothness = experiment_.background_estimate_smoothness.value_or(qQNaN());
+    out.points = experiment_.background_estimate_n_points.value_or(0);
+    out.tolerance = experiment_.background_estimate_tolerance.value_or(qQNaN());
+    out.use_model = QString::fromStdString(experiment_.background_estimate_use_model.value_or("auto"));
+    out.max_terms = experiment_.background_estimate_max_terms.value_or(0);
+    try {
+        const edi::BackgroundEstimateOptions options = edi::background_estimate_options(experiment_);
+        const edi::BackgroundEstimate defaults = edi::background_estimate_defaults(experiment_, options);
+        out.derived_method = QString::fromStdString(defaults.method);
+        out.derived_width = defaults.width;
+        out.derived_smoothness = defaults.smoothness.value_or(qQNaN());
+        out.model_choice = QString::fromStdString(defaults.model_choice);
+        out.model_reason = QString::fromStdString(defaults.model_reason);
+        // A blank most points or most terms has no value to derive, so the field shows how many Estimate places.
+        if (experiment_.background_type == "line-segment") {
+            if (!options.n_points) {
+                out.derived_points = static_cast<int>(edi::estimate_background(experiment_, options).points.size());
+            }
+        } else if (!options.max_terms) {
+            out.derived_terms = static_cast<int>(edi::estimate_background(experiment_, options).terms.size());
+        }
+        QStringList warnings;
+        for (const std::string& warning : defaults.warnings) {
+            warnings.append(QString::fromStdString(warning));
+        }
+        out.note = warnings.join(QLatin1Char('\n'));
+    } catch (const std::exception& error) {
+        out.note = QString::fromUtf8(error.what());
+    }
+    return out;
+}
+
+void ExperimentViewModel::setBackgroundEstimateMode(const QString& mode) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_mode(experiment, mode.toStdString()), false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateMethod(const QString& method) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_method(experiment, method.toStdString()), false));
+}
+
+// A NaN width or smoothness, or fewer than one point, is blank: derived from the data.
+void ExperimentViewModel::setBackgroundEstimateWidth(double width) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(
+        edi::Edit::background_estimate_width(experiment, qIsNaN(width) ? std::nullopt : std::optional(width)), false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateSmoothness(double smoothness) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_smoothness(
+                                   experiment, qIsNaN(smoothness) ? std::nullopt : std::optional(smoothness)),
+                               false));
+}
+
+void ExperimentViewModel::setBackgroundEstimatePoints(int points) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(
+        edi::Edit::background_estimate_n_points(experiment, points < 1 ? std::nullopt : std::optional(points)), false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateMaxTerms(int maxTerms) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(
+        edi::Edit::background_estimate_max_terms(experiment, maxTerms < 1 ? std::nullopt : std::optional(maxTerms)),
+        false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateTolerance(double tolerance) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_tolerance(
+                                   experiment, qIsNaN(tolerance) ? std::nullopt : std::optional(tolerance)),
+                               false));
+}
+
+void ExperimentViewModel::setBackgroundEstimateUseModel(const QString& useModel) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::background_estimate_use_model(experiment, useModel.toStdString()), false));
+}
+
 void ExperimentViewModel::setBackgroundType(const QString& token) {
     if (token == background_type_) {
         return;
@@ -177,6 +495,41 @@ void ExperimentViewModel::setAbsorptionType(const QString& token) {
     setLastError(editor_.apply(edi::Edit::absorption(experiment, token.toStdString()), true));
 }
 
+void ExperimentViewModel::setExtinctionType(const QString& token) {
+    if (token == extinction_type_) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::extinction(experiment, token.toStdString()), true));
+}
+
+void ExperimentViewModel::setMosaicDistribution(const QString& token) {
+    if (token == mosaic_distribution_) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply(edi::Edit::mosaic_distribution(experiment, token.toStdString()), false));
+}
+
+void ExperimentViewModel::setReflnsThresholdSigma(double sigma) {
+    const std::optional<double> value = qIsNaN(sigma) ? std::nullopt : std::optional<double>(sigma);
+    if (value == experiment_.reflns_threshold_sigma) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply_unread(edi::Edit::reflns_threshold_sigma(experiment, value)));
+}
+
+void ExperimentViewModel::setReflnsThresholdBasis(const QString& token) {
+    const std::optional<std::string> value =
+        token.isEmpty() ? std::nullopt : std::optional<std::string>(token.toStdString());
+    if (value == experiment_.reflns_threshold_basis) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply_unread(edi::Edit::reflns_threshold_basis(experiment, value)));
+}
+
 void ExperimentViewModel::setCutoffFwhm(double cutoff) {
     edi::ExperimentBase& experiment = experiment_;
     setLastError(editor_.apply(edi::Edit::assign(experiment.peak.cutoff_fwhm, cutoff), false));
@@ -205,6 +558,41 @@ void ExperimentViewModel::setLastError(const QString& error) {
     }
 }
 
+void ExperimentViewModel::syncEstimate() {
+    // Every value is stored before any signal, so a handler reads the new settings throughout.
+    const EstimateSettings before = std::exchange(estimate_, read_estimate_settings());
+    const auto notify = [this](bool changed, void (ExperimentViewModel::*signal)()) {
+        if (changed) {
+            emit(this->*signal)();
+        }
+    };
+    const auto moved = [](double a, double b) { return !(qIsNaN(a) && qIsNaN(b)) && a != b; };
+    notify(estimate_.mode != before.mode, &ExperimentViewModel::backgroundEstimateModeChanged);
+    notify(estimate_.method != before.method, &ExperimentViewModel::backgroundEstimateMethodChanged);
+    notify(moved(estimate_.width, before.width), &ExperimentViewModel::backgroundEstimateWidthChanged);
+    notify(moved(estimate_.smoothness, before.smoothness), &ExperimentViewModel::backgroundEstimateSmoothnessChanged);
+    notify(estimate_.points != before.points, &ExperimentViewModel::backgroundEstimatePointsChanged);
+    notify(moved(estimate_.tolerance, before.tolerance), &ExperimentViewModel::backgroundEstimateToleranceChanged);
+    notify(estimate_.model_choice != before.model_choice, &ExperimentViewModel::estimateModelChoiceChanged);
+    notify(estimate_.model_reason != before.model_reason, &ExperimentViewModel::estimateModelReasonChanged);
+    notify(estimate_.use_model != before.use_model, &ExperimentViewModel::backgroundEstimateUseModelChanged);
+    notify(estimate_.derived_method != before.derived_method, &ExperimentViewModel::estimateMethodChanged);
+    notify(moved(estimate_.derived_width, before.derived_width), &ExperimentViewModel::estimateWidthChanged);
+    notify(moved(estimate_.derived_smoothness, before.derived_smoothness), &ExperimentViewModel::estimateSmoothnessChanged);
+    notify(estimate_.derived_points != before.derived_points, &ExperimentViewModel::estimatePointsChanged);
+    notify(estimate_.max_terms != before.max_terms, &ExperimentViewModel::backgroundEstimateMaxTermsChanged);
+    notify(estimate_.derived_terms != before.derived_terms, &ExperimentViewModel::estimateTermsChanged);
+    notify(estimate_.note != before.note, &ExperimentViewModel::estimateNoteChanged);
+}
+
+bool ExperimentViewModel::madeForType() const {
+    const edi::ExperimentType& now = experiment_.experiment_type;
+    return now.effective_sample_form() == made_for_.effective_sample_form() &&
+           now.effective_beam_mode() == made_for_.effective_beam_mode() &&
+           now.effective_radiation_probe() == made_for_.effective_radiation_probe() &&
+           now.effective_scattering_type() == made_for_.effective_scattering_type();
+}
+
 void ExperimentViewModel::sync() {
     const auto update = [this](auto& member, const auto& value, void (ExperimentViewModel::*signal)()) {
         if (member != value) {
@@ -212,12 +600,28 @@ void ExperimentViewModel::sync() {
             emit(this->*signal)();
         }
     };
+    sync_description();
     update(name_, QString::fromStdString(experiment_.name), &ExperimentViewModel::nameChanged);
     const std::string default_profile = edi::default_peak_profile(experiment_.effective_beam_mode());
     update(peak_type_, QString::fromStdString(experiment_.peak.type.value_or(default_profile)),
            &ExperimentViewModel::peakTypeChanged);
     update(absorption_type_, QString::fromStdString(experiment_.absorption.type.value_or("none")),
            &ExperimentViewModel::absorptionTypeChanged);
+    update(extinction_type_, QString::fromStdString(experiment_.extinction.type.value_or("none")),
+           &ExperimentViewModel::extinctionTypeChanged);
+    update(mosaic_distribution_, QString::fromStdString(experiment_.extinction.mosaic_distribution.value_or("")),
+           &ExperimentViewModel::mosaicDistributionChanged);
+    // The observed threshold: n, the basis and the expression they make, each with its own signal.
+    const double threshold_sigma = experiment_.reflns_threshold_sigma.value_or(qQNaN());
+    if ((qIsNaN(threshold_sigma) != qIsNaN(reflns_threshold_sigma_)) ||
+        (!qIsNaN(threshold_sigma) && threshold_sigma != reflns_threshold_sigma_)) {
+        reflns_threshold_sigma_ = threshold_sigma;
+        emit reflnsThresholdSigmaChanged();
+    }
+    update(reflns_threshold_basis_, QString::fromStdString(experiment_.reflns_threshold_basis.value_or("")),
+           &ExperimentViewModel::reflnsThresholdBasisChanged);
+    update(reflns_threshold_expression_, QString::fromStdString(edi::reflns_threshold_expression(experiment_)),
+           &ExperimentViewModel::reflnsThresholdExpressionChanged);
     update(background_type_, QString::fromStdString(experiment_.background_type),
            &ExperimentViewModel::backgroundTypeChanged);
     // NaN never equals itself: a constant the type lacks is compared as absent.
@@ -232,6 +636,7 @@ void ExperimentViewModel::sync() {
     update_constant(background_x_min_, experiment_.background_x_min, &ExperimentViewModel::backgroundXMinChanged);
     update_constant(background_x_max_, experiment_.background_x_max, &ExperimentViewModel::backgroundXMaxChanged);
     update(cutoff_fwhm_, experiment_.peak.cutoff_fwhm, &ExperimentViewModel::cutoffFwhmChanged);
+    syncEstimate();
     // The one link's id and scale; empty for a bank of several phases, whose rows the Linked structures
     // table shows.
     const bool one_link = experiment_.linked_structures.size() == 1;
@@ -241,17 +646,8 @@ void ExperimentViewModel::sync() {
     update(dataset_weight_, experiment_.dataset_weight, &ExperimentViewModel::datasetWeightChanged);
     update(scale_, one_link ? registry_.find(&experiment_.linked_structure().scale) : nullptr,
            &ExperimentViewModel::scaleChanged);
-    // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
-    // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
     measured_range_->sync();
-    std::vector<edi::Category> categories = edi::experiment_categories(experiment_);
-    for (edi::Category& category : categories) {
-        if (category.id == "data") {
-            category.is_loop = true;
-            category.rows = static_cast<std::size_t>(measured_range_->points());
-        }
-    }
-    categories_->setCategories(categories);
+    syncCategories();
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();
@@ -259,6 +655,8 @@ void ExperimentViewModel::sync() {
         family->sync();
     }
     absorption_->sync();
+    extinction_->sync();
+    single_crystal_reflections_->sync();
     background_->sync();
     background_terms_->sync();
     excluded_regions_->sync();
@@ -278,7 +676,26 @@ std::size_t ExperimentViewModel::place() const {
     return place;
 }
 
+void ExperimentViewModel::syncCategories() {
+    // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
+    // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
+    std::vector<edi::Category> categories = edi::experiment_categories(experiment_);
+    for (edi::Category& category : categories) {
+        if (category.id == "data") {
+            category.is_loop = true;
+            category.rows = static_cast<std::size_t>(measured_range_->points());
+        }
+    }
+    categories_->setCategories(categories, [this] { return text_->discoveryText().toStdString(); },
+                               [this] { return edi::calculated_categories(experiment_); });
+}
+
 void ExperimentViewModel::capturePattern() {
+    // What the calculation publishes with the pattern: a single crystal's calculated F², a powder's reflections, and
+    // the categories its file holds with them, with their counts.
+    single_crystal_reflections_->sync();
+    reflections_->sync();
+    syncCategories();
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {
@@ -290,6 +707,9 @@ void ExperimentViewModel::capturePattern() {
 }
 
 void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<edi::PatternSource> d_source) {
+    if (source.refln_calc) {  // a single crystal's F²calc at a fit's iteration
+        single_crystal_reflections_->showFrame(source.refln_calc);
+    }
     pattern_source_ = std::move(source);
     pattern_source_.experiment_place = colourPlace();
     if (d_source) {
@@ -300,12 +720,17 @@ void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<e
     emit patternSourceChanged();
 }
 
-void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::size_t count) {
-    if (place == colour_place_ && (!place || count == colour_count_)) {
+void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::size_t count,
+                                         std::vector<std::size_t> positions) {
+    if (place == colour_place_ && (!place || count == colour_count_) && positions == colour_positions_) {
         return;
     }
     colour_place_ = place;
     colour_count_ = place ? count : 0;
+    if (positions != colour_positions_) {
+        colour_positions_ = std::move(positions);
+        emit colourPositionsChanged();
+    }
     // The same pattern in its new colour: the chart draws it again, and nothing waiting on a new pattern counts it.
     pattern_source_.experiment_place = colourPlace();
     if (d_source_) {

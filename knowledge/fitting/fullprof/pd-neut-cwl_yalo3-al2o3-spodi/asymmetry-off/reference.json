@@ -1,0 +1,328 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "scope": "asymmetry-off fit",
+  "start_project": "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project",
+  "n_free": 52,
+  "converged": true,
+  "r_wp": 0.046799999999999994,
+  "r_wp_by_bank": {
+    "spodi": 0.046799999999999994
+  },
+  "fullprof_parameters": {
+    "1": {
+      "symbol": "Bck_0_pat1",
+      "value": 1332.042,
+      "uncertainty": 60.295357
+    },
+    "2": {
+      "symbol": "Bck_1_pat1",
+      "value": 1822.9773,
+      "uncertainty": 38.277233
+    },
+    "3": {
+      "symbol": "Bck_2_pat1",
+      "value": 2431.012,
+      "uncertainty": 24.972029
+    },
+    "4": {
+      "symbol": "Bck_3_pat1",
+      "value": 2109.5525,
+      "uncertainty": 20.732388
+    },
+    "5": {
+      "symbol": "Bck_4_pat1",
+      "value": 2026.3981,
+      "uncertainty": 20.492586
+    },
+    "6": {
+      "symbol": "Bck_5_pat1",
+      "value": 2074.8623,
+      "uncertainty": 18.714663
+    },
+    "7": {
+      "symbol": "Bck_6_pat1",
+      "value": 2099.4148,
+      "uncertainty": 19.677885
+    },
+    "8": {
+      "symbol": "Bck_7_pat1",
+      "value": 2135.0596,
+      "uncertainty": 22.246275
+    },
+    "9": {
+      "symbol": "Bck_8_pat1",
+      "value": 1951.9056,
+      "uncertainty": 25.89283
+    },
+    "10": {
+      "symbol": "Bck_9_pat1",
+      "value": 1992.5564,
+      "uncertainty": 23.849352
+    },
+    "11": {
+      "symbol": "Bck_10_pat1",
+      "value": 2033.5367,
+      "uncertainty": 19.578005
+    },
+    "12": {
+      "symbol": "Bck_11_pat1",
+      "value": 1965.3577,
+      "uncertainty": 19.862007
+    },
+    "13": {
+      "symbol": "Bck_12_pat1",
+      "value": 2130.6982,
+      "uncertainty": 20.584063
+    },
+    "14": {
+      "symbol": "Bck_13_pat1",
+      "value": 2130.9883,
+      "uncertainty": 23.003223
+    },
+    "15": {
+      "symbol": "Bck_14_pat1",
+      "value": 2154.2969,
+      "uncertainty": 25.752003
+    },
+    "16": {
+      "symbol": "Bck_15_pat1",
+      "value": 2060.8354,
+      "uncertainty": 31.495668
+    },
+    "17": {
+      "symbol": "Bck_16_pat1",
+      "value": 1957.7367,
+      "uncertainty": 29.019489
+    },
+    "18": {
+      "symbol": "Bck_17_pat1",
+      "value": 1964.9028,
+      "uncertainty": 25.966257
+    },
+    "19": {
+      "symbol": "Bck_18_pat1",
+      "value": 1996.8417,
+      "uncertainty": 24.756773
+    },
+    "20": {
+      "symbol": "Bck_19_pat1",
+      "value": 2512.4165,
+      "uncertainty": 31.994112
+    },
+    "21": {
+      "symbol": "Bck_20_pat1",
+      "value": 2342.8337,
+      "uncertainty": 26.218836
+    },
+    "22": {
+      "symbol": "Bck_21_pat1",
+      "value": 2686.7471,
+      "uncertainty": 30.053455
+    },
+    "23": {
+      "symbol": "Bck_22_pat1",
+      "value": 2593.9431,
+      "uncertainty": 34.849384
+    },
+    "24": {
+      "symbol": "Bck_23_pat1",
+      "value": 2830.209,
+      "uncertainty": 43.195786
+    },
+    "25": {
+      "symbol": "Bck_24_pat1",
+      "value": 2781.9851,
+      "uncertainty": 54.725849
+    },
+    "26": {
+      "symbol": "Zero_pat1",
+      "value": 0.0040003979,
+      "uncertainty": 0.00043372496
+    },
+    "27": {
+      "symbol": "Z_Al1_ph1",
+      "value": 0.33484828,
+      "uncertainty": 0.0033605923
+    },
+    "28": {
+      "symbol": "Biso_Al1_ph1",
+      "value": -0.67113012,
+      "uncertainty": 0.27776384
+    },
+    "29": {
+      "symbol": "X_O1_ph1",
+      "value": 0.36141068,
+      "uncertainty": 0.0033121954
+    },
+    "30": {
+      "symbol": "Biso_O1_ph1",
+      "value": 0.063122012,
+      "uncertainty": 0.23900229
+    },
+    "31": {
+      "symbol": "Scale_ph1_pat1",
+      "value": 0.16215885,
+      "uncertainty": 0.011069425
+    },
+    "32": {
+      "symbol": "EtaPV_ph1_pat1",
+      "value": 0.13955955,
+      "uncertainty": 0.0056609311
+    },
+    "33": {
+      "symbol": "U-Cagl_ph1_pat1",
+      "value": 0.027375951,
+      "uncertainty": 0.00076463638
+    },
+    "34": {
+      "symbol": "V-Cagl_ph1_pat1",
+      "value": -0.031253908,
+      "uncertainty": 0.0020424169
+    },
+    "35": {
+      "symbol": "W-Cagl_ph1_pat1",
+      "value": 0.10048487,
+      "uncertainty": 0.0010541383
+    },
+    "36": {
+      "symbol": "Cell_A_ph1_pat1",
+      "value": 4.756124,
+      "uncertainty": 0.00040826865
+    },
+    "37": {
+      "symbol": "Cell_C_ph1_pat1",
+      "value": 12.982359,
+      "uncertainty": 0.0017620698
+    },
+    "38": {
+      "symbol": "X_Y_ph2",
+      "value": 0.012308854,
+      "uncertainty": 0.00013498939
+    },
+    "39": {
+      "symbol": "Y_Y_ph2",
+      "value": 0.55407113,
+      "uncertainty": 9.4875148e-05
+    },
+    "40": {
+      "symbol": "Biso_Y_ph2",
+      "value": 0.12564933,
+      "uncertainty": 0.010155763
+    },
+    "41": {
+      "symbol": "Biso_Al_ph2",
+      "value": 0.1822558,
+      "uncertainty": 0.017914442
+    },
+    "42": {
+      "symbol": "X_O1_ph2",
+      "value": -0.083735369,
+      "uncertainty": 0.00016931482
+    },
+    "43": {
+      "symbol": "Y_O1_ph2",
+      "value": -0.021928802,
+      "uncertainty": 0.00014349389
+    },
+    "44": {
+      "symbol": "Biso_O1_ph2",
+      "value": 0.079670087,
+      "uncertainty": 0.011415885
+    },
+    "45": {
+      "symbol": "X_O2_ph2",
+      "value": 0.20459223,
+      "uncertainty": 0.00011460795
+    },
+    "46": {
+      "symbol": "Y_O2_ph2",
+      "value": 0.29491818,
+      "uncertainty": 0.00010156118
+    },
+    "47": {
+      "symbol": "Z_O2_ph2",
+      "value": 0.044309359,
+      "uncertainty": 7.3890435e-05
+    },
+    "48": {
+      "symbol": "Biso_O2_ph2",
+      "value": 0.17482235,
+      "uncertainty": 0.008941099
+    },
+    "49": {
+      "symbol": "Scale_ph2_pat1",
+      "value": 28.137316,
+      "uncertainty": 0.088317409
+    },
+    "50": {
+      "symbol": "Cell_A_ph2_pat1",
+      "value": 5.1734939,
+      "uncertainty": 3.0540334e-05
+    },
+    "51": {
+      "symbol": "Cell_B_ph2_pat1",
+      "value": 5.3277779,
+      "uncertainty": 3.1211923e-05
+    },
+    "52": {
+      "symbol": "Cell_C_ph2_pat1",
+      "value": 7.3624887,
+      "uncertainty": 4.2288975e-05
+    }
+  },
+  "parameter_codes": {
+    "spodi.background.1.intensity": 1,
+    "spodi.background.2.intensity": 2,
+    "spodi.background.3.intensity": 3,
+    "spodi.background.4.intensity": 4,
+    "spodi.background.5.intensity": 5,
+    "spodi.background.6.intensity": 6,
+    "spodi.background.7.intensity": 7,
+    "spodi.background.8.intensity": 8,
+    "spodi.background.9.intensity": 9,
+    "spodi.background.10.intensity": 10,
+    "spodi.background.11.intensity": 11,
+    "spodi.background.12.intensity": 12,
+    "spodi.background.13.intensity": 13,
+    "spodi.background.14.intensity": 14,
+    "spodi.background.15.intensity": 15,
+    "spodi.background.16.intensity": 16,
+    "spodi.background.17.intensity": 17,
+    "spodi.background.18.intensity": 18,
+    "spodi.background.19.intensity": 19,
+    "spodi.background.20.intensity": 20,
+    "spodi.background.21.intensity": 21,
+    "spodi.background.22.intensity": 22,
+    "spodi.background.23.intensity": 23,
+    "spodi.background.24.intensity": 24,
+    "spodi.background.25.intensity": 25,
+    "spodi.instrument.calib_twotheta_offset": 26,
+    "Al2O3.atom_site.Al1.fract_z": 27,
+    "Al2O3.atom_site.Al1.adp_iso": 28,
+    "Al2O3.atom_site.O1.fract_x": 29,
+    "Al2O3.atom_site.O1.adp_iso": 30,
+    "spodi.linked_structure.Al2O3.scale": 31,
+    "spodi.peak.mixing_eta_0": 32,
+    "spodi.peak.broad_gauss_u": 33,
+    "spodi.peak.broad_gauss_v": 34,
+    "spodi.peak.broad_gauss_w": 35,
+    "Al2O3.cell.length_a": 36,
+    "Al2O3.cell.length_c": 37,
+    "YAlO3.atom_site.Y.fract_x": 38,
+    "YAlO3.atom_site.Y.fract_y": 39,
+    "YAlO3.atom_site.Y.adp_iso": 40,
+    "YAlO3.atom_site.Al.adp_iso": 41,
+    "YAlO3.atom_site.O1.fract_x": 42,
+    "YAlO3.atom_site.O1.fract_y": 43,
+    "YAlO3.atom_site.O1.adp_iso": 44,
+    "YAlO3.atom_site.O2.fract_x": 45,
+    "YAlO3.atom_site.O2.fract_y": 46,
+    "YAlO3.atom_site.O2.fract_z": 47,
+    "YAlO3.atom_site.O2.adp_iso": 48,
+    "spodi.linked_structure.YAlO3.scale": 49,
+    "YAlO3.cell.length_a": 50,
+    "YAlO3.cell.length_b": 51,
+    "YAlO3.cell.length_c": 52
+  }
+}

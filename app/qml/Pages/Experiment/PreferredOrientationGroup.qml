@@ -25,45 +25,44 @@ Column {
         defaultInfoText: qsTr("No preferred orientation")
         sourceModel: group.rows
 
-        columnWidths: [numberColumnWidth, textColumnWidth("structureId", qsTr("structure")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+        columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("structure")
+                uid: "preferred_orientation.structure_id"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "h"
+                uid: "preferred_orientation.index_h"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "k"
+                uid: "preferred_orientation.index_k"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "l"
+                uid: "preferred_orientation.index_l"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: "r"
+                uid: "preferred_orientation.march_r"
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("random")
+                uid: "preferred_orientation.march_random_fract"
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string structureId
             required property int indexH
             required property int indexK
@@ -71,9 +70,9 @@ Column {
             required property ParameterItem marchR
             required property ParameterItem marchRandomFract
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             TextCell {
@@ -113,7 +112,7 @@ Column {
                 objectName: `preferredOrientation.marchRandomFract.${row.index}`
                 item: row.marchRandomFract
             }
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `preferredOrientation.remove.${row.index}`
                 fontIcon: "minus-circle"

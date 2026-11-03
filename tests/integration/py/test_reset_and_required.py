@@ -24,11 +24,52 @@ def reset_observation(body):
     )
 
 
+def reset_handler_observation(handler, guard, *, pending_text=False, settle_text=True):
+    return javascript(
+        'const observations=[];for(const project of [null,{modified:false},{modified:true}]){'
+        'let resets=0;const queued=[],questions=[];const Session={project};'
+        'const Qt={callLater:action=>queued.push(action)};const settlements=[];'
+        'let textEdit='
+        + ('{settleEdit:action=>settlements.push(action)};' if pending_text else 'null;')
+        + 'const AppState={reset:()=>resets++};'
+        'const changesQuestion=action=>questions.push(action);'
+        + guard
+        + ';AppState.afterChanges=afterChanges;(function(){'
+        + handler
+        + '})();const before=[resets,queued.length,questions.length];'
+        + ('for(const action of settlements){textEdit=null;action();}' if settle_text else '')
+        + 'for(const action of questions)Qt.callLater(action);'
+        'for(const action of queued)action();'
+        'observations.push([...before,resets'
+        + (',settlements.length' if pending_text else '')
+        + ']);}'
+        'console.log(JSON.stringify(observations));'
+    )
+
+
 def test_reset_closes_the_project_and_lands_on_project():
     main = source('qml/Main.qml')
-    assert property_value(item(main, 'appBar.button.reset'), 'onClicked') == 'AppState.reset()', (
-        'The toolbar reset action must invoke the shared application reset'
+    handler = property_value(item(main, 'appBar.button.reset'), 'onClicked')
+    guard = block(source('qml/Globals/AppState.qml'), 'function afterChanges(')
+    expected = [[0, 1, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]]
+    assert reset_handler_observation(handler, guard) == expected, (
+        'Toolbar reset must wait for the shared unsaved-changes guard, '
+        'then invoke the shared reset once after authorization or the queued turn'
     )
+    for damaged in (
+        'AppState.reset()',
+        'AppState.afterChanges(() => {})',
+        'AppState.afterChanges(() => {AppState.reset();AppState.reset();})',
+    ):
+        assert reset_handler_observation(damaged, guard) != expected, (
+            'The reset observer must reject guard bypass, a lost reset and duplicate resets'
+        )
+    assert reset_handler_observation(handler, guard, pending_text=True) == [[0, 0, 0, 1, 1]] * 3, (
+        'Reset waits for each pending Text edit to settle before the project-change guard runs'
+    )
+    assert reset_handler_observation(handler, guard, pending_text=True, settle_text=False) == (
+        [[0, 0, 0, 0, 1]] * 3
+    ), 'An unsettled Text edit prevents every queued or immediate Reset'
     body = block(source('qml/Globals/AppState.qml'), 'function reset(')
     assert reset_observation(body) == [False, 1, 1, 1], (
         'Reset must close the current project once and land on the reached Project page'

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <locale>
 #include <memory>
+#include <mutex>
 #include <sstream>
 #include <limits>
 #include <cmath>
@@ -20,26 +23,34 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <type_traits>
 #include <vector>
 
+#include "edi/background_estimate.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/calculation.hpp"
+#include "edi/display.hpp"
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
+#include "number_token.hpp"
 #include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
+#include "crysta/background_estimate.hpp"
 #include "crysta/constraints.hpp"
 #include "crysta/cell_metric.hpp"
 #include "crysta/cell_symmetry.hpp"
+#include "crysta/cif_import.hpp"
 #include "crysta/descent.hpp"
 #include "crysta/experiment_builder.hpp"
 #include "crysta/fit.hpp"
 #include "crysta/fit_quality.hpp"
 #include "crysta/fit_report.hpp"
+#include "crysta/fittability.hpp"
 #include "crysta/identity.hpp"
+#include "crysta/legacy_metadata.hpp"
 #include "crysta/model.hpp"
 #include "crysta/parameter.hpp"
 #include "crysta/partype.hpp"
@@ -47,17 +58,29 @@
 #include "crysta/peak.hpp"
 #include "crysta/recompute.hpp"
 #include "crysta/residual.hpp"
+#if __has_include("crysta/cif_report.hpp")
+#include "crysta/cif_report.hpp"
+#endif
+#if __has_include("crysta/dictionary_items.hpp")
+#include "crysta/dictionary_items.hpp"
+#endif
 #if __has_include("crysta/report_settings.hpp")
+#include "crysta/project_output.hpp"
 #include "crysta/report_settings.hpp"
 #endif
 #include "crysta/scattering.hpp"
+#include "crysta/single_crystal.hpp"
 #include "crysta/structure_geometry.hpp"
 #include "crysta/symmetry.hpp"
+#include "crysta/weight_fraction.hpp"
 #include "crysta/threading.hpp"
 #include "crysta/tokens.hpp"
 #include "edi/categories.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
+#include "edi/parameter_walk.hpp"
+#include "edi/selectors.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/threading.hpp"
@@ -167,6 +190,13 @@ crysta::Cell to_completed_crysta_cell(const Cell& c, const crysta::CellFreedom& 
 // the symmetry-COMPLETED cell (fork 2's contract, above): this is the single edi→engine conversion
 // choke point, so every consumer — calculate, fit, fit_joint —
 // crosses the boundary with a cell that satisfies the model's own space-group ties.
+// One `_structure_view` item of a structure, absent while the view has not set it.
+std::optional<std::string> view_item(const Structure& s, const char* name) {
+    const std::map<std::string, std::string>& view = s.view;
+    const auto found = view.find(name);
+    return found != view.end() ? std::optional<std::string>(found->second) : std::nullopt;
+}
+
 crysta::Structure to_crysta_structure(const Structure& s) {
     crysta::SpaceGroup space_group = resolve_group(s);
     const crysta::CellFreedom freedom = crysta::cell_freedom(space_group);
@@ -176,6 +206,17 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                              [&s](crysta::Structure& built) {
                                  // Crysta proves a texture row's key against this identity
                                  built.name = s.name;
+                                 // A calculation of this structure (a fit's quality) reads the declared
+                                 // scattering lengths from it, as the fit reads them from select_scattering.
+                                 built.scattering_lengths_fm = s.scattering_lengths_fm;
+                                 // How the view shows it, saved with it: each item crysta's category has.
+                                 using View = crysta::StructureViewCategory;
+                                 std::apply(
+                                     [&](auto... column) {
+                                         std::size_t index = 0;
+                                         ((built.*column = view_item(s, View::items[index++])), ...);
+                                     },
+                                     View::columns);
                                  // The bond cutoffs cross presence-faithfully, so crysta's
                                  // writer saves a declared `_geom` and no other.
                                  built.geom.min_bond_distance_cutoff =
@@ -615,6 +656,12 @@ void complete_atom_site_aniso(Structure& s) {
                 if (parameters[k]->value != components[k]) {
                     parameters[k]->value = components[k];
                 }
+                // An exact zero has no s.u., as in a new tensor: a fixed 0 read from a file keeps none either, so a
+                // project reopened, or holding what it saved, shows its zeros as it did before.
+                if (components[k] == 0.0 && !parameters[k]->free.get() &&
+                    parameters[k]->uncertainty.get() == std::optional<double>(0.0)) {
+                    parameters[k]->uncertainty = std::nullopt;
+                }
             }
             // An anisotropic site's adp_iso is its tensor's equivalent value, in the form its type shows it.
             const double equivalent = crysta::iso_of(crysta::equivalent_iso_form(form),
@@ -974,7 +1021,6 @@ std::vector<crysta::Structure> to_crysta_structures(const Project& model) {
     for (const auto& structure : model.structures) {
         // NOLINTNEXTLINE(modernize-make-unique) — make_unique would move the built prvalue
         built.emplace_back(new crysta::Structure(to_crysta_structure(*structure)));
-        built.back()->scattering_lengths_fm = structure->scattering_lengths_fm;
     }
     const auto values = std::views::transform(
         built, [](const std::unique_ptr<crysta::Structure>& structure) -> const crysta::Structure& {
@@ -1005,7 +1051,7 @@ void make_fit_ready(crysta::ExperimentBase& built) {
     // The reciprocal pad is TOF-only by construction: the CW instrument layout is with no
     // reciprocal slot — crysta's CW free_from_model reads exactly those, so a CW experiment
     // is already fit-ready as converted and padding it would corrupt the layout.
-    if (built.kind != crysta::BeamModeEnum::TimeOfFlight) {
+    if (built.kind != crysta::BeamModeEnum::TimeOfFlight || built.reflections.has_value()) {
         return;
     }
     if (built.instrument.size() < 4) {
@@ -1391,8 +1437,83 @@ PlainDataRows read_plain_data(const std::string& path) {
 
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name) {
-    PlainDataRows read = read_plain_data(path);
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+    // New data starts with an unknown facility and instrument, which the user chooses (ADR-0054); the previous
+    // data's description does not carry over.
+    load.experiment.description_chosen = true;
+    load.experiment.instrument.name.clear();
+    load.experiment.instrument.facility.clear();
+    if (experiment.reflections.has_value()) {
+        // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
+        // reader), taking a FullProf file's wavelength at constant wavelength.
+        const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
+        const crysta::ReflectionFile file = crysta::read_reflection_file(
+            path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+        load.unweighted = file.skipped_unweighted;
+        load.skipped_lines = file.skipped_lines;
+        load.skipped = file.skipped_lines.size();
+        // One experiment per dataset of the file, in the order of their codes.
+        std::vector<std::int32_t> codes(file.dataset.begin(), file.dataset.end());
+        std::sort(codes.begin(), codes.end());
+        codes.erase(std::unique(codes.begin(), codes.end()), codes.end());
+        const auto rows_of = [&file](std::optional<std::int32_t> code) {
+            std::vector<std::int32_t> h, k, l;
+            std::vector<double> f2, su, wavelength;
+            for (std::size_t i = 0; i < file.index_h.size(); ++i) {
+                if (code && file.dataset[i] != *code) {
+                    continue;
+                }
+                h.push_back(file.index_h[i]);
+                k.push_back(file.index_k[i]);
+                l.push_back(file.index_l[i]);
+                f2.push_back(file.intensity[i]);
+                su.push_back(file.sigma[i]);
+                if (!file.wavelength.empty()) {
+                    wavelength.push_back(file.wavelength[i]);
+                }
+            }
+            ReflnDataBase rows;
+            rows.index_h = std::move(h);
+            rows.index_k = std::move(k);
+            rows.index_l = std::move(l);
+            rows.intensity_meas = std::move(f2);
+            rows.intensity_meas_su = std::move(su);
+            rows.wavelength = std::move(wavelength);
+            return rows;
+        };
+        const bool split = codes.size() > 1;
+        load.points = file.index_h.size();
+        load.experiment.reflections = rows_of(split ? std::optional<std::int32_t>(codes.front()) : std::nullopt);
+        // Measured once it holds a reflection, as crysta's setter has it.
+        load.experiment.calculation_only = load.experiment.reflections->size() == 0;
+        if (cw && file.file_wavelength > 0.0 && load.experiment.instrument.setup_wavelength) {
+            load.experiment.instrument.setup_wavelength->value = file.file_wavelength;
+        }
+        load.experiment.data_file = load.file_name;
+        if (take_file_name) {
+            std::string stem = std::filesystem::path(path).stem().string();
+            for (char& character : stem) {
+                const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
+                                  (character >= '0' && character <= '9') || character == '_' || character == '-';
+                character = keep ? character : '_';
+            }
+            if (persistable_name(stem)) {
+                load.experiment.name = stem;
+            }
+        }
+        if (split) {
+            const std::string base = load.experiment.name.value();
+            load.experiment.name = base + "_" + std::to_string(codes.front());
+            for (std::size_t c = 1; c < codes.size(); ++c) {
+                BraggPdExperiment next(load.experiment);
+                next.name = base + "_" + std::to_string(codes[c]);
+                next.reflections = rows_of(codes[c]);
+                load.more.push_back(std::move(next));
+            }
+        }
+        return load;
+    }
+    PlainDataRows read = read_plain_data(path);
     load.points = read.x.size();
     load.skipped = read.skipped;
     load.nonpositive = read.nonpositive;
@@ -1569,20 +1690,8 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
 }  // namespace
 
 bool parse_scan_number(std::string_view token, double& value) {
-    // io.cpp's to_double device: a classic-locale stream that must consume the whole token. Not
-    // std::from_chars, whose floating-point overload libc++ does not provide (macOS builds).
-    if (token.empty() || std::isspace(static_cast<unsigned char>(token.front())) != 0) {
-        return false;
-    }
-    std::istringstream stream{std::string(token)};
-    stream.imbue(std::locale::classic());
-    double parsed = 0.0;
-    stream >> parsed;
-    if (stream.fail() || !stream.eof()) {
-        return false;
-    }
-    value = parsed;
-    return true;
+    // The project loader's rule (number_token.hpp): the whole token, the same value on every platform.
+    return edi::detail::read_number(std::string(token), value) == edi::detail::NumberToken::ok;
 }
 
 ScanPlaces scan_places(const ScanDatasets& datasets) {
@@ -2080,6 +2189,7 @@ void copy_report_settings(const Project& model, crysta::Project& cproject) {
         cproject.report_files.push_back(row);
     }
     cproject.correlation_threshold = model.correlation_threshold;
+    cproject.refine_ls_threshold_sigma = model.refine_ls_threshold_sigma;
     cproject.pattern_x_axis = model.pattern_x_axis;
 }
 #endif
@@ -2113,12 +2223,36 @@ bool save_report_settings(const Project& model, const std::string& directory) {
 #endif
 }
 
-void save_project_via_crysta(const Project& model, const std::string& directory) {
-    // Edi does not write — it asks crysta to. Build the full engine project from the model
-    // through the one conversion choke point (completed cell, start-carrying parameters),
-    // fill the persistence-only fields the calculation conversion never needed, stamp the
-    // loader-grade identity with crysta's own exported stamp, and hand crysta::save_project
-    // the write (staging, atomic publish and fail-closed validation are its own).
+std::string report_settings_text(const Project& model) {
+#if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
+    const crysta::Project carrier(std::vector<crysta::Structure>{}, std::vector<crysta::BraggPdExperiment>{},
+                                  [&model](crysta::Project& project) {
+                                      copy_report_settings(model, project);
+                                      // The defaults effective_report_options takes for a setting left unstated.
+                                      project.report_html = std::optional<bool>(model.report_html.value_or(true));
+                                      project.report_pdf = std::optional<bool>(model.report_pdf.value_or(false));
+                                      project.report_cif = std::optional<bool>(model.report_cif.value_or(false));
+                                      project.report_html_offline =
+                                          std::optional<bool>(model.report_html_offline.value_or(false));
+                                      project.report_excluded =
+                                          std::optional<std::string>(model.report_excluded.value_or("data"));
+                                  });
+    return crysta::report_settings_text(carrier);
+#else
+    (void)model;
+    throw std::invalid_argument("showing the report settings needs a newer crysta");
+#endif
+}
+
+namespace {
+
+// The engine project a save writes, handed to `use`. Edi does not write — it asks crysta to. Build
+// the full engine project from the model through the one conversion choke point (completed cell,
+// start-carrying parameters), fill the persistence-only fields the calculation conversion never
+// needed, and stamp the loader-grade identity with crysta's own exported stamp. crysta::Project
+// cannot move, so it is lent rather than returned.
+void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use,
+                        const std::string* source = nullptr) {
     BuiltExperiments built_experiments;
     built_experiments.reserve(model.experiments.size());
     for (const auto& e_item : model.experiments) {
@@ -2202,7 +2336,7 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
             copy.source_kind = row->source_kind.value();
             copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
             copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
-            copy.correlation = row->correlation.value();
+            copy.correlation = row->correlation.get();
             copy.file_path = row->file_path.value();
         }
         to.correlations.assign(rows);
@@ -2217,9 +2351,16 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     // the declared data_dir stays inside it; with an empty path it can do neither, so an edi save
     // silently dropped the scan inputs and the results, and the containment rule never ran on the
     // edi save path at all.
-    cproject.path = model.path;
+    // A project opened from an archive has no directory of its own: its files are carried from the folder it was
+    // unpacked into (edi ADR-0052), its reports among them.
+    cproject.path = model.path.empty() ? model.scan_data_root : model.path;
     // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
     cproject.scan_data_root = model.scan_data_root;
+    // A save that carries its files from another folder (a scratch save writing texts) carries no scan data.
+    if (source != nullptr) {
+        cproject.path = *source;
+        cproject.scan_data_root = std::string();
+    }
     // The project identity rides the delegated save. Copy the persisted metadata fields
     // across (the two ProjectMetadata mirrors are distinct C++ types; `path` is engine
     // bookkeeping the record never carries) and ENGAGE persistence — crysta's writer then merges
@@ -2295,12 +2436,17 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
     std::vector<bool> current;
     current.reserve(model.experiments.size());
     for (const auto& item : model.experiments) {
-        current.push_back(item->data.has_value() && !item->data->intensity_calc.empty() &&
-                          item->computed_current());
+        // A powder bank's calculation is in its data, a single crystal's in its reflections.
+        const bool calculated = (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+                                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
+        current.push_back(calculated && item->computed_current());
     }
     if (std::find(current.begin(), current.end(), true) != current.end()) {
+        // A save writes edi's points: the engine calculates with due estimates deferred, so a bank whose estimate is
+        // due calculates with its own points, and its columns are written when edi's calculation of it is current; it
+        // stays due, and the next calculation estimates it (ADR-0040).
         try {
-            crysta::calculate_project(cproject);
+            crysta::calculate_project(cproject, crysta::DueEstimates::Defer);
         } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — saved uncomputed
         }
         for (std::size_t index = 0; index < current.size(); ++index) {
@@ -2329,12 +2475,101 @@ void save_project_via_crysta(const Project& model, const std::string& directory)
             geom.bond_distance_inc = std::optional<double>(geom.bond_distance_inc.get());
         }
     }
-    try {
-        crysta::save_project(cproject, directory);
-    } catch (const std::exception& error) {
-        raise_coded(error);
-        throw;
+    use(cproject);
+}
+
+}  // namespace
+
+void refresh_agreement_records(Project& project) {
+    if (!project.fit_result.held()) {
+        return;
     }
+    with_saved_project(project, [&project](crysta::Project& engine) {
+        try {
+            crysta::calculate_project(engine, crysta::DueEstimates::Defer);
+        } catch (const std::invalid_argument&) {
+            return;  // nothing calculated: the records stay as they are
+        }
+        crysta::refresh_agreement_records(engine);
+        for (const auto& item : project.experiments) {
+            for (const crysta::BraggPdExperiment& bank : engine.experiments) {
+                if (bank.name.value() != item->name.value()) {
+                    continue;
+                }
+                item->fit_n_data_points = bank.fit_n_data_points.get();
+                item->fit_prof_r_factor = bank.fit_prof_r_factor.get();
+                item->fit_prof_wr_factor = bank.fit_prof_wr_factor.get();
+                item->fit_prof_wr_expected = bank.fit_prof_wr_expected.get();
+                item->fit_prof_cr_factor = bank.fit_prof_cr_factor.get();
+                item->fit_prof_cwr_factor = bank.fit_prof_cwr_factor.get();
+                item->fit_chi_square = bank.fit_chi_square.get();
+                auto link = item->linked_structures.begin();
+                for (const crysta::LinkedStructure& phase : bank.linked_structures) {
+                    if (link == item->linked_structures.end()) {
+                        break;
+                    }
+                    (*link)->fit_bragg_r_factor = phase.fit_bragg_r_factor.get();
+                    (*link)->fit_f_r_factor = phase.fit_f_r_factor.get();
+                    ++link;
+                }
+            }
+        }
+        FitResultRecord& result = project.fit_result;
+        const crysta::FitResultRecord& fitted = engine.fit_result;
+        result.prof_wr_factor = fitted.prof_wr_factor.get();
+        result.prof_r_factor = fitted.prof_r_factor.get();
+        result.prof_wr_expected = fitted.prof_wr_expected.get();
+        result.prof_cr_factor = fitted.prof_cr_factor.get();
+        result.prof_cwr_factor = fitted.prof_cwr_factor.get();
+        result.reduced_chi_square = fitted.reduced_chi_square.get();
+        result.objective_value = fitted.objective_value.get();
+        result.n_data_points = fitted.n_data_points.get();
+        result.degrees_of_freedom = fitted.degrees_of_freedom.get();
+    });
+}
+
+void save_project_via_crysta(const Project& model, const std::string& directory, const std::string* source) {
+    // crysta::save_project does the write: staging, atomic publish and fail-closed validation are its own.
+    with_saved_project(
+        model,
+        [&directory](crysta::Project& project) {
+            try {
+                crysta::save_project(project, directory);
+            } catch (const std::exception& error) {
+                raise_coded(error);
+                throw;
+            }
+        },
+        source);
+}
+
+SaveSpelling save_spelling(const Project& model) {
+    SaveSpelling out;
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    // A project a save would refuse keeps the rule's spelling: there is nothing written to match.
+    try {
+        with_saved_project(model, [&out](crysta::Project& project) {
+            const crysta::SaveSpelling spelling = crysta::save_spelling(project);
+            out.all_exact = spelling.all_exact;
+            out.exact_cells.assign(spelling.exact_cells.begin(), spelling.exact_cells.end());
+        });
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the rule's spelling stands
+    }
+#else
+    static_cast<void>(model);
+#endif
+    return out;
+}
+
+std::string cif_report_text(const Project& model) {
+#if __has_include("crysta/cif_report.hpp")  // drop the guard when the pin moves
+    std::string text;
+    with_saved_project(model, [&text](crysta::Project& project) { text = crysta::cif_report(project); });
+    return text;
+#else
+    (void)model;
+    throw std::invalid_argument("the CIF report needs a newer crysta");
+#endif
 }
 
 namespace detail {
@@ -2363,6 +2598,115 @@ std::string cell_domain_message(double a, double b, double c, double alpha_deg, 
 
 std::string wavelength_domain_message(double wavelength) {
     return crysta::wavelength_domain_message(wavelength);
+}
+
+// The names are crysta's dictionary's; against an SDK without them every name is current.
+std::string current_edi_name(const std::string& tag, bool every_name) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::current_edi_name(tag, every_name);
+#else
+    static_cast<void>(every_name);
+    return tag;
+#endif
+}
+
+std::string structure_view_refusal(const std::string& item, const std::string& value) {
+    return crysta::structure_view_refusal(item, value);
+}
+
+void replace_file(const std::string& root, const std::string& file, const std::string& text) {
+    crysta::output::replace_file(root, file, text);
+}
+
+std::string one_row_category(const std::string& tag) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::one_row_category(tag);
+#else
+    return tag.rfind("_peak.", 0) == 0 ? "_peak" : std::string();
+#endif
+}
+
+std::vector<std::string> name_variants(const std::string& tag) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::name_variants(tag);
+#else
+    static_cast<void>(tag);
+    return {};
+#endif
+}
+
+bool is_retired_metadata_tag(const std::string& tag) { return crysta::is_retired_metadata_tag(tag); }
+
+std::vector<std::string> apply_legacy_metadata(
+    const std::vector<std::pair<std::string, std::string>>& record, Project& project) {
+    std::vector<crysta::LegacyExperiment> experiments;
+    for (const auto& experiment : project.experiments) {
+        experiments.push_back(
+            {experiment->name, experiment->experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY,
+             experiment->effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT});
+    }
+    const crysta::LegacyMetadata converted = crysta::legacy_project_metadata(record, experiments);
+    std::size_t index = 0;
+    for (const auto& experiment : project.experiments) {
+        const crysta::LegacyDescription& description = converted.experiments[index++];
+        for (const auto& [field, value] :
+             {std::pair{&experiment->experiment_type.dimensionality, &description.dimensionality},
+              std::pair{&experiment->experiment_type.polarisation, &description.polarisation},
+              std::pair{&experiment->instrument.name, &description.instrument_name},
+              std::pair{&experiment->instrument.facility, &description.facility}}) {
+            if (field->empty() && !value->empty()) {
+                *field = *value;
+            }
+        }
+    }
+    std::vector<std::string> warnings;
+    for (const crysta::LegacyNotice& notice : converted.notices) {
+        warnings.push_back("project.edi " + notice.tag + " is retired (" + notice.detail + ")");
+    }
+    return warnings;
+}
+
+bool is_cif_names(const std::vector<std::string>& tags) {
+    return crysta::classify_names(tags) == crysta::TextKind::Cif;
+}
+
+std::string cif_to_edi(const std::string& text, bool experiment, const std::string& where,
+                       std::vector<std::string>& notes) {
+    return crysta::cif_to_edi(text, experiment ? crysta::DocumentKind::Experiment : crysta::DocumentKind::Structure,
+                              where, &notes);
+}
+
+#if !__has_include("crysta/dictionary_items.hpp")  // drop with the guards below when the pin moves
+// The `.edi` files of a folder, sorted, as an SDK without crysta's rule lists them.
+static std::vector<std::string> sorted_edi_paths(const std::string& folder) {
+    std::vector<std::string> paths;
+    if (std::filesystem::is_directory(folder)) {
+        for (const auto& entry : std::filesystem::directory_iterator(folder)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".edi") {
+                paths.push_back(entry.path().string());
+            }
+        }
+    }
+    std::sort(paths.begin(), paths.end());
+    return paths;
+}
+#endif
+
+std::vector<std::string> project_structure_files(const std::string& folder, std::vector<std::string>* hidden) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::project_structure_files(folder, hidden);
+#else
+    static_cast<void>(hidden);
+    return sorted_edi_paths(folder);
+#endif
+}
+
+std::vector<std::string> project_experiment_files(const std::string& folder) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::project_experiment_files(folder);
+#else
+    return sorted_edi_paths(folder);
+#endif
 }
 
 #if __has_include("crysta/report_settings.hpp")  // drop the guard when the pin moves
@@ -2394,6 +2738,11 @@ double read_correlation_threshold(const std::string&) { needs_newer_crysta(); }
 std::string read_pattern_x_axis(const std::string&) { needs_newer_crysta(); }
 std::string read_report_file_format(const std::string&) { needs_newer_crysta(); }
 #endif
+
+double read_threshold_sigma(const std::string& value, const char* tag) {
+    return crysta::read_threshold_sigma(value, tag);
+}
+std::string read_threshold_basis(const std::string& value) { return crysta::read_threshold_basis(value); }
 
 // Edi's refusals spell an id exactly as crysta's do (edi/model.hpp).
 std::string printable_id(const std::string& id) { return crysta::printable_id(id); }
@@ -2528,8 +2877,31 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
     // The declared neutron source, so crysta chooses the table.
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
+    // ADR-0054: the description crosses as declared, so a save writes it back.
+    built.dimensionality =
+        crossed(crysta::TokenField::Dimensionality, built, e.experiment_type.dimensionality);
+    built.polarisation = crossed(crysta::TokenField::Polarisation, built, e.experiment_type.polarisation);
+    built.instrument_name = e.instrument.name;
+    built.facility = e.instrument.facility;
     built.dataset_weight = e.dataset_weight;
     built.data_file = e.data_file;
+    // ADR-0040: the estimate settings, with the mode in force and, in auto mode, what the points came from, so a save
+    // writes edi's mode and digests and the engine estimates again only what edi would.
+    if (e.background_estimate_mode) {
+        built.background_estimate_mode = background_estimate_mode(e);
+        if (*built.background_estimate_mode.get() == "auto") {
+            built.background_estimate_inputs = e.background_estimate_inputs;
+            built.background_estimate_points = e.background_estimate_points;
+        }
+    }
+    built.background_estimate_method = e.background_estimate_method;
+    built.background_estimate_width = e.background_estimate_width;
+    built.background_estimate_smoothness = e.background_estimate_smoothness;
+    built.background_estimate_n_points = e.background_estimate_n_points;
+    built.background_estimate_tolerance = e.background_estimate_tolerance;
+    built.background_estimate_in_peaks = e.background_estimate_in_peaks;
+    built.background_estimate_use_model = e.background_estimate_use_model;
+    built.background_estimate_max_terms = e.background_estimate_max_terms;
     std::vector<crysta::ExcludedRegion> regions;
     regions.reserve(e.excluded_regions.size());
     for (const auto& region : e.excluded_regions) {
@@ -2704,13 +3076,12 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
         slot(e.peak.asym_beba_a1, "asym_beba_a1", 0.0);
         slot(e.peak.asym_beba_b1, "asym_beba_b1", 0.0);
         slot(e.peak.asym_beba_limit, "asym_beba_limit", 180.0);
-        peak.back().set_free(false);  // a fixed setting, whatever its flag (is_fixed_setting)
     }
     // Every other slot must be the declared profile's: one it does not carry would be dropped here,
     // from a calculation, a fit and a save alike, so it is refused instead.
     require_peak_slots_fit_type(e);
     std::vector<crysta::Parameter> instrument;
-    instrument.reserve(6);
+    instrument.reserve(8);
     instrument.push_back(param(required(e.instrument.calib_twotheta_offset, "instrument.calib_twotheta_offset"), crysta::CALIBRATION,
                                "calib_twotheta_offset"));
     instrument.push_back(
@@ -2725,14 +3096,18 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
                                crysta::CALIBRATION, "calib_sample_displacement"));
     instrument.push_back(param(e.instrument.calib_sample_transparency.value_or(undeclared_shift),
                                crysta::CALIBRATION, "calib_sample_transparency"));
-    // An X-ray experiment's monochromator polarization at instrument[4]/[5], crysta's 6-wide X-ray
-    // layout; absent takes the loader's default 0 under the same no-uncertainty rule. A neutron
-    // experiment stays 4-wide, as crysta's loader builds it.
+    // An X-ray experiment's monochromator polarization at instrument[4]/[5] and its K-alpha doublet
+    // at [6]/[7], crysta's 8-wide X-ray layout; absent takes the loader's default 0 under the same
+    // no-uncertainty rule. A neutron experiment stays 4-wide, as crysta's loader builds it.
     if (e.experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY) {
         instrument.push_back(param(e.instrument.setup_polarization_coefficient.value_or(undeclared_shift),
                                    crysta::CALIBRATION, "setup_polarization_coefficient"));
         instrument.push_back(param(e.instrument.setup_monochromator_twotheta.value_or(undeclared_shift),
                                    crysta::CALIBRATION, "setup_monochromator_twotheta"));
+        instrument.push_back(param(e.instrument.setup_wavelength_2.value_or(undeclared_shift),
+                                   crysta::CALIBRATION, "setup_wavelength_2"));
+        instrument.push_back(param(e.instrument.setup_wavelength_2_to_1_ratio.value_or(undeclared_shift),
+                                   crysta::CALIBRATION, "setup_wavelength_2_to_1_ratio"));
     }
     std::vector<crysta::LineSegment> background;
     background.reserve(e.background.size());
@@ -2753,7 +3128,8 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
     return crysta::BraggPdExperiment(built);  // a copy: an experiment never moves
 }
 
-// The ONE admission rule for the X-ray monochromator polarization on an experiment that is not
+// The ONE admission rule for the X-ray monochromator polarization and K-alpha doublet on an experiment
+// that is not
 // X-ray CW (a view over another family's experiment, or X-ray state whose radiation or beam mode
 // was changed after loading). A member that says nothing beyond crysta's
 // default (value 0, fixed, no uncertainty, no fit start) is the default every reader applies, so
@@ -2771,7 +3147,11 @@ void require_polarization_family(const ExperimentBase& e) {
          {std::pair<const char*, const OptionalParameter*>{
               "setup_polarization_coefficient", &e.instrument.setup_polarization_coefficient},
           std::pair<const char*, const OptionalParameter*>{
-              "setup_monochromator_twotheta", &e.instrument.setup_monochromator_twotheta}}) {
+              "setup_monochromator_twotheta", &e.instrument.setup_monochromator_twotheta},
+          std::pair<const char*, const OptionalParameter*>{"setup_wavelength_2",
+                                                           &e.instrument.setup_wavelength_2},
+          std::pair<const char*, const OptionalParameter*>{
+              "setup_wavelength_2_to_1_ratio", &e.instrument.setup_wavelength_2_to_1_ratio}}) {
         if (!*slot) {
             continue;
         }
@@ -2780,14 +3160,121 @@ void require_polarization_family(const ExperimentBase& e) {
             throw std::invalid_argument(
                 "experiment '" + e.name + "' carries _instrument." + name +
                 (p.free ? " (free)" : "") +
-                " but is not an X-ray constant-wavelength experiment — the monochromator "
-                "polarization is X-ray CW only: reset it to 0 and fixed, or "
-                "declare the experiment X-ray CW");
+                " but is not an X-ray constant-wavelength experiment — the " +
+                (std::string(name).starts_with("setup_wavelength_2") ? "K-alpha doublet"
+                                                                     : "monochromator polarization") +
+                " is X-ray CW only: reset it to 0 and fixed, or declare the experiment X-ray CW");
         }
     }
 }
 
+// A single crystal's measured reflections as crysta reads them.
+crysta::ReflectionFile reflection_file(const ExperimentBase& e) {
+    crysta::ReflectionFile rows;
+    rows.index_h = e.reflections->index_h;
+    rows.index_k = e.reflections->index_k;
+    rows.index_l = e.reflections->index_l;
+    rows.intensity = e.reflections->intensity_meas;
+    rows.sigma = e.reflections->intensity_meas_su;
+    rows.wavelength = e.reflections->wavelength;
+    return rows;
+}
+
+crysta::BeamModeEnum single_crystal_kind(const ExperimentBase& e) {
+    return e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? crysta::BeamModeEnum::ConstantWavelength
+                                                                         : crysta::BeamModeEnum::TimeOfFlight;
+}
+
+// Why crysta refuses the first single crystal's reflection table (a column without one value per reflection), or
+// empty. A calculation asks it before anything is cleared, so a refused table leaves every computed column as it
+// was.
+std::string reflection_refusal(const Project& project) {
+    for (const auto& bank_item : project.experiments) {
+        const ExperimentBase& bank = *bank_item;
+        if (!bank.reflections) {
+            continue;
+        }
+        crysta::BraggPdExperiment scratch = crysta::single_crystal_experiment(single_crystal_kind(bank));
+        scratch.name = bank.name;
+        try {
+            crysta::set_measured_reflections(scratch, reflection_file(bank));
+        } catch (const std::invalid_argument& error) {
+            return error.what();
+        }
+    }
+    return {};
+}
+
+// A single crystal crosses as crysta's single-crystal form: its wavelength (constant wavelength),
+// extinction, linked structures and measured reflections.
+crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
+    const bool cw = e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
+    crysta::BraggPdExperiment built = crysta::single_crystal_experiment(single_crystal_kind(e));
+    built.name = e.name;
+    built.beam_mode = crossed(crysta::TokenField::BeamMode, built,
+                              e.experiment_type.beam_mode ? token(*e.experiment_type.beam_mode) : std::string());
+    built.radiation_probe = crossed(crysta::TokenField::RadiationProbe, built,
+                                    e.experiment_type.radiation_probe ? token(*e.experiment_type.radiation_probe)
+                                                                      : std::string());
+    built.scattering_type = crossed(crysta::TokenField::ScatteringType, built,
+                                    e.experiment_type.scattering_type ? token(*e.experiment_type.scattering_type)
+                                                                      : std::string());
+    built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
+                                              e.neutron_scattering_length.value_or(""));
+    // ADR-0054: the description crosses as declared, so a save writes it back.
+    built.dimensionality =
+        crossed(crysta::TokenField::Dimensionality, built, e.experiment_type.dimensionality);
+    built.polarisation = crossed(crysta::TokenField::Polarisation, built, e.experiment_type.polarisation);
+    built.instrument_name = e.instrument.name;
+    built.facility = e.instrument.facility;
+    built.dataset_weight = e.dataset_weight;
+    if (cw) {
+        if (!e.instrument.setup_wavelength) {
+            throw std::invalid_argument("single crystal '" + e.name + "' declares no wavelength");
+        }
+        built.instrument[0] = param(*e.instrument.setup_wavelength, crysta::INSTRUMENT, "setup_wavelength");
+    }
+    built.extinction_type = crossed(crysta::TokenField::ExtinctionType, built, e.extinction.type.value_or("none"));
+    built.extinction_model = crossed(crysta::TokenField::ExtinctionModel, built,
+                                     e.extinction.mosaic_distribution.value_or("gaussian"));
+    built.reflns_threshold_sigma = e.reflns_threshold_sigma;
+    built.reflns_threshold_basis = e.reflns_threshold_basis;
+    if (e.extinction.domain_radius) {
+        built.extinction[0] = param(*e.extinction.domain_radius, crysta::CORRECTION, "domain_radius");
+    }
+    if (e.extinction.mosaic_spread) {
+        built.extinction[1] = param(*e.extinction.mosaic_spread, crysta::CORRECTION, "mosaic_spread");
+    }
+    if (e.extinction.crystal_radius) {
+        built.extinction[2] = param(*e.extinction.crystal_radius, crysta::CORRECTION, "crystal_radius");
+    }
+    if (e.extinction.coefficient) {
+        built.extinction[3] = param(*e.extinction.coefficient, crysta::CORRECTION, "coefficient");
+    }
+    std::size_t slot = 4;
+    for (const auto& [name, term] :
+         {std::pair{"coefficient_11", &e.extinction.coefficient_11}, std::pair{"coefficient_22", &e.extinction.coefficient_22},
+          std::pair{"coefficient_33", &e.extinction.coefficient_33}, std::pair{"coefficient_12", &e.extinction.coefficient_12},
+          std::pair{"coefficient_13", &e.extinction.coefficient_13}, std::pair{"coefficient_23", &e.extinction.coefficient_23}}) {
+        if (*term) {
+            built.extinction[slot] = param(**term, crysta::CORRECTION, name);
+        }
+        ++slot;
+    }
+    std::vector<crysta::LinkedStructure> links;
+    for (const auto& link : e.linked_structures) {
+        links.emplace_back(link->structure_id.value(), param(link->scale, crysta::SCALE, "scale"),
+                           link->enabled.get());
+    }
+    built.linked_structures.assign(links);
+    crysta::set_measured_reflections(built, reflection_file(e));
+    return crysta::BraggPdExperiment(built);  // a copy: an experiment never moves
+}
+
 crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& e, bool for_relations) {
+    if (e.reflections) {
+        return to_crysta_single_crystal(e);
+    }
     require_polarization_family(e);
     if (e.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH) {
         return to_crysta_cwl_experiment(e, for_relations);
@@ -3112,7 +3599,15 @@ bool ExperimentBase::computed_current() const {
                                source->constraints, source->relations);
 }
 
-void Project::calculate() {
+void Project::calculate(DueEstimates due) {
+    // A single crystal's reflection table is admitted before anything is touched: a refused one leaves every
+    // computed column and the geometry as they were.
+    if (const std::string why = detail::reflection_refusal(*this); !why.empty()) {
+        throw std::invalid_argument(why);
+    }
+    if (due == DueEstimates::Run) {
+        refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
+    }
     // The reference shape (diffraction-lib Analysis.calculate): no arguments — every input is
     // read from the model (grid = the data node's engaged axis, bank angle and
     // cutoff = the experiment's declared values, scattering = the structure's declared map or the
@@ -3128,6 +3623,9 @@ void Project::calculate() {
         for (auto& bank_item : experiments) {
             if (bank_item->data.has_value()) {
                 bank_item->data->clear_computed();
+            }
+            if (bank_item->reflections.has_value()) {
+                bank_item->reflections->clear_computed();
             }
             bank_item->refln.clear();
             bank_item->computed_source.reset();
@@ -3158,7 +3656,7 @@ void Project::calculate() {
         }
     }
     try {
-        publish_calculation();
+        publish_calculation(due);
     } catch (...) {
         clear_banks();
         throw;
@@ -3174,6 +3672,10 @@ BuiltExperiments calculation_banks(const ItemVec<BraggPdExperiment>& experiments
     banks.reserve(experiments.size());
     for (const auto& bank_item : experiments) {
         const BraggPdExperiment& bank = *bank_item;
+        if (bank.reflections.has_value()) {  // a single crystal: its reflections cross with it
+            build_on_heap(banks, bank);
+            continue;
+        }
         if (!bank.data.has_value()) {
             throw std::invalid_argument(
                 "edi calculate: experiment carries no data node — a loaded project always has "
@@ -3209,10 +3711,11 @@ RelationProject relation_project(const Project& model) {
     for (const auto& bank_item : model.experiments) {
         crysta::BraggPdExperiment& built = build_on_heap(converted.banks, *bank_item, true);
         // crysta's project needs every bank to link a structure. A bank with no link has no scale
-        // of its own, so here it links the first structure under a scale no edi parameter names.
+        // of its own, so here it links the first structure, disabled, under a scale no edi parameter
+        // names: the link reads nothing.
         if (bank_item->linked_structures.empty() && !structures.empty()) {
             built.linked_structures.assign(std::vector<crysta::LinkedStructure>{crysta::LinkedStructure(
-                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), true)});
+                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), false)});
         }
     }
     converted.project =
@@ -3220,6 +3723,49 @@ RelationProject relation_project(const Project& model) {
     fill_crysta_relations(model, *converted.project);
     return converted;
 }
+
+}  // namespace
+
+std::optional<WeightFraction> weight_fraction(const LinkedStructure& link) {
+    const detail::Membership* membership = link.row.record();
+    const detail::KeyedBase* owner = membership != nullptr ? membership->owner : nullptr;
+    const Project* model = owner != nullptr ? owner->host() : nullptr;
+    if (model == nullptr) {
+        return std::nullopt;
+    }
+    std::size_t index = 0;
+    bool found = false;
+    for (const auto& item : model->experiments) {
+        if (static_cast<const detail::KeyedBase*>(&item->linked_structures) == owner) {
+            found = true;
+            break;
+        }
+        ++index;
+    }
+    if (!found) {
+        return std::nullopt;
+    }
+    RelationProject converted = relation_project(*model);
+    // The correlations between scales the last fit stored, by the unique names crysta resolves.
+    std::vector<crysta::FitParameterCorrelation> rows;
+    for (const auto& row : model->fit_result.correlations) {
+        crysta::FitParameterCorrelation& copy = rows.emplace_back();
+        copy.id = row->id.value();
+        copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
+        copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
+        copy.correlation = row->correlation.get();
+        copy.file_path = row->file_path.value();
+    }
+    converted.project->fit_result.correlations.assign(rows);
+    const std::optional<crysta::WeightFraction> fraction = crysta::weight_fraction(
+        *converted.project, converted.project->experiments[index], link.structure_id.value());
+    if (!fraction) {
+        return std::nullopt;
+    }
+    return WeightFraction{fraction->value, fraction->uncertainty};
+}
+
+namespace {
 
 enum class Completion : std::uint8_t { Values, ValuesAndUncertainties };
 
@@ -3298,9 +3844,9 @@ void mark_dependents(Project& model, const crysta::RelationGraph& relations, con
             const bool saved_su = from_file && relation.source == crysta::Dependence::Constrained &&
                                   target.uncertainty.get().value_or(0.0) != 0.0;
             if (warn && !saved_su) {
-                warn("crysta.domain.dependent_free_ignored: parameter '" + relation.target_name +
-                     "' is " + dependent_source(relation) +
-                     "; free = True is ignored and it stays dependent");
+                warn("crysta.domain.dependent_free_ignored: parameter '" + relation.target_name + "' is " +
+                     dependent_source(relation) + "; free = True is ignored and it stays dependent (cannot be fitted: " +
+                     std::string(crysta::fit_reason(crysta::dependence_blocker(relation.source))) + ")");
             }
         }
     }
@@ -3326,14 +3872,113 @@ void refresh_relations(Project& project, const WarningSink& warn, bool from_file
     mark_dependents(project, crysta::compile_relations(*converted->project, false), warn, from_file);
 }
 
+namespace {
+FitBlocker fit_blocker_of(crysta::FitBlocker blocker) {
+    switch (blocker) {
+        case crysta::FitBlocker::Descriptor: return FitBlocker::Descriptor;
+        case crysta::FitBlocker::Symmetry: return FitBlocker::Symmetry;
+        case crysta::FitBlocker::Constraint: return FitBlocker::Constraint;
+        case crysta::FitBlocker::Data: return FitBlocker::Data;
+        case crysta::FitBlocker::Capability: return FitBlocker::Capability;
+        case crysta::FitBlocker::None: break;
+    }
+    return FitBlocker::None;
+}
+
+// crysta's reason with its detail, or for a blocker given alone its reason; empty when fittable.
+void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}, bool idle = false) {
+    parameter.fit_blocker = fit_blocker_of(blocker);
+    parameter.fit_reason = reason.empty() ? std::string(crysta::fit_reason(blocker)) : std::move(reason);
+    parameter.fit_idle = idle;
+}
+}  // namespace
+
+bool is_descriptor(const std::string& uid) { return crysta::is_descriptor(uid); }
+
+std::string fit_reason(FitBlocker blocker) {
+    switch (blocker) {
+        case FitBlocker::Descriptor: return std::string(crysta::fit_reason(crysta::FitBlocker::Descriptor));
+        case FitBlocker::Symmetry: return std::string(crysta::fit_reason(crysta::FitBlocker::Symmetry));
+        case FitBlocker::Constraint: return std::string(crysta::fit_reason(crysta::FitBlocker::Constraint));
+        case FitBlocker::Data: return std::string(crysta::fit_reason(crysta::FitBlocker::Data));
+        case FitBlocker::Capability: return std::string(crysta::fit_reason(crysta::FitBlocker::Capability));
+        case FitBlocker::None: break;
+    }
+    return {};
+}
+
+void refresh_fittability(Project& project) {
+    // Every parameter a page or a fit names, fittable until the rule says otherwise; a descriptor by its entry alone.
+    std::vector<Parameter*> parameters;
+    std::set<const Parameter*> seen;
+    std::vector<std::pair<std::string, Parameter*>> named;
+    for (const NamedSlot& slot : named_slots(project)) {
+        named.emplace_back(slot.unique_name, slot.parameter);
+        if (seen.insert(slot.parameter).second) {
+            parameters.push_back(slot.parameter);
+        }
+    }
+    for (const ParameterEntry& entry : parameter_entries(project)) {
+        if (seen.insert(entry.parameter).second) {
+            parameters.push_back(entry.parameter);
+        }
+    }
+    for (Parameter* parameter : parameters) {
+        mark(*parameter, crysta::FitBlocker::None);
+        const ParameterSpec* spec = parameter->spec;
+        if (spec != nullptr && crysta::is_descriptor(std::string(spec->category) + "." + spec->name)) {
+            mark(*parameter, crysta::FitBlocker::Descriptor);
+        }
+    }
+    if (project.structures.empty()) {
+        return;
+    }
+    std::optional<crysta::Fittability> rule;
+    try {
+        RelationProject converted = relation_project(project);
+        // An experiment that links nothing crosses with a placeholder link to the first structure, which is no use of it.
+        std::vector<std::size_t> fitted;
+        for (const std::size_t index : fit_context(project)) {
+            if (!project.experiments[index]->linked_structures.empty()) {
+                fitted.push_back(index);
+            }
+        }
+        rule = crysta::fittability(*converted.project, fitted);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a calculation or fit says why
+        return;
+    }
+    std::set<const Parameter*> answered;
+    for (const auto& [unique_name, parameter] : named) {
+        const crysta::FitEligibility* status = rule->status(unique_name);
+        if (parameter->fit_blocker == FitBlocker::Descriptor || status == nullptr) {
+            continue;
+        }
+        mark(*parameter, status->blocker, status->reason(), status->idle);
+        answered.insert(parameter);
+    }
+    // A parameter crysta's model does not hold (an inert slot of the other beam mode), or one of an experiment no fit
+    // uses, is one no fitted experiment can determine.
+    for (Parameter* parameter : parameters) {
+        if (parameter->fit_blocker != FitBlocker::Descriptor && !answered.contains(parameter)) {
+            mark(*parameter, crysta::FitBlocker::Data);
+        }
+    }
+}
+
 void complete_relations(Project& project) {
     if (project.structures.empty()) {
         return;
     }
-    // crysta completes a converted copy, so a refusal leaves this model as it was.
-    RelationProject converted = relation_project(project);
-    copy_dependents(*converted.project, project, Completion::Values);
-    mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
+    // crysta completes a converted copy, so a refusal leaves this model as it was; one with codes
+    // (a non-finite value, a value outside a physical domain) keeps them.
+    try {
+        RelationProject converted = relation_project(project);
+        copy_dependents(*converted.project, project, Completion::Values);
+        mark_dependents(project, crysta::compile_relations(*converted.project, false), {});
+    } catch (const std::exception& error) {
+        raise_coded(error);
+        throw;
+    }
 }
 
 bool apply_relations(Project& project) {
@@ -3372,6 +4017,83 @@ void restore_dependents(Project& project, const std::set<const Parameter*>& rest
 
 int background_max_order(const std::string& type) {
     return crysta::background_max_order(crysta::background_form_of(type));
+}
+
+std::vector<AdpDefinitenessWarning> adp_definiteness_warnings(const Project& project) {
+    std::vector<AdpDefinitenessWarning> out;
+    for (const auto& structure : project.structures) {
+        try {
+            const crysta::Project engine(to_crysta_structure(*structure), std::vector<crysta::BraggPdExperiment>{});
+            for (const crysta::AdpDefinitenessWarning& warning : crysta::adp_definiteness_warnings(engine)) {
+                for (const auto& tensor : structure->atom_site_aniso) {
+                    if (tensor->id.value() == warning.site) {
+                        out.push_back({tensor.get(), warning.message});
+                    }
+                }
+            }
+        } catch (const std::exception&) {
+            // a structure that does not convert is refused where it is calculated
+        }
+    }
+    return out;
+}
+
+namespace {
+std::mutex engine_warnings_mutex;
+std::vector<std::string> engine_warnings;
+}  // namespace
+
+void collect_engine_warnings() {
+    crysta::set_warning_handler([](const std::string& code, const std::string& message) {
+        if (code == "crysta.domain.adp_not_positive_definite" || code == "crysta.domain.constraint_range") {
+            return;
+        }
+        const std::lock_guard<std::mutex> lock(engine_warnings_mutex);
+        if (std::find(engine_warnings.begin(), engine_warnings.end(), message) == engine_warnings.end()) {
+            engine_warnings.push_back(message);
+        }
+    });
+}
+
+std::vector<std::string> take_engine_warnings() {
+    const std::lock_guard<std::mutex> lock(engine_warnings_mutex);
+    std::vector<std::string> taken;
+    taken.swap(engine_warnings);
+    return taken;
+}
+
+std::vector<std::string> extinction_type_tokens() {
+    return crysta::file_tokens(crysta::TokenField::ExtinctionType, crysta::BeamModeEnum::ConstantWavelength);
+}
+
+std::vector<std::string> mosaic_distribution_tokens() {
+    return crysta::file_tokens(crysta::TokenField::ExtinctionModel, crysta::BeamModeEnum::ConstantWavelength);
+}
+
+std::vector<std::string> reflns_threshold_basis_tokens() { return {"intensity", "amplitude"}; }
+
+void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {
+    experiment.reflns_threshold_sigma =
+        sigma ? std::optional<double>(crysta::check_threshold_sigma(*sigma, "_reflns.threshold_sigma"))
+              : std::nullopt;
+}
+
+void set_reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis) {
+    experiment.reflns_threshold_basis =
+        basis ? std::optional<std::string>(crysta::read_threshold_basis(*basis)) : std::nullopt;
+}
+
+void set_refine_ls_threshold_sigma(Project& project, std::optional<double> sigma) {
+    project.refine_ls_threshold_sigma =
+        sigma ? std::optional<double>(crysta::check_threshold_sigma(*sigma, "_refine_ls.threshold_sigma"))
+              : std::nullopt;
+}
+
+std::string reflns_threshold_expression(const ExperimentBase& experiment) {
+    crysta::BraggPdExperiment crystal = crysta::single_crystal_experiment(crysta::BeamModeEnum::ConstantWavelength);
+    crystal.reflns_threshold_sigma = experiment.reflns_threshold_sigma;
+    crystal.reflns_threshold_basis = experiment.reflns_threshold_basis;
+    return crysta::threshold_expression(crystal);
 }
 
 std::vector<std::string> absorption_file_tokens(BeamModeEnum mode) {
@@ -3429,7 +4151,7 @@ std::uint64_t engine_structure_factor_evaluations() noexcept {
     return crysta::structure_factor_evaluations();
 }
 
-void Project::publish_calculation() {
+void Project::publish_calculation(DueEstimates due) {
     const BuiltExperiments banks = calculation_banks(experiments);
     std::vector<std::shared_ptr<const detail::ComputedSource>> sources;
     sources.reserve(experiments.size());
@@ -3448,13 +4170,36 @@ void Project::publish_calculation() {
     data.reserve(experiments.size());
     reflections.reserve(experiments.size());
     for (std::size_t index = 0; index < experiments.size(); ++index) {
-        const crysta::ComputedUnits& units = crysta::current(engine, engine.experiments[index]);
+        const crysta::ComputedUnits& units = crysta::current(
+            engine, engine.experiments[index],
+            due == DueEstimates::Run ? crysta::DueEstimates::Run : crysta::DueEstimates::Defer);
+        // A calculation holding an infinity is not a result (crysta's one test, the residual included): the bank
+        // is calculated and holds nothing, as a save writes it and a reopen reads it, and no view shows the values.
+        if (crysta::holds_infinite(engine.experiments[index])) {
+            data.emplace_back();
+            reflections.emplace_back();
+            continue;
+        }
+        if (experiments[index]->reflections) {
+            // A single crystal: its calculated F² and geometry, one value per measured reflection.
+            const crysta::ComputedRefln& refln = units.refln();
+            PdDataBase none;
+            data.push_back(std::move(none));
+            PowderReflnDataBase rows;
+            rows.d_spacing = shared_column(refln.d_spacing);
+            rows.sin_theta_over_lambda = shared_column(refln.sin_theta_over_lambda);
+            rows.f_squared_calc = shared_column(refln.intensity_calc);
+            reflections.push_back(std::move(rows));
+            continue;
+        }
         const crysta::ComputedData& computed = units.data();
         PdDataBase columns;
         columns.d_spacing = shared_column(computed.d_spacing);
         columns.intensity_calc = shared_column(computed.intensity_calc);
         columns.intensity_bkg = shared_column(computed.intensity_bkg);
         columns.calc_status = status_column(computed.calc_status);
+        columns.component_intensities_net = shared_column(computed.component_intensities_net);
+        columns.component_order = shared_column(computed.component_order);
         columns.residual = shared_column(crysta::residual(engine.experiments[index]));
         data.push_back(std::move(columns));
 
@@ -3473,14 +4218,26 @@ void Project::publish_calculation() {
     }
     for (std::size_t index = 0; index < experiments.size(); ++index) {
         BraggPdExperiment& bank = *experiments[index];
+        if (bank.reflections) {
+            bank.reflections->d_spacing = std::move(reflections[index].d_spacing);
+            bank.reflections->sin_theta_over_lambda = std::move(reflections[index].sin_theta_over_lambda);
+            bank.reflections->intensity_calc = std::move(reflections[index].f_squared_calc);
+            bank.computed_source = std::move(sources[index]);
+            continue;
+        }
         PdDataBase& target = *bank.data;
         target.d_spacing = std::move(data[index].d_spacing);
         target.intensity_calc = std::move(data[index].intensity_calc);
         target.intensity_bkg = std::move(data[index].intensity_bkg);
         target.calc_status = std::move(data[index].calc_status);
+        target.component_intensities_net = std::move(data[index].component_intensities_net);
+        target.component_order = std::move(data[index].component_order);
         target.residual = std::move(data[index].residual);
         bank.refln = std::move(reflections[index]);
         bank.computed_source = std::move(sources[index]);
+    }
+    for (auto& bank : experiments) {
+        bank->carried_calculation = false;
     }
 }
 // --- (edi ADR-0020 §1): the publication transaction -------------------------------
@@ -3552,6 +4309,12 @@ CalculationResult calculate(WorkSnapshot& snapshot, const work::CancelToken& tok
         result.cancelled = true;
         return result;
     }
+    // A refused reflection table changes nothing: publish keeps what is shown.
+    if (std::string why = detail::reflection_refusal(snapshot.project); !why.empty()) {
+        result.refusal = std::move(why);
+        result.kept = true;
+        return result;
+    }
     std::string refusal;
     try {
         snapshot.project.calculate();
@@ -3601,6 +4364,15 @@ CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, s
     result.data.reserve(calculated.experiments.size());
     result.refln.reserve(calculated.experiments.size());
     for (const auto& bank_item : calculated.experiments) {
+        if (bank_item->reflections.has_value()) {  // a single crystal's calculated F², by reflection
+            PowderReflnDataBase rows;
+            rows.d_spacing = bank_item->reflections->d_spacing;
+            rows.sin_theta_over_lambda = bank_item->reflections->sin_theta_over_lambda;
+            rows.f_squared_calc = bank_item->reflections->intensity_calc;
+            result.data.emplace_back();
+            result.refln.push_back(std::move(rows));
+            continue;
+        }
         PdDataBase columns;
         if (bank_item->data.has_value()) {
             const PdDataBase& computed = *bank_item->data;
@@ -3608,6 +4380,8 @@ CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, s
             columns.intensity_calc = computed.intensity_calc;
             columns.intensity_bkg = computed.intensity_bkg;
             columns.calc_status = computed.calc_status;
+            columns.component_intensities_net = computed.component_intensities_net;
+            columns.component_order = computed.component_order;
             columns.residual = computed.residual;
         }
         result.data.push_back(std::move(columns));
@@ -3650,7 +4424,13 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
     const std::size_t banks = live.experiments.size();
     const std::size_t structures = live.structures.size();
     // --- preflight: nothing the result depends on was written since the snapshot -----------------
-    if (result.cancelled || !unchanged_since(live, stamps) || result.geometry.size() != structures) {
+    if (result.cancelled || !unchanged_since(live, stamps)) {
+        return PublishOutcome::Superseded;
+    }
+    if (result.kept) {  // refused before anything was calculated: nothing to write
+        return PublishOutcome::Published;
+    }
+    if (result.geometry.size() != structures) {
         return PublishOutcome::Superseded;
     }
     const bool refused = !result.refusal.empty();
@@ -3658,7 +4438,8 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         return PublishOutcome::Superseded;
     }
     for (std::size_t index = 0; index < banks; ++index) {
-        if (!refused && !live.experiments[index]->data.has_value()) {
+        if (!refused && !live.experiments[index]->data.has_value() &&
+            !live.experiments[index]->reflections.has_value()) {
             return PublishOutcome::Superseded;
         }
     }
@@ -3711,8 +4492,19 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
             if (bank.data.has_value()) {
                 bank.data->clear_computed();
             }
+            if (bank.reflections.has_value()) {
+                bank.reflections->clear_computed();
+            }
             bank.refln.clear();
             bank.computed_source.reset();
+            continue;
+        }
+        bank.carried_calculation = false;
+        if (bank.reflections.has_value()) {
+            bank.reflections->d_spacing = std::move(result.refln[index].d_spacing);
+            bank.reflections->sin_theta_over_lambda = std::move(result.refln[index].sin_theta_over_lambda);
+            bank.reflections->intensity_calc = std::move(result.refln[index].f_squared_calc);
+            bank.computed_source = std::move(sources[index]);
             continue;
         }
         PdDataBase& target = *bank.data;
@@ -3720,6 +4512,8 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         target.intensity_calc = std::move(result.data[index].intensity_calc);
         target.intensity_bkg = std::move(result.data[index].intensity_bkg);
         target.calc_status = std::move(result.data[index].calc_status);
+        target.component_intensities_net = std::move(result.data[index].component_intensities_net);
+        target.component_order = std::move(result.data[index].component_order);
         target.residual = std::move(result.data[index].residual);
         bank.refln = std::move(result.refln[index]);
         bank.computed_source = std::move(sources[index]);
@@ -3727,11 +4521,11 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
     return PublishOutcome::Published;
 }
 
-void Project::refresh_calculated_pattern() {
+void Project::refresh_calculated_pattern(DueEstimates due) {
     // / crysta — contract in model.hpp. A refusal clears EVERY bank: no computed column may
     // describe a model the calculation refused (calculate() clears them itself).
     try {
-        calculate();
+        calculate(due);
     } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — cleared, not raised
     }
 }
@@ -3875,6 +4669,10 @@ void publish_fit_state(Project& project, crysta::Project& converted, const std::
             p.start_uncertainty.reset();
         }
     }
+    // A fit may refine auto-mode points; they are the background now (ADR-0040).
+    for (const auto& experiment : project.experiments) {
+        record_fitted_background(*experiment);
+    }
     project.refresh_calculated_pattern();  // The pattern follows the model it describes
 }
 
@@ -3887,6 +4685,10 @@ crysta::FitQuality fitted_quality(crysta::Project& fitted, const std::deque<crys
         fitted.experiments[bank].data = measured[bank];
         fitted.experiments[bank].calculation_only = false;
         fitted.experiments[bank].explicit_grid = false;
+        // The quality describes the points the fit ran with, never an estimate from these data (ADR-0040).
+        if (fitted.experiments[bank].background_estimate_mode.get()) {
+            crysta::set_background_estimate_mode(fitted.experiments[bank], "manual");
+        }
     }
     crysta::calculate_project(fitted);
     return crysta::fit_quality(fitted, n_free);
@@ -3970,6 +4772,17 @@ std::vector<FitParameterCorrelation> crysta_correlations(crysta::Project& fitted
     return rows;
 }
 
+// An agreement factor over no signal or no weight is not a number. The record holds none for it, which a save leaves
+// out.
+std::optional<double> finite_factor(double value) {
+    return std::isfinite(value) ? std::optional<double>(value) : std::nullopt;
+}
+
+// A factor over no points is none too, never the zero an empty sum gives.
+std::optional<double> factor_over(std::size_t points, double value) {
+    return points > 0 ? finite_factor(value) : std::nullopt;
+}
+
 // The fit's result as the project records it (`_fit_result`, diffraction-lib's names, each experiment's share and
 // each phase's), from what the fit returned — the same numbers the reports print — with the R factors and the
 // parameter correlations crysta computed. The status label is crysta's machine-record spelling; the profile function
@@ -3991,11 +4804,11 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     record.message = record.exit_reason;
     record.iterations = outcome.iterations;
     record.fitting_time = outcome.elapsed_ms / 1000.0;
-    record.reduced_chi_square = outcome.reduced_chi_square;
+    record.reduced_chi_square = finite_factor(outcome.reduced_chi_square);
     const std::size_t n_free = outcome.values.size();
     record.objective_name = "chi_square";
     record.objective_value =
-        outcome.reduced_chi_square * detail::reduced_chi_square_dof(outcome.n_points_fitted, n_free);
+        finite_factor(outcome.reduced_chi_square * detail::reduced_chi_square_dof(outcome.n_points_fitted, n_free));
     record.n_data_points = static_cast<int>(outcome.n_points_fitted);
     // diffraction-lib's n_parameters is every parameter the fit considered (its structures' and its experiments'
     // parameters, the active profile family only): the engine project the fit ran on, the count crysta's own
@@ -4006,7 +4819,7 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     record.degrees_of_freedom =
         outcome.n_points_fitted > n_free ? static_cast<int>(outcome.n_points_fitted - n_free) : 0;
     record.covariance_available = !outcome.uncertainty.empty();
-    record.prof_wr_factor = outcome.rwp;
+    record.prof_wr_factor = finite_factor(outcome.rwp);
     std::optional<std::string> profile;
     bool shared = true;
     for (const auto& experiment_item : project.experiments) {
@@ -4029,10 +4842,11 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
         record.background_function = *background;
     }
     record.descent = outcome.descent;  // review-1 F3: the descent that produced it
-    record.prof_r_factor = quality.pooled.rp;
-    record.prof_wr_expected = quality.pooled.rexp;
-    record.prof_cr_factor = quality.pooled.crp;
-    record.prof_cwr_factor = quality.pooled.cwrp;
+    const std::size_t pooled = quality.pooled.n_points;
+    record.prof_r_factor = factor_over(pooled, quality.pooled.rp);
+    record.prof_wr_expected = factor_over(pooled, quality.pooled.rexp);
+    record.prof_cr_factor = factor_over(pooled, quality.pooled.crp);
+    record.prof_cwr_factor = factor_over(pooled, quality.pooled.cwrp);
     const std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows = numbered_correlations(correlations);
     outcome.correlations.clear();
     for (const auto& row : rows) {
@@ -4046,20 +4860,20 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
         for (const crysta::ProfileFactors& bank : quality.experiments) {
             if (bank.experiment == experiment.name) {
                 experiment.fit_n_data_points = static_cast<int>(bank.n_points);
-                experiment.fit_prof_r_factor = bank.rp;
-                experiment.fit_prof_wr_factor = bank.rwp;
-                experiment.fit_prof_wr_expected = bank.rexp;
-                experiment.fit_prof_cr_factor = bank.crp;
-                experiment.fit_prof_cwr_factor = bank.cwrp;
-                experiment.fit_chi_square = bank.chi_square;
+                experiment.fit_prof_r_factor = factor_over(bank.n_points, bank.rp);
+                experiment.fit_prof_wr_factor = factor_over(bank.n_points, bank.rwp);
+                experiment.fit_prof_wr_expected = factor_over(bank.n_points, bank.rexp);
+                experiment.fit_prof_cr_factor = factor_over(bank.n_points, bank.crp);
+                experiment.fit_prof_cwr_factor = factor_over(bank.n_points, bank.cwrp);
+                experiment.fit_chi_square = factor_over(bank.n_points, bank.chi_square);
             }
         }
         // A bank the fit reported keeps the fit's own points, Rwp and chi-square, the numbers the report prints.
         for (const BankMetric& bank : outcome.banks) {
             if (bank.name == experiment.name) {
                 experiment.fit_n_data_points = static_cast<int>(bank.n_points);
-                experiment.fit_prof_wr_factor = bank.rwp;
-                experiment.fit_chi_square = bank.chi_square;
+                experiment.fit_prof_wr_factor = factor_over(bank.n_points, bank.rwp);
+                experiment.fit_chi_square = factor_over(bank.n_points, bank.chi_square);
             }
         }
         for (const auto& link : experiment.linked_structures) {
@@ -4069,8 +4883,8 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
             for (const crysta::PhaseFactors& phase : quality.phases) {
                 if (link->enabled.get() && phase.experiment == experiment.name &&
                     KeyTraits<Structure>::canonical(phase.structure) == structure) {
-                    link->fit_bragg_r_factor = phase.r_bragg;
-                    link->fit_f_r_factor = phase.r_f;
+                    link->fit_bragg_r_factor = finite_factor(phase.r_bragg);
+                    link->fit_f_r_factor = finite_factor(phase.r_f);
                 }
             }
         }
@@ -4112,6 +4926,8 @@ void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
     record.correlations.assign(std::move(kept));
 }
 
+std::string single_crystal_forbidden_tag(const std::string& tag) { return crysta::single_crystal_forbidden_tag(tag); }
+
 std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file) {
     std::vector<FitParameterCorrelation> rows;
     if (!table.names || !table.values) {
@@ -4127,7 +4943,7 @@ std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& ta
             row.source_kind = std::string("deterministic");
             row.parameter_unique_name_i = names[i];
             row.parameter_unique_name_j = names[j];
-            row.correlation = crysta::correlation_text(values[rows.size() - 1]);
+            row.correlation = values[rows.size() - 1];
             row.file_path = file;
         }
     }
@@ -4181,6 +4997,26 @@ crysta::DescentRequest declared_request(const std::string& descent, int max_iter
 
 }  // namespace
 
+namespace {
+// ADR-0040: an auto-mode background is estimated from the experiment's own measured pattern before a fit (the
+// no-argument fits refresh first). A fit of other measurements, or one whose estimate is overdue, would solve with
+// a background that does not belong to the data it fits, so it is refused before anything is built.
+void require_auto_background_for(const ExperimentBase& experiment, const std::vector<double>& grid,
+                                 const std::vector<double>& observed) {
+    if (background_estimate_mode(experiment) != "auto") {
+        return;
+    }
+    const bool own = experiment.data.has_value() && experiment.data->axis() == grid &&
+                     experiment.data->intensity_meas.get() == observed;
+    if (!own || background_estimate_due(experiment)) {
+        throw std::invalid_argument("experiment '" + experiment.name +
+                                    "': its background is estimated automatically from its own measured data, so a "
+                                    "fit of other data cannot use it; set background_estimate.mode to manual, or fit "
+                                    "the experiment's own data");
+    }
+}
+}  // namespace
+
 FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<double>& observed,
                            const std::vector<double>& sigma, const IterationCallback& on_iteration,
                            const PreambleCallback& on_start, const CancelCallback& should_cancel) {
@@ -4188,7 +5024,14 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
     // structured ValueError, never a partial/silent result. The model is written only on success.
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit");
-    detail::validate_fit_request(grid, observed, sigma, *this);
+    // A single crystal fits its own measured reflections: no pattern crosses.
+    const bool single_crystal = experiments.size() == 1 && experiment().reflections.has_value();
+    if (!single_crystal) {
+        detail::validate_fit_request(grid, observed, sigma, *this);
+    }
+    if (!experiments.empty() && !single_crystal) {
+        require_auto_background_for(experiment(), grid, observed);  // the one experiment a single fit fits
+    }
     try {
         // Stateless rebuild-per-fit: the same single crysta-touching build path
         // (build_crysta_project + select_scattering) the forward accessors use — no persistent
@@ -4221,9 +5064,12 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
         // Points as READ, before the mask — the caller-owned authority for `n_points_loaded`. It
         // must be taken here: apply_exclusions replaces `measured`, and the provider only ever
         // sees the masked pattern.
-        const std::size_t n_points_loaded = measured.grid.size();
-        measured = crysta::apply_exclusions(measured, excluded_region_ranges(experiment().excluded_regions));
-        if (measured.grid.empty()) {
+        const std::size_t n_points_loaded =
+            single_crystal ? experiment().reflections->size() : measured.grid.size();
+        if (!single_crystal) {
+            measured = crysta::apply_exclusions(measured, excluded_region_ranges(experiment().excluded_regions));
+        }
+        if (measured.grid.empty() && !single_crystal) {
             throw std::invalid_argument(
                 "edi fit: no measured data remains after applying the excluded regions");
         }
@@ -4288,11 +5134,13 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             crysta::DescentRequest request =
                 declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
             const crysta::FitResultBase result = [&] {
-                if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
+                  if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
                     return crysta::fit_problem(
                         provider, /*separable_linear=*/true, request.max_iterations,
                         collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
                         should_cancel);  // The cooperative cancel
+                  }
                 }
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
@@ -4367,9 +5215,17 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             crysta::write_fit_result_into(project, result);  // crysta completes the dependents
             publish_fit_state(*this, project, refined);
             record_fit_result(*this, outcome, considered, crysta_correlations(project, result),
-                              fitted_quality(project, {crysta::PdDataBase(grid, observed, sigma)}, outcome.values.size()));
+                              fitted_quality(project,
+                                             single_crystal ? std::deque<crysta::PdDataBase>{}
+                                                            : std::deque<crysta::PdDataBase>{crysta::PdDataBase(grid, observed, sigma)},
+                                             outcome.values.size()));
             return outcome;
         };
+        if (single_crystal) {
+            project.refine_ls_threshold_sigma = refine_ls_threshold_sigma;  // the fit's cutoff (edi ADR-0050)
+            crysta::SingleCrystalResidual provider(project, std::move(free));
+            return finish(provider);
+        }
         if (phases) {
             crysta::PhaseSumResidual provider(project);
             return finish(provider);
@@ -4399,6 +5255,7 @@ FitResultBase Project::fit_independent(const IterationCallback& on_iteration,
                                           const FileCompleteCallback& on_file_complete,
                                           const CancelCallback& should_cancel,
                                           const FileFittedCallback& on_file_fitted) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // Review-2 F2: this entry serves EXACTLY `independent`, and it reaches the shared scan body
     // DIRECTLY. It used to delegate to fit_sequential(), which accepted either scan mode — so
     // an `independent` project also succeeded through the explicitly sequential entry, whose
@@ -4418,6 +5275,7 @@ FitResultBase Project::fit_sequential(const IterationCallback& on_iteration,
                                          const FileCompleteCallback& on_file_complete,
                                          const CancelCallback& should_cancel,
                                          const FileFittedCallback& on_file_fitted) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // Serves EXACTLY `sequential` — the scan family is no longer accepted here.
     if (fitting_mode != "sequential") {
         throw std::invalid_argument("edi fit_sequential: _fitting_mode.type is '" +
@@ -4508,6 +5366,12 @@ bool parse_csv_cell(const std::string& cell, Value& out) {
     return !stream.fail() && stream.eof();
 }
 
+// A number cell reads as the project loader reads one (number_token.hpp): a stream read of a double diverges between
+// the platforms' libraries.
+bool parse_csv_cell(const std::string& cell, double& out) {
+    return edi::detail::read_number(cell, out) == edi::detail::NumberToken::ok;
+}
+
 // A results row's file, as the scan's events name it: its file_path cell without the directory.
 std::string scan_file_name(const std::string& file_path) {
     const std::size_t slash = file_path.rfind('/');
@@ -4593,7 +5457,10 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     for (const auto& [start, end] : excluded_region_ranges(experiment.excluded_regions)) {
         source.excluded.push_back({std::min(start, end), std::max(start, end)});
     }
-    source.x_title = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "2θ (°)" : "TOF (µs)";
+    // The axis is titled by its data item's dictionary label and units (edi ADR-0051).
+    const char* const axis =
+        experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "data.two_theta" : "data.time_of_flight";
+    source.x_title = label(axis) + " (" + units_label(axis) + ")";
     const crysta::ComputedView view = crysta::peek(fitted, fitted.experiment());
     const auto shared = [](const crysta::ColumnSnapshot<double>& column) -> PatternSource::Column {
         return column.empty() ? nullptr : column.buffer();
@@ -4602,7 +5469,7 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     source.meas = shared(view.data.intensity_meas);
     source.su = shared(view.data.intensity_meas_su);
     source.current = view.data_state == crysta::ComputedState::Current &&
-                     view.refln_state == crysta::ComputedState::Current;
+                     view.refln_state == crysta::ComputedState::Current && !crysta::holds_infinite(fitted.experiment());
     if (!source.current) {
         return source;
     }
@@ -4617,6 +5484,10 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     source.phases = group_reflections(view.refln.structure_id.values(), view.refln.position.values(),
                                       view.refln.index_h.values(), view.refln.index_k.values(),
                                       view.refln.index_l.values(), names);
+    // Each structure's curve, which crysta's snapshot leaves out, from the fit's own computed columns.
+    const crysta::ComputedData& computed = fitted.experiment().computed().data();
+    source.components = structure_components(computed.component_order.values(), computed.component_intensities_net.values(),
+                                             view.data.axis.size(), names);
     return source;
 }
 
@@ -4630,6 +5501,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                    const FileCompleteCallback& on_file_complete,
                                    const CancelCallback& should_cancel,
                                    const FileFittedCallback& on_file_fitted) {
+    refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
     // The ONE native entry point the `sequential` fitting mode delegates to. The whole loop, the
     // carry-forward/resume state (the CSV) and the results.csv writer are crysta's — one
     // crysta::fit_project call on the converted project (criterion 6's one writer, literal); edi
@@ -4648,6 +5520,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         throw std::invalid_argument("edi fit_scan: _fitting_mode.type is '" + fitting_mode +
                                     "' - the scan body serves only 'sequential' and 'independent'");
     }
+    require_fittable_free(*this);  // ADR-0053: a free flag the fit cannot honour is refused by name
     if (experiments.size() != 1) {
         throw std::invalid_argument(
             "edi fit_sequential: the project has " + std::to_string(experiments.size()) +
@@ -4686,10 +5559,6 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         detail::require_populated_participants(cproject, "edi fit_sequential");
         fill_crysta_relations(*this, cproject);
         make_fit_ready(cproject.experiment());
-        if (!phases) {
-            cproject.structure().name = structure().name;
-            cproject.structure().scattering_lengths_fm = structure().scattering_lengths_fm;
-        }
         // Review-1 F4: forward the DECLARED mode, never a hard-coded one — pinning
         // "sequential" here would have run an `independent` project chained, silently answering
         // a different question than the project declares.
@@ -4934,7 +5803,18 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
     // engine contact, so a malformed request can never partially mutate the model (ADR-0003 pt 5).
     // The checks themselves are edi-side policy (fit_policy.cpp).
     validate_descent(descent, "edi fit_joint");
-    detail::validate_joint_request(*this, experiments, patterns);
+    // Single crystals fit their own reflections together (crysta's stacked single-crystal residual).
+    const bool single_crystals =
+        !experiments.empty() && std::all_of(experiments.begin(), experiments.end(), [](const auto& experiment) {
+            return experiment->reflections.has_value();
+        });
+    if (!single_crystals) {
+        detail::validate_joint_request(*this, experiments, patterns);
+    }
+    for (std::size_t index = 0; index < experiments.size() && index < patterns.size(); ++index) {
+        require_auto_background_for(*experiments[index], patterns[index].axis(),
+                                    patterns[index].intensity_meas.get());
+    }
     try {
         // Stateless rebuild-per-fit, the same shape as the single-bank path: one crysta Project over
         // the shared structure and EVERY loaded bank, so crysta's own free_from_model dispatches to
@@ -4952,6 +5832,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             std::any_of(experiments.begin(), experiments.end(), [](const auto& experiment) {
                 return experiment->linked_structures.size() != 1 || !experiment->linked_structure().enabled.get();
             });
+        if (single_crystals && phases) {
+            throw std::invalid_argument(
+                "edi fit_joint: single crystals fit over one structure, each linking it once and enabled");
+        }
         crysta::Project project = [&]() -> crysta::Project {
             if (phases) {
                 return crysta::Project(to_crysta_structures(*this), experiment_list(built));
@@ -4982,6 +5866,11 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
         // Points as READ across every bank, before any mask — the caller-owned authority for
         // `n_points_loaded`.
         std::size_t n_points_loaded = 0;
+        if (single_crystals) {
+            for (const auto& experiment : experiments) {
+                n_points_loaded += experiment->reflections->size();
+            }
+        }
         for (std::size_t bank = 0; bank < patterns.size(); ++bank) {
             n_points_loaded += patterns[bank].axis().size();
             crysta::ResidualPattern pattern{patterns[bank].axis(), patterns[bank].intensity_meas,
@@ -5040,11 +5929,13 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             crysta::DescentRequest request =
                 declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
             const crysta::FitResultBase result = [&] {
-                if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
-                    return crysta::fit_problem(
-                        provider, /*separable_linear=*/true, request.max_iterations,
-                        collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
-                        should_cancel);  // The cooperative cancel
+                if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
+                    if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                        return crysta::fit_problem(
+                            provider, /*separable_linear=*/true, request.max_iterations,
+                            collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
+                            should_cancel);  // The cooperative cancel
+                    }
                 }
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
@@ -5127,6 +6018,12 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             // self-assignment was a write that staled bank 0's fresh calculation.
             return outcome;
         };
+        if (single_crystals) {
+            project.refine_ls_threshold_sigma = refine_ls_threshold_sigma;  // the fit's cutoff (edi ADR-0050)
+            std::vector<crysta::FreeParameter> free = crysta::free_from_model(project);
+            crysta::SingleCrystalResidual provider(project, std::move(free));
+            return finish(provider);
+        }
         if (phases) {
             crysta::PhaseSumResidual provider(project);
             return finish(provider);
@@ -5245,5 +6142,439 @@ EngineThreading engine_threading() noexcept {
 void set_engine_threads(int count) noexcept { crysta::threading::set_thread_count(count); }
 
 int engine_threads_setting() noexcept { return crysta::threading::thread_count_setting(); }
+
+namespace {
+
+static_assert(kDefaultBackgroundTolerance == crysta::kDefaultBackgroundTolerance);
+static_assert(kAutoModelBelowShare == crysta::kAutoModelBelowShare);
+
+crysta::BackgroundEstimateOptions engine_estimate_options(const BackgroundEstimateOptions& options) {
+    crysta::BackgroundEstimateOptions out;
+    out.method = options.method;
+    out.width = options.width;
+    out.smoothness = options.smoothness;
+    out.n_points = options.n_points;
+    out.tolerance = options.tolerance;
+    out.in_peaks = options.in_peaks;
+    out.use_model = options.use_model;
+    out.max_terms = options.max_terms;
+    return out;
+}
+
+// The pattern an estimate reads: the measured pattern on the whole axis, with the calculated one when
+// the experiment holds it (stale or not, as diffraction-lib reads it: subtracting the calculated peaks
+// stays right after a background edit). crysta keeps the points outside the excluded regions.
+crysta::BackgroundEstimateInput engine_estimate_input(const ExperimentBase& experiment, const std::string& use_model) {
+    if (!experiment.data.has_value() || experiment.data->intensity_meas.get().empty()) {
+        return {};
+    }
+    const PdDataBase& data = *experiment.data;
+    return crysta::background_estimate_input(data.axis(), data.intensity_meas.get(), data.intensity_calc.values(),
+                                             data.intensity_bkg.values(),
+                                             excluded_region_ranges(experiment.excluded_regions), use_model);
+}
+
+BackgroundEstimate from_engine(const crysta::BackgroundEstimate& estimate, bool used_model) {
+    BackgroundEstimate out;
+    out.method = estimate.method;
+    out.model_choice = estimate.model_choice;
+    out.model_reason = estimate.model_reason;
+    out.width = estimate.width;
+    out.noise = estimate.noise;
+    out.used_model = used_model;
+    out.warnings = estimate.warnings;
+    for (const auto& [name, value] : estimate.backend_params) {
+        if (name == "lam") {
+            out.smoothness = value;
+        } else if (name == "max_half_window") {
+            out.half_window = static_cast<int>(value);
+        }
+    }
+    out.summary = crysta::background_estimate_summary(estimate);
+    return out;
+}
+
+}  // namespace
+
+std::vector<std::string> background_estimator_methods() { return crysta::background_estimator_methods(); }
+
+BackgroundEstimate background_estimate_defaults(const ExperimentBase& experiment,
+                                                const BackgroundEstimateOptions& options) {
+    const crysta::BackgroundEstimateInput input = engine_estimate_input(experiment, options.use_model);
+    return from_engine(crysta::background_estimate_defaults(input, engine_estimate_options(options)),
+                       input.used_model);
+}
+
+BackgroundEstimate estimate_background(const ExperimentBase& experiment, const BackgroundEstimateOptions& options) {
+    const crysta::BackgroundEstimateInput input = engine_estimate_input(experiment, options.use_model);
+    if (experiment.background_type != "line-segment") {
+        // A polynomial about its origin, a Chebyshev series over its domain: the declared ones, else the middle
+        // and the range of the included data.
+        const double first = input.x.empty() ? 0.0 : input.x.front();
+        const double last = input.x.empty() ? 1.0 : input.x.back();
+        const crysta::BackgroundEstimate estimate = crysta::estimate_background_series(
+            input, engine_estimate_options(options), experiment.background_type,
+            experiment.background_origin.value_or(0.5 * (first + last)), experiment.background_x_min.value_or(first),
+            experiment.background_x_max.value_or(last));
+        BackgroundEstimate out = from_engine(estimate, input.used_model);
+        out.origin = estimate.origin;
+        out.x_min = estimate.x_min;
+        out.x_max = estimate.x_max;
+        for (std::size_t m = 0; m < estimate.coefficients.size(); ++m) {
+            PolynomialTerm term;
+            term.id = std::to_string(m);  // named by its order
+            term.order = static_cast<int>(m);
+            term.coef.value = estimate.coefficients[m];
+            term.coef.free = false;
+            out.terms.push_back(std::move(term));
+        }
+        return out;
+    }
+    const crysta::BackgroundEstimate estimate =
+        crysta::estimate_background_points(input, engine_estimate_options(options));
+    BackgroundEstimate out = from_engine(estimate, input.used_model);
+    for (std::size_t i = 0; i < estimate.anchor_x.size(); ++i) {
+        LineSegment point;
+        point.id = std::to_string(i + 1);
+        point.position = estimate.anchor_x[i];
+        point.intensity.value = estimate.anchor_y[i];
+        point.intensity.free = false;
+        out.points.push_back(std::move(point));
+    }
+    return out;
+}
+
+namespace {
+
+// What the points came from: 0 is no record (manual), kStaleEstimate "estimate at the next calculation". The digests
+// are crysta's, so a file either product saves reads the same in both (ADR-0040).
+constexpr std::uint64_t kNoRecord = 0;
+constexpr std::uint64_t kStaleEstimate = 1;
+
+std::uint64_t inputs_digest(const ExperimentBase& experiment, const BackgroundEstimateOptions& options) {
+    // A series' basis, as crysta's own experiment digest has it.
+    crysta::BackgroundSeriesBasis basis;
+    if (experiment.background_type == "polynomial") {
+        basis = {experiment.background_type, experiment.background_origin, {}, {}};
+    } else if (experiment.background_type == "chebyshev") {
+        basis = {experiment.background_type, {}, experiment.background_x_min, experiment.background_x_max};
+    }
+    return crysta::background_estimate_inputs_digest(engine_estimate_input(experiment, "ignore"),
+                                                     engine_estimate_options(options), basis);
+}
+
+std::uint64_t points_digest(const ExperimentBase& experiment) {
+    std::vector<crysta::BackgroundPointValues> points;
+    if (experiment.background_type != "line-segment") {
+        // A polynomial's or Chebyshev's terms, the order in place of a position, as the engine reads them.
+        for (const auto& term : experiment.background_terms) {
+            points.push_back({term->id.value(), static_cast<double>(term->order.get()), term->coef.value.get(),
+                              term->coef.free.get()});
+        }
+        return crysta::background_points_digest(points);
+    }
+    points.reserve(experiment.background.size());
+    for (const auto& point : experiment.background) {
+        points.push_back({point->id.value(), point->position.get(), point->intensity.value.get(),
+                          point->intensity.free.get()});
+    }
+    return crysta::background_points_digest(points);
+}
+
+bool declares_auto(const ExperimentBase& experiment) {
+    return experiment.background_estimate_mode && *experiment.background_estimate_mode == "auto";
+}
+
+bool edited_by_hand(const ExperimentBase& experiment) {
+    return experiment.background_estimate_points != kNoRecord &&
+           experiment.background_estimate_points != points_digest(experiment);
+}
+
+bool has_included_points(const ExperimentBase& experiment) {
+    return !engine_estimate_input(experiment, "ignore").x.empty();
+}
+
+}  // namespace
+
+BackgroundEstimateOptions background_estimate_options(const ExperimentBase& experiment) {
+    BackgroundEstimateOptions options;
+    options.method = experiment.background_estimate_method.value_or("auto");
+    options.width = experiment.background_estimate_width;
+    options.smoothness = experiment.background_estimate_smoothness;
+    options.n_points = experiment.background_estimate_n_points;
+    options.tolerance = experiment.background_estimate_tolerance;
+    options.in_peaks = experiment.background_estimate_in_peaks.value_or("move");
+    options.use_model = experiment.background_estimate_use_model.value_or("auto");
+    options.max_terms = experiment.background_estimate_max_terms;
+    return options;
+}
+
+// ADR-0040: the declared mode; an auto-mode background whose rows differ from the estimate is refused, never read as
+// manual.
+std::string background_estimate_mode(const ExperimentBase& experiment) {
+    return declares_auto(experiment) ? "auto" : "manual";
+}
+
+void set_background_estimate_mode(ExperimentBase& experiment, const std::string& mode) {
+    if (mode != "manual" && mode != "auto") {
+        throw std::invalid_argument("background_estimate.mode must be manual or auto, got '" + mode + "'.");
+    }
+    experiment.background_estimate_mode = mode;
+    const bool automatic = mode == "auto";
+    experiment.background_estimate_inputs = automatic ? kStaleEstimate : kNoRecord;
+    experiment.background_estimate_points = automatic ? points_digest(experiment) : kNoRecord;
+}
+
+void set_background_estimate_method(ExperimentBase& experiment, const std::string& method) {
+    crysta::resolve_background_estimator_method(method);
+    experiment.background_estimate_method = method;
+}
+
+void set_background_estimate_width(ExperimentBase& experiment, std::optional<double> width) {
+    crysta::BackgroundEstimateOptions check;
+    check.width = width;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_width = width;
+}
+
+void set_background_estimate_smoothness(ExperimentBase& experiment, std::optional<double> smoothness) {
+    crysta::BackgroundEstimateOptions check;
+    check.smoothness = smoothness;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_smoothness = smoothness;
+}
+
+void set_background_estimate_n_points(ExperimentBase& experiment, std::optional<int> n_points) {
+    crysta::BackgroundEstimateOptions check;
+    check.n_points = n_points;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_n_points = n_points;
+}
+
+void set_background_estimate_tolerance(ExperimentBase& experiment, std::optional<double> tolerance) {
+    crysta::BackgroundEstimateOptions check;
+    check.tolerance = tolerance;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_tolerance = tolerance;
+}
+
+void set_background_estimate_in_peaks(ExperimentBase& experiment, const std::string& in_peaks) {
+    crysta::BackgroundEstimateOptions check;
+    check.in_peaks = in_peaks;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_in_peaks = in_peaks;
+}
+
+void rebaseline_background_estimate(ExperimentBase& experiment) {
+    if (declares_auto(experiment)) {
+        experiment.background_estimate_inputs = kStaleEstimate;
+        experiment.background_estimate_points = points_digest(experiment);
+    }
+}
+
+void record_fitted_background(ExperimentBase& experiment) {
+    if (declares_auto(experiment) && experiment.background_estimate_points != kNoRecord) {
+        experiment.background_estimate_points = points_digest(experiment);
+    }
+}
+
+void require_background_edit(const ExperimentBase& experiment) {
+    if (background_estimate_mode(experiment) == "auto") {
+        throw std::invalid_argument(
+            "the background is estimated automatically (background_estimate.mode is auto); set "
+            "background_estimate.mode to manual before editing its points or terms");
+    }
+}
+
+std::vector<const Parameter*> estimated_background_values(const ExperimentBase& experiment) {
+    std::vector<const Parameter*> values;
+    if (background_estimate_mode(experiment) == "auto") {
+        for (const auto& point : experiment.background) {
+            values.push_back(&point->intensity);
+        }
+        for (const auto& term : experiment.background_terms) {
+            values.push_back(&term->coef);
+        }
+    }
+    return values;
+}
+
+void set_background_estimate_max_terms(ExperimentBase& experiment, std::optional<int> max_terms) {
+    crysta::BackgroundEstimateOptions check;
+    check.max_terms = max_terms;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_max_terms = max_terms;
+}
+
+void set_background_estimate_use_model(ExperimentBase& experiment, const std::string& use_model) {
+    crysta::BackgroundEstimateOptions check;
+    check.use_model = use_model;
+    crysta::validate_background_estimate_options(check);
+    experiment.background_estimate_use_model = use_model;
+}
+
+std::uint64_t parse_background_digest(const std::string& text) { return crysta::parse_background_digest(text); }
+
+void settle_loaded_background_estimate(ExperimentBase& experiment) {
+    if (!declares_auto(experiment)) {
+        experiment.background_estimate_inputs = kNoRecord;
+        experiment.background_estimate_points = kNoRecord;
+        return;
+    }
+    if (experiment.background_estimate_points == kNoRecord) {
+        experiment.background_estimate_points = points_digest(experiment);
+    }
+    if (experiment.background_estimate_inputs == kNoRecord) {
+        experiment.background_estimate_inputs = kStaleEstimate;
+    }
+}
+
+void apply_background_estimate(ExperimentBase& experiment, const BackgroundEstimate& estimate,
+                               const BackgroundEstimateOptions& options) {
+    if (!estimate.terms.empty()) {
+        set_background_terms(experiment, estimate.terms);
+        // The origin or domain the terms are about, when the experiment declared none.
+        if (experiment.background_type == "polynomial") {
+            if (!experiment.background_origin) {
+                experiment.background_origin = estimate.origin;
+            }
+        } else if (!experiment.background_x_min || !experiment.background_x_max) {
+            experiment.background_x_min = estimate.x_min;
+            experiment.background_x_max = estimate.x_max;
+        }
+        experiment.background_estimate_inputs = inputs_digest(experiment, options);
+        experiment.background_estimate_points = points_digest(experiment);
+        return;
+    }
+    if (estimate.points.empty()) {
+        return;  // nothing measured: the points stay
+    }
+    set_background_points(experiment, estimate.points);
+    experiment.background_estimate_inputs = inputs_digest(experiment, options);
+    experiment.background_estimate_points = points_digest(experiment);
+}
+
+bool background_estimate_due(const ExperimentBase& experiment) {
+    if (!declares_auto(experiment)) {
+        return false;
+    }
+    if (edited_by_hand(experiment)) {
+        return true;
+    }
+    if (!has_included_points(experiment)) {
+        return false;
+    }
+    return experiment.background_estimate_inputs !=
+           inputs_digest(experiment, background_estimate_options(experiment));
+}
+
+bool background_estimates_due(const Project& project) {
+    return std::any_of(project.experiments.begin(), project.experiments.end(),
+                       [](const auto& experiment) { return background_estimate_due(*experiment); });
+}
+
+bool refresh_background_estimates(Project& project, std::vector<std::pair<std::string, std::string>>* reasons) {
+    if (!background_estimates_due(project)) {
+        return false;
+    }
+    // crysta estimates, on the project a calculation would build, against the peaks of its current model; the
+    // conversion carries each experiment's digests, so the engine estimates exactly the experiments due here.
+    const BuiltExperiments banks = calculation_banks(project.experiments);
+    crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
+    fill_crysta_relations(project, engine);
+    std::vector<std::pair<std::size_t, std::string>> engine_reasons;
+    crysta::refresh_background_estimates(engine, reasons != nullptr ? &engine_reasons : nullptr);
+    if (reasons != nullptr) {
+        for (const auto& [index, reason] : engine_reasons) {
+            reasons->emplace_back(project.experiments[index]->name, reason);
+        }
+    }
+    bool changed = false;
+    for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+        ExperimentBase& experiment = *project.experiments[index];
+        if (!background_estimate_due(experiment)) {
+            continue;
+        }
+        if (edited_by_hand(experiment)) {
+            // The engine refuses such an experiment before anything is written; never reached.
+            throw std::invalid_argument("experiment '" + experiment.name +
+                                        "': its background points or terms differ from the estimate while "
+                                        "background_estimate.mode is auto; set background_estimate.mode to manual to "
+                                        "keep them, or estimate again");
+        }
+        const crysta::BraggPdExperiment& estimated = engine.experiments[index];
+        if (experiment.background_type != "line-segment") {
+            std::vector<PolynomialTerm> terms;
+            for (const crysta::PolynomialTerm& from : estimated.background_terms) {
+                PolynomialTerm term;
+                term.id = from.id.value();
+                term.order = from.order.get();
+                term.coef.value = from.coef.value();
+                term.coef.free = from.coef.free();
+                terms.push_back(std::move(term));
+            }
+            set_background_terms(experiment, terms);
+            experiment.background_origin = estimated.background_origin.get();
+            experiment.background_x_min = estimated.background_x_min.get();
+            experiment.background_x_max = estimated.background_x_max.get();
+            experiment.background_estimate_inputs = estimated.background_estimate_inputs.get();
+            experiment.background_estimate_points = points_digest(experiment);
+            changed = true;
+            continue;
+        }
+        std::vector<LineSegment> points;
+        points.reserve(estimated.background.size());
+        for (const crysta::LineSegment& from : estimated.background) {
+            LineSegment point;
+            point.id = from.id.value();
+            point.position = from.position.get();
+            point.intensity.value = from.intensity.value();
+            point.intensity.free = from.intensity.free();
+            points.push_back(std::move(point));
+        }
+        set_background_points(experiment, points);
+        experiment.background_estimate_inputs = estimated.background_estimate_inputs.get();
+        experiment.background_estimate_points = points_digest(experiment);
+        changed = true;
+    }
+    return changed;
+}
+
+BackgroundState capture_background(const ExperimentBase& experiment) {
+    BackgroundState state;
+    state.type = experiment.background_type;
+    for (const auto& point : experiment.background) {
+        state.points.push_back(*point);
+    }
+    for (const auto& term : experiment.background_terms) {
+        state.terms.push_back(*term);
+    }
+    state.origin = experiment.background_origin;
+    state.x_min = experiment.background_x_min;
+    state.x_max = experiment.background_x_max;
+    state.mode = experiment.background_estimate_mode;
+    state.inputs = experiment.background_estimate_inputs;
+    state.written = experiment.background_estimate_points;
+    return state;
+}
+
+void restore_background(ExperimentBase& experiment, const BackgroundState& state) {
+    // The whole typed state, the type included: an undo after a type change gives back the type with its rows, never
+    // one type's rows in another's model.
+    experiment.background_type = state.type;
+    experiment.background.clear();
+    experiment.background_terms.clear();
+    if (state.type == "line-segment") {
+        set_background_points(experiment, state.points);
+    } else {
+        set_background_terms(experiment, state.terms);
+    }
+    experiment.background_origin = state.origin;
+    experiment.background_x_min = state.x_min;
+    experiment.background_x_max = state.x_max;
+    experiment.background_estimate_mode = state.mode;
+    experiment.background_estimate_inputs = state.inputs;
+    experiment.background_estimate_points = state.written;
+}
 
 }  // namespace edi

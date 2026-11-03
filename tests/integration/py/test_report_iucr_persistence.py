@@ -4,10 +4,13 @@ import json
 import re
 import shutil
 import struct
+from decimal import Decimal
 from pathlib import Path
 
 import edi as engine
 import pytest
+
+from tests.fixtures.project_save.reference import six_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCE = json.loads((ROOT / 'tests/fixtures/report_units/reference.json').read_text())
@@ -50,6 +53,18 @@ def test_every_writer_uses_the_project_iucr_rule(value, su, rule, expected, tmp_
         'Every save must preserve the selected project uncertainty rule'
     )
     again = engine.Project.load(destination)
+    shown, bracket = expected[:-1].split('(')
+    places = len(shown.split('.')[1]) if '.' in shown else 0
+    expected_su = Decimal(bracket) if '.' in bracket else Decimal(bracket) * Decimal(10) ** -places
+    restored = again.experiments['bank'].background[0].intensity
+    assert restored.value == pytest.approx(float(shown), rel=0, abs=0), (
+        'Reload must retain the independently rounded value, including its sign'
+    )
+    assert restored.uncertainty == pytest.approx(float(expected_su), rel=0, abs=0), (
+        'Decimal brackets store the uncertainty itself; integer brackets scale by place'
+    )
+    if float(value):
+        assert restored.value != 0, 'A saved nonzero value must never be written as zero'
     second = tmp_path / 'again'
     again.save_as(second)
     assert saved_token(second) == expected, (
@@ -94,8 +109,8 @@ def test_absent_rule_defaults_and_unknown_rule_refuses(tmp_path):
     loaded = engine.Project.load(source)
     destination = tmp_path / 'saved'
     loaded.save_as(destination)
-    assert saved_token(destination) == '2.164(5)', (
-        'An absent rule must select the IUCr recommendation-12 default'
+    assert saved_token(destination) == '2.1635(49)', (
+        'An absent rule selects two su digits while declared IUCr choices remain explicit'
     )
     metadata = source / 'project.edi'
     metadata.write_text(metadata.read_text() + '\n_su_format.rule iucr_7\n')
@@ -166,12 +181,32 @@ def test_fixed_absent_zero_and_nonfinite_uncertainty_keep_their_distinctions(fre
     destination = tmp_path / 'saved'
     loaded.save_as(destination)
     restored = engine.Project.load(destination).experiments['bank'].background[0].intensity
-    assert struct.pack('>d', restored.value) == struct.pack('>d', 0.10000000000000002), (
-        'Fixed, absent, zero and nonfinite uncertainty must retain the exact round-trip value'
-    )
+    assert struct.pack('>d', restored.value) == struct.pack(
+        '>d', six_digits(0.10000000000000002)
+    ), 'Fixed, absent, zero and nonfinite uncertainty use the independent six-digit saved value'
     assert restored.free == free, 'Uncertainty spelling must retain the parameter free state'
     wanted = 0.0 if not free or (su is not None and not su) else None
     assert restored.uncertainty == wanted, (
         'Bare fixed values reload with the retained engaged zero; free zero remains '
         'engaged while free absent and nonfinite uncertainties remain absent'
+    )
+
+
+def test_cell_length_with_larger_uncertainty_remains_loadable(tmp_path):
+    loaded = engine.Project.load(project(tmp_path, '4()', 'iucr_19'))
+    parameter = loaded.structures[0].cell.length_a
+    parameter.value = 3.88
+    parameter.uncertainty = 1e20
+    parameter.free = True
+    destination = tmp_path / 'saved-cell'
+    loaded.save_as(destination)
+    written = next((destination / 'structures').glob('*.edi')).read_text()
+    token = re.search(r'^_cell\.length_a\s+(\S+)', written, re.MULTILINE)
+    assert token is not None, 'The saved structure must contain its cell length'
+    assert token[1] == '3.9(100000000000000000000.)', (
+        'Zero-avoiding rounding keeps two value digits and a decimal uncertainty bracket'
+    )
+    restored = engine.Project.load(destination).structures[0].cell.length_a
+    assert (restored.value, restored.uncertainty) == (3.9, 1e20), (
+        'A cell length with a much larger s.u. must still load as the stated nonzero pair'
     )

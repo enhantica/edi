@@ -726,6 +726,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "background_estimate": {
+     "need": {
+      "by": "deviation",
+      "ref": "D88",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "background_origin": {
      "need": {
       "by": "deviation",
@@ -802,6 +811,15 @@
      "need": {
       "by": "counterpart",
       "ref": "ExperimentBase.experiment_type",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "extinction": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ScExperimentBase.extinction",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1168,6 +1186,24 @@
     }
    },
    "CwlInstrumentBase": {
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -1244,6 +1280,24 @@
     }
    },
    "CwlPdInstrumentBase": {
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -1277,6 +1331,24 @@
      "need": {
       "by": "counterpart",
       "ref": "CwlPdInstrumentBase.calib_twotheta_offset",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1329,6 +1401,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -1360,6 +1450,24 @@
      "need": {
       "by": "counterpart",
       "ref": "CwlInstrumentBase.setup_wavelength",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "setup_wavelength_2": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlInstrumentBase.setup_wavelength_2",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "setup_wavelength_2_to_1_ratio": {
+     "need": {
+      "by": "counterpart",
+      "ref": "CwlInstrumentBase.setup_wavelength_2_to_1_ratio",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2167,6 +2275,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "dimensionality": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "polarisation": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "radiation_probe": {
      "need": {
       "by": "counterpart",
@@ -2635,6 +2761,24 @@
     }
    },
    "InstrumentBase": {
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -2867,6 +3011,15 @@
     }
    },
    "LineSegment": {
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "LineSegment.id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "intensity": {
      "need": {
       "by": "deviation",
@@ -2927,6 +3080,15 @@
      "need": {
       "by": "counterpart",
       "ref": "LinkedStructure.structure_id",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "weight_fraction": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3165,6 +3327,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "component_intensities_net": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_presentation_order": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "d_spacing": {
      "need": {
       "by": "counterpart",
@@ -3234,6 +3414,24 @@
      "need": {
       "by": "counterpart",
       "ref": "PdDataBase.calc_status",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_intensities_net": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_presentation_order": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3322,6 +3520,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "extinction": {
+     "need": {
+      "by": "counterpart",
+      "ref": "ScExperimentBase.extinction",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "linked_structure": {
      "need": {
       "by": "deviation",
@@ -3391,6 +3598,24 @@
      "need": {
       "by": "counterpart",
       "ref": "PdDataBase.calc_status",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_intensities_net": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "component_presentation_order": {
+     "need": {
+      "by": "deviation",
+      "ref": "D89",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3633,6 +3858,15 @@
      "need": {
       "by": "counterpart",
       "ref": "PolynomialTerm.coef",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "id": {
+     "need": {
+      "by": "counterpart",
+      "ref": "PolynomialTerm.id",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4109,6 +4343,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "export_zip": {
+     "need": {
+      "by": "deviation",
+      "ref": "D91",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "fit": {
      "need": {
       "by": "deviation",
@@ -4167,6 +4410,15 @@
      "need": {
       "by": "counterpart",
       "ref": "Project.load",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "location": {
+     "need": {
+      "by": "deviation",
+      "ref": "D91",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4377,7 +4629,7 @@
     "as_html": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4386,7 +4638,7 @@
     "check": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4395,7 +4647,7 @@
     "cif": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4404,7 +4656,7 @@
     "correlation_threshold": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4413,7 +4665,7 @@
     "excluded": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4422,7 +4674,7 @@
     "html": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4431,7 +4683,7 @@
     "html_offline": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4440,7 +4692,7 @@
     "model": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4449,7 +4701,7 @@
     "pdf": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4458,7 +4710,16 @@
     "save": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "save_cif": {
+     "need": {
+      "by": "deviation",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4467,7 +4728,7 @@
     "save_html": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4476,7 +4737,7 @@
     "x_axis": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4487,7 +4748,7 @@
     "from_json": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -4496,7 +4757,7 @@
     "to_json": {
      "need": {
       "by": "deviation",
-      "ref": "D80",
+      "ref": "D83",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5423,6 +5684,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "facility": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "name": {
+     "need": {
+      "by": "deviation",
+      "ref": "D92",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -5616,6 +5895,26 @@
     "OFF": {
      "need": {
       "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "WeightFraction": {
+    "uncertainty": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "value": {
+     "need": {
+      "by": "deviation",
+      "ref": "D80",
       "verdict": "keep"
      },
      "reason": "C",
@@ -6221,7 +6520,7 @@
    "Report": {
     "need": {
      "by": "deviation",
-     "ref": "D80",
+     "ref": "D83",
      "verdict": "keep"
     },
     "reason": "C",
@@ -6230,7 +6529,7 @@
    "ReportModel": {
     "need": {
      "by": "deviation",
-     "ref": "D80",
+     "ref": "D83",
      "verdict": "keep"
     },
     "reason": "C",
@@ -6416,6 +6715,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "WeightFraction": {
+    "need": {
+     "by": "deviation",
+     "ref": "D80",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "error_report": {
     "need": {
      "by": "deviation",
@@ -6508,7 +6816,7 @@
    }
   }
  },
- "directionality": "crysta-py ⊆ edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration — crysta cannot add a public name without edi following",
+ "directionality": "crysta-py \u2286 edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration \u2014 crysta cannot add a public name without edi following",
  "public": {
   "AbsorptionBase": {
    "kind": "class",
@@ -6651,6 +6959,7 @@
    "members": [
     "absorption",
     "background",
+    "background_estimate",
     "background_origin",
     "background_terms",
     "background_type",
@@ -6660,6 +6969,7 @@
     "dataset_weight",
     "excluded_regions",
     "experiment_type",
+    "extinction",
     "instrument",
     "linked_structure",
     "linked_structures",
@@ -6724,6 +7034,8 @@
   "CwlInstrumentBase": {
    "kind": "class",
    "members": [
+    "facility",
+    "name",
     "parameters"
    ]
   },
@@ -6742,6 +7054,8 @@
   "CwlPdInstrumentBase": {
    "kind": "class",
    "members": [
+    "facility",
+    "name",
     "parameters"
    ]
   },
@@ -6751,6 +7065,8 @@
     "calib_sample_displacement",
     "calib_sample_transparency",
     "calib_twotheta_offset",
+    "facility",
+    "name",
     "parameters",
     "setup_wavelength"
    ]
@@ -6761,10 +7077,14 @@
     "calib_sample_displacement",
     "calib_sample_transparency",
     "calib_twotheta_offset",
+    "facility",
+    "name",
     "parameters",
     "setup_monochromator_twotheta",
     "setup_polarization_coefficient",
-    "setup_wavelength"
+    "setup_wavelength",
+    "setup_wavelength_2",
+    "setup_wavelength_2_to_1_ratio"
    ]
   },
   "CwlPseudoVoigt": {
@@ -6907,6 +7227,8 @@
    "kind": "class",
    "members": [
     "beam_mode",
+    "dimensionality",
+    "polarisation",
     "radiation_probe",
     "sample_form",
     "scattering_type"
@@ -6998,6 +7320,8 @@
   "InstrumentBase": {
    "kind": "class",
    "members": [
+    "facility",
+    "name",
     "parameters"
    ]
   },
@@ -7048,6 +7372,7 @@
   "LineSegment": {
    "kind": "class",
    "members": [
+    "id",
     "intensity",
     "parameters",
     "position"
@@ -7059,7 +7384,8 @@
     "enabled",
     "parameters",
     "scale",
-    "structure_id"
+    "structure_id",
+    "weight_fraction"
    ]
   },
   "LinkedStructures": {
@@ -7105,6 +7431,8 @@
    "members": [
     "axis",
     "calc_status",
+    "component_intensities_net",
+    "component_presentation_order",
     "d_spacing",
     "intensity_bkg",
     "intensity_calc",
@@ -7118,6 +7446,8 @@
    "members": [
     "axis",
     "calc_status",
+    "component_intensities_net",
+    "component_presentation_order",
     "d_spacing",
     "intensity_bkg",
     "intensity_calc",
@@ -7132,6 +7462,7 @@
     "dataset_weight",
     "excluded_regions",
     "experiment_type",
+    "extinction",
     "linked_structure",
     "linked_structures",
     "name",
@@ -7145,6 +7476,8 @@
    "members": [
     "axis",
     "calc_status",
+    "component_intensities_net",
+    "component_presentation_order",
     "d_spacing",
     "intensity_bkg",
     "intensity_calc",
@@ -7192,6 +7525,7 @@
    "kind": "class",
    "members": [
     "coef",
+    "id",
     "order",
     "parameters"
    ]
@@ -7273,6 +7607,7 @@
     "descent",
     "experiment",
     "experiments",
+    "export_zip",
     "fit",
     "fit_independent",
     "fit_joint",
@@ -7280,6 +7615,7 @@
     "fitting_mode",
     "free_parameters",
     "load",
+    "location",
     "metadata",
     "name",
     "parameters",
@@ -7327,6 +7663,7 @@
     "model",
     "pdf",
     "save",
+    "save_cif",
     "save_html",
     "x_axis"
    ]
@@ -7521,6 +7858,8 @@
     "calib_d_to_tof_offset",
     "calib_d_to_tof_quadratic",
     "calib_d_to_tof_reciprocal",
+    "facility",
+    "name",
     "parameters",
     "setup_twotheta_bank"
    ]
@@ -7558,6 +7897,13 @@
     "COMPACT",
     "FULL",
     "OFF"
+   ]
+  },
+  "WeightFraction": {
+   "kind": "class",
+   "members": [
+    "uncertainty",
+    "value"
    ]
   },
   "error_report": {

@@ -7,7 +7,8 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // The Home page (easydiffractionbeta Pages/Home/Page.qml, ported): the wordmark as the official logo lays it
-// out and the version, composed as in About (WordmarkWithVersion), Start, and the links. The tutorials stay disabled, as in the original v0.9.9.
+// out and the version, composed as in About (WordmarkWithVersion), Start, and two columns of light links with icons:
+// tutorials, documentation and what's new, then Help and feedback, How to cite and About.
 Item {
     Column {
         anchors.centerIn: parent
@@ -35,46 +36,67 @@ Item {
             height: AppSizes.homeBlockSpacer
         }
 
+        // Two columns of three links, left-aligned, each with its icon: learning the app, and getting in touch.
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: AppSizes.homeLinkColumnsSpacing
 
             Column {
+                objectName: "home.learn"
                 spacing: AppSizes.homeLinkSpacing
 
-                EaElements.Button {
-                    objectName: "home.about"
-                    text: qsTr("About %1").arg(ApplicationInfo.name)
-                    onClicked: EaGlobals.Vars.showAppAboutDialog = true
+                IconLink {
+                    objectName: "home.tutorials"
+                    fontIcon: "graduation-cap"
+                    text: qsTr("Tutorials")
+                    onClicked: tutorialsDialog.open()
                 }
-                EaElements.Button {
-                    text: qsTr("Online documentation")
+                IconLink {
+                    objectName: "home.changes"
+                    fontIcon: "bullhorn"
+                    text: qsTr("What's new")
+                    onClicked: AppState.whatsNewRequested()
+                }
+                // A web page: the icon says it opens outside the app.
+                IconLink {
+                    objectName: "home.documentation"
+                    fontIcon: "external-link-alt"
+                    text: qsTr("Documentation")
                     onClicked: Qt.openUrlExternally(ApplicationInfo.docsUrl)
-                }
-                EaElements.Button {
-                    text: qsTr("Get in touch online")
-                    onClicked: Qt.openUrlExternally(ApplicationInfo.contactUrl)
                 }
             }
 
             Column {
+                objectName: "home.contact"
                 spacing: AppSizes.homeLinkSpacing
 
-                EaElements.Button {
-                    enabled: false
-                    text: qsTr("Tutorial") + " 1: " + qsTr("App interface")
+                IconLink {
+                    objectName: "home.feedback"
+                    fontIcon: "comments"
+                    text: qsTr("Help and feedback")
+                    onClicked: AppState.feedbackRequested("feedback", "")
                 }
-                EaElements.Button {
-                    enabled: false
-                    text: qsTr("Tutorial") + " 2: " + qsTr("Basic usage")
+                IconLink {
+                    objectName: "home.cite"
+                    fontIcon: "quote-right"
+                    text: qsTr("How to cite")
+                    onClicked: citationDialog.open()
                 }
-                EaElements.Button {
-                    enabled: false
-                    text: qsTr("Tutorial") + " 3: " + qsTr("Advanced usage")
+                IconLink {
+                    objectName: "home.about"
+                    fontIcon: "info-circle"
+                    text: qsTr("About %1").arg(ApplicationInfo.name)
+                    onClicked: EaGlobals.Vars.showAppAboutDialog = true
                 }
             }
         }
     }
 
+    CitationDialog {
+        id: citationDialog
+    }
+    TutorialsDialog {
+        id: tutorialsDialog
+    }
     AboutDialog {}
 }

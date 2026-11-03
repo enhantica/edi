@@ -10,7 +10,6 @@
 #include <QHash>
 #include <QImage>
 #include <QJsonDocument>
-#include <QSaveFile>
 #include <algorithm>
 #include <exception>
 #include <memory>
@@ -20,21 +19,33 @@
 #include "correlation_view_model.hpp"
 #include "edi/io.hpp"
 #include "edi/report_html.hpp"
+#include "edi/report_save.hpp"
+#include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "report_pdf.hpp"
 #include "web_files.hpp"
 
 namespace edi_app {
 
-ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : QObject(parent), project_(project) {
+ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent)
+    : QObject(parent), project_(project), colour_scheme_(project.colourScheme()) {
     // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
-    // end rebuilds from the outcome.
+    // end rebuilds from the outcome. A fit's end is announced by the project once the fit has published.
     connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
+    // The structure figures take the structure view's element colours.
+    if (StructureViewOptions* view = project_.structureViewOptions()) {
+        connect(view, &StructureViewOptions::colorSchemeChanged, this, &ReportViewModel::refresh);
+    }
+    // The charts take each block's colour at its position in the palette, as the app's pages do.
+    connect(&project_, &ProjectViewModel::colourPositionsChanged, this, &ReportViewModel::refresh);
     refresh();
 }
 
 bool ReportViewModel::calculating() const {
-    return project_.calculating();
+    // A fit counts until it ends: between its own calculations the project is idle, but the report is not yet the
+    // fit's outcome.
+    const FitViewModel* fit = project_.fit();
+    return project_.calculating() || (fit != nullptr && fit->running());
 }
 
 void ReportViewModel::setColourScheme(const QString& scheme) {
@@ -81,7 +92,7 @@ void ReportViewModel::refresh() {
         return;
     }
     if (build()) {
-        emit modelChanged();
+        publishModel();
     }
     emit savedReportsChanged();
 }
@@ -89,23 +100,45 @@ void ReportViewModel::refresh() {
 void ReportViewModel::ensureBuilt() const {
     if (dirty_ && build()) {
         auto* self = const_cast<ReportViewModel*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-        QMetaObject::invokeMethod(self, [self] { emit self->modelChanged(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(self, [self] { self->publishModel(); }, Qt::QueuedConnection);
+    }
+}
+
+void ReportViewModel::publishModel() {
+    emit modelChanged();
+    const QString stem = fileStem();
+    if (stem != published_file_stem_) {
+        published_file_stem_ = stem;
+        emit fileStemChanged();
     }
 }
 
 bool ReportViewModel::build() const {
     dirty_ = false;
-    // The project's report settings (ADR-0036 §7); of a fit of several experiments, the one the tab shows.
-    edi::ReportOptions options = edi::effective_report_options(project_.project());
-    options.colour_scheme = edi::colour_scheme_from_name(colour_scheme_.toStdString()).value_or(edi::ColourScheme::Default);
+    // The project's report settings (ADR-0036 §7) and the app's choices, given as the CLI and Python give them: the
+    // Preferences' palette and, of a fit of several experiments, the experiment the Analysis page shows; then the
+    // blocks' positions in the palette and the structure view's element colours.
+    const edi::Project& project = project_.project();
+    edi::ReportOverrides choices;
+    if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
+        choices.colour_scheme = colour_scheme_.toStdString();
+    }
     const int shown = project_.currentExperimentIndex();
-    options.correlation_experiment = !project_.scan() && shown > 0 ? static_cast<std::size_t>(shown) : 0;
+    if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
+        choices.correlation_experiment = project.experiments[static_cast<std::size_t>(shown)]->name.value();
+    }
+    judged_.reset();
+    cif_digest_.reset();
     edi::ReportModel next;
     try {
-        // A scan's report is its template dataset's (edi ADR-0036 §3).
-        const edi::Project* scan_template = project_.scanTemplate();
-        next = edi::build_report(scan_template != nullptr ? *scan_template : project_.project(), options);
+        options_ = edi::effective_report_options(project, choices);
+        const StructureViewOptions* view = project_.structureViewOptions();
+        const bool vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
+        options_.element_colours = vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
+        options_.colour_positions = project_.colourPositions();
+        next = edi::build_report(reportInput(), options_);
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
+        options_ = {};
         next = {};
     }
     std::string json = edi::report_to_json(next);
@@ -242,10 +275,48 @@ QString ReportViewModel::reportsDirectory() const {
     return QDir(QString::fromStdString(project_.project().path)).filePath(QStringLiteral("reports"));
 }
 
-QVariantList ReportViewModel::savedReports() const {
+const edi::Project& ReportViewModel::reportInput() const {
+    // A scan's report is its template dataset's (edi ADR-0036 §3).
+    const edi::Project* scan_template = project_.scanTemplate();
+    return scan_template != nullptr ? *scan_template : project_.project();
+}
+
+const edi::ReportModel& ReportViewModel::judged() const {
+    ensureBuilt();
+    if (!edi::chooses_presentation(options_)) {
+        return report_;
+    }
+    if (!judged_) {
+        try {
+            judged_ = edi::build_report(reportInput(), edi::report_file_options(options_));
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — as build(): no report
+            judged_ = edi::ReportModel{};
+        }
+    }
+    return *judged_;
+}
+
+const std::string& ReportViewModel::cifDigest() const {
+    ensureBuilt();
+    if (!cif_digest_) {
+        try {
+            cif_digest_ = edi::fnv1a64(edi::cif_report_text(reportInput()));
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — no CIF report: judged out of date
+            cif_digest_ = std::string();
+        }
+    }
+    return *cif_digest_;
+}
+
+QString ReportViewModel::fileStem() const {
+    ensureBuilt();
+    return QString::fromStdString(report_.name.empty() ? std::string("report") : report_.name);
+}
+
+QList<SavedReport> ReportViewModel::savedReports() const {
     ensureBuilt();
     const edi::Project& project = project_.project();
-    QVariantList rows;
+    QList<SavedReport> rows;
     const QDir reports(reportsDirectory());
     for (const auto& file : project.report_files) {
         const QString name = QString::fromStdString(file->name.value());
@@ -257,31 +328,39 @@ QVariantList ReportViewModel::savedReports() const {
             // The digest of what the format's writer would write now, the HTML with the libraries the project embeds.
             const edi::ReportLibraries* embedded = format == "html" && embedLibraries() ? libraries() : nullptr;
             static const edi::ReportLibraries kOnline;
-            if (edi::report_digest(report_, format, embedded != nullptr ? *embedded : kOnline) !=
-                file->digest.value()) {
+            const std::string digest = format == "cif" ? cifDigest()
+                                                       : edi::report_digest(judged(), format,
+                                                                            embedded != nullptr ? *embedded : kOnline);
+            if (digest != file->digest.value()) {
                 state = QStringLiteral("out of date");
             }
         }
         // Shown in the user's local time, in the pattern of the project's own dates.
         const QString saved = QString::fromStdString(file->saved.value());
         const QDateTime when = QDateTime::fromString(saved, Qt::ISODate);
-        rows.append(QVariantMap{{QStringLiteral("name"), name},
-                                {QStringLiteral("format"), QString::fromStdString(format)},
-                                {QStringLiteral("saved"),
-                                 when.isValid()
-                                     ? QLocale::c().toString(when.toLocalTime(), QStringLiteral("dd MMM yyyy HH:mm:ss"))
-                                     : saved},
-                                {QStringLiteral("state"), state}});
+        rows.append({name, QString::fromStdString(format),
+                     when.isValid() ? QLocale::c().toString(when.toLocalTime(), QStringLiteral("dd MMM yyyy HH:mm:ss"))
+                                    : saved,
+                     state});
     }
     return rows;
 }
 
-void ReportViewModel::saveReport(const QVariantMap& figures, const QString& fontFamily) {
+void ReportViewModel::setFigure(const QString& name, const QImage& image) {
+    if (!image.isNull()) {
+        figures_.insert(name, image);
+    }
+}
+
+void ReportViewModel::saveReport(const QString& fontFamily) {
+    // The figures belong to this save only, whatever it ends in.
+    const QHash<QString, QImage> images = std::exchange(figures_, {});
     ensureBuilt();
     const edi::Project& project = project_.project();
-    const QString base = QString::fromStdString(report_.name.empty() ? std::string("report") : report_.name);
+    const QString base = fileStem();
     const QDir reports(reportsDirectory());
-    if (project.path.empty() || !QDir().mkpath(reports.path())) {
+    // The reports folder is made as project output when the first file is written (ADR-0039).
+    if (project.path.empty()) {
         emit saveFailed(tr("The report folder %1 could not be made").arg(reports.path()));
         return;
     }
@@ -292,8 +371,16 @@ void ReportViewModel::saveReport(const QVariantMap& figures, const QString& font
     std::vector<edi::ReportFile> rows;
     const auto write = [&](const char* format, const QByteArray& bytes, const std::string& digest) {
         const QString name = base + QLatin1Char('.') + QLatin1String(format);
-        QSaveFile out(reports.filePath(name));
-        if (bytes.isEmpty() || !out.open(QIODevice::WriteOnly) || out.write(bytes) != bytes.size() || !out.commit()) {
+        // Through the core's writer, as the command line writes: nothing behind a link in reports/ is written.
+        bool stored = !bytes.isEmpty();
+        if (stored) {
+            try {
+                edi::write_report_file(project.path, name.toStdString(), bytes.toStdString());
+            } catch (const std::exception&) {
+                stored = false;
+            }
+        }
+        if (!stored) {
             emit saveFailed(tr("The report could not be written to %1").arg(reports.filePath(name)));
             return false;
         }
@@ -313,37 +400,41 @@ void ReportViewModel::saveReport(const QVariantMap& figures, const QString& font
         written.append(reports.filePath(name));
         return true;
     };
+    // Each format is written whole or not at all; a failure stops the formats after it, and the files written before
+    // it keep their rows and, in the browser, are downloaded.
+    bool failed = false;
     try {
         if (writes("html")) {
             const edi::ReportLibraries* embedded = embedLibraries() ? libraries() : nullptr;
             if (embedLibraries() && embedded == nullptr) {
                 emit saveFailed(tr("The chart libraries could not be read"));
-                return;
-            }
-            static const edi::ReportLibraries kOnline;
-            const edi::ReportLibraries& used = embedded != nullptr ? *embedded : kOnline;
-            if (!write("html", QByteArray::fromStdString(edi::report_html(report_, used)),
-                       edi::report_digest(report_, "html", used))) {
-                return;
-            }
-        }
-        if (writes("pdf")) {
-            QHash<QString, QImage> images;
-            for (auto it = figures.cbegin(); it != figures.cend(); ++it) {
-                const QImage image = it.value().value<QImage>();
-                if (!image.isNull()) {
-                    images.insert(it.key(), image);
-                }
-            }
-            if (!write("pdf", reportPdf(report_, images, fontFamily), edi::report_digest(report_, "pdf"))) {
-                return;
+                failed = true;
+            } else {
+                static const edi::ReportLibraries kOnline;
+                const edi::ReportLibraries& used = embedded != nullptr ? *embedded : kOnline;
+                failed = !write("html", QByteArray::fromStdString(edi::report_html(report_, used)),
+                                edi::report_digest(judged(), "html", used));
             }
         }
-        // The rows, in reports/report.edi alone; the project's other files are left as they are.
-        project_.recordReportFiles(std::move(rows));
+        if (!failed && writes("pdf")) {
+            failed = !write("pdf", reportPdf(report_, images, fontFamily), edi::report_digest(judged(), "pdf"));
+        }
+        if (!failed && writes("cif")) {
+            const std::string text = edi::cif_report_text(reportInput());
+            failed = !write("cif", QByteArray::fromStdString(text), edi::fnv1a64(text));
+        }
     } catch (const std::exception& error) {
         emit saveFailed(QString::fromUtf8(error.what()));
-        return;
+        failed = true;
+    }
+    // The rows, in reports/report.edi alone; the project's other files are left as they are.
+    if (!rows.empty()) {
+        try {
+            project_.recordReportFiles(std::move(rows));
+        } catch (const std::exception& error) {
+            emit saveFailed(QString::fromUtf8(error.what()));
+            failed = true;
+        }
     }
     // One format downloads as its file, several as <project name>-reports.zip holding reports/<name>.<ext>, as the
     // project save hands the browser a zip (the owner, 2026-10-14). The files also stay in the in-browser reports/.
@@ -357,7 +448,9 @@ void ReportViewModel::saveReport(const QVariantMap& figures, const QString& font
         WebFiles::download(WebFiles::packFiles(entries), base + QStringLiteral("-reports.zip"));
     }
     emit savedReportsChanged();
-    emit saved(written.join(QStringLiteral(", ")));
+    if (!failed) {
+        emit saved(written.join(QStringLiteral(", ")));
+    }
 }
 
 }  // namespace edi_app

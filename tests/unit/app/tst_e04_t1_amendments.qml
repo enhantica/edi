@@ -257,6 +257,6 @@ TestCase {
         renderedCategories(["space_group", "cell", "atom_site", "atom_site_aniso"], ["scattering_length", "appearance"]);
         click("appBar.tab.experiment");
         renderedCategories(["background", "instrument", "peak", "excluded_region", "linked_structure"],
-                           ["data", "absorption", "preferred_orientation", "scattering_source", "peak"]);
+                           ["data", "absorption", "preferred_orientation", "scattering_source", "peak", "background"]);
     }
 }

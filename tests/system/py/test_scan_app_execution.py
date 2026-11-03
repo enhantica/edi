@@ -27,6 +27,25 @@ from tests.fixtures.scan_app.harness import (
 )
 
 MODES = ('sequential', 'independent')
+# Free flags and names in scan_template/project and the full cooling-scan input.
+SCAN_FREE_PARAMETER_NAMES = {
+    *(f'cosio.cell.length_{axis}' for axis in 'abc'),
+    'cosio.atom_site.Co1.adp_iso',
+    *(f'cosio.atom_site.Co2.fract_{axis}' for axis in 'xz'),
+    *(
+        f'cosio.atom_site.{site}.{field}'
+        for site in ('Si', 'O1', 'O2')
+        for field in ('fract_x', 'fract_z', 'adp_iso')
+    ),
+    *(f'cosio.atom_site.O3.{field}' for field in ('fract_x', 'fract_y', 'fract_z', 'adp_iso')),
+    *(
+        f'd20.peak.{field}'
+        for field in ('broad_gauss_u', 'broad_gauss_v', 'broad_gauss_w', 'broad_lorentz_y')
+    ),
+    'd20.instrument.calib_twotheta_offset',
+    'd20.linked_structure.cosio.scale',
+    *(f'd20.background.{index}.intensity' for index in range(1, 15)),
+}
 DATASETS = range(162)  # Packet: run 01 of the frozen 324-file source, exactly 162 files.
 
 
@@ -167,7 +186,7 @@ def transition_observations(harness, root, observed):
     observed['joint'] = harness.invoke('joint', copy_project(FULL, root / 'joint'))
     observed['singleReopened'] = harness.invoke('inventory', Path(str(single) + '-saved'))
     observed['bundle'] = harness.invoke(
-        'bundle', 'pd-neut-cwl_cosio-d20_scan-162f', root / 'saved-bundle'
+        'bundle', 'pd-neut-cwl_cosio-d20_scan', root / 'saved-bundle'
     )
     readonly = copy_project(FULL, root / 'readonly', iterations=1)
     paths = list(readonly.rglob('*'))
@@ -309,15 +328,22 @@ def test_initial_dataset_and_labels_follow_template_and_independent_extract(exec
 def test_evolution_all_parameter_values_errors_and_both_axes_equal_csv(projection_execution):
     execution = projection_execution
     rows = execution['projectionRows']
-    expected_names = {
+    # The fixture declares this offset free under its model name (ADR-0036).
+    csv_names = {
         name.removesuffix('.uncertainty') for name in rows[0] if name.endswith('.uncertainty')
     }
+    model_to_csv = {
+        name.replace('.instrument.twotheta_offset', '.instrument.calib_twotheta_offset'): name
+        for name in csv_names
+    }
+    expected_names = SCAN_FREE_PARAMETER_NAMES | set(model_to_csv)
     columns = execution['evolution'].get('columns', [])
-    assert {column['name'] for column in columns} == expected_names, (
-        'Evolution tab: every fitted CSV parameter must be selectable, without metadata columns'
-    )
+    assert (
+        len(columns) == len(expected_names)
+        and {column['name'] for column in columns} == expected_names
+    ), 'Evolution tab: every fitted CSV parameter must be selectable, without metadata columns'
     for column in columns:
-        name = column['name']
+        name = model_to_csv[column['name']]
         for axis in column['axes']:
             assert axis['count'] == 162 and len(axis['points']) == 162, (
                 'Evolution tab: the small full run preserves every fitted point'
@@ -338,12 +364,30 @@ def test_evolution_all_parameter_values_errors_and_both_axes_equal_csv(projectio
                 )
 
 
+def synthetic_evolution_column(columns, expected_names=None):
+    by_name = {column['name']: column for column in columns}
+    if expected_names is None:
+        expected_names = {'cosio.cell.length_a', 'd20.background.1.intensity'}
+        assert [column['name'] for column in columns] == [
+            'd20.background.1.intensity',
+            'cosio.cell.length_a',
+        ], 'Evolution tab: free model names precede additional CSV parameter columns'
+    assert (
+        len(columns) == len(by_name) == len(expected_names) and set(by_name) == expected_names
+    ), 'Evolution tab: list all free model parameters once and exclude CSV metadata'
+    assert all(
+        not axis['points'] and axis['count'] == 0
+        for name, column in by_name.items()
+        if name != 'cosio.cell.length_a'
+        for axis in column['axes']
+    ), 'Evolution tab: an unrecorded free parameter must have no fabricated points'
+    return by_name['cosio.cell.length_a']
+
+
 def test_evolution_without_extract_uses_one_based_file_index(execution):
     columns = execution['indexEvolution'].get('columns', [])
-    assert len(columns) == 1, (
-        'Evolution tab: a CSV without extracted metadata must expose its fitted parameter'
-    )
-    axis = columns[0]['axes'][0]
+    column = synthetic_evolution_column(columns, SCAN_FREE_PARAMETER_NAMES)
+    axis = column['axes'][0]
     assert [point[0] for point in axis['points']] == [1, 2, 3], (
         'Evolution tab: without an extracted x value, points use the one-based file index'
     )
@@ -368,11 +412,12 @@ def test_evolution_point_click_changes_the_shared_selection(execution):
 def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_execution, mode):
     execution = transition_execution
     flow = execution[mode + '-flow']
-    assert all(value is not None for value in flow['originalFiles'].values()), (
-        'Reset fits: its Undo witness starts with CSV, provenance and run-summary files present'
-    )
-    assert not flow['fitted']['available'], (
-        'Fit state: all fitted datasets disable Start without discarding result files'
+    assert all(
+        flow['originalFiles'][name] is not None
+        for name in ('results.csv', 'results-provenance.csv', 'scan-run.json')
+    ), 'Reset fits: its Undo witness starts with CSV, provenance and run-summary files present'
+    assert flow['fitted']['available'], (
+        'Refit: the seeded previous-generation results enable replacement before Reset'
     )
     assert all(value is None for value in flow['resetFiles'].values()), (
         'Reset fits: every CSV, provenance and run-summary file must be cleared'
@@ -380,8 +425,8 @@ def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_ex
     assert flow['resetState']['available'] and not flow['resetState']['continuable'], (
         'Reset fits: no fitted datasets re-enables Start rather than Continue'
     )
-    assert flow['resetRestored'] and not flow['restoredState']['available'], (
-        'Reset fits: one Undo restores every prior result byte and the completed fit state'
+    assert flow['resetRestored'] and flow['restoredState']['available'], (
+        'Reset fits: one Undo restores every prior result byte and its available Refit state'
     )
     assert flow['stop']['entered'] and flow['stop']['completed'] == 40, (
         'Stop and continue: Stop after file 40 must reach the real worker boundary'
@@ -399,18 +444,21 @@ def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_ex
     assert flow['undoRestored'], (
         'Undo: a first partial run restores absence of all prior result files as one step'
     )
-    assert flow['partialEdited']['available'] and flow['partialEdited']['continuable'], (
-        'Continue fitting: a template edit keeps a partial scan resumable '
-        'without clearing its prefix'
-    )
     assert flow['continue']['completed'] == 122 and flow['prefixKept'], (
         'Stop and continue: continuation keeps the prefix and fits only files 41 through 162; '
         f'worker report: {flow["continue"]}'
     )
     expected = execution['modes'][mode]['files']
     assert_work(flow['work'], expected[40:], 'continue')
-    assert not flow['edited']['available'] and not flow['blocked']['entered'], (
-        'Fit state: editing a completed scan keeps Start disabled until Reset fits'
+    assert flow['edited']['available'] and flow['refit']['entered'], (
+        'Refit: editing a completed scan enables fitting without Reset'
+    )
+    assert flow['refit']['completed'] == len(expected) and flow['refitReplaced'], (
+        'Refit: the edited template replaces every dataset result, including already fitted files'
+    )
+    assert_work(flow['work'], expected, 'refit')
+    assert flow['refitUndoRestored'] and flow['refitUndoStale'], (
+        'Refit Undo: one step restores all prior result/provenance bytes and outdated state'
     )
     assert (
         flow['editKept']
@@ -419,7 +467,7 @@ def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_ex
         and flow['oldResultsVisible']
     ), (
         'Result tagging: old CSV results remain visible with actual fit and Evolution '
-        'out-of-date markers'
+        'outdated state and Evolution marker'
     )
     assert all(value is None for value in flow['editResetFiles'].values()), (
         'Reset fits: clearing stale results removes every result and provenance file'
@@ -559,26 +607,29 @@ def test_single_fit_persists_template_tag_and_selection(execution):
 
 
 def test_bundle_scan_uses_temporary_copy_and_save_as_retains_results(execution):
-    bundle = execution['bundle']
-    assert bundle.get('opened'), 'Temporary working copy: the bundled 162-file example must open'
-    assert bundle['needsSaveAs'], (
-        'Temporary working copy: an opened bundled project must require Save As'
-    )
-    assert not bundle['path'].startswith(':/') and '/docs/user/' not in bundle['path'], (
-        'Temporary working copy: the worker writes into the extracted writable project'
-    )
-    assert bundle['run']['entered'] and bundle['run']['completed'] == 162, (
-        'Temporary working copy: the actual bundled scan must finish on the worker'
-    )
-    assert bundle['beforeSave'], (
-        'Temporary working copy: fitted CSV bytes must exist before Save As'
-    )
-    assert bundle['saved'] and not bundle['afterNeedsSaveAs'], (
-        'Save As: the working copy must become a saved project'
-    )
-    assert bundle['afterSave'] == bundle['beforeSave'], (
-        'Save As: every working result byte travels with the project'
-    )
+    for kind, count in [('bundle', 155), ('readonly', 162)]:
+        bundle = execution[kind]
+        assert bundle.get('opened'), (
+            'Temporary working copy: catalogue and retained 162-file fixture vehicles must open'
+        )
+        assert bundle['needsSaveAs'], (
+            'Temporary working copy: bundled and retained read-only inputs require Save As'
+        )
+        assert not bundle['path'].startswith(':/') and '/docs/user/' not in bundle['path'], (
+            'Temporary working copy: the worker writes into the extracted writable project'
+        )
+        assert bundle['run']['entered'] and bundle['run']['completed'] == count, (
+            'Temporary working copy: each complete scan keeps its declared file population'
+        )
+        assert bundle['beforeSave'], (
+            'Temporary working copy: fitted CSV bytes must exist before Save As'
+        )
+        assert bundle['saved'] and not bundle['afterNeedsSaveAs'], (
+            'Save As: the working copy must become a saved project'
+        )
+        assert bundle['afterSave'] == bundle['beforeSave'], (
+            'Save As: every working result byte travels with the project'
+        )
 
 
 def assert_lazy_trace(trace, paths):
@@ -650,10 +701,8 @@ def test_lazy_gate_rejects_real_eager_native_payload_reads(execution):
 
 def test_large_evolution_thins_points_and_regression_bucket_partition_preserves_extrema(execution):
     columns = execution['largeEvolution'].get('columns', [])
-    assert len(columns) == 1, (
-        'Evolution tab: the synthetic CSV must expose its single fitted parameter'
-    )
-    for axis in columns[0]['axes']:
+    column = synthetic_evolution_column(columns)
+    for axis in column['axes']:
         points = axis['points']
         assert 0 < len(points) <= 5000, (
             'Evolution tab: large scans draw at most the packet thinning threshold'

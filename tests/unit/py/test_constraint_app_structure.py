@@ -1,9 +1,11 @@
 """Static app wiring checks retained while native app tests are disabled."""
 
+import json
 import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
@@ -99,10 +101,22 @@ def test_preview_projects_cannot_be_bundled_as_application_resources():
                 'temporary look-check projects must not enter shipped application resources'
             )
     cmake = (ROOT / 'app/CMakeLists.txt').read_text()
-    examples = re.search(r'set\(EDI_APP_OWN_EXAMPLES\s+([^)]*)\)', cmake)
-    assert examples, 'the app example packaging list must be inspectable'
-    assert not re.search(r'(?i)(?:look|preview|sample|demo)', examples.group(1)), (
-        'look-check and preview projects must not enter the shipped example resource list'
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    bundled = [row['id'] for row in registry if row.get('user-facing') is True]
+    selected = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    assert bundled == [row['id'] for row in selected], (
+        'The app must bundle the complete independent owner selection in its declared order'
+    )
+    assert 'file(STRINGS ${_cli}/projects.yml' in cmake and 'user-facing:' in cmake, (
+        'the app example selection must read the registry user-facing declarations'
+    )
+    assert 'edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})' in cmake, (
+        'the registry-selected catalogue must reach the production bundle call'
+    )
+    assert not any(re.search(r'(?i)(?:look|preview|demo)', case) for case in bundled), (
+        'look-check and preview projects must not enter the shipped example catalogue'
     )
     assert 'constraint_samples' not in cmake, (
         'the application packaging list must exclude the temporary relation samples'
@@ -131,15 +145,19 @@ def test_relation_tables_expose_live_append_duplicate_and_remove_actions(compone
 
 
 def test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order():
+    """The historical linked-group witness now follows dictionary order without an exception."""
     text = source('src/category_list_model.cpp')
     body = text.split('presentation_order(', 1)[1].split(
         'CategoryListModel::CategoryListModel', 1
     )[0]
-    assert '"linked_structure"' in body, (
-        'presentation ordering must explicitly handle Linked structures after all other groups'
+    assert 'std::stable_sort' in body, (
+        'Category presentation preserves declaration order when dictionary numbers tie'
     )
-    assert re.search(r'\{\s*"excluded_region"\s*,\s*"linked_structure"\s*}', body), (
-        'the final ordinary Basic group must precede Linked structures in presentation order'
+    assert re.search(
+        r'return\s+edi::category_order\(a->id\)\s*<\s*edi::category_order\(b->id\)', body
+    ), 'Every sidebar group follows its declared dictionary order number'
+    assert '"linked_structure"' not in body, (
+        'Linked structures have no separate ordering rule outside the dictionary'
     )
 
 
@@ -177,14 +195,38 @@ def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
         'the Analysis Text tab must read the canonical saved analysis block'
     )
     project = source('src/project_view_model.cpp')
-    # Saving uses the template when a dataset is shown; ordinary projects save themselves.
-    assert 'edi::project_edi_files(scanTemplateOrModel())' in project, (
-        'the text provider must use the canonical writer on the same template or model as saving'
+    saved = re.search(
+        r'ProjectViewModel::savedFiles\(\)\s+const\s*\{(.*?)\n\}', project, re.DOTALL
     )
-    assert (
-        'edi::save_project_as(*scan_template_' in project
-        and 'edi::save_project_as(*project_' in project
-    ), 'project saving must retain both the scan-template and ordinary-model canonical routes'
+    assert saved, 'the shared Text snapshot provider must remain inspectable'
+    assert re.search(r'edi::project_edi_files\(\s*\*project_\s*\)', saved.group(1)) and (
+        'scanTemplateOrModel' not in saved.group(1)
+    ), (
+        'ADR-0015 makes Text use the shown model, including selected scan values; '
+        'the save routes still write the scan template or ordinary project'
+    )
+    save = re.search(r'QString ProjectViewModel::saveTo\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL)
+    assert save, 'The actual project Save boundary remains inspectable'
+    assert re.search(
+        r'edi::Project& saved = scan_template_ \? \*scan_template_ : \*project_;',
+        save.group(1),
+    ), 'Project saving selects the canonical scan template or ordinary project'
+    assert 'edi::save_project_as(saved, directory.toStdString())' in save.group(1), (
+        'The selected canonical model reaches the actual core writer'
+    )
+    session = source('src/session.cpp')
+    staged = re.search(r'bool Session::stageCopy\([^)]*\)\s*{(.*?)\n}', session, re.DOTALL)
+    assert staged, 'The staged project Save boundary remains inspectable'
+    assert 'std::make_shared<edi::Project>(project_->savedModel())' in staged.group(1), (
+        'A staged save copies the canonical saved model rather than a selected dataset view'
+    )
+    assert 'edi::save_project_as(*copy, staged.folder.toStdString())' in staged.group(1), (
+        'The canonical staged snapshot reaches the actual core writer'
+    )
+    assert re.search(
+        r'savedModel\(\) const { return scan_template_ \? \*scan_template_ : \*project_; }',
+        source('src/project_view_model.hpp'),
+    ), 'Both staged and direct writers select the scan template or ordinary model'
     assert re.search(r'for \(const auto& \[path, body\] : savedFiles\(\)\)', project), (
         'each text block must come from the shared saved-file snapshot'
     )

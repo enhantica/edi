@@ -14,7 +14,7 @@ import yaml
 from tests.fixtures.fast_ci.generate import run_record
 from tests.fixtures.fast_ci.policy import app_build_sites
 from tests.fixtures.fast_ci.processes import process_guard, stop_observer_tree
-from tests.fixtures.fast_ci.workflow import artifact_routes, timing_route
+from tests.fixtures.fast_ci.workflow import APP_CACHE_PATHS, artifact_routes, timing_route
 from tests.system.py.test_latest_fit_uncertainty import vehicle
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -244,7 +244,17 @@ def test_system_jobs_restore_the_app_artifact_instead_of_building_it(tmp_path):
 
 
 @pytest.mark.parametrize(
-    'defect', ['producer-run', 'consumer-run', 'fallback', 'miss', 'payload', 'optional']
+    'defect',
+    [
+        'producer-run',
+        'consumer-run',
+        'producer-platform',
+        'consumer-platform',
+        'fallback',
+        'miss',
+        'payload',
+        'optional',
+    ],
 )
 def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_path, defect):
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
@@ -263,6 +273,9 @@ def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_p
     if defect.endswith('-run'):
         target = producer if defect == 'producer-run' else consumer
         target['with']['key'] = 'edi-app-${{ matrix.platform }}-main'
+    elif defect.endswith('-platform'):
+        target = producer if defect == 'producer-platform' else consumer
+        target['with']['key'] = 'edi-app-fixed-platform-${{ github.run_id }}'
     elif defect == 'fallback':
         consumer['with']['restore-keys'] = 'edi-app-${{ matrix.platform }}-'
     elif defect == 'miss':
@@ -273,6 +286,69 @@ def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_p
         consumer['continue-on-error'] = True
     with pytest.raises(AssertionError):
         artifact_routes(damaged, tmp_path / 'damaged')
+
+
+def app_cache_step(workflow, role):
+    job, action = ('app', 'cache/save') if role == 'producer' else ('system', 'cache/restore')
+    return next(
+        step
+        for step in workflow['jobs'][job]['steps']
+        if action in step.get('uses', '')
+        and 'edi-app-' in str(step.get('with', {}).get('key', ''))
+    )
+
+
+@pytest.mark.parametrize('role', ['producer', 'consumer'])
+@pytest.mark.parametrize(
+    'defect',
+    [
+        'missing-app',
+        'missing-runner',
+        'missing-observer',
+        'extra-file',
+        'duplicate',
+        'empty',
+        'missing-path',
+        'non-text',
+    ],
+)
+def test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths(
+    tmp_path, role, defect
+):
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    artifact_routes(workflow, tmp_path / 'valid')
+    paths = list(APP_CACHE_PATHS)
+    payloads = {
+        'missing-app': ['\n'.join(path for path in paths if path != 'build/app/app/edi_app')],
+        'missing-runner': [
+            '\n'.join(path for path in paths if path != 'build/app/app/edi_app_tests')
+        ],
+        'missing-observer': [
+            '\n'.join(path for path in paths if path != 'build/tutorial-transactions')
+        ],
+        'extra-file': ['\n'.join([*paths, 'build/app/app/edi_imgdiff'])],
+        'duplicate': ['\n'.join([*paths, path]) for path in paths],
+        'empty': [''],
+        'missing-path': [None],
+        'non-text': [paths],
+    }[defect]
+    for index, payload in enumerate(payloads):
+        damaged = copy.deepcopy(workflow)
+        options = app_cache_step(damaged, role)['with']
+        if payload is None:
+            options.pop('path')
+        else:
+            options['path'] = payload
+        with pytest.raises(AssertionError, match=r'exactly|must be uploaded'):
+            artifact_routes(damaged, tmp_path / f'damaged-{index}')
+
+
+def test_app_cache_payload_order_does_not_change_the_transferred_executables(tmp_path):
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    for role in ('producer', 'consumer'):
+        options = app_cache_step(workflow, role)['with']
+        options['path'] = '\n'.join(reversed(options['path'].splitlines()))
+    artifact_routes(workflow, tmp_path)
 
 
 def invoke_time_gate(tmp_path, current, main):
@@ -410,6 +486,7 @@ def test_shard_time_gate_refuses_unprovable_evidence(tmp_path, mutation):
 
 
 def test_timing_gate_is_wired_after_system_shards_on_pull_requests(tmp_path):
+    """Retained inventory name: the authorized timing cohort is now main push."""
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
     timing_route(workflow, tmp_path)
 

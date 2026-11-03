@@ -102,6 +102,6 @@ cmake -S "$SRC" -B "$BUILD" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Rel
   -DCMAKE_DISABLE_FIND_PACKAGE_Python=ON \
   -DCMAKE_DISABLE_FIND_PACKAGE_Python2=ON \
   -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON
-cmake --build "$BUILD" -j
+cmake --build "$BUILD" -j ${CMAKE_BUILD_PARALLEL_LEVEL:-}
 "$BUILD/crysta_consumer"
 echo "crysta zero-Python installed-consumer gate: PASS"

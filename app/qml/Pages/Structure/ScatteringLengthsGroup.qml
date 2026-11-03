@@ -22,38 +22,37 @@ Column {
 
     DataTable {
         objectName: "scatteringLengths.list"
-        defaultInfoText: qsTr("No custom scattering lengths: the built-in table applies")
+        defaultInfoText: qsTr("No custom scattering lengths: the standard values are used.")
         sourceModel: group.lengths
 
-        columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", qsTr("type")), -1, AppSizes.iconColumnWidth]
+        columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
-            EaComponents.TableViewLabel {
+            HeaderLabel {
                 horizontalAlignment: Text.AlignLeft
-                text: qsTr("type")
+                uid: "scattering_length.type_symbol"
             }
-            EaComponents.TableViewLabel {
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("b (fm)")
+            HeaderLabel {
+                uid: "scattering_length.length_fm"
+                withUnits: true
             }
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        delegate: EaComponents.ListViewDelegate {
+        delegate: TableRow {
             id: row
 
-            required property int index
             required property string typeSymbol
             required property real lengthFm
 
-            EaComponents.TableViewLabel {
+            EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
-                color: EaStyle.Colors.themeForegroundMinor
+                marksCurrentRow: true
                 text: row.index + 1
             }
             TextCell {
@@ -65,11 +64,12 @@ Column {
             TextCell {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.lengthFm.${row.index}`
+                uid: "scattering_length.length_fm"
                 value: row.lengthFm
                 accepts: "number"
                 onCommitted: text => group.lengths.setLengthFm(row.index, Number(text))
             }
-            EaComponents.TableViewButton {
+            EaComponents.ListViewButton {
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.remove.${row.index}`
                 fontIcon: "minus-circle"

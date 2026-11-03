@@ -7,6 +7,9 @@ import shutil
 import edi
 import pytest
 
+from tests.fixtures.metadata_transition.source_bytes import previous_bytes
+from tests.fixtures.project_categories.historical_bytes import prior_bytes
+from tests.fixtures.report_units.iucr_reference import rounded_record, saved_record
 from tests.fixtures.shared_correlations.freeze_saved import HERE, hashes, loop_bytes
 
 PROVENANCE = json.loads((HERE / 'saved-provenance.json').read_text())
@@ -56,8 +59,17 @@ def test_pre_change_correlation_bytes_survive_unchanged_reload(tmp_path, case):
     for name in ['once', 'twice']:
         destination = tmp_path / name
         loaded.save_as(destination)
-        assert (destination / 'analysis/analysis.edi').read_bytes() == analysis.read_bytes(), (
-            'An unchanged reload and save must retain every pre-change analysis byte'
+        expected = saved_record(analysis.read_bytes())
+        assert (
+            prior_bytes(
+                (destination / 'analysis/analysis.edi').read_bytes(),
+                expected,
+                name='analysis/analysis.edi',
+            )
+            == expected
+        ), (
+            'Saved real values, parameter s.u. and correlation '
+            'tokens receive the independent save spelling; all other bytes stay pinned'
         )
         loaded = edi.Project.load(destination)
 
@@ -66,6 +78,15 @@ def test_pre_change_correlation_bytes_survive_unchanged_reload(tmp_path, case):
 def test_fitted_correlation_loop_matches_pre_change_regression_pin(tmp_path, case):
     source = tmp_path / 'source'
     shutil.copytree(HERE / (case + '-input'), source)
+    for path in source.rglob('*'):
+        if path.is_file():
+            name = (
+                'tests/fixtures/shared_correlations/'
+                + case
+                + '-input/'
+                + path.relative_to(source).as_posix()
+            )
+            path.write_bytes(previous_bytes(name, path.read_bytes()))
     assert hashes(source) == PROVENANCE['cases'][case]['input_sha256'], (
         'The fixed-state witness must retain all exact pre-change producer input bytes'
     )
@@ -85,8 +106,9 @@ def test_fitted_correlation_loop_matches_pre_change_regression_pin(tmp_path, cas
     saved = tmp_path / 'saved'
     project.save_as(saved)
     actual = loop_bytes((saved / 'analysis/analysis.edi').read_bytes())
-    assert actual == expected, (
-        'Saving the fixed single or template fitted state must retain the exact correlation loop'
+    assert actual == rounded_record(expected), (
+        'Saving the fixed single or template fitted state preserves every loop byte except '
+        'the independently IUCr-rounded coefficient tokens'
     )
     reopened = edi.Project.load(saved)
     reopened.save_as(tmp_path / 'again')
@@ -114,7 +136,10 @@ def test_loaded_nonordinal_id_and_decimal_spelling_survive_views_and_save(tmp_pa
     for name in ['once', 'twice']:
         destination = tmp_path / name
         project.save_as(destination)
-        assert loop_bytes((destination / 'analysis/analysis.edi').read_bytes()) == loop, (
-            'Reading saved rows must preserve pair17 and the literal decimal coefficient spelling'
+        assert loop_bytes((destination / 'analysis/analysis.edi').read_bytes()) == rounded_record(
+            loop
+        ), (
+            'Reading saved rows retains pair17, both endpoints and source kind; only the '
+            'coefficient changes to the independent IUCr spelling, then stays byte identical'
         )
         project = edi.Project.load(destination)

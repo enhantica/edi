@@ -5,6 +5,7 @@
 #include <QAbstractListModel>
 #include <QString>
 #include <QtQml/qqmlregistration.h>
+#include <functional>
 #include <vector>
 
 #include "edi/categories.hpp"
@@ -31,13 +32,26 @@ class CategoryListModel : public QAbstractListModel {
         ItemCountRole,
         IsLoopRole,
         AdmittedRole,
-        ExtrasPartRole
+        ExtrasPartRole,
+        ToolTipRole,
+        NeedsDataRole,
+        ExtrasNeedsDataRole,
+        ExtrasTitleRole
     };
 
     explicit CategoryListModel(QObject* parent = nullptr);
 
     // Bring the rows to the core's list: rows are inserted and removed by id, counts updated in place.
-    void setCategories(const std::vector<edi::Category>& categories);
+    // The core's categories of a block, and those its saved text carries that the core does not list, each with a
+    // group the app makes from the dictionary (GeneratedCategory), so every category of the file has a group, with
+    // the count the file has: `text` gives the block's saved text, read on every call (the project caches it), and
+    // `calculated` the categories the file holds while its calculation is current (edi::calculated_categories), which
+    // a text made without calculating leaves out.
+    void setCategories(const std::vector<edi::Category>& categories, const std::function<std::string()>& text = {},
+                       const std::function<std::vector<edi::Category>()>& calculated = {});
+    // The same list against the block's text and calculation as they are now: after a calculation, which adds
+    // computed categories, or an edit no core category shows.
+    void refresh();
     int count() const { return static_cast<int>(rows_.size()); }
     Q_INVOKABLE bool contains(const QString& categoryId) const;
     Q_INVOKABLE int itemCount(const QString& categoryId) const;
@@ -57,6 +71,9 @@ class CategoryListModel : public QAbstractListModel {
         bool admitted = true;
     };
     std::vector<Row> rows_;
+    std::vector<edi::Category> categories_;
+    std::function<std::string()> text_;
+    std::function<std::vector<edi::Category>()> calculated_;
 };
 
 // The app's presentation of a category id: which sidebar tab shows it, its title and its icon
@@ -65,9 +82,15 @@ class CategoryListModel : public QAbstractListModel {
 // (`peak`'s `cutoff_fwhm`).
 struct CategoryPresentation {
     CategoryListModel::Tier tier;
-    const char* title;
-    const char* icon;
+    QString title;
+    QString icon;
     bool extras_part = false;
+    QString tool_tip;  // the title and the `.edi` name, from the dictionary
+    // Only of use with measured data: hidden while its block has none (the owner, 2026-10-27). `extras_needs_data`
+    // is the same for a Basic category's Extras part.
+    bool needs_data = false;
+    bool extras_needs_data = false;
+    QString extras_title;  // the Extras part's own title, when it differs from the category's
 };
 CategoryPresentation category_presentation(const QString& id);
 

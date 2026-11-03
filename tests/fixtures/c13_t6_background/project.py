@@ -79,9 +79,10 @@ _background.intensity
             background += (
                 f'_background.x_min {row["x_min"]:.17g}\n_background.x_max {row["x_max"]:.17g}\n'
             )
-        background += 'loop_\n_background.order\n_background.coef\n'
+        # Every term row carries its id; the row ordinal, as a reader without ids once gave.
+        background += 'loop_\n_background.id\n_background.order\n_background.coef\n'
         background += ''.join(
-            f'{i} {value:.17g}{"()" if i in free else ""}\n'
+            f'{i + 1} {i} {value:.17g}{"()" if i in free else ""}\n'
             for i, value in enumerate(coefficients)
         )
     data = ''.join(f'{a:.17g} {b:.17g} 1\n' for a, b in zip(x, observed, strict=True))

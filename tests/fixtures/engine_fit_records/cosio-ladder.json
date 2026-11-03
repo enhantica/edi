@@ -1,0 +1,23 @@
+{
+  "provenance": {
+    "claim": "Pinned crysta CLI parity regression pin, not an independent physics oracle",
+    "engine_sha": "775492fbe8c7def791eb85c988fb30c576dd86ba",
+    "cli_sha256": "4eb192d2d166fc3933eec99b66045cbe72bea17bd860bb4344cec9b5462b093d",
+    "invocation": [
+      "fit",
+      "tests/fitting/cosio-d20-s1/project",
+      "--dry",
+      "--verbosity",
+      "compact"
+    ],
+    "input_sha256": {
+      "README.md": "24680816d23943898d5c318e49c2d158b1b811a85a70381bdf192e5189bbcd76",
+      "analysis/analysis.edi": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "experiments/d20.edi": "c0ef1ce128acbcc94eda9294f6afd63fd80c059eb7f7e5f1c5981f3efb07fbca",
+      "project.edi": "d15fd6bb0cfa3d72ae8fd32dc0b67f4278a72b31d26b7ce952ff1eef246bcd67",
+      "structures/cosio.edi": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48"
+    },
+    "decision": "The resumed descent ends with no accepted step"
+  },
+  "record": "schema=8\nrecord=fit\nstatus=no_step\nmode=single\nconverged=false\nn_points_loaded=1418\nn_points_fitted=1418\nn_free=43\niterations=13\nreduced_chi_square=75.61970582\nrwp=0.1634558338\ncutoff_policy=off\ndescent=ladder\nfast_descent=false\nlinear_snap=false\nguarded_linear_snap=false\nlinear_snap_attempts=0\nlinear_snap_rejections=0\nlinear_snap_guard_residual_evaluations=0\nmultistart_prune=false\nmultistart_probes_started=0\nmultistart_probes_pruned=0\nmultistart_probe_iterations=0\nmultistart_survivor=none\nunevaluable_trials=22\nterminal_unevaluable_trials=2\nnonfinite_trials=0\nterminal_nonfinite_trials=0\nbound_active_columns=none\nzero_jacobian_columns=none\n"
+}

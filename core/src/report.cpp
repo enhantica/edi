@@ -2,12 +2,20 @@
 #include "edi/report.hpp"
 
 #include "crysta/fit_report.hpp"
+#include "edi/categories.hpp"
+#include "edi/display.hpp"
+#include "edi/parameter_walk.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <iomanip>
 #include <locale>
+#include <map>
+#include <optional>
 #include <sstream>
+#include <unordered_map>
+#include <vector>
 
 // . The machine half is a straight call into the engine's emitter; everything else here is edi's
 // own human view, which is the only reason this file is long. Presentation lives in the product
@@ -21,14 +29,19 @@ namespace {
 // (`experiments[wish_1_10].background[10].intensity`) rather than by short engine labels; a
 // narrower column would ragged the numeric columns on almost every row.
 constexpr int kLabelWidth = 48;
+constexpr int kNameWidth = 16;
 
-// Hand-aligned to the data-row widths below (7/11/10/12). The header and the change column carry
-// UTF-8; every DATA cell is ASCII, so byte width equals display width there and the numeric columns
-// stay aligned. The glyphs sit only where that is safe: in this literal, and at the END of a row.
-constexpr const char* kIterHeader = "   iter   time (s)       Rwp          \u03c7\u00b2   change";
+// The iteration table's columns: iter (7) and time (11), which no dictionary item names, then Rwp
+// (10) and reduced χ² (12), whose labels and units are the dictionary's, then the change.
+constexpr int kIterWidth = 7;
+constexpr int kTimeWidth = 11;
+constexpr int kRwpWidth = 10;
+constexpr int kChiWidth = 12;
 
 // Human-facing numbers are formatted for reading, not for comparison — the machine record is the
 // comparison channel. Still classic-locale, so the two views cannot disagree about a decimal point.
+// Rwp and χ² are the dictionary's (metric below); this is for the time and change columns, which have
+// no dictionary item.
 std::string fixed(double value, int precision, int width = 0) {
     std::ostringstream out;
     out.imbue(std::locale::classic());
@@ -39,11 +52,102 @@ std::string fixed(double value, int precision, int width = 0) {
     return out.str();
 }
 
+// The dictionary item of an identity path read off the path, for a table printed without its project. A path is a
+// root, then a category or a collection's row `<collection>[<id>]`, then the item's name after the last dot
+// (`structure.atom_sites[Co].adp_iso` is `atom_site.adp_iso`). An id may hold any character, brackets and dots
+// included, so the reading never counts brackets: the category is the word after the last dot before the name, and a
+// row's collection a word between a dot and an opening bracket, its plural `s` left out, taken only when the
+// dictionary has the name in it. Empty when the dictionary has none.
+std::string item_of(const std::string& path) {
+    const std::size_t last = path.rfind('.');
+    if (last == std::string::npos) {
+        return {};
+    }
+    const std::string name = path.substr(last + 1);
+    const std::string head = path.substr(0, last);
+    const auto item = [&name](const std::string& category) {
+        for (const std::string& candidate :
+             {category, category.ends_with('s') ? category.substr(0, category.size() - 1) : std::string()}) {
+            if (!candidate.empty() && has_item(candidate + "." + name)) {
+                return candidate + "." + name;
+            }
+        }
+        return std::string();
+    };
+    if (!head.ends_with(']')) {
+        const std::size_t dot = head.rfind('.');
+        return dot == std::string::npos ? std::string() : item(head.substr(dot + 1));
+    }
+    for (std::size_t open = head.find('['); open != std::string::npos; open = head.find('[', open + 1)) {
+        if (const std::size_t dot = head.rfind('.', open); dot != std::string::npos) {
+            if (std::string uid = item(head.substr(dot + 1, open - dot - 1)); !uid.empty()) {
+                return uid;
+            }
+        }
+    }
+    return {};
+}
+
+// A number of a fitted parameter: by its dictionary format, or to five decimals for a path the dictionary has
+// no item for.
+std::string padded_left(std::string text, int width) {
+    if (static_cast<int>(text.size()) < width) {
+        text.insert(0, static_cast<std::size_t>(width) - text.size(), ' ');
+    }
+    return text;
+}
+
+std::string number_of(const std::string& uid, double value, int width, const std::string& variant = {}) {
+    return padded_left(uid.empty() ? fixed(value, 5) : display_text(uid, value, variant), width);
+}
+
+// A fit metric of item `uid` by its dictionary format for `variant`, right-aligned to `width` (Rwp in percent, χ²).
+std::string metric(const char* uid, double value, int width = 0, const std::string& variant = {}) {
+    std::string text = display_text(uid, value, variant);
+    if (static_cast<int>(text.size()) < width) {
+        text.insert(0, static_cast<std::size_t>(width) - text.size(), ' ');
+    }
+    return text;
+}
+
+// The characters `text` shows, counted as UTF-8 code points.
+int shown_width(const std::string& text) {
+    int shown = 0;
+    for (const char byte : text) {
+        shown += (static_cast<unsigned char>(byte) & 0xC0U) != 0x80U ? 1 : 0;
+    }
+    return shown;
+}
+
+// Pads to `width` characters, counted as UTF-8 code points, so a label with Å or ² keeps the columns aligned.
 void append_padded(std::ostringstream& out, const std::string& text, int width) {
     out << text;
-    for (int pad = static_cast<int>(text.size()); pad < width; ++pad) {
+    for (int pad = shown_width(text); pad < width; ++pad) {
         out << ' ';
     }
+}
+
+// `text` right-aligned to `width` characters, as append_padded counts them.
+std::string right_aligned(const std::string& text, int width) {
+    return std::string(static_cast<std::size_t>(std::max(0, width - shown_width(text))), ' ') + text;
+}
+
+// A metric's dictionary label for `variant`, with its units in brackets when it has some (`Rwp (%)`).
+std::string metric_header(const char* uid, const std::string& variant = {}) {
+    const std::string units = units_label(uid, variant);
+    return units.empty() ? label(uid, variant) : label(uid, variant) + " (" + units + ")";
+}
+
+// The width of the iteration table's profile-factor column: its header and a space, the powder width at least.
+int rwp_width(const std::string& variant) {
+    return std::max(kRwpWidth, shown_width(metric_header("fit_result.prof_wr_factor", variant)) + 1);
+}
+
+// The iteration table's header, aligned to iteration_line's columns.
+std::string iteration_header(const std::string& variant) {
+    return right_aligned("iter", kIterWidth) + right_aligned(metric_header("fit_result.fitting_time"), kTimeWidth) +
+           right_aligned(metric_header("fit_result.prof_wr_factor", variant), rwp_width(variant)) +
+           right_aligned(metric_header("fit_result.reduced_chi_square"), kChiWidth) + "   change";
 }
 
 }  // namespace
@@ -272,7 +376,8 @@ std::string scan_progress_line(int completed, std::optional<int> total_files,
     append_scan_part(line, std::to_string(fail_count) + " fail");
     if (!total_files.has_value() || completed < *total_files) {
         append_scan_part(line, scan_display_name(file_name));
-        append_scan_part(line, "χ² " + fixed(reduced_chi_square, 2));
+        append_scan_part(line, label("fit_result.reduced_chi_square") + " " +
+                                   display_text("fit_result.reduced_chi_square", reduced_chi_square));
     }
     return line;
 }
@@ -289,7 +394,9 @@ std::string scan_summary(int total_files, int ok_count, int fail_count, double c
     // follows. (the caller's fold now spans the resume rows too, so a resumed scan
     // reaches this blank only when nothing anywhere recorded one.)
     if (std::isfinite(chi2_min) && std::isfinite(chi2_max)) {
-        append_scan_part(line, "χ² " + fixed(chi2_min, 2) + "-" + fixed(chi2_max, 2));
+        append_scan_part(line, label("fit_result.reduced_chi_square") + " " +
+                                   display_text("fit_result.reduced_chi_square", chi2_min) + "-" +
+                                   display_text("fit_result.reduced_chi_square", chi2_max));
     }
     // The duration is the ONE quantity history cannot supply, so it is rendered on its own
     // basis or not at all: nothing fitted this call means no duration to report (a completed
@@ -304,28 +411,31 @@ std::string scan_summary(int total_files, int ok_count, int fail_count, double c
     return line;
 }
 
-std::string iteration_line(const IterationRecord& record, double previous_reduced_chi2) {
+std::string iteration_line(const IterationRecord& record, double previous_reduced_chi2, const std::string& variant) {
     std::ostringstream out;
     out.imbue(std::locale::classic());
-    out << std::setw(7) << record.iteration << fixed(record.elapsed_ms / 1000.0, 2, 11)
-        << fixed(record.rwp, 4, 10) << fixed(record.reduced_chi_square, 4, 12) << "   "
+    out << std::setw(kIterWidth) << record.iteration << fixed(record.elapsed_ms / 1000.0, 2, kTimeWidth)
+        << metric("fit_result.prof_wr_factor", record.rwp, rwp_width(variant), variant)
+        << metric("fit_result.reduced_chi_square", record.reduced_chi_square, kChiWidth) << "   "
         << format_change(record.reduced_chi_square, previous_reduced_chi2);
     return out.str();
 }
 
 // File-internal: its binding left the surface; stream_header renders the starting row
 // through it.
-static std::string pre_fit_line(const IterationRecord& pre_fit) {
+static std::string pre_fit_line(const IterationRecord& pre_fit, const std::string& variant) {
     // The starting row (iteration 0): iter (7) and time (11) columns blank, only Rwp (10) and
     // reduced χ² (12); no change column (there is no previous basis). Aligned to iteration_line's
     // widths so the pre-fit row and the iteration rows share one column grid.
     std::ostringstream out;
     out.imbue(std::locale::classic());
-    out << std::string(18, ' ') << fixed(pre_fit.rwp, 4, 10) << fixed(pre_fit.reduced_chi_square, 4, 12);
+    out << std::string(kIterWidth + kTimeWidth, ' ')
+        << metric("fit_result.prof_wr_factor", pre_fit.rwp, rwp_width(variant), variant)
+        << metric("fit_result.reduced_chi_square", pre_fit.reduced_chi_square, kChiWidth);
     return out.str();
 }
 
-std::string stream_header(const FitPreamble& preamble, const std::string& project_name) {
+std::string stream_header(const FitPreamble& preamble, const std::string& project_name, const std::string& variant) {
     std::ostringstream out;
     out.imbue(std::locale::classic());
     if (preamble.joint) {
@@ -345,49 +455,134 @@ std::string stream_header(const FitPreamble& preamble, const std::string& projec
     // The iteration-table header, then the pre-fit starting row — so the first iteration's
     // improvement over the initial model is visible (edi used to print a header then nothing for ~30
     // s).
-    out << kIterHeader << '\n';
-    out << pre_fit_line(preamble.pre_fit) << '\n';
+    out << iteration_header(variant) << '\n';
+    out << pre_fit_line(preamble.pre_fit, variant) << '\n';
     return out.str();
 }
 
-std::string summary_line(const FitResultBase& outcome) {
+std::string summary_line(const FitResultBase& outcome, const std::string& variant) {
     std::ostringstream out;
     out.imbue(std::locale::classic());
+    // The two metrics by their dictionary labels and units for `variant` (`reduced χ² 1.23 · Rwp 4.56 %`).
+    const auto shown = [&variant](const char* uid, double value) {
+        const std::string units = units_label(uid, variant);
+        return label(uid, variant) + " " + metric(uid, value, 0, variant) + (units.empty() ? "" : " " + units);
+    };
     out << "  done · " << (outcome.converged ? "converged" : "not converged") << " · "
-        << outcome.iterations << " iters · reduced χ² "
-        << fixed(outcome.reduced_chi_square, 4) << " · Rwp " << fixed(outcome.rwp, 4)
-        << " · " << fixed(outcome.elapsed_ms / 1000.0, 1) << " s\n";
+        << outcome.iterations << " iters · " << shown("fit_result.reduced_chi_square", outcome.reduced_chi_square)
+        << " · " << shown("fit_result.prof_wr_factor", outcome.rwp) << " · "
+        << fixed(outcome.elapsed_ms / 1000.0, 1) << " s\n";
     return out.str();
 }
 
-std::string parameter_table(const FitResultBase& outcome) {
+std::string parameter_table(const FitResultBase& outcome, const Project* project) {
     std::ostringstream out;
     out.imbue(std::locale::classic());
     // Per-bank metrics exist for a joint refinement only — the engine reports no per-bank block for
     // a single-bank fit, so there is nothing truthful to print there.
     if (!outcome.banks.empty()) {
-        out << "\n  per-bank Rwp:";
+        const std::string variant = project != nullptr ? metric_variant(*project) : std::string();
+        out << "\n  per-bank " << metric_header("fit_result_bank.prof_wr_factor", variant) << ":";
         for (const BankMetric& bank : outcome.banks) {
-            out << "   " << bank.name << ' ' << fixed(bank.rwp, 4);
+            out << "   " << bank.name << ' ' << metric("fit_result_bank.prof_wr_factor", bank.rwp, 0, variant);
         }
         out << '\n';
     }
     out << "\n  refined parameters (" << outcome.values.size() << " free):\n  ";
+    append_padded(out, "name", kNameWidth);
     append_padded(out, "parameter", kLabelWidth);
     out << std::setw(13) << "start" << std::setw(13) << "value" << std::setw(10) << "s.u."
         << "   change\n";
+    // With the project, each row is its parameter's, found by the result path (parameter_entries walks the paths a fit
+    // result carries): its item, an ADP labelled and rounded by its site's type, and a value and its s.u. by the
+    // project's rule. Without it, the item is read off the path, with the default rule and the items' base entries.
+    std::map<std::string, std::string> variants;
+    std::map<std::string, std::string> uids;
+    std::string rule = kDefaultSuRule;
+    if (project != nullptr) {
+        rule = project->su_rule;
+        const std::unordered_map<const Parameter*, std::string> by_parameter = parameter_variants(*project);
+        // The walk only reads; it hands out writable parameters for the app's editors. A result names a block's
+        // parameter under either root, by the fit that made it: `experiment.` for the one block a single-bank fit
+        // builds (the first), `experiments[<name>].` for a joint fit even with one bank. Each entry answers to the
+        // walk's own path first, then to both roots. The root is cut off as the string the walk spelled it, since a
+        // block's name may hold brackets and dots.
+        const std::vector<ParameterEntry> entries = parameter_entries(const_cast<Project&>(*project));
+        std::map<std::string, std::string> first_block;  // block kind -> its first block's name
+        for (const ParameterEntry& entry : entries) {
+            first_block.emplace(entry.block_kind, entry.block_name);
+        }
+        const auto keys_of = [&first_block](const ParameterEntry& entry) {
+            std::vector<std::string> keys{entry.path};
+            // A structure's named root is its datablock key, as structure_root spells it; an experiment's its name.
+            const std::string named =
+                entry.block_kind + "s[" +
+                (entry.block_kind == "structure" ? datablock_key(entry.block_name, "structure") : entry.block_name) +
+                "]";
+            std::optional<std::string> rest;
+            if (entry.path.starts_with(named + ".")) {
+                rest = entry.path.substr(named.size());
+            } else if (entry.path.starts_with(entry.block_kind + ".")) {
+                rest = entry.path.substr(entry.block_kind.size());
+            }
+            if (rest.has_value()) {
+                keys.push_back(named + *rest);
+                if (first_block.at(entry.block_kind) == entry.block_name) {
+                    keys.push_back(entry.block_kind + *rest);
+                }
+            }
+            return keys;
+        };
+        for (const ParameterEntry& entry : entries) {
+            for (const std::string& key : keys_of(entry)) {
+                if (const auto found = by_parameter.find(entry.parameter); found != by_parameter.end()) {
+                    variants.emplace(key, found->second);
+                }
+                if (const std::string uid = entry.category + "." + entry.name; has_item(uid)) {
+                    uids.emplace(key, uid);
+                }
+            }
+        }
+    }
     // std::map iterates sorted by identity path, which is the stable display order.
     for (const auto& [path, value] : outcome.values) {
         const auto start_it = outcome.start.find(path);
         const double start = start_it == outcome.start.end() ? value : start_it->second;
         const auto esd_it = outcome.uncertainty.find(path);
+        const double su = esd_it == outcome.uncertainty.end() ? 0.0 : esd_it->second;
+        // The dictionary's label and units name the row; the identity path stays its identity.
+        const auto uid_it = uids.find(path);
+        const std::string uid = uid_it != uids.end() ? uid_it->second : item_of(path);
+        const auto variant_it = variants.find(path);
+        const std::string variant = variant_it == variants.end() ? std::string() : variant_it->second;
+        std::string name = uid.empty() ? std::string() : label(uid, variant);
+        if (const std::string units = uid.empty() ? std::string() : units_label(uid, variant); !units.empty()) {
+            name += ", " + units;
+        }
+        // A value with an s.u. is rounded by it, as a file writes it, and the s.u. by the uncertainty rule, never by
+        // the value's own format.
+        std::string value_cell = number_of(uid, value, 13, variant);
+        std::string su_cell = number_of(uid, su, 10, variant);
+        if (!uid.empty() && std::isfinite(su) && su > 0.0 && std::isfinite(value)) {
+            const FileText fitted = fitted_text(uid, value, su, rule);
+            value_cell = padded_left(fitted.value, 13);
+            su_cell = padded_left(fitted.su, 10);
+        }
         out << "  ";
+        append_padded(out, name, kNameWidth);
         append_padded(out, path, kLabelWidth);
-        out << fixed(start, 5, 13) << fixed(value, 5, 13)
-            << fixed(esd_it == outcome.uncertainty.end() ? 0.0 : esd_it->second, 5, 10) << "   "
-            << format_change(value, start) << '\n';
+        out << number_of(uid, start, 13, variant) << value_cell << su_cell << "   " << format_change(value, start)
+            << '\n';
     }
     return out.str();
+}
+
+std::string metric_variant(const Project& project) {
+    const bool single_crystal =
+        !project.experiments.empty() &&
+        std::all_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->reflections.has_value(); });
+    return single_crystal ? token(SampleFormEnum::SINGLE_CRYSTAL) : std::string();
 }
 
 std::string progress_report(const IterationRecord& record) {
