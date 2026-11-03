@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T11:04:49Z
+# measured_utc = 2026-11-03T11:55:53Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 166247 banked, 0 stale row(s) dropped)
-# Collected tests: 210344; with a reported duration: 70521
+# Recorded from: measured test run (6 node(s) measured once, 166243 banked, 0 stale row(s) dropped)
+# Collected tests: 210344; with a reported duration: 70523
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 210344
 # inventory_cpp = 400
-# inventory_measured = 166247
-# inventory_unmeasured = 44497
+# inventory_measured = 166249
+# inventory_unmeasured = 44495
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 66942
 
@@ -202217,7 +202217,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[ordinary]
 0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[wrong-backend]
 0.010	tests/system/py/test_cwl_token_migration.py::test_historical_refusal_capture_requires_exact_bytes_and_location[saved-before-rounded.json]
-0.000	tests/system/py/test_cwl_token_migration.py::test_historical_refusal_capture_requires_exact_bytes_and_location[saved-main.json]
+0.010	tests/system/py/test_cwl_token_migration.py::test_historical_refusal_capture_requires_exact_bytes_and_location[saved-main.json]
 1.620	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[changed-input]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
@@ -204177,10 +204177,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_actual_from_files_fitting_recipe[staged-fits]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_actual_from_files_fitting_recipe[unconstrained-diagnostics]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_constrained_fit_is_reviewed_before_report
-UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_every_staged_free_set_teaches_category_header_and_clear
+0.000	tests/system/py/test_fitting_tutorial_recipe.py::test_every_staged_free_set_teaches_category_header_and_clear
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_experiment_type_is_taught_before_data_locks_it
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_fit_results_are_explained_at_their_actual_ok_control
-UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_recipe_orders_data_background_stages_and_constraint
+0.000	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_recipe_orders_data_background_stages_and_constraint
 0.000	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_script_contains_each_required_instruction[automatic-background]
 0.000	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_script_contains_each_required_instruction[constraint]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_script_contains_each_required_instruction[correlation]
@@ -207448,12 +207448,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test
 0.910	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[drag]
 0.310	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[marker]
 0.450	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[names]
-0.000	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[progress]
+0.320	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[progress]
 0.410	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[repeat]
 0.860	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[reset]
 0.910	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[wheel]
 0.300	tests/system/py/test_scan_owner_adjustments.py::test_previous_and_next_repeat_the_effective_selection_step
-0.010	tests/system/py/test_scan_owner_adjustments.py::test_progress_remains_at_the_status_bar_far_right
+0.160	tests/system/py/test_scan_owner_adjustments.py::test_progress_remains_at_the_status_bar_far_right
 0.380	tests/system/py/test_scan_owner_adjustments.py::test_project_page_displays_bounded_names_and_the_middle_ellipsis
 0.180	tests/system/py/test_scan_performance_work.py::test_scan_performance_proves_complete_work_controls_and_the_owner_bound
 0.660	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]
