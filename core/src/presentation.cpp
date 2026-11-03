@@ -506,7 +506,7 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.phases = group_reflections(refln.structure_id.values(), refln.position.values(),
                                       refln.index_h.values(), refln.index_k.values(),
                                       refln.index_l.values(), names, refln.f_squared_calc.values(),
-                                      refln.m_perp_squared_calc.values());
+                                      refln.f_m_perp_squared_calc.values());
     source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
                                               data.axis().size(), names, data.component_intensities_magnetic.values(),
                                               data.component_intensities_nuclear.values());

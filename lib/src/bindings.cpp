@@ -3777,8 +3777,8 @@ NB_MODULE(_edi, m) {
                      [live_refln](const edi::PowderReflnDataBase& r) { return readonly_array(live_refln(r).index_l); })
         .def_prop_ro("f_calc",
                      [live_refln](const edi::PowderReflnDataBase& r) { return readonly_array(live_refln(r).f_calc); })
-        .def_prop_ro("m_perp_squared_calc", [live_refln](const edi::PowderReflnDataBase& r) {
-            return readonly_array(live_refln(r).m_perp_squared_calc);
+        .def_prop_ro("f_m_perp_squared_calc", [live_refln](const edi::PowderReflnDataBase& r) {
+            return readonly_array(live_refln(r).f_m_perp_squared_calc);
         })
         .def_prop_ro("f_squared_calc", [live_refln](const edi::PowderReflnDataBase& r) {
             return readonly_array(live_refln(r).f_squared_calc);
