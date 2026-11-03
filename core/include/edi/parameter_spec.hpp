@@ -68,6 +68,9 @@ inline constexpr const char* kAdp33[] = {"_atom_site_aniso.adp_33"};
 inline constexpr const char* kAdp12[] = {"_atom_site_aniso.adp_12"};
 inline constexpr const char* kAdp13[] = {"_atom_site_aniso.adp_13"};
 inline constexpr const char* kAdp23[] = {"_atom_site_aniso.adp_23"};
+inline constexpr const char* kMomentX[] = {"_atom_site_moment.crystalaxis_x"};
+inline constexpr const char* kMomentY[] = {"_atom_site_moment.crystalaxis_y"};
+inline constexpr const char* kMomentZ[] = {"_atom_site_moment.crystalaxis_z"};
 inline constexpr const char* kRiseAlpha0[] = {"_peak.rise_alpha_0"};
 inline constexpr const char* kRiseAlpha0Cif[] = {"_easydiffraction_peak.rise_alpha_0"};
 inline constexpr const char* kRiseAlpha1[] = {"_peak.rise_alpha_1"};
@@ -210,6 +213,10 @@ inline const ParameterSpec atom_site_aniso_adp_33{"atom_site_aniso", "adp_33", "
 inline const ParameterSpec atom_site_aniso_adp_12{"atom_site_aniso", "adp_12", "angstrom_squared", detail::kUnbounded, detail::kAdp12, {}};
 inline const ParameterSpec atom_site_aniso_adp_13{"atom_site_aniso", "adp_13", "angstrom_squared", detail::kUnbounded, detail::kAdp13, {}};
 inline const ParameterSpec atom_site_aniso_adp_23{"atom_site_aniso", "adp_23", "angstrom_squared", detail::kUnbounded, detail::kAdp23, {}};
+// A magnetic site's moment components, in Bohr magnetons along the cell axes.
+inline const ParameterSpec atom_site_moment_crystalaxis_x{"atom_site_moment", "crystalaxis_x", "bohr_magnetons", detail::kUnbounded, detail::kMomentX, detail::kMomentX};
+inline const ParameterSpec atom_site_moment_crystalaxis_y{"atom_site_moment", "crystalaxis_y", "bohr_magnetons", detail::kUnbounded, detail::kMomentY, detail::kMomentY};
+inline const ParameterSpec atom_site_moment_crystalaxis_z{"atom_site_moment", "crystalaxis_z", "bohr_magnetons", detail::kUnbounded, detail::kMomentZ, detail::kMomentZ};
 
 inline const ParameterSpec peak_rise_alpha_0{"peak", "rise_alpha_0", "microseconds", detail::kUnbounded, detail::kRiseAlpha0, detail::kRiseAlpha0Cif};
 inline const ParameterSpec peak_rise_alpha_1{"peak", "rise_alpha_1", "microseconds_per_angstrom", detail::kUnbounded, detail::kRiseAlpha1, detail::kRiseAlpha1Cif};

@@ -32,6 +32,7 @@
 // as headers in the SDK. No engine type crosses here: the engine model stays behind the adapter.
 #include "crysta/anchors.hpp"
 #include "crysta/column.hpp"
+#include "crysta/magnetic_types.hpp"
 #include "crysta/schema.hpp"
 #include "crysta/stamped.hpp"
 
@@ -49,6 +50,7 @@ struct BraggPdExperiment;
 struct Structure;
 struct AtomSite;
 struct AtomSiteAniso;
+struct AtomSiteMoment;
 class Project;
 class ItemKey;
 struct Parameter;
@@ -2249,7 +2251,7 @@ class ItemVec final : public detail::KeyedBase {
             if (Project* project = host()) detail::follow_background_aliases(*project, key, next);
         } else if constexpr (std::is_same_v<T, AtomSite>) {
             detail::follow_site_references(host(), holder(), key.value(), next);
-        } else if constexpr (std::is_same_v<T, AtomSiteAniso>) {
+        } else if constexpr (std::is_same_v<T, AtomSiteAniso> || std::is_same_v<T, AtomSiteMoment>) {
             detail::follow_tensor_rename(holder(), key.value(), next);
         } else {
             (void)key;
@@ -2756,6 +2758,58 @@ struct RowTraits<AtomSiteAniso> {
     static const detail::RowLink* primary(const AtomSiteAniso& row) noexcept { return &row.row; }
 };
 
+// A magnetic site's moment, keyed by the site id: three components in Bohr magnetons along the cell
+// axes, and the symmetry form crysta derives for the site.
+struct AtomSiteMoment : std::enable_shared_from_this<AtomSiteMoment> {
+    ItemKey id;  // the site id;: owned by atom_site_moment
+    Parameter crystalaxis_x;
+    Parameter crystalaxis_y;
+    Parameter crystalaxis_z;
+    std::string symmform;
+
+    AtomSiteMoment();
+
+    std::vector<Parameter*> parameters() { return {&crystalaxis_x, &crystalaxis_y, &crystalaxis_z}; }
+    std::vector<Parameter*> free_parameters();
+    detail::RowLink row;
+    detail::Epoch epoch;
+};
+
+template <>
+struct KeyTraits<AtomSiteMoment> {
+    static ItemKey& key(AtomSiteMoment& row) { return row.id; }
+    static const ItemKey& key(const AtomSiteMoment& row) { return row.id; }
+    static std::string canonical(const std::string& id) { return id; }
+    static const char* category() { return "magnetic atom site"; }
+};
+
+template <>
+struct RowTraits<AtomSiteMoment> {
+    static void link(AtomSiteMoment& row, const std::shared_ptr<detail::Membership>& record) noexcept {
+        row.row.link(record);
+    }
+    static void unlink(AtomSiteMoment& row) noexcept { row.row.unlink(); }
+    static const detail::RowLink* primary(const AtomSiteMoment& row) noexcept { return &row.row; }
+};
+
+// A structure's magnetic description besides its moments, each category as written: crysta reads,
+// checks and writes it.
+struct MagneticDescription {
+    crysta::MagneticGroupName group;
+    std::vector<std::pair<std::string, crysta::MagneticTransform>> transforms;
+    std::vector<std::pair<std::string, std::string>> operations;
+    std::vector<std::pair<std::string, std::string>> centerings;
+    crysta::ParentSpaceGroup parent;
+    std::vector<std::pair<std::string, std::string>> propagation_vectors;
+    std::map<std::string, crysta::MagneticIon> form_factors;
+
+    bool empty() const noexcept {
+        return group.empty() && transforms.empty() && operations.empty() && centerings.empty() &&
+               parent.empty() && propagation_vectors.empty() && form_factors.empty();
+    }
+    friend bool operator==(const MagneticDescription&, const MagneticDescription&) = default;
+};
+
 }  // namespace edi
 
 // ADR-0018: the columns of the `_atom_site` table.
@@ -2859,6 +2913,14 @@ struct ExpandedAtomSites {  // `_expanded_atom_site`
     ComputedColumn<std::int32_t> cluster_id;
     std::size_t size() const noexcept { return atom_site_id.size(); }
 };
+struct ExpandedAtomSiteMoments {  // `_expanded_atom_site_moment`
+    ComputedColumn<std::string> atom_site_id;
+    ComputedColumn<std::string> site_symmetry;
+    ComputedColumn<double> crystalaxis_x;
+    ComputedColumn<double> crystalaxis_y;
+    ComputedColumn<double> crystalaxis_z;
+    std::size_t size() const noexcept { return atom_site_id.size(); }
+};
 struct GeomBonds {  // `_geom_bond`
     ComputedColumn<std::int32_t> expanded_atom_site_id_1;
     ComputedColumn<std::int32_t> expanded_atom_site_id_2;
@@ -2876,6 +2938,7 @@ struct CartnTransform {  // `_atom_sites_cartn_transform`: r = M x, row-major
 struct StructureGeometry {
     SpaceGroupSymop space_group_symop;
     ExpandedAtomSites expanded_atom_sites;
+    ExpandedAtomSiteMoments expanded_atom_site_moments;
     GeomBonds geom_bond;
     CartnTransform atom_sites_cartn_transform;
     ViewWindow window;
@@ -2901,6 +2964,10 @@ struct Structure : std::enable_shared_from_this<Structure> {
     ItemVec<AtomSite> atom_sites;  // Shared items, deep-copied with the structure
     // The anisotropic sites' tensors, one row per such site (ADR-0027).
     ItemVec<AtomSiteAniso> atom_site_aniso;
+    // The magnetic sites' moments, one row per magnetic site, and the rest of the magnetic
+    // description; both empty for a structure without magnetic order.
+    ItemVec<AtomSiteMoment> atom_site_moment;
+    detail::Written<MagneticDescription> magnetic;
     // Element -> coherent bound neutron scattering length b_c (fm). Empty => the adapter uses crysta's
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).
     // A loop category held in one cell; written whole or with `modify`.
@@ -2937,6 +3004,7 @@ struct Structure : std::enable_shared_from_this<Structure> {
     void hold_rows() noexcept {
         atom_sites.holder_ = this;
         atom_site_aniso.holder_ = this;
+        atom_site_moment.holder_ = this;
     }
 };
 
@@ -2947,6 +3015,8 @@ inline Structure::Structure(const Structure& other)
       cell(other.cell),
       atom_sites(other.atom_sites),
       atom_site_aniso(other.atom_site_aniso),
+      atom_site_moment(other.atom_site_moment),
+      magnetic(other.magnetic),
       scattering_lengths_fm(other.scattering_lengths_fm),
       view(other.view),
       epoch(other.epoch),
@@ -2965,19 +3035,39 @@ inline void follow_site_rename(Structure* structure, const std::string& from, co
     if (structure == nullptr || from == to) {
         return;
     }
+    // The site's tensor and moment rows take the new id, or neither does.
+    ItemKey* tensor = nullptr;
+    ItemKey* moment = nullptr;
     for (const auto& row : structure->atom_site_aniso) {
         if (row->id.value() == from) {
-            following_site = true;
-            try {
-                row->id = to;
-            } catch (...) {
-                following_site = false;
-                throw;
-            }
-            following_site = false;
-            return;
+            tensor = &row->id;
         }
     }
+    for (const auto& row : structure->atom_site_moment) {
+        if (row->id.value() == from) {
+            moment = &row->id;
+        }
+    }
+    following_site = true;
+    try {
+        if (tensor != nullptr) {
+            *tensor = to;
+        }
+        try {
+            if (moment != nullptr) {
+                *moment = to;
+            }
+        } catch (...) {
+            if (tensor != nullptr) {
+                *tensor = from;
+            }
+            throw;
+        }
+    } catch (...) {
+        following_site = false;
+        throw;
+    }
+    following_site = false;
 }
 
 inline void follow_tensor_rename(Structure* structure, const std::string& from, const std::string& to) {
@@ -2986,7 +3076,7 @@ inline void follow_tensor_rename(Structure* structure, const std::string& from, 
     }
     for (const auto& site : structure->atom_sites) {
         if (site->id.value() == from) {
-            throw std::invalid_argument("the anisotropic row of site '" + detail::printable_id(from) +
+            throw std::invalid_argument("the row of site '" + detail::printable_id(from) +
                                         "' cannot be renamed to '" + detail::printable_id(to) +
                                         "' on its own: it follows its site; rename the site");
         }
@@ -5025,6 +5115,7 @@ inline void ProjectTail::relink() const noexcept {
 inline void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept {
     static_cast<KeyedBase&>(structure.atom_sites).host_link_ = link;
     static_cast<KeyedBase&>(structure.atom_site_aniso).host_link_ = link;
+    static_cast<KeyedBase&>(structure.atom_site_moment).host_link_ = link;
 }
 
 inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept {
@@ -5140,6 +5231,8 @@ inline void follow_site_references(Project* project, Structure* structure, const
             for (const char* field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"}) follow("atom_site", field);
             for (const char* field : {"adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"})
                 follow("atom_site_aniso", field);
+            for (const char* field : {"crystalaxis_x", "crystalaxis_y", "crystalaxis_z"})
+                follow("atom_site_moment", field);
         };
         for (const auto& alias : project->aliases) note(alias->parameter_unique_name);
         for (const auto& pair : project->fit_result.correlations) {
@@ -5153,7 +5246,7 @@ inline void follow_site_references(Project* project, Structure* structure, const
     if (project != nullptr && structure != nullptr) {
         const auto block = datablock_key(structure->name.value(), "structure") + ".";
         rename_scan_results(project->fit_result, [&](const std::string& name) -> std::optional<std::string> {
-            for (const char* category : {"atom_site.", "atom_site_aniso."}) {
+            for (const char* category : {"atom_site.", "atom_site_aniso.", "atom_site_moment."}) {
                 const auto root = block + category + from + ".";
                 if (name.starts_with(root)) {
                     const std::string field = name.substr(root.size());
@@ -5199,7 +5292,8 @@ inline std::optional<std::string> ParameterRenames::operator()(const std::string
         return std::nullopt;
     }
     const std::string category = rest.substr(0, end);
-    static const std::set<std::string> structure_categories{"cell", "atom_site", "atom_site_aniso"};
+    static const std::set<std::string> structure_categories{"cell", "atom_site", "atom_site_aniso",
+                                                            "atom_site_moment"};
     static const std::set<std::string> experiment_categories{
         "peak", "instrument", "absorption", "background", "linked_structure", "preferred_orientation"};
     if (block == from && (structure ? structure_categories : experiment_categories).contains(category)) {
@@ -5680,6 +5774,12 @@ inline AtomSite::AtomSite() {
     adp_iso.spec = &spec::atom_site_adp_iso;
 }
 
+inline AtomSiteMoment::AtomSiteMoment() {
+    crystalaxis_x.spec = &spec::atom_site_moment_crystalaxis_x;
+    crystalaxis_y.spec = &spec::atom_site_moment_crystalaxis_y;
+    crystalaxis_z.spec = &spec::atom_site_moment_crystalaxis_z;
+}
+
 inline AtomSiteAniso::AtomSiteAniso() {
     adp_11.spec = &spec::atom_site_aniso_adp_11;
     adp_22.spec = &spec::atom_site_aniso_adp_22;
@@ -5737,6 +5837,9 @@ inline std::vector<Parameter*> AtomSite::free_parameters() { return detail::free
 inline std::vector<Parameter*> AtomSiteAniso::free_parameters() {
     return detail::free_of(parameters());
 }
+inline std::vector<Parameter*> AtomSiteMoment::free_parameters() {
+    return detail::free_of(parameters());
+}
 inline std::vector<Parameter*> LineSegment::free_parameters() {
     return detail::free_of(parameters());
 }
@@ -5752,6 +5855,11 @@ inline std::vector<Parameter*> Structure::parameters() {
     }
     for (const std::shared_ptr<AtomSiteAniso>& tensor : atom_site_aniso) {
         for (Parameter* parameter : tensor->parameters()) {
+            out.push_back(parameter);
+        }
+    }
+    for (const std::shared_ptr<AtomSiteMoment>& moment : atom_site_moment) {
+        for (Parameter* parameter : moment->parameters()) {
             out.push_back(parameter);
         }
     }
@@ -6052,6 +6160,7 @@ inline void point_parameters(AtomSite& site) {
     }
 }
 inline void point_parameters(AtomSiteAniso& tensor) { point_at_row(tensor); }
+inline void point_parameters(AtomSiteMoment& moment) { point_at_row(moment); }
 inline void point_parameters(LineSegment& point) { point_at_row(point); }
 inline void point_parameters(PolynomialTerm& term) { point_at_row(term); }
 inline void point_parameters(PrefOrient& row) { point_at_row(row); }
@@ -6066,6 +6175,9 @@ inline void point_parameters(Structure& structure) {
     }
     for (const std::shared_ptr<AtomSiteAniso>& tensor : structure.atom_site_aniso) {
         point_parameters(*tensor);
+    }
+    for (const std::shared_ptr<AtomSiteMoment>& moment : structure.atom_site_moment) {
+        point_parameters(*moment);
     }
 }
 inline void point_parameters(ExperimentBase& experiment) {

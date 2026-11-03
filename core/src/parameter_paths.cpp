@@ -329,6 +329,17 @@ std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
                 if (field == names[k]) return ResolvedParameter{components[k], base + names[k]};
             }
         }
+        // A magnetic site's moment component, `<site>.crystalaxis_<x|y|z>`.
+        for (auto& moment_item : structure.atom_site_moment) {
+            AtomSiteMoment& moment = *moment_item;
+            if (moment.id != site) continue;
+            const std::string base = root + "atom_site_moment[" + moment.id + "].";
+            const char* const names[3] = {"crystalaxis_x", "crystalaxis_y", "crystalaxis_z"};
+            const std::vector<Parameter*> components = moment.parameters();
+            for (std::size_t k = 0; k < 3; ++k) {
+                if (field == names[k]) return ResolvedParameter{components[k], base + names[k]};
+            }
+        }
     }
     return std::nullopt;
 }
@@ -562,6 +573,12 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                         field.parameter, root + "atom_site_aniso[" + entry.row_label + "]." + field.name);
                     tensor_entries.push_back(entry);
                     continue;
+                } else if (category.id == "atom_site_moment") {
+                    // A magnetic site's moment components, after the structure's other values (edi ADR-0068).
+                    entry.row_label = structure->atom_site_moment[i / 3]->id;
+                    entry.path = path_of(
+                        detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
+                        field.parameter, root + "atom_site_moment[" + entry.row_label + "]." + field.name);
                 } else {
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, category.id + "_" + field.name, root),
