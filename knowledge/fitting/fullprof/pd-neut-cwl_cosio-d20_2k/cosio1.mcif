@@ -6,7 +6,7 @@
 #           Juan Rodriguez-Carvajal (jrc@ill.eu)
 # Improvements will be progressively added as needed.
  
-#      Date: 03/11/2026  Time: 11:48:50.031
+#      Date: 03/11/2026  Time: 11:52:31.292
  
 #=============================================================================
  data_global
@@ -51,9 +51,9 @@ _space_group_magn.number_OG  ?
 _space_group_magn.name_OG    ?
 
 
-_cell_length_a     10.3088(3)
-_cell_length_b     6.00262(17)
-_cell_length_c     4.78770(13)
+_cell_length_a     10.3113(6)
+_cell_length_b     6.0041(4)
+_cell_length_c     4.7887(3)
 _cell_angle_alpha  90.0000
 _cell_angle_beta   90.0000
 _cell_angle_gamma  90.0000
@@ -81,11 +81,11 @@ loop_
     _atom_site_occupancy
     _atom_site_adp_type
  Co1_1 Co  0.00000  0.00000  0.00000  0.00341  1.00000 Uiso
- Co2_1 Co  0.2805(7)  0.25000  0.9840(19)  0.00341  1.00000 Uiso
- Si_1 Si  0.0931(6)  0.25000  0.4276(11)  0.00590  1.00000 Uiso
- O1_1 O  0.0898(4)  0.25000  0.7729(9)  0.00985  1.00000 Uiso
- O2_1 O  0.4479(4)  0.25000  0.2176(10)  0.00813  1.00000 Uiso
- O3_1 O  0.1639(3)  0.0322(5)  0.2805(7)  0.01161  1.00000 Uiso
+ Co2_1 Co  0.2796(7)  0.25000  0.9865(18)  0.00341  1.00000 Uiso
+ Si_1 Si  0.0932(5)  0.25000  0.4288(11)  0.00590  1.00000 Uiso
+ O1_1 O  0.0897(4)  0.25000  0.7716(9)  0.00985  1.00000 Uiso
+ O2_1 O  0.4477(4)  0.25000  0.2168(9)  0.00813  1.00000 Uiso
+ O3_1 O  0.1640(3)  0.0321(5)  0.2812(7)  0.01161  1.00000 Uiso
  
 
 loop_
@@ -93,8 +93,8 @@ loop_
     _atom_site_moment.crystalaxis_x
     _atom_site_moment.crystalaxis_y
     _atom_site_moment.crystalaxis_z
- Co1_1  0.76(5)  2.72(3)  0.43(14)
- Co2_1  0.00000  2.86(4)  0.00000
+ Co1_1  0.82(5)  2.85(3)  0.1(5)
+ Co2_1  0.00000  3.00(4)  0.00000
  
 # Spherical components of magnetic moments (angles in degrees)
 # Commented because current programs as VESTA, JMOL, etc. are unable to interpret them
@@ -103,6 +103,6 @@ loop_
 #   _atom_site_moment.spherical_modulus
 #   _atom_site_moment.spherical_azimuthal
 #   _atom_site_moment.spherical_polar
-#  Co1_1  2.86(4)  74.3(9)  81(3)
-#  Co2_1  2.86(4)  90.0000  90.0000
+#  Co1_1  2.97(4)  73.9(9)  88(9)
+#  Co2_1  3.00(4)  90.0000  90.0000
 
