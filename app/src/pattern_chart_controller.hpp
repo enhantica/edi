@@ -33,12 +33,14 @@ struct BraggLabel {
     Q_PROPERTY(QColor color MEMBER color CONSTANT)
     Q_PROPERTY(double centre MEMBER centre CONSTANT)
     Q_PROPERTY(bool hidden MEMBER hidden CONSTANT)
+    Q_PROPERTY(bool magnetic MEMBER magnetic CONSTANT)
 
    public:
     QString text;
     QColor color;
     double centre = 0.0;
     bool hidden = false;  // its ticks are hidden from the legend
+    bool magnetic = false;  // a magnetic structure's magnetic row: the magnet icon
     bool operator==(const BraggLabel&) const = default;
 };
 

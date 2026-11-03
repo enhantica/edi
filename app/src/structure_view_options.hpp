@@ -36,6 +36,8 @@ class StructureViewOptions : public QObject {
     // Angstrom per Bohr magneton (`_structure_view.moment_scale`), saved with the structure (edi ADR-0068).
     Q_PROPERTY(bool showMoments READ showMoments WRITE setShowMoments NOTIFY showMomentsChanged)
     Q_PROPERTY(double momentScale READ momentScale WRITE setMomentScale NOTIFY momentScaleChanged)
+    // How the arrows are coloured — "atom", "greyed" or "single" — the app's preference, not saved with a project.
+    Q_PROPERTY(QString momentColours READ momentColours WRITE setMomentColours NOTIFY momentColoursChanged)
     // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
 
@@ -63,6 +65,8 @@ class StructureViewOptions : public QObject {
     bool showMoments() const { return options_.moments; }
     void setShowMoments(bool shown);
     double momentScale() const { return options_.moment_scale; }
+    QString momentColours() const;
+    void setMomentColours(const QString& colours);
     void setMomentScale(double scale);  // above 0
 
     // The atom subset's next state, as diffraction-lib's atoms button: all, asymmetric unit, none; with no
@@ -88,6 +92,7 @@ class StructureViewOptions : public QObject {
     void axesChanged();
     void showMomentsChanged();
     void momentScaleChanged();
+    void momentColoursChanged();
     // Any option changed: what the views re-present on.
     void changed();
 

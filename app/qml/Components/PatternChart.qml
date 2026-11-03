@@ -850,7 +850,8 @@ Item {
             textColor: ink
             segments: [
                 {
-                    "icon": "layer-group",
+                    // A magnetic structure's magnetic row: the magnet, as its group's icon (the owner, 2026-11-03).
+                    "icon": modelData.magnetic ? "magnet" : "layer-group",
                     "color": ink
                 },
                 {

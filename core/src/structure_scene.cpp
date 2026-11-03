@@ -837,6 +837,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                 }
             }
             scene.moments.push_back({atom, scene.atoms[atom].centre, mul(vector, options.moment_scale)});
+            scene.moment_colours = options.moment_colours;
         }
     }
     if (options.labels) {
@@ -1027,7 +1028,15 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
         }
         SceneArrow arrow;
         arrow.letter = 'm';
-        arrow.color = style_color("moment");
+        const Rgb single = style_color("moment");
+        const SceneAtom& atom = scene.atoms[moment.atom];
+        const Rgb own = atom.parts.empty() ? single : atom.parts[atom.major].color;
+        // Halfway from the atom's colour to a mid grey.
+        const auto greyed = [](std::uint8_t c) { return static_cast<std::uint8_t>((c + 128) / 2); };
+        arrow.color = scene.moment_colours == MomentColours::Single ? single
+                      : scene.moment_colours == MomentColours::Atom
+                          ? own
+                          : Rgb{greyed(own.r), greyed(own.g), greyed(own.b)};
         arrow.direction = divided(moment.vector, length);
         arrow.origin = sub(moment.centre, mul(moment.vector, 0.5));
         arrow.head_length = std::min(kMomentHeadShare * length, 0.6);
