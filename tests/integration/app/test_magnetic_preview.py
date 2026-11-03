@@ -17,6 +17,10 @@ CASES = [
     'visibility_keeps_camera_and_independent_moments',
     'analysis_contains_only_independent_magnetic_components',
     'nuclear_and_magnetic_tick_rows_cover_the_independent_reflections',
+    'phase_contributions_draw_two_independent_curves_and_fills',
+    'analysis_filter_counts_match_every_rendered_row',
+    'analysis_filter_counts_survive_repeated_fit_publications_and_tabs',
+    'fit_from_zero_moments_reaches_reference_and_logs_start',
     'k_editor_refuses_without_changing_the_saved_model',
     'catalogue_count_and_selector_operator_replacement',
     'primitive_propagation_add_refuses_without_losing_rows',
@@ -41,7 +45,11 @@ def test_magnetic_preview_uses_rendered_production_controls(case):
         capture_output=True,
         text=True,
         check=False,
-        timeout=45,
+        timeout=140
+        if case.startswith(('fit_from_zero', 'analysis_filter_counts_survive'))
+        else 90
+        if case.startswith('analysis_filter_counts')
+        else 45,
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
     )
     output = result.stdout + result.stderr

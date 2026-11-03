@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T11:04:49Z
+# measured_utc = 2026-11-03T12:17:10Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 166247 banked, 0 stale row(s) dropped)
-# Collected tests: 210344; with a reported duration: 70521
+# Recorded from: measured test run (2 node(s) measured once, 166249 banked, 0 stale row(s) dropped)
+# Collected tests: 210348; with a reported duration: 70523
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210344
+# inventory_python = 210348
 # inventory_cpp = 400
-# inventory_measured = 166247
-# inventory_unmeasured = 44497
+# inventory_measured = 166249
+# inventory_unmeasured = 44499
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66942
+# inventory_pr_python = 66946
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -226,8 +226,11 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[pattern]
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[vesta]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[analysis_contains_only_independent_magnetic_components]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[analysis_filter_counts_match_every_rendered_row]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[analysis_filter_counts_survive_repeated_fit_publications_and_tabs]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[catalogue_count_and_selector_operator_replacement]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[extra_groups_are_single_ordered_and_human_readable]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[fit_from_zero_moments_reaches_reference_and_logs_start]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[k_editor_refuses_without_changing_the_saved_model]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[magnetic_column_shows_none_and_aligns_each_choice]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[magnetic_selector_and_scale_use_one_editing_surface]
@@ -236,6 +239,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::te
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[named_magcif_import_uses_the_app_loader:fullprof]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[named_magcif_import_uses_the_app_loader:isodistort]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[nuclear_and_magnetic_tick_rows_cover_the_independent_reflections]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[phase_contributions_draw_two_independent_curves_and_fills]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[primitive_propagation_add_refuses_without_losing_rows]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[propagation_rows_add_remove_and_refuse_duplicates:decimal-first]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[propagation_rows_add_remove_and_refuse_duplicates:fraction-first]
@@ -202217,7 +202221,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[ordinary]
 0.000	tests/system/py/test_cwl_token_migration.py::test_external_profile_literal_is_limited_to_its_reader_boundary[wrong-backend]
 0.010	tests/system/py/test_cwl_token_migration.py::test_historical_refusal_capture_requires_exact_bytes_and_location[saved-before-rounded.json]
-0.000	tests/system/py/test_cwl_token_migration.py::test_historical_refusal_capture_requires_exact_bytes_and_location[saved-main.json]
+0.010	tests/system/py/test_cwl_token_migration.py::test_historical_refusal_capture_requires_exact_bytes_and_location[saved-main.json]
 1.620	tests/system/py/test_cwl_token_migration.py::test_no_tracked_file_keeps_a_retired_cw_token
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[changed-input]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
@@ -204177,10 +204181,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_actual_from_files_fitting_recipe[staged-fits]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_actual_from_files_fitting_recipe[unconstrained-diagnostics]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_constrained_fit_is_reviewed_before_report
-UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_every_staged_free_set_teaches_category_header_and_clear
+0.000	tests/system/py/test_fitting_tutorial_recipe.py::test_every_staged_free_set_teaches_category_header_and_clear
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_experiment_type_is_taught_before_data_locks_it
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_fit_results_are_explained_at_their_actual_ok_control
-UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_recipe_orders_data_background_stages_and_constraint
+0.000	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_recipe_orders_data_background_stages_and_constraint
 0.000	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_script_contains_each_required_instruction[automatic-background]
 0.000	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_script_contains_each_required_instruction[constraint]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fitting_tutorial_recipe.py::test_fitting_script_contains_each_required_instruction[correlation]
@@ -207448,12 +207452,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_owner_additions.py::test
 0.910	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[drag]
 0.310	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[marker]
 0.450	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[names]
-0.000	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[progress]
+0.320	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[progress]
 0.410	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[repeat]
 0.860	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[reset]
 0.910	tests/system/py/test_scan_owner_adjustments.py::test_owner_observers_reject_live_disconnected_or_constant_consumers[wheel]
 0.300	tests/system/py/test_scan_owner_adjustments.py::test_previous_and_next_repeat_the_effective_selection_step
-0.010	tests/system/py/test_scan_owner_adjustments.py::test_progress_remains_at_the_status_bar_far_right
+0.160	tests/system/py/test_scan_owner_adjustments.py::test_progress_remains_at_the_status_bar_far_right
 0.380	tests/system/py/test_scan_owner_adjustments.py::test_project_page_displays_bounded_names_and_the_middle_ellipsis
 0.180	tests/system/py/test_scan_performance_work.py::test_scan_performance_proves_complete_work_controls_and_the_owner_bound
 0.660	tests/system/py/test_scan_projection_wiring_escapes.py::test_actual_stale_markers_reject_constant_or_other_result_state[chart]

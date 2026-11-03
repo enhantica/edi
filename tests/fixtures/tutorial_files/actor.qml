@@ -58,9 +58,15 @@ TestCase {
         verify(waitForRendering(app.contentItem), "The real Home page is ready for tutorial entry");
         const home = Probe.objectsWithProperty(app, "text").filter(item => item.text === "Tutorials" && Ui.rendered(item) && typeof item.clicked === "function");
         compare(home.length, 1, "The fitting lesson starts through Home Tutorials");
+        OnboardingProbe.startClock();
         click(home[0]);
-        tryCompare(named("tutorials"), "opened", true, 2000, "The actual Tutorials chooser opens");
-        click(named("tutorials.row.fitting"));
+        OnboardingProbe.advanceClock(1000);
+        const chooser = named("tutorials");
+        tryCompare(chooser, "opened", true, 2000, "The actual Tutorials chooser opens");
+        const play = findChild(chooser.contentItem, "tutorials.open.fitting");
+        verify(play !== null, "The rendered Fitting row exposes its own play control");
+        click(play);
+        OnboardingProbe.advanceClock(1000);
         panel = named("tutorial");
         tryCompare(panel, "opened", true, 2000, "The fitting tutorial opens from its real chooser action");
         written = JSON.parse(OnboardingProbe.sourceText("app/tutorials/manifest.json")).tutorials.find(item => item.id === "fitting").steps;

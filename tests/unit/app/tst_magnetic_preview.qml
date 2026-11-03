@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import OnboardingAcceptance 1.0
 import ReportAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
@@ -13,8 +14,11 @@ TestCase {
     when: windowShown
     property var appWindow
     property var scratch
+    property var repeatFitPreferences: null
     Component { id: application; Main {} }
     Component { id: preferences; AppPreferencesDialog {} }
+    Component { id: fitPublication; SignalSpy { signalName: "finished" } }
+    Component { id: analysisParameters; ParametersGroup { width: 760; y: 60; z: 1000; tableViewportHeight: 500 } }
     Component { id: pattern; PatternChart { width: 1200; height: 800 } }
     function init() {
         scratch = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/magnetic_pnma/app-project"));
@@ -26,6 +30,11 @@ TestCase {
     }
     function cleanup() {
         Session.closeProject();
+        if (repeatFitPreferences !== null) {
+            Preferences.engineThreads = repeatFitPreferences.threads;
+            Preferences.showFitResults = repeatFitPreferences.showResults;
+            repeatFitPreferences = null;
+        }
         appWindow.destroy();
     }
     function click(name) { Ui.click(test, Probe, appWindow, name); }
@@ -249,6 +258,253 @@ TestCase {
         compare(structure?.icon, "layer-group", "A structure icon identifies the nuclear row");
         compare(String(magnet.color), String(structure.color), "The magnet uses the same phase colour as its nuclear structure icon");
         chart.destroy();
+    }
+    function test_phase_contributions_draw_two_independent_curves_and_fills() {
+        Preferences.structureCurves = true;
+        Preferences.patternLegendShown = true;
+        const chart = pattern.createObject(appWindow.contentItem, {experiment: Session.project.currentExperiment});
+        verify(chart && waitForPolish(chart), "The contribution check uses the production chart");
+        const areas = () => Render.series(chart).filter(series => /^chart\.series\.structure\.\d+$/.test(series.objectName));
+        tryVerify(() => areas().length === 2 && areas().every(area => area.upperSeries.count > 0 && area.lowerSeries.count > 0), 5000, "One magnetic phase draws two populated contribution fills");
+        const [first, second] = areas();
+        for (const area of [first, second]) {
+            verify(area.outline.count > 0 && area.outline.color.a > 0 && area.color.a > 0, "Each contribution draws a populated visible outline and a visible fill");
+            verify(area.upperSeries.count === area.outline.count, "Each contribution fill follows its own curve");
+        }
+        verify(String(first.outline.color) !== String(second.outline.color), "Nuclear and magnetic contributions use different shades");
+        const legend = findChild(chart, "chart.legend");
+        verify(legend && legend.visible, "The real chart legend exposes the two phase controls");
+        const rows = Render.descendants(legend).filter(item => item.objectName === "chart.legend.entry" && item.visible && !item.bragg && item.segments.some(part => part.text === "cosio"));
+        compare(rows.length, 2, "The legend presents two independent controls for the same phase");
+        const ticks = Render.series(chart).filter(series => String(series.objectName).startsWith("chart.series.bragg.") && series.count > 0);
+        const tickLabels = Render.descendants(chart).filter(item => item.objectName === "chart.bragg.label" && item.visible);
+        for (const glyph of ["layer-group", "magnet"]) {
+            const label = tickLabels.find(item => item.segments.some(part => part.icon === glyph));
+            const entry = rows.find(item => item.segments.some(part => part.icon === glyph));
+            verify(label && entry, "The contribution and its tick row share the approved icon: " + glyph);
+            const tick = ticks.find(series => Math.abs(series.at(0).y - label.modelData.centre) < .5);
+            verify(tick, "Each contribution icon identifies an actual populated tick series");
+            verify(areas().some(area => String(area.outline.color) === String(tick.color)), "Each contribution curve matches its tick shade");
+        }
+        const magnetic = rows.find(item => item.segments.some(part => part.icon === "magnet"));
+        legend.toggled(magnetic.key);
+        tryVerify(() => areas().filter(area => area.outline.color.a > 0 && area.color.a > 0).length === 1, 2000, "The magnetic legend control hides one curve and fill independently");
+        legend.toggled(magnetic.key);
+        tryVerify(() => areas().every(area => area.outline.color.a > 0 && area.color.a > 0), 2000, "The magnetic legend control restores its curve and fill");
+        chart.destroy();
+    }
+    function openMagneticFitExample() {
+        const project = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"));
+        verify(Session.openProject(project), "The gate opens a disposable copy of the documented 2.3 K fit");
+        tryCompare(Session.project, "calculating", false, 15000, "The example's initial measured pattern finishes");
+    }
+    function checkAnalysisRows(table, block, category, variability, transition) {
+        const model = table.sourceModel;
+        function count(text) {
+            const match = /\((\d+)\)\s*$/.exec(text);
+            verify(match !== null, "The active selector publishes its concrete row count");
+            return Number(match[1]);
+        }
+        const scope = [transition, block.displayText, category.displayText, variability.displayText].join(" / ");
+        const promised = count(variability.displayText);
+        compare(count(category.displayText), promised, "The selected category and parameter counts agree: " + scope);
+        if (model.categoryFilter === "")
+            compare(count(block.displayText), promised, "The datablock count agrees when all its categories are selected: " + scope);
+        tryCompare(table, "count", promised, 1000, "The visible table model lists the promised number of parameters: " + scope);
+        const paths = Probe.rows(model).map(row => String(row.path));
+        compare(paths.length, promised, "The filter model preserves every promised row: " + scope);
+        compare(new Set(paths).size, promised, "The active filters never repeat a parameter identity: " + scope);
+        for (let row = 0; row < promised; ++row) {
+            table.positionViewAtIndex(row, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => Ui.rendered(table.itemAtIndex(row)), 500, "Every promised parameter row becomes visible after scrolling: " + scope + " row " + (row + 1));
+            compare(String(table.itemAtIndex(row).path), paths[row], "The rendered row is the actual matching parameter: " + scope);
+        }
+    }
+    function test_analysis_filter_counts_match_every_rendered_row() {
+        openMagneticFitExample();
+        const controls = analysisParameters.createObject(appWindow.contentItem, {project: Session.project});
+        verify(controls && waitForPolish(controls), "The census uses the rendered production Analysis Parameters group");
+        const table = Review.find(controls, "parameters.list");
+        const block = Review.find(controls, "parameters.datablock");
+        const category = Review.find(controls, "parameters.category");
+        const variability = Review.find(controls, "parameters.variability");
+        verify(table && block && category && variability, "Analysis exposes the real table and all three selectors");
+        const model = table.sourceModel;
+        model.clearFilters();
+        function select(blockIndex, categoryIndex, parameterIndex) {
+            block.activated(blockIndex);
+            category.activated(categoryIndex);
+            variability.activated(parameterIndex);
+        }
+        const moments = model.categories.indexOf("atom_site_moment");
+        verify(moments > 0, "The cobalt fit exposes its magnetic moment category");
+        const expected = ["Co1.crystalaxis_x", "Co1.crystalaxis_y", "Co1.crystalaxis_z", "Co2.crystalaxis_y"];
+        for (const categoryFirst of [true, false]) {
+            model.clearFilters();
+            if (categoryFirst) {
+                category.activated(moments);
+                variability.activated(ParameterFilterModel.Free);
+            } else {
+                variability.activated(ParameterFilterModel.Free);
+                category.activated(moments);
+            }
+            tryCompare(table, "count", 4, 1000, "Magnetic moments (4) with Free parameters (4) lists four rows in either selection order");
+            table.positionViewAtBeginning();
+            table.forceLayout();
+            verify(waitForPolish(table), "The four-row cobalt repro completes its Analysis layout");
+            for (let i = 0; i < 4; ++i)
+                verify(Ui.rendered(table.itemAtIndex(i)), "The four cobalt components are visible together without scrolling");
+            checkAnalysisRows(table, block, category, variability, "Static census");
+            const components = Probe.rows(model).map(row => String(row.rowLabel) + "." + String(row.name)).sort();
+            compare(components, expected, "The four rows identify the independent cobalt components");
+        }
+        const blocks = Array.from(model.datablocks);
+        verify(blocks.length >= 3, "The census covers the all, structure and experiment datablock choices");
+        for (let b = 0; b < blocks.length; ++b) {
+            select(b, 0, ParameterFilterModel.All);
+            const categories = Array.from(model.categories);
+            for (let c = 0; c < categories.length; ++c) {
+                for (let v = 0; v < variability.count; ++v) {
+                    select(b, c, v);
+                    compare(model.datablockFilter, blocks[b], "The datablock selection survives the other filter changes");
+                    compare(model.categoryFilter, categories[c], "The category selection survives the parameter filter changes");
+                    checkAnalysisRows(table, block, category, variability, "Static census");
+                }
+            }
+        }
+        controls.destroy();
+    }
+    function test_analysis_filter_counts_survive_repeated_fit_publications_and_tabs() {
+        openMagneticFitExample();
+        repeatFitPreferences = {threads: Preferences.engineThreads, showResults: Preferences.showFitResults};
+        Preferences.engineThreads = 1;
+        Preferences.showFitResults = false;
+        const fit = Session.project.fit;
+        const publication = fitPublication.createObject(appWindow, {target: fit});
+        verify(publication && publication.valid, "The repeat witness observes real fit publications");
+        function analysisPage() {
+            AppState.open(AppState.Page.Analysis);
+            tryVerify(() => {
+                const page = Ui.page(appWindow);
+                return page && page.item && typeof page.item.showMainTab === "function"
+                    && Ui.find(page.item, "parameters.list", true)
+                    && Math.abs(page.mapToItem(appWindow.contentItem, 0, 0).x) < 1;
+            }, 5000, "The real Analysis page returns to the viewport with its Parameters table");
+            return Ui.page(appWindow).item;
+        }
+        function view() {
+            const page = Ui.page(appWindow);
+            const table = Ui.find(page, "parameters.list", true);
+            const block = Ui.find(page, "parameters.datablock", true);
+            const category = Ui.find(page, "parameters.category", true);
+            const variability = Ui.find(page, "parameters.variability", true);
+            verify(table && block && category && variability, "The current Analysis page has the real table and selectors");
+            return {table, block, category, variability, model: table.sourceModel};
+        }
+        function check(transition) {
+            const current = view();
+            checkAnalysisRows(current.table, current.block, current.category, current.variability, transition);
+        }
+        function change(kind, key, transition) {
+            const current = view();
+            const model = current.model;
+            const index = kind === "block" ? model.datablocks.indexOf(key)
+                : kind === "category" ? model.categories.indexOf(key) : key;
+            verify(index >= 0 && index < current[kind].count, "The selected filter option is offered: " + transition);
+            current[kind].activated(index);
+            const selected = kind === "block" ? model.datablockFilter
+                : kind === "category" ? model.categoryFilter : model.variability;
+            compare(selected, key, "The production selector applies the requested filter: " + transition);
+            check(transition);
+        }
+        analysisPage();
+        const blocks = Array.from(view().model.datablocks);
+        const structure = blocks.find(key => key.startsWith("structure:"));
+        const experiment = blocks.find(key => key.startsWith("experiment:"));
+        verify(structure && experiment, "The repeat witness covers both structure and experiment datablocks");
+        change("category", "atom_site_moment", "Initial magnetic category");
+        change("variability", ParameterFilterModel.Free, "Initial free moments");
+        for (let round = 0; round < 3; ++round) {
+            if (round > 0) {
+                const moment = Probe.rows(Session.project.parameters).find(row =>
+                    row.category === "atom_site_moment" && row.free);
+                verify(moment !== undefined, "A subsequent fit can start from a fresh magnetic parameter edit");
+                const start = moment.parameter.value + .02;
+                moment.parameter.value = start;
+                compare(moment.parameter.value, start, "The edited moment reaches the live project before the next fit");
+                tryCompare(Session.project, "calculating", false, 15000, "The edited example finishes recalculating");
+            }
+            const before = publication.count;
+            verify(fit.available, "Each repeat round admits a real fit");
+            fit.start();
+            verify(fit.running, "The fit starts before the page switch");
+            AppState.open(AppState.Page.Experiment);
+            tryVerify(() => publication.count > before && !fit.running, 25000,
+                      "A new fit result is published while Analysis is offscreen");
+            verify(Probe.rows(fit.results.agreement).some(row => row.place >= 0),
+                   "The new publication contains real measured agreement values");
+            const page = analysisPage();
+            check("Round " + (round + 1) + " after publication and returning to Analysis");
+            page.showMainTab(1);
+            tryCompare(page, "mainTabIndex", 1, 1000, "The repeat reaches the Correlations tab");
+            check("Round " + (round + 1) + " after Correlations");
+            page.showMainTab(0);
+            tryCompare(page, "mainTabIndex", 0, 1000, "The repeat returns to the Pattern tab");
+            check("Round " + (round + 1) + " after Pattern");
+            change("block", structure, "Structure datablock");
+            change("category", round % 2 === 0 ? "cell" : "atom_site_moment", "Structure category");
+            change("variability", ParameterFilterModel.Free, "Free structure parameters");
+            change("category", round % 2 === 0 ? "atom_site_moment" : "cell", "Second structure category");
+            change("variability", ParameterFilterModel.All, "All structure parameters");
+            change("block", experiment, "Experiment datablock");
+            change("category", "instrument", "Instrument category");
+            change("variability", ParameterFilterModel.Fixed, "Fixed instrument parameters");
+            change("block", "", "All datablocks");
+        }
+        compare(publication.count, 3, "The filter and tab sequence spans three fresh fit publications");
+        publication.destroy();
+    }
+    function test_fit_from_zero_moments_reaches_reference_and_logs_start() {
+        const path = Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k");
+        Preferences.engineThreads = 1;
+        const reference = JSON.parse(SettingsProof.text(path, "expected.json")).quantities;
+        function fit(zero) {
+            openMagneticFitExample();
+            const moments = () => Probe.rows(Session.project.parameters).filter(row => row.category === "atom_site_moment" && row.free);
+            compare(moments().length, 4, "The 2.3 K fit uses the four free moment components");
+            if (zero)
+                for (const row of moments())
+                    row.parameter.value = 0;
+            verify(moments().every(row => (row.parameter.value === 0) === zero), "The fit receives the requested nonzero or all-zero start");
+            verify(OnboardingProbe.startHostLog().length > 0, "The test observes the actual fit log");
+            const model = Session.project.fit;
+            verify(model.available, "The real project admits a fit with the requested moment start");
+            model.start();
+            tryVerify(() => !model.running && model.outcome !== "", 55000, "The actual minimizer publishes its completed result");
+            const log = OnboardingProbe.finishHostLog();
+            const notice = log.split("\n").filter(line => /moment/i.test(line) && /start|seed|initial/i.test(line) && /\b1(?:\.0+)?\s*(?:[µμ]B|mu[_ ]?B|Bohr magneton)/i.test(line));
+            if (zero)
+                verify(notice.length > 0, "The fit log names the one-magneton start for all-zero free moments");
+            else
+                compare(notice.length, 0, "The fit does not replace the nonzero user start");
+            const rows = Probe.rows(model.results.agreement);
+            const result = rows.find(row => row.place >= 0);
+            verify(result !== undefined, "The completed 2.3 K fit publishes its measured dataset agreement");
+            const rwp = Number(result.values[1]) / 100;
+            const limit = reference.rwp.value * reference.rwp.tol_rel;
+            verify(Math.abs(rwp - reference.rwp.value) <= limit, "The fit reaches the independent fixed-model FullProf Rwp interval");
+            const components = moments();
+            for (const key of Object.keys(reference).filter(key => key.startsWith("param."))) {
+                const row = components.find(row => "param." + row.rowLabel + "." + row.name + ".value" === key);
+                verify(row !== undefined, "The completed fit exposes the independently referenced moment: " + key);
+                verify(Math.abs(Math.abs(row.parameter.value) - Math.abs(reference[key].value)) <= reference[key].tol_abs, "The fitted component magnitude meets the independent FullProf interval: " + key);
+            }
+            return rwp;
+        }
+        const baseline = fit(false);
+        const fromZero = fit(true);
+        verify(Math.abs(fromZero - baseline) <= reference.rwp.value * reference.rwp.tol_rel, "Zero and nonzero starts reach the same reference minimum within its stated Rwp tolerance");
     }
     function test_k_editor_refuses_without_changing_the_saved_model() {
         const propagation = group("parent_propagation_vector");
