@@ -1,0 +1,25 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "same_start": false,
+  "start_project": "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project",
+  "banks": [
+    "d20"
+  ],
+  "n_free": 40,
+  "profiles": [
+    "cosio_1.prf"
+  ],
+  "summary": "cosio.sum",
+  "phases": [
+    "cosio"
+  ],
+  "r_wp": 0.0475,
+  "artifacts_sha256": {
+    "cosio.pcr": "50429c4ca42d94db0273972d37737116c6b85dbce7480395a4c2f8490bbe84f6",
+    "cosio.out": "339f0cb008186995060ecac29d96c42ebfaaf815a02145f8ddd23c2350ca2321",
+    "cosio.sum": "eaf1f7bdbc1d51fd74be3d35bfb3fd8855998700c2f607240839cd8f934fbae9",
+    "cosio_1.prf": "ecbf97a72434db543c879cbbff85ca73a3ce88133a1626c0a6b3fd34a7867d0c",
+    "cosio1.mcif": "4d38603134f6fe9fbae90b706a86fbe6626fc6f869cd5031c186ba90098ad75e"
+  }
+}

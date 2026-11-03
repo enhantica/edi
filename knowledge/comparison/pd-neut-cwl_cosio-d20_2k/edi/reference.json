@@ -1,0 +1,32 @@
+{
+  "program": "edi",
+  "crysta_sdk": "crysta 32483b94, built locally before its SDK build",
+  "banks": [
+    "d20"
+  ],
+  "n_free": 42,
+  "status": "done",
+  "converged": true,
+  "iterations": 24,
+  "rwp": 0.04729890131825729,
+  "reduced_chi_square": 6.336441002099658,
+  "cells": {
+    "cosio": {
+      "a": [
+        10.322332002211686,
+        0.000433987808133184
+      ],
+      "b": [
+        6.010284476419283,
+        0.00024724563484185226
+      ],
+      "c": [
+        4.793795242302612,
+        0.00019444634642932444
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "d20.csv": "2a099f9e6355d6dd78f3ee3c42bcd4ae10eaac90ceffb1b635f2507cf013cbfc"
+  }
+}
