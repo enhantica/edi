@@ -2025,18 +2025,32 @@ struct AssistantViewModel::State {
         }catch(...){return false;}
     }
     void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
-    // The automatic reopen of the last conversation at startup failed. A failed reopen never leaves the user without a
-    // connection: it is retired (Connect no longer repeats it), the saved association is kept, the reason is shown,
-    // and an ordinary connection starts a new conversation.
+    // The automatic reopen of the last conversation at startup failed. It is retired, so Connect no longer repeats it;
+    // the saved association is kept; the reason is shown in plain words; and the ordinary Connect ChatGPT offer,
+    // with its consent to exactly what is shared, is the way on. Nothing connects or approves a context by itself.
     void startup_reopen_failed(const QString& reason) noexcept {
         try {
+            // Nothing of the failed reopen may continue behind Connect: no resume of it, no pending selection.
+            const auto target=restore_last_target;
+            if(resume_checkpoint && (target.isEmpty() || resume_checkpoint->thread==target)){resume_checkpoint.reset();generic_resuming=false;}
+            if(session_restore_target==target)session_restore_target.clear();
+            if(session_selection_target==target)session_selection_target.clear();
+            if(session_account_target==target){session_account_preflight=false;session_account_target.clear();session_account_email.clear();}
+            sessions_loading=false;
             retire_startup_restore();
             startup_restore_observation["reopen_failure"]=reason;
-            error=sessions_error=QObject::tr("The last conversation could not reopen: %1 Its saved association was kept; select it in Sessions to try again. A new conversation is connecting instead.").arg(reason);
+            error=sessions_error=QObject::tr("Your last conversation could not be reopened. %1 It is still listed in Sessions. Choose Connect ChatGPT to start a new conversation.").arg(reason);
             notify();
-            const QPointer<AssistantViewModel> receiver(&owner);
-            QMetaObject::invokeMethod(&owner,[receiver]{if(receiver)receiver->signIn();},Qt::QueuedConnection);
         } catch(...) {}
+    }
+    // A conversation selection failed after it began (account check, project Open, preparation or continuation): it
+    // settles once, under its own operation, with the actual cause; the startup reopen also takes the path above.
+    // A manual Sessions selection keeps its own error and can be retried.
+    void settle_reopen_failure(quint64 operation,const QString& target,const QString& reason) noexcept {
+        const bool automatic=!target.isEmpty() && restore_last_target==target && operation==session_operation;
+        fail_session_operation(operation,target,reason);
+        if(automatic)startup_reopen_failed(reason);
+        else if(operation==session_operation){try{error=reason;notify();}catch(...){}}
     }
 
     bool session_account_preflight=false;
@@ -2406,12 +2420,17 @@ struct AssistantViewModel::State {
             throw std::runtime_error("The saved conversation account changed during selection; the original project and connection were preserved");
         return !saved.isEmpty()?saved:captured;
     }
+    // Why the last begin_saved_session returned false, in plain words.
+    QString saved_session_refusal;
     bool begin_saved_session(const QString& id,bool automatic=false) {
+        saved_session_refusal=QObject::tr("Other assistant work was still settling.");
         if(!session_switch_idle())return false;
         const QPointer<AssistantViewModel> receiver(&owner);auto proof=file_projection();
         session_preparation_observation={{"operation",QString::number(session_operation)},{"stage","association_metadata"}};
         auto record=saved_session(id);
+        saved_session_refusal=QObject::tr("It was archived.");
         if(automatic && record.value("archived").toBool())return false;
+        saved_session_refusal=QObject::tr("It is no longer saved on this computer.");
         if(record.isEmpty() && !owned_session(session_metadata.value(id)))return false;
         const auto previous=viewed_session && viewed_session_current(*viewed_session)?viewed_session->thread:generic_thread;
         session_selection_target=id;sessions_loading=true;
@@ -2446,8 +2465,9 @@ struct AssistantViewModel::State {
                 emit owner.sessionProjectRequested(id,QUrl::fromLocalFile(path),owner.sessionSelection());
                 return true;
             }
-            if(!available)throw std::runtime_error("The conversation's original project is unavailable or changed. Its saved association was preserved; no other project was substituted.");
+            if(!available)throw std::runtime_error("The project folder it used was moved, replaced or changed since then, so it was not opened.");
         }
+        saved_session_refusal=QObject::tr("The account it belongs to is not recorded.");
         if(automatic && record.value("email").toString().isEmpty()){session_selection_target.clear();return false;}
         const auto expectedEmail=original_session_email(id,record);
         sessions_loading=true;
@@ -12683,6 +12703,13 @@ struct AssistantViewModel::State {
         // settled, or when a still running fit ends (edi ADR-0055).
         const QPointer<ProjectViewModel> trial(project);const auto trialOwner=generation;
         const auto settleTrial=qScopeGuard([this,trial,trialOwner]() noexcept {(void)settle_trial(trial,trialOwner,true);});
+        // A failure of the startup reopen's account check (a refusal, a mismatch, a transport or reply failure) is
+        // that reopen's failure too: it settles once with this cause and leaves the ordinary Connect offer.
+        const auto& startup=restore_last_target;
+        const bool startupCheck=!startup.isEmpty() && restore_last_attempted &&
+            (session_account_target==startup || session_restore_target==startup || session_selection_target==startup ||
+             (resume_checkpoint && resume_checkpoint->thread==startup));
+        const auto settleStartup=qScopeGuard([this,startupCheck,explanation]() noexcept {if(startupCheck)startup_reopen_failed(explanation);});
         FileProjection projection;
         try {
             projection = file_projection();
@@ -13843,12 +13870,12 @@ struct AssistantViewModel::State {
                 if(kind!="chatgpt" || !emailProof || expected.isEmpty()) {
                     accountStage("ACCOUNT_IDENTITY_UNAVAILABLE");
                     const auto reason=QObject::tr("The original managed account identity could not be confirmed before opening this conversation's saved project. Sign in with that account; its saved association was preserved.");
-                    generic_fail(reason);if(automatic)startup_reopen_failed(reason);return;
+                    generic_fail(reason);return;
                 }
                 if(email.toString()!=expected) {
                     accountStage("ACCOUNT_SAVED_MISMATCH");
                     const auto reason=QObject::tr("The confirmed account differs from this conversation's original managed account. Its saved project was not opened.");
-                    generic_fail(reason);if(automatic)startup_reopen_failed(reason);return;
+                    generic_fail(reason);return;
                 }
                 session_account_email=email.toString();session_account_preflight=false;
                 generic_connecting=false;agent->settleOperation();
@@ -13857,13 +13884,12 @@ struct AssistantViewModel::State {
                 if(!publication.input_current() || operation!=session_operation || session_restore_target!=target || session_selection_target!=target)return;
                 // The account is confirmed; opening the saved project is a separate step with its own stage and cause.
                 accountStage("SAVED_PROJECT_REOPEN");
-                try {(void)begin_saved_session(target,automatic);}
-                catch(const std::exception& failure) {
-                    const auto reason=bounded_error(QString::fromUtf8(failure.what()));
+                QString reason;
+                try {if(!begin_saved_session(target,automatic))reason=saved_session_refusal;}
+                catch(const std::exception& failure) {reason=bounded_error(QString::fromUtf8(failure.what()));}
+                if(!reason.isEmpty()) {
                     session_account_observation["reopen_failure"]=reason;
-                    fail_session_operation(operation,target,reason);
-                    if(automatic)startup_reopen_failed(reason);
-                    else {error=reason;notify();}
+                    settle_reopen_failure(operation,target,reason);
                 }
                 return;
             }
@@ -17075,7 +17101,7 @@ bool AssistantViewModel::prepareSessionProjectRestore(ProjectViewModel* target,c
     if(s->session_opening_operation!=operation || s->session_restore_target!=id || source.isEmpty() ||
         QFileInfo(source).canonicalFilePath()!=association.value("canonical") ||
         State::session_object_identity(expected)!=association.value("identity")) {
-        s->fail_session_operation(operation,id,tr("The original project Open no longer owns this conversation selection."));return true;
+        s->settle_reopen_failure(operation,id,tr("The project that was opened is not the one this conversation used."));return true;
     }
     if(s->account_confirmation_pending)return false;
     try {
@@ -17087,7 +17113,7 @@ bool AssistantViewModel::prepareSessionProjectRestore(ProjectViewModel* target,c
         s->session_preparation_observation["stage"]="prepared_original_project_restore";
         return true;
     }catch(const std::exception& failure) {
-        if(receiver && receiver->state_.get()==s && proof.input_current())s->fail_session_operation(operation,id,s->bounded_error(QString::fromUtf8(failure.what())));
+        if(receiver && receiver->state_.get()==s && proof.input_current())s->settle_reopen_failure(operation,id,s->bounded_error(QString::fromUtf8(failure.what())));
         return false;
     }
 #else
@@ -17617,6 +17643,19 @@ void AssistantViewModel::cancelSessionSelection(const QString& intent) {
     original->fail_session_operation(original->session_operation,target,tr("Conversation selection was cancelled. No earlier action was replayed."));
 #endif
 }
+void AssistantViewModel::failSessionProjectOpen(const QString& intent,const QString& cause) {
+#ifndef __EMSCRIPTEN__
+    auto* const original=state_.get();
+    if(!intent.isEmpty() && intent!=sessionSelection())return;
+    const auto target=original->session_selection_target;
+    if(target.isEmpty())return;
+    original->sessions_loading=true;
+    original->settle_reopen_failure(original->session_operation,target,cause.trimmed().isEmpty()?
+        tr("Its project could not be opened."):tr("Its project could not be opened: %1").arg(original->bounded_error(cause.trimmed())));
+#else
+    Q_UNUSED(intent);Q_UNUSED(cause);
+#endif
+}
 QString AssistantViewModel::sessionDraft() const {
 #ifndef __EMSCRIPTEN__
     return state_->session_draft;
@@ -17648,9 +17687,9 @@ void AssistantViewModel::continueSessionRestore(const QString& id) {
         } else (void)original->begin_saved_session(id);
     }}
     catch(const std::exception& failure) {if(receiver && receiver->state_.get()==original) {
-        original->fail_session_operation(operation,id,original->bounded_error(QString::fromUtf8(failure.what())));
+        original->settle_reopen_failure(operation,id,original->bounded_error(QString::fromUtf8(failure.what())));
     }}catch(...) {if(receiver && receiver->state_.get()==original) {
-        original->fail_session_operation(operation,id,tr("The selected session could not reconnect. Original projects and attachments were preserved; no action was replayed."));}}
+        original->settle_reopen_failure(operation,id,tr("The selected session could not reconnect. Original projects and attachments were preserved; no action was replayed."));}}
 #else
     Q_UNUSED(id);
 #endif
@@ -17713,7 +17752,7 @@ void AssistantViewModel::restoreLastSession() {
             original->retire_startup_restore();original->notify();return;
         }
         if(!original->begin_saved_session(id,true) && receiver && receiver->state_.get()==original)
-            original->startup_reopen_failed(tr("It is not available to reopen automatically; your draft is retained."));
+            original->startup_reopen_failed(original->saved_session_refusal);
     }catch(const std::exception& failure) {if(receiver && receiver->state_.get()==original) {
         const auto reason=original->bounded_error(QString::fromUtf8(failure.what()));
         original->fail_session_operation(original->session_operation,original->session_selection_target,reason);
@@ -18892,7 +18931,7 @@ void AssistantViewModel::signIn() {
     if(state_->session_preparation) {
         const QPointer<AssistantViewModel> receiver(this);auto* original=state_.get();const auto operation=original->session_operation;const auto target=original->session_selection_target;
         try {original->session_preparation->approved=true;original->advance_session_preparation();}
-        catch(const std::exception& failure){if(receiver && receiver->state_.get()==original)original->fail_session_operation(operation,target,original->bounded_error(QString::fromUtf8(failure.what())));}
+        catch(const std::exception& failure){if(receiver && receiver->state_.get()==original)original->settle_reopen_failure(operation,target,original->bounded_error(QString::fromUtf8(failure.what())));}
         if(receiver && receiver->state_.get()==original)original->notify();return;
     }
     // Authentication is independent of local evidence maintenance. Scientific
@@ -18941,7 +18980,10 @@ void AssistantViewModel::signIn() {
                 state_->resume_checkpoint=State::ResumeCheckpoint{target,state_->generic_workspace,expectedEmail,state_->project,approval,state_->generation,bool(state_->project),true,false,true};
             }
             state_->generic_sign_in(std::move(approval), publication);
-        } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("The approved account/project scope could not be prepared safely.")); }
+        } catch (const std::exception& failure) {
+            if (publication.input_current() && receiver && state_->generation == binding)
+                state_->generic_fail(tr("ChatGPT could not connect: %1").arg(state_->bounded_error(QString::fromUtf8(failure.what()))));
+        } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("ChatGPT could not connect, and the cause was not reported. Try Connect ChatGPT again.")); }
         return;
     }
 #endif

@@ -2953,7 +2953,12 @@ QJSValue projectCallback(const PanelUsageFrame& frame, uint operation, const std
     const auto opened = projectInvoke(frame, "Session", "openProject", {captured(3)});
     if (panelUsageTruth(opened) && consentQtObject(frame, owner) && projectFieldIs(frame, "panel", "assistant", owner)
         && consentFieldEquals(frame, owner, "sessionSelection", intent)) panelUsageMemberCall(frame, owner, "continueSessionRestore", {captured(4)});
-    else if (!consentQtObject(frame, owner) || !panelUsageTruth(panelUsageMemberCall(frame, owner, "sessionProjectRestorePending", {intent}))) abandon();
+    else if (!consentQtObject(frame, owner) || !panelUsageTruth(panelUsageMemberCall(frame, owner, "sessionProjectRestorePending", {intent}))) {
+        // A failed Open is not a cancel: the selection settles with the Open's own cause.
+        if (!panelUsageTruth(opened) && consentQtObject(frame, owner))
+            panelUsageMemberCall(frame, owner, "failSessionProjectOpen", {intent, assistantContextField(frame, "Session", "lastError")});
+        else abandon();
+    }
     return {};
 }
 } // namespace

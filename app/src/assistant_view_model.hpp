@@ -107,6 +107,9 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool sessionProjectRestorePending(const QString& intent = {}) const;
     Q_INVOKABLE bool beginSessionProjectRestore(const QString& intent);
     Q_INVOKABLE void cancelSessionSelection(const QString& intent = {});
+    // The saved project Open a conversation selection asked for failed (not cancelled): the selection settles with
+    // the Open's own cause; a startup reopen then leaves the ordinary Connect offer.
+    Q_INVOKABLE void failSessionProjectOpen(const QString& intent, const QString& cause);
     QString sessionDraft() const;
     void setSessionDraft(const QString&);
     Q_INVOKABLE void restoreLastSession();
