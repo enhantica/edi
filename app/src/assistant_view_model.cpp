@@ -18965,6 +18965,8 @@ void AssistantViewModel::signIn() {
 }
 void AssistantViewModel::signOut() {
 #ifndef __EMSCRIPTEN__
+    // Disconnecting ends this session's trial: its candidate goes back to the accepted fit first (edi ADR-0055).
+    (void)state_->settle_trial(state_->project,state_->generation,true);
     state_->remember_current_session();state_->remember_session_draft();state_->retire_startup_restore();state_->forget_last_session();state_->viewed_session.reset();
     state_->session_restore_target.clear();state_->session_selection_target.clear();state_->session_preparation.reset();state_->account_selection_wait.reset();state_->session_opening_target.clear();state_->session_account_target.clear();state_->session_account_email.clear();state_->session_account_preflight=false;
     state_->resume_checkpoint.reset();state_->generic_resuming=false;

@@ -520,7 +520,8 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
     }
     submitted_single_joint_ = !scan;
     submitted_attempt_ = attempt; // The real submitted job owns this identity even if a later attempt refuses.
-    if (!scan) starting_ = {attempt, std::make_shared<const edi::Project>(project_), accepted_fit_, !manual_since_accepted_};
+    if (!scan) starting_ = {attempt, std::make_shared<const edi::Project>(project_), accepted_fit_, !manual_since_accepted_,
+                            accepted_history_depth_};
     const bool admitted = job_->start(scan ? owner_.scanTemplate() : nullptr);
     if (!admitted && submitted_attempt_ == attempt) submitted_attempt_ = 0;
     if (owner_.retired_) return;
@@ -591,6 +592,11 @@ bool FitViewModel::undo() {
     const bool undone = owner_.applyUndo(std::move(edit), whole).isEmpty();
     if (!self) return undone;
     restoring_ = false;
+    if (undone && whole) {
+        // The undone fit's entry is gone; the trial's setup entries above the accepted fit go with it.
+        accepted_history_depth_ = target.depth;
+        dropTrialHistory();
+    }
     if (undone) {
         if (owner_.retired_) return true;
         accepted_fit_ = target.attempt ? target.accepted : nullptr;
@@ -611,13 +617,24 @@ bool FitViewModel::restoreAccepted(quint64 owner) {
     candidate_ = stop_rollback_ = false;
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
+    dropTrialHistory();
     const QString refusal = owner_.restoreProject(*accepted);
     if (!self) return false;
     restoring_ = false;
+    // The rejected trial leaves no Undo step behind: Undo continues from the accepted fit, never into the trial.
+    if (refusal.isEmpty()) dropTrialHistory();
     if (!refusal.isEmpty() || owner_.retired_) return false;
     manual_since_accepted_ = false;
     results_->setRecord(project_);
     return true;
+}
+
+void FitViewModel::dropTrialHistory() noexcept {
+    auto& history = owner_.undo_history_;
+    if (accepted_history_depth_ < history.size()) {
+        history.erase(history.begin() + static_cast<std::ptrdiff_t>(accepted_history_depth_), history.end());
+        try { owner_.syncUndo(); } catch (...) {}
+    }
 }
 
 void FitViewModel::restoreAcceptedOnStop(quint64 owner) {
@@ -1130,6 +1147,7 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
             // A fit stopped part way is not accepted: a candidate it ends goes back to the accepted state.
             if (report.status != edi::FitStatus::CANCELLED) {
                 accepted_fit_ = std::make_shared<const edi::Project>(project_);
+                accepted_history_depth_ = owner_.undo_history_.size();
                 candidate_ = manual_since_accepted_ = false;
             }
         }

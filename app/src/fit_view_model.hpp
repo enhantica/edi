@@ -339,12 +339,17 @@ class FitViewModel : public QObject {
         std::uint64_t attempt = 0;
         std::shared_ptr<const edi::Project> before, accepted;
         bool owned = false;  // no manual edit since the accepted fit: Undo may put the whole accepted project back
+        std::size_t depth = 0;  // the Undo depth when that accepted fit was taken
     };
     std::shared_ptr<const edi::Project> accepted_fit_;
     UndoTarget starting_, undo_target_;
     // Whether the assistant changed the project since the accepted fit (markCandidate), and which session did.
     bool candidate_ = false, stop_rollback_ = false, manual_since_accepted_ = false, restoring_ = false;
     quint64 candidate_owner_ = 0;
+    // The project's Undo depth when the accepted fit was taken: a whole-project restore drops the trial's own Undo
+    // entries above it, so a later ordinary Undo cannot bring back a fragment of the trial.
+    std::size_t accepted_history_depth_ = 0;
+    void dropTrialHistory() noexcept;
     bool presenting_ = false, submitted_single_joint_ = false;
     friend class AssistantViewModel;
     std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);
