@@ -102,7 +102,7 @@ struct SceneOptions {
     AtomSubset atoms = AtomSubset::All;
     bool bonds = true, cell = true, axes = true, labels = false;
     bool moments = true;        // `_structure_view.show_moments`
-    double moment_scale = 0.5;  // Angstrom of arrow per Bohr magneton (the app's setting)
+    double moment_scale = 0.75;  // Angstrom of arrow per Bohr magneton (`_structure_style.moment_scale`)
 };
 
 struct ScenePart {  // one site at a position

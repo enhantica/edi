@@ -241,7 +241,9 @@ SceneFrame home_frame(const StructureScene& scene, bool has_cell) {
     const Vec3 up = cross(direction, right);
     const Vec3 centre = mul(add(add(basis[0], basis[1]), basis[2]), 0.5);
 
-    // The atoms and the cell's corners, each a point with the radius it is drawn with.
+    // The atoms and the cell's corners, each a point with the radius it is drawn with. Every atom counts, shown
+    // or not, as the cell and its axes do whether they are shown, so a show or hide keeps the camera (the owner,
+    // 2026-11-03).
     struct Reach {
         Vec3 point;
         double radius = 0.0;
@@ -250,10 +252,8 @@ SceneFrame home_frame(const StructureScene& scene, bool has_cell) {
     double pad = 0.0;
     for (const SceneAtom& atom : scene.atoms) {
         pad = std::max(pad, atom.radius);
-        if (atom.drawn) {
-            const Vec3& s = atom.semi_axes;
-            fixed.push_back({atom.centre, atom.ellipsoid ? std::max({s.x, s.y, s.z}) : atom.radius});
-        }
+        const Vec3& s = atom.semi_axes;
+        fixed.push_back({atom.centre, atom.ellipsoid ? std::max({s.x, s.y, s.z}) : atom.radius});
     }
     if (has_cell) {
         for (int i = 0; i != 2; ++i) {
@@ -274,12 +274,12 @@ SceneFrame home_frame(const StructureScene& scene, bool has_cell) {
         std::vector<Reach> reach = fixed;
         if (has_cell) {
             const double letter = style_value("axis.letter.offset") * h;
-            for (const SceneAxis& axis : scene.axes) {
-                const double length = norm(axis.vector);
+            for (const Vec3& axis : scene.cell_basis) {
+                const double length = norm(axis);
                 if (!(length > 0.0)) {
                     continue;
                 }
-                const Vec3 along = unit(axis.vector);
+                const Vec3 along = unit(axis);
                 const double tip = length + arrow_overhang(h, pad);
                 reach.push_back({mul(along, tip), style_value("axis.head.radius") * h});
                 reach.push_back({mul(along, tip + letter), letter});
@@ -824,7 +824,9 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
                 continue;
             }
             const std::size_t atom = atom_of_row[found->second];
-            if (!scene.atoms[atom].drawn) {
+            // The moments have their own switch: hiding the atoms keeps them, and only the
+            // asymmetric-unit subset narrows them as it narrows the atoms.
+            if (options.atoms == AtomSubset::AsymmetricUnit && !scene.atoms[atom].asymmetric) {
                 continue;
             }
             const double components[3] = {(*source.moment_x)[i], (*source.moment_y)[i], (*source.moment_z)[i]};
@@ -1015,8 +1017,8 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
     }
     // A moment arrow is centred on its atom; its thickness is fixed in Angstrom, so it reads at every zoom
     // like the bonds.
-    constexpr double kMomentShaftRadius = 0.06;
-    constexpr double kMomentHeadRadius = 0.15;
+    constexpr double kMomentShaftRadius = 0.12;
+    constexpr double kMomentHeadRadius = 0.3;
     constexpr double kMomentHeadShare = 0.3;
     for (const SceneMoment& moment : scene.moments) {
         const double length = norm(moment.vector);
@@ -1028,7 +1030,7 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
         arrow.color = style_color("moment");
         arrow.direction = divided(moment.vector, length);
         arrow.origin = sub(moment.centre, mul(moment.vector, 0.5));
-        arrow.head_length = std::min(kMomentHeadShare * length, 0.4);
+        arrow.head_length = std::min(kMomentHeadShare * length, 0.6);
         arrow.shaft_length = length - arrow.head_length;
         arrow.shaft_radius = kMomentShaftRadius;
         arrow.head_radius = kMomentHeadRadius;
@@ -1071,7 +1073,7 @@ const std::vector<SceneStyle>& structure_style_table() {
         {"axis.a", "#DC2828", "#DC2828", 0.0},
         {"axis.b", "#28B428", "#28B428", 0.0},
         {"axis.c", "#2850DC", "#2850DC", 0.0},
-        {"moment", "#C2185B", "#F06292", 0.0},  // the magnetic moment arrows (edi ADR-0068)
+        {"moment", "#616161", "#BDBDBD", 0.0},  // the magnetic moment arrows (edi ADR-0068), grey to stand apart
         {"axis.shaft.radius", "", "", 0.009},
         {"axis.head.radius", "", "", 0.028},
         {"axis.head.length", "", "", 0.085},

@@ -313,26 +313,6 @@ AppDialog {
             }
 
             RowLabel {
-                text: qsTr("Moment arrows (Å per μB)") + ":"
-            }
-            EaElements.TextField {
-                objectName: "preferences.momentArrowScale"
-                width: dialog.controlWidth
-                horizontalAlignment: TextInput.AlignLeft
-                validator: DoubleValidator {
-                    bottom: 0.01
-                    top: 10
-                }
-                text: Number(Preferences.momentArrowScale).toLocaleString(Qt.locale("C"), "f", 2)
-                onEditingFinished: {
-                    const value = parseFloat(text);
-                    if (value > 0)
-                        Preferences.momentArrowScale = value;
-                }
-                ToolTip.text: qsTr("The length of a magnetic moment's arrow in the structure view, per Bohr magneton")
-            }
-
-            RowLabel {
                 text: qsTr("Sidebar") + ":"
             }
             RowBox {

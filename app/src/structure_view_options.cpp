@@ -100,6 +100,7 @@ void StructureViewOptions::setShowMoments(bool shown) {
 }
 void StructureViewOptions::setMomentScale(double scale) {
     if (scale > 0.0) {
+        moments_declared_ = moments_declared_ || scale != options_.moment_scale;
         assign(options_.moment_scale, scale, &StructureViewOptions::momentScaleChanged);
     }
 }
@@ -131,6 +132,7 @@ std::map<std::string, std::string> StructureViewOptions::toView() const {
             {"axes", flag(options_.axes)}};
     if (moments_declared_) {
         view["show_moments"] = flag(options_.moments);
+        view["moment_scale"] = QString::number(options_.moment_scale, 'g', 6).toStdString();
     }
     return view;
 }
@@ -160,7 +162,8 @@ void StructureViewOptions::setFromView(const std::map<std::string, std::string>&
     setCell(flag("cell", defaults.cell));
     setAxes(flag("axes", defaults.axes));
     setShowMoments(flag("show_moments", defaults.moments));
-    moments_declared_ = view.contains("show_moments");
+    setMomentScale(number("moment_scale", defaults.moment_scale));
+    moments_declared_ = view.contains("show_moments") || view.contains("moment_scale");
 }
 
 }  // namespace edi_app

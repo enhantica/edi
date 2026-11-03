@@ -33,7 +33,7 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(bool cell READ cell WRITE setCell NOTIFY cellChanged)
     Q_PROPERTY(bool axes READ axes WRITE setAxes NOTIFY axesChanged)
     // Whether the magnetic moments are drawn (`_structure_view.show_moments`), and their arrows' length in
-    // Angstrom per Bohr magneton, an app setting the preferences set (edi ADR-0068).
+    // Angstrom per Bohr magneton (`_structure_view.moment_scale`), saved with the structure (edi ADR-0068).
     Q_PROPERTY(bool showMoments READ showMoments WRITE setShowMoments NOTIFY showMomentsChanged)
     Q_PROPERTY(double momentScale READ momentScale WRITE setMomentScale NOTIFY momentScaleChanged)
     // The atom views diffraction-lib offers, for the Appearance group's selector.

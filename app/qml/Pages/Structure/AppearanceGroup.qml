@@ -17,6 +17,8 @@ SideBarGroup {
 
     property StructureViewOptions options: null
     property StructureViewController controller: null
+    // The structure shown: its moments bring the Moment scale field.
+    property StructureViewModel structure: null
 
     readonly property string openKey: "Extras:appearance"
 
@@ -75,6 +77,36 @@ SideBarGroup {
 
                 // Its title as every field's (edi ADR-0017 §5).
                 Component.onCompleted: FieldTitles.align(scale)
+                onAccepted: commit()
+                onEditingFinished: commit()
+            }
+            // The moment arrows' length per Bohr magneton, beside the atom scale (the owner, 2026-11-03).
+            EaElements.ParamTextField {
+                id: momentScale
+
+                objectName: "structure.appearance.momentScale"
+                visible: group.structure !== null && group.structure.magnetic
+                width: grid.fieldWidth
+                parameter: group.options ? {
+                    "value": group.options.momentScale,
+                    "error": 0,
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "name": "moment_scale",
+                    "shortPrettyName": qsTr("Moment scale"),
+                    "units": "Å/μB"
+                } : ({})
+
+                // Above 0; anything else leaves the scale as it was.
+                function commit() {
+                    if (group.options !== null && text !== momentScale.value) {
+                        group.options.momentScale = Number(text);
+                        text = Qt.binding(() => momentScale.value);
+                    }
+                }
+
+                Component.onCompleted: FieldTitles.align(momentScale)
                 onAccepted: commit()
                 onEditingFinished: commit()
             }

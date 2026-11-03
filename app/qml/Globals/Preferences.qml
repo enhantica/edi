@@ -65,8 +65,6 @@ QtObject {
     // (ApplicationInfo.colourSchemeOrDefault). Every chart, legend, icon and report the app draws follows it, a report
     // in its light colours. The Stacked and Map colours are scanStackedPalette and scanMapColours.
     property string colourScheme: "earth"
-    // The structure view's magnetic moment arrows: Angstrom of arrow per Bohr magneton (edi ADR-0068).
-    property real momentArrowScale: 0.5
     // The patterns' palette stored before the one palette (the owner, 2026-10-22, until 2026-10-26): read once into
     // colourScheme, then cleared, so a choice made there carries over.
     property string patternColourScheme: ""
@@ -139,7 +137,6 @@ QtObject {
         property alias colourScheme: preferences.colourScheme
         // After colourScheme: the settings load in this order, so the earlier patterns' choice wins once.
         property alias patternColourScheme: preferences.patternColourScheme
-        property alias momentArrowScale: preferences.momentArrowScale
     }
 
     property Settings projectsSettings: Settings {
