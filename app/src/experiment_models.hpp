@@ -103,7 +103,8 @@ class BackgroundTermListModel : public RowTableModel {
 
 // The reflections the loaded file carried (`_refln`), read-only: `hkl` ("h k l"),
 // `dSpacing`, `position` (2θ or TOF), `fSquaredCalc` and, for a magnetic structure seen by neutrons,
-// `mPerpSquaredCalc` (|M⊥|², edi ADR-0068), numbers as read; NaN where a cell is not one.
+// `fMPerpSquaredCalc` (|M⊥|², edi ADR-0068) and `fSquaredTotalCalc` (F² + |M⊥|², as crysta computes it), numbers as
+// read; NaN where a cell is not one.
 class ReflectionListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
