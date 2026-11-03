@@ -87,20 +87,18 @@ TestCase {
         compare(differences.length, 0, "All four sidebars use crysta's category order: " + differences.join("; "));
     }
     function test_extra_groups_are_single_ordered_and_human_readable() {
-        const shown = groups("structure", "extras");
-        const appearances = shown.filter(item => /^Appearance/.test(item.title));
-        compare(appearances.length, 1, "The two preview Appearance groups are merged into one");
-        verify(!shown.some(item => item.categoryId === "parent_space_group"), "The crystal parent has no duplicate Extra group");
-        verify(!shown.some(item => item.categoryId === "magnetic_form_factor"), "The ion selector belongs to moment rows, not a separate group");
-        const ids = shown.map(item => item.categoryId);
-        for (const id of ["space_group_symop_magn_operation", "space_group_symop_magn_centering", "expanded_atom_site_moment"])
-            verify(ids.includes(id), "Extra retains the signed operators and moments in the cell: " + id);
-        const magnetic = shown.filter(item => /magn|moment/.test(item.categoryId));
-        verify(magnetic.length > 0, "Extra exposes actual magnetic groups");
-        const crystal = shown.filter(item => ["cell", "atom_site", "atom_site_aniso", "space_group_symop"].includes(item.categoryId));
-        verify(crystal.every(c => magnetic.every(m => shown.indexOf(c) < shown.indexOf(m))), "Extra magnetic groups follow the existing crystal groups");
-        const labels = Render.descendants(Ui.page(appWindow)).filter(item => typeof item.label === "string").map(item => item.label);
-        verify(!labels.some(label => /number_BNS|name_BNS|name_UNI/.test(label)), "GUI labels use readable BNS and UNI titles instead of CIF item names");
+        Session.closeProject();
+        scratch = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"));
+        verify(Session.openProject(scratch), "The published 2.3 K example opens for the Extra sidebar check");
+        tryCompare(Session.project, "calculating", false, 15000, "The example's computed Extra groups finish calculating");
+        const shown = groups("structure", "extras").filter(item => item.visible &&
+            (item.shownTier === "Extras" && item.listed || /^Appearance/.test(item.title)));
+        shown.sort((a, b) => a.mapToItem(appWindow.contentItem, 0, 0).y -
+                             b.mapToItem(appWindow.contentItem, 0, 0).y);
+        const titles = shown.map(item => item.title.replace(/\s*\(\d+\)$/, ""));
+        compare(titles, ["Scattering lengths", "Symmetry operators", "Atoms in the cell",
+                         "Bonds", "Magnetic operators", "Moments in the cell", "Appearance"],
+                "The rendered 2.3 K Extra groups use the approved names and order");
     }
     function test_main_order_all_sites_ids_ions_and_symmetry_form() {
         const shown = groups("structure", "basic");
@@ -255,11 +253,20 @@ TestCase {
         const mz = findChild(moments, "atomSiteMoment.mz.0");
         verify(form && mx && my && mz, "The first cobalt row lays out the symmetry form beside its three components");
         verify(form.readOnly, "The wider symmetry form remains read-only");
+        compare(form.horizontalAlignment, Text.AlignRight, "The symmetry form text is right-aligned");
         const em = form.font.pixelSize;
         verify(form.width - form.implicitWidth >= em / 2, "The symmetry form has spare width beyond its full expression");
-        const gap = (left, right) => right.mapToItem(moments, right.leftPadding, 0).x
-            - left.mapToItem(moments, left.width - left.rightPadding, 0).x;
-        verify(gap(mz, form) >= gap(mx, my) + em / 4, "The symmetry form has a distinct gap beyond normal component spacing");
+        function extent(input) {
+            const first = input.positionToRectangle(0);
+            const last = input.positionToRectangle(input.text.length);
+            return [input.mapToItem(moments, first.x, 0).x,
+                    input.mapToItem(moments, last.x, 0).x];
+        }
+        const gap = (left, right) => extent(right)[0] - extent(left)[1];
+        const normal = gap(mx, my);
+        const separated = gap(mz, form);
+        verify(separated >= normal + em / 4,
+               "The rendered text has a distinct gap after Mz: " + separated + " px versus " + normal + " px");
     }
     function test_magnetic_column_shows_none_and_aligns_each_choice() {
         const moments = group("atom_site_moment");
@@ -735,19 +742,60 @@ TestCase {
         const fromZero = fit(true);
         verify(Math.abs(fromZero - baseline) <= reference.rwp.value * reference.rwp.tol_rel, "Zero and nonzero starts reach the same reference minimum within its stated Rwp tolerance");
     }
+    function propagationTable(group) {
+        const table = findChild(group, "propagationVectors.list");
+        verify(table !== null, "Propagation vectors are displayed in the real row table");
+        return table;
+    }
+    function propagationRows(table) {
+        return Probe.rows(table.sourceModel).map(row => [row.id, row.vector]);
+    }
+    function propagationEditor(table, row) {
+        const name = "propagationVector.vector." + row;
+        tryVerify(() => table.itemAtIndex(row) && findChild(table.itemAtIndex(row), name), 3000,
+                  "The displayed propagation row has its actual editable vector field");
+        return findChild(table.itemAtIndex(row), name);
+    }
+    function enterPropagation(table, row, value) {
+        const editor = propagationEditor(table, row);
+        Ui.scrollIntoView(editor);
+        click(editor.objectName);
+        tryVerify(() => editor.activeFocus, 2000, "The vector editor receives keyboard focus");
+        editor.selectAll();
+        const punctuation = {"/": Qt.Key_Slash, ",": Qt.Key_Comma, ".": Qt.Key_Period};
+        for (const character of value)
+            keyClick(punctuation[character] ?? (Qt.Key_0 + Number(character)));
+        compare(editor.text, value, "The typed vector is in the field before Return");
+        keyClick(Qt.Key_Return);
+        return editor;
+    }
+    function inlinePropagationDiagnostic(group, matches, expected) {
+        tryVerify(() => {
+            const label = findChild(group, "propagationVectors.refusal");
+            return label && label.visible && matches(label.text);
+        }, 3000, "The inline propagation diagnostic matches the attempted change: " + expected);
+        return findChild(group, "propagationVectors.refusal").text;
+    }
+    function propagationRefusal(group, row, vector) {
+        const prefix = "propagation vector '" + row + "' (" + vector + "): ";
+        const text = inlinePropagationDiagnostic(group,
+            value => value.startsWith(prefix) && value.length > prefix.length, prefix);
+        return text.slice(prefix.length);
+    }
     function test_k_editor_refuses_without_changing_the_saved_model() {
         const propagation = group("parent_propagation_vector");
-        const editors = Render.descendants(propagation).filter(item => typeof item.text === "string" && "readOnly" in item && !item.readOnly && item.enabled);
-        verify(editors.length > 0, "Propagation rows expose the validated editable k input");
+        const table = propagationTable(propagation);
+        compare(propagationRows(table), [["1", "0,0,0"]], "Primitive cobalt starts at the one zero vector");
         verify(Session.save(), "The valid propagation model saves before the refused edit");
         const before = SettingsProof.text(scratch, "structures/cosio.edi");
-        const editor = editors[editors.length - 1];
-        const old = editor.text;
-        editor.forceActiveFocus();
-        keyClick(Qt.Key_A, Qt.ControlModifier);
-        editor.text = "1/3,0,0";
-        keyClick(Qt.Key_Return);
-        tryCompare(editor, "text", old, 2000, "The primitive third-order k is refused and the editor restores the old row");
+        const editor = enterPropagation(table, 0, "1/3,0,0");
+        const reason = propagationRefusal(propagation, "1", "1/3,0,0");
+        verify(/axis is not a period/i.test(reason), "The edit identifies the incompatible magnetic-cell translation");
+        tryCompare(editor, "text", "0,0,0", 3000, "The vector field restores zero after Return");
+        keyClick(Qt.Key_Tab);
+        tryVerify(() => !editor.activeFocus, 3000, "Tab moves focus away from the refused vector editor");
+        compare(propagationEditor(table, 0).text, "0,0,0", "The vector field remains zero after focus leaves it");
+        compare(propagationRows(table), [["1", "0,0,0"]], "The refused edit leaves the actual table model unchanged");
         verify(Session.save(), "A refused k edit leaves a saveable consistent model");
         compare(SettingsProof.text(scratch, "structures/cosio.edi"), before, "A refused GUI propagation edit writes no change to the model");
     }
@@ -782,57 +830,78 @@ TestCase {
     }
     function test_primitive_propagation_add_refuses_without_losing_rows() {
         const vectors = group("parent_propagation_vector");
-        const objects = Render.descendants(vectors);
-        const table = objects.find(item => item.sourceModel !== undefined && typeof item.itemAtIndex === "function");
-        verify(table !== undefined && table.count === 1, "Primitive cobalt starts with its one zero propagation row");
-        const add = objects.find(item => typeof item.clicked === "function" && item.text === "Add vector");
-        verify(add !== undefined, "The primitive model exposes the same Add vector boundary");
+        const table = propagationTable(vectors);
+        compare(propagationRows(table), [["1", "0,0,0"]], "Primitive cobalt starts with its one zero propagation row");
         verify(Session.save(), "The primitive model saves before the refused addition");
         const before = SettingsProof.text(scratch, "structures/cosio.edi");
-        mouseClick(add);
-        compare(table.count, 1, "A primitive cell cannot add another distinct commensurate propagation vector");
-        verify(Session.save(), "A refused addition preserves a saveable magnetic model");
-        compare(SettingsProof.text(scratch, "structures/cosio.edi"), before, "A refused new vector preserves every prior row and operator");
-        verify(Probe.rows(Session.loadWarnings).some(row => /duplicate|propagation|translation|commensurate/i.test(row.message)), "The refused addition states the same acceptance-rule reason as an edit");
+        click("propagationVectors.append");
+        const addReason = propagationRefusal(vectors, "2", "1/2,0,0");
+        verify(/axis is not a period/i.test(addReason), "The Add proposal is incompatible with the primitive cell translation");
+        compare(propagationRows(table), [["1", "0,0,0"]], "A refused Add keeps the one original propagation vector");
+        const editor = enterPropagation(table, 0, "1/2,0,0");
+        const editReason = propagationRefusal(vectors, "1", "1/2,0,0");
+        compare(addReason, editReason, "The inline Add and Edit diagnostics have the same acceptance-rule reason for the same vector");
+        tryCompare(editor, "text", "0,0,0", 3000, "The refused Edit also restores the original field value");
+        verify(Session.save(), "The refused Add and Edit preserve a saveable magnetic model");
+        compare(SettingsProof.text(scratch, "structures/cosio.edi"), before, "The refused changes preserve every prior row and operator");
     }
     function test_propagation_rows_add_remove_and_refuse_duplicates_data() {
         return [{tag: "fraction-first", first: "1/2", duplicate: "0.5"},
                 {tag: "decimal-first", first: "0.5", duplicate: "1/2"}];
     }
     function test_propagation_rows_add_remove_and_refuse_duplicates(data) {
-        const location = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/magnetic_pnma/propagation-project"));
-        const original = SettingsProof.text(location, "structures/cosio.edi");
-        verify(SettingsProof.write(location, "structures/cosio.edi", original.replace("1/2,0,0", data.first + ",0,0")), "The duplicate control independently chooses its exact starting spelling");
-        verify(Session.openProject(location), "The period-22 edit control opens with one valid half-order row");
+        Session.closeProject();
+        scratch = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/magnetic_pnma/propagation-project"));
+        const file = "structures/cosio.edi";
+        const original = SettingsProof.text(scratch, file);
+        verify(SettingsProof.write(scratch, file, original.replace("1/2,0,0", "0,0,0")),
+               "The period-22 control starts with zero and leaves half order available to Add");
+        verify(Session.openProject(scratch), "The period-22 add and edit control opens");
         const vectors = group("parent_propagation_vector");
-        const objects = () => Render.descendants(vectors);
-        const table = objects().find(item => item.sourceModel !== undefined && typeof item.itemAtIndex === "function");
-        verify(table !== undefined && table.count === 1, "The propagation control starts with exactly one row");
-        const removes = () => objects().filter(item => typeof item.clicked === "function" && /remove|delete/i.test((item.objectName || "") + " " + (item.toolTip || "")));
+        const table = propagationTable(vectors);
+        compare(propagationRows(table), [["1", "0,0,0"]], "The supercell starts with one zero row");
+        const removes = () => Render.descendants(vectors).filter(item => /^propagationVector\.remove\.\d+$/.test(item.objectName));
         verify(removes().length === 1 && !removes()[0].enabled, "The final propagation row cannot be removed");
-        verify(!objects().some(item => /enable|active/i.test(item.objectName || "") && "checked" in item), "Propagation rows have no enable toggle");
-        const add = objects().find(item => typeof item.clicked === "function" && item.text === "Add vector");
-        verify(add !== undefined && add.width > vectors.width * .6, "A wide Add vector button sits below the propagation table");
-        mouseClick(add);
-        tryCompare(table, "count", 2, 2000, "Add vector creates a second compatible distinct row");
+        verify(!Render.descendants(vectors).some(item => /enable|active/i.test(item.objectName || "") && "checked" in item),
+               "Propagation rows have no enable toggle");
+        const add = findChild(vectors, "propagationVectors.append");
+        verify(add && add.width > vectors.width * .6 &&
+               add.mapToItem(vectors, 0, 0).y >= table.mapToItem(vectors, 0, table.height).y,
+               "A wide Add vector button sits below the propagation table");
+        click(add.objectName);
+        const refusal = findChild(vectors, "propagationVectors.refusal");
+        tryCompare(table, "count", 2, 3000, "The half-order proposal adds a distinct row in the period-22 supercell" +
+                   (refusal && refusal.visible ? ". Inline refusal: " + refusal.text : ""));
+        compare(propagationRows(table), [["1", "0,0,0"], ["2", "1/2,0,0"]],
+                "Add keeps zero and publishes the exact half-order vector");
+        if (data.first !== "1/2") {
+            enterPropagation(table, 1, data.first + ",0,0");
+            tryVerify(() => propagationRows(table)[1]?.[1] === data.first + ",0,0", 3000,
+                      "A decimal spelling of the same row's half-order vector is accepted");
+        }
+        const held = [["1", "0,0,0"], ["2", data.first + ",0,0"]];
         verify(Session.save(), "The two accepted propagation rows save");
-        const before = SettingsProof.text(location, "structures/cosio.edi");
-        const editors = objects().filter(item => typeof item.text === "string" && "readOnly" in item && !item.readOnly && item.enabled);
-        verify(editors.length >= 2, "Both propagation rows have real editable k fields");
-        const editor = editors[editors.length - 1];
-        const old = editor.text;
+        const before = SettingsProof.text(scratch, file);
+        click(add.objectName);
+        inlinePropagationDiagnostic(vectors, text => /'2' and '3' are the same vector/i.test(text), "duplicate rows 2 and 3");
+        compare(propagationRows(table), held, "The duplicate Add preserves both accepted rows");
         for (const value of [data.duplicate + ",0,0", "1/3,0,0"]) {
-            editor.forceActiveFocus();
-            editor.text = value;
-            keyClick(Qt.Key_Return);
-            tryCompare(editor, "text", old, 2000, "An exact duplicate or incompatible k restores the previous row");
-            verify(Session.save(), "A refused propagation edit keeps a valid saveable row set");
-            compare(SettingsProof.text(location, "structures/cosio.edi"), before, "Duplicate and incompatible edits preserve every prior propagation row");
-            verify(Probe.rows(Session.loadWarnings).some(row => /duplicate|propagation|translation|commensurate/i.test(row.message)), "Each refused row edit explains the acceptance-rule failure");
+            const editor = enterPropagation(table, 0, value);
+            if (value.startsWith("1/3")) {
+                verify(/axis is not a period/i.test(propagationRefusal(vectors, "1", value)),
+                       "The inline Edit diagnostic identifies the incompatible translation");
+            } else {
+                inlinePropagationDiagnostic(vectors, text => /'1' and '2' are the same vector/i.test(text), "duplicate rows 1 and 2");
+            }
+            tryCompare(editor, "text", "0,0,0", 3000, "A refused k edit restores the previous row after Return");
+            compare(propagationRows(table), held, "Each refused Edit preserves both accepted rows");
+            verify(Session.save(), "The refused Edit keeps a valid saveable row set");
+            compare(SettingsProof.text(scratch, file), before, "Duplicate and incompatible edits preserve every saved propagation row");
         }
         verify(removes().length === 2 && removes().every(item => item.enabled), "Every row can be removed while another remains");
-        mouseClick(removes()[1]);
-        tryCompare(table, "count", 1, 2000, "Removing a propagation row leaves its peer intact");
+        click("propagationVector.remove.1");
+        tryCompare(table, "count", 1, 3000, "Removing a propagation row leaves its peer intact");
+        compare(propagationRows(table), [["1", "0,0,0"]], "Removal preserves the original zero vector");
         verify(removes().length === 1 && !removes()[0].enabled, "Removal disables again at the last remaining row");
     }
     function test_named_magcif_import_uses_the_app_loader_data() {
