@@ -153,3 +153,71 @@ def test_quiet_background_excludes_the_half_sigma_boundary():
         'The strict quiet population contains only its independently known '
         'weighted background residual',
     )
+
+
+def authored_peak():
+    return {
+        'dataset_id': 'isolated-peak',
+        'axis_kind': 'data.twotheta',
+        'current': True,
+        'x': [10, 11, 12, 13, 14, 15, 16],
+        'background': [10] * 7,
+        'measured': [10, 13, 15, 17, 18, 13, 10],
+        'calculated': [10, 13, 15, 20, 15, 13, 10],
+        'sigma': [2] * 7,
+        'phases': [{'phase_id': 'alpha', 'positions': [13]}],
+    }
+
+
+def test_peak_below_background_has_no_measured_direction():
+    data = authored_peak()
+    data['measured'] = [9, 10, 9, 10, 9, 10, 9]
+    expected = peak(data, [1, 2, 3, 4, 5], 13, 'alpha')
+    assert 'centroid_shift' not in expected, (
+        'The independently authored observations have no positive net intensity'
+    )
+    for reported in actual(data).get('worst_peaks', []):
+        assert reported.get('centroid_shift') is None and reported.get('width_ratio') is None, (
+            'A calculated peak with no observed centroid cannot publish measured zero direction'
+        )
+
+
+def test_peak_support_cannot_cross_or_center_in_a_mask():
+    data = authored_peak()
+    data['excluded'] = [[12, 12]]
+    expected = peak(data, [3, 4, 5], 13, 'alpha')
+    for reported in actual(data).get('worst_peaks', []):
+        if reported.get('centroid_shift') is not None:
+            close(reported['centroid_shift'], expected['centroid_shift'], 'mask splits support')
+        if reported.get('weighted_square_sum') is not None:
+            close(
+                reported['weighted_square_sum'],
+                expected['weighted_square_sum'],
+                'points beyond the mask are outside this peak support',
+            )
+
+    data['excluded'] = [[13, 13]]
+    for reported in actual(data).get('worst_peaks', []):
+        assert reported.get('centroid_shift') is None, (
+            'A reflection centered in an excluded interval has no observed direction'
+        )
+
+
+def test_coincident_phases_do_not_inherit_one_phases_peak_direction():
+    data = authored_peak()
+    data['phases'].append({'phase_id': 'beta', 'positions': [13]})
+    for reported in actual(data).get('worst_peaks', []):
+        if reported.get('centroid_shift') is not None:
+            assert reported.get('phase_id') not in {'alpha', 'beta'}, (
+                'A shared observed support cannot identify one coincident phase as its owner'
+            )
+            expected = peak(data, [1, 2, 3, 4, 5], 13, 'combined')
+            close(
+                reported['centroid_shift'], expected['centroid_shift'], 'combined support moment'
+            )
+
+    data['excluded'] = [[10, 16]]
+    result = actual(data)
+    assert result.get('points', 0) == 0 and not result.get('worst_peaks'), (
+        'A fully masked pattern has no usable points or directional peak diagnostics'
+    )
