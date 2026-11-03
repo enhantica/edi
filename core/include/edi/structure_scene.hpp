@@ -34,6 +34,9 @@ enum class ColorScheme : std::uint8_t { Jmol, Vesta };
 enum class AtomView : std::uint8_t { Covalent, VanDerWaals, Ionic, Adp };
 enum class Projection : std::uint8_t { Orthographic, Perspective };
 enum class AtomSubset : std::uint8_t { All, AsymmetricUnit, None };
+// How the moment arrows are coloured (the owner, 2026-11-03): each in its atom's colour, in that colour
+// greyed so arrows stand apart from the atoms while the types stay distinct, or all in one grey.
+enum class MomentColours : std::uint8_t { Atom, GreyedAtom, Single };
 
 // The element tables: data/elements/element-styles.tsv, embedded in the core at build time. 118 rows,
 // H to Og. Parsed once; a malformed row throws std::runtime_error naming it.
@@ -102,7 +105,8 @@ struct SceneOptions {
     AtomSubset atoms = AtomSubset::All;
     bool bonds = true, cell = true, axes = true, labels = false;
     bool moments = true;        // `_structure_view.show_moments`
-    double moment_scale = 0.75;  // Angstrom of arrow per Bohr magneton (`_structure_style.moment_scale`)
+    double moment_scale = 0.75;  // Angstrom of arrow per Bohr magneton (`_structure_view.moment_scale`)
+    MomentColours moment_colours = MomentColours::GreyedAtom;  // the app's preference
 };
 
 struct ScenePart {  // one site at a position
@@ -171,6 +175,7 @@ struct StructureScene {
     std::vector<SceneAxis> axes;
     std::vector<SceneLabel> labels;
     std::vector<SceneMoment> moments;
+    MomentColours moment_colours = MomentColours::GreyedAtom;  // as the options asked
     std::vector<SceneLegendEntry> legend;
     std::vector<std::string> substituted_elements;  // sorted, once each; "" for parts with no element
     SceneFrame frame;

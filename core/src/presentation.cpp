@@ -566,7 +566,8 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
         if (found == building.end()) {
             Building next;
             next.phase.structure_id = key;
-            next.phase.label = magnetic_phase ? id + " (magnetic)" : id;
+            next.phase.label = id;
+            next.phase.magnetic = magnetic_phase;
             next.phase.place = building.size();
             for (std::size_t place = 0; place < structure_names.size(); ++place) {
                 if (structure_names[place] == id) {
@@ -881,7 +882,7 @@ PatternPresentation present_pattern(const PatternSource& given, const PatternVie
         series.label = phase.label;
         series.style = style_key("bragg", phase.place);
         const double row_bottom = static_cast<double>(phases.size() - k - 1);
-        out.bragg_labels.push_back({phase.label, series.style, row_bottom + 0.5});
+        out.bragg_labels.push_back({phase.label, series.style, row_bottom + 0.5, phase.magnetic});
         std::vector<char> taken(binned ? static_cast<std::size_t>(view.columns) : 0, 0);
         for (std::size_t r = 0; r < phase.position->size(); ++r) {
             const double position = (*phase.position)[r];

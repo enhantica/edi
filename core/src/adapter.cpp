@@ -716,6 +716,20 @@ void complete_atom_site_aniso(Structure& s) {
     }
 }
 
+void set_propagation_vectors(Structure& s, std::vector<std::pair<std::string, std::string>> rows) {
+    std::set<std::string> ids;
+    for (const auto& [id, k] : rows) {
+        if (id.empty() || !ids.insert(id).second) {
+            throw std::invalid_argument("a propagation vector needs an id of its own; '" + id + "' is empty or taken");
+        }
+    }
+    Structure trial = s;
+    trial.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = rows; });
+    const crysta::Structure engine = to_crysta_structure(trial);
+    crysta::check_propagation_vectors(engine, engine.propagation_vectors.get());
+    s.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = std::move(rows); });
+}
+
 void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) {
     if (!is_adp_type(adp_type)) {
         throw std::invalid_argument("adp_type '" + adp_type +

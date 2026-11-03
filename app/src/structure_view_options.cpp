@@ -119,6 +119,25 @@ void StructureViewOptions::cycleAtoms(bool hasCopies) {
     }
 }
 
+QString StructureViewOptions::momentColours() const {
+    switch (options_.moment_colours) {
+        case edi::MomentColours::Atom:
+            return QStringLiteral("atom");
+        case edi::MomentColours::Single:
+            return QStringLiteral("single");
+        case edi::MomentColours::GreyedAtom:
+            break;
+    }
+    return QStringLiteral("greyed");
+}
+
+void StructureViewOptions::setMomentColours(const QString& colours) {
+    const edi::MomentColours scheme = colours == QLatin1String("atom")     ? edi::MomentColours::Atom
+                                      : colours == QLatin1String("single") ? edi::MomentColours::Single
+                                                                           : edi::MomentColours::GreyedAtom;
+    assign(options_.moment_colours, scheme, &StructureViewOptions::momentColoursChanged);
+}
+
 std::map<std::string, std::string> StructureViewOptions::toView() const {
     const auto flag = [](bool on) { return std::string(on ? "true" : "false"); };
     std::map<std::string, std::string> view{{"atom_view", atomView().toStdString()},

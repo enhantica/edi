@@ -11,17 +11,14 @@ _experiment_type.polarisation unpolarised
 _instrument.name D20
 _instrument.facility ILL
 
-_peak.type cwl-pseudo-voigt-berar-baldinozzi
-_peak.broad_gauss_u 0.273213()
-_peak.broad_gauss_v -0.587787()
-_peak.broad_gauss_w 0.410988()
-_peak.mixing_eta_0 0.1()
-_peak.mixing_eta_1 0()
-_peak.asym_beba_a0 0()
-_peak.asym_beba_b0 0()
-_peak.asym_beba_a1 0()
-_peak.asym_beba_b1 0()
-_peak.asym_beba_limit 180
+_peak.type cwl-tch-pseudo-voigt-fcj
+_peak.broad_gauss_u 0.273527()
+_peak.broad_gauss_v -0.589718()
+_peak.broad_gauss_w 0.413007()
+_peak.broad_lorentz_x 0
+_peak.broad_lorentz_y 0.017548()
+_peak.asym_fcj_1 0.03()
+_peak.asym_fcj_2 0.02()
 _peak.cutoff_fwhm 8
 
 _absorption.type cylinder-hewat

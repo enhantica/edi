@@ -312,6 +312,20 @@ AppDialog {
                 ToolTip.text: qsTr("What the pattern chart's y range does when a click on its legend hides or shows a curve")
             }
 
+            // The magnetic moment arrows' colours (the owner, 2026-11-03).
+            RowLabel {
+                text: qsTr("Moment colours") + ":"
+            }
+            RowBox {
+                readonly property var schemes: ["atom", "greyed", "single"]
+
+                objectName: "preferences.momentColours"
+                model: [qsTr("Atom"), qsTr("Greyed atom"), qsTr("Single")]
+                currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
+                onActivated: index => Preferences.momentColours = schemes[index]
+                ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows: in the atom's colour, in that colour greyed, or in one grey")
+            }
+
             RowLabel {
                 text: qsTr("Sidebar") + ":"
             }

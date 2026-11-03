@@ -10,7 +10,7 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // `atom_site_moment` (edi ADR-0068; the owner, 2026-11-03): one row per atom site, as Atomic displacement — its id,
-// read only; the magnetic ion its moment takes, empty for a site without a moment, so choosing an ion marks the site
+// read only; the magnetic ion its moment takes, "none" for a site without a moment, so choosing an ion marks the site
 // magnetic; the three components along the cell axes, those the site symmetry leaves free editable; and the symmetry
 // form crysta derives, read only. The ion belongs to the atom type, so sites of one type share it.
 Column {
@@ -29,7 +29,8 @@ Column {
         sourceModel: group.moments
 
         equalColumns: true
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, textColumnWidth("symmform", Session.label("atom_site_moment.symmform"))]
+        // The symmetry form a little wider than its text, so it stands clear of Mz (the owner, 2026-11-03).
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.ionWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, textColumnWidth("symmform", Session.label("atom_site_moment.symmform")) + EaStyle.Sizes.fontPixelSize * 4]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -39,9 +40,11 @@ Column {
                 horizontalAlignment: Text.AlignLeft
                 uid: "atom_site.id"
             }
+            // The magnetic form factor, by its ion (the owner, 2026-11-03).
             HeaderLabel {
-                horizontalAlignment: Text.AlignHCenter
+                horizontalAlignment: Text.AlignLeft
                 uid: "magnetic_form_factor.ion"
+                text: qsTr("magnetic")
             }
             HeaderLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -56,7 +59,7 @@ Column {
                 uid: "atom_site_moment.crystalaxis_z"
             }
             HeaderLabel {
-                horizontalAlignment: Text.AlignLeft
+                horizontalAlignment: Text.AlignHCenter
                 uid: "atom_site_moment.symmform"
             }
         }
@@ -70,7 +73,7 @@ Column {
             required property var my
             required property var mz
             required property string symmform
-            readonly property bool magnetic: ion !== ""
+            readonly property bool magnetic: ion !== "none"
 
             EaComponents.ListViewLabel {
                 horizontalAlignment: Text.AlignHCenter
@@ -100,7 +103,7 @@ Column {
                         currentIndex = Qt.binding(() => group.moments ? group.moments.ions(row.index).indexOf(row.ion) : -1);
                         Qt.callLater(() => moments.setIon(site, ion));
                     }
-                    ToolTip.text: qsTr("The magnetic ion whose form factor the moment takes, shared by every site of the atom type; none: no moment")
+                    ToolTip.text: qsTr("The magnetic ion whose form factor the moment takes, shared by every site of the atom type; none: the site has no moment")
                 }
             }
             ParameterCell {
@@ -136,7 +139,7 @@ Column {
             // Derived from the site and the magnetic group: read only.
             TextCell {
                 objectName: `atomSiteMoment.symmform.${row.index}`
-                horizontalAlignment: Text.AlignLeft
+                horizontalAlignment: Text.AlignHCenter
                 readOnly: true
                 value: row.symmform
             }

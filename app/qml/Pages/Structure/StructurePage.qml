@@ -25,6 +25,7 @@ WorkflowPage {
             "atom_site_aniso": atomSiteAdpContent,
             "atom_site_moment": atomSiteMomentContent,
             "space_group_magn": magneticSpaceGroupContent,
+            "parent_propagation_vector": propagationVectorsContent,
             "scattering_length": scatteringLengthsContent
         })
 
@@ -153,6 +154,12 @@ WorkflowPage {
     Component {
         id: magneticSpaceGroupContent
         MagneticSpaceGroupGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: propagationVectorsContent
+        PropagationVectorsGroup {
             structure: page.structure
         }
     }

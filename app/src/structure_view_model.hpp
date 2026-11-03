@@ -183,7 +183,7 @@ class AtomSiteAdpListModel : public RowTableModel {
 };
 
 // The Magnetic moments group (edi ADR-0068; the owner, 2026-11-03): one row per atom site, in the sites' order, as the
-// Atomic displacement group — its id, the magnetic ion its moment takes ("" when the site carries no moment), the three
+// Atomic displacement group — its id, the magnetic ion its moment takes ("none" when the site carries no moment), the three
 // components along the cell axes and the symmetry form crysta derives, read only. The ion belongs to the site's atom
 // type, so two sites of one type share it.
 class AtomSiteMomentListModel : public RowTableModel {
@@ -195,15 +195,52 @@ class AtomSiteMomentListModel : public RowTableModel {
     AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
                             QObject* parent);
     void sync();
-    // The ions a row can choose: none, then the form-factor table's ions for the site's element.
+    // The ions a row can choose: "none", then the form-factor table's ions for the site's element.
     Q_INVOKABLE QStringList ions(int row) const;
-    // "" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
+    // "none" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
     Q_INVOKABLE void setIon(int row, const QString& ion);
 
    private:
     edi::Structure& structure_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
+};
+
+// The Propagation vectors group (edi ADR-0068; the owner, 2026-11-03): the structure's commensurate k vectors, each
+// added, edited and removed through crysta's rule, so a vector the cell and the signed group cannot carry, or a
+// second spelling of one already there, is refused with its reason and the rows stay as they were. The last row
+// cannot be removed.
+class PropagationVectorListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    // Why the last change was refused; empty after one that was made.
+    Q_PROPERTY(QString refusal READ refusal NOTIFY refusalChanged)
+
+   public:
+    PropagationVectorListModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
+    Q_INVOKABLE bool setVector(int row, const QString& vector);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+    QString refusal() const { return refusal_; }
+
+   signals:
+    void refusalChanged();
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("id")       ? setId(row, value.toString())
+               : role == QLatin1String("vector") ? setVector(row, value.toString())
+                                                 : false;
+    }
+
+   private:
+    bool replace(std::vector<std::pair<std::string, std::string>> rows);
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    QString refusal_;
 };
 
 // The structure's custom neutron scattering lengths.
@@ -244,6 +281,7 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::AtomSiteListModel* atomSites READ atomSites CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteAdpListModel* atomSiteAdps READ atomSiteAdps CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteMomentListModel* atomSiteMoments READ atomSiteMoments CONSTANT)
+    Q_PROPERTY(edi_app::PropagationVectorListModel* propagationVectors READ propagationVectors CONSTANT)
     Q_PROPERTY(edi_app::ScatteringLengthListModel* scatteringLengths READ scatteringLengths CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
@@ -265,6 +303,7 @@ class StructureViewModel : public QObject {
     AtomSiteListModel* atomSites() const { return atom_sites_; }
     AtomSiteAdpListModel* atomSiteAdps() const { return atom_site_adps_; }
     AtomSiteMomentListModel* atomSiteMoments() const { return atom_site_moments_; }
+    PropagationVectorListModel* propagationVectors() const { return propagation_vectors_; }
     ScatteringLengthListModel* scatteringLengths() const { return scattering_lengths_; }
     CategoryListModel* categories() const { return categories_; }
     BlockText* text() const { return text_; }
@@ -296,6 +335,7 @@ class StructureViewModel : public QObject {
     AtomSiteListModel* atom_sites_;
     AtomSiteAdpListModel* atom_site_adps_;
     AtomSiteMomentListModel* atom_site_moments_;
+    PropagationVectorListModel* propagation_vectors_;
     ScatteringLengthListModel* scattering_lengths_;
     CategoryListModel* categories_;
     BlockText* text_;

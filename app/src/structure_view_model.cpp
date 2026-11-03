@@ -388,7 +388,7 @@ void AtomSiteMomentListModel::sync() {
                 moment = row.get();
             }
         }
-        QString ion;
+        QString ion = QStringLiteral("none");
         if (moment != nullptr) {
             const auto declared = magnetic.form_factors.find(site->type_symbol.value());
             ion = declared != magnetic.form_factors.end() && !declared->second.ion.empty()
@@ -411,7 +411,7 @@ void AtomSiteMomentListModel::sync() {
 
 QStringList AtomSiteMomentListModel::ions(int row) const {
     const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
-    QStringList out{QString()};
+    QStringList out{QStringLiteral("none")};
     if (site != nullptr) {
         for (const std::string& ion : crysta::magnetic_ions_for_type(site->type_symbol.value())) {
             out.append(QString::fromStdString(ion));
@@ -426,11 +426,80 @@ void AtomSiteMomentListModel::setIon(int row, const QString& ion) {
         return;
     }
     edi::Structure& structure = structure_;
+    const bool magnetic = !ion.isEmpty() && ion != QLatin1String("none");
     // The moment row comes or goes: the parameter set changes.
-    editor_.apply(edi::Edit::moment_site(structure, *site, !ion.isEmpty()), true);
-    if (!ion.isEmpty()) {
+    editor_.apply(edi::Edit::moment_site(structure, *site, magnetic), true);
+    if (magnetic) {
         editor_.apply(edi::Edit::magnetic_ion(structure, site->type_symbol.value(), ion.toStdString()), false);
     }
+}
+
+// ---- PropagationVectorListModel -----------------------------------------------------------------
+
+PropagationVectorListModel::PropagationVectorListModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent)
+    : RowTableModel({"id", "vector"}, parent), structure_(structure), editor_(editor) {
+    sync();
+}
+
+void PropagationVectorListModel::sync() {
+    const auto& vectors = structure_.magnetic->propagation_vectors;
+    QList<Row> rows;
+    for (std::size_t i = 0; i < vectors.size(); ++i) {
+        rows.append({&vectors[i], {QString::fromStdString(vectors[i].first), QString::fromStdString(vectors[i].second)}});
+    }
+    setTableRows(rows);
+}
+
+bool PropagationVectorListModel::replace(std::vector<std::pair<std::string, std::string>> rows) {
+    edi::Structure& structure = structure_;
+    const QString refusal = editor_.apply(edi::Edit::propagation_vectors(structure, std::move(rows)), true);
+    if (refusal != refusal_) {
+        refusal_ = refusal;
+        emit refusalChanged();
+    }
+    return refusal.isEmpty();
+}
+
+bool PropagationVectorListModel::setId(int row, const QString& id) {
+    auto rows = structure_.magnetic->propagation_vectors;
+    if (row < 0 || row >= static_cast<int>(rows.size())) {
+        return false;
+    }
+    rows[static_cast<std::size_t>(row)].first = id.trimmed().toStdString();
+    return replace(std::move(rows));
+}
+
+bool PropagationVectorListModel::setVector(int row, const QString& vector) {
+    auto rows = structure_.magnetic->propagation_vectors;
+    if (row < 0 || row >= static_cast<int>(rows.size())) {
+        return false;
+    }
+    rows[static_cast<std::size_t>(row)].second = vector.trimmed().toStdString();
+    return replace(std::move(rows));
+}
+
+void PropagationVectorListModel::append() {
+    auto rows = structure_.magnetic->propagation_vectors;
+    // The next free id, and a half-order vector along a to start from; crysta refuses it with its reason
+    // when the cell and the group cannot carry it.
+    int n = static_cast<int>(rows.size()) + 1;
+    const auto taken = [&rows](const std::string& id) {
+        return std::any_of(rows.begin(), rows.end(), [&id](const auto& row) { return row.first == id; });
+    };
+    while (taken(std::to_string(n))) {
+        ++n;
+    }
+    rows.emplace_back(std::to_string(n), "1/2,0,0");
+    replace(std::move(rows));
+}
+
+void PropagationVectorListModel::remove(int row) {
+    auto rows = structure_.magnetic->propagation_vectors;
+    if (rows.size() <= 1 || row < 0 || row >= static_cast<int>(rows.size())) {
+        return;
+    }
+    rows.erase(rows.begin() + row);
+    replace(std::move(rows));
 }
 
 // ---- ScatteringLengthListModel ------------------------------------------------------------------
@@ -496,6 +565,7 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
       atom_sites_(new AtomSiteListModel(structure, editor, registry, this)),
       atom_site_adps_(new AtomSiteAdpListModel(structure, editor, registry, this)),
       atom_site_moments_(new AtomSiteMomentListModel(structure, editor, registry, this)),
+      propagation_vectors_(new PropagationVectorListModel(structure, editor, this)),
       scattering_lengths_(new ScatteringLengthListModel(structure, editor, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this,
@@ -561,6 +631,7 @@ void StructureViewModel::sync() {
     atom_sites_->sync();
     atom_site_adps_->sync();
     atom_site_moments_->sync();
+    propagation_vectors_->sync();
     scattering_lengths_->sync();
     emit magneticChanged();
     categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
