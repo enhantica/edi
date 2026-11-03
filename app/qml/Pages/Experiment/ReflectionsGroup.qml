@@ -65,6 +65,7 @@ DataTable {
             horizontalAlignment: Text.AlignHCenter
             visible: table.magnetic
             uid: "refln.f_squared_total_calc"
+            toolTipText: qsTr("F² + |F_M⊥|²: nuclear plus magnetic, unpolarised neutrons")
         }
     }
 
