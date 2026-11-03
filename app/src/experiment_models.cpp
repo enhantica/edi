@@ -154,19 +154,24 @@ ExcludedRegionListModel::ExcludedRegionListModel(edi::ExperimentBase& experiment
 }
 
 ReflectionListModel::ReflectionListModel(const edi::ExperimentBase& experiment, QObject* parent)
-    : RowTableModel({"hkl", "dSpacing", "position", "fSquaredCalc"}, parent), experiment_(experiment) {
+    : RowTableModel({"hkl", "dSpacing", "position", "fSquaredCalc", "mPerpSquaredCalc"}, parent),
+      experiment_(experiment) {
     sync();
 }
 
 void ReflectionListModel::sync() {
     // The calculation's reflections while a save writes them, else those the file carried (edi::experiment_categories).
     QList<Row> rows;
+    bool magnetic = false;
     if (edi::detail::writes_calculation(experiment_)) {
         const edi::PowderReflnDataBase& refln = experiment_.refln;
+        const auto& m_perp = refln.m_perp_squared_calc;
+        magnetic = m_perp.size() == refln.size() && refln.size() > 0;
         for (std::size_t i = 0; i < refln.size(); ++i) {
             const QString hkl = QStringLiteral("%1 %2 %3").arg(refln.index_h[i]).arg(refln.index_k[i]).arg(refln.index_l[i]);
             rows.append({reinterpret_cast<const void*>(i + 1),
-                         {hkl, refln.d_spacing[i], refln.position[i], refln.f_squared_calc[i]}});
+                         {hkl, refln.d_spacing[i], refln.position[i], refln.f_squared_calc[i],
+                          magnetic ? m_perp[i] : qQNaN()}});
         }
     } else if (const auto& loop = experiment_.carried_reflections; loop.has_value()) {
         const auto column = [&loop](const char* name) {
@@ -174,7 +179,8 @@ void ReflectionListModel::sync() {
             return found == loop->columns.end() ? -1 : static_cast<int>(found - loop->columns.begin());
         };
         const int h = column("index_h"), k = column("index_k"), l = column("index_l"), d = column("d_spacing"),
-                  f2 = column("f_squared_calc");
+                  f2 = column("f_squared_calc"), m2 = column("m_perp_squared_calc");
+        magnetic = m2 >= 0;
         const int position = column("two_theta") >= 0 ? column("two_theta") : column("time_of_flight");
         for (std::size_t i = 0; i < loop->rows.size(); ++i) {
             const std::vector<std::string>& cells = loop->rows[i];
@@ -188,10 +194,14 @@ void ReflectionListModel::sync() {
             };
             rows.append({reinterpret_cast<const void*>(i + 1),
                          {QStringList{text(h), text(k), text(l)}.join(QLatin1Char(' ')), number(d), number(position),
-                          number(f2)}});
+                          number(f2), number(m2)}});
         }
     }
     setTableRows(rows);
+    if (magnetic != magnetic_) {
+        magnetic_ = magnetic;
+        emit magneticChanged();
+    }
 }
 
 namespace {

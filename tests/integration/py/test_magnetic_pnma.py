@@ -137,7 +137,7 @@ def test_pnma_magnetic_squared_factors_match_independent_sum(tmp_path, c2):
             reflections.index_h,
             reflections.index_k,
             reflections.index_l,
-            reflections.m_perp_squared_calc,
+            reflections.f_m_perp_squared_calc,
             strict=True,
         )
     }
@@ -270,7 +270,7 @@ _atom_site_moment.crystalaxis_z
             * (2.695 * 0.63 * ref.form_factor(s) * np.exp(-0.17 * s * s)) ** 2
             / 100
         )
-        assert reflections.m_perp_squared_calc[int(index[0])] == pytest.approx(
+        assert reflections.f_m_perp_squared_calc[int(index[0])] == pytest.approx(
             expected, rel=1e-11, abs=1e-12
         ), (
             'Single and opposite moments follow the closed form with occupancy, '

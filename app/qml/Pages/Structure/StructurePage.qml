@@ -167,6 +167,7 @@ WorkflowPage {
         id: atomSiteMomentContent
         AtomSiteMomentGroup {
             structure: page.structure
+            options: page.project ? page.project.structureViewOptions : null
         }
     }
     Component {

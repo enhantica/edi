@@ -215,6 +215,15 @@ class Edit {
     static Edit value(Parameter& parameter, double value) {
         return Edit([&parameter, value] { assign_value(parameter, value); });
     }
+    // Several parameters' values in one edit, each under its admissible range: a moment edited in another form (edi
+    // ADR-0068), whose free components change together.
+    static Edit values(std::vector<std::pair<Parameter*, double>> writes) {
+        return Edit([writes = std::move(writes)] {
+            for (const auto& [parameter, value] : writes) {
+                assign_value(*parameter, value);
+            }
+        });
+    }
     // A background point's fixed position: one recorded assignment, which cannot fail.
     static Edit background_position(LineSegment& point, double position) {
         return Edit([&point, position] { point.position = position; });
