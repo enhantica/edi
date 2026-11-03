@@ -11101,7 +11101,11 @@ def _two_genuine_project_session_records(main_actor, tmp_path):
     )
     actor.until(lambda value: not value['ui']['project']['calculating'])
     actor.connect()
-    actor.request('A distinct actual conversation belongs to the now-current other project.')
+    text = 'A distinct actual conversation belongs to the now-current other project.'
+    editor = _scene_control_expression('assistant.composer', exposed=True)
+    qml(actor, '(' + editor + ').text = ' + json.dumps(text))
+    actor.until(lambda row: _unique_input_control(row, 'assistant.send') is not None)
+    actor.request(text)
     _session_completed(actor, 2)
     current_id = _session_state(actor)['inputs'][1]['threadId']
     assert current_id != target_id, (
@@ -11411,9 +11415,8 @@ def test_abandoned_original_deferred_open_settles_intent_and_unblocks_real_attac
             'After actual abandonment, the genuine original file chooser owner can still admit '
             'a new current draft file'
         )
-        assert any(
-            row['name'] == source.name and row['pending'] for row in _attachment_rows(actor)
-        ), (
+        attachment_rows = _attachment_rows(actor)
+        assert any(row['name'] == source.name and row['pending'] for row in attachment_rows), (
             'No stale selection target may suppress normal selected-file model publication '
             'after the abandoned Open'
         )
@@ -11427,6 +11430,7 @@ def test_abandoned_original_deferred_open_settles_intent_and_unblocks_real_attac
             'Later ordinary Connect/input admission cannot revive the abandoned target against '
             'the surviving current project'
         )
+        project = actor.command('inspect')['ui']['project']
         (actor.folder / 'actual-deferred-abandonment.json').write_text(
             json.dumps(
                 {
@@ -11435,8 +11439,8 @@ def test_abandoned_original_deferred_open_settles_intent_and_unblocks_real_attac
                     'target_thread': target_id,
                     'surviving_thread': current_id,
                     'actual_standard_button': delivered,
-                    'actual_current_project': actor.last['ui']['project'],
-                    'new_input_rows': _attachment_rows(actor),
+                    'actual_current_project': project,
+                    'new_input_rows': attachment_rows,
                 },
                 indent=2,
             )
