@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T18:55:49Z
+# measured_utc = 2026-11-03T19:56:25Z
 #
-# Recorded from: four scoped app failures banked; previous inventory carried pending the scan reference
-# Collected tests: 210356; with a reported duration: 70524
+# Recorded from: scoped Evolution and arrow receipts; previous inventory carried pending the scan reference
+# Collected tests: 210357; with a reported duration: 70525
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210356
-# inventory_cpp = 400
-# inventory_measured = 166250
-# inventory_unmeasured = 44506
+# inventory_python = 210357
+# inventory_cpp = 401
+# inventory_measured = 166251
+# inventory_unmeasured = 44507
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66954
+# inventory_pr_python = 66955
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -374,6 +374,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_axis_sync.py::test
 0.004	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_current_row_tracks_async_coordinates:stacked]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:map]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_every_pattern_is_drawn:stacked]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_evolution_error_bars_and_range_survive_reload]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-x]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-y]
 0.000	tests/integration/app/test_scan_view_content.py::test_scan_view_content[test_independent_axis_type_buttons:map-z]
@@ -209154,7 +209155,8 @@ UNMEASURED:failed-in-native-replay-fe3d181	tests/unit/cpp/test_loop_parameter_pa
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_admission.cpp::Native C++ factories share the magnetic admission rule
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_admission.cpp::The C++ magCIF handoff shares the magnetic admission rule
 UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_categories.cpp::Magnetic Main groups expose the four independent cobalt components
-UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_scene.cpp::Cobalt moment arrows preserve the independent cell expansion and display scale
+0.014	tests/unit/cpp/test_magnetic_scene.cpp::Cobalt moment arrows preserve the independent cell expansion and display scale
+UNMEASURED:failed-in-this-run	tests/unit/cpp/test_magnetic_scene.cpp::Moment arrow heads keep their proportion without changing the shaft width
 UNMEASURED:failed-nonfinite-measured-band	tests/unit/cpp/test_pattern_owner_bands.cpp::Owner uncertainty bands give absent zero and nonfinite su zero width
 0.000	tests/unit/cpp/test_pattern_owner_bands.cpp::Owner uncertainty bands retain independent measured and residual edges
 0.001	tests/unit/cpp/test_report_coloured_table.cpp::Report I40 writes the signed coloured matrix as a text table
