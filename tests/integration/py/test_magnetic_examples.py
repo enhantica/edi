@@ -188,3 +188,33 @@ def test_magnetic_worked_examples_are_in_documentation_navigation(name):
     assert name in (ROOT / 'mkdocs.yml').read_text(), (
         'Both magnetic worked examples are reachable through the documentation navigation'
     )
+
+
+def test_sequential_magnetic_example_has_a_tutorial_page():
+    example = 'pd-neut-cwl_cosio-d20_scan-213f'
+    docs = ROOT / 'docs'
+    nav = yaml.load((ROOT / 'mkdocs.yml').read_text(), Loader=yaml.BaseLoader)['nav']
+
+    def tutorial_sections(items):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            for title, value in item.items():
+                if title == 'Tutorials' and isinstance(value, list):
+                    yield from value
+                elif isinstance(value, list):
+                    yield from tutorial_sections(value)
+
+    pages = [
+        next(iter(entry.values())) if isinstance(entry, dict) else entry
+        for entry in tutorial_sections(nav)
+    ]
+    tutorial = [
+        docs / page
+        for page in pages
+        if isinstance(page, str)
+        and Path(page).parent == Path('user/tutorials')
+        and Path(page).stem == example
+    ]
+    assert len(tutorial) == 1, 'The extended magnetic app example has one Tutorials page'
+    assert example in tutorial[0].read_text(), 'The tutorial walks through the registered example'
