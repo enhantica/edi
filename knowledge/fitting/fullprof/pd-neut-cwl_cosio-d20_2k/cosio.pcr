@@ -1,0 +1,149 @@
+COMM Co2SiO4 D20 2.344 K Pnma.1 mGM1+
+NPATT   1   1 <- Flags for patterns (1:refined, 0: excluded)
+W_PAT   1.000
+!Nph Dum Ias Nre Cry Opt Aut
+   1   0   0   0   0   0   0
+!Job Npr Nba Nex Nsc Nor Iwg Ilo Res Ste Uni Cor Anm Int
+   1   7  16   3   0   0   0   0   0   0   0   0   0   0  !-> Patt#: 1
+!
+!File names of data(patterns) files
+cosio.dat
+!
+!Mat Pcr NLI Rpa Sym Sho
+   0   2   0   0   0   0
+!Ipr Ppl Ioc Ls1 Ls2 Ls3 Prf Ins Hkl Fou Ana
+   2   0   1   0   4   0   3  10   0   0   1  !-> Patt#: 1
+!
+! Lambda1  Lambda2    Ratio    Bkpos    Wdt    Cthm     muR   AsyLim   Rpolarz  2nd-muR -> Patt# 1
+ 1.870000 1.870000  0.00000   79.000   8.000  0.0000  0.2300  180.00    0.0000  0.0000
+!
+!NCY  Eps  R_at  R_an  R_pr  R_gl
+ 150  0.05  0.30  0.30  0.30  0.30
+!     Thmin       Step       Thmax    PSD    Sent0  -> Patt#: 1
+      8.0953   0.100000   149.9953   0.000   0.000
+!
+!2Theta/TOF/E(Kev)   Background  for Pattern#  1
+       8.0000       524.5618   11.00
+       8.5000       535.2188   21.00
+       9.0000       579.2980   31.00
+       9.5000       698.6753   41.00
+      10.0000       751.8748   51.00
+      11.5000       451.5461   61.00
+      12.0000       427.2208   71.00
+      15.0000       415.9394   81.00
+      25.0000       394.9576   91.00
+      30.0000       372.0537   101.00
+      50.0000       405.9138   111.00
+      70.0000       407.2754   121.00
+      90.0000       396.6694   131.00
+     110.0000       346.7481   141.00
+     130.0000       279.0244   151.00
+     150.0000       232.3498   161.00
+!
+! Excluded regions (LowT  HighT) for Pattern#  1
+      0.0000     7.9960
+     64.7000    64.7200
+    150.0500   180.0000
+!
+!
+    44    !Number of refined parameters
+!
+!  Zero    Code    SyCos    Code   SySin    Code  Lambda     Code MORE ->Patt# 1
+  0.29478  171.00  0.00000    0.0  0.00000    0.0 0.000000    0.00   0
+!-------------------------------------------------------------------------------
+!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:     0
+!-------------------------------------------------------------------------------
+Co2SiO4 Pnma.1 magnetic modes           FIX xyz
+!
+COMMANDS
+reference_cell  10.300000   6.000000   4.800000  90.000000  90.000000  90.000000
+END COMMANDS
+!Nat Dis Ang Jbt Isy Str Furth        ATZ     Nvk More
+   6   0   0  -6   2   0  15        839.800   0   0
+!Contributions (0/1) of this phase to the  1 patterns
+ 1
+!Irf Npr Jtyp  Nsp_Ref Ph_Shift for Pattern#  1
+   0   7    1      0      0
+! Pr1    Pr2    Pr3   Brind.   Rmua   Rmub   Rmuc     for Pattern#  1
+  0.000  0.000  1.000  1.000  0.000  0.000  0.000
+!
+Pnma.1  number:  62.441   <--Magnetic Space Group Symbol (UNI symbol and BNS number)
+Transform to standard:  a,b,c;0,0,0  <--Basis transformation from alt setting to standard BNS
+Parent space group:  Pnma  IT_number:   62  <--Nonmagnetic Parent Group
+Transform from Parent:  a,b,c;0,0,0  <--Basis transformation from parent to current setting
+!
+! Atom Typ    Mag Vec     X        Y        Z       Biso     Occ  N_type  Spc/Fftype
+!       Rx       Ry       Rz       Ix       Iy       Iz     MagPh
+Co1_1  MCO2     1   0   0.00000  0.00000  0.00000  0.26900  0.50000    1   1
+                         0.00     0.00     0.00     0.00     0.00
+    0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000
+                         0.00     0.00     0.00     0.00     0.00     0.00     0.00
+Co2_1  MCO2     1   0   0.28198  0.25000  0.98177  0.26900  0.50000    1   1
+                         0.00     0.00     0.00     0.00     0.00
+    0.00000  0.00000  0.00000  0.00000  0.00000  0.00000  0.00000
+                         0.00     0.00     0.00     0.00     0.00     0.00     0.00
+Si_1   SI       0   0   0.09416  0.25000  0.42974  0.46600  0.50000    0   2
+                         0.00     0.00     0.00     0.00     0.00
+O1_1   O        0   0   0.09090  0.25000  0.76941  0.77800  0.50000    0   3
+                         0.00     0.00     0.00     0.00     0.00
+O2_1   O        0   0   0.44861  0.25000  0.21547  0.64200  0.50000    0   3
+                         0.00     0.00     0.00     0.00     0.00
+O3_1   O        0   0   0.16406  0.03236  0.28012  0.91700  1.00000    0   3
+                         0.00     0.00     0.00     0.00     0.00
+! Polarisation Vectors of Symmetry Modes for each atom
+V_MODES   11
+! Nm  Atm     Irrep               Vx        Vy        Vz         Coeff
+   1  Co2_1   GM1+             0.048544  0.000000  0.000000    1.000000
+   2  Co2_1   GM1+             0.000000  0.000000  0.104167    1.000000
+   3  Si_1    GM1+             0.048544  0.000000  0.000000    1.000000
+   4  Si_1    GM1+             0.000000  0.000000  0.104167    1.000000
+   5  O1_1    GM1+             0.048544  0.000000  0.000000    1.000000
+   6  O1_1    GM1+             0.000000  0.000000  0.104167    1.000000
+   7  O2_1    GM1+             0.048544  0.000000  0.000000    1.000000
+   8  O2_1    GM1+             0.000000  0.000000  0.104167    1.000000
+   9  O3_1    GM1+             0.034326  0.000000  0.000000    1.000000
+  10  O3_1    GM1+             0.000000  0.058926  0.000000    1.000000
+  11  O3_1    GM1+             0.000000  0.000000  0.073657    1.000000
+! Basis vectors of magnetic symmetry modes for each atom
+M_MODES   4
+! Nm Atom  Irrep     Mx      My      Mz      Coeff
+   1  Co1_1   mGM1+           0.048544  0.000000  0.000000    1.000000
+   2  Co1_1   mGM1+           0.000000  0.083333  0.000000    1.000000
+   3  Co1_1   mGM1+           0.000000  0.000000  0.104167    1.000000
+   4  Co2_1   mGM1+           0.000000  0.083333  0.000000    1.000000
+! Amplitudes of Symmetry Modes
+A_MODES   11     2
+Max_Amplitude    0.3000
+      A1_GM1+           -0.011637         181.00
+      A2_GM1+            0.010953         191.00
+      A3_GM1+           -0.019950         201.00
+      A4_GM1+           -0.024804         211.00
+      A5_GM1+           -0.026690         221.00
+      A6_GM1+            0.036279         231.00
+      A7_GM1+           -0.016033         241.00
+      A8_GM1+            0.023548         251.00
+      A9_GM1+           -0.001395         261.00
+      A10_GM1+           -0.004041         271.00
+      A11_GM1+            0.000515         281.00
+! Amplitudes of Magnetic Symmetry Modes
+MA_MODES    4
+    A1_mGM1+          0.70000  291.00
+    A2_mGM1+          2.59000  301.00
+    A3_mGM1+          0.20000  311.00
+    A4_mGM1+          2.93000  321.00
+!
+!-------> Profile Parameters for Pattern #   1  ----> Phase #   1
+!  Scale        Shape1      Bov      Str1      Str2      Str3   Strain-Model
+    1.241786  0.00000   0.00000   0.00000   0.00000   0.00000       0
+    331.00     0.000     0.000     0.000     0.000     0.000
+!       U         V          W           X          Y        GauSiz   LorSiz Size-Model
+   0.273527  -0.589718   0.413007   0.000000   0.017548 0.000000   0.000000    0
+     341.00      351.00      361.00      0.000      371.00      0.000      0.000
+!     a          b         c        alpha      beta       gamma      #Cell Info
+   10.308216    6.002241    4.787430  90.000000  90.000000  90.000000
+   381.00    391.00    401.00    0.00000    0.00000    0.00000
+!  Pref1    Pref2      Asy1     Asy2     Asy3     Asy4      S_L      D_L
+  0.00000  0.00000  -0.00155  0.03553  0.18880  0.01063  0.00000  0.00000
+     0.00     0.00     411.00     421.00     431.00     441.00     0.00     0.00
+!  2Th1/TOF1    2Th2/TOF2  Pattern to plot
+      8.095     149.995       1

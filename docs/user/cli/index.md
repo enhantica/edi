@@ -33,6 +33,7 @@ differently and why.
 | [Rietveld fit: La₀.₅Ba₀.₅CoO₃, HRPT](pd-neut-cwl_lbco-hrpt/index.md) | La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI | [pd-neut-cwl_lbco-hrpt](../tutorials/pd-neut-cwl_lbco-hrpt.ipynb) |
 | [Rietveld fit: herbertsmithite, HRPT](pd-neut-cwl_hs-hrpt/index.md) | ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI | [pd-neut-cwl_hs-hrpt](../tutorials/pd-neut-cwl_hs-hrpt.ipynb) |
 | [Rietveld fit: Co₂SiO₄, D20](pd-neut-cwl_cosio-d20/index.md) | Co₂SiO₄ [Pnma] · D20 @ ILL | [pd-neut-cwl_cosio-d20](../tutorials/pd-neut-cwl_cosio-d20.ipynb) |
+| [Magnetic structure: Co₂SiO₄, D20, 2.3 K](pd-neut-cwl_cosio-d20_2k/index.md) | Co₂SiO₄ [Pnma.1] · D20 @ ILL | [pd-neut-cwl_cosio-d20_2k](../tutorials/pd-neut-cwl_cosio-d20_2k.ipynb) |
 | [Rietveld fit: LiNiO₂, ECHIDNA](pd-neut-cwl_lmo-echidna/index.md) | LiNiO₂ [R-3m] · ECHIDNA @ ANSTO | [pd-neut-cwl_lmo-echidna](../tutorials/pd-neut-cwl_lmo-echidna.ipynb) |
 | [Rietveld fit: Y₂O₃, SPODI](pd-neut-cwl_y2o3-spodi/index.md) | Y₂O₃ [Ia-3] · SPODI @ FRM II | [pd-neut-cwl_y2o3-spodi](../tutorials/pd-neut-cwl_y2o3-spodi.ipynb) |
 | [Two-phase fit: YAlO₃ and Al₂O₃, SPODI](pd-neut-cwl_yalo3-al2o3-spodi/index.md) | YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II | [pd-neut-cwl_yalo3-al2o3-spodi](../tutorials/pd-neut-cwl_yalo3-al2o3-spodi.ipynb) |

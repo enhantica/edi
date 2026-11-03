@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T07:38:51Z
+# measured_utc = 2026-11-03T09:29:43Z
 #
 # Recorded from: focused magnetic Python replay and native scene/category replay; baseline rows retained
-# Collected tests: 210192; with a reported duration: 70519
+# Collected tests: 210243; with a reported duration: 70520
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210192
+# inventory_python = 210243
 # inventory_cpp = 398
-# inventory_measured = 166243
-# inventory_unmeasured = 44347
+# inventory_measured = 166244
+# inventory_unmeasured = 44397
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66790
+# inventory_pr_python = 66841
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -149250,6 +149250,57 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[chebyshev]
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[line-segment]
 0.000	tests/integration/py/test_loop_parameter_ids.py::test_positional_alias_with_constraint_is_refused_on_load[polynomial]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-centring-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-centring-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-operations-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[anti-translation-in-operations-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[grey-zero-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[grey-zero-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[half-order-displaced-sublattice-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[half-order-displaced-sublattice-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[rounded-third-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[rounded-third-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[sixteenth-decimal-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[sixteenth-decimal-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[sixteenth-exact-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[sixteenth-exact-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[strained-parent-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[strained-parent-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[tripled-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_commensurate_and_strained_models_are_admitted[tripled-project]
+0.010	tests/integration/py/test_magnetic_commensurate.py::test_dead_detector_cell_is_excluded_on_the_products_own_grid
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_grey_centred_structure_has_zero_moments_and_undoubled_nuclear_intensity
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_cell_edit_is_atomic_and_loading_rederives_moment_ties
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[decimal-before-fraction-duplicate-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[decimal-before-fraction-duplicate-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[fraction-before-decimal-duplicate-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[fraction-before-decimal-duplicate-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[grey-nonzero-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[grey-nonzero-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[invalid-theta-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[invalid-theta-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[missing-identity-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[missing-identity-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[missing-theta-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[missing-theta-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[negative-duplicate-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[negative-duplicate-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[not-closed-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[not-closed-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[primitive-third-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[primitive-third-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[reciprocal-duplicate-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[reciprocal-duplicate-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[rotating-centring-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[rotating-centring-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[wrong-anticharacter-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[wrong-anticharacter-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[wrong-child-metric-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[wrong-child-metric-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[wrong-positive-character-factory]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[wrong-positive-character-project]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_named_magnetic_cif_imports_preserve_moments_and_iso_loops[cosio1.mcif]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_named_magnetic_cif_imports_preserve_moments_and_iso_loops[isodistort.mcif]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[crysta]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_each_product_reads_the_other_products_saved_moments[edi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_pnma.py::test_every_expanded_moment_matches_the_published_axial_operations

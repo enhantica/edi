@@ -76,7 +76,14 @@ def generate() -> dict[str, object]:
             else '__not_applicable__'
             for item in described
         })
-        sources = [record, analysis, *experiments, *sorted((project / 'structures').glob('*.edi'))]
+        # Every example has a crystal structure; one whose structure carries moments is magnetic too.
+        structures = sorted((project / 'structures').glob('*.edi'))
+        magnetic = any(
+            re.search(r'^_atom_site_moment\.', p.read_text(encoding='utf-8'), re.MULTILINE)
+            for p in structures
+        )
+        values['structure'] = ['crystal', 'magnetic'] if magnetic else ['crystal']
+        sources = [record, analysis, *experiments, *structures]
         entries[example_id] = {
             'samples': sample.split(' / '),
             'origin': origin,

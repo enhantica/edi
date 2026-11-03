@@ -65,7 +65,7 @@ _atom_site_moment.crystalaxis_x
 _atom_site_moment.crystalaxis_y
 _atom_site_moment.crystalaxis_z
 _atom_site_moment.symmform
-Co1 0.701 2.595 0.19 Mx,My,Mz
-Co2 0 2.967 0 0,My,0
+Co1 0.701() 2.595() 0.19() Mx,My,Mz
+Co2 0 2.967() 0 0,My,0
 
 _structure_view.show_moments true

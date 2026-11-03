@@ -14,3 +14,7 @@
   Co₂SiO₄ in Pnma.1 (irrep mGM1+): its eight operators and the moments of that FullProf fit.
 - **Excluded:** 0–8° and 150–180°, and 64.65–64.74°, which holds only the dead D20 detector cell at 64.6953°.
 - **Reference:** A. Sazonov et al., *Magnetic behaviour of synthetic Co₂SiO₄*, Acta Cryst. B65 (2009) 664–675.
+- **Expected values:** `expected.json` holds FullProf's fit of the same pattern and model
+  (`knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/`): Rwp within 5 % of FullProf's 4.90 %, and the three
+  well-determined moment components within 0.15 μB of FullProf's, about four of its standard deviations. Co1's Mz is
+  not compared: powder data barely determine it.
