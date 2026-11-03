@@ -363,6 +363,37 @@ class Edit {
     static Edit adp_type(Structure& structure, AtomSite& site, std::string type) {
         return Edit([&structure, &site, type = std::move(type)] { change_adp_type(structure, site, type); });
     }
+    // Whether a site carries a magnetic moment (edi ADR-0068): marking it adds its moment row, all three
+    // components zero; unmarking removes the row.
+    static Edit moment_site(Structure& structure, const AtomSite& site, bool magnetic) {
+        return Edit([&structure, &site, magnetic] {
+            std::optional<std::size_t> found;
+            for (std::size_t row = 0; row < structure.atom_site_moment.size(); ++row) {
+                if (structure.atom_site_moment[row]->id.value() == site.id.value()) {
+                    found = row;
+                }
+            }
+            if (magnetic && !found) {
+                AtomSiteMoment moment;
+                moment.id = site.id.value();
+                structure.atom_site_moment.push_back(std::move(moment));
+            } else if (!magnetic && found) {
+                structure.atom_site_moment.erase_at(*found);
+            }
+        });
+    }
+    // The magnetic ion of an atom type, whose form factor its moments take; empty: the type's default ion.
+    static Edit magnetic_ion(Structure& structure, std::string type_symbol, std::string ion) {
+        return Edit([&structure, type_symbol = std::move(type_symbol), ion = std::move(ion)] {
+            structure.magnetic.modify([&](MagneticDescription& magnetic) {
+                if (ion.empty()) {
+                    magnetic.form_factors.erase(type_symbol);
+                } else {
+                    magnetic.form_factors[type_symbol].ion = ion;
+                }
+            });
+        });
+    }
     static Edit texture_axis_component(PrefOrient& row, detail::Written<int> PrefOrient::*component, int value) {
         return Edit([&row, component, value] { set_texture_axis_component(row, component, value); });
     }
@@ -478,9 +509,18 @@ class Edit {
                     tensor = row;
                 }
             }
+            std::optional<std::size_t> moment;
+            for (std::size_t row = 0; row < structure.atom_site_moment.size(); ++row) {
+                if (structure.atom_site_moment[row]->id.value() == id) {
+                    moment = row;
+                }
+            }
             structure.atom_sites.erase_at(index);
             if (tensor) {
                 structure.atom_site_aniso.erase_at(*tensor);
+            }
+            if (moment) {
+                structure.atom_site_moment.erase_at(*moment);
             }
         });
     }

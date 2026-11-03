@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <map>
 
+#include "crysta/magnetic.hpp"
 #include "edi/categories.hpp"
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
@@ -366,6 +367,72 @@ void AtomSiteAdpListModel::setType(int row, const QString& type) {
     editor_.apply(edi::Edit::adp_type(structure_, *site, type.toStdString()), true);
 }
 
+// ---- AtomSiteMomentListModel --------------------------------------------------------------------
+
+AtomSiteMomentListModel::AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor,
+                                                 ParameterRegistry& registry, QObject* parent)
+    : RowTableModel({"label", "ion", "mx", "my", "mz", "symmform"}, parent),
+      structure_(structure),
+      editor_(editor),
+      registry_(registry) {
+    sync();
+}
+
+void AtomSiteMomentListModel::sync() {
+    const edi::MagneticDescription& magnetic = structure_.magnetic;
+    QList<Row> rows;
+    for (const auto& site : structure_.atom_sites) {
+        const edi::AtomSiteMoment* moment = nullptr;
+        for (const auto& row : structure_.atom_site_moment) {
+            if (row->id.value() == site->id.value()) {
+                moment = row.get();
+            }
+        }
+        QString ion;
+        if (moment != nullptr) {
+            const auto declared = magnetic.form_factors.find(site->type_symbol.value());
+            ion = declared != magnetic.form_factors.end() && !declared->second.ion.empty()
+                      ? QString::fromStdString(declared->second.ion)
+                      : QString::fromStdString(crysta::magnetic_type_ion(site->type_symbol.value()));
+        }
+        QList<QVariant> values{QString::fromStdString(site->id), ion};
+        if (moment != nullptr) {
+            for (const edi::Parameter* component : const_cast<edi::AtomSiteMoment*>(moment)->parameters()) {
+                values.append(parameter_role(registry_, component));
+            }
+            values.append(QString::fromStdString(moment->symmform));
+        } else {
+            values << QVariant() << QVariant() << QVariant() << QString();
+        }
+        rows.append({site.get(), values});
+    }
+    setTableRows(rows);
+}
+
+QStringList AtomSiteMomentListModel::ions(int row) const {
+    const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
+    QStringList out{QString()};
+    if (site != nullptr) {
+        for (const std::string& ion : crysta::magnetic_ions_for_type(site->type_symbol.value())) {
+            out.append(QString::fromStdString(ion));
+        }
+    }
+    return out;
+}
+
+void AtomSiteMomentListModel::setIon(int row, const QString& ion) {
+    const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
+    if (site == nullptr) {
+        return;
+    }
+    edi::Structure& structure = structure_;
+    // The moment row comes or goes: the parameter set changes.
+    editor_.apply(edi::Edit::moment_site(structure, *site, !ion.isEmpty()), true);
+    if (!ion.isEmpty()) {
+        editor_.apply(edi::Edit::magnetic_ion(structure, site->type_symbol.value(), ion.toStdString()), false);
+    }
+}
+
 // ---- ScatteringLengthListModel ------------------------------------------------------------------
 
 ScatteringLengthListModel::ScatteringLengthListModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent)
@@ -428,6 +495,7 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
       cell_(new CellViewModel(structure, registry, this)),
       atom_sites_(new AtomSiteListModel(structure, editor, registry, this)),
       atom_site_adps_(new AtomSiteAdpListModel(structure, editor, registry, this)),
+      atom_site_moments_(new AtomSiteMomentListModel(structure, editor, registry, this)),
       scattering_lengths_(new ScatteringLengthListModel(structure, editor, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this,
@@ -455,6 +523,33 @@ void StructureViewModel::setName(const QString& name) {
     editor_.rename_structure(structure, name.toStdString());
 }
 
+QVariantMap StructureViewModel::magneticGroup() const {
+    const crysta::MagneticGroupName& group = structure_.magnetic->group;
+    return {{QStringLiteral("number_bns"), QString::fromStdString(group.number_bns)},
+            {QStringLiteral("name_bns"), QString::fromStdString(group.name_bns)},
+            {QStringLiteral("name_uni"), QString::fromStdString(group.name_uni)},
+            {QStringLiteral("number_og"), QString::fromStdString(group.number_og)},
+            {QStringLiteral("name_og"), QString::fromStdString(group.name_og)}};
+}
+
+QVariantMap StructureViewModel::parentGroup() const {
+    const crysta::ParentSpaceGroup& parent = structure_.magnetic->parent;
+    // The identity transform in either spelling a file uses.
+    const auto identity = [](std::string text) {
+        std::erase(text, ' ');
+        return text.empty() || text == "a,b,c;0,0,0" || text == "a,b,c";
+    };
+    std::string own = structure_.space_group.name_h_m.value();
+    std::string named = parent.name_h_m_alt;
+    std::erase(own, ' ');
+    std::erase(named, ' ');
+    const bool differs = !parent.empty() && (!identity(parent.transform_pp_abc) || (!named.empty() && named != own));
+    return {{QStringLiteral("name_h_m_alt"), QString::fromStdString(parent.name_h_m_alt)},
+            {QStringLiteral("it_number"), QString::fromStdString(parent.it_number)},
+            {QStringLiteral("transform_pp_abc"), QString::fromStdString(parent.transform_pp_abc)},
+            {QStringLiteral("differs"), differs}};
+}
+
 void StructureViewModel::sync() {
     const QString name = QString::fromStdString(structure_.name);
     if (name != name_) {
@@ -465,7 +560,9 @@ void StructureViewModel::sync() {
     cell_->sync();
     atom_sites_->sync();
     atom_site_adps_->sync();
+    atom_site_moments_->sync();
     scattering_lengths_->sync();
+    emit magneticChanged();
     categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
 }

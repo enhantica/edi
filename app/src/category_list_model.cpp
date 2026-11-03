@@ -65,9 +65,13 @@ CategoryPresentation category_presentation(const QString& id) {
 namespace {
 // The sidebar's order is the dictionary's order number, the files' order, so the app
 // keeps no order of its own; categories the dictionary does not order keep the core's order, last. A category
-// shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer.
+// shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer, and a
+// structure's saved view (`_structure_view`) in Extra's Appearance group.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
-    static const char* const kShownElsewhere[] = {"experiment_type"};
+    // The magnetic form factors are chosen per site in the Magnetic moments group, and the parent group shows in
+    // the Magnetic space group group when it differs from the space group (edi ADR-0068).
+    static const char* const kShownElsewhere[] = {"experiment_type", "structure_view", "magnetic_form_factor",
+                                                  "parent_space_group"};
     std::vector<const edi::Category*> ordered;
     for (const edi::Category& category : categories) {
         if (std::find(std::begin(kShownElsewhere), std::end(kShownElsewhere), category.id) == std::end(kShownElsewhere)) {
@@ -94,11 +98,19 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     categories_ = categories;
     text_ = text;
     calculated_ = calculated;
+    // The Atomic displacement and Magnetic moments groups list every atom site, so their headers count the sites.
+    int sites = 0;
+    for (const edi::Category& category : categories) {
+        if (category.id == "atom_site") {
+            sites = static_cast<int>(category.rows);
+        }
+    }
     std::vector<Row> target;
     for (const edi::Category* shown : presentation_order(categories)) {
         const edi::Category& category = *shown;
-        target.push_back({QString::fromStdString(category.id), static_cast<int>(category.rows), category.is_loop,
-                          category.admitted});
+        const bool per_site = category.id == "atom_site_aniso" || category.id == "atom_site_moment";
+        target.push_back({QString::fromStdString(category.id), per_site ? sites : static_cast<int>(category.rows),
+                          category.is_loop, category.admitted});
         // An experiment's background carries its estimate settings (`_background_estimate`), a category of its own
         // with its own group; the core lists them with the background.
         if (category.id == "background") {
@@ -110,9 +122,12 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     // transform, the calculator (there is one), the curves' presentation order, the block list or the correlations,
     // which the Correlations tab shows. The bond settings get a designed group of their own later, and the type is
     // shown elsewhere.
+    // Nor what another group shows: a structure's saved view (Appearance), its magnetic form factors (Magnetic
+    // moments) and its parent group (Magnetic space group, when it differs from the space group).
     static const char* const kNotGenerated[] = {"geom",     "experiment_type",           "edi",
                                                 "calculator", "atom_sites_cartn_transform", "pd_calc_overall",
-                                                "pd_block", "fit_parameter_correlation"};
+                                                "pd_block", "fit_parameter_correlation", "structure_view",
+                                                "magnetic_form_factor", "parent_space_group"};
     const auto generates = [](const std::string& id) {
         return std::find(std::begin(kNotGenerated), std::end(kNotGenerated), id) == std::end(kNotGenerated) &&
                !edi::category_label(id).empty();

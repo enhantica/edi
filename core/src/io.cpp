@@ -2648,6 +2648,15 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
             add(prefix + "adp_13", unique + "adp_13", &tensor.adp_13);
             add(prefix + "adp_23", unique + "adp_23", &tensor.adp_23);
         }
+        // The magnetic sites' moments, after every tensor (crysta's fit_state.hpp order; edi ADR-0068).
+        for (auto& moment_item : structure.atom_site_moment) {
+            auto& moment = *moment_item;
+            const std::string prefix = base + moment.id.value() + ".";
+            const std::string unique = block + ".atom_site_moment." + moment.id.value() + ".";
+            add(prefix + "crystalaxis_x", unique + "crystalaxis_x", &moment.crystalaxis_x);
+            add(prefix + "crystalaxis_y", unique + "crystalaxis_y", &moment.crystalaxis_y);
+            add(prefix + "crystalaxis_z", unique + "crystalaxis_z", &moment.crystalaxis_z);
+        }
     }
     for (auto& experiment_item : project.experiments) {
         auto& experiment = *experiment_item;
