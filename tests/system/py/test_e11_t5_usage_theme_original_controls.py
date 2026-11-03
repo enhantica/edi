@@ -47,9 +47,7 @@ def theme_actor(main_actor):
     state = {'installed': False}
     yield actor, state, phase
     # Separate pytest teardown preserves a prior body exception and restores actual theme.
-    assert actor.process.poll() is None and not getattr(
-        actor, '_stream_unusable', None
-    ), (
+    assert actor.process.poll() is None and not getattr(actor, '_stream_unusable', None), (
         'This boundary requires actor.process.poll() is None and (not getattr(actor, '
         "'_stream_unusable', None))"
     )
@@ -59,20 +57,17 @@ def theme_actor(main_actor):
             "This boundary requires value == {'found': 1, 'restored': True}"
         )
     else:
-        assert value['found'] in {0, 1}, (
-            "This boundary requires value['found'] in {0, 1}"
-        )
+        assert value['found'] in {0, 1}, "This boundary requires value['found'] in {0, 1}"
         if value['found'] == 1:
-            assert value['restored'], (
-                "This boundary requires value['restored']"
-            )
+            assert value['restored'], "This boundary requires value['restored']"
     actor.until(lambda _row: _command(actor, 'absent')['remaining'] == 0)
 
 
 def _snapshot(actor, action='snapshot'):
     value = _command(actor, action)
     assert isinstance(value['problem'], str) and not value['problem'], (
-        'Command results must contain an empty problem string', value,
+        'Command results must contain an empty problem string',
+        value,
     )
     assert all(
         value[key]
@@ -91,19 +86,12 @@ def _snapshot(actor, action='snapshot'):
         "'same_button', 'same_label', 'same_colors', 'actual_window', 'visible', "
         "'enabled')))"
     )
-    assert (
-        not value['hovered']
-        and not value['down']
-        and not value['visual_focus']
-    ), (
+    assert not value['hovered'] and not value['down'] and not value['visual_focus'], (
         "This boundary requires not value['hovered'] and (not value['down']) and (not "
         "value['visual_focus'])"
     )
     assert value['remaining'] == 63 and value['text'] == '37% used', (
-
-        "This boundary requires value['remaining'] == 63 and value['text'] == '37% "
-        "used'"
-
+        "This boundary requires value['remaining'] == 63 and value['text'] == '37% used'"
     )
     assert all(
         actor.last['ui'][key]
@@ -127,9 +115,7 @@ def _settled(actor, dark):
     actor.until(current)
     value = _snapshot(actor)
     assert value['dark'] is dark and value['matches_foreground'], (
-
         "This boundary requires value['dark'] is dark and value['matches_foreground']"
-
     )
     assert value['actual'] == value['expected'], (
         "This boundary requires value['actual'] == value['expected']"
@@ -166,40 +152,23 @@ def test_original_usage_same_label_observes_actual_light_dark_light_theme(theme_
     _snapshot(actor, 'dark')
     dark = _settled(actor, True)
     canonical._retain(actor, 'actual-theme-dark', dark)
-    assert (
-        dark['actual'] != light['actual']
-        and dark['changes'] > light['changes']
-    ), (
-        'Required: original usage same label observes actual light dark light '
-        'theme.'
+    assert dark['actual'] != light['actual'] and dark['changes'] > light['changes'], (
+        'Required: original usage same label observes actual light dark light theme.'
     )
     _snapshot(actor, 'light')
     again = _settled(actor, False)
     canonical._retain(actor, 'actual-theme-light-again', again)
-    assert (
-        again['actual'] == light['actual']
-        and again['changes'] > dark['changes']
-    ), (
-        'Required: original usage same label observes actual light dark light '
-        'theme.'
+    assert again['actual'] == light['actual'] and again['changes'] > dark['changes'], (
+        'Required: original usage same label observes actual light dark light theme.'
     )
     wire = base._session_wire(actor)
     canonical._retain(actor, 'actual-theme-wire', wire)
-    assert not any(
-        row.get('method') in {'turn/start', 'account/logout'}
-        for row in wire
-    ), (
-        'Required: original usage same label observes actual light dark light '
-        'theme.'
+    assert not any(row.get('method') in {'turn/start', 'account/logout'} for row in wire), (
+        'Required: original usage same label observes actual light dark light theme.'
     )
-    assert {
-        method: len(base._session_wire(actor, method))
-        for method in metadata_before
-    } == (metadata_before), (
-        'Required: original usage same label observes actual light dark light '
-        'theme.'
-    )
+    assert {method: len(base._session_wire(actor, method)) for method in metadata_before} == (
+        metadata_before
+    ), 'Required: original usage same label observes actual light dark light theme.'
     assert canonical._phase() == phase, (
-        'Required: original usage same label observes actual light dark light '
-        'theme.'
+        'Required: original usage same label observes actual light dark light theme.'
     )

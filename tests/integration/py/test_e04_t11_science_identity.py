@@ -68,10 +68,7 @@ def capture(case):
     fixture = json.loads(original[native_path])
     conditioning = json.loads(original[conditioning_path])
     raw = json.loads(original[raw_path])
-    assert (
-        hashlib.sha256(original[raw_path]).hexdigest()
-        == conditioning['raw_capture_sha256']
-    ), (
+    assert hashlib.sha256(original[raw_path]).hexdigest() == conditioning['raw_capture_sha256'], (
         'This boundary requires hashlib.sha256(original[raw_path]).hexdigest() == '
         "conditioning['raw_capture_sha256']"
     )
@@ -80,25 +77,19 @@ def capture(case):
 
 def assert_domains(fixture, conditioning, blocks):
     mapping = bridge.conditioning_semantics(fixture['scientific'], conditioning, blocks)
-    assert set(mapping) == {
-        tuple(binding[:3]) for binding in conditioning['bindings']
-    }, (
+    assert set(mapping) == {tuple(binding[:3]) for binding in conditioning['bindings']}, (
         'This boundary requires set(mapping) == {tuple(binding[:3]) for binding in '
         "conditioning['bindings']}"
     )
     domains = bridge.frozen_domains(fixture, blocks)
     raw_coordinates = {tuple(binding[:3]) for binding in fixture['native_precision_bindings']}
     assert {
-        key
-        for key, domain in domains.items()
-        if domain == 'native-raw-parameter'
+        key for key, domain in domains.items() if domain == 'native-raw-parameter'
     } == raw_coordinates, (
         'This boundary requires {key for key, domain in domains.items() if domain == '
         "'native-raw-parameter'} == raw_coordinates"
     )
-    assert any(
-        domain == 'historical-written' for domain in domains.values()
-    ), (
+    assert any(domain == 'historical-written' for domain in domains.values()), (
         "This boundary requires any((domain == 'historical-written' for domain in "
         'domains.values()))'
     )
@@ -114,27 +105,19 @@ def assert_omitted(raw, banks, index):
     assert anchors.keys() == expected_labels, (
         'This boundary requires anchors.keys() == expected_labels'
     )
-    assert anchors, (
-        'This boundary requires anchors'
-    )
+    assert anchors, 'This boundary requires anchors'
     assert all(anchor.key not in index.cells for anchor in anchors.values()), (
         'Old scientific whitelist omitted these raw-anchored roles; do not pretend it covered them'
     )
     for label, anchor in anchors.items():
         assert raw['labels'][anchor.column] == label, (
-
             "This boundary requires raw['labels'][anchor.column] == label"
-
         )
         assert anchor.value == raw['values'][anchor.column], (
-
             "This boundary requires anchor.value == raw['values'][anchor.column]"
-
         )
         assert anchor.uncertainty == math.sqrt(
-            raw['covariance'][
-                anchor.column * len(raw['labels']) + anchor.column
-            ]
+            raw['covariance'][anchor.column * len(raw['labels']) + anchor.column]
         ), (
             'This boundary requires anchor.uncertainty == '
             "math.sqrt(raw['covariance'][anchor.column * len(raw['labels']) + "
@@ -157,18 +140,14 @@ def test_frozen_catalogue_coordinates_domains_and_omitted_raw_storage(case):
         'Required: frozen catalogue coordinates domains and omitted raw storage.'
     )
     # Existing bounds and OLD-coordinate conditioning authentication, unchanged.
-    assert compare_scientific(
-        aligned, scientific, conditioning=conditioning
-    ), (
+    assert compare_scientific(aligned, scientific, conditioning=conditioning), (
         'Required: frozen catalogue coordinates domains and omitted raw storage.'
     )
     assert_omitted(raw, banks, bridge.semantic_index(scientific, blocks))
     assert [fixture, conditioning, raw] == frozen_before, (
         'Required: frozen catalogue coordinates domains and omitted raw storage.'
     )
-    assert all(
-        path.read_bytes() == data for path, data in original.items()
-    ), (
+    assert all(path.read_bytes() == data for path, data in original.items()), (
         'Required: frozen catalogue coordinates domains and omitted raw storage.'
     )
 

@@ -260,14 +260,12 @@ def test_catalogue_description_pairs_preserve_whole_newer_source(
         assert metadata_bytes.records(retained, {'_peak.type'}) == metadata_bytes.records(
             raw, {'_peak.type'}
         ), 'Catalogue creation already owned its actual CWL/TOF profile spelling'
-    assert metadata_bytes.remainder(
-        raw, fields
-    ) == metadata_bytes.remainder(retained, fields), (
+    assert metadata_bytes.remainder(raw, fields) == metadata_bytes.remainder(retained, fields), (
         'Required: catalogue description pairs preserve whole newer source.'
     )
-    assert metadata_bytes.records(raw, {'_edi.schema_version'}) == {
-        '_edi.schema_version': '3'
-    }, 'Required: catalogue description pairs preserve whole newer source.'
+    assert metadata_bytes.records(raw, {'_edi.schema_version'}) == {'_edi.schema_version': '3'}, (
+        'Required: catalogue description pairs preserve whole newer source.'
+    )
 
 
 @pytest.mark.parametrize('pair', CATALOGUE_INPUTS)
@@ -284,10 +282,7 @@ def test_catalogue_whole_pair_refuses_unowned_or_malformed_changes(
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
     monkeypatch.setattr(metadata_bytes, 'ROOT', tmp_path)
-    assert (
-        hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest()
-        == prior
-    ), (
+    assert hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest() == prior, (
         'Required: catalogue whole pair refuses unowned or malformed changes.'
     )
     project = name.endswith('/project.edi')
@@ -306,9 +301,7 @@ def test_catalogue_whole_pair_refuses_unowned_or_malformed_changes(
         )
     else:
         changed = raw + b'_unowned.scientific_parameter 1.25\n'
-    assert changed != raw, (
-        'Required: catalogue whole pair refuses unowned or malformed changes.'
-    )
+    assert changed != raw, 'Required: catalogue whole pair refuses unowned or malformed changes.'
     path.write_bytes(changed)
     with pytest.raises(
         AssertionError,
@@ -332,11 +325,8 @@ def test_catalogue_reversal_refuses_cross_source_pair_and_leaves_unlisted_paths_
         ),
     ):
         metadata_bytes.pre_description_bytes(other, raw)
-    assert (
-        metadata_bytes.pre_description_bytes('unlisted/' + name, raw) == raw
-    ), (
-        'Required: catalogue reversal refuses cross source pair and leaves '
-        'unlisted paths raw.'
+    assert metadata_bytes.pre_description_bytes('unlisted/' + name, raw) == raw, (
+        'Required: catalogue reversal refuses cross source pair and leaves unlisted paths raw.'
     )
 
 
@@ -382,10 +372,7 @@ def test_catalogue_reversal_refuses_real_scientific_and_data_edits(
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
     monkeypatch.setattr(metadata_bytes, 'ROOT', tmp_path)
-    assert (
-        hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest()
-        == prior
-    ), (
+    assert hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest() == prior, (
         'Required: catalogue reversal refuses real scientific and data edits.'
     )
     lines = raw.splitlines(keepends=True)
@@ -400,9 +387,7 @@ def test_catalogue_reversal_refuses_real_scientific_and_data_edits(
         else:
             lines[first], lines[first + 1] = lines[first + 1], lines[first]
             changed = b''.join(lines)
-    assert changed != raw, (
-        'Required: catalogue reversal refuses real scientific and data edits.'
-    )
+    assert changed != raw, 'Required: catalogue reversal refuses real scientific and data edits.'
     path.write_bytes(changed)
     with pytest.raises(
         AssertionError,

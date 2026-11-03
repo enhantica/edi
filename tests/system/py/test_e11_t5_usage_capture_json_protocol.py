@@ -28,19 +28,14 @@ import test_e11_t5_usage_account_original_controls as recorder
 def test_capture_preserves_parsed_json_value_and_strict_utf8_bytes(tmp_path, wire):
     value = json.loads(wire)
     saved = copy.deepcopy(value)
-    assert (
-        recorder._retain(SimpleNamespace(folder=tmp_path), 'sample', value)
-        is value
-    ), (
+    assert recorder._retain(SimpleNamespace(folder=tmp_path), 'sample', value) is value, (
         'Required: capture preserves parsed json value and strict utf8 bytes.'
     )
     text = (tmp_path / 'sample.json').read_bytes().decode('utf-8', errors='strict')
     assert json.loads(text) == saved, (
         'Required: capture preserves parsed json value and strict utf8 bytes.'
     )
-    assert value == saved, (
-        'Required: capture preserves parsed json value and strict utf8 bytes.'
-    )
+    assert value == saved, 'Required: capture preserves parsed json value and strict utf8 bytes.'
 
 
 def test_capture_does_not_truncate_prior_receipt_when_serialization_refuses(tmp_path):
@@ -50,8 +45,7 @@ def test_capture_does_not_truncate_prior_receipt_when_serialization_refuses(tmp_
     with pytest.raises(TypeError):
         recorder._retain(SimpleNamespace(folder=tmp_path), 'sample', {'unserializable': object()})
     assert path.read_bytes() == previous, (
-        'Required: capture does not truncate prior receipt when serialization '
-        'refuses.'
+        'Required: capture does not truncate prior receipt when serialization refuses.'
     )
 
 
@@ -61,8 +55,7 @@ def test_capture_propagates_actual_io_failure_without_synthetic_receipt(tmp_path
     with pytest.raises(OSError, match=r'sample\.json'):
         recorder._retain(SimpleNamespace(folder=tmp_path), 'sample', {'valid': 'value'})
     assert path.is_dir() and list(path.iterdir()) == [], (
-        'Required: capture propagates actual io failure without synthetic '
-        'receipt.'
+        'Required: capture propagates actual io failure without synthetic receipt.'
     )
 
 
@@ -79,17 +72,12 @@ def test_capture_refuses_actual_short_write_and_preserves_partial_evidence(tmp_p
     monkeypatch.setattr(Path, 'write_bytes', short_write)
     with pytest.raises(OSError, match='not fully written'):
         recorder._retain(SimpleNamespace(folder=tmp_path), 'sample', {'valid': 'value'})
-    assert (
-        len(writes) == 1 and writes[0]['requested'] > writes[0]['written']
-    ), (
-        'Required: capture refuses actual short write and preserves partial '
-        'evidence.'
+    assert len(writes) == 1 and writes[0]['requested'] > writes[0]['written'], (
+        'Required: capture refuses actual short write and preserves partial evidence.'
     )
     assert writes[0]['written'] == 5, (
-        'Required: capture refuses actual short write and preserves partial '
-        'evidence.'
+        'Required: capture refuses actual short write and preserves partial evidence.'
     )
     assert (tmp_path / 'sample.json').read_bytes() == writes[0]['prefix'], (
-        'Required: capture refuses actual short write and preserves partial '
-        'evidence.'
+        'Required: capture refuses actual short write and preserves partial evidence.'
     )

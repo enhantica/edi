@@ -54,51 +54,38 @@ def clock_actor(main_actor):
     state = {'installed': False}
     yield actor, started_ms, state, phase
     # Pytest teardown is separate: it cannot replace a semantic body failure.
-    assert actor.process.poll() is None and not getattr(
-        actor, '_stream_unusable', None
-    ), (
+    assert actor.process.poll() is None and not getattr(actor, '_stream_unusable', None), (
         'This boundary requires actor.process.poll() is None and (not getattr(actor, '
         "'_stream_unusable', None))"
     )
     cleanup = _command(actor, 'cleanup')
     if state['installed']:
         assert cleanup == {'found': 1, 'destroyed': True}, (
-
             "This boundary requires cleanup == {'found': 1, 'destroyed': True}"
-
         )
     else:
-        assert cleanup['found'] in {0, 1}, (
-            'Clock cleanup finds at most its one owned capture'
-        )
+        assert cleanup['found'] in {0, 1}, 'Clock cleanup finds at most its one owned capture'
     actor.until(lambda _row: _command(actor, 'absent')['remaining'] == 0)
 
 
 def _snapshot(actor, action='snapshot'):
     value = _command(actor, action)
     assert isinstance(value['problem'], str) and not value['problem'], (
-        'Command results must contain an empty problem string', value,
+        'Command results must contain an empty problem string',
+        value,
     )
-    assert (
-        value['owner'] and value['same_original'] and value['imported_info']
-    ), (
+    assert value['owner'] and value['same_original'] and value['imported_info'], (
         "This boundary requires value['owner'] and value['same_original'] and "
         "value['imported_info']"
     )
     assert value['interval'] == INTERVAL_MS and value['repeat'] is True, (
-
-        "This boundary requires value['interval'] == INTERVAL_MS and value['repeat'] "
-        'is True'
-
+        "This boundary requires value['interval'] == INTERVAL_MS and value['repeat'] is True"
     )
     assert value['triggered_on_start'] is False, (
         "This boundary requires value['triggered_on_start'] is False"
     )
     assert value['running'] == (value['visible'] and value['connected']), (
-
-        "This boundary requires value['running'] == (value['visible'] and "
-        "value['connected'])"
-
+        "This boundary requires value['running'] == (value['visible'] and value['connected'])"
     )
     assert value['count'] == len(value['events']), (
         "This boundary requires value['count'] == len(value['events'])"
@@ -122,11 +109,7 @@ def _begin(clock_actor):
     value = _snapshot(actor, 'install')
     state['installed'] = True
     canonical._retain(actor, 'clock-created-original', value)
-    assert (
-        not value['visible']
-        and not value['opened']
-        and not value['connected']
-    ), (
+    assert not value['visible'] and not value['opened'] and not value['connected'], (
         "This boundary requires not value['visible'] and (not value['opened']) and "
         "(not value['connected'])"
     )
@@ -134,9 +117,7 @@ def _begin(clock_actor):
         "This boundary requires value['count'] == 0 and (not value['running'])"
     )
     assert started_ms <= value['clock'] <= value['wall_after'], (
-
         "This boundary requires started_ms <= value['clock'] <= value['wall_after']"
-
     )
     base._session_configure(
         actor,
@@ -149,19 +130,12 @@ def _begin(clock_actor):
     canonical._usage_ready(actor)
     connected = _snapshot(actor)
     canonical._retain(actor, 'clock-connected-closed', connected)
-    assert (
-        connected['connected']
-        and not connected['visible']
-        and not connected['running']
-    ), (
+    assert connected['connected'] and not connected['visible'] and not connected['running'], (
         "This boundary requires connected['connected'] and (not connected['visible']) "
         "and (not connected['running'])"
     )
-    assert (
-        connected['clock'] == value['clock'] and connected['count'] == 0
-    ), (
-        "This boundary requires connected['clock'] == value['clock'] and "
-        "connected['count'] == 0"
+    assert connected['clock'] == value['clock'] and connected['count'] == 0, (
+        "This boundary requires connected['clock'] == value['clock'] and connected['count'] == 0"
     )
     return actor, phase, connected
 
@@ -169,14 +143,12 @@ def _begin(clock_actor):
 def _no_model_work(actor, usage_requests):
     wire = base._session_wire(actor)
     canonical._retain(actor, 'clock-final-wire', wire)
-    assert (
-        len(base._session_wire(actor, 'account/rateLimits/read'))
-        == usage_requests
-    ), 'Required:  no model work.'
-    assert not any(
-        row.get('method') in {'turn/start', 'account/logout'}
-        for row in wire
-    ), 'Required:  no model work.'
+    assert len(base._session_wire(actor, 'account/rateLimits/read')) == usage_requests, (
+        'Required:  no model work.'
+    )
+    assert not any(row.get('method') in {'turn/start', 'account/logout'} for row in wire), (
+        'Required:  no model work.'
+    )
 
 
 def test_original_usage_clock_open_and_actual_sixty_second_trigger(clock_actor):
@@ -190,9 +162,7 @@ def test_original_usage_clock_open_and_actual_sixty_second_trigger(clock_actor):
     assert opened['count'] == 0, (
         'Required: original usage clock open and actual sixty second trigger.'
     )
-    assert (
-        before['wall_before'] <= opened['clock'] <= opened['wall_after']
-    ), (
+    assert before['wall_before'] <= opened['clock'] <= opened['wall_after'], (
         'Required: original usage clock open and actual sixty second trigger.'
     )
     usage_requests = len(base._session_wire(actor, 'account/rateLimits/read'))
@@ -218,11 +188,8 @@ def test_original_usage_clock_open_and_actual_sixty_second_trigger(clock_actor):
         'Required: original usage clock open and actual sixty second trigger.'
     )
     assert all(
-        event['owner'] and event['visible'] and event['connected']
-        for event in after['events']
-    ), (
-        'Required: original usage clock open and actual sixty second trigger.'
-    )
+        event['owner'] and event['visible'] and event['connected'] for event in after['events']
+    ), 'Required: original usage clock open and actual sixty second trigger.'
     assert opened['clock'] < after['clock'] <= after['wall_after'], (
         'Required: original usage clock open and actual sixty second trigger.'
     )
@@ -239,19 +206,14 @@ def test_original_usage_clock_closed_connected_is_cold_for_full_interval(clock_a
 
     def complete_cold_interval(_row):
         value = _snapshot(actor)
-        assert (
-            value['connected'] and not value['visible'] and not value['running']
-        ), (
-            'Required: original usage clock closed connected is cold for full '
-            'interval.'
+        assert value['connected'] and not value['visible'] and not value['running'], (
+            'Required: original usage clock closed connected is cold for full interval.'
         )
         assert value['count'] == 0 and value['events'] == [], (
-            'Required: original usage clock closed connected is cold for full '
-            'interval.'
+            'Required: original usage clock closed connected is cold for full interval.'
         )
         assert value['clock'] == before['clock'], (
-            'Required: original usage clock closed connected is cold for full '
-            'interval.'
+            'Required: original usage clock closed connected is cold for full interval.'
         )
         return time.monotonic() - started >= INTERVAL_MS / 1000
 
@@ -266,6 +228,5 @@ def test_original_usage_clock_closed_connected_is_cold_for_full_interval(clock_a
     )
     _no_model_work(actor, usage_requests)
     assert canonical._phase() == phase, (
-        'Required: original usage clock closed connected is cold for full '
-        'interval.'
+        'Required: original usage clock closed connected is cold for full interval.'
     )

@@ -821,8 +821,7 @@ def test_original_direct_sidecar_io_refuses_unsafe_kind_before_touching_target(
     published = _inventory(publication)
     checkers = list(fixture.build.glob('verify_assistant_runtime_*.cmake'))
     assert len(checkers) == 1, (
-        'Required: original direct sidecar io refuses unsafe kind before touching '
-        'target.'
+        'Required: original direct sidecar io refuses unsafe kind before touching target.'
     )
     checker = checkers[0]
     if role == 'lock':
@@ -933,8 +932,7 @@ def test_original_owned_regular_verifier_temporary_still_publishes_exact_checker
     original = _inventory(publication)
     checkers = list(fixture.build.glob('verify_assistant_runtime_*.cmake'))
     assert len(checkers) == 1, (
-        'Required: original owned regular verifier temporary still publishes '
-        'exact checker.'
+        'Required: original owned regular verifier temporary still publishes exact checker.'
     )
     checker = checkers[0]
     original_checker = checker.read_bytes()  # Original actual constructor regression pin.

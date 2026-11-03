@@ -119,9 +119,7 @@ def test_saved_archive_flat_and_nested_owners_retain_every_file_byte(tmp_path, p
     assert archive_files(archive) == {
         **files,
         'extra.bin': b'An extra file must not be silently ignored.',
-    }, (
-        'Required: saved archive flat and nested owners retain every file byte.'
-    )
+    }, 'Required: saved archive flat and nested owners retain every file byte.'
 
 
 @pytest.mark.parametrize(

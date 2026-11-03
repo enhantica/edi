@@ -136,8 +136,7 @@ def test_receipt_completeness_and_unrelated_failure_escapes_refuse(escape):
 def test_unreviewed_or_coding_error_prefix_cannot_consume_expected_warning(prefix):
     events, scopes, contract, stderr = _sample()
     assert assess_qml_contract(events, scopes, contract, prefix + stderr), (
-        'Required: unreviewed or coding error prefix cannot consume expected '
-        'warning.'
+        'Required: unreviewed or coding error prefix cannot consume expected warning.'
     )
 
 
@@ -153,8 +152,7 @@ def test_multiple_errors_on_one_line_never_count_as_one_expected_counterpart(lin
     events, scopes, contract, stderr = _sample()
     actual = line.format(expected=stderr.rstrip('\n')) + '\n'
     assert assess_qml_contract(events, scopes, contract, actual), (
-        'Required: multiple errors on one line never count as one expected '
-        'counterpart.'
+        'Required: multiple errors on one line never count as one expected counterpart.'
     )
 
 
@@ -178,21 +176,13 @@ def _suffix_pair():
 def test_suffix_overlap_requires_two_separate_exact_stderr_counterparts():
     events, scopes, contract, long_line, short_line = _suffix_pair()
     assert assess_qml_contract(events, scopes, contract, long_line), (
-        'Required: suffix overlap requires two separate exact stderr '
-        'counterparts.'
+        'Required: suffix overlap requires two separate exact stderr counterparts.'
     )
     assert assess_qml_contract(events, scopes, contract, short_line), (
-        'Required: suffix overlap requires two separate exact stderr '
-        'counterparts.'
+        'Required: suffix overlap requires two separate exact stderr counterparts.'
     )
-    assert (
-        assess_qml_contract(
-            events, scopes, contract, long_line + short_line
-        )
-        == []
-    ), (
-        'Required: suffix overlap requires two separate exact stderr '
-        'counterparts.'
+    assert assess_qml_contract(events, scopes, contract, long_line + short_line) == [], (
+        'Required: suffix overlap requires two separate exact stderr counterparts.'
     )
 
 
@@ -290,31 +280,23 @@ def _assert_exception_identity(caught, primary, body_failed):
     if body_failed:
         assert caught.value is primary, 'A finalizer failure cannot replace the semantic exception'
     else:
-        assert caught.value is not primary, (
-            'Required:  assert exception identity.'
-        )
+        assert caught.value is not primary, 'Required:  assert exception identity.'
         assert 'Intentional QML contract failed' in str(caught.value), (
             'Required:  assert exception identity.'
         )
 
 
 def _assert_assessment_identity(actor, facts, body_failed, primary):
-    assert facts['body_failed'] is body_failed, (
-        'Required:  assert assessment identity.'
-    )
+    assert facts['body_failed'] is body_failed, 'Required:  assert assessment identity.'
     assert facts['problems'], 'Evidence loss never becomes an empty successful warning list'
-    assert facts['secondary_errors'], (
-        'Required:  assert assessment identity.'
-    )
+    assert facts['secondary_errors'], 'Required:  assert assessment identity.'
     assert actor.close_calls == 1, 'Required:  assert assessment identity.'
     if body_failed:
         assert facts['primary_error']['representation'] == repr(primary), (
             'Required:  assert assessment identity.'
         )
     else:
-        assert facts['primary_error'] is None, (
-            'Required:  assert assessment identity.'
-        )
+        assert facts['primary_error'] is None, 'Required:  assert assessment identity.'
 
 
 def _assert_capture_facts(actor, facts, defect):
@@ -327,18 +309,13 @@ def _assert_capture_facts(actor, facts, defect):
             == (actor.folder / 'qml-warning-events.jsonl').read_bytes()
         ), 'Required:  assert capture facts.'
     else:
-        assert facts['raw_warning_log'] is None, (
-            'Required:  assert capture facts.'
-        )
-        assert facts['raw_warning_log_hex'] is None, (
-            'Required:  assert capture facts.'
-        )
+        assert facts['raw_warning_log'] is None, 'Required:  assert capture facts.'
+        assert facts['raw_warning_log_hex'] is None, 'Required:  assert capture facts.'
     if defect != 'missing_stderr':
         assert facts['stderr'], 'Other collection failures cannot prevent obtaining stderr'
-        assert (
-            bytes.fromhex(facts['stderr_hex'])
-            == (actor.folder / 'host.stderr').read_bytes()
-        ), 'Required:  assert capture facts.'
+        assert bytes.fromhex(facts['stderr_hex']) == (actor.folder / 'host.stderr').read_bytes(), (
+            'Required:  assert capture facts.'
+        )
     else:
         assert facts['stderr'] is None, 'Required:  assert capture facts.'
 
@@ -349,31 +326,22 @@ def _assert_persistence(facts, body_failed, defect, caught, capsys, primary):
             "This boundary requires facts['receipt_path'] is None"
         )
         if defect == 'all_evidence_sinks_error':
-            assert any(
-                row['stage'] == 'secondary_stderr'
-                for row in facts['secondary_errors']
-            ), (
+            assert any(row['stage'] == 'secondary_stderr' for row in facts['secondary_errors']), (
                 "This boundary requires any((row['stage'] == 'secondary_stderr' for "
                 "row in facts['secondary_errors']))"
             )
             notes = caught.value.__notes__
             assert any('raw_warning_log' in note for note in notes), (
-
-                "This boundary requires any(('raw_warning_log' in note for note in "
-                'notes))'
-
+                "This boundary requires any(('raw_warning_log' in note for note in notes))"
             )
         else:
-            assert (
-                'No file receipt could be persisted' in capsys.readouterr().err
-            ), (
+            assert 'No file receipt could be persisted' in capsys.readouterr().err, (
                 "This boundary requires 'No file receipt could be persisted' in "
                 'capsys.readouterr().err'
             )
         if body_failed:
             assert any(
-                'No file receipt could be persisted' in note
-                for note in primary.__notes__
+                'No file receipt could be persisted' in note for note in primary.__notes__
             ), (
                 "This boundary requires any(('No file receipt could be persisted' in "
                 'note for note in primary.__notes__))'
@@ -381,32 +349,19 @@ def _assert_persistence(facts, body_failed, defect, caught, capsys, primary):
     else:
         saved = json.loads(Path(facts['receipt_path']).read_text(encoding='utf-8'))
         assert saved['secondary_errors'] == facts['secondary_errors'], (
-
-            "This boundary requires saved['secondary_errors'] == "
-            "facts['secondary_errors']"
-
+            "This boundary requires saved['secondary_errors'] == facts['secondary_errors']"
         )
         assert saved['raw_warning_log'] == facts['raw_warning_log'], (
-
-            "This boundary requires saved['raw_warning_log'] == "
-            "facts['raw_warning_log']"
-
+            "This boundary requires saved['raw_warning_log'] == facts['raw_warning_log']"
         )
         assert saved['raw_warning_log_hex'] == facts['raw_warning_log_hex'], (
-
-            "This boundary requires saved['raw_warning_log_hex'] == "
-            "facts['raw_warning_log_hex']"
-
+            "This boundary requires saved['raw_warning_log_hex'] == facts['raw_warning_log_hex']"
         )
         assert saved['stderr_hex'] == facts['stderr_hex'], (
-
             "This boundary requires saved['stderr_hex'] == facts['stderr_hex']"
-
         )
         assert saved['stderr'] == facts['stderr'], (
-
             "This boundary requires saved['stderr'] == facts['stderr']"
-
         )
 
 
@@ -456,9 +411,7 @@ def test_clean_receipt_control_really_finalizes_and_persists(tmp_path):
     actor, host = _owned_sample(tmp_path)
     with host:
         pass
-    assert actor.close_calls == 1, (
-        'Required: clean receipt control really finalizes and persists.'
-    )
+    assert actor.close_calls == 1, 'Required: clean receipt control really finalizes and persists.'
     assert host._last_facts['problems'] == [], (
         'Required: clean receipt control really finalizes and persists.'
     )
@@ -466,11 +419,9 @@ def test_clean_receipt_control_really_finalizes_and_persists(tmp_path):
         'Required: clean receipt control really finalizes and persists.'
     )
     assert (
-        json.loads(
-            Path(host._last_facts['receipt_path']).read_text(
-                encoding='utf-8'
-            )
-        )['body_failed']
+        json.loads(Path(host._last_facts['receipt_path']).read_text(encoding='utf-8'))[
+            'body_failed'
+        ]
         is False
     ), 'Required: clean receipt control really finalizes and persists.'
 
@@ -481,25 +432,20 @@ def test_semantic_body_failure_remains_primary_even_when_receipt_is_clean(tmp_pa
     with pytest.raises(AssertionError) as caught, host:
         raise primary
     assert caught.value is primary, (
-        'Required: semantic body failure remains primary even when receipt is '
-        'clean.'
+        'Required: semantic body failure remains primary even when receipt is clean.'
     )
     assert actor.close_calls == 1, (
-        'Required: semantic body failure remains primary even when receipt is '
-        'clean.'
+        'Required: semantic body failure remains primary even when receipt is clean.'
     )
     assert host._last_facts['problems'] == [], (
-        'Required: semantic body failure remains primary even when receipt is '
-        'clean.'
+        'Required: semantic body failure remains primary even when receipt is clean.'
     )
     assert host._last_facts['body_failed'] is True, (
-        'Required: semantic body failure remains primary even when receipt is '
-        'clean.'
+        'Required: semantic body failure remains primary even when receipt is clean.'
     )
     saved = json.loads(Path(host._last_facts['receipt_path']).read_text(encoding='utf-8'))
     assert saved['primary_error']['representation'] == repr(primary), (
-        'Required: semantic body failure remains primary even when receipt is '
-        'clean.'
+        'Required: semantic body failure remains primary even when receipt is clean.'
     )
 
 
@@ -513,13 +459,9 @@ def test_recording_and_missing_contract_still_fail_with_complete_synthetic_captu
     with pytest.raises(AssertionError), host:
         pass
     assert actor.close_calls == 1, (
-        'Required: recording and missing contract still fail with complete '
-        'synthetic capture.'
+        'Required: recording and missing contract still fail with complete synthetic capture.'
     )
     expected = 'unqualified' if mode == 'missing-contract' else 'recording'
-    assert any(
-        expected in problem for problem in host._last_facts['problems']
-    ), (
-        'Required: recording and missing contract still fail with complete '
-        'synthetic capture.'
+    assert any(expected in problem for problem in host._last_facts['problems']), (
+        'Required: recording and missing contract still fail with complete synthetic capture.'
     )

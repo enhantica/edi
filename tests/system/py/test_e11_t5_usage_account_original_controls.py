@@ -60,33 +60,24 @@ def _usage_header_input(bond, usage_phase):
     source, graph = _absolute(bond['root']), _absolute(bond['real_build_root'])
     selected = bond['selected_header']
     expected = USAGE_HEADER_HASHES[usage_phase]
-    assert _absolute(selected['path']) == source / USAGE_HEADER, (
+    assert _absolute(selected['path']) == source / USAGE_HEADER, 'Required:  usage header input.'
+    assert selected['sha256'] == bond['selected_header_sha256'] == expected, (
         'Required:  usage header input.'
     )
-    assert (
-        selected['sha256'] == bond['selected_header_sha256'] == expected
-    ), 'Required:  usage header input.'
-    assert _sha(_absolute(selected['path'])) == expected, (
-        'Required:  usage header input.'
-    )
+    assert _sha(_absolute(selected['path'])) == expected, 'Required:  usage header input.'
     usage_object = (
         'app/CMakeFiles/edi_app_tests.dir/__/tests/unit/app/test_e11_t5_usage_account.cpp.o'
     )
     assert selected['object'] == usage_object, 'The selected header belongs to the usage unit'
-    assert selected['selected_targets'] == ['edi_app_tests'], (
-        'Required:  usage header input.'
-    )
+    assert selected['selected_targets'] == ['edi_app_tests'], 'Required:  usage header input.'
     assert _sha(graph / usage_object) == selected['object_sha256'], (
         'Required:  usage header input.'
     )
     dependencies = selected['dependency_record']
     assert (
-        hashlib.sha256(dependencies.encode()).hexdigest()
-        == selected['dependency_record_sha256']
+        hashlib.sha256(dependencies.encode()).hexdigest() == selected['dependency_record_sha256']
     ), 'Required:  usage header input.'
-    assert '(VALID)' in dependencies.splitlines()[0], (
-        'Required:  usage header input.'
-    )
+    assert '(VALID)' in dependencies.splitlines()[0], 'Required:  usage header input.'
     assert str(source / USAGE_HEADER) in {
         line.strip() for line in dependencies.splitlines()[1:]
     }, 'Required:  usage header input.'
@@ -97,18 +88,15 @@ def _activity_source_inputs(bond):
     built = bond['build_observation']['data']
     for relative, digest in ACTIVITY_INPUTS.items():
         row = built['source_inputs'][relative]
-        assert _absolute(row['path']) == source / relative, (
-            'Required:  activity source inputs.'
-        )
+        assert _absolute(row['path']) == source / relative, 'Required:  activity source inputs.'
         assert row['sha256'] == _sha(_absolute(row['path'])) == digest, (
             ('Required:  activity source inputs.'),
             relative,
         )
     probe_source = 'tests/integration/py/assistant_ui_probe/probe.cpp'
-    assert (
-        bond['compiled_sources'][probe_source]
-        == ACTIVITY_INPUTS[probe_source]
-    ), 'Required:  activity source inputs.'
+    assert bond['compiled_sources'][probe_source] == ACTIVITY_INPUTS[probe_source], (
+        'Required:  activity source inputs.'
+    )
 
 
 def _activity_object_input(bond):
@@ -117,25 +105,18 @@ def _activity_object_input(bond):
     activity_object = 'assistant-ui-probe/CMakeFiles/assistant_real_owner_probe.dir/probe.cpp.o'
     object_path = graph / activity_object
     witness = built['object_witnesses'][activity_object]
-    assert _absolute(witness['path']) == object_path, (
-        'Required:  activity object input.'
-    )
-    assert _sha(object_path) == witness['sha256'], (
-        'Required:  activity object input.'
-    )
+    assert _absolute(witness['path']) == object_path, 'Required:  activity object input.'
+    assert _sha(object_path) == witness['sha256'], 'Required:  activity object input.'
     target = 'assistant_real_owner_probe'
     record = built['active_target_input_records'][target]
-    assert _sha(_absolute(record['path'])) == record['sha256'], (
+    assert _sha(_absolute(record['path'])) == record['sha256'], 'Required:  activity object input.'
+    assert record['sha256'] == bond['active_target_inputs'][target]['record_sha256'], (
         'Required:  activity object input.'
     )
-    assert (
-        record['sha256']
-        == bond['active_target_inputs'][target]['record_sha256']
-    ), 'Required:  activity object input.'
     inputs = _absolute(record['path']).read_text().splitlines()
-    assert str(object_path) in {
-        str((graph / value).resolve()) for value in inputs if value
-    }, 'Required:  activity object input.'
+    assert str(object_path) in {str((graph / value).resolve()) for value in inputs if value}, (
+        'Required:  activity object input.'
+    )
     _activity_compile_command(bond, graph, object_path)
 
 
@@ -150,12 +131,8 @@ def _activity_compile_command(bond, graph, object_path):
     assert len(rows) == 1, 'Activity has one genuine owning probe translation unit'
     arguments = shlex.split(rows[0]['command'])
     output = Path(arguments[arguments.index('-o') + 1])
-    assert _absolute(rows[0]['directory']) == graph, (
-        'Required:  activity compile command.'
-    )
-    assert (graph / output).resolve() == object_path, (
-        'Required:  activity compile command.'
-    )
+    assert _absolute(rows[0]['directory']) == graph, 'Required:  activity compile command.'
+    assert (graph / output).resolve() == object_path, 'Required:  activity compile command.'
 
 
 def _compiled_callers(bond, bond_hash, record, registry_path):
@@ -163,16 +140,16 @@ def _compiled_callers(bond, bond_hash, record, registry_path):
     assert set(expected) == CALLER_KEYS, 'Both actual Composer/Panel caller units are mandatory'
     for key, digest in expected.items():
         assert isinstance(digest, str) and len(digest) == 64, (
-
             'This boundary requires isinstance(digest, str) and len(digest) == 64'
-
         )
         observed = bond['generated_inputs'][key]
         assert observed['sha256'] == digest, (
-            ("This boundary requires observed['sha256'] == digest", key)
+            "This boundary requires observed['sha256'] == digest",
+            key,
         )
         assert _sha(_absolute(observed['path'])) == digest, (
-            ("This boundary requires _sha(_absolute(observed['path'])) == digest", key)
+            "This boundary requires _sha(_absolute(observed['path'])) == digest",
+            key,
         )
     reference = record['source_proof']
     path = _absolute(reference['path'])
@@ -181,27 +158,18 @@ def _compiled_callers(bond, bond_hash, record, registry_path):
     assert proof['bond_sha256'] == bond_hash, (
         "This boundary requires proof['bond_sha256'] == bond_hash"
     )
-    assert (
-        proof['compiled_source'] == bond['source']
-        and proof['compiled_tree'] == bond['tree']
-    ), (
+    assert proof['compiled_source'] == bond['source'] and proof['compiled_tree'] == bond['tree'], (
         "This boundary requires proof['compiled_source'] == bond['source'] and "
         "proof['compiled_tree'] == bond['tree']"
     )
     assert proof['family_phases'] == bond['family_phases'], (
-
         "This boundary requires proof['family_phases'] == bond['family_phases']"
-
     )
     assert proof['generated_inputs'] == expected, (
-
         "This boundary requires proof['generated_inputs'] == expected"
-
     )
     assert proof['case_registry_sha256'] == _sha(registry_path), (
-
         "This boundary requires proof['case_registry_sha256'] == _sha(registry_path)"
-
     )
     assert proof['cases'] == json.loads(registry_path.read_text()), (
         'Source attribution covers the complete exact six-case registry, not only generated hashes'
@@ -217,9 +185,7 @@ def _bound_receipt(variable):
         'This boundary requires len(expected) == 64 and all((character in '
         "'0123456789abcdef' for character in expected))"
     )
-    assert _sha(path) == expected, (
-        'This boundary requires _sha(path) == expected'
-    )
+    assert _sha(path) == expected, 'This boundary requires _sha(path) == expected'
     return json.loads(path.read_text())
 
 
@@ -265,18 +231,13 @@ def _phase():
     assert phase['binding_status'] == 'BOUND', 'Root must bind the completed fresh comparison'
     assert phase['caller_binding_status'] == 'BOUND', 'Both fresh caller maps require source proof'
     assert phase['namespace'] == 'fresh-usage-original-native', (
-
         "This boundary requires phase['namespace'] == 'fresh-usage-original-native'"
-
     )
     assert phase['phase'] in {'original', 'native'}, (
         "This boundary requires phase['phase'] in {'original', 'native'}"
     )
     assert os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == phase['phase'], (
-
-        "This boundary requires os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == "
-        "phase['phase']"
-
+        "This boundary requires os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == phase['phase']"
     )
     assert (
         Path(base.__file__).resolve()
@@ -288,14 +249,13 @@ def _phase():
     files = phase['files']
     for path, expected in files.items():
         assert _sha(ROOT / path) == expected, (
-            ('This boundary requires _sha(ROOT / path) == expected', path)
+            'This boundary requires _sha(ROOT / path) == expected',
+            path,
         )
     bond = _bound_receipt('EDI_E11_USAGE_ACCOUNT_BINARY_BOND')
     original = _bound_receipt('EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND')
     assert original['source'] == phase['original_source'], (
-
         "This boundary requires original['source'] == phase['original_source']"
-
     )
     assert bond['source'] == phase['compiled_source'], (
         "This boundary requires bond['source'] == phase['compiled_source']"
@@ -315,9 +275,7 @@ def _phase():
         'usage': 'original',
     }
     assert original['family_phases'] == original_families, (
-
         "This boundary requires original['family_phases'] == original_families"
-
     )
     assert bond['family_phases'] == {
         **original_families,
@@ -328,29 +286,25 @@ def _phase():
     )
     for name, expected in phase['native'].items():
         assert original['native'][name] == expected, (
-            ("This boundary requires original['native'][name] == expected", name)
+            "This boundary requires original['native'][name] == expected",
+            name,
         )
         assert bond['native'][name] == expected, (
-            ("This boundary requires bond['native'][name] == expected", name)
+            "This boundary requires bond['native'][name] == expected",
+            name,
         )
     assert (
-        original['bundled_runtime']['config_sha256']
-        == phase['original_runtime_config_sha256']
+        original['bundled_runtime']['config_sha256'] == phase['original_runtime_config_sha256']
     ), (
         "This boundary requires original['bundled_runtime']['config_sha256'] == "
         "phase['original_runtime_config_sha256']"
     )
-    assert (
-        bond['bundled_runtime']['config_sha256']
-        == phase['current_runtime_config_sha256']
-    ), (
+    assert bond['bundled_runtime']['config_sha256'] == phase['current_runtime_config_sha256'], (
         "This boundary requires bond['bundled_runtime']['config_sha256'] == "
         "phase['current_runtime_config_sha256']"
     )
     if phase['phase'] == 'original':
-        assert bond == original, (
-            'This boundary requires bond == original'
-        )
+        assert bond == original, 'This boundary requires bond == original'
     else:
         expected = os.environ['EDI_E11_USAGE_ACCOUNT_COMPILED_SOURCE']
         assert len(expected) == 40 and all(
@@ -360,22 +314,14 @@ def _phase():
             "'0123456789abcdef' for character in expected))"
         )
         assert bond['source'] == expected == phase['compiled_source'], (
-
-            "This boundary requires bond['source'] == expected == "
-            "phase['compiled_source']"
-
+            "This boundary requires bond['source'] == expected == phase['compiled_source']"
         )
     assert files[USAGE_HEADER] == USAGE_HEADER_HASHES[phase['phase']], (
-
-        'This boundary requires files[USAGE_HEADER] == '
-        "USAGE_HEADER_HASHES[phase['phase']]"
-
+        "This boundary requires files[USAGE_HEADER] == USAGE_HEADER_HASHES[phase['phase']]"
     )
     assert (
         files['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp']
-        == ACTIVITY_INPUTS[
-            'tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp'
-        ]
+        == ACTIVITY_INPUTS['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp']
     ), (
         'This boundary requires '
         "files['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp'] == "
@@ -402,7 +348,8 @@ def _phase():
         'tests/integration/py/assistant_ui_probe/probe.cpp',
     ):
         assert bond['compiled_sources'][path] == files[path], (
-            ("This boundary requires bond['compiled_sources'][path] == files[path]", path)
+            "This boundary requires bond['compiled_sources'][path] == files[path]",
+            path,
         )
     for section, keys in {
         'compiler_kit': ['compiler_sha256', 'package_metadata'],
@@ -412,7 +359,8 @@ def _phase():
     }.items():
         for key in keys:
             assert bond[section][key] == original[section][key], (
-                'Recorded source and Original input identities agree', (section, key),
+                'Recorded source and Original input identities agree',
+                (section, key),
             )
     assert (
         _sha(Path(os.environ['EDI_ASSISTANT_UI_PROBE']))
@@ -422,9 +370,7 @@ def _phase():
         "bond['binaries']['assistant_real_owner_probe']['sha256']"
     )
     assert os.environ['EDI_E11_T5_A2A_PHASE'] == 'native', (
-
         "This boundary requires os.environ['EDI_E11_T5_A2A_PHASE'] == 'native'"
-
     )
     return phase
 
@@ -448,9 +394,7 @@ def _observe(actor, phase, stage):
     _retain(actor, stage + '-raw', {'observer': source, 'envelope': envelope})
     value = json.loads(envelope['reply']['value'])
     _retain(actor, stage, value)
-    assert value['problems'] == [], (
-        "This boundary requires value['problems'] == []"
-    )
+    assert value['problems'] == [], "This boundary requires value['problems'] == []"
     assert all(
         envelope['ui'][key]
         for key in (
@@ -481,60 +425,40 @@ def _open_usage(actor):
 
 
 def _check_selection(value, expected):
-    assert (
-        value['usage'] == value['canonical'] and value['plain_projection']
-    ), (
-        "This boundary requires value['usage'] == value['canonical'] and "
-        "value['plain_projection']"
+    assert value['usage'] == value['canonical'] and value['plain_projection'], (
+        "This boundary requires value['usage'] == value['canonical'] and value['plain_projection']"
     )
     assert value['usage']['available'] and not value['usage']['stale'], (
-
-        "This boundary requires value['usage']['available'] and (not "
-        "value['usage']['stale'])"
-
+        "This boundary requires value['usage']['available'] and (not value['usage']['stale'])"
     )
-    assert (
-        value['usage']['state'] == 'ready' and not value['usage']['loading']
-    ), (
+    assert value['usage']['state'] == 'ready' and not value['usage']['loading'], (
         "This boundary requires value['usage']['state'] == 'ready' and (not "
         "value['usage']['loading'])"
     )
-    assert [row['id'] for row in value['usage']['buckets']] == expected[
-        'bucket_ids'
-    ], (
+    assert [row['id'] for row in value['usage']['buckets']] == expected['bucket_ids'], (
         "This boundary requires [row['id'] for row in value['usage']['buckets']] == "
         "expected['bucket_ids']"
     )
     for key in ('global', 'remaining', 'session_path', 'weekly_path', 'button', 'caption'):
         assert value[key] == expected[key], (
-            ('This boundary requires value[key] == expected[key]', key)
+            'This boundary requires value[key] == expected[key]',
+            key,
         )
     assert value['accessible'] == expected['caption'], (
-
         "This boundary requires value['accessible'] == expected['caption']"
-
     )
     assert value['independent_session'] and value['independent_weekly'], (
-
-        "This boundary requires value['independent_session'] and "
-        "value['independent_weekly']"
-
+        "This boundary requires value['independent_session'] and value['independent_weekly']"
     )
     assert value['strict_string_duration'], (
         "This boundary requires value['strict_string_duration']"
     )
     rows = value['rows']
     assert [row['key'] for row in rows] == expected['descriptors'], (
-
-        "This boundary requires [row['key'] for row in rows] == "
-        "expected['descriptors']"
-
+        "This boundary requires [row['key'] for row in rows] == expected['descriptors']"
     )
     assert [row['percent'] for row in rows] == expected['percent'], (
-
-        "This boundary requires [row['percent'] for row in rows] == "
-        "expected['percent']"
-
+        "This boundary requires [row['percent'] for row in rows] == expected['percent']"
     )
     descriptors = {
         'session': {'title': 'Session limit', 'minutes': 300, 'key': 'session'},
@@ -547,9 +471,7 @@ def _check_selection(value, expected):
         "[descriptors[key] for key in expected['descriptors']]"
     )
     assert all(row['selected_member'] for row in rows), (
-
         "This boundary requires all((row['selected_member'] for row in rows))"
-
     )
     assert all(
         row['current']
@@ -563,9 +485,7 @@ def _check_selection(value, expected):
         "row['percent_current'] and row['reset_current'] and (row['reset'] == 'Reset "
         "unavailable') for row in rows))"
     )
-    assert [row['sceneY'] for row in rows] == sorted(
-        row['sceneY'] for row in rows
-    ), (
+    assert [row['sceneY'] for row in rows] == sorted(row['sceneY'] for row in rows), (
         "This boundary requires [row['sceneY'] for row in rows] == "
         "sorted((row['sceneY'] for row in rows))"
     )
@@ -588,17 +508,15 @@ def _check_account_projection(value, case, expected, *, phase):
     if phase.get('scope') == 'current_native_mount':
         # ADR-0015 account is now a fixed typed value with both string members.
         public = {key: case['account'].get(key, '') for key in ('email', 'planType')}
-    assert (
-        value['account'] == public and value['canonical_account'] == public
-    ), 'Required:  check account projection.'
+    assert value['account'] == public and value['canonical_account'] == public, (
+        'Required:  check account projection.'
+    )
     for key in ('plan', 'plan_label', 'initial'):
         assert value[key] == expected[key], (
             ('Required:  check account projection.'),
             key,
         )
-    assert value['connection'] == expected['initial'], (
-        'Required:  check account projection.'
-    )
+    assert value['connection'] == expected['initial'], 'Required:  check account projection.'
 
 
 def _account_display(actor, expected):
@@ -680,9 +598,7 @@ def _wire_proof(actor, case):
         for row in sent
         if row.get('id') == account_requests[0]['id'] and 'result' in row
     ]
-    assert account_results == [
-        {'account': case['account'], 'requiresOpenaiAuth': False}
-    ], (
+    assert account_results == [{'account': case['account'], 'requiresOpenaiAuth': False}], (
         "This boundary requires account_results == [{'account': case['account'], "
         "'requiresOpenaiAuth': False}]"
     )
@@ -705,10 +621,7 @@ def _wire_proof(actor, case):
             'sent))'
         )
     assert not any(row.get('method') == 'turn/start' for row in wire), (
-
-        "This boundary requires not any((row.get('method') == 'turn/start' for row in "
-        'wire))'
-
+        "This boundary requires not any((row.get('method') == 'turn/start' for row in wire))"
     )
 
 

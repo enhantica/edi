@@ -58,33 +58,24 @@ def _usage_header_input(bond, usage_phase):
     source, graph = _absolute(bond['root']), _absolute(bond['real_build_root'])
     selected = bond['selected_header']
     expected = USAGE_HEADER_HASHES[usage_phase]
-    assert _absolute(selected['path']) == source / USAGE_HEADER, (
+    assert _absolute(selected['path']) == source / USAGE_HEADER, 'Required:  usage header input.'
+    assert selected['sha256'] == bond['selected_header_sha256'] == expected, (
         'Required:  usage header input.'
     )
-    assert (
-        selected['sha256'] == bond['selected_header_sha256'] == expected
-    ), 'Required:  usage header input.'
-    assert _sha(_absolute(selected['path'])) == expected, (
-        'Required:  usage header input.'
-    )
+    assert _sha(_absolute(selected['path'])) == expected, 'Required:  usage header input.'
     usage_object = (
         'app/CMakeFiles/edi_app_tests.dir/__/tests/unit/app/test_e11_t5_usage_account.cpp.o'
     )
     assert selected['object'] == usage_object, 'The selected header belongs to the usage unit'
-    assert selected['selected_targets'] == ['edi_app_tests'], (
-        'Required:  usage header input.'
-    )
+    assert selected['selected_targets'] == ['edi_app_tests'], 'Required:  usage header input.'
     assert _sha(graph / usage_object) == selected['object_sha256'], (
         'Required:  usage header input.'
     )
     dependencies = selected['dependency_record']
     assert (
-        hashlib.sha256(dependencies.encode()).hexdigest()
-        == selected['dependency_record_sha256']
+        hashlib.sha256(dependencies.encode()).hexdigest() == selected['dependency_record_sha256']
     ), 'Required:  usage header input.'
-    assert '(VALID)' in dependencies.splitlines()[0], (
-        'Required:  usage header input.'
-    )
+    assert '(VALID)' in dependencies.splitlines()[0], 'Required:  usage header input.'
     assert str(source / USAGE_HEADER) in {
         line.strip() for line in dependencies.splitlines()[1:]
     }, 'Required:  usage header input.'
@@ -95,18 +86,15 @@ def _activity_source_inputs(bond):
     built = bond['build_observation']['data']
     for relative, digest in ACTIVITY_INPUTS.items():
         row = built['source_inputs'][relative]
-        assert _absolute(row['path']) == source / relative, (
-            'Required:  activity source inputs.'
-        )
+        assert _absolute(row['path']) == source / relative, 'Required:  activity source inputs.'
         assert row['sha256'] == _sha(_absolute(row['path'])) == digest, (
             ('Required:  activity source inputs.'),
             relative,
         )
     probe_source = 'tests/integration/py/assistant_ui_probe/probe.cpp'
-    assert (
-        bond['compiled_sources'][probe_source]
-        == ACTIVITY_INPUTS[probe_source]
-    ), 'Required:  activity source inputs.'
+    assert bond['compiled_sources'][probe_source] == ACTIVITY_INPUTS[probe_source], (
+        'Required:  activity source inputs.'
+    )
 
 
 def _activity_object_input(bond):
@@ -115,25 +103,18 @@ def _activity_object_input(bond):
     activity_object = 'assistant-ui-probe/CMakeFiles/assistant_real_owner_probe.dir/probe.cpp.o'
     object_path = graph / activity_object
     witness = built['object_witnesses'][activity_object]
-    assert _absolute(witness['path']) == object_path, (
-        'Required:  activity object input.'
-    )
-    assert _sha(object_path) == witness['sha256'], (
-        'Required:  activity object input.'
-    )
+    assert _absolute(witness['path']) == object_path, 'Required:  activity object input.'
+    assert _sha(object_path) == witness['sha256'], 'Required:  activity object input.'
     target = 'assistant_real_owner_probe'
     record = built['active_target_input_records'][target]
-    assert _sha(_absolute(record['path'])) == record['sha256'], (
+    assert _sha(_absolute(record['path'])) == record['sha256'], 'Required:  activity object input.'
+    assert record['sha256'] == bond['active_target_inputs'][target]['record_sha256'], (
         'Required:  activity object input.'
     )
-    assert (
-        record['sha256']
-        == bond['active_target_inputs'][target]['record_sha256']
-    ), 'Required:  activity object input.'
     inputs = _absolute(record['path']).read_text().splitlines()
-    assert str(object_path) in {
-        str((graph / value).resolve()) for value in inputs if value
-    }, 'Required:  activity object input.'
+    assert str(object_path) in {str((graph / value).resolve()) for value in inputs if value}, (
+        'Required:  activity object input.'
+    )
     _activity_compile_command(bond, graph, object_path)
 
 
@@ -148,12 +129,8 @@ def _activity_compile_command(bond, graph, object_path):
     assert len(rows) == 1, 'Activity has one genuine owning probe translation unit'
     arguments = shlex.split(rows[0]['command'])
     output = Path(arguments[arguments.index('-o') + 1])
-    assert _absolute(rows[0]['directory']) == graph, (
-        'Required:  activity compile command.'
-    )
-    assert (graph / output).resolve() == object_path, (
-        'Required:  activity compile command.'
-    )
+    assert _absolute(rows[0]['directory']) == graph, 'Required:  activity compile command.'
+    assert (graph / output).resolve() == object_path, 'Required:  activity compile command.'
 
 
 def _compiled_callers(bond, bond_hash, record, registry_path):
@@ -161,16 +138,16 @@ def _compiled_callers(bond, bond_hash, record, registry_path):
     assert set(expected) == CALLER_KEYS, 'Both actual Composer/Panel caller units are mandatory'
     for key, digest in expected.items():
         assert isinstance(digest, str) and len(digest) == 64, (
-
             'This boundary requires isinstance(digest, str) and len(digest) == 64'
-
         )
         observed = bond['generated_inputs'][key]
         assert observed['sha256'] == digest, (
-            ("This boundary requires observed['sha256'] == digest", key)
+            "This boundary requires observed['sha256'] == digest",
+            key,
         )
         assert _sha(_absolute(observed['path'])) == digest, (
-            ("This boundary requires _sha(_absolute(observed['path'])) == digest", key)
+            "This boundary requires _sha(_absolute(observed['path'])) == digest",
+            key,
         )
     reference = record['source_proof']
     path = _absolute(reference['path'])
@@ -179,27 +156,18 @@ def _compiled_callers(bond, bond_hash, record, registry_path):
     assert proof['bond_sha256'] == bond_hash, (
         "This boundary requires proof['bond_sha256'] == bond_hash"
     )
-    assert (
-        proof['compiled_source'] == bond['source']
-        and proof['compiled_tree'] == bond['tree']
-    ), (
+    assert proof['compiled_source'] == bond['source'] and proof['compiled_tree'] == bond['tree'], (
         "This boundary requires proof['compiled_source'] == bond['source'] and "
         "proof['compiled_tree'] == bond['tree']"
     )
     assert proof['family_phases'] == bond['family_phases'], (
-
         "This boundary requires proof['family_phases'] == bond['family_phases']"
-
     )
     assert proof['generated_inputs'] == expected, (
-
         "This boundary requires proof['generated_inputs'] == expected"
-
     )
     assert proof['case_registry_sha256'] == _sha(registry_path), (
-
         "This boundary requires proof['case_registry_sha256'] == _sha(registry_path)"
-
     )
     assert proof['cases'] == json.loads(registry_path.read_text()), (
         'Source attribution covers the complete exact six-case registry, not only generated hashes'
@@ -215,11 +183,8 @@ def _source_inputs():
         'Both fresh caller maps require source proof'
     )
     assert os.environ['EDI_E11_T5_A2A_PHASE'] == 'native', 'Activity header07 stays native'
-    assert (
-        os.environ['EDI_E11_COMPOSER_BROWSER_PHASE'] == binding['phase']
-    ), (
-        "This boundary requires os.environ['EDI_E11_COMPOSER_BROWSER_PHASE'] == "
-        "binding['phase']"
+    assert os.environ['EDI_E11_COMPOSER_BROWSER_PHASE'] == binding['phase'], (
+        "This boundary requires os.environ['EDI_E11_COMPOSER_BROWSER_PHASE'] == binding['phase']"
     )
     assert binding['phase'] in {
         'native-complete-final',
@@ -236,16 +201,11 @@ def _source_inputs():
         "This boundary requires binding['family_phases'] == families"
     )
     assert _sha(frozen) == binding['frozen266_sha256'], (
-
         "This boundary requires _sha(frozen) == binding['frozen266_sha256']"
-
     )
     active_path = Path(__file__).with_name('native_cases.py').resolve(strict=True)
     assert _sha(active_path) == binding['active_native_cases_sha256'], (
-
-        'This boundary requires _sha(active_path) == '
-        "binding['active_native_cases_sha256']"
-
+        "This boundary requires _sha(active_path) == binding['active_native_cases_sha256']"
     )
     for row in binding['required_files'] + binding['production_files']:
         assert _sha(root / row['path']) == row['sha256'], (
@@ -261,18 +221,12 @@ def _source_inputs():
         "'0123456789abcdef' for character in expected))"
     )
     assert expected == binding['current_bond_sha256'], (
-
         "This boundary requires expected == binding['current_bond_sha256']"
-
     )
-    assert _sha(receipt_path) == expected, (
-        'This boundary requires _sha(receipt_path) == expected'
-    )
+    assert _sha(receipt_path) == expected, 'This boundary requires _sha(receipt_path) == expected'
     receipt = json.loads(receipt_path.read_text())
     assert (
-        receipt['source']
-        == os.environ['EDI_E11_POST_SOURCE_SHA']
-        == binding['current_source']
+        receipt['source'] == os.environ['EDI_E11_POST_SOURCE_SHA'] == binding['current_source']
     ), (
         "This boundary requires receipt['source'] == "
         "os.environ['EDI_E11_POST_SOURCE_SHA'] == binding['current_source']"
@@ -282,29 +236,23 @@ def _source_inputs():
     )
     original_path = _absolute(os.environ['EDI_E11_COMPARISON_ORIGINAL_BINARY_BOND'])
     assert _sha(original_path) == binding['original_bond_sha256'], (
-
-        'This boundary requires _sha(original_path) == '
-        "binding['original_bond_sha256']"
-
+        "This boundary requires _sha(original_path) == binding['original_bond_sha256']"
     )
     original = json.loads(original_path.read_text())
     assert original['source'] == binding['original_source'], (
-
         "This boundary requires original['source'] == binding['original_source']"
-
     )
     assert original['family_phases'] == {**families, 'usage': 'original'}, (
-
-        "This boundary requires original['family_phases'] == {**families, 'usage': "
-        "'original'}"
-
+        "This boundary requires original['family_phases'] == {**families, 'usage': 'original'}"
     )
     for name, value in binding['comparison_native'].items():
         assert receipt['native'][name] == value, (
-            ("This boundary requires receipt['native'][name] == value", name)
+            "This boundary requires receipt['native'][name] == value",
+            name,
         )
         assert original['native'][name] == value, (
-            ("This boundary requires original['native'][name] == value", name)
+            "This boundary requires original['native'][name] == value",
+            name,
         )
     for bond in (receipt, original):
         assert (
@@ -315,15 +263,13 @@ def _source_inputs():
             "binding['comparison_native']['archive_sha256']"
         )
     assert (
-        receipt['bundled_runtime']['config_sha256']
-        == binding['current_runtime_config_sha256']
+        receipt['bundled_runtime']['config_sha256'] == binding['current_runtime_config_sha256']
     ), (
         "This boundary requires receipt['bundled_runtime']['config_sha256'] == "
         "binding['current_runtime_config_sha256']"
     )
     assert (
-        original['bundled_runtime']['config_sha256']
-        == binding['original_runtime_config_sha256']
+        original['bundled_runtime']['config_sha256'] == binding['original_runtime_config_sha256']
     ), (
         "This boundary requires original['bundled_runtime']['config_sha256'] == "
         "binding['original_runtime_config_sha256']"
@@ -332,9 +278,7 @@ def _source_inputs():
         (receipt, 'current_runtime_config_sha256'),
         (original, 'original_runtime_config_sha256'),
     ):
-        assert (
-            _sha(_absolute(bond['bundled_runtime']['config'])) == binding[key]
-        ), (
+        assert _sha(_absolute(bond['bundled_runtime']['config'])) == binding[key], (
             'This boundary requires '
             "_sha(_absolute(bond['bundled_runtime']['config'])) == binding[key]"
         )
@@ -353,11 +297,7 @@ def _source_inputs():
         )
     assert (
         binding['native_attribution_proof']
-        == (
-            binding['compiled_caller_proof']['current']['source_proof'][
-                'sha256'
-            ]
-        )
+        == (binding['compiled_caller_proof']['current']['source_proof']['sha256'])
     ), (
         "This boundary requires binding['native_attribution_proof'] == "
         "binding['compiled_caller_proof']['current']['source_proof']['sha256']"
@@ -368,9 +308,7 @@ def _source_inputs():
                 ('Required:  source inputs.'),
                 row['path'],
             )
-    assert receipt['compiled_sources'][
-        'tests/integration/py/assistant_ui_probe/probe.cpp'
-    ] == (
+    assert receipt['compiled_sources']['tests/integration/py/assistant_ui_probe/probe.cpp'] == (
         '5cace5b63a55b0b373848242d63646121e4532f4a7071d8ac6a4c3e68930bd5c'
     ), (
         'This boundary requires '
@@ -389,9 +327,7 @@ def _source_inputs():
         '317201f07568bcdec51f93294b41554d9db7560c8ffe2739534a5868d7b1db5d'
     ), 'Original87 remains immutable protocol custody, never the fresh kit authority'
     if expected_usage == 'original':
-        assert receipt == original, (
-            'This boundary requires receipt == original'
-        )
+        assert receipt == original, 'This boundary requires receipt == original'
     _require_stable_dependencies(receipt, original)
     return root, frozen
 
@@ -553,9 +489,7 @@ class CommandScopes:
         self.case = case
         self.contract_steps = {row['step'] for row in owner.contract['expected']}
         self.original = actor.command
-        assert self.original.__self__ is actor, (
-            'Required: CommandScopes.  init  .'
-        )
+        assert self.original.__self__ is actor, 'Required: CommandScopes.  init  .'
         assert self.original.__func__ is ACTUAL.MainActor.command, (
             'Required: CommandScopes.  init  .'
         )

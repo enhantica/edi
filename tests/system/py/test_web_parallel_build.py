@@ -210,9 +210,9 @@ def require_physical_build_calls(
             assert '-DCMAKE_INSTALL_PREFIX=' + str(prefix) in args, (
                 'The install destination is the same physical kit prefix'
             )
-            assert '-S' in args and args[args.index('-S') + 1] == str(
-                root / 'build/crysta-src'
-            ), 'Required: require physical build calls.'
+            assert '-S' in args and args[args.index('-S') + 1] == str(root / 'build/crysta-src'), (
+                'Required: require physical build calls.'
+            )
             required = {
                 '-DCMAKE_BUILD_TYPE=Release',
                 '-DCRYSTA_CXX_PACKAGE=ON',
@@ -243,24 +243,19 @@ def require_physical_build_calls(
             assert '-DQT_HOST_PATH=' + env['CONDA_PREFIX'] in args, (
                 'The exact host prefix survives as a CMake argument'
             )
-            assert (
-                '-DQT_HOST_PATH_CMAKE_DIR=' + env['CONDA_PREFIX'] + '/lib/cmake'
-                in args
-            ), 'Required: require physical build calls.'
-            assert (
-                '-DEigen3_DIR=' + str(tools / 'eigen-3.4.0/share/eigen3/cmake')
-                in args
-            ), 'Required: require physical build calls.'
+            assert '-DQT_HOST_PATH_CMAKE_DIR=' + env['CONDA_PREFIX'] + '/lib/cmake' in args, (
+                'Required: require physical build calls.'
+            )
+            assert '-DEigen3_DIR=' + str(tools / 'eigen-3.4.0/share/eigen3/cmake') in args, (
+                'Required: require physical build calls.'
+            )
             if env.get('EDI_GUI_COMPONENTS_SRC'):
                 assert (
-                    '-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS='
-                    + env['EDI_GUI_COMPONENTS_SRC']
+                    '-DFETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS=' + env['EDI_GUI_COMPONENTS_SRC']
                     in args
                 ), 'Required: require physical build calls.'
             assert (
-                '-DEDI_WORKER_OWNER_THREAD='
-                + ('OFF' if mode == 'multithread' else 'ON')
-                in args
+                '-DEDI_WORKER_OWNER_THREAD=' + ('OFF' if mode == 'multithread' else 'ON') in args
             ), 'Required: require physical build calls.'
         else:
             assert args[0] == operation, (
@@ -340,9 +335,7 @@ def test_normal_wasm_graph_arguments_are_physical_for_both_kits(physical_build_r
         assert key == expected.encode(), (
             'Physical addressing does not change source/kit/Emscripten/Eigen/backend identity'
         )
-        assert (
-            path / 'app/app/CRYSTA_SOURCE_SHA'
-        ).read_text() == 'a' * 40 + '\n', (
+        assert (path / 'app/app/CRYSTA_SOURCE_SHA').read_text() == 'a' * 40 + '\n', (
             'Required: normal wasm graph arguments are physical for both kits.'
         )
 
