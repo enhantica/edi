@@ -196,8 +196,15 @@ TestCase {
         const degrees = 180 / Math.PI;
         const spherical = y => [Math.hypot(3, y, 12), Math.atan2(Math.hypot(3, y), 12) * degrees,
                                 Math.atan2(y, 3) * degrees];
+        // At Cartesian (3,4,12), differentiate r, theta and phi in the crystal basis
+        // X=A-C/2, Y=B, Z=C*sqrt(3)/2, with independent crystal s.u. (0.1,0.2,0.3).
+        const sphericalSu = [
+            Math.hypot(0.3, 0.8, 0.3 * (-1.5 + 6 * root3)) / 13,
+            degrees * Math.hypot(0.1 * 7.2, 0.2 * 9.6, 0.3 * (-3.6 - 2.5 * root3)) / 169,
+            degrees * Math.hypot(0.1 * 4, 0.2 * 3, 0.3 * 2) / 25
+        ];
         inspect("Crystal axes", crystal, 13, [0.1, 0.2, 0.3]);
-        inspect("Spherical", spherical(4), 13);
+        inspect("Spherical", spherical(4), 13, sphericalSu);
         const cartesian = inspect("Cartesian", [3, 4, 12], 13,
                                   [Math.hypot(0.1, 0.15), 0.2, 0.15 * root3]);
         const y = cartesian[1];
