@@ -101,24 +101,19 @@ def test_tensor_zero_is_typed_and_keeps_nonzero_free_and_present_su(kind):
     values[indices[5]] = (0.0, 0.001, False)
     tensor_readback(subject, values, slots)
     assert values[indices[0]] == (0.01, 0.0, False), (
-        'tensor zero is typed and keeps nonzero free and present su: require '
-        'values[indices[0]] == (0.01, 0.0, False)'
+        'Required: tensor zero is typed and keeps nonzero free and present su.'
     )
     assert values[indices[3]] == (0.0, None, False), (
-        'tensor zero is typed and keeps nonzero free and present su: require '
-        'values[indices[3]] == (0.0, None, False)'
+        'Required: tensor zero is typed and keeps nonzero free and present su.'
     )
     assert values[indices[4]] == (0.0, 0.0, True), (
-        'tensor zero is typed and keeps nonzero free and present su: require '
-        'values[indices[4]] == (0.0, 0.0, True)'
+        'Required: tensor zero is typed and keeps nonzero free and present su.'
     )
     assert values[indices[5]] == (0.0, 0.001, False), (
-        'tensor zero is typed and keeps nonzero free and present su: require '
-        'values[indices[5]] == (0.0, 0.001, False)'
+        'Required: tensor zero is typed and keeps nonzero free and present su.'
     )
     assert saved_triplet(0, None, False) == (0.0, 0.0, False), (
-        'tensor zero is typed and keeps nonzero free and present su: require '
-        'saved_triplet(0, None, False) == (0.0, 0.0, False)'
+        'Required: tensor zero is typed and keeps nonzero free and present su.'
     )
 
 
@@ -167,17 +162,20 @@ def test_optional_omission_is_distinct_from_a_written_fixed_or_free_zero(
         {},
     )
     assert records[0][2] is present, (
-        'optional omission is distinct from a written fixed or free zero: require '
-        'records[0][2] is present'
+        'Required: optional omission is distinct from a written fixed or free '
+        'zero.'
     )
     assert values[0] == (written if present else (0, None, False)), (
-        'optional omission is distinct from a written fixed or free zero: require '
-        'values[0] == (written if present else (0, None, False))'
+        'Required: optional omission is distinct from a written fixed or free '
+        'zero.'
     )
-    assert records[0][3] == (written[0], written[1] if written[2] else None, written[2]), (
-        'optional omission is distinct from a written fixed or free zero: require '
-        'records[0][3] == (written[0], written[1] if written[2] else None, '
-        'written[2])'
+    assert records[0][3] == (
+        written[0],
+        written[1] if written[2] else None,
+        written[2],
+    ), (
+        'Required: optional omission is distinct from a written fixed or free '
+        'zero.'
     )
 
 
@@ -227,11 +225,11 @@ def test_optional_slots_do_not_cross_the_declared_experiment_family(family):
     ]
     _, _, _, optional, _ = model_inputs(subject)
     assert len(optional) == (
-        len(OPTIONAL_XRAY) if family == ('CONSTANT_WAVELENGTH', 'XRAY') else 0
+        len(OPTIONAL_XRAY)
+        if family == ('CONSTANT_WAVELENGTH', 'XRAY')
+        else 0
     ), (
-        'optional slots do not cross the declared experiment family: require '
-        'len(optional) == ( len(OPTIONAL_XRAY) if family == '
-        "('CONSTANT_WAVELENGTH', 'XRAY') else 0 )"
+        'Required: optional slots do not cross the declared experiment family.'
     )
 
 
@@ -253,36 +251,36 @@ def test_declared_complement_has_distinct_loaded_and_completed_boundaries():
     subject = constrained_model()
     reference = saved_parameters(subject, 'iucr_99')
     assert reference[0]['first_written'][9] == (0.0876543, 0.0, False), (
-        'declared complement has distinct loaded and completed boundaries: '
-        "require reference[0]['first_written'][9] == (0.0876543, 0.0, False)"
+        'Required: declared complement has distinct loaded and completed '
+        'boundaries.'
     )
     assert reference[0]['first_loaded'][9] == (0.0876543, 0.0, False), (
-        'declared complement has distinct loaded and completed boundaries: '
-        "require reference[0]['first_loaded'][9] == (0.0876543, 0.0, False)"
+        'Required: declared complement has distinct loaded and completed '
+        'boundaries.'
     )
     assert reference[0]['adopted'][9] == (1 - 0.912346, 0.0, False), (
-        'declared complement has distinct loaded and completed boundaries: '
-        "require reference[0]['adopted'][9] == (1 - 0.912346, 0.0, False)"
+        'Required: declared complement has distinct loaded and completed '
+        'boundaries.'
     )
     assert reference[0]['final_written'][9] == (0.087654, 0.0, False), (
-        'declared complement has distinct loaded and completed boundaries: '
-        "require reference[0]['final_written'][9] == (0.087654, 0.0, False)"
+        'Required: declared complement has distinct loaded and completed '
+        'boundaries.'
     )
     assert reference[0]['loaded'][9] == (0.087654, 0.0, False), (
-        'declared complement has distinct loaded and completed boundaries: '
-        "require reference[0]['loaded'][9] == (0.087654, 0.0, False)"
+        'Required: declared complement has distinct loaded and completed '
+        'boundaries.'
     )
     assert reference[0]['parameter_rewrite_required'] is True, (
-        'declared complement has distinct loaded and completed boundaries: '
-        "require reference[0]['parameter_rewrite_required'] is True"
+        'Required: declared complement has distinct loaded and completed '
+        'boundaries.'
     )
     assert reference[0]['completed'][9] == (1 - 0.912346, 0.0, False), (
-        'declared complement has distinct loaded and completed boundaries: '
-        "require reference[0]['completed'][9] == (1 - 0.912346, 0.0, False)"
+        'Required: declared complement has distinct loaded and completed '
+        'boundaries.'
     )
     assert reference[0]['loaded'][9] != reference[0]['completed'][9], (
-        'declared complement has distinct loaded and completed boundaries: '
-        "require reference[0]['loaded'][9] != reference[0]['completed'][9]"
+        'Required: declared complement has distinct loaded and completed '
+        'boundaries.'
     )
     for phase in ('loaded', 'completed'):
         publish(subject, reference, phase)
@@ -301,17 +299,20 @@ def test_unchanged_parameter_adoption_has_one_file_projection_for_either_calcula
     reference = saved_parameters(subject, 'iucr_99')
     stages = reference[0]
     assert stages['parameter_rewrite_required'] is False, (
-        'unchanged parameter adoption has one file projection for either '
-        "calculation path: require stages['parameter_rewrite_required'] is False"
+        'Required: unchanged parameter adoption has one file projection for '
+        'either calculation path.'
     )
-    assert stages['first_written'] == stages['final_written'] == stages['loaded'], (
-        'unchanged parameter adoption has one file projection for either '
-        "calculation path: require stages['first_written'] == "
-        "stages['final_written'] == stages['loaded']"
+    assert (
+        stages['first_written']
+        == stages['final_written']
+        == stages['loaded']
+    ), (
+        'Required: unchanged parameter adoption has one file projection for '
+        'either calculation path.'
     )
     assert stages['adopted'] == stages['completed'], (
-        'unchanged parameter adoption has one file projection for either '
-        "calculation path: require stages['adopted'] == stages['completed']"
+        'Required: unchanged parameter adoption has one file projection for '
+        'either calculation path.'
     )
 
 
@@ -355,21 +356,13 @@ def test_optional_dependent_token_is_from_the_final_adopted_write(tmp_path):
         'setup_monochromator_twotheta',
         True,
         (0.0876543, None, False),
-    ), (
-        'optional dependent token is from the final adopted write: require first '
-        "== ('experiment', 'setup_monochromator_twotheta', True, (0.0876543, "
-        'None, False))'
-    )
+    ), 'Required: optional dependent token is from the final adopted write.'
     assert final == (
         'experiment',
         'setup_monochromator_twotheta',
         True,
         (0.087654, None, False),
-    ), (
-        'optional dependent token is from the final adopted write: require final '
-        "== ('experiment', 'setup_monochromator_twotheta', True, (0.087654, None, "
-        'False))'
-    )
+    ), 'Required: optional dependent token is from the final adopted write.'
     folder = tmp_path / 'experiments'
     folder.mkdir()
     file = folder / 'experiment.edi'
@@ -421,10 +414,13 @@ def test_topological_declared_values_keep_su_and_refuse_duplicate_targets():
     indices = {'leader': 0, 'dependent': 1, 'copy': 2}
     # Insertion order deliberately lists the consumer first.
     apply_declared(values, indices, {2: tree('dependent'), 1: tree('1-leader')})
-    assert values == [(0.2, 0.01, True), (1 - 0.2, 0.02, False), (1 - 0.2, None, False)], (
-        'topological declared values keep su and refuse duplicate targets: '
-        'require values == [(0.2, 0.01, True), (1 - 0.2, 0.02, False), (1 - 0.2, '
-        'None, False)]'
+    assert values == [
+        (0.2, 0.01, True),
+        (1 - 0.2, 0.02, False),
+        (1 - 0.2, None, False),
+    ], (
+        'Required: topological declared values keep su and refuse duplicate '
+        'targets.'
     )
     subject = constrained_model()
     subject.analysis.constraints.append(
@@ -452,10 +448,10 @@ def test_population_and_optional_constrained_bracket_cannot_disappear():
         },
         {0: tree('leader')},
     )
-    assert records == (('experiment', 'setup_wavelength_2', True, (1.2, 0.02, True)),), (
-        'population and optional constrained bracket cannot disappear: require '
-        "records == (('experiment', 'setup_wavelength_2', True, (1.2, 0.02, "
-        'True)),)'
+    assert records == (
+        ('experiment', 'setup_wavelength_2', True, (1.2, 0.02, True)),
+    ), (
+        'Required: population and optional constrained bracket cannot disappear.'
     )
 
 
@@ -476,16 +472,16 @@ def test_fixed_representative_matches_independent_cctbx_and_the_full_declared_or
     fixed = next(row for row in record['wyckoff'] if row['letter'] == 'a')
     representative, orbit = fixed_declaration((227, '1'), 'a')
     assert representative == coordinates(fixed['special_op'], {}), (
-        'fixed representative matches independent cctbx and the full declared '
-        "orbit: require representative == coordinates(fixed['special_op'], {})"
+        'Required: fixed representative matches independent cctbx and the full '
+        'declared orbit.'
     )
     assert len(orbit) == fixed['multiplicity'], (
-        'fixed representative matches independent cctbx and the full declared '
-        "orbit: require len(orbit) == fixed['multiplicity']"
+        'Required: fixed representative matches independent cctbx and the full '
+        'declared orbit.'
     )
     assert (0, 0, 0) in orbit, (
-        'fixed representative matches independent cctbx and the full declared '
-        'orbit: require (0, 0, 0) in orbit'
+        'Required: fixed representative matches independent cctbx and the full '
+        'declared orbit.'
     )
     subject = fixed_model()
     reference = saved_parameters(subject, 'iucr_99')
@@ -522,8 +518,8 @@ def test_unconstrained_coordinates_remain_exact_and_fixed_orbits_refuse_off_orbi
     subject = model()
     _, slots, _, _, _ = model_inputs(subject)
     assert fixed_values(subject, slots) == {}, (
-        'unconstrained coordinates remain exact and fixed orbits refuse off orbit '
-        'input: require fixed_values(subject, slots) == {}'
+        'Required: unconstrained coordinates remain exact and fixed orbits refuse '
+        'off orbit input.'
     )
     subject = fixed_model()
     subject.structures[0].atom_sites[0].fract_x.value = 0.17

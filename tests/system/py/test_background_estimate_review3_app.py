@@ -137,16 +137,14 @@ def require_undo_saved_state(receipt, native_rows, native_parameters):
         }, 'The adopted host agrees on value, explicit uncertainty presence and free state'
     block = gemmi.cif.read_string(receipt['file']).sole_block()
     assert block.name == 'd20', 'The actual file is the same restored experiment, not another bank'
-    assert gemmi.cif.as_string(block.find_value('_background.type')) == before['type'], (
-        'require undo saved state: require '
-        "gemmi.cif.as_string(block.find_value('_background.type')) == "
-        "before['type']"
-    )
-    assert gemmi.cif.as_string(block.find_value('_background_estimate.mode')) == before['mode'], (
-        'require undo saved state: require '
-        "gemmi.cif.as_string(block.find_value('_background_estimate.mode')) == "
-        "before['mode']"
-    )
+    assert (
+        gemmi.cif.as_string(block.find_value('_background.type'))
+        == before['type']
+    ), 'Required: require undo saved state.'
+    assert (
+        gemmi.cif.as_string(block.find_value('_background_estimate.mode'))
+        == before['mode']
+    ), 'Required: require undo saved state.'
     for field, tag in [('origin', 'origin'), ('low', 'x_min'), ('high', 'x_max')]:
         token = block.find_value('_background.' + tag)
         if before[field] is None:

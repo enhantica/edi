@@ -112,8 +112,7 @@ def test_saved_archive_flat_and_nested_owners_retain_every_file_byte(tmp_path, p
         for name, contents in files.items():
             writer.writestr(prefix + name, contents)
     assert archive_files(archive) == files, (
-        'saved archive flat and nested owners retain every file byte: require '
-        'archive_files(archive) == files'
+        'Required: saved archive flat and nested owners retain every file byte.'
     )
     with zipfile.ZipFile(archive, 'a') as writer:
         writer.writestr(prefix + 'extra.bin', b'An extra file must not be silently ignored.')
@@ -121,9 +120,7 @@ def test_saved_archive_flat_and_nested_owners_retain_every_file_byte(tmp_path, p
         **files,
         'extra.bin': b'An extra file must not be silently ignored.',
     }, (
-        'saved archive flat and nested owners retain every file byte: require '
-        "archive_files(archive) == { **files, 'extra.bin': b'An extra file must "
-        "not be silently ignored.', }"
+        'Required: saved archive flat and nested owners retain every file byte.'
     )
 
 
@@ -174,8 +171,7 @@ def test_saved_archive_duplicate_path_refuses(tmp_path, prefix, target):
             writer.writestr(prefix + target, b'second')
     with zipfile.ZipFile(archive) as planted:
         assert planted.namelist().count(prefix + target) == 2, (
-            'saved archive duplicate path refuses: require '
-            'planted.namelist().count(prefix + target) == 2'
+            'Required: saved archive duplicate path refuses.'
         )
     expected = 'exactly one project root' if target == 'project.edi' else 'duplicate'
     with pytest.raises(AssertionError, match=expected):

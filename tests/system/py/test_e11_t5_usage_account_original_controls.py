@@ -61,42 +61,35 @@ def _usage_header_input(bond, usage_phase):
     selected = bond['selected_header']
     expected = USAGE_HEADER_HASHES[usage_phase]
     assert _absolute(selected['path']) == source / USAGE_HEADER, (
-        " usage header input: require _absolute(selected['path']) == source / USAGE_HEADER"
+        'Required:  usage header input.'
     )
-    assert selected['sha256'] == bond['selected_header_sha256'] == expected, (
-        " usage header input: require selected['sha256'] == "
-        "bond['selected_header_sha256'] == expected"
-    )
+    assert (
+        selected['sha256'] == bond['selected_header_sha256'] == expected
+    ), 'Required:  usage header input.'
     assert _sha(_absolute(selected['path'])) == expected, (
-        " usage header input: require _sha(_absolute(selected['path'])) == expected"
+        'Required:  usage header input.'
     )
     usage_object = (
         'app/CMakeFiles/edi_app_tests.dir/__/tests/unit/app/test_e11_t5_usage_account.cpp.o'
     )
     assert selected['object'] == usage_object, 'The selected header belongs to the usage unit'
     assert selected['selected_targets'] == ['edi_app_tests'], (
-        " usage header input: require selected['selected_targets'] == ['edi_app_tests']"
+        'Required:  usage header input.'
     )
     assert _sha(graph / usage_object) == selected['object_sha256'], (
-        " usage header input: require _sha(graph / usage_object) == selected['object_sha256']"
+        'Required:  usage header input.'
     )
     dependencies = selected['dependency_record']
     assert (
-        hashlib.sha256(dependencies.encode()).hexdigest() == selected['dependency_record_sha256']
-    ), (
-        ' usage header input: require '
-        'hashlib.sha256(dependencies.encode()).hexdigest() == '
-        "selected['dependency_record_sha256']"
-    )
+        hashlib.sha256(dependencies.encode()).hexdigest()
+        == selected['dependency_record_sha256']
+    ), 'Required:  usage header input.'
     assert '(VALID)' in dependencies.splitlines()[0], (
-        " usage header input: require '(VALID)' in dependencies.splitlines()[0]"
+        'Required:  usage header input.'
     )
     assert str(source / USAGE_HEADER) in {
         line.strip() for line in dependencies.splitlines()[1:]
-    }, (
-        ' usage header input: require str(source / USAGE_HEADER) in {line.strip() '
-        'for line in dependencies.splitlines()[1:]}'
-    )
+    }, 'Required:  usage header input.'
 
 
 def _activity_source_inputs(bond):
@@ -105,20 +98,17 @@ def _activity_source_inputs(bond):
     for relative, digest in ACTIVITY_INPUTS.items():
         row = built['source_inputs'][relative]
         assert _absolute(row['path']) == source / relative, (
-            " activity source inputs: require _absolute(row['path']) == source / relative"
+            'Required:  activity source inputs.'
         )
         assert row['sha256'] == _sha(_absolute(row['path'])) == digest, (
-            (
-                " activity source inputs: require row['sha256'] == "
-                "_sha(_absolute(row['path'])) == digest"
-            ),
+            ('Required:  activity source inputs.'),
             relative,
         )
     probe_source = 'tests/integration/py/assistant_ui_probe/probe.cpp'
-    assert bond['compiled_sources'][probe_source] == ACTIVITY_INPUTS[probe_source], (
-        " activity source inputs: require bond['compiled_sources'][probe_source] "
-        '== ACTIVITY_INPUTS[probe_source]'
-    )
+    assert (
+        bond['compiled_sources'][probe_source]
+        == ACTIVITY_INPUTS[probe_source]
+    ), 'Required:  activity source inputs.'
 
 
 def _activity_object_input(bond):
@@ -128,25 +118,24 @@ def _activity_object_input(bond):
     object_path = graph / activity_object
     witness = built['object_witnesses'][activity_object]
     assert _absolute(witness['path']) == object_path, (
-        " activity object input: require _absolute(witness['path']) == object_path"
+        'Required:  activity object input.'
     )
     assert _sha(object_path) == witness['sha256'], (
-        " activity object input: require _sha(object_path) == witness['sha256']"
+        'Required:  activity object input.'
     )
     target = 'assistant_real_owner_probe'
     record = built['active_target_input_records'][target]
     assert _sha(_absolute(record['path'])) == record['sha256'], (
-        " activity object input: require _sha(_absolute(record['path'])) == record['sha256']"
+        'Required:  activity object input.'
     )
-    assert record['sha256'] == bond['active_target_inputs'][target]['record_sha256'], (
-        " activity object input: require record['sha256'] == "
-        "bond['active_target_inputs'][target]['record_sha256']"
-    )
+    assert (
+        record['sha256']
+        == bond['active_target_inputs'][target]['record_sha256']
+    ), 'Required:  activity object input.'
     inputs = _absolute(record['path']).read_text().splitlines()
-    assert str(object_path) in {str((graph / value).resolve()) for value in inputs if value}, (
-        ' activity object input: require str(object_path) in {str((graph / '
-        'value).resolve()) for value in inputs if value}'
-    )
+    assert str(object_path) in {
+        str((graph / value).resolve()) for value in inputs if value
+    }, 'Required:  activity object input.'
     _activity_compile_command(bond, graph, object_path)
 
 
@@ -154,7 +143,7 @@ def _activity_compile_command(bond, graph, object_path):
     database = bond['native_consumer_graph']
     commands = _absolute(database['compile_commands'])
     assert _sha(commands) == database['compile_commands_sha256'], (
-        " activity compile command: require _sha(commands) == database['compile_commands_sha256']"
+        'Required:  activity compile command.'
     )
     probe_source = _absolute(bond['root']) / 'tests/integration/py/assistant_ui_probe/probe.cpp'
     rows = [row for row in json.loads(commands.read_text()) if Path(row['file']) == probe_source]
@@ -162,10 +151,10 @@ def _activity_compile_command(bond, graph, object_path):
     arguments = shlex.split(rows[0]['command'])
     output = Path(arguments[arguments.index('-o') + 1])
     assert _absolute(rows[0]['directory']) == graph, (
-        " activity compile command: require _absolute(rows[0]['directory']) == graph"
+        'Required:  activity compile command.'
     )
     assert (graph / output).resolve() == object_path, (
-        ' activity compile command: require (graph / output).resolve() == object_path'
+        'Required:  activity compile command.'
     )
 
 
@@ -174,36 +163,34 @@ def _compiled_callers(bond, bond_hash, record, registry_path):
     assert set(expected) == CALLER_KEYS, 'Both actual Composer/Panel caller units are mandatory'
     for key, digest in expected.items():
         assert isinstance(digest, str) and len(digest) == 64, (
-            ' compiled callers: require isinstance(digest, str) and len(digest) == 64'
+            'Required:  compiled callers.'
         )
         observed = bond['generated_inputs'][key]
         assert observed['sha256'] == digest, (
-            (" compiled callers: require observed['sha256'] == digest"),
+            ('Required:  compiled callers.'),
             key,
         )
         assert _sha(_absolute(observed['path'])) == digest, (
-            (" compiled callers: require _sha(_absolute(observed['path'])) == digest"),
+            ('Required:  compiled callers.'),
             key,
         )
     reference = record['source_proof']
     path = _absolute(reference['path'])
     assert _sha(path) == reference['sha256'], 'Caller attribution is an immutable source proof'
     proof = json.loads(path.read_text())
-    assert proof['bond_sha256'] == bond_hash, (
-        " compiled callers: require proof['bond_sha256'] == bond_hash"
-    )
-    assert proof['compiled_source'] == bond['source'] and proof['compiled_tree'] == bond['tree'], (
-        " compiled callers: require proof['compiled_source'] == bond['source'] "
-        "and proof['compiled_tree'] == bond['tree']"
-    )
+    assert proof['bond_sha256'] == bond_hash, 'Required:  compiled callers.'
+    assert (
+        proof['compiled_source'] == bond['source']
+        and proof['compiled_tree'] == bond['tree']
+    ), 'Required:  compiled callers.'
     assert proof['family_phases'] == bond['family_phases'], (
-        " compiled callers: require proof['family_phases'] == bond['family_phases']"
+        'Required:  compiled callers.'
     )
     assert proof['generated_inputs'] == expected, (
-        " compiled callers: require proof['generated_inputs'] == expected"
+        'Required:  compiled callers.'
     )
     assert proof['case_registry_sha256'] == _sha(registry_path), (
-        " compiled callers: require proof['case_registry_sha256'] == _sha(registry_path)"
+        'Required:  compiled callers.'
     )
     assert proof['cases'] == json.loads(registry_path.read_text()), (
         'Source attribution covers the complete exact six-case registry, not only generated hashes'
@@ -215,11 +202,8 @@ def _bound_receipt(variable):
     expected = os.environ[variable + '_SHA256']
     assert len(expected) == 64 and all(
         character in '0123456789abcdef' for character in expected
-    ), (
-        ' bound receipt: require len(expected) == 64 and all(character in '
-        "'0123456789abcdef' for character in expected)"
-    )
-    assert _sha(path) == expected, ' bound receipt: require _sha(path) == expected'
+    ), 'Required:  bound receipt.'
+    assert _sha(path) == expected, 'Required:  bound receipt.'
     return json.loads(path.read_text())
 
 
@@ -265,43 +249,29 @@ def _phase():
     assert phase['binding_status'] == 'BOUND', 'Root must bind the completed fresh comparison'
     assert phase['caller_binding_status'] == 'BOUND', 'Both fresh caller maps require source proof'
     assert phase['namespace'] == 'fresh-usage-original-native', (
-        " phase: require phase['namespace'] == 'fresh-usage-original-native'"
+        'Required:  phase.'
     )
-    assert phase['phase'] in {'original', 'native'}, (
-        " phase: require phase['phase'] in {'original', 'native'}"
-    )
+    assert phase['phase'] in {'original', 'native'}, 'Required:  phase.'
     assert os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == phase['phase'], (
-        " phase: require os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == phase['phase']"
+        'Required:  phase.'
     )
     assert (
         Path(base.__file__).resolve()
         == ROOT / 'tests/system/py/test_e11_t5_dev_native_integration.py'
-    ), (
-        ' phase: require Path(base.__file__).resolve() == ROOT / '
-        "'tests/system/py/test_e11_t5_dev_native_integration.py'"
-    )
+    ), 'Required:  phase.'
     files = phase['files']
     for path, expected in files.items():
-        assert _sha(ROOT / path) == expected, (
-            (' phase: require _sha(ROOT / path) == expected'),
-            path,
-        )
+        assert _sha(ROOT / path) == expected, (('Required:  phase.'), path)
     bond = _bound_receipt('EDI_E11_USAGE_ACCOUNT_BINARY_BOND')
     original = _bound_receipt('EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND')
     assert original['source'] == phase['original_source'], (
-        " phase: require original['source'] == phase['original_source']"
+        'Required:  phase.'
     )
-    assert bond['source'] == phase['compiled_source'], (
-        " phase: require bond['source'] == phase['compiled_source']"
-    )
+    assert bond['source'] == phase['compiled_source'], 'Required:  phase.'
     assert (
         os.environ['EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND_SHA256']
         == phase['original_bond_sha256']
-    ), (
-        ' phase: require '
-        "os.environ['EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND_SHA256'] == "
-        "phase['original_bond_sha256']"
-    )
+    ), 'Required:  phase.'
     original_families = {
         'activity': 'native',
         'composer': 'native',
@@ -309,54 +279,45 @@ def _phase():
         'usage': 'original',
     }
     assert original['family_phases'] == original_families, (
-        " phase: require original['family_phases'] == original_families"
+        'Required:  phase.'
     )
-    assert bond['family_phases'] == {**original_families, 'usage': phase['phase']}, (
-        " phase: require bond['family_phases'] == {**original_families, 'usage': phase['phase']}"
-    )
+    assert bond['family_phases'] == {
+        **original_families,
+        'usage': phase['phase'],
+    }, 'Required:  phase.'
     for name, expected in phase['native'].items():
         assert original['native'][name] == expected, (
-            (" phase: require original['native'][name] == expected"),
+            ('Required:  phase.'),
             name,
         )
-        assert bond['native'][name] == expected, (
-            (" phase: require bond['native'][name] == expected"),
-            name,
-        )
+        assert bond['native'][name] == expected, (('Required:  phase.'), name)
     assert (
-        original['bundled_runtime']['config_sha256'] == phase['original_runtime_config_sha256']
-    ), (
-        " phase: require original['bundled_runtime']['config_sha256'] == "
-        "phase['original_runtime_config_sha256']"
-    )
-    assert bond['bundled_runtime']['config_sha256'] == phase['current_runtime_config_sha256'], (
-        " phase: require bond['bundled_runtime']['config_sha256'] == "
-        "phase['current_runtime_config_sha256']"
-    )
+        original['bundled_runtime']['config_sha256']
+        == phase['original_runtime_config_sha256']
+    ), 'Required:  phase.'
+    assert (
+        bond['bundled_runtime']['config_sha256']
+        == phase['current_runtime_config_sha256']
+    ), 'Required:  phase.'
     if phase['phase'] == 'original':
-        assert bond == original, ' phase: require bond == original'
+        assert bond == original, 'Required:  phase.'
     else:
         expected = os.environ['EDI_E11_USAGE_ACCOUNT_COMPILED_SOURCE']
         assert len(expected) == 40 and all(
             character in '0123456789abcdef' for character in expected
-        ), (
-            ' phase: require len(expected) == 40 and all( character in '
-            "'0123456789abcdef' for character in expected )"
-        )
+        ), 'Required:  phase.'
         assert bond['source'] == expected == phase['compiled_source'], (
-            " phase: require bond['source'] == expected == phase['compiled_source']"
+            'Required:  phase.'
         )
     assert files[USAGE_HEADER] == USAGE_HEADER_HASHES[phase['phase']], (
-        " phase: require files[USAGE_HEADER] == USAGE_HEADER_HASHES[phase['phase']]"
+        'Required:  phase.'
     )
     assert (
         files['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp']
-        == ACTIVITY_INPUTS['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp']
-    ), (
-        ' phase: require '
-        "files['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp'] == "
-        "ACTIVITY_INPUTS['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp']"
-    )
+        == ACTIVITY_INPUTS[
+            'tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp'
+        ]
+    ), 'Required:  phase.'
     for observed, key in ((bond, 'current'), (original, 'original')):
         _compiled_phase_inputs(observed, observed['family_phases']['usage'])
         _compiled_callers(
@@ -378,7 +339,7 @@ def _phase():
         'tests/integration/py/assistant_ui_probe/probe.cpp',
     ):
         assert bond['compiled_sources'][path] == files[path], (
-            (" phase: require bond['compiled_sources'][path] == files[path]"),
+            ('Required:  phase.'),
             path,
         )
     for section, keys in {
@@ -389,18 +350,15 @@ def _phase():
     }.items():
         for key in keys:
             assert bond[section][key] == original[section][key], (
-                (' phase: require bond[section][key] == original[section][key]'),
+                ('Required:  phase.'),
                 (section, key),
             )
     assert (
         _sha(Path(os.environ['EDI_ASSISTANT_UI_PROBE']))
         == (bond['binaries']['assistant_real_owner_probe']['sha256'])
-    ), (
-        " phase: require _sha(Path(os.environ['EDI_ASSISTANT_UI_PROBE'])) == "
-        "(bond['binaries']['assistant_real_owner_probe']['sha256'])"
-    )
+    ), 'Required:  phase.'
     assert os.environ['EDI_E11_T5_A2A_PHASE'] == 'native', (
-        " phase: require os.environ['EDI_E11_T5_A2A_PHASE'] == 'native'"
+        'Required:  phase.'
     )
     return phase
 
@@ -424,7 +382,7 @@ def _observe(actor, phase, stage):
     _retain(actor, stage + '-raw', {'observer': source, 'envelope': envelope})
     value = json.loads(envelope['reply']['value'])
     _retain(actor, stage, value)
-    assert value['problems'] == [], " observe: require value['problems'] == []"
+    assert value['problems'] == [], 'Required:  observe.'
     assert all(
         envelope['ui'][key]
         for key in (
@@ -432,13 +390,8 @@ def _observe(actor, phase, stage):
             'engine_parent',
             'cpp_ownership',
         )
-    ), (
-        " observe: require all( envelope['ui'][key] for key in ( "
-        "'singleton_identity', 'engine_parent', 'cpp_ownership', ) )"
-    )
-    assert value['owner'] and value['imported_info'], (
-        " observe: require value['owner'] and value['imported_info']"
-    )
+    ), 'Required:  observe.'
+    assert value['owner'] and value['imported_info'], 'Required:  observe.'
     return value
 
 
@@ -455,41 +408,36 @@ def _open_usage(actor):
 
 
 def _check_selection(value, expected):
-    assert value['usage'] == value['canonical'] and value['plain_projection'], (
-        " check selection: require value['usage'] == value['canonical'] and "
-        "value['plain_projection']"
-    )
+    assert (
+        value['usage'] == value['canonical'] and value['plain_projection']
+    ), 'Required:  check selection.'
     assert value['usage']['available'] and not value['usage']['stale'], (
-        " check selection: require value['usage']['available'] and not value['usage']['stale']"
+        'Required:  check selection.'
     )
-    assert value['usage']['state'] == 'ready' and not value['usage']['loading'], (
-        " check selection: require value['usage']['state'] == 'ready' and not "
-        "value['usage']['loading']"
-    )
-    assert [row['id'] for row in value['usage']['buckets']] == expected['bucket_ids'], (
-        " check selection: require [row['id'] for row in "
-        "value['usage']['buckets']] == expected['bucket_ids']"
-    )
+    assert (
+        value['usage']['state'] == 'ready' and not value['usage']['loading']
+    ), 'Required:  check selection.'
+    assert [row['id'] for row in value['usage']['buckets']] == expected[
+        'bucket_ids'
+    ], 'Required:  check selection.'
     for key in ('global', 'remaining', 'session_path', 'weekly_path', 'button', 'caption'):
         assert value[key] == expected[key], (
-            (' check selection: require value[key] == expected[key]'),
+            ('Required:  check selection.'),
             key,
         )
     assert value['accessible'] == expected['caption'], (
-        " check selection: require value['accessible'] == expected['caption']"
+        'Required:  check selection.'
     )
     assert value['independent_session'] and value['independent_weekly'], (
-        " check selection: require value['independent_session'] and value['independent_weekly']"
+        'Required:  check selection.'
     )
-    assert value['strict_string_duration'], (
-        " check selection: require value['strict_string_duration']"
-    )
+    assert value['strict_string_duration'], 'Required:  check selection.'
     rows = value['rows']
     assert [row['key'] for row in rows] == expected['descriptors'], (
-        " check selection: require [row['key'] for row in rows] == expected['descriptors']"
+        'Required:  check selection.'
     )
     assert [row['percent'] for row in rows] == expected['percent'], (
-        " check selection: require [row['percent'] for row in rows] == expected['percent']"
+        'Required:  check selection.'
     )
     descriptors = {
         'session': {'title': 'Session limit', 'minutes': 300, 'key': 'session'},
@@ -497,12 +445,9 @@ def _check_selection(value, expected):
     }
     assert [row['descriptor'] for row in rows] == [
         descriptors[key] for key in expected['descriptors']
-    ], (
-        " check selection: require [row['descriptor'] for row in rows] == [ "
-        "descriptors[key] for key in expected['descriptors'] ]"
-    )
+    ], 'Required:  check selection.'
     assert all(row['selected_member'] for row in rows), (
-        " check selection: require all(row['selected_member'] for row in rows)"
+        'Required:  check selection.'
     )
     assert all(
         row['current']
@@ -511,27 +456,17 @@ def _check_selection(value, expected):
         and row['reset_current']
         and row['reset'] == 'Reset unavailable'
         for row in rows
-    ), (
-        " check selection: require all( row['current'] and row['visible'] and "
-        "row['percent_current'] and row['reset_current'] and row['reset'] == "
-        "'Reset unavailable' for row in rows )"
-    )
-    assert [row['sceneY'] for row in rows] == sorted(row['sceneY'] for row in rows), (
-        " check selection: require [row['sceneY'] for row in rows] == "
-        "sorted(row['sceneY'] for row in rows)"
-    )
+    ), 'Required:  check selection.'
+    assert [row['sceneY'] for row in rows] == sorted(
+        row['sceneY'] for row in rows
+    ), 'Required:  check selection.'
     if rows:
-        assert not value['status']['visible'], (
-            " check selection: require not value['status']['visible']"
-        )
+        assert not value['status']['visible'], 'Required:  check selection.'
     else:
         assert value['status'] == {
             'visible': True,
             'text': 'Session and weekly usage were not reported.',
-        }, (
-            " check selection: require value['status'] == { 'visible': True, 'text': "
-            "'Session and weekly usage were not reported.', }"
-        )
+        }, 'Required:  check selection.'
 
 
 def _check_account_projection(value, case, expected, *, phase):
@@ -539,17 +474,16 @@ def _check_account_projection(value, case, expected, *, phase):
     if phase.get('scope') == 'current_native_mount':
         # ADR-0015 account is now a fixed typed value with both string members.
         public = {key: case['account'].get(key, '') for key in ('email', 'planType')}
-    assert value['account'] == public and value['canonical_account'] == public, (
-        " check account projection: require value['account'] == public and "
-        "value['canonical_account'] == public"
-    )
+    assert (
+        value['account'] == public and value['canonical_account'] == public
+    ), 'Required:  check account projection.'
     for key in ('plan', 'plan_label', 'initial'):
         assert value[key] == expected[key], (
-            (' check account projection: require value[key] == expected[key]'),
+            ('Required:  check account projection.'),
             key,
         )
     assert value['connection'] == expected['initial'], (
-        " check account projection: require value['connection'] == expected['initial']"
+        'Required:  check account projection.'
     )
 
 
@@ -593,20 +527,12 @@ def _account_display(actor, expected):
         'plan_plain': True,
         'plan_visible': expected['plan_visible'],
         'plan_current': True,
-    }, (
-        " account display: require value == { 'identity': expected['identity'], "
-        "'identity_plain': True, 'identity_visible': True, 'identity_current': "
-        "True, 'plan': expected['plan_label'], 'plan_plain': True, "
-        "'plan_visible': expected['plan_visible'], 'plan_current': True, }"
-    )
+    }, 'Required:  account display.'
     assert not any(
         'NEVER_ACCOUNT_DISPLAY_269' in row['display']
         for row in envelope['ui']['texts']
         if row['visible']
-    ), (
-        " account display: require not any( 'NEVER_ACCOUNT_DISPLAY_269' in "
-        "row['display'] for row in envelope['ui']['texts'] if row['visible'] )"
-    )
+    ), 'Required:  account display.'
 
     # The fixture owns opening Account and closes that modal through ordinary input.
     actor.command('manual_key', key='escape')
@@ -624,38 +550,28 @@ def _wire_proof(actor, case):
     _retain(actor, 'canonical-wire-proof', {'wire': wire, 'sent': sent})
     account_requests = [row for row in wire if row.get('method') == 'account/read']
     usage_requests = [row for row in wire if row.get('method') == 'account/rateLimits/read']
-    assert account_requests and usage_requests, (
-        ' wire proof: require account_requests and usage_requests'
-    )
+    assert account_requests and usage_requests, 'Required:  wire proof.'
     account_results = [
         row['result']
         for row in sent
         if row.get('id') == account_requests[0]['id'] and 'result' in row
     ]
-    assert account_results == [{'account': case['account'], 'requiresOpenaiAuth': False}], (
-        " wire proof: require account_results == [{'account': case['account'], "
-        "'requiresOpenaiAuth': False}]"
-    )
+    assert account_results == [
+        {'account': case['account'], 'requiresOpenaiAuth': False}
+    ], 'Required:  wire proof.'
     assert any(
         row.get('id') in {request['id'] for request in usage_requests}
         and row.get('result') == case['usage']
         for row in sent
-    ), (
-        " wire proof: require any( row.get('id') in {request['id'] for request in "
-        "usage_requests} and row.get('result') == case['usage'] for row in sent )"
-    )
+    ), 'Required:  wire proof.'
     if 'update' in case:
         assert any(
             row.get('id') in {request['id'] for request in usage_requests}
             and row.get('result') == case['update']
             for row in sent
-        ), (
-            " wire proof: require any( row.get('id') in {request['id'] for request in "
-            "usage_requests} and row.get('result') == case['update'] for row in sent "
-            ')'
-        )
+        ), 'Required:  wire proof.'
     assert not any(row.get('method') == 'turn/start' for row in wire), (
-        " wire proof: require not any(row.get('method') == 'turn/start' for row in wire)"
+        'Required:  wire proof.'
     )
 
 

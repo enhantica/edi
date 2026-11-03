@@ -21,7 +21,7 @@ def _sample(case_id):
     assert hashlib.sha256(raw).hexdigest() == custody[case_id], 'Never sample current output'
     facts = json.loads(raw)
     assert facts['body_failed'] is False and facts['host_exit'] == 0, (
-        " sample: require facts['body_failed'] is False and facts['host_exit'] == 0"
+        'Required:  sample.'
     )
     mapping = json.loads(Path(__file__).with_name('action_line_map.json').read_text())
     for scope in facts['scopes']:
@@ -185,9 +185,7 @@ def test_actual101_compact_model_packet_is_not_a_current_full_scene():
         hashlib.sha256(raw).hexdigest()
         == '058c0c36659f0fe23f0be77a0736bb09826bce7434912a778ea5ec77985d3579'
     ), (
-        'actual101 compact model packet is not a current full scene: require '
-        'hashlib.sha256(raw).hexdigest() == '
-        "'058c0c36659f0fe23f0be77a0736bb09826bce7434912a778ea5ec77985d3579'"
+        'Required: actual101 compact model packet is not a current full scene.'
     )
     packet = json.loads(raw)
     with pytest.raises(KeyError, match='singleton_identity'):
