@@ -107,7 +107,7 @@ TestCase {
         shown.sort((a, b) => a.mapToItem(appWindow.contentItem, 0, 0).y -
                              b.mapToItem(appWindow.contentItem, 0, 0).y);
         const titles = shown.map(item => item.title.replace(/\s*\(\d+\)$/, ""));
-        compare(titles, ["Scattering lengths", "Symmetry operators", "Atoms in the cell",
+        compare(titles, ["Scattering lengths", "Magnetic form factors", "Symmetry operators", "Atoms in the cell",
                          "Bonds", "Magnetic operators", "Moments in the cell", "Appearance"],
                 "The rendered 2.3 K Extra groups use the approved names and order");
     }
@@ -489,6 +489,102 @@ TestCase {
         box.activated(1);
         tryCompare(box, "currentText", "Greyed atom", 1000, "The selector can restore the default scheme");
         dialog.destroy();
+    }
+    function test_form_factor_group_edits_and_fits_its_ion_coefficients() {
+        Session.closeProject();
+        const path = "structures/cosio.edi";
+        const witness = Probe.readFile("tests/fixtures/magnetic_pnma/form-factor-ions.edi");
+        verify(witness.length > 0 && SettingsProof.write(scratch, path, witness),
+               "The scratch structure has two Ho sites, one Er site and a nonmagnetic oxygen");
+        verify(Session.openProject(scratch), "The two-ion form-factor witness opens through the app");
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
+                  10000, "The form-factor witness builds its Structure workflow");
+        const factors = group("magnetic_form_factor", "structure", "extras");
+        verify(factors.title.startsWith("Magnetic form factors"),
+               "Structure Extra names the Magnetic form factors group");
+        const table = Render.descendants(factors).find(item => item.visible && item.headerItem &&
+            typeof item.itemAtIndex === "function");
+        verify(table, "The group lays out its production ion table");
+        compare(table.count, 2, "Repeated Ho shares one ion row, Er has one row and oxygen has none");
+
+        const ions = {};
+        for (let index = 0; index < table.count; ++index) {
+            table.positionViewAtIndex(index, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => table.itemAtIndex(index) !== null, 2000, "The ion row has been materialised");
+            const row = table.itemAtIndex(index);
+            const ion = Render.descendants(row).find(item =>
+                item.visible && /^(Ho|Er)(3|³)(\+|⁺)$/.test(String(item.text)));
+            verify(ion && (ion.readOnly === true || typeof ion.positionToRectangle !== "function"),
+                   "The ion identity is displayed and read-only");
+            ions[String(ion.text).slice(0, 2)] = index;
+        }
+        compare(Object.keys(ions).sort(), ["Er", "Ho"], "Each independently declared ion has one row");
+        const rowIndex = ions.Ho;
+        table.positionViewAtIndex(rowIndex, ListView.Contain);
+        table.forceLayout();
+
+        function row() { return table.itemAtIndex(rowIndex); }
+        const combo = Render.descendants(row()).find(item => item.visible && typeof item.textAt === "function");
+        verify(combo && combo.count === 3, "The Ho ion row offers three approximation choices");
+        const entries = Array.from({length: combo.count}, (_, index) => combo.textAt(index));
+        const beyond = entries.findIndex(text => /beyond|j[6₆]/i.test(text));
+        const dipole = entries.findIndex((text, index) => index !== beyond && /dipole/i.test(text));
+        const j0 = entries.findIndex((text, index) => index !== beyond && index !== dipole && /j[0₀]/i.test(text));
+        verify(new Set([j0, dipole, beyond]).size === 3 && Math.min(j0, dipole, beyond) >= 0,
+               "The actual choices name j0, dipole and beyond dipole");
+        function select(index) {
+            if (combo.currentIndex === index)
+                return;
+            Ui.scrollIntoView(combo);
+            tryVerify(() => Ui.exposed(combo), 2000, "The approximation control is exposed");
+            mouseClick(combo);
+            tryCompare(combo.popup, "opened", true, 2000, "A real click opens the approximation choices");
+            const list = combo.popup.contentItem;
+            tryVerify(() => list.itemAtIndex(index) && Ui.exposed(list.itemAtIndex(index)), 2000,
+                      "The named approximation can be clicked in the popup");
+            mouseClick(list.itemAtIndex(index));
+            tryCompare(combo, "currentIndex", index, 2000, "Choosing an approximation updates the ion row");
+        }
+        function editableCoefficients() {
+            const result = new Map();
+            for (const cell of Render.descendants(row())) {
+                const name = String(cell.item?.name ?? cell.objectName ?? "");
+                const order = name.match(/(?:j|c)([246])(?:_coefficient)?(?:[.\d]*$)/i);
+                if (order && cell.item && cell.visible && cell.enabled && !cell.readOnly)
+                    result.set(Number(order[1]), cell);
+            }
+            return result;
+        }
+        select(dipole);
+        tryVerify(() => editableCoefficients().has(2), 3000, "The dipole row exposes its C2 editor");
+        const c2 = editableCoefficients().get(2);
+        tryCompare(c2.item, "value", .25, 3000, "The Ho coefficient reads its independently declared starting value");
+        const tooltip = [c2.ToolTip.text, ...Render.descendants(c2).map(item => item.text)].join(" ");
+        verify(/land[eé]/i.test(tooltip) && /\bg\s*[:=≈]\s*1[.,]6(?:0+)?(?![\d.])/i.test(tooltip),
+               "The C2 tooltip gives the matching Landé g of 1.6 from 2/(1+0.25)");
+
+        for (const [choice, expected] of [[j0, []], [dipole, [2]], [beyond, [2, 4, 6]]]) {
+            select(choice);
+            tryVerify(() => JSON.stringify([...editableCoefficients().keys()].sort()) === JSON.stringify(expected),
+                      3000, "Only the coefficients of the selected approximation can be edited: " + entries[choice]);
+        }
+        for (const order of [2, 4, 6]) {
+            const cell = editableCoefficients().get(order);
+            verify(cell?.item.fittable, "The active coefficient is fittable: C" + order);
+            Ui.scrollIntoView(cell);
+            tryVerify(() => Ui.exposed(cell), 2000, "The coefficient editor is reachable: C" + order);
+            mouseClick(cell);
+            cell.selectAll();
+            keyClick(Qt.Key_1);
+            keyClick(Qt.Key_Return);
+            tryCompare(cell.item, "value", 1, 3000, "A real edit updates the model coefficient: C" + order);
+            const fit = cell.fitCheckBox;
+            verify(fit && fit.enabled && fit.visible, "The active coefficient has a usable Free control: C" + order);
+            if (!cell.item.free)
+                mouseClick(fit);
+            tryCompare(cell.item, "free", true, 3000, "The Free control publishes the fitting state: C" + order);
+        }
     }
     function test_magnetic_selector_and_scale_use_one_editing_surface() {
         const dialog = preferences.createObject(appWindow.contentItem);

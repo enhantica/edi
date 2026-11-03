@@ -32,14 +32,26 @@ def scalars(path: Path) -> dict[str, str]:
     return result
 
 
-def generate() -> dict[str, object]:
+def structure_values(structures: list[Path]) -> list[str]:
+    """Every example has a crystal structure; one with moments is magnetic too."""
+    magnetic = any(
+        re.search(r'^_atom_site_moment\.', p.read_text(encoding='utf-8'), re.MULTILINE)
+        for p in structures
+    )
+    return ['crystal', 'magnetic'] if magnetic else ['crystal']
+
+
+def example_ids() -> list[str]:
+    """The catalogue cases and the declared app-only examples (ADR-0048), in registry order."""
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text(encoding='utf-8'))
-    # The catalogue cases and the declared app-only examples (ADR-0048), in registry order.
-    ids = [
+    return [
         row['id'] for row in registry['projects'] if row.get('user-facing') or row.get('app-only')
     ]
+
+
+def generate() -> dict[str, object]:
     entries = {}
-    for example_id in ids:
+    for example_id in example_ids():
         project = ROOT / 'docs/user/cli' / example_id / 'project'
         record = project / 'project.edi'
         analysis = project / 'analysis/analysis.edi'
@@ -76,13 +88,8 @@ def generate() -> dict[str, object]:
             else '__not_applicable__'
             for item in described
         })
-        # Every example has a crystal structure; one whose structure carries moments is magnetic too.
         structures = sorted((project / 'structures').glob('*.edi'))
-        magnetic = any(
-            re.search(r'^_atom_site_moment\.', p.read_text(encoding='utf-8'), re.MULTILINE)
-            for p in structures
-        )
-        values['structure'] = ['crystal', 'magnetic'] if magnetic else ['crystal']
+        values['structure'] = structure_values(structures)
         sources = [record, analysis, *experiments, *structures]
         entries[example_id] = {
             'samples': sample.split(' / '),
@@ -99,13 +106,51 @@ def generate() -> dict[str, object]:
     return {'schema': 1, 'examples': entries}
 
 
+# The Examples list order: powder before single crystal, simulations before fits, sequential
+# fits after the others, and within each group the technique in this order.
+TECHNIQUES = ('neut-cwl', 'neut-tof', 'xray-cwl', 'neut-xray-cwl')
+
+
+def order_key(example_id: str, values: dict[str, list[str]]) -> tuple[int, int, int, int]:
+    technique = example_id.split('_', 1)[0].split('-', 1)[1]
+    if technique not in TECHNIQUES:
+        raise ValueError(f'{example_id}: technique {technique!r} has no place in TECHNIQUES')
+    return (
+        values['sampleForm'] != ['powder'],
+        values['purpose'] != ['simulation'],
+        values['fittingMode'] == ['sequential'],
+        TECHNIQUES.index(technique),
+    )
+
+
+def order_problems(examples: dict[str, dict[str, object]]) -> list[str]:
+    """The examples listed out of the declared order, each against the one before it."""
+    problems = []
+    previous = None
+    for example_id, entry in examples.items():
+        key = order_key(example_id, entry['values'])
+        if previous is not None and key < previous[1]:
+            problems.append(f'{example_id} is listed after {previous[0]}')
+        previous = (example_id, key)
+    return problems
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     generated = generate()
+    problems = order_problems(generated['examples'])
+    if problems:
+        parser.exit(
+            1,
+            'Examples out of order; move their rows in docs/user/cli/projects.yml:\n  '
+            + '\n  '.join(problems)
+            + '\n',
+        )
     if args.check:
-        if json.loads(CATALOG.read_text()) != generated:
+        committed = json.loads(CATALOG.read_text())
+        if committed != generated or list(committed['examples']) != list(generated['examples']):
             parser.exit(
                 1,
                 'Example metadata differs from its source project records; '
