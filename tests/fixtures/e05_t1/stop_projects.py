@@ -5,6 +5,8 @@ from pathlib import Path
 
 import gemmi
 
+from tests.fixtures.project_categories.historical_bytes import units
+
 
 def background_prefix(text):
     """Replace only background/data, retaining the saved experiment's full typed input."""
@@ -52,7 +54,6 @@ def background_prefix(text):
         end = items[index + 1].line_number - 1 if index + 1 < len(items) else len(lines)
         retained.extend(lines[item.line_number - 1 : end])
     return ''.join(retained)
-from tests.fixtures.project_categories.historical_bytes import units
 
 
 def materialize(engine, source, target, *, stalled):

@@ -6,6 +6,8 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import gemmi
+
+from tests.fixtures.adp_site_symmetry.model import equivalent
 from tests.fixtures.project_save.completion import (
     ANISOTROPIC,
     CELL,
@@ -15,8 +17,6 @@ from tests.fixtures.project_save.completion import (
     fixed_values,
     model_inputs,
 )
-
-from tests.fixtures.adp_site_symmetry.model import equivalent
 from tests.fixtures.report_units.iucr_reference import rounded_pair
 from tests.fixtures.saved_spelling.reference import NUMBER, decode
 

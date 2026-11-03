@@ -6,8 +6,8 @@ Wire shapes are independently retained in the earlier assistant stdio fixture at
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import os
 import stat
 import sys
@@ -27,7 +27,13 @@ first_response_for_retry = {}
 calls = []
 turn_number = 0
 thread_number = 0
-cursor = {'position': 0, 'sequence': 0, 'pending_final': False, 'research': None, 'message_stream': None}
+cursor = {
+    'position': 0,
+    'sequence': 0,
+    'pending_final': False,
+    'research': None,
+    'message_stream': None,
+}
 native_ids = {}
 emit_lock = threading.RLock()
 usage_notifications_delivered = False
@@ -42,9 +48,14 @@ pending_archive = None
 pending_turn_start = None
 fixture_unacked_start = None
 client_originator = None
-if config.get("session_fixture"):
-    with trace.open("a", encoding="utf-8") as output:
-        output.write(json.dumps({"fixture_runtime_started": {"pid": os.getpid(), "parent_pid": os.getppid()}}) + "\n")
+if config.get('session_fixture'):
+    with trace.open('a', encoding='utf-8') as output:
+        output.write(
+            json.dumps({
+                'fixture_runtime_started': {'pid': os.getpid(), 'parent_pid': os.getppid()}
+            })
+            + '\n'
+        )
 # Provider-owned offline persistence, using pinned092d Thread/Resume/Read shapes.
 # This never fabricates application state or scientific results. A killed helper
 # must resume the original stored ID, rather than silently starting another one.
@@ -53,18 +64,36 @@ source_state = os.environ.get('EDI_TEST_CODEX_PROVIDER_STATE_SOURCE')
 if source_state and not state_path.exists():
     source = Path(source_state).resolve(strict=True)
     fixture_root = Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).resolve().parent.parent
-    assert source.is_relative_to(fixture_root) and source.is_file() and source.stat().st_uid == os.geteuid()
+    assert (
+        source.is_relative_to(fixture_root)
+        and source.is_file()
+        and source.stat().st_uid == os.geteuid()
+    )
     assert not state_path.exists() and config.get('session_fixture')
     original_state_bytes = source.read_bytes()
     original_state = json.loads(original_state_bytes)
-    assert isinstance(original_state.get('threads'), dict) and isinstance(original_state.get('inputs'), list)
+    assert isinstance(original_state.get('threads'), dict) and isinstance(
+        original_state.get('inputs'), list
+    )
     state_path.write_bytes(original_state_bytes)
     with trace.open('a', encoding='utf-8') as output:
-        output.write(json.dumps({'fixture_provider_restore': {'source': str(source),
-            'destination': str(state_path), 'bytes': len(original_state_bytes),
-            'sha256': hashlib.sha256(original_state_bytes).hexdigest(), 'exact_copy': True}}) + '\n')
-state = json.loads(state_path.read_text()) if state_path.exists() else {
-    'thread_number': 0, 'turn_number': 0, 'threads': {}, 'inputs': []}
+        output.write(
+            json.dumps({
+                'fixture_provider_restore': {
+                    'source': str(source),
+                    'destination': str(state_path),
+                    'bytes': len(original_state_bytes),
+                    'sha256': hashlib.sha256(original_state_bytes).hexdigest(),
+                    'exact_copy': True,
+                }
+            })
+            + '\n'
+        )
+state = (
+    json.loads(state_path.read_text())
+    if state_path.exists()
+    else {'thread_number': 0, 'turn_number': 0, 'threads': {}, 'inputs': []}
+)
 thread_number = state['thread_number']
 turn_number = state['turn_number']
 
@@ -85,13 +114,20 @@ def saved_thread(exclude_turns=False):
 def thread_response(exclude_turns=False):
     effective = effective_configs.get(thread_id, {})
     return {
-        'thread': saved_thread(exclude_turns), 'model': effective.get('model', 'gpt-6.1-sol'),
-        'modelProvider': 'openai', 'serviceTier': None, 'disabledPluginIds': [],
-        'cwd': effective.get('cwd', cwd), 'instructionSources': [], 'approvalPolicy': 'never',
+        'thread': saved_thread(exclude_turns),
+        'model': effective.get('model', 'gpt-6.1-sol'),
+        'modelProvider': 'openai',
+        'serviceTier': None,
+        'disabledPluginIds': [],
+        'cwd': effective.get('cwd', cwd),
+        'instructionSources': [],
+        'approvalPolicy': 'never',
         'approvalsReviewer': 'user',
         'sandbox': {'type': 'readOnly', 'networkAccess': False},
-        'reasoningEffort': effective.get('effort', 'medium'), 'collaborationMode': None,
-        'turnsBackwardsCursor': None, 'itemsBackwardsCursor': None,
+        'reasoningEffort': effective.get('effort', 'medium'),
+        'collaborationMode': None,
+        'turnsBackwardsCursor': None,
+        'itemsBackwardsCursor': None,
     }
 
 
@@ -112,7 +148,10 @@ def reply_configured_original_usage(request, spec):
     original = json.loads(json.dumps(request))
     captured = json.loads(json.dumps(spec))
     assert ('result' in captured) != ('error' in captured)
-    envelope = {'id': original['id'], **{key: captured[key] for key in ('result', 'error') if key in captured}}
+    envelope = {
+        'id': original['id'],
+        **{key: captured[key] for key in ('result', 'error') if key in captured},
+    }
     fifo = captured.get('release_fifo')
     if not fifo:
         emit(envelope)
@@ -120,50 +159,95 @@ def reply_configured_original_usage(request, spec):
     target = Path(fifo)
     ready = Path(captured['ready'])
     owner = Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).resolve().parent
-    assert target.is_absolute() and target.parent.resolve() == owner and ready.parent.resolve() == owner
-    assert not target.is_symlink() and stat.S_ISFIFO(target.stat().st_mode) and target.stat().st_uid == os.geteuid()
+    assert (
+        target.is_absolute()
+        and target.parent.resolve() == owner
+        and ready.parent.resolve() == owner
+    )
+    assert (
+        not target.is_symlink()
+        and stat.S_ISFIFO(target.stat().st_mode)
+        and target.stat().st_uid == os.geteuid()
+    )
+
     def release_original_once():
         descriptor = os.open(target, os.O_RDWR)
         try:
-            ready.write_text(json.dumps({'request_id': original['id'], 'method': original['method'],
-                'pid': os.getpid(), 'parent_pid': os.getppid(), 'captured_envelope_sha256':
-                    hashlib.sha256(json.dumps(envelope, sort_keys=True).encode()).hexdigest()}))
+            ready.write_text(
+                json.dumps({
+                    'request_id': original['id'],
+                    'method': original['method'],
+                    'pid': os.getpid(),
+                    'parent_pid': os.getppid(),
+                    'captured_envelope_sha256': hashlib.sha256(
+                        json.dumps(envelope, sort_keys=True).encode()
+                    ).hexdigest(),
+                })
+            )
             token = os.read(descriptor, 1)
-            assert token == b'R', 'Only the original owned fixture release settles this exact request'
+            assert token == b'R', (
+                'Only the original owned fixture release settles this exact request'
+            )
             emit(envelope)
         finally:
             os.close(descriptor)
+
     thread = threading.Thread(target=release_original_once, daemon=True)
     thread.start()
+
 
 def hold_original_usage_stdin_after_reply(spec):
     hold = spec.get('hold_stdin_after_reply')
     if not hold:
         return
     owner = Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).resolve().parent
-    drain = Path(hold['drain_fifo']);notify_fifo = Path(hold['notification_fifo'])
-    ready = Path(hold['ready']);notify_ready = Path(hold['notification_ready'])
+    drain = Path(hold['drain_fifo'])
+    notify_fifo = Path(hold['notification_fifo'])
+    ready = Path(hold['ready'])
+    notify_ready = Path(hold['notification_ready'])
     for path in (drain, notify_fifo, ready, notify_ready):
         assert path.is_absolute() and path.parent.resolve() == owner
     for path in (drain, notify_fifo):
-        assert not path.is_symlink() and stat.S_ISFIFO(path.stat().st_mode) and path.stat().st_uid == os.geteuid()
+        assert (
+            not path.is_symlink()
+            and stat.S_ISFIFO(path.stat().st_mode)
+            and path.stat().st_uid == os.geteuid()
+        )
     original_event = json.loads(json.dumps(hold['notification']))
-    assert original_event['method'] == 'account/updated', 'This finite carrier releases only the original account-mode notification'
+    assert original_event['method'] == 'account/updated', (
+        'This finite carrier releases only the original account-mode notification'
+    )
+
     def release_account_notification():
         descriptor = os.open(notify_fifo, os.O_RDWR)
         try:
-            notify_ready.write_text(json.dumps({'pid': os.getpid(), 'parent_pid': os.getppid(), 'event': original_event}))
+            notify_ready.write_text(
+                json.dumps({
+                    'pid': os.getpid(),
+                    'parent_pid': os.getppid(),
+                    'event': original_event,
+                })
+            )
             assert os.read(descriptor, 1) == b'N'
             notify(original_event['method'], original_event['params'])
         finally:
             os.close(descriptor)
-    thread = threading.Thread(target=release_account_notification, daemon=True);thread.start()
+
+    thread = threading.Thread(target=release_account_notification, daemon=True)
+    thread.start()
     descriptor = os.open(drain, os.O_RDWR)
     try:
-        ready.write_text(json.dumps({'pid': os.getpid(), 'parent_pid': os.getppid(), 'actual_stdin_read_held': True}))
+        ready.write_text(
+            json.dumps({
+                'pid': os.getpid(),
+                'parent_pid': os.getppid(),
+                'actual_stdin_read_held': True,
+            })
+        )
         assert os.read(descriptor, 1) == b'D'
     finally:
         os.close(descriptor)
+
 
 def metadata_reply(request, value, family):
     current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
@@ -180,19 +264,31 @@ def settle_captured_archived_start():
     if not original or not Path(original['hold']).exists():
         return
     pending_turn_start = None
-    request = original['request'];identity = original['thread'];started = original['turn']
+    request = original['request']
+    identity = original['thread']
+    started = original['turn']
     state.setdefault('late_start_outcomes', []).append({
-        'request_id': request['id'], 'threadId': identity, 'turnId': started['id'],
-        'actual_reply': original['reply']})
+        'request_id': request['id'],
+        'threadId': identity,
+        'turnId': started['id'],
+        'actual_reply': original['reply'],
+    })
     if original['reply'] == 'refusal':
         persist()
-        emit({'id': request['id'], 'error': {'code': -32000,
-            'message': 'Independent original start refused after its thread was archived'}})
+        emit({
+            'id': request['id'],
+            'error': {
+                'code': -32000,
+                'message': 'Independent original start refused after its thread was archived',
+            },
+        })
         return
     interrupted = {**started, 'status': 'interrupted'}
     state['threads'][identity]['turns'].append(interrupted)
     if original.get('user_entry'):
-        state.setdefault('item_history', {}).setdefault(identity, []).append(original['user_entry'])
+        state.setdefault('item_history', {}).setdefault(identity, []).append(
+            original['user_entry']
+        )
     persist()
     reply(request, {'turn': started})
     notify('turn/started', {'threadId': identity, 'turn': started})
@@ -206,14 +302,19 @@ def finish_native_archive(request):
     affected = {target}
     if config.get('session_fixture', {}).get('native_archive_subtree'):
         while True:
-            children = {identity for identity, row in state['threads'].items()
-                        if row.get('parentThreadId') in affected}
+            children = {
+                identity
+                for identity, row in state['threads'].items()
+                if row.get('parentThreadId') in affected
+            }
             if children <= affected:
                 break
             affected.update(children)
-    state.setdefault('archive_operations', []).append({'target': target,
+    state.setdefault('archive_operations', []).append({
+        'target': target,
         'affected': sorted(affected),
-        'actually_loaded_in_this_peer': sorted(affected.intersection(effective_configs))})
+        'actually_loaded_in_this_peer': sorted(affected.intersection(effective_configs)),
+    })
     archived = state.setdefault('archived_threads', [])
     for identity in sorted(affected):
         if identity not in archived:
@@ -233,40 +334,71 @@ def settle_fixture_unacked_start():
     if not captured or not Path(captured['hold']).exists():
         return
     fixture_unacked_start = None
-    identity = captured['thread'];original = captured['turn']
+    identity = captured['thread']
+    original = captured['turn']
     reply(captured['request'], {'turn': original})
     notify('turn/started', {'threadId': identity, 'turn': original})
     item = agent_message(original['id'] + '-final', captured['final_text'])
     binding = {'threadId': identity, 'turnId': original['id'], 'item': item}
     notify('item/started', binding)
     notify('item/completed', {**binding, 'completedAtMs': 1})
-    complete = {**original, 'status': 'completed',
-        'items': [entry['item'] for entry in state.get('item_history', {}).get(identity, [])
-                  if entry['turnId'] == original['id']], 'itemsView': 'full'}
-    state['threads'][identity]['turns'].append(complete);persist()
-    notify('turn/completed', {'threadId': identity,
-        'turn': {**complete, 'items': [dict(item)], 'itemsView': 'summary'}})
+    complete = {
+        **original,
+        'status': 'completed',
+        'items': [
+            entry['item']
+            for entry in state.get('item_history', {}).get(identity, [])
+            if entry['turnId'] == original['id']
+        ],
+        'itemsView': 'full',
+    }
+    state['threads'][identity]['turns'].append(complete)
+    persist()
+    notify(
+        'turn/completed',
+        {
+            'threadId': identity,
+            'turn': {**complete, 'items': [dict(item)], 'itemsView': 'summary'},
+        },
+    )
 
 
 def agent_message(identity, text):
     # Pinned092d event_mapping.rs406-420 and v2/item.rs252-263,889-904:
     # live item events and terminal Summary serialize the SAME nullable fields.
-    return {'type': 'agentMessage', 'id': identity, 'text': text,
-            'phase': None, 'memoryCitation': None, 'delivery': None, 'questions': None}
+    return {
+        'type': 'agentMessage',
+        'id': identity,
+        'text': text,
+        'phase': None,
+        'memoryCitation': None,
+        'delivery': None,
+        'questions': None,
+    }
 
 
 def remember_actual_item(method, params):
-    if not config.get('observe_context_continuity') or method not in ('item/started', 'item/completed'):
+    if not config.get('observe_context_continuity') or method not in (
+        'item/started',
+        'item/completed',
+    ):
         return
     identity = params.get('threadId')
-    assert identity in state['threads'] and params.get('turnId') and isinstance(params.get('item'), dict)
+    assert (
+        identity in state['threads']
+        and params.get('turnId')
+        and isinstance(params.get('item'), dict)
+    )
     item = json.loads(json.dumps(params['item']))
     entries = state.setdefault('item_history', {}).setdefault(identity, [])
     key = (params['turnId'], item['id'])
     old = next((entry for entry in entries if (entry['turnId'], entry['item']['id']) == key), None)
-    entry = {'turnId': params['turnId'], 'item': item,
-             'startedAtMs': params.get('startedAtMs', old.get('startedAtMs') if old else None),
-             'completedAtMs': params.get('completedAtMs') if method == 'item/completed' else None}
+    entry = {
+        'turnId': params['turnId'],
+        'item': item,
+        'startedAtMs': params.get('startedAtMs', old.get('startedAtMs') if old else None),
+        'completedAtMs': params.get('completedAtMs') if method == 'item/completed' else None,
+    }
     if old is None:
         entries.append(entry)
     else:
@@ -280,9 +412,17 @@ def notify(method, params):
 
 
 def turn(status):
-    return {'id': turn_id, 'rootTurnId': None, 'items': [], 'itemsView': 'notLoaded',
-            'status': status, 'error': None, 'startedAt': None, 'completedAt': None,
-            'durationMs': None}
+    return {
+        'id': turn_id,
+        'rootTurnId': None,
+        'items': [],
+        'itemsView': 'notLoaded',
+        'status': status,
+        'error': None,
+        'startedAt': None,
+        'completedAt': None,
+        'durationMs': None,
+    }
 
 
 def operands(value):
@@ -325,13 +465,31 @@ def advance():
                 completed['error'] = terminal_fixture['error']
             event = terminal_fixture.get('notification')
             if event:
-                notify('error', {'threadId': thread_id, 'turnId': turn_id,
-                    'error': event['error'], 'willRetry': event['willRetry']})
+                notify(
+                    'error',
+                    {
+                        'threadId': thread_id,
+                        'turnId': turn_id,
+                        'error': event['error'],
+                        'willRetry': event['willRetry'],
+                    },
+                )
                 if event.get('duplicate'):
-                    notify('error', {'threadId': thread_id, 'turnId': turn_id,
-                        'error': event['error'], 'willRetry': event['willRetry']})
+                    notify(
+                        'error',
+                        {
+                            'threadId': thread_id,
+                            'turnId': turn_id,
+                            'error': event['error'],
+                            'willRetry': event['willRetry'],
+                        },
+                    )
         if config.get('observe_context_continuity'):
-            completed['items'] = [entry['item'] for entry in state.get('item_history', {}).get(thread_id, []) if entry['turnId'] == turn_id]
+            completed['items'] = [
+                entry['item']
+                for entry in state.get('item_history', {}).get(thread_id, [])
+                if entry['turnId'] == turn_id
+            ]
             completed['itemsView'] = 'full'
         state['threads'][thread_id]['turns'].append(completed)
         persist()
@@ -349,7 +507,9 @@ def advance():
         return
     spec = calls[cursor['position']]
     if 'idle_delay_ms' in spec:
-        calls[cursor['position']] = {key: value for key, value in spec.items() if key != 'idle_delay_ms'}
+        calls[cursor['position']] = {
+            key: value for key, value in spec.items() if key != 'idle_delay_ms'
+        }
         timer = threading.Timer(spec['idle_delay_ms'] / 1000, advance)
         timer.daemon = True
         timer.start()
@@ -367,11 +527,19 @@ def advance():
         if gate:
             assert len(chunks) > 1 and not cursor['message_stream']
             notify('item/agentMessage/delta', {**binding, 'itemId': call_id, 'delta': chunks[0]})
-            cursor['message_stream'] = {'gate': gate, 'chunks': chunks, 'binding': binding, 'item': item}
+            cursor['message_stream'] = {
+                'gate': gate,
+                'chunks': chunks,
+                'binding': binding,
+                'item': item,
+            }
             return
         for chunk in chunks:
             notify('item/agentMessage/delta', {**binding, 'itemId': call_id, 'delta': chunk})
-        notify('item/completed', {**binding, 'item': {**item, 'text': ''.join(chunks)}, 'completedAtMs': 1})
+        notify(
+            'item/completed',
+            {**binding, 'item': {**item, 'text': ''.join(chunks)}, 'completedAtMs': 1},
+        )
         advance()
         return
     if 'notification' in spec:
@@ -399,13 +567,25 @@ def advance():
     if 'human_question' in spec or 'human_questions' in spec:
         # Pinned092d ToolRequestUserInputParams/Question and ordinary pending
         # ThreadItem lifecycle. This is runtime question metadata, no Edi result.
-        questions = spec['human_questions'] if 'human_questions' in spec else [spec['human_question']]
-        item = {'type': 'dynamicToolCall', 'id': call_id, 'namespace': None,
-                'tool': 'request_user_input', 'arguments': {'questions': questions},
-                'status': 'inProgress', 'contentItems': None, 'success': None, 'durationMs': None}
+        questions = (
+            spec['human_questions'] if 'human_questions' in spec else [spec['human_question']]
+        )
+        item = {
+            'type': 'dynamicToolCall',
+            'id': call_id,
+            'namespace': None,
+            'tool': 'request_user_input',
+            'arguments': {'questions': questions},
+            'status': 'inProgress',
+            'contentItems': None,
+            'success': None,
+            'durationMs': None,
+        }
         binding = {'threadId': thread_id, 'turnId': turn_id}
         if spec.get('human_without_public_item'):
-            binding['question_item_id'] = call_id  # Pinned callback call ID only, NOT a public item.
+            binding['question_item_id'] = (
+                call_id  # Pinned callback call ID only, NOT a public item.
+            )
         else:
             binding['item'] = item
         request_id = 'independent-human-envelope-' + str(cursor['sequence'])
@@ -414,9 +594,18 @@ def advance():
             human_native_scheduled.append((request_id, probe))
         if 'item' in binding:
             notify('item/started', {**binding, 'startedAtMs': 1})
-        emit({'id': request_id, 'method': 'item/tool/requestUserInput', 'params': {
-            'threadId': thread_id, 'turnId': turn_id, 'itemId': call_id,
-            'questions': questions, 'isBlocking': True, 'autoResolutionMs': None}})
+        emit({
+            'id': request_id,
+            'method': 'item/tool/requestUserInput',
+            'params': {
+                'threadId': thread_id,
+                'turnId': turn_id,
+                'itemId': call_id,
+                'questions': questions,
+                'isBlocking': True,
+                'autoResolutionMs': None,
+            },
+        })
         return
     spec = {**spec, 'arguments': operands(spec['arguments'])}
     item = {
@@ -435,8 +624,12 @@ def advance():
     pending[request_id] = binding
     if spec.get('replay_request_once'):
         retry_after_response[request_id] = {
-            'threadId': thread_id, 'turnId': turn_id, 'callId': call_id,
-            'namespace': None, 'tool': spec['tool'], 'arguments': spec['arguments'],
+            'threadId': thread_id,
+            'turnId': turn_id,
+            'callId': call_id,
+            'namespace': None,
+            'tool': spec['tool'],
+            'arguments': spec['arguments'],
         }
     notify('item/started', {**binding, 'startedAtMs': 1})
     emit({
@@ -462,17 +655,34 @@ def emit_released_question_native_probes():
         human_native_scheduled.remove((parent_rpc, probe))
         original = human_pending[parent_rpc]
         arguments = operands(probe['arguments'])
-        item = {'type': 'dynamicToolCall', 'id': probe['call_id'], 'namespace': None,
-                'tool': probe['tool'], 'arguments': arguments, 'status': 'inProgress',
-                'contentItems': None, 'success': None, 'durationMs': None}
+        item = {
+            'type': 'dynamicToolCall',
+            'id': probe['call_id'],
+            'namespace': None,
+            'tool': probe['tool'],
+            'arguments': arguments,
+            'status': 'inProgress',
+            'contentItems': None,
+            'success': None,
+            'durationMs': None,
+        }
         binding = {'threadId': original['threadId'], 'turnId': original['turnId'], 'item': item}
         rpc = 'original-human-native-envelope-' + probe['call_id']
         assert rpc not in human_native_pending and rpc not in pending and rpc not in human_pending
         human_native_pending[rpc] = (parent_rpc, binding)
         notify('item/started', {**binding, 'startedAtMs': 1})
-        emit({'id': rpc, 'method': 'item/tool/call', 'params': {
-            'threadId': binding['threadId'], 'turnId': binding['turnId'],
-            'callId': item['id'], 'namespace': None, 'tool': item['tool'], 'arguments': arguments}})
+        emit({
+            'id': rpc,
+            'method': 'item/tool/call',
+            'params': {
+                'threadId': binding['threadId'],
+                'turnId': binding['turnId'],
+                'callId': item['id'],
+                'namespace': None,
+                'tool': item['tool'],
+                'arguments': arguments,
+            },
+        })
 
 
 for line in sys.stdin:
@@ -483,11 +693,18 @@ for line in sys.stdin:
         if request['id'] in human_native_pending:
             parent_rpc, original = human_native_pending.pop(request['id'])
             state.setdefault('human_native_responses', []).append({
-                'parent_rpc': parent_rpc, 'response': json.loads(json.dumps(request))})
+                'parent_rpc': parent_rpc,
+                'response': json.loads(json.dumps(request)),
+            })
             persist()
             result = request.get('result', {})
-            item = {**original['item'], 'status': 'completed' if result.get('success') else 'failed',
-                    'success': bool(result.get('success')), 'contentItems': result.get('contentItems', []), 'durationMs': 1}
+            item = {
+                **original['item'],
+                'status': 'completed' if result.get('success') else 'failed',
+                'success': bool(result.get('success')),
+                'contentItems': result.get('contentItems', []),
+                'durationMs': 1,
+            }
             notify('item/completed', {**original, 'item': item, 'completedAtMs': 1})
             # This distinct real native reply cannot answer or advance the
             # original human RPC, nor execute another original scripted step.
@@ -498,9 +715,18 @@ for line in sys.stdin:
             persist()
             if 'item' in original:
                 success = 'result' in request and 'error' not in request
-                item = {**original['item'], 'status': 'completed' if success else 'failed',
-                        'success': success, 'contentItems': [{'type': 'inputText',
-                        'text': json.dumps(request.get('result', request.get('error')))}], 'durationMs': 1}
+                item = {
+                    **original['item'],
+                    'status': 'completed' if success else 'failed',
+                    'success': success,
+                    'contentItems': [
+                        {
+                            'type': 'inputText',
+                            'text': json.dumps(request.get('result', request.get('error'))),
+                        }
+                    ],
+                    'durationMs': 1,
+                }
                 notify('item/completed', {**original, 'item': item, 'completedAtMs': 2})
             # A real builtin callback resolves its original RPC without inventing
             # item/completed for an item the runtime never published.
@@ -553,25 +779,56 @@ for line in sys.stdin:
         if mode is not None and not account_mode_delivered:
             account_mode_delivered = True
             with trace.open('a', encoding='utf-8') as output:
-                output.write(json.dumps({'fixture_mode_before_account_read': {'request_id': request['id'], 'pid': os.getpid(), 'metadata': mode}}) + '\n')
+                output.write(
+                    json.dumps({
+                        'fixture_mode_before_account_read': {
+                            'request_id': request['id'],
+                            'pid': os.getpid(),
+                            'metadata': mode,
+                        }
+                    })
+                    + '\n'
+                )
             notify('account/updated', mode)
-        current_account = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
-        normal_account = {'account': {'type': 'chatgpt',
-            'email': config.get('account_email', 'integration@example.invalid'), 'planType': 'plus'},
-            'requiresOpenaiAuth': False}
+        current_account = json.loads(
+            Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8')
+        )
+        normal_account = {
+            'account': {
+                'type': 'chatgpt',
+                'email': config.get('account_email', 'integration@example.invalid'),
+                'planType': 'plus',
+            },
+            'requiresOpenaiAuth': False,
+        }
         if current_account.get('fixture_account_read_response') is not None:
-            reply_configured_original_usage(request, current_account['fixture_account_read_response'])
+            reply_configured_original_usage(
+                request, current_account['fixture_account_read_response']
+            )
         else:
-            metadata_reply(request, current_account.get('fixture_account_read_reply', normal_account), 'account_read')
+            metadata_reply(
+                request,
+                current_account.get('fixture_account_read_reply', normal_account),
+                'account_read',
+            )
     elif method == 'account/rateLimits/read':
         emit_released_question_native_probes()
-        current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
+        current = json.loads(
+            Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8')
+        )
         settle_captured_archived_start()
         settle_fixture_unacked_start()
         configured = current.get('fixture_usage_responses')
         if configured is not None:
-            assert fixture_usage_response_index < len(configured) or current.get('fixture_usage_response_tail') is not None, 'Unexpected extra usage read is not a fixture polling allowance'
-            captured = configured[fixture_usage_response_index] if fixture_usage_response_index < len(configured) else current['fixture_usage_response_tail']
+            assert (
+                fixture_usage_response_index < len(configured)
+                or current.get('fixture_usage_response_tail') is not None
+            ), 'Unexpected extra usage read is not a fixture polling allowance'
+            captured = (
+                configured[fixture_usage_response_index]
+                if fixture_usage_response_index < len(configured)
+                else current['fixture_usage_response_tail']
+            )
             fixture_usage_response_index += 1
             reply_configured_original_usage(request, captured)
             hold_original_usage_stdin_after_reply(captured)
@@ -590,7 +847,13 @@ for line in sys.stdin:
             gate = current.get('session_fixture', {}).get(family + '_hold')
             if not gate or Path(gate).exists():
                 if current.get('session_fixture', {}).get(family + '_error_on_release'):
-                    emit({'id': old['id'], 'error': {'code': -32000, 'message': 'Independent original ' + family + ' operation failure'}})
+                    emit({
+                        'id': old['id'],
+                        'error': {
+                            'code': -32000,
+                            'message': 'Independent original ' + family + ' operation failure',
+                        },
+                    })
                 else:
                     reply(old, value)
                 pending_metadata.remove((old, value, family))
@@ -606,7 +869,8 @@ for line in sys.stdin:
                 if event['method'] == 'thread/archived':
                     archived = state.setdefault('archived_threads', [])
                     if event_params['threadId'] not in archived:
-                        archived.append(event_params['threadId']);persist()
+                        archived.append(event_params['threadId'])
+                        persist()
                 notify(event['method'], event_params)
         if pending_archive and Path(config['session_fixture']['archive_hold']).exists():
             original = pending_archive
@@ -615,10 +879,19 @@ for line in sys.stdin:
         held_stream = cursor['message_stream']
         if held_stream and Path(held_stream['gate']).exists():
             cursor['message_stream'] = None
-            binding, item, chunks = held_stream['binding'], held_stream['item'], held_stream['chunks']
+            binding, item, chunks = (
+                held_stream['binding'],
+                held_stream['item'],
+                held_stream['chunks'],
+            )
             for chunk in chunks[1:]:
-                notify('item/agentMessage/delta', {**binding, 'itemId': item['id'], 'delta': chunk})
-            notify('item/completed', {**binding, 'item': {**item, 'text': ''.join(chunks)}, 'completedAtMs': 1})
+                notify(
+                    'item/agentMessage/delta', {**binding, 'itemId': item['id'], 'delta': chunk}
+                )
+            notify(
+                'item/completed',
+                {**binding, 'item': {**item, 'text': ''.join(chunks)}, 'completedAtMs': 1},
+            )
             advance()
         if cursor['research'] and Path(cursor['research'][0]).exists():
             notify('item/completed', cursor['research'][1])
@@ -627,7 +900,29 @@ for line in sys.stdin:
         if cursor['pending_final'] and Path(config['final_gate']).exists():
             advance()
     elif method == 'model/list':
-        reply(request, {'data': config.get('fixture_models', [{'id': 'gpt-6.1-sol', 'model': 'gpt-6.1-sol', 'displayName': 'Independent offline model', 'description': 'Protocol fixture', 'hidden': False, 'isDefault': True, 'defaultReasoningEffort': 'medium', 'supportedReasoningEfforts': [{'reasoningEffort': 'medium', 'description': 'Fixture'}]}]), 'nextCursor': None})
+        reply(
+            request,
+            {
+                'data': config.get(
+                    'fixture_models',
+                    [
+                        {
+                            'id': 'gpt-6.1-sol',
+                            'model': 'gpt-6.1-sol',
+                            'displayName': 'Independent offline model',
+                            'description': 'Protocol fixture',
+                            'hidden': False,
+                            'isDefault': True,
+                            'defaultReasoningEffort': 'medium',
+                            'supportedReasoningEfforts': [
+                                {'reasoningEffort': 'medium', 'description': 'Fixture'}
+                            ],
+                        }
+                    ],
+                ),
+                'nextCursor': None,
+            },
+        )
     elif method == 'skills/list':
         reply(
             request,
@@ -658,42 +953,78 @@ for line in sys.stdin:
         thread_id = '019a0290-0000-7000-8000-' + f'{thread_number:012d}'
         cwd = params['cwd']
         state['threads'][thread_id] = {
-            'id': thread_id, 'cliVersion': '0.162.1', 'createdAt': 1, 'updatedAt': 1,
-            'cwd': cwd, 'ephemeral': params.get('ephemeral') is True,
-            'modelProvider': 'openai', 'preview': '', 'projectId': None,
-            'sessionId': 'integration-session', 'source': 'appServer',
-            'forkedFromId': None, 'parentThreadId': None, 'section': None,
-            'sectionEnteredAt': None, 'historyMode': 'legacy', 'recencyAt': None,
-            'model': 'gpt-6.1-sol', 'reasoningEffort': 'medium', 'path': None,
-            'originator': None, 'threadSource': None, 'agentNickname': None,
-            'agentRole': None, 'gitInfo': None, 'name': None,
-            'status': {'type': 'idle'}, 'turns': [],
+            'id': thread_id,
+            'cliVersion': '0.162.1',
+            'createdAt': 1,
+            'updatedAt': 1,
+            'cwd': cwd,
+            'ephemeral': params.get('ephemeral') is True,
+            'modelProvider': 'openai',
+            'preview': '',
+            'projectId': None,
+            'sessionId': 'integration-session',
+            'source': 'appServer',
+            'forkedFromId': None,
+            'parentThreadId': None,
+            'section': None,
+            'sectionEnteredAt': None,
+            'historyMode': 'legacy',
+            'recencyAt': None,
+            'model': 'gpt-6.1-sol',
+            'reasoningEffort': 'medium',
+            'path': None,
+            'originator': None,
+            'threadSource': None,
+            'agentNickname': None,
+            'agentRole': None,
+            'gitInfo': None,
+            'name': None,
+            'status': {'type': 'idle'},
+            'turns': [],
         }
         if config.get('session_fixture'):
             # Actual stock0.162.1 CLI default; explicit launch flag takes priority.
-            source = sys.argv[sys.argv.index('--session-source') + 1] if '--session-source' in sys.argv else 'vscode'
+            source = (
+                sys.argv[sys.argv.index('--session-source') + 1]
+                if '--session-source' in sys.argv
+                else 'vscode'
+            )
             state['threads'][thread_id]['source'] = source
             state['threads'][thread_id]['originator'] = client_originator
         persist()
-        effective_configs[thread_id] = {'cwd': cwd, 'model': params.get('model', 'gpt-6.1-sol'),
-                                        'effort': params.get('config', {}).get('model_reasoning_effort', 'medium')}
+        effective_configs[thread_id] = {
+            'cwd': cwd,
+            'model': params.get('model', 'gpt-6.1-sol'),
+            'effort': params.get('config', {}).get('model_reasoning_effort', 'medium'),
+        }
         subscribed_threads.add(thread_id)
         reply(request, thread_response())
     elif method == 'thread/list':
         fixture = config.get('session_fixture', {})
         if params.get('originators'):
-            emit({'id': request['id'], 'error': {'code': -32602,
-                  'message': 'nonempty originators filter is unavailable on the local app-server'}})
+            emit({
+                'id': request['id'],
+                'error': {
+                    'code': -32602,
+                    'message': 'nonempty originators filter is unavailable on the local app-server',
+                },
+            })
             continue
         if not state.get('session_fixtures_seeded'):
             for original in fixture.get('threads', []):
-                value = {**original, 'cwd': cwd if original['cwd'] == '{CURRENT_WORKSPACE}' else original['cwd']}
+                value = {
+                    **original,
+                    'cwd': cwd if original['cwd'] == '{CURRENT_WORKSPACE}' else original['cwd'],
+                }
                 state['threads'][value['id']] = value
             state['session_fixtures_seeded'] = True
             persist()
         archived = set(state.get('archived_threads', []))
-        rows = [row for key, row in state['threads'].items()
-                if (key in archived) == bool(params.get('archived', False))]
+        rows = [
+            row
+            for key, row in state['threads'].items()
+            if (key in archived) == bool(params.get('archived', False))
+        ]
         if fixture.get('list_only_fixture_threads'):
             known = {row['id'] for row in fixture.get('threads', [])}
             rows = [row for row in rows if row['id'] in known]
@@ -701,6 +1032,7 @@ for line in sys.stdin:
             rows = [row for row in rows if row.get('parentThreadId') == params['parentThreadId']]
         if params.get('ancestorThreadId'):
             ancestor = params['ancestorThreadId']
+
             def descendant(row):
                 seen = {row['id']}
                 parent = row.get('parentThreadId')
@@ -712,6 +1044,7 @@ for line in sys.stdin:
                     seen.add(parent)
                     parent = state['threads'].get(parent, {}).get('parentThreadId')
                 return False
+
             rows = [row for row in rows if row['id'] != ancestor and descendant(row)]
         if params.get('sourceKinds'):
             rows = [row for row in rows if row['source'] in params['sourceKinds']]
@@ -721,27 +1054,49 @@ for line in sys.stdin:
             choices = params['cwd'] if isinstance(params['cwd'], list) else [params['cwd']]
             rows = [row for row in rows if row['cwd'] in choices]
         key = 'updatedAt' if params.get('sortKey') == 'updated_at' else 'createdAt'
-        rows.sort(key=lambda row: (row[key], row['id']), reverse=params.get('sortDirection', 'desc') == 'desc')
+        rows.sort(
+            key=lambda row: (row[key], row['id']),
+            reverse=params.get('sortDirection', 'desc') == 'desc',
+        )
         cursor_value = params.get('cursor')
         offset = 0 if cursor_value is None else int(cursor_value.removeprefix('independent-page:'))
         count = min(fixture.get('page_size', 2), params.get('limit', 100))
-        page = rows[offset:offset + count]
-        metadata_reply(request, {'data': [{**row, 'turns': []} for row in page],
-                        'nextCursor': 'independent-page:' + str(offset + count) if offset + count < len(rows) else None}, 'list')
+        page = rows[offset : offset + count]
+        metadata_reply(
+            request,
+            {
+                'data': [{**row, 'turns': []} for row in page],
+                'nextCursor': 'independent-page:' + str(offset + count)
+                if offset + count < len(rows)
+                else None,
+            },
+            'list',
+        )
     elif method == 'thread/archive':
         fixture = config.get('session_fixture', {})
         if params['threadId'] not in state['threads']:
-            emit({'id': request['id'], 'error': {'code': -32000, 'message': 'independent original session unavailable'}})
+            emit({
+                'id': request['id'],
+                'error': {'code': -32000, 'message': 'independent original session unavailable'},
+            })
         elif fixture.get('archive_error'):
-            emit({'id': request['id'], 'error': {'code': -32000, 'message': 'independent archive refusal'}})
+            emit({
+                'id': request['id'],
+                'error': {'code': -32000, 'message': 'independent archive refusal'},
+            })
         elif fixture.get('archive_hold') and not Path(fixture['archive_hold']).exists():
             pending_archive = request
         else:
             finish_native_archive(request)
     elif method == 'thread/resume':
         if config.get('session_fixture', {}).get('resume_error'):
-            emit({'id': request['id'], 'error': {'code': -32000,
-                  'message': 'Independent exact-session bootstrap refusal'}})
+            emit({
+                'id': request['id'],
+                'error': {
+                    'code': -32000,
+                    'message': 'Independent exact-session bootstrap refusal',
+                },
+            })
             continue
         assert params['threadId'] in state['threads']
         assert not params.get('history') and not params.get('path')
@@ -755,20 +1110,34 @@ for line in sys.stdin:
         if not was_loaded or not subscribed:
             effective_configs[thread_id] = {
                 'cwd': params.get('cwd', stored_cwd),
-                'model': params.get('model') or state['threads'][thread_id].get('model') or 'gpt-6.1-sol',
-                'effort': params.get('config', {}).get('model_reasoning_effort', state['threads'][thread_id].get('reasoningEffort')),
+                'model': params.get('model')
+                or state['threads'][thread_id].get('model')
+                or 'gpt-6.1-sol',
+                'effort': params.get('config', {}).get(
+                    'model_reasoning_effort', state['threads'][thread_id].get('reasoningEffort')
+                ),
             }
         cwd = effective_configs[thread_id]['cwd']
         subscribed_threads.add(thread_id)
-        state.setdefault('resume_observations', []).append({'threadId': thread_id,
-            'was_loaded': was_loaded, 'had_subscribers': subscribed,
-            'historical_cwd': stored_cwd, 'effective_cwd': cwd,
-            'overrides_applied': not was_loaded or not subscribed})
+        state.setdefault('resume_observations', []).append({
+            'threadId': thread_id,
+            'was_loaded': was_loaded,
+            'had_subscribers': subscribed,
+            'historical_cwd': stored_cwd,
+            'effective_cwd': cwd,
+            'overrides_applied': not was_loaded or not subscribed,
+        })
         persist()
         reply(request, thread_response(params.get('excludeTurns') is True))
     elif method == 'thread/unsubscribe':
         target = params['threadId']
-        status = 'notLoaded' if target not in effective_configs else 'unsubscribed' if target in subscribed_threads else 'notSubscribed'
+        status = (
+            'notLoaded'
+            if target not in effective_configs
+            else 'unsubscribed'
+            if target in subscribed_threads
+            else 'notSubscribed'
+        )
         subscribed_threads.discard(target)
         reply(request, {'status': status})
     elif method == 'thread/items/list':
@@ -784,26 +1153,50 @@ for line in sys.stdin:
             entries.reverse()
         cursor_value = params.get('cursor')
         assert cursor_value is None or isinstance(cursor_value, str)
-        offset = 0 if cursor_value is None else int(cursor_value.removeprefix('genuine-items-page:'))
-        count = min(config.get('session_fixture', {}).get('items_page_size', 2), (params.get('limit') or 100))
+        offset = (
+            0 if cursor_value is None else int(cursor_value.removeprefix('genuine-items-page:'))
+        )
+        count = min(
+            config.get('session_fixture', {}).get('items_page_size', 2),
+            (params.get('limit') or 100),
+        )
         assert count > 0
-        page = entries[offset:offset + count]
-        metadata_reply(request, {'data': page,
-            'nextCursor': 'genuine-items-page:' + str(offset + count) if offset + count < len(entries) else None,
-            'backwardsCursor': None}, 'items')
+        page = entries[offset : offset + count]
+        metadata_reply(
+            request,
+            {
+                'data': page,
+                'nextCursor': 'genuine-items-page:' + str(offset + count)
+                if offset + count < len(entries)
+                else None,
+                'backwardsCursor': None,
+            },
+            'items',
+        )
     elif method == 'thread/read':
         if config.get('session_fixture', {}).get('read_error'):
-            emit({'id': request['id'], 'error': {'code': -32000, 'message': 'Independent original metadata read unavailable'}})
+            emit({
+                'id': request['id'],
+                'error': {
+                    'code': -32000,
+                    'message': 'Independent original metadata read unavailable',
+                },
+            })
             continue
         assert params['threadId'] in state['threads']
         original_id = thread_id
         thread_id = params['threadId']
-        metadata_reply(request, {'thread': saved_thread(not params.get('includeTurns', False))}, 'read')
+        metadata_reply(
+            request, {'thread': saved_thread(not params.get('includeTurns', False))}, 'read'
+        )
         thread_id = original_id
     elif method == 'thread/name/set':
         assert set(params) == {'threadId', 'name'} and isinstance(params['name'], str)
         if params['threadId'] not in state['threads']:
-            emit({'id': request['id'], 'error': {'code': -32000, 'message': 'Original session unavailable'}})
+            emit({
+                'id': request['id'],
+                'error': {'code': -32000, 'message': 'Original session unavailable'},
+            })
         else:
             state['threads'][params['threadId']]['name'] = params['name']
             persist()
@@ -819,7 +1212,9 @@ for line in sys.stdin:
         effective.update({key: params[key] for key in ('model', 'effort') if key in params})
         held_settings_reply = None
         if config.get('fixture_settings_observation'):
-            settings_fixture = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
+            settings_fixture = json.loads(
+                Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8')
+            )
             held_settings_reply = settings_fixture.get('fixture_original_settings_reply')
         if held_settings_reply is None:
             reply(request, {})
@@ -862,45 +1257,83 @@ for line in sys.stdin:
         turn_number += 1
         turn_id = '019a0290-0000-7000-8000-' + f'{turn_number + 1:012d}'
         # The finite test may configure calls after account bootstrap, before its first turn.
-        current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
+        current = json.loads(
+            Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8')
+        )
         config.update(current)
         state['turn_number'] = turn_number
         record = {'threadId': thread_id, 'turnId': turn_id, 'input': params.get('input')}
         if config.get('observe_context_continuity'):
             prior = [row for row in state['inputs'] if row['threadId'] == thread_id]
             record['actual_prior_input_count'] = len(prior)
-            record['first_actual_input_sha256'] = hashlib.sha256(json.dumps(prior[0]['input'], sort_keys=True, ensure_ascii=False).encode()).hexdigest() if prior else None
+            record['first_actual_input_sha256'] = (
+                hashlib.sha256(
+                    json.dumps(prior[0]['input'], sort_keys=True, ensure_ascii=False).encode()
+                ).hexdigest()
+                if prior
+                else None
+            )
             record['actual_request_model'] = params.get('model')
             record['effective_model'] = effective_configs.get(thread_id, {}).get('model')
         if config.get('observe_context_continuity'):
             # Pinned ThreadItem.userMessage retains the actual acknowledged
             # turn/start UserInput array. This is not app history injection.
             actual_user_entry = {
-                'turnId': turn_id, 'item': {'type': 'userMessage', 'id': turn_id + '-actual-user',
-                    'clientId': params.get('clientId'), 'content': json.loads(json.dumps(params.get('input', [])))},
-                'startedAtMs': None, 'completedAtMs': None}
+                'turnId': turn_id,
+                'item': {
+                    'type': 'userMessage',
+                    'id': turn_id + '-actual-user',
+                    'clientId': params.get('clientId'),
+                    'content': json.loads(json.dumps(params.get('input', []))),
+                },
+                'startedAtMs': None,
+                'completedAtMs': None,
+            }
         state['inputs'].append(record)
         persist()
         calls = current['turns'][turn_number - 1]
         cursor['position'] = 0
         unacked_hold = current.get('fixture_unacked_start_hold')
         if unacked_hold and not Path(unacked_hold).exists():
-            assert fixture_unacked_start is None and not calls, 'The narrow ACK fixture holds only one actual read-only no-tool turn'
-            assert config.get('observe_context_continuity'), 'The actual accepted input must have its genuine pinned persistence owner'
-            state.setdefault('item_history', {}).setdefault(thread_id, []).append(actual_user_entry)
-            fixture_unacked_start = {'request': json.loads(json.dumps(request)), 'thread': thread_id,
-                'turn': turn('inProgress'), 'hold': unacked_hold,
-                'final_text': config.get('final_text', 'The original read-only fixture turn is settled.')}
+            assert fixture_unacked_start is None and not calls, (
+                'The narrow ACK fixture holds only one actual read-only no-tool turn'
+            )
+            assert config.get('observe_context_continuity'), (
+                'The actual accepted input must have its genuine pinned persistence owner'
+            )
+            state.setdefault('item_history', {}).setdefault(thread_id, []).append(
+                actual_user_entry
+            )
+            fixture_unacked_start = {
+                'request': json.loads(json.dumps(request)),
+                'thread': thread_id,
+                'turn': turn('inProgress'),
+                'hold': unacked_hold,
+                'final_text': config.get(
+                    'final_text', 'The original read-only fixture turn is settled.'
+                ),
+            }
             state.setdefault('actual_unacked_requests', []).append(json.loads(json.dumps(request)))
             persist()
             continue
         delayed = current.get('archive_before_start_reply')
         if delayed:
-            assert pending_turn_start is None, 'Only one actual original pending start belongs to this fixture hold'
-            assert delayed['reply'] in ('success', 'refusal'), 'Closed original pending-start reply cases only'
-            pending_turn_start = {'request': json.loads(json.dumps(request)), 'thread': thread_id,
-                'turn': turn('inProgress'), 'hold': delayed['hold'], 'reply': delayed['reply'],
-                'user_entry': actual_user_entry if config.get('observe_context_continuity') else None}
+            assert pending_turn_start is None, (
+                'Only one actual original pending start belongs to this fixture hold'
+            )
+            assert delayed['reply'] in ('success', 'refusal'), (
+                'Closed original pending-start reply cases only'
+            )
+            pending_turn_start = {
+                'request': json.loads(json.dumps(request)),
+                'thread': thread_id,
+                'turn': turn('inProgress'),
+                'hold': delayed['hold'],
+                'reply': delayed['reply'],
+                'user_entry': actual_user_entry
+                if config.get('observe_context_continuity')
+                else None,
+            }
             archived = state.setdefault('archived_threads', [])
             if thread_id not in archived:
                 archived.append(thread_id)
@@ -909,17 +1342,21 @@ for line in sys.stdin:
             continue
         reply(request, {'turn': turn('inProgress')})
         if config.get('observe_context_continuity'):
-            state.setdefault('item_history', {}).setdefault(thread_id, []).append(actual_user_entry)
+            state.setdefault('item_history', {}).setdefault(thread_id, []).append(
+                actual_user_entry
+            )
             persist()
         notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
         advance()
     elif method == 'turn/interrupt':
         if fixture_unacked_start and params.get('threadId') == fixture_unacked_start['thread']:
-            original = fixture_unacked_start;fixture_unacked_start = None
+            original = fixture_unacked_start
+            fixture_unacked_start = None
             reply(original['request'], {'turn': original['turn']})
             reply(request, {})
             interrupted = {**original['turn'], 'status': 'interrupted'}
-            state['threads'][original['thread']]['turns'].append(interrupted);persist()
+            state['threads'][original['thread']]['turns'].append(interrupted)
+            persist()
             notify('turn/completed', {'threadId': original['thread'], 'turn': interrupted})
         else:
             reply(request, {})

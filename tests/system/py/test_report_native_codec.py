@@ -7,11 +7,10 @@ import re
 import subprocess
 from pathlib import Path
 
+from tests.fixtures.report_evolution.observe_browser import observe
 from tests.integration.py.test_report_html_text import Contents
 from tests.integration.py.test_report_option_resolution import external_scripts
 from tests.unit.py.test_report_collection_domain import model
-
-from tests.fixtures.report_evolution.observe_browser import observe
 
 ROOT = Path(__file__).resolve().parents[3]
 LIBRARIES = {
