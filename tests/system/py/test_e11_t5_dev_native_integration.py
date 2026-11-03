@@ -12257,6 +12257,35 @@ def test_failed_original_input_preparation_preserves_usable_current_thread_and_p
         )
     )
 
+    _retry_failed_manual_session_selection(actor, target)
+
+
+def _retry_failed_manual_session_selection(actor, target):
+    before = len(_session_wire(actor, 'thread/read'))
+    actor.command('click', name='assistant.sessions')
+    _session_wait(actor)
+    retry = actor.command('session_row_click', thread_id=target)['reply']
+    assert retry['reached'] and retry['actual_pressed_changes'] > 0, (
+        'Required: the same original manual Sessions row remains available for deliberate retry.'
+    )
+    actor.until(
+        lambda row: (
+            not qml(actor, 'Session.assistant.sessionsLoading')
+            and any(
+                event['params']['threadId'] == target
+                for event in _session_wire(actor, 'thread/read')[before:]
+            )
+            and any(
+                message.get('text')
+                == 'Original target conversation retains this exact admitted input identity.'
+                for message in row['ui']['messages']
+            )
+        )
+    )
+    assert not qml(actor, 'Session.assistant.sessionsError'), (
+        'Required: successful manual retry settles the original target and clears its own error.'
+    )
+
 
 # Actual FIRST message/document/resource/input owners, not a TeX test parser.
 def _genuine_math_message(main_actor, source):

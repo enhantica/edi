@@ -269,3 +269,17 @@ def test_provider_result_encoding_retains_unavailable_misfit():
     assert empty.get('reason') == raw_empty['reason'], (
         'The encoded provider reply preserves the native reason for zero usable samples'
     )
+
+
+@pytest.mark.parametrize(('position', 'support'), [(13, [1, 2, 3]), (14, [4, 5])])
+def test_exclusion_between_usable_rows_ends_peak_support(position, support):
+    data = authored_peak()
+    data['excluded'] = [[13.25, 13.75]]
+    data['phases'] = [{'phase_id': 'alpha', 'positions': [position]}]
+    assert population(data) == list(range(len(data['x']))), (
+        'Required: the authored exclusion contains no sampled row.'
+    )
+    (reported,) = actual(data)['worst_peaks']
+    expected = peak(data, support, position, 'alpha')
+    for field in ('weighted_square_sum', 'intensity_ratio', 'centroid_shift', 'width_ratio'):
+        close(reported[field], expected[field], f'{field} uses only the authored side of the gap')
