@@ -58,6 +58,9 @@ struct PatternSource {
         std::string structure_id, label;
         std::size_t place = 0;  // the structure's place in the project's list: its colour
         Column net;
+        // A magnetic structure's magnetic part (crysta's ADR-0108), placed as its magnetic reflections are; its
+        // other component is then its nuclear part (edi ADR-0068).
+        bool magnetic = false;
     };
     std::vector<Component> components;
     std::vector<ExcludedBand> excluded;
@@ -97,10 +100,18 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
 
 // Each structure's curve above the background out of crysta's row-major table (`net`, one value per point and
 // structure in `order`), one component per structure, placed as group_reflections places phases. None when the
-// table does not hold one value per point and structure.
+// table does not hold one value per point and structure. With crysta's magnetic and nuclear tables of the same
+// layout (edi ADR-0068), a structure whose magnetic part is not zero gives two components, as two structures would:
+// its nuclear part, in its own place, and its magnetic part, marked `magnetic` and placed after every structure as its
+// magnetic reflections are; a structure without moments draws as before.
 std::vector<PatternSource::Component> structure_components(std::span<const std::string> order,
                                                            std::span<const double> net, std::size_t points,
-                                                           std::span<const std::string> structure_names);
+                                                           std::span<const std::string> structure_names,
+                                                           std::span<const double> magnetic = {},
+                                                           std::span<const double> nuclear = {});
+// A tick row's series id: `bragg/<structure id>`, and `bragg/<structure id>/magnetic` for a structure's magnetic
+// reflections, so each row is shown and hidden on its own, as a phase is.
+std::string bragg_series_id(const PatternSource::Phase& phase);
 
 // What the renderer asks for.
 struct PatternView {

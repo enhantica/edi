@@ -206,7 +206,8 @@ inline bool writes_calculation(const ExperimentBase& experiment) {
     const PdDataBase& data = *experiment.data;
     const PowderReflnDataBase& refln = experiment.refln;
     return !infinite(data.d_spacing) && !infinite(data.intensity_calc) && !infinite(data.intensity_bkg) &&
-           !infinite(data.component_intensities_net) && !infinite(data.residual) && !infinite(refln.d_spacing) &&
+           !infinite(data.component_intensities_net) &&
+           !infinite(data.component_intensities_magnetic) && !infinite(data.component_intensities_nuclear) && !infinite(data.residual) && !infinite(refln.d_spacing) &&
            !infinite(refln.sin_theta_over_lambda) && !infinite(refln.f_calc) && !infinite(refln.f_squared_calc) &&
            !infinite(refln.position);
 }

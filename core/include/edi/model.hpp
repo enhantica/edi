@@ -3452,6 +3452,11 @@ struct PdDataBase {
     // row-major, one value per point and structure in `component_order` (the structures' ids). Empty until a
     // calculation ran, and when no structure is linked.
     ComputedColumn<double> component_intensities_net;
+    // crysta's ADR-0108: a magnetic structure's curve in its magnetic part (the profile from |M⊥|² alone) and its
+    // nuclear part (the net curve less it), in the layout of component_intensities_net. Empty unless a linked structure
+    // is magnetic and seen by neutrons.
+    ComputedColumn<double> component_intensities_magnetic;
+    ComputedColumn<double> component_intensities_nuclear;
     ComputedColumn<std::string> component_order;
     // ADR-0021 §2: crysta's residual — measured minus calculated on the included rows, NaN on
     // the excluded ones, empty for a calculation-only experiment. Published with the columns
@@ -3490,6 +3495,8 @@ struct PdDataBase {
         intensity_bkg.clear();
         calc_status.clear();
         component_intensities_net.clear();
+        component_intensities_magnetic.clear();
+        component_intensities_nuclear.clear();
         component_order.clear();
         residual.clear();
     }
