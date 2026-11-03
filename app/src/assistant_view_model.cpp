@@ -2048,9 +2048,11 @@ struct AssistantViewModel::State {
             // A connection the failed reopen had started is retired too, so the ordinary Connect offer is what remains.
             startup_reopen_kept=true;
             if(generic_connecting && !generic_authenticated) {
+                // That failure must not capture a recovery of the failed reopen; everything of the old operation is
+                // retired before it publishes, and nothing is written after.
+                suppress_resume_capture=true;
+                const auto restore=qScopeGuard([this]{suppress_resume_capture=false;});
                 generic_fail(message);
-                // That failure must not leave a recovery of the failed reopen behind either.
-                resume_checkpoint.reset();generic_resuming=false;
                 return;
             }
             notify();
@@ -2925,7 +2927,10 @@ struct AssistantViewModel::State {
         auto expected=std::make_shared<DisclosureScope>(*saved.disclosure);expected->account=usage_epoch;
         return same_disclosure(expected,current_disclosure()) && staged_skills_match(expected);
     }
+    // Set while a failed startup reopen retires its connection: that failure records no recovery of it.
+    bool suppress_resume_capture=false;
     void capture_resume_checkpoint() noexcept {
+        if(suppress_resume_capture)return;
         try {
             // The runtime saves a thread at its first turn: one that never had input cannot be resumed, and a
             // reconnect starts a new one.
