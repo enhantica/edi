@@ -169,18 +169,19 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
                 // A center inside an excluded region has no peak, wherever the region's edges fall between samples.
                 if(std::any_of(source.excluded.begin(),source.excluded.end(),
                                [p](const auto& band){return p>=band.x_min && p<=band.x_max;}))continue;
-                // The seed is the nearest usable row on the center's own side of every excluded region; with none
-                // there, the reflection has no peak to measure.
+                // The seed is the nearest row on the center's own side of every excluded region. If that row is not
+                // usable (no valid weight, a non-finite value) the reflection has no peak: a neighbor beyond it is
+                // another peak's support, not this one's.
                 std::size_t near=total;double best=std::numeric_limits<double>::infinity();
                 for(std::size_t i=0;i<total;++i) {
                     const auto d=std::abs(x[i]-p);
-                    if(!std::isfinite(d) || d>=best || place[i]==used.size())continue;
+                    if(!std::isfinite(d) || d>=best)continue;
                     const auto lo=std::min(x[i],p),hi=std::max(x[i],p);
                     if(std::any_of(source.excluded.begin(),source.excluded.end(),
                                    [lo,hi](const auto& band){return band.x_max>=lo && band.x_min<=hi;}))continue;
                     best=d;near=i;
                 }
-                if(near==total)continue;
+                if(near==total || place[near]==used.size())continue;
                 const auto at=place[near];
                 const double top=c[near]-b[near];
                 if(!(top>0))continue;
