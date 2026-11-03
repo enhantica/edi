@@ -1529,6 +1529,48 @@ class Edit {
         });
     }
 
+    // The last fit undone back to the state just before it, for the assistant's Undo of a rejected trial (edi
+    // ADR-0055): undo_fit's restore, then the fit record the project held when that fit started instead of none,
+    // and, when the restored values are exactly those the previous adopted fit left, that fit's free flags too.
+    // `before` is the project as the undone fit started and `accepted` as the previous adopted fit left it; either
+    // may be null, and one whose experiments or parameters no longer match is not used. Worked out on a copy first.
+    static Edit undo_fit_to(Project& project, std::shared_ptr<const Project> before,
+                            std::shared_ptr<const Project> accepted) {
+        return Edit([&project, before = std::move(before), accepted = std::move(accepted)] {
+            Project restored = project;
+            const bool undone = !restore_fit_start(restored).was_no_op;
+            const auto same_experiments = [](const Project& a, const Project& b) {
+                if (a.experiments.size() != b.experiments.size()) return false;
+                for (std::size_t i = 0; i < a.experiments.size(); ++i)
+                    if (a.experiments[i]->name.value() != b.experiments[i]->name.value()) return false;
+                return true;
+            };
+            if (undone && before && same_experiments(restored, *before)) copy_fit_result(restored, *before);
+            std::vector<bool> flags;
+            if (undone && accepted) {
+                Project kept = *accepted;
+                const auto to = named_slots(restored);
+                const auto from = named_slots(kept);
+                bool same = to.size() == from.size();
+                for (std::size_t i = 0; same && i < to.size(); ++i) {
+                    same = to[i].unique_name == from[i].unique_name &&
+                           to[i].parameter->value.get() == from[i].parameter->value.get() &&
+                           to[i].parameter->uncertainty.get() == from[i].parameter->uncertainty.get();
+                }
+                if (same) for (const auto& slot : from) flags.push_back(slot.parameter->free.get());
+            }
+            if (!copy_parameter_states(project, restored)) {
+                throw std::logic_error("undo: the restored copy does not match the project");
+            }
+            if (!flags.empty()) {
+                const auto live = named_slots(project);
+                if (live.size() == flags.size())
+                    for (std::size_t i = 0; i < live.size(); ++i) live[i].parameter->free = static_cast<bool>(flags[i]);
+            }
+            copy_fit_result(project, restored);
+        });
+    }
+
    private:
     struct ResultOperation {};
     explicit Edit(std::function<void()> operation) : operation_(std::move(operation)) {}

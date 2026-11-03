@@ -516,6 +516,7 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
     }
     submitted_single_joint_ = !scan;
     submitted_attempt_ = attempt; // The real submitted job owns this identity even if a later attempt refuses.
+    if (!scan) before_fit_ = std::make_shared<const edi::Project>(project_);
     const bool admitted = job_->start(scan ? owner_.scanTemplate() : nullptr);
     if (!admitted && submitted_attempt_ == attempt) submitted_attempt_ = 0;
     if (owner_.retired_) return;
@@ -570,12 +571,15 @@ bool FitViewModel::undo() {
     }
     // Through the project's one write door, as an edit: the restore, then the calculation of the pre-fit
     // state on the worker (edi::Edit::undo_fit). The fit items describe a fit the model no longer holds.
+    // The assistant's Undo of a rejected fit goes back to the state before it, with the record and flags of the
+    // accepted fit before (edi ADR-0055); the app's own Undo clears the record, as diffraction-lib's does.
     edi::Project& project = project_;
-    if (owner_.applyUndo(edi::Edit::undo_fit(project), false).isEmpty()) {
+    auto edit = input ? edi::Edit::undo_fit_to(project, before_fit_, accepted_fit_) : edi::Edit::undo_fit(project);
+    if (owner_.applyUndo(std::move(edit), false).isEmpty()) {
         if (owner_.retired_) return true;
         setProgress(QString(), QString(), QString());
         setElapsed(QString());
-        results_->clear();
+        results_->setRecord(project_);
         return true;
     }
     return false;
@@ -1076,6 +1080,7 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
         // The table, the χ², the chart and the texts all come from this one result, in this one step.
         owner_.publishFit();
         if (owner_.retired_) return;
+        accepted_fit_ = submitted_single_joint_ ? std::make_shared<const edi::Project>(project_) : nullptr;
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),

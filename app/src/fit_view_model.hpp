@@ -318,6 +318,9 @@ class FitViewModel : public QObject {
     void invalidateFitUndo() noexcept { undo_attempt_ = history_attempt_ = 0; }
     std::uint64_t attempt_serial_ = 0, latest_attempt_ = 0, submitted_attempt_ = 0;
     std::uint64_t undo_attempt_ = 0, history_attempt_ = 0, finished_attempt_ = 0, native_attempt_ = 0;
+    // The project as the latest single or joint fit started, and as the latest adopted one left it: what the
+    // assistant's Undo of a rejected fit restores (Edit::undo_fit_to).
+    std::shared_ptr<const edi::Project> before_fit_, accepted_fit_;
     bool presenting_ = false, submitted_single_joint_ = false;
     friend class AssistantViewModel;
     std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);
