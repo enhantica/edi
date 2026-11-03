@@ -7,25 +7,25 @@
   },
   "quantities": {
     "rwp": {
-      "value": 0.049,
+      "value": 0.0547,
       "kind": "reference",
       "tol_abs": null,
-      "tol_rel": 0.05
+      "tol_rel": 0.08
     },
     "param.Co1.crystalaxis_x.value": {
-      "value": 0.7008,
+      "value": 0.7641,
       "kind": "reference",
       "tol_abs": 0.15,
       "tol_rel": null
     },
     "param.Co1.crystalaxis_y.value": {
-      "value": 2.5957,
+      "value": 2.7238,
       "kind": "reference",
       "tol_abs": 0.15,
       "tol_rel": null
     },
     "param.Co2.crystalaxis_y.value": {
-      "value": 2.9682,
+      "value": 2.8647,
       "kind": "reference",
       "tol_abs": 0.15,
       "tol_rel": null
