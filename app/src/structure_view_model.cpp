@@ -4,6 +4,9 @@
 #include <QRegularExpression>
 #include <QSet>
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <limits>
 #include <filesystem>
 #include <map>
 
@@ -12,6 +15,7 @@
 #include "edi/edits.hpp"
 #include "edi/io.hpp"
 #include "edi/symmetry.hpp"
+#include "parameter_item.hpp"
 #include "parameter_registry.hpp"
 #include "project_editor.hpp"
 
@@ -407,6 +411,8 @@ void AtomSiteMomentListModel::sync() {
         rows.append({site.get(), values});
     }
     setTableRows(rows);
+    ++revision_;
+    emit revisionChanged();
 }
 
 QStringList AtomSiteMomentListModel::ions(int row) const {
@@ -432,6 +438,112 @@ void AtomSiteMomentListModel::setIon(int row, const QString& ion) {
     if (magnetic) {
         editor_.apply(edi::Edit::magnetic_ion(structure, site->type_symbol.value(), ion.toStdString()), false);
     }
+}
+
+namespace {
+std::array<double, 6> cell_of(const edi::Structure& structure) {
+    const edi::Cell& cell = structure.cell;
+    return {cell.length_a.value, cell.length_b.value, cell.length_c.value,
+            cell.angle_alpha.value, cell.angle_beta.value, cell.angle_gamma.value};
+}
+
+const edi::AtomSiteMoment* moment_of(const edi::Structure& structure, const edi::AtomSite* site) {
+    if (site == nullptr) {
+        return nullptr;
+    }
+    for (const auto& row : structure.atom_site_moment) {
+        if (row->id.value() == site->id.value()) {
+            return row.get();
+        }
+    }
+    return nullptr;
+}
+
+std::array<double, 3> in_form(const std::array<double, 6>& cell, const std::array<double, 3>& crystal,
+                              const QString& form) {
+    if (form == QLatin1String("cartesian")) {
+        return crysta::moment_cartesian(cell, crystal);
+    }
+    if (form == QLatin1String("spherical")) {
+        return crysta::moment_spherical(crysta::moment_cartesian(cell, crystal));
+    }
+    return crystal;
+}
+
+std::array<double, 3> from_form(const std::array<double, 6>& cell, const std::array<double, 3>& values,
+                                const QString& form) {
+    if (form == QLatin1String("cartesian")) {
+        return crysta::moment_crystal_axis(cell, values);
+    }
+    if (form == QLatin1String("spherical")) {
+        return crysta::moment_crystal_axis(cell, crysta::moment_from_spherical(values));
+    }
+    return values;
+}
+}  // namespace
+
+QVariantList AtomSiteMomentListModel::components(int row, const QString& form) const {
+    const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
+    const edi::AtomSiteMoment* moment = moment_of(structure_, site);
+    if (moment == nullptr) {
+        return {};
+    }
+    const std::array<double, 6> cell = cell_of(structure_);
+    const std::array<double, 3> crystal{moment->crystalaxis_x.value, moment->crystalaxis_y.value,
+                                        moment->crystalaxis_z.value};
+    const bool has_su = moment->crystalaxis_x.uncertainty.has_value() ||
+                        moment->crystalaxis_y.uncertainty.has_value() ||
+                        moment->crystalaxis_z.uncertainty.has_value();
+    const std::array<double, 3> su{moment->crystalaxis_x.uncertainty.value_or(0.0),
+                                   moment->crystalaxis_y.uncertainty.value_or(0.0),
+                                   moment->crystalaxis_z.uncertainty.value_or(0.0)};
+    const std::array<double, 3> values = in_form(cell, crystal, form);
+    const std::array<double, 3> spherical = crysta::moment_spherical(crysta::moment_cartesian(cell, crystal));
+    const std::array<double, 3> spherical_su = crysta::moment_spherical_su(cell, crystal, su);
+    std::array<double, 3> values_su = su;
+    if (form == QLatin1String("cartesian")) {
+        values_su = crysta::moment_cartesian_su(cell, su);
+    } else if (form == QLatin1String("spherical")) {
+        values_su = spherical_su;
+    }
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    QVariantList out;
+    for (const double value : values) {
+        out.append(value);
+    }
+    for (const double value : values_su) {
+        out.append(has_su ? value : nan);
+    }
+    out.append(spherical[0]);
+    out.append(has_su ? spherical_su[0] : nan);
+    return out;
+}
+
+QString AtomSiteMomentListModel::setComponent(int row, const QString& form, int k, double value) {
+    const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
+    auto* moment = const_cast<edi::AtomSiteMoment*>(moment_of(structure_, site));
+    if (moment == nullptr || k < 0 || k > 2 || !std::isfinite(value)) {
+        return tr("This site has no moment to edit");
+    }
+    const std::array<double, 6> cell = cell_of(structure_);
+    const std::array<double, 3> crystal{moment->crystalaxis_x.value, moment->crystalaxis_y.value,
+                                        moment->crystalaxis_z.value};
+    std::array<double, 3> values = in_form(cell, crystal, form);
+    values[static_cast<std::size_t>(k)] = value;
+    const std::array<double, 3> wanted = from_form(cell, values, form);
+    // The components the site symmetry leaves free (the registry's refinable marks); the others follow them.
+    const std::vector<edi::Parameter*> components = moment->parameters();
+    std::vector<std::pair<edi::Parameter*, double>> writes;
+    for (std::size_t i = 0; i < components.size(); ++i) {
+        const ParameterItem* item = registry_.find(components[i]);
+        if (item != nullptr && item->isRefinable()) {
+            writes.emplace_back(components[i], wanted[i]);
+        }
+    }
+    if (writes.empty()) {
+        return tr("The site symmetry fixes this moment");
+    }
+    return editor_.apply(edi::Edit::values(std::move(writes)), false);
 }
 
 // ---- PropagationVectorListModel -----------------------------------------------------------------

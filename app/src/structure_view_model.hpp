@@ -190,6 +190,8 @@ class AtomSiteMomentListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to a structure")
+    // Counts the structure's syncs: what components() reads (the cell as well as the moments) may have changed.
+    Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 
    public:
     AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
@@ -199,11 +201,24 @@ class AtomSiteMomentListModel : public RowTableModel {
     Q_INVOKABLE QStringList ions(int row) const;
     // "none" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
     Q_INVOKABLE void setIon(int row, const QString& ion);
+    // The row's moment in `form` ("crystal_axes", "cartesian" or "spherical"; edi ADR-0068): its three components,
+    // their s.u. (NaN where the components have none) and the modulus |M| with its s.u.; empty for a site without
+    // a moment.
+    Q_INVOKABLE QVariantList components(int row, const QString& form) const;
+    // Sets component `k` of the row's moment in `form`, the other two kept: the moment is converted to crystal axes
+    // and only the components the site symmetry leaves free are written, in one edit. Returns why it was refused,
+    // or an empty text.
+    Q_INVOKABLE QString setComponent(int row, const QString& form, int k, double value);
+    int revision() const { return revision_; }
+
+   signals:
+    void revisionChanged();
 
    private:
     edi::Structure& structure_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
+    int revision_ = 0;
 };
 
 // The Propagation vectors group (edi ADR-0068; the owner, 2026-11-03): the structure's commensurate k vectors, each

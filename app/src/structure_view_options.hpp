@@ -36,10 +36,14 @@ class StructureViewOptions : public QObject {
     // Angstrom per Bohr magneton (`_structure_view.moment_scale`), saved with the structure (edi ADR-0068).
     Q_PROPERTY(bool showMoments READ showMoments WRITE setShowMoments NOTIFY showMomentsChanged)
     Q_PROPERTY(double momentScale READ momentScale WRITE setMomentScale NOTIFY momentScaleChanged)
+    // The form the Magnetic moments table shows and edits the moments in: "crystal_axes", "cartesian" or "spherical"
+    // (`_structure_view.moment_form`, saved with the structure; the stored form stays crystal axes; edi ADR-0068).
+    Q_PROPERTY(QString momentForm READ momentForm WRITE setMomentForm NOTIFY momentFormChanged)
     // How the arrows are coloured — "atom", "greyed" or "single" — the app's preference, not saved with a project.
     Q_PROPERTY(QString momentColours READ momentColours WRITE setMomentColours NOTIFY momentColoursChanged)
     // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* momentFormOptions READ momentFormOptions CONSTANT)
 
    public:
     explicit StructureViewOptions(QObject* parent = nullptr);
@@ -68,6 +72,8 @@ class StructureViewOptions : public QObject {
     QString momentColours() const;
     void setMomentColours(const QString& colours);
     void setMomentScale(double scale);  // above 0
+    QString momentForm() const { return moment_form_; }
+    void setMomentForm(const QString& form);  // one of the three; anything else is ignored
 
     // The atom subset's next state, as diffraction-lib's atoms button: all, asymmetric unit, none; with no
     // atom outside the asymmetric unit, all and none.
@@ -79,6 +85,7 @@ class StructureViewOptions : public QObject {
     std::map<std::string, std::string> toView() const;
     void setFromView(const std::map<std::string, std::string>& view);
     OptionListModel* atomViewOptions() const { return atom_view_options_; }
+    OptionListModel* momentFormOptions() const { return moment_form_options_; }
 
    signals:
     void atomViewChanged();
@@ -92,6 +99,7 @@ class StructureViewOptions : public QObject {
     void axesChanged();
     void showMomentsChanged();
     void momentScaleChanged();
+    void momentFormChanged();
     void momentColoursChanged();
     // Any option changed: what the views re-present on.
     void changed();
@@ -103,6 +111,8 @@ class StructureViewOptions : public QObject {
     // Whether the structure states show_moments, so a structure that does not keeps its bytes.
     bool moments_declared_ = false;
     OptionListModel* atom_view_options_;
+    OptionListModel* moment_form_options_;
+    QString moment_form_ = QStringLiteral("crystal_axes");
 };
 
 }  // namespace edi_app
