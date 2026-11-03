@@ -1,0 +1,220 @@
+site_name: EasyDiffraction
+site_description: Diffraction analysis, your way. Application, Python and command line in one place.
+site_url: http://127.0.0.1:8873/
+docs_dir: docs
+site_dir: site
+theme:
+  variant: modern
+  custom_dir: overrides
+  logo: assets/logo-light.svg
+  favicon: assets/icon.png
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: lucide/sun
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: lucide/moon
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+extra_css:
+  - assets/brand-colors.css?v=1
+  - assets/wordmark.css?v=header-2
+  - assets/site-components.css?v=table-icons-2
+  - assets/experiment-tags.css?v=2
+  - assets/parameter-reference.css?v=3
+extra_javascript:
+  - assets/example-catalogue.js?v=1
+extra:
+  interface_icons:
+    Application: [lucide/globe, lucide/monitor]
+    Web application: [lucide/globe]
+    Web app: [lucide/globe]
+    Desktop application: [lucide/monitor]
+    Desktop app: [lucide/monitor]
+    Python: [simple/python]
+    Command Line: [lucide/square-terminal]
+  section_icons:
+    Foundations: book-open-variant
+    Analysis workflow: routes
+    Start here: compass-outline
+    Peak profiles: chart-bell-curve
+    Intensity corrections: tune
+    Experiment model: microscope
+    Refinement and statistics: chart-scatter-plot
+    Reference: book-search-outline
+  workflow_icons:
+    Project: archive
+    Structure: puzzle
+    Experiment: microscope
+    Analysis: calculator
+    Report: clipboard-text
+nav:
+- Home: index.md
+- User guide:
+  - user-guide/index.md
+  - Foundations:
+    - Introduction: user-guide/introduction.md
+    - Features and roadmap: user-guide/features.md
+    - Concept: user-guide/concepts.md
+    - Data formats: user-guide/data-formats.md
+    - Parameters: user-guide/parameters.md
+    - Parameter names: user-guide/parameter-reference.md
+    - Experiment types and labels: user-guide/experiment-types.md
+    - Glossary: user-guide/glossary.md
+  - Analysis workflow:
+    - user-guide/analysis-workflow/index.md
+    - Project: user-guide/analysis-workflow/project.md
+    - Structure: user-guide/analysis-workflow/structure.md
+    - Experiment: user-guide/analysis-workflow/experiment.md
+    - Analysis: user-guide/analysis-workflow/analysis.md
+    - Fitting modes: user-guide/fitting-modes.md
+    - Fit quality: user-guide/fit-quality.md
+    - Report: user-guide/analysis-workflow/report.md
+  - Examples: user-guide/examples.md
+- Application:
+  - application/index.md
+  - Start here:
+    - In your browser: application/browser.md
+    - On your desktop: application/desktop.md
+    - Application layout: application/workspace.md
+    - Example refinement: application/first-refinement.md
+    - Example projects: application/examples.md
+  - Project:
+    - Create a project: application/new-project.md
+    - Open and save: application/projects.md
+  - Structure:
+    - Load and display: application/structures.md
+    - Symmetry and cell: application/symmetry.md
+    - Atom sites: application/atoms.md
+    - Atomic displacement: application/displacement.md
+    - Scattering lengths: application/scattering.md
+  - Experiment:
+    - Experiments and data: application/experiments.md
+    - Instrument: application/instrument.md
+    - Peak profiles: application/peak-profiles.md
+    - Background and exclusions: application/background.md
+    - Linked structures: application/linked-structures.md
+    - Intensity corrections: application/corrections.md
+  - Analysis:
+    - Refine a pattern: application/refine.md
+    - Parameters and constraints: application/parameters.md
+    - Fitting modes: application/fitting-modes.md
+    - Minimizer: application/minimizer.md
+    - Display and updates: application/display.md
+    - Work with a scan: application/scans.md
+  - Report:
+    - Review and save: application/reports.md
+- Python:
+  - python/index.md
+  - Start here:
+    - Setup: python/setup.md
+    - Example refinement: python/examples.md
+  - Project:
+    - Load and save: python/projects.md
+  - Structure:
+    - Structures and parameters: python/structures.md
+  - Experiment:
+    - Experiments and data: python/experiments.md
+  - Analysis:
+    - Calculate a pattern: python/calculate.md
+    - Fit a project: python/fit.md
+    - Inspect results: python/results.md
+  - Report:
+    - Generate and save: python/reports.md
+  - Reference:
+    - API quick reference: python/reference.md
+- Command Line:
+  - cli/index.md
+  - Start here:
+    - Standalone executable: cli/standalone.md
+    - Python package: cli/python.md
+    - Example refinement: cli/examples.md
+  - Project:
+    - Inputs and output files: cli/files.md
+  - Structure:
+    - Prepared structures: cli/structures.md
+  - Experiment:
+    - Prepared experiments: cli/experiments.md
+  - Analysis:
+    - Calculate a pattern: cli/calculate.md
+    - Refine a project: cli/fit.md
+    - Batch workflows: cli/batch.md
+  - Report:
+    - Generate and check: cli/reports.md
+  - Reference:
+    - Command reference: cli/reference.md
+- Physics:
+  - physics/index.md
+  - Diffraction model:
+    - Rietveld refinement: physics/rietveld.md
+    - Crystallography: physics/crystallography.md
+    - Scattering and structure factors: physics/diffraction.md
+    - Atomic displacement: physics/displacement.md
+  - Peak profiles:
+    - physics/profiles.md
+    - Constant wavelength: physics/profiles/cw.md
+    - Time of flight: physics/profiles/tof.md
+  - Intensity corrections:
+    - Absorption: physics/corrections/absorption.md
+    - Extinction: physics/corrections/extinction.md
+    - Preferred orientation: physics/corrections/orientation.md
+    - Lorentz and polarization: physics/corrections/intensity.md
+  - Experiment model:
+    - Calibration and peak positions: physics/calibration.md
+    - Background: physics/background.md
+  - Refinement and statistics:
+    - physics/refinement.md
+    - Minimization and uncertainty: physics/minimization.md
+    - Reliability factors: physics/reliability.md
+  - Reference:
+    - Conventions: physics/conventions.md
+    - Model catalogue: physics/models.md
+    - Parameter explanations: physics/parameters.md
+- About:
+  - about/index.md
+  - Get involved: about/community.md
+  - Licence and source: about/licence.md
+  - Citation and reproducibility: about/citation.md
+  - What's new: changelog.md
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:zensical.extensions.emoji.to_svg
+      emoji_index: !!python/name:zensical.extensions.emoji.twemoji
+      options:
+        custom_icons:
+          - overrides/.icons
+  - pymdownx.arithmatex:
+      generic: true
+copyright: 'EasyDiffraction · <a href="https://enhantica.github.io/edi/dev/">Contributor documentation</a>'
+validation:
+  invalid_links: true
+  invalid_link_anchors: true

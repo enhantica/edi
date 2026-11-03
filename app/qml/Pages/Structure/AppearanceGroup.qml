@@ -12,7 +12,7 @@ import edi.app
 // caption above each field and the fields side by side in equal columns over the group's width, with the
 // components that group and the selectors use. The elements whose radius was substituted are listed under them.
 // View state of the open project, shared by every structure's view; not saved.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     property StructureViewOptions options: null
@@ -24,7 +24,7 @@ EaElements.GroupBox {
     // Open as left, or open when it is the first group shown, as every sidebar group (SideBarGroups).
     collapsed: !SideBarGroups.isOpen(openKey, group)
     onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
-    title: qsTr("Appearance")
+    title: Session.categoryTitle("structure_view")
     icon: "palette"
     last: SideBarGroups.isLast(group)
 

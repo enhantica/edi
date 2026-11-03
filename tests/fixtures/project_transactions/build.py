@@ -136,8 +136,11 @@ def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and 
         'edi_app_tests',
     ])
     tokens = shlex.split(commands.splitlines()[-1])
-    tokens = tokens[2:-2]  # Ninja's ': && <link> && :' envelope.
-    if not tokens or not tokens[0].endswith('c++'):
+    if tokens[:2] == [':', '&&'] and tokens[-2:] == ['&&', ':']:
+        tokens = tokens[2:-2]
+    cache = (native / 'CMakeCache.txt').read_text()
+    compiler = re.search(r'^CMAKE_CXX_COMPILER:[^=]*=(.+)$', cache, re.MULTILINE)
+    if not tokens or compiler is None or tokens[0] != compiler[1]:
         raise RuntimeError('The observer requires the actual native C++ app link command')
     compile_commands = run([
         str(prefix / 'bin/ninja'),
@@ -266,15 +269,7 @@ def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and 
     }
     if fingerprint(root) != before:
         raise RuntimeError('Production source changed while linking the transaction observer')
-    sdk = (
-        Path(
-            re.search(
-                r'^crysta_DIR:[^=]*=(.+)$', (native / 'CMakeCache.txt').read_text(), re.MULTILINE
-            )[1]
-        )
-        .resolve()
-        .parents[2]
-    )
+    sdk = Path(re.search(r'^crysta_DIR:[^=]*=(.+)$', cache, re.MULTILINE)[1]).resolve().parents[2]
     receipt = {
         'production': before,
         'source_sha': os.environ.get('EDI_TRANSACTION_SOURCE_SHA')

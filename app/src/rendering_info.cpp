@@ -10,9 +10,7 @@
 
 namespace edi_app {
 
-namespace {
-
-QString api_name(QSGRendererInterface::GraphicsApi api) {
+QString RenderingInfo::apiName(QSGRendererInterface::GraphicsApi api) {
     switch (api) {
         case QSGRendererInterface::OpenGL:
             return QStringLiteral("OpenGL");
@@ -30,8 +28,6 @@ QString api_name(QSGRendererInterface::GraphicsApi api) {
             return QStringLiteral("Unknown");
     }
 }
-
-}  // namespace
 
 RenderingInfo::RenderingInfo(QObject* parent) : QObject(parent) {}
 
@@ -69,7 +65,7 @@ void RenderingInfo::observe(QQuickWindow* window) {
                     QOpenGLContext::currentContext()->functions()->glGetString(GL_RENDERER));
                 renderer = QString::fromLatin1(text != nullptr ? text : "");
             }
-            const QString name = api_name(api);
+            const QString name = apiName(api);
             QMetaObject::invokeMethod(this, [this, name, renderer] { setDetected(name, renderer); }, Qt::QueuedConnection);
         },
         Qt::DirectConnection);

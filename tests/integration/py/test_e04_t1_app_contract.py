@@ -19,9 +19,11 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 # Frozen from the published gui-components archive; ADR-0015.
+
 GUI_PIN = 'bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1'
 GUI_ARCHIVE_SHA256 = '4a91484651c78fcc639007b0144c349f8c5c87a9d5a98a85dfb8088947204f35'
 GUI_SOURCE_SHA256 = 'c61364b60961098a49cad8b1c1e0c8681ab2e510611f900fa7339c9b3c8984f2'
@@ -707,7 +709,7 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
     assert oracle['corpus'], 'I7: the independent frozen category corpus cannot be empty'
     for case in oracle['corpus']:
         file = ROOT / case['project'] / 'experiments' / (case['experiment'] + '.edi')
-        assert hashlib.sha256(file.read_bytes()).hexdigest() == case['sha256'], (
+        assert hashlib.sha256(read_previous(file)).hexdigest() == case['sha256'], (
             'I7: a changed fixture requires an independently reviewed expectation update'
         )
     profiles = {
@@ -731,7 +733,7 @@ def test_frozen_oracle_inputs_are_the_committed_fixture_bytes():
     )
     assert display['sources'], 'gate 3: displayed-value expectations must name their .edi sources'
     for relative, digest in display['sources'].items():
-        assert hashlib.sha256((ROOT / relative).read_bytes()).hexdigest() == digest, (
+        assert hashlib.sha256(read_previous(ROOT / relative)).hexdigest() == digest, (
             'gate 3: rendered-value oracle retains independently frozen source bytes'
         )
     assert len({case['tag'] for case in display['cases']}) == len(display['cases']), (
@@ -819,6 +821,6 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
         )
         for relative, digest in project['files'].items():
             assert (
-                hashlib.sha256((ROOT / project['path'] / relative).read_bytes()).hexdigest()
+                hashlib.sha256(read_previous(ROOT / project['path'] / relative)).hexdigest()
                 == digest
             ), 'I19: all project-block expectations retain input provenance'

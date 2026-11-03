@@ -158,12 +158,13 @@ WorkflowPage {
         }
     }
     // The page's view options (edi ADR-0031 §2): which rows the parameter table shows, and how a followed scan redraws.
-    // The chart's own choices are on the chart.
+    // The chart's own choices are on the chart. Both are about fitting, so both are hidden while no experiment has
+    // measured data (edi ADR-0046), as the table's free column is.
     settingsItem: Component {
         EaComponents.SideBarColumn {
             ShownParametersGroup {
-                project: page.project
                 visible: page.measured
+                project: page.project
             }
             PatternUpdatesGroup {
                 visible: page.measured

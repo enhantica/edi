@@ -1,0 +1,12 @@
+@font-face {font-family:EDReferenceIcons;src:url("gui-icons/fontawesome-5-solid.otf") format("opentype");font-display:block}
+.ed-reference-icon {display:inline-block;font-family:EDReferenceIcons!important;font-style:normal;font-weight:normal;line-height:1;vertical-align:-.05em;margin-inline-end:.18em}
+.md-typeset table code {overflow-wrap:anywhere;white-space:normal}
+
+.md-typeset :is(h1,h2,h3) .ed-reference-icon,
+.md-nav .ed-reference-icon {vertical-align:middle;inline-size:1em;text-align:center}
+.md-nav__link > .ed-nav-category {flex:none;align-self:center;margin:0}
+
+.md-typeset .ed-parameter-entry {border-top:1px solid var(--md-default-fg-color--lightest);margin-block:1.5rem;padding-block-start:1rem}
+.md-typeset .ed-parameter-entry h3 {margin-block-start:0;font-weight:600}
+
+.ed-reference-anchor {scroll-margin-block-start:7rem}

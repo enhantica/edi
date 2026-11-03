@@ -17,7 +17,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/approved_palettes'
-PALETTES = json.loads((FIXTURE / 'colours.json').read_text())['palettes']
+OWNER = json.loads((ROOT / 'tests/fixtures/chart_controls/owner.json').read_text())
+PALETTES = OWNER['palettes']
+ROLE_GREYS = json.loads((FIXTURE / 'colours.json').read_text())['palettes'][0]
 
 
 def normalized(value):
@@ -135,7 +137,7 @@ def test_exact_catalogue_order_and_natural_default(palette_probe):
     assert list(map(normalized, names)) == [normalized(p['name']) for p in PALETTES], (
         'The core catalogue lists exactly the five approved palettes in display order'
     )
-    assert normalized(default) == 'natural', 'A new user and an unknown preference use Edi Natural'
+    assert normalized(default) == 'earth', 'A new user and an unknown preference use Earth'
 
 
 @pytest.mark.parametrize('palette', PALETTES, ids=itemgetter('name'))
@@ -161,21 +163,25 @@ def test_actual_colour_assignment_matches_approved_order_and_oklab(
         count, place = int(count), int(place)
         if role == 'structures' and count > 0 and place >= count:
             continue
-        colours = palette[theme][role]
-        # The existing empty/index contract clamps categorical indices to the stored set.
+        colours = palette[theme]
+        first = 2 if role == 'structures' and palette['name'] == 'Earth' and count else 0
+        position = first + min(place, max(0, count - 1))
+        size = first + count
         expected = (
-            colours[min(place, 4)]
-            if count <= 5
-            else gradient(colours[0], colours[1], min(place, count - 1) / (count - 1))
+            colours[position]
+            if position < 11
+            else gradient(colours[0], colours[1], (position - 10) / (size - 10))
         )
         if actual.upper() != expected:
             mismatches.append((count, place, actual.upper(), expected))
         seen.append((count, place))
-    assert {count for count, _ in seen} == {0, 1, 2, 5, 6, 17}, (
-        'The core assignment must reach empty, categorical, threshold and larger groups'
+    assert {count for count, _ in seen} == {0, 1, 2, 5, 6, 11, 12, 17}, (
+        'The core assignment must reach empty, categorical, '
+        'eleven-colour boundary and larger groups'
     )
     assert not mismatches, (
-        'Both groups use their own approved order and whole-group Oklab endpoints at every size; '
+        'Every shared position uses the approved order, Earth reservation '
+        'and Oklab overflow shades; '
         f'{palette["name"]}/{theme}/{role}, (count, index, actual, expected)={mismatches}'
     )
 
@@ -188,7 +194,7 @@ def test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls():
     assert gradient('#000000', '#FFFFFF', 0.5) == '#636363', (
         'A half-lightness Oklab grey is not the encoded-sRGB midpoint'
     )
-    first, second = PALETTES[0]['light']['measured'][:2]
+    first, second = PALETTES[0]['light'][:2]
     assert gradient(first, second, 0.4) != gradient(first, second, 0.5), (
         'A nontrivial sampling control distinguishes the required t from a fixed midpoint'
     )
@@ -203,7 +209,7 @@ def test_actual_role_colours_match_approved_light_and_dark(palette_probe, palett
         [str(palette_probe), token, 'roles'], capture_output=True, text=True, check=True, timeout=2
     )
     expected = [
-        palette[theme][role]
+        (OWNER['calc'][theme] if role == 'total_calculation' else ROLE_GREYS[theme][role])
         for theme in ('light', 'dark')
         for role in ('total_calculation', 'background', 'difference')
     ]

@@ -1,0 +1,6 @@
+{% extends "main.html" %}
+{% block extrahead %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ 'assets/gui-capture.css' | url }}?v={{ config.extra.gui_assets_version }}">
+  <script defer src="{{ 'assets/gui-capture.js' | url }}?v={{ config.extra.gui_assets_version }}"></script>
+{% endblock %}

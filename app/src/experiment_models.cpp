@@ -159,8 +159,16 @@ ReflectionListModel::ReflectionListModel(const edi::ExperimentBase& experiment, 
 }
 
 void ReflectionListModel::sync() {
+    // The calculation's reflections while a save writes them, else those the file carried (edi::experiment_categories).
     QList<Row> rows;
-    if (const auto& loop = experiment_.carried_reflections; loop.has_value()) {
+    if (edi::detail::writes_calculation(experiment_)) {
+        const edi::PowderReflnDataBase& refln = experiment_.refln;
+        for (std::size_t i = 0; i < refln.size(); ++i) {
+            const QString hkl = QStringLiteral("%1 %2 %3").arg(refln.index_h[i]).arg(refln.index_k[i]).arg(refln.index_l[i]);
+            rows.append({reinterpret_cast<const void*>(i + 1),
+                         {hkl, refln.d_spacing[i], refln.position[i], refln.f_squared_calc[i]}});
+        }
+    } else if (const auto& loop = experiment_.carried_reflections; loop.has_value()) {
         const auto column = [&loop](const char* name) {
             const auto found = std::find(loop->columns.begin(), loop->columns.end(), name);
             return found == loop->columns.end() ? -1 : static_cast<int>(found - loop->columns.begin());

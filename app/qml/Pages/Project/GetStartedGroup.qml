@@ -14,7 +14,7 @@ import edi.app
 
 // Get started (easydiffractionbeta Pages/Project/SideBarBasic/GetStarted.qml): create a new project, open one from its
 // project.edi or a .zip, or save the open one as a folder or a .zip, or a copy of it (edi ADR-0017 §13, ADR-0052).
-EaElements.GroupBox {
+SideBarGroup {
     id: group
     objectName: "group.getStarted"
     title: qsTr("Get started")
@@ -30,7 +30,7 @@ EaElements.GroupBox {
             objectName: "project.create"
             fontIcon: "plus-circle"
             text: qsTr("Create a new project")
-            onClicked: AppState.afterChanges(() => EaGlobals.Vars.showProjectDescriptionDialog = true)
+            onClicked: AppState.afterChanges(() => EaGlobals.Vars.showProjectDescriptionDialog = true, true)
         }
 
         EaElements.SideBarButton {
@@ -65,6 +65,9 @@ EaElements.GroupBox {
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
         visible: EaGlobals.Vars.showProjectDescriptionDialog
+        // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
+        // it (edi ADR-0064).
+        showsLocation: !AppState.tutorialRunning || !Session.hasProjectSetAside || Session.project !== null
         onClosed: EaGlobals.Vars.showProjectDescriptionDialog = false
         // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
         // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
@@ -75,7 +78,7 @@ EaElements.GroupBox {
         onAccepted: {
             EaGlobals.Vars.showProjectDescriptionDialog = false;
             const name = createDialog.projectName, description = createDialog.projectDescription;
-            const location = WebFiles.available ? "" : createDialog.projectLocation;
+            const location = WebFiles.available || createDialog.showsLocation === false ? "" : createDialog.projectLocation;
             const title = createDialog.projectTitle, authors = createDialog.projectAuthors;
             Qt.callLater(() => {
                 if (!Session.createProject(name, description, location, Preferences.newProjectSuRule, title, authors, Preferences.newReportLibraries === "embedded"))
@@ -110,6 +113,7 @@ EaElements.GroupBox {
 
         Column {
             id: openChoiceColumn
+            objectName: "project.openChoice"
 
             ChoiceRadioButton {
                 objectName: "open.folder"

@@ -1,4 +1,4 @@
-"""The real app keeps dictionary labels and file-spelled numeric fields."""
+"""The real app keeps dictionary displays and the instrument description selectors."""
 
 import json
 import os
@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def run_actor(tmp_path, function):
+    if function == 'DictionaryDisplay::test_page:experiment':
+        run_actor(tmp_path, 'DescriptionLoadState::test_description_load_state')
     assert (ROOT / 'core/include/edi/display.hpp').is_file(), (
         'The app consumes the public dictionary through its core display bridge'
     )
@@ -34,6 +36,15 @@ def run_actor(tmp_path, function):
         if option['token'] != option['display_name']
     ]
     (tmp_path / 'dictionary.json').write_text(json.dumps(expected))
+    group_source = Path(
+        os.environ.get(
+            'EDI_TEST_INSTRUMENT_GROUP_SOURCE',
+            ROOT / 'app/qml/Pages/Experiment/InstrumentGroup.qml',
+        )
+    )
+    (tmp_path / 'instrument-group.qml').write_text(
+        group_source.read_text(encoding='utf-8'), encoding='utf-8'
+    )
     configured = os.environ.get('EDI_APP_TEST_RUNNER')
     binary = Path(configured) if configured else ROOT / 'build/app/app/edi_app_tests'
     assert binary.is_file(), 'The dictionary app gate executes the production Qt test host'
@@ -42,7 +53,11 @@ def run_actor(tmp_path, function):
             str(binary),
             '-input',
             str(ROOT / 'tests/unit/app/tst_dictionary_display.qml'),
-            function,
+            *(
+                [function, 'DictionaryDisplay::test_instrument_selectors']
+                if function == 'DictionaryDisplay::test_page:experiment'
+                else [function]
+            ),
             '-o',
             '-,txt',
         ],
@@ -60,7 +75,8 @@ def run_actor(tmp_path, function):
     )
     output = result.stdout + result.stderr
     assert result.returncode == 0, (
-        'The real app satisfies the dictionary-label and file-spelling contract: ' + output
+        'The real app satisfies dictionary displays and instrument description selectors: '
+        + output
     )
     assert 'PASS' in output and '0 failed' in output, (
         'The selected app actor reaches a passing assertion rather than an empty launch'

@@ -3,6 +3,8 @@
 #define EDI_APP_SESSION_HPP
 
 #include <QObject>
+#include <QPointer>
+#include <optional>
 #include <QString>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -77,6 +79,11 @@ class Session : public QObject {
     QML_SINGLETON
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
+    // A project set aside while a tutorial works in its own (edi ADR-0064), and whether it has unsaved changes.
+    Q_PROPERTY(bool hasProjectSetAside READ hasProjectSetAside NOTIFY projectSetAsideChanged)
+    Q_PROPERTY(bool projectSetAsideModified READ projectSetAsideModified NOTIFY projectSetAsideModifiedChanged)
+    // The set-aside project's name; empty when no project was open (edi ADR-0064).
+    Q_PROPERTY(QString projectSetAsideName READ projectSetAsideName NOTIFY projectSetAsideNameChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(edi_app::ExampleListModel* examples READ examples CONSTANT)
     Q_PROPERTY(edi_app::WarningListModel* loadWarnings READ loadWarnings CONSTANT)
@@ -95,6 +102,9 @@ class Session : public QObject {
     // Whether Save must ask where (edi ADR-0017 §13): a project with no directory yet, or a bundled example's
     // temporary working copy, is saved as.
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
+    // The selected figure palette (Preferences): a project created or opened takes its first colour positions in it
+    // (ADR-0038), so it opens as it would if the palette had been chosen with it open.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
 
    public:
     explicit Session(QObject* parent = nullptr);
@@ -110,6 +120,8 @@ class Session : public QObject {
     QString locationText() const;
     QString projectLocation() const;
     bool needsSaveAs() const;
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
 
     // Open a project from its folder, its project.edi or a .zip of the folder; only `file:` URLs (edi ADR-0052). An
     // archive unpacks into a temporary folder: the project has no folder of its own until Save asks where to keep it.
@@ -126,6 +138,20 @@ class Session : public QObject {
                                    const QString& suRule = QStringLiteral("iucr_99"), const QString& title = QString(),
                                    const QString& authors = QString(), bool reportLibraries = false);
     Q_INVOKABLE void closeProject();
+    // A tutorial's project (edi ADR-0064): the open project, unsaved changes and all, is set aside rather than closed
+    // while a bundled example or a new empty project opens. False, with nothing set aside, when that fails.
+    Q_INVOKABLE bool openExampleAside(const QString& exampleId);
+    Q_INVOKABLE bool createProjectAside(const QString& name, const QString& description);
+    // Sets the open project aside, as the two above do, and leaves no project open: a tutorial whose user creates its
+    // project (edi ADR-0064).
+    Q_INVOKABLE bool setProjectAside();
+    // The set-aside project back in place of the tutorial's, which is closed; with none set aside, no project.
+    Q_INVOKABLE void restoreProjectSetAside();
+    // The tutorial's project is kept: the set-aside project is closed.
+    Q_INVOKABLE void dropProjectSetAside();
+    bool hasProjectSetAside() const { return aside_.has_value(); }
+    bool projectSetAsideModified() const;
+    QString projectSetAsideName() const;
     // The open project's calculation refusals into the message list, after each recalculation (§14).
     void syncCalculationMessages();
     // Save the open project to its directory, or into `directory` (a `file:` URL), which then is its
@@ -176,6 +202,7 @@ class Session : public QObject {
     Q_INVOKABLE QString tooltip(const QString& uid, const QString& variant = QString()) const;
     Q_INVOKABLE QString optionLabel(const QString& uid, const QString& token) const;
     Q_INVOKABLE QString optionTooltip(const QString& uid, const QString& token) const;
+    Q_INVOKABLE QUrl documentationUrl(const QString& uid) const;
     Q_INVOKABLE QString categoryTitle(const QString& id) const;
     // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
     Q_INVOKABLE QString written(const QString& uid, double value) const;
@@ -191,11 +218,15 @@ class Session : public QObject {
     void projectChanged();
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
+    void projectSetAsideChanged();
+    void projectSetAsideNameChanged();
+    void projectSetAsideModifiedChanged();
     void openedExampleChanged();
     void openedArchiveChanged();
     void locationTextChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
+    void colourSchemeChanged();
     void lastErrorChanged();
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
     // no-op.
@@ -219,6 +250,9 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source, const QString& target, const QString& example);
+    // The first of `name`, `name-2`, `name-3`, ... that, in the temporary directory, neither the open project nor the
+    // set-aside one works in, so a new copy never replaces a live project's files (ADR-0064). A name in that directory.
+    QString freeCopyName(const QString& name) const;
     void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
@@ -235,6 +269,7 @@ class Session : public QObject {
     std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
     QString opened_archive_;
+    QString colour_scheme_ = QStringLiteral("earth");
     // The .zip the project was saved as: its location, rewritten by every Save from the working folder.
     QString archive_location_;
     // The read-only folder a temporary working copy was made from.
@@ -254,6 +289,18 @@ class Session : public QObject {
         QString name;
     };
     WebPlace web_place_;
+    // The project a tutorial set aside, with everything the session knew of it, its browser copy and place included, so
+    // it comes back exactly as it was (edi ADR-0064).
+    struct SetAside {
+        QPointer<ProjectViewModel> project;
+        QString example, temporary_folder, archive_location, opened_archive, read_only_source;
+        bool read_only_copy = false;
+        QString web_copy;
+        WebPlace web_place;
+        bool web_from_file = false;
+    };
+    std::optional<SetAside> aside_;
+    bool aside_next_ = false;  // the next replaceProject sets the open project aside
     // The open project's place is the browser's own storage until a Save as onto the disk.
     void setWebPlace(const WebPlace& place);
     // The answer to a browser chooser that copied a project into `root` in memory: opens it there.

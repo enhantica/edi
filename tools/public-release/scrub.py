@@ -65,6 +65,8 @@ SKIP_FILES = {
     'tests/fit-sites.yml',
     'tests/threshold-dispositions.json',
     'pixi.lock',
+    # Vendored MathJax, minified: a rewrite would break it.
+    'website/surfaces/docs/assets/math/tex-svg-full-3.2.2.js',
 }
 SKIP_DIRS = ('.git/', '.pixi/', 'build/', 'site/', 'node_modules/', '__pycache__/', 'tmp/')
 # Byte-pinned inputs: tests compare these files with recorded hashes or with crysta's own bytes,

@@ -1,0 +1,504 @@
+{
+  "pages": [
+    {
+      "page": "home",
+      "steps": [
+        {
+          "title": "Workflow tabs",
+          "text": "Interface tour. The tabs at the top lead through the work, left to right, from the project to the report. This tour uses the LBCO example, so every page is filled in.",
+          "target": "appBar.workflow"
+        },
+        {
+          "title": "Home",
+          "text": "Home: the start page, with the tutorials, the documentation and how to get in touch.",
+          "target": "appBar.tab.home"
+        },
+        {
+          "title": "Start",
+          "text": "Start opens the Project page.",
+          "target": "home.start"
+        }
+      ]
+    },
+    {
+      "page": "project",
+      "steps": [
+        {
+          "title": "Open Project",
+          "text": "Project: what the project is, where it is saved, and the examples and recent projects. Open the Project page with its tab, or press Next.",
+          "target": "appBar.tab.project",
+          "page": "home",
+          "check": "page:project"
+        },
+        {
+          "title": "Description",
+          "text": "The main view shows the project's title, description and authors, as the report will show them.",
+          "target": "mainArea.project.tab.description",
+          "open": true
+        },
+        {
+          "title": "Main tab",
+          "text": "Main holds the controls used most often on each page.",
+          "target": "sideBar.tab.basic",
+          "open": true
+        },
+        {
+          "title": "Get started",
+          "text": "Create a new project, or open one from a folder or a .zip file.",
+          "target": "group.getStarted"
+        },
+        {
+          "title": "Examples",
+          "text": "Open a built-in example. It stays unsaved until you save it.",
+          "target": "group.examples"
+        },
+        {
+          "title": "Recent projects",
+          "text": "The projects you opened lately, newest first.",
+          "target": "group.recentProjects"
+        },
+        {
+          "title": "Extra tab",
+          "text": "Extra: the format of numbers with a standard uncertainty.",
+          "target": "sideBar.tab.extras",
+          "open": true
+        },
+        {
+          "title": "Uncertainties",
+          "text": "How numbers with a standard uncertainty are written in the project and its report.",
+          "target": "group.su_format"
+        },
+        {
+          "title": "Text tab",
+          "text": "Text: This page's part of the project as it is saved, ready to edit as text.",
+          "target": "sideBar.tab.text",
+          "open": true
+        },
+        {
+          "title": "Apply the text",
+          "text": "After editing the text, click the check mark to apply it to the project. The box beside it chooses what the tab shows: Editable, the parts you can edit, or Everything, with the measured data and results read-only.",
+          "target": "text.apply"
+        },
+        {
+          "title": "Settings tab",
+          "text": "Settings: not used on this page yet.",
+          "target": "sideBar.tab.settings",
+          "open": true
+        }
+      ]
+    },
+    {
+      "page": "structure",
+      "steps": [
+        {
+          "title": "Open Structure",
+          "text": "Structure: the crystal structures, with their symmetry, cell and atoms. Open the Structure page with its tab, or press Next.",
+          "target": "appBar.tab.structure",
+          "page": "project",
+          "check": "page:structure"
+        },
+        {
+          "title": "Structure view",
+          "text": "The structure view draws the cell and its atoms. Drag to turn it.",
+          "target": "mainArea.structure.tab.view",
+          "open": true
+        },
+        {
+          "title": "Pattern",
+          "text": "Pattern shows the pattern this structure gives.",
+          "target": "mainArea.structure.tab.pattern",
+          "open": true
+        },
+        {
+          "title": "Main tab",
+          "text": "Main: what defines the structure.",
+          "target": "sideBar.tab.basic",
+          "open": true
+        },
+        {
+          "title": "Structures",
+          "text": "The structures in the project. Add, copy or remove one here.",
+          "target": "group.structures"
+        },
+        {
+          "title": "Space group",
+          "text": "The space group, by its symbol or its number.",
+          "target": "group.space_group"
+        },
+        {
+          "title": "Cell",
+          "text": "The cell lengths and angles. Values the symmetry fixes are shown, not typed.",
+          "target": "group.cell"
+        },
+        {
+          "title": "Atom sites",
+          "text": "The atom sites: element, position, occupancy and displacement.",
+          "target": "group.atom_site"
+        },
+        {
+          "title": "Anisotropic ADPs",
+          "text": "Anisotropic displacements, for the sites given an anisotropic type.",
+          "target": "group.atom_site_aniso"
+        },
+        {
+          "title": "Extra tab",
+          "text": "Extra: scattering lengths, the symmetry operators, the atoms in the cell, bonds and how the view looks.",
+          "target": "sideBar.tab.extras",
+          "open": true
+        },
+        {
+          "title": "Scattering lengths",
+          "text": "The scattering lengths of the elements, for the neutron patterns.",
+          "target": "group.scattering_length"
+        },
+        {
+          "title": "Symmetry operators",
+          "text": "The symmetry operators of the space group.",
+          "target": "group.space_group_symop"
+        },
+        {
+          "title": "Cell atoms",
+          "text": "Every atom in the cell, as the symmetry places them.",
+          "target": "group.expanded_atom_site"
+        },
+        {
+          "title": "Bonds",
+          "text": "The bond lengths between neighbouring atoms.",
+          "target": "group.geom_bond"
+        },
+        {
+          "title": "Appearance",
+          "text": "How the structure view draws atoms, bonds and the cell.",
+          "target": "group.appearance"
+        },
+        {
+          "title": "Text tab",
+          "text": "Text: This page's part of the project as it is saved, ready to edit as text.",
+          "target": "sideBar.tab.text",
+          "open": true
+        },
+        {
+          "title": "Settings tab",
+          "text": "Settings: not used on this page yet.",
+          "target": "sideBar.tab.settings",
+          "open": true
+        }
+      ]
+    },
+    {
+      "page": "experiment",
+      "steps": [
+        {
+          "title": "Open Experiment",
+          "text": "Experiment: the measurements, with their instrument, peak profile and background. Open the Experiment page with its tab, or press Next.",
+          "target": "appBar.tab.experiment",
+          "page": "structure",
+          "check": "page:experiment"
+        },
+        {
+          "title": "Pattern",
+          "text": "Pattern shows the measured pattern and the one the model calculates.",
+          "target": "mainArea.experiment.tab.chart",
+          "open": true
+        },
+        {
+          "title": "Stacked",
+          "text": "Stacked draws the patterns of a scan one above another. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
+          "target": "mainArea.experiment.tab.stacked",
+          "open": true
+        },
+        {
+          "title": "Map",
+          "text": "Map draws the patterns of a scan as a colour map. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
+          "target": "mainArea.experiment.tab.map",
+          "open": true
+        },
+        {
+          "title": "Main tab",
+          "text": "Main: what defines the experiment.",
+          "target": "sideBar.tab.basic",
+          "open": true
+        },
+        {
+          "title": "Experiments",
+          "text": "The experiments in the project. Add one from a measured data file.",
+          "target": "group.experiments"
+        },
+        {
+          "title": "Background",
+          "text": "The background under the peaks.",
+          "target": "group.background"
+        },
+        {
+          "title": "Instrument",
+          "text": "The instrument, such as the wavelength and the zero shift.",
+          "target": "group.instrument"
+        },
+        {
+          "title": "Peak profile",
+          "text": "The peak profile: how the shape and width of the peaks change across the pattern.",
+          "target": "group.peak"
+        },
+        {
+          "title": "Excluded regions",
+          "text": "Parts of the pattern left out of the fit.",
+          "target": "group.excluded_region"
+        },
+        {
+          "title": "Linked structures",
+          "text": "The structures that contribute to this pattern, each with its scale.",
+          "target": "group.linked_structure"
+        },
+        {
+          "title": "Extra tab",
+          "text": "Extra: background estimation, the peak cutoff, absorption, preferred orientation, the radiation, the measured data and the reflections.",
+          "target": "sideBar.tab.extras",
+          "open": true
+        },
+        {
+          "title": "Background estimate",
+          "text": "How the background is estimated from the measured pattern.",
+          "target": "group.background_estimate"
+        },
+        {
+          "title": "Peak profile",
+          "text": "The peak cutoff: how far from its centre each peak is calculated, in peak widths.",
+          "target": "group.peak",
+          "tab": "extras"
+        },
+        {
+          "title": "Absorption",
+          "text": "Absorption by the sample.",
+          "target": "group.absorption"
+        },
+        {
+          "title": "Preferred orientation",
+          "text": "Preferred orientation of the crystallites.",
+          "target": "group.preferred_orientation"
+        },
+        {
+          "title": "Radiation",
+          "text": "The radiation's own properties, such as its polarisation.",
+          "target": "group.scattering_source"
+        },
+        {
+          "title": "Measured data",
+          "text": "The measured points: position, intensity and uncertainty.",
+          "target": "group.data"
+        },
+        {
+          "title": "Reflections",
+          "text": "The reflections the structure gives in this pattern.",
+          "target": "group.refln"
+        },
+        {
+          "title": "Text tab",
+          "text": "Text: This page's part of the project as it is saved, ready to edit as text.",
+          "target": "sideBar.tab.text",
+          "open": true
+        },
+        {
+          "title": "Settings tab",
+          "text": "Settings: not used on this page yet.",
+          "target": "sideBar.tab.settings",
+          "open": true
+        }
+      ]
+    },
+    {
+      "page": "analysis",
+      "steps": [
+        {
+          "title": "Open Analysis",
+          "text": "Analysis: choose what the fit may change, run the fit and look at the result. Open the Analysis page with its tab, or press Next.",
+          "target": "appBar.tab.analysis",
+          "page": "experiment",
+          "check": "page:analysis"
+        },
+        {
+          "title": "Pattern",
+          "text": "Pattern compares the calculated pattern with the measurement, with the difference below.",
+          "target": "mainArea.analysis.tab.fitting",
+          "open": true
+        },
+        {
+          "title": "Main tab",
+          "text": "Main: the parameters.",
+          "target": "sideBar.tab.basic",
+          "open": true
+        },
+        {
+          "title": "Parameters",
+          "text": "Every parameter, with its value and uncertainty. Tick free for the ones the fit may change.",
+          "target": "group.parameters"
+        },
+        {
+          "title": "Datablock filter",
+          "text": "Show the parameters of all blocks, or only of one structure or experiment.",
+          "target": "parameters.datablock"
+        },
+        {
+          "title": "Category filter",
+          "text": "Show the parameters of one category, such as the cell or the atom sites.",
+          "target": "parameters.category"
+        },
+        {
+          "title": "Free filter",
+          "text": "Show all parameters, only the free ones, only the fixed ones, or those that cannot be fitted.",
+          "target": "parameters.variability"
+        },
+        {
+          "title": "Name filter",
+          "text": "Type part of a name to list only the parameters whose names contain it.",
+          "target": "parameters.nameFilter"
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear all filters, to list every parameter again.",
+          "target": "parameters.clearFilters"
+        },
+        {
+          "title": "Fit",
+          "text": "Start the fit: click Fit, or press Next. The status bar follows it while it runs.",
+          "target": "statusBar.fit.button",
+          "check": "fit-done"
+        },
+        {
+          "title": "Fit results",
+          "text": "The fit's results: its status, the reduced chi-squared and the R values of each dataset. Close them with OK.",
+          "target": "fit.results.ok",
+          "check": "results-closed"
+        },
+        {
+          "title": "Pattern",
+          "text": "After the fit, Pattern shows the calculated pattern on the measured one, with the difference below.",
+          "target": "mainArea.analysis.tab.fitting",
+          "open": true
+        },
+        {
+          "title": "Correlations",
+          "text": "Correlations, filled by the fit: how strongly the fitted parameters depend on each other.",
+          "target": "mainArea.analysis.tab.correlations",
+          "open": true
+        },
+        {
+          "title": "Stacked",
+          "text": "Stacked draws the fits of a scan one above another. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
+          "target": "mainArea.analysis.tab.stacked",
+          "open": true
+        },
+        {
+          "title": "Map",
+          "text": "Map draws the fits of a scan as a colour map. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
+          "target": "mainArea.analysis.tab.map",
+          "open": true
+        },
+        {
+          "title": "Extra tab",
+          "text": "Extra: the minimizer, the fitting mode, aliases and constraints.",
+          "target": "sideBar.tab.extras",
+          "open": true
+        },
+        {
+          "title": "Minimizer",
+          "text": "The minimizer that runs the fit, and its settings.",
+          "target": "group.minimizer"
+        },
+        {
+          "title": "Fitting mode",
+          "text": "Fit one experiment, several together, or a scan.",
+          "target": "group.fitting_mode"
+        },
+        {
+          "title": "Aliases",
+          "text": "Short names for parameters, for constraints to use.",
+          "target": "group.alias"
+        },
+        {
+          "title": "Constraints",
+          "text": "Constraints that tie a parameter to others.",
+          "target": "group.constraint"
+        },
+        {
+          "title": "Text tab",
+          "text": "Text: This page's part of the project as it is saved, ready to edit as text.",
+          "target": "sideBar.tab.text",
+          "open": true
+        },
+        {
+          "title": "Settings tab",
+          "text": "Settings: which parameters the table lists, and how often a scan redraws the pattern.",
+          "target": "sideBar.tab.settings",
+          "open": true
+        },
+        {
+          "title": "Shown parameters",
+          "text": "Which parameters the table lists.",
+          "target": "group.shownParameters"
+        },
+        {
+          "title": "Pattern updates",
+          "text": "How often a scan redraws the pattern.",
+          "target": "group.patternUpdates"
+        }
+      ]
+    },
+    {
+      "page": "report",
+      "steps": [
+        {
+          "title": "Open Report",
+          "text": "Report: a summary of the fitted model. Open the Report page with its tab, or press Next.",
+          "target": "appBar.tab.report",
+          "page": "analysis",
+          "check": "page:report"
+        },
+        {
+          "title": "Report",
+          "text": "The report as it will be saved.",
+          "target": "mainArea.report.tab.report",
+          "open": true
+        },
+        {
+          "title": "Main tab",
+          "text": "Main: what goes into the report, and how it is saved.",
+          "target": "sideBar.tab.basic",
+          "open": true
+        },
+        {
+          "title": "Export",
+          "text": "Save the report as HTML, PDF or CIF.",
+          "target": "group.reportExport"
+        },
+        {
+          "title": "Contents",
+          "text": "Choose the parts the report shows.",
+          "target": "group.reportContents"
+        },
+        {
+          "title": "Extra tab",
+          "text": "Extra: not used on this page yet.",
+          "target": "sideBar.tab.extras",
+          "open": true
+        },
+        {
+          "title": "Text tab",
+          "text": "Text: the report's saved settings, as text.",
+          "target": "sideBar.tab.text",
+          "open": true
+        },
+        {
+          "title": "Settings tab",
+          "text": "Settings: not used on this page yet.",
+          "target": "sideBar.tab.settings",
+          "open": true
+        },
+        {
+          "title": "Preferences",
+          "text": "Preferences hold the choices for the whole app, such as tooltips, colours and the logging level.",
+          "target": "appBar.button.preferences"
+        }
+      ]
+    }
+  ]
+}

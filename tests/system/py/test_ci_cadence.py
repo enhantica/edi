@@ -504,6 +504,7 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
         'axis-absent-zero',
         'axis-zero-absent',
         *[f'catalogue-{index}' for index in range(21)],
+        'status-results-banner',
     ],
 )
 def test_inventory_migration_refuses_every_dropped_successor(retired):
@@ -549,14 +550,51 @@ def test_shipped_nightly_cohort_is_explicit_nonempty_and_retained():
     old = json.loads(SHIPPED['files']['tests/test-groups.json'])['groups'][group]['paths']
     paths = groups[group]['paths']
     assert paths, 'the shipped nightly cohort stays nonempty'
-    assert set(paths) == set(old), (
-        'accepted-main regression cohort retains the approved nightly deferrals'
+    approved = (
+        {
+            'tests/system/py/test_project_transactions.py',
+        }
+        if BASE['repo'] == 'edi'
+        else set()
+    )
+    assert set(paths) == set(old) | approved, (
+        'accepted-main nightly deferrals and the project transaction supplement remain explicit'
     )
     assert len(paths) == len(set(paths)), 'nightly paths are unique'
     collected = {n.split('::')[0] for n in nodes()}
     assert set(paths) <= collected, (
         'moving a cohort to nightly keeps every file collected in the runtime inventory'
     )
+    if BASE['repo'] == 'edi':
+        weekly = groups['weekly-only']['paths']
+        assert weekly == ['tests/integration/py/test_cif_import_contract.py'], (
+            'The owner-approved weekly cohort retains exactly the CIF import matrix'
+        )
+        assert set(weekly) <= collected and not set(weekly) & set(paths), (
+            'The weekly matrix remains collected in the inventory and excluded from nightly'
+        )
+        workflow = document(ROOT / '.github/workflows/ci.yml')
+        trigger = workflow.get('on', workflow.get(True, {}))
+        assert trigger['schedule'] == [{'cron': '45 1 * * *'}, {'cron': '15 2 * * 0'}], (
+            'The daily clock is retained and the weekly clock runs at 02:15 UTC on Sunday'
+        )
+        for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
+            steps = [
+                (job, step, ctx)
+                for _, job, step, ctx in suite_steps(workflow, event, 'linux-64', 'edi')
+                if 'pixi run core-tests' in step.get('run', '')
+            ]
+            assert steps, 'Every event retains the core test entry point for cohort selection'
+            for job, step, ctx in steps:
+                for core_only in (False, True):
+                    env = run_settings(workflow, job, step, ctx | {'inputs.core_only': core_only})[
+                        1
+                    ]
+                    expected = event == 'schedule' and ctx['github.event.schedule'] == '15 2 * * 0'
+                    assert env.get('EDI_RUN_WEEKLY_ONLY') == ('true' if expected else 'false'), (
+                        'Only the Sunday schedule enables the CIF matrix; daily, PR, push '
+                        'and both manual modes leave it out'
+                    )
 
 
 @pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
@@ -567,6 +605,12 @@ def test_shipped_suite_paths_execute_their_cohort_and_propagate_failures(
     workflow = document(ROOT / '.github/workflows/ci.yml')
     baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
     if BASE['repo'] == 'edi':
+        for key, _, step, _ in suite_steps(baseline, event, platform, 'edi'):
+            if key[2] == 'Tests (declared group, C++ unit, unit and integration)':
+                step.setdefault('env', {})['EDI_RUN_NIGHTLY_ONLY'] = (
+                    "${{ github.event_name == 'schedule' || "
+                    "(github.event_name == 'workflow_dispatch' && inputs.core_only != true) }}"
+                )
         system_steps = [
             (job, step, ctx)
             for key, job, step, ctx in suite_steps(workflow, event, platform, 'edi')

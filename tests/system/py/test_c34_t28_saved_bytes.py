@@ -121,7 +121,9 @@ def historical_input_hashes(source, *, excluded=False):
     return result
 
 
-def observe_legacy_pin(source, destination, *, calculator=False, excluded=False):
+def observe_legacy_pin(
+    source, destination, *, calculator=False, excluded=False, order_reference=None
+):
     destination.parent.mkdir(parents=True, exist_ok=True)
     REFERENCE.observe(source, destination, calculator=calculator)
     legacy = stored_id_bytes.ordinal_copy(
@@ -138,9 +140,9 @@ def observe_legacy_pin(source, destination, *, calculator=False, excluded=False)
         record = legacy / 'project.edi'
         record.write_bytes(without_default_rule('project.edi', record.read_bytes()))
     return (
-        REFERENCE.saved_hashes(legacy, excluded=excluded)
+        REFERENCE.saved_hashes(legacy, excluded=excluded, order_reference=order_reference)
         if calculator
-        else REFERENCE.hashes(legacy, excluded=excluded)
+        else REFERENCE.hashes(legacy, excluded=excluded, order_reference=order_reference)
     )
 
 
@@ -348,9 +350,14 @@ def check_excluded_transition():
 
 
 def assert_saved_projection(source, tmp_path, previous, case, record_property):
-    ordinary = observe_legacy_pin(source, tmp_path / 'saved', calculator=True)
-    converted = observe_legacy_pin(
-        source, tmp_path / 'transition' / 'converted', calculator=True, excluded=True
+    order_reference = carried_hashes(previous, case)
+    ordinary = observe_legacy_pin(
+        source, tmp_path / 'saved', calculator=True, order_reference=order_reference
+    )
+    # Both historical views concern the same written bytes. A second identical
+    # load/save supplies no extra witness; project those bytes through each policy.
+    converted = REFERENCE.saved_hashes(
+        tmp_path / 'ordinal-pin', excluded=True, order_reference=order_reference
     )
     actual = retained_hashes(ordinary, converted, previous)
     if case in CARRIED_CASES:
@@ -467,7 +474,7 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case, recor
         live_source = REFERENCE.inputs()[case]
         live_raw = {
             path.relative_to(live_source).as_posix(): hashlib.sha256(
-                estimate_bytes.without_category(path.read_bytes())
+                estimate_bytes.without_category(metadata_bytes.pre_catalogue_bytes(path))
                 if case in estimate_bytes.CASES
                 and path.relative_to(live_source).as_posix() == estimate_bytes.EXPERIMENT
                 else metadata_bytes.pre_catalogue_bytes(path)
@@ -484,7 +491,7 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case, recor
         )
         if case in estimate_bytes.CASES:
             (source / estimate_bytes.EXPERIMENT).write_bytes(
-                (live_source / estimate_bytes.EXPERIMENT).read_bytes()
+                metadata_bytes.pre_catalogue_bytes(live_source / estimate_bytes.EXPERIMENT)
             )
         source = current_source(source, tmp_path / 'history')
     assert (
@@ -525,9 +532,10 @@ def test_new_lif_project_matches_labelled_post_feature_byte_pin(tmp_path, case):
     assert REFERENCE.hashes(source) == expected['input_sha256'], (
         ' post-feature regression pin retains all input bytes and measured files'
     )
-    assert observe_legacy_pin(source, tmp_path / 'saved') == rounded_pins(
-        expected['saved_sha256']
-    ), ' post-feature serialization regression pin retains the full saved inventory and bytes'
+    saved = rounded_pins(expected['saved_sha256'])
+    assert observe_legacy_pin(source, tmp_path / 'saved', order_reference=saved) == saved, (
+        ' post-feature serialization regression pin retains the full saved inventory and bytes'
+    )
 
 
 @pytest.mark.parametrize('damage', ['value', 'row-order', 'missing', 'extra', 'data'])

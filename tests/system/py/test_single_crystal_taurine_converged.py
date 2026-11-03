@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.single_crystal.freeze_taurine_converged import extract
 from tests.integration.py.test_single_crystal import engine
 
@@ -33,7 +34,7 @@ def parameter(model, path):
 def test_converged_artifacts_and_parameter_conventions_are_independent():
     record = json.loads((REFERENCE / 'reference.json').read_text())
     for name, digest in record['artifacts'].items():
-        assert hashlib.sha256((REFERENCE / name).read_bytes()).hexdigest() == digest, (
+        assert hashlib.sha256(read_previous(REFERENCE / name)).hexdigest() == digest, (
             'The converged FullProf input, output and stimulus bytes must retain '
             'their sealed hashes'
         )

@@ -309,7 +309,7 @@ def test_c11_t41_two_pytest_workers_cannot_enter_the_shared_core_build(
         assert 'build' in output.lower() or 'artifact' in output.lower()
 
 
-def _partition_transport(groups, omitted):
+def _partition_transport(groups, omitted, *, core=False, weekly_omitted=True):
     with tempfile.TemporaryDirectory(prefix='system-part-contract-') as scratch:
         replay = Path(scratch)
         (replay / 'tests').mkdir()
@@ -328,10 +328,15 @@ def _partition_transport(groups, omitted):
             **os.environ,
             'PATH': str(bindir) + os.pathsep + os.defpath,
             'EDI_RUN_NIGHTLY_ONLY': 'false' if omitted else 'true',
+            'EDI_RUN_WEEKLY_ONLY': 'false' if weekly_omitted else 'true',
             'EDI_TEST_DURATIONS': str(replay / 'no-prior-durations.json'),
         }
         result = subprocess.run(
-            ['/bin/bash', str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3'],
+            (
+                ['/bin/bash', str(ROOT / 'tools/ci/core-tests.sh'), '--collect-only']
+                if core
+                else ['/bin/bash', str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3']
+            ),
             cwd=replay,
             env=env,
             capture_output=True,
@@ -340,7 +345,7 @@ def _partition_transport(groups, omitted):
             check=False,
         )
     assert result.returncode == 0, (
-        'the actual system partition runner reaches its pytest transport'
+        'The requested production partition runner reaches its pytest transport: ' + result.stderr
     )
     return result
 
@@ -493,10 +498,38 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
     ]
     assert len(parts) == 1, 'every system part invokes one required production partition runner'
     switch = parts[0]['env']['EDI_RUN_NIGHTLY_ONLY']
+    core_step = next(
+        step for step in jobs['core']['steps'] if 'pixi run core-tests' in step.get('run', '')
+    )
+    assert core_step['env']['EDI_RUN_NIGHTLY_ONLY'] == switch, (
+        'The core and system runners retain the same schedule and full-manual nightly switch'
+    )
     _assert_nightly_inclusion(switch, active)
+    weekly_paths = groups['weekly-only']['paths']
     for omitted in (False, True):
         result = _partition_transport(groups, omitted)
         ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
+        for weekly_omitted in (False, True):
+            core_result = _partition_transport(
+                groups, omitted, core=True, weekly_omitted=weekly_omitted
+            )
+            weekly_ignores = (
+                ['--ignore=' + path for path in weekly_paths] if weekly_omitted else []
+            )
+            assert json.loads(core_result.stdout) == [
+                '-m',
+                'pytest',
+                'tests/unit',
+                'tests/integration',
+                '--ignore=tests/integration/app',
+                '-q',
+                *ignores,
+                *weekly_ignores,
+                '--collect-only',
+            ], (
+                'The production core runner excludes exactly the declared nightly and weekly '
+                'files unless their respective inclusion switches are true'
+            )
         ignores.append('--ignore=' + LICENCE_MODULE)
         assert json.loads(result.stdout) == [
             '-m',
@@ -599,15 +632,9 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             'tools/ci/pytest-lenient.sh',
             '--ignore=tests/integration/app',
         ], 'the local merge group retains its complete default collection outside the app tier'
-        assert tasks['core-tests']['cmd'] == [
-            'python',
-            '-m',
-            'pytest',
-            'tests/unit',
-            'tests/integration',
-            '--ignore=tests/integration/app',
-            '-q',
-        ], 'the split core task must retain all declared unit and integration selections'
+        assert tasks['core-tests']['cmd'] == ['bash', 'tools/ci/core-tests.sh'], (
+            'The split core task uses the runner that preserves the explicit nightly selection'
+        )
         assert tasks['system-tests-part']['cmd'] == ['bash', 'tools/ci/system-tests-part.sh'], (
             'each system part invokes the actual declared partition executable'
         )

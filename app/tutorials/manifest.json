@@ -1,0 +1,853 @@
+{
+  "schema": 1,
+  "tutorials": [
+    {
+      "id": "interface",
+      "title": "Interface tour",
+      "description": "Workflow tabs, sidebar, main area and status bar.",
+      "project": "temporary",
+      "start": "example:pd-neut-cwl_lbco-hrpt",
+      "completion": ["keep", "discard"],
+      "stop": "restore-user-project",
+      "tour": "tour.json",
+      "tags": ["tutorial:Tour"]
+    },
+    {
+      "id": "simulation",
+      "title": "Simulation",
+      "description": "Define a structure and calculate its pattern.",
+      "project": "temporary",
+      "start": "aside",
+      "completion": ["keep", "discard"],
+      "stop": "restore-user-project",
+      "steps": [
+        {
+          "title": "Open Project",
+          "text": "Simulation. Your own project is put aside until the end of this tutorial. Click Start to begin on the Project page.",
+          "page": "home",
+          "target": "home.start",
+          "expected": "The Project page is open.",
+          "check": "page:project"
+        },
+        {
+          "title": "New project",
+          "text": "Create a new project with Create a new project.",
+          "page": "project",
+          "target": "project.create",
+          "expected": "The Create project dialog is open.",
+          "check": "creating"
+        },
+        {
+          "title": "Name the project",
+          "text": "Give the project a name, for example lbco: type it in Name, or press Next.",
+          "page": "project",
+          "target": "createProject.name",
+          "expected": "The project has a name.",
+          "check": "text:createProject.name=lbco"
+        },
+        {
+          "title": "Create it",
+          "text": "Click OK to create the project. It is not saved: at the end you keep working on it or return to your own project.",
+          "page": "project",
+          "target": "createProject.accept",
+          "expected": "A new project is open.",
+          "check": "project"
+        },
+        {
+          "title": "Open Structure",
+          "text": "This is the Structure page, where structures are defined. Open the Structure page with its tab, or press Next.",
+          "page": "project",
+          "target": "appBar.tab.structure",
+          "expected": "The Structure page is open.",
+          "check": "page:structure"
+        },
+        {
+          "title": "New structure",
+          "text": "Create a structure.",
+          "page": "structure",
+          "target": "structures.create",
+          "expected": "A structure is in the list.",
+          "check": "structures:1"
+        },
+        {
+          "title": "Name it",
+          "text": "A new structure is called structure1. Click its name and type lbco, the name this tutorial uses from here on.",
+          "page": "structure",
+          "target": "structures.name.0",
+          "expected": "The structure is called lbco.",
+          "check": "structure:lbco"
+        },
+        {
+          "title": "Open Space group",
+          "text": "Open the Space group group to see the structure's symmetry.",
+          "page": "structure",
+          "target": "group.space_group",
+          "expected": "The Space group group is open.",
+          "check": "open:group.space_group"
+        },
+        {
+          "title": "Space group",
+          "text": "A new structure starts in P b n m. Choose the space group P m -3 m for lbco.",
+          "page": "structure",
+          "target": "spaceGroup.nameHM",
+          "expected": "The space group is P m -3 m, number 221.",
+          "check": "space-group:221"
+        },
+        {
+          "title": "Open Cell",
+          "text": "Open the Cell group to see the cell lengths and angles.",
+          "page": "structure",
+          "target": "group.cell",
+          "expected": "The Cell group is open.",
+          "check": "open:group.cell"
+        },
+        {
+          "title": "Cell length",
+          "text": "Set the cell length a to 3.89 Å. In a cubic cell b and c follow it.",
+          "page": "structure",
+          "target": "cell.length_a",
+          "expected": "a, b and c are 3.89 Å.",
+          "check": "cell-a:3.89"
+        },
+        {
+          "title": "Open Atom sites",
+          "text": "Open the Atom sites group to see the structure's atoms.",
+          "page": "structure",
+          "target": "group.atom_site",
+          "expected": "The Atom sites group is open.",
+          "check": "open:group.atom_site"
+        },
+        {
+          "title": "Add the atoms",
+          "text": "A new structure has one atom site. Add three more, then set them: La at 0, 0, 0 and Ba on the same position, each with occupancy 0.5; Co at ½, ½, ½; O at 0, ½, ½.",
+          "page": "structure",
+          "target": "atomSites.append",
+          "expected": "The four atom sites are in the table and the structure view shows them.",
+          "check": "sites:La 0 0 0,Ba 0 0 0,Co 0.5 0.5 0.5,O 0 0.5 0.5"
+        },
+        {
+          "title": "Open Experiment",
+          "text": "Open the Experiment page with its tab, or press Next.",
+          "page": "structure",
+          "target": "appBar.tab.experiment",
+          "expected": "The Experiment page is open.",
+          "check": "page:experiment"
+        },
+        {
+          "title": "New experiment",
+          "text": "Open the Experiment page and create an experiment.",
+          "page": "experiment",
+          "target": "experiments.create",
+          "expected": "The new experiment is in the list.",
+          "check": "experiment"
+        },
+        {
+          "title": "Experiment type",
+          "text": "Powder, constant wavelength and neutrons are selected by default. For your own data you can change them here; in this tutorial keep the defaults.",
+          "page": "experiment",
+          "target": "experimentType",
+          "expected": "The experiment type is powder, constant wavelength, neutron."
+        },
+        {
+          "title": "Open Instrument",
+          "text": "Open the Instrument group to see the wavelength and the zero shift.",
+          "page": "experiment",
+          "target": "group.instrument",
+          "expected": "The Instrument group is open.",
+          "check": "open:group.instrument"
+        },
+        {
+          "title": "Wavelength",
+          "text": "The wavelength is 1.494 Å, the default and the one this tutorial uses. For your own data set the instrument's wavelength here.",
+          "page": "experiment",
+          "target": "instrument.setup_wavelength",
+          "expected": "The wavelength is 1.494 Å."
+        },
+        {
+          "title": "Open Linked structures",
+          "text": "Open the Linked structures group to see the structures in this pattern.",
+          "page": "experiment",
+          "target": "group.linked_structure",
+          "expected": "The Linked structures group is open.",
+          "check": "open:group.linked_structure"
+        },
+        {
+          "title": "Scale",
+          "text": "Every structure is linked to a new experiment automatically, so lbco is here with scale 1. Here you can change a scale or weight fraction, switch a link off or add another.",
+          "page": "experiment",
+          "target": "linkedStructure.scale.0",
+          "expected": "lbco is linked with scale 1."
+        },
+        {
+          "title": "The pattern",
+          "text": "The calculated pattern of lbco is in the main area. Change the cell length or a position and watch the peaks move.",
+          "page": "experiment",
+          "target": "workflow.experiment.mainContent",
+          "expected": "The main area shows the calculated pattern."
+        },
+        {
+          "title": "Open Analysis",
+          "text": "Parameters can be changed on the Structure and Experiment pages, in their groups, and also here on the Analysis page, in one table that holds all of them. Open the Analysis page with its tab, or press Next.",
+          "page": "experiment",
+          "target": "appBar.tab.analysis",
+          "expected": "The Analysis page is open.",
+          "check": "page:analysis"
+        },
+        {
+          "title": "Show the cell",
+          "text": "The table holds every parameter; its filters find the one to change. Choose Cell in the category filter.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "expected": "The table lists the cell length a.",
+          "check": "category:Cell"
+        },
+        {
+          "title": "Select cell a",
+          "text": "Click the row of the cell length a to select it: the slider below the table now changes a.",
+          "page": "analysis",
+          "target": "parameters.name@cell.length_a",
+          "expected": "The cell length a is selected.",
+          "check": "selected:cell.length_a"
+        },
+        {
+          "title": "Change cell a",
+          "text": "Drag the slider or type a new value, and watch the peaks shift: a larger cell moves them to lower angles.",
+          "page": "analysis",
+          "target": "parameters.slider",
+          "expected": "The cell length a has changed.",
+          "check": "changed:cell.length_a=3.95"
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "expected": "Every parameter is listed.",
+          "check": "filters-clear"
+        },
+        {
+          "title": "Filter by name",
+          "text": "Type wave in the name filter to show the wavelength.",
+          "page": "analysis",
+          "target": "parameters.nameFilter",
+          "expected": "The table lists the wavelength.",
+          "check": "name-filter:wave"
+        },
+        {
+          "title": "Select wavelength",
+          "text": "Click the row of the wavelength to select it: the slider below the table now changes the wavelength.",
+          "page": "analysis",
+          "target": "parameters.name@instrument.setup_wavelength",
+          "expected": "The wavelength is selected.",
+          "check": "selected:instrument.setup_wavelength"
+        },
+        {
+          "title": "Change wavelength",
+          "text": "Drag the slider or type a new value, and watch the peaks spread out to higher angles as it grows.",
+          "page": "analysis",
+          "target": "parameters.slider",
+          "expected": "The wavelength has changed.",
+          "check": "changed:instrument.setup_wavelength=1.6"
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "expected": "Every parameter is listed.",
+          "check": "filters-clear"
+        },
+        {
+          "title": "Show B iso",
+          "text": "Choose Atomic displacement in the category filter.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "expected": "The table lists the sites' B_iso.",
+          "check": "category:Atomic displacement"
+        },
+        {
+          "title": "Select B iso",
+          "text": "Click the row of La's B_iso to select it: the slider below the table now changes La's B_iso.",
+          "page": "analysis",
+          "target": "parameters.name@La.adp_iso",
+          "expected": "La's B_iso is selected.",
+          "check": "selected:La.adp_iso"
+        },
+        {
+          "title": "Change B iso",
+          "text": "Drag the slider or type a new value, and watch the peaks at high angles weaken most as it grows.",
+          "page": "analysis",
+          "target": "parameters.slider",
+          "expected": "La's B_iso has changed.",
+          "check": "changed:La.adp_iso=2"
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "expected": "Every parameter is listed.",
+          "check": "filters-clear"
+        },
+        {
+          "title": "Show the peak",
+          "text": "Choose Peak profile in the category filter.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "expected": "The table lists the peak profile.",
+          "check": "category:Peak profile"
+        },
+        {
+          "title": "Select peak width",
+          "text": "Click the row of the peak width W to select it: the slider below the table now changes W.",
+          "page": "analysis",
+          "target": "parameters.name@peak.broad_gauss_w",
+          "expected": "The peak width W is selected.",
+          "check": "selected:peak.broad_gauss_w"
+        },
+        {
+          "title": "Change peak width",
+          "text": "Drag the slider or type a new value, and watch the peaks broaden as it grows.",
+          "page": "analysis",
+          "target": "parameters.slider",
+          "expected": "The peak width W has changed.",
+          "check": "changed:peak.broad_gauss_w=0.5"
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "expected": "Every parameter is listed.",
+          "check": "filters-clear"
+        },
+        {
+          "title": "Free column",
+          "text": "With measured data, the free column is where fitting chooses the parameters it may change. A simulation has nothing to fit, so here they all stay fixed.",
+          "page": "analysis",
+          "target": "parameters.list",
+          "expected": "The free column is in the table."
+        },
+        {
+          "title": "Open Report",
+          "text": "A simulation has a useful report too: lbco, the experiment and the calculated pattern. Open the Report page with its tab, or press Next.",
+          "page": "analysis",
+          "target": "appBar.tab.report",
+          "expected": "The Report page is open.",
+          "check": "page:report"
+        },
+        {
+          "title": "Open Export",
+          "text": "Open the Export group to see how the report is saved.",
+          "page": "report",
+          "target": "group.reportExport",
+          "expected": "The Export group is open.",
+          "check": "open:group.reportExport"
+        },
+        {
+          "title": "Save the report",
+          "text": "Choose HTML, PDF or CIF and press Save to write the report. In this tutorial you may skip saving.",
+          "page": "report",
+          "target": "report.save",
+          "expected": "The report can be saved."
+        }
+      ],
+      "tags": ["purpose:simulation", "sampleForm:powder", "probe:neutron", "beamMode:constant wavelength", "scatteringType:bragg"]
+    },
+    {
+      "id": "fitting",
+      "title": "Fitting",
+      "description": "Fit LBCO measured on HRPT, from a CIF and a data file.",
+      "project": "temporary",
+      "start": "aside",
+      "completion": ["keep", "discard"],
+      "stop": "restore-user-project",
+      "steps": [
+        {
+          "title": "Open Project",
+          "text": "Fitting. Your own project is put aside until the end of this tutorial. Click Start to begin on the Project page.",
+          "page": "home",
+          "target": "home.start",
+          "expected": "The Project page is open.",
+          "check": "page:project"
+        },
+        {
+          "title": "New project",
+          "text": "This tutorial builds a fitting project from a structure file and a measured pattern. Create a new project with Create a new project.",
+          "page": "project",
+          "target": "project.create",
+          "expected": "The Create project dialog is open.",
+          "check": "creating"
+        },
+        {
+          "title": "Name the project",
+          "text": "Give the project a name, for example lbco: type it in Name, or press Next.",
+          "page": "project",
+          "target": "createProject.name",
+          "expected": "The project has a name.",
+          "check": "text:createProject.name=lbco"
+        },
+        {
+          "title": "Create it",
+          "text": "Click OK to create the project. It is not saved: at the end you keep working on it or return to your own project.",
+          "page": "project",
+          "target": "createProject.accept",
+          "expected": "A new project is open.",
+          "check": "project"
+        },
+        {
+          "title": "Save the files",
+          "text": "Save the tutorial's two files, lbco.cif and hrpt.xye, with Save tutorial files below and a folder of your choice, or press Next to save them to a temporary folder.",
+          "page": "project",
+          "target": "workflow.project.mainContent",
+          "coversTarget": true,
+          "expected": "The tutorial files are saved.",
+          "check": "files-saved",
+          "files": true
+        },
+        {
+          "title": "Open Structure",
+          "text": "Open the Structure page with its tab, or press Next.",
+          "page": "project",
+          "target": "appBar.tab.structure",
+          "expected": "The Structure page is open.",
+          "check": "page:structure"
+        },
+        {
+          "title": "Load the CIF",
+          "text": "On the Structure page, load the structure from lbco.cif with Load structure.",
+          "page": "structure",
+          "target": "structures.load",
+          "expected": "The structure lbco is in the list.",
+          "check": "structure:lbco"
+        },
+        {
+          "title": "From the CIF",
+          "text": "lbco.cif gave the space group P m -3 m, the cell of 3.88 Å and four atom sites: La and Ba share one site, each half occupied.",
+          "page": "structure",
+          "target": "group.space_group",
+          "expected": "The structure is defined."
+        },
+        {
+          "title": "Open Experiment",
+          "text": "Open the Experiment page with its tab, or press Next.",
+          "page": "structure",
+          "target": "appBar.tab.experiment",
+          "expected": "The Experiment page is open.",
+          "check": "page:experiment"
+        },
+        {
+          "title": "New experiment",
+          "text": "On the Experiment page, create an experiment.",
+          "page": "experiment",
+          "target": "experiments.create",
+          "expected": "The new experiment is in the list.",
+          "check": "experiment"
+        },
+        {
+          "title": "Experiment type",
+          "text": "An .xye file holds only the pattern, so choose its kind first. Powder, constant wavelength and neutrons, as HRPT measures, are selected by default: keep them.",
+          "page": "experiment",
+          "target": "experimentType",
+          "expected": "The experiment type is powder, constant wavelength, neutron."
+        },
+        {
+          "title": "Load the data",
+          "text": "Load the measured pattern from hrpt.xye with Load data… in the experiment's row.",
+          "page": "experiment",
+          "target": "experiments.loadData.0",
+          "expected": "The measured pattern is in the main area.",
+          "check": "data"
+        },
+        {
+          "title": "Open Instrument",
+          "text": "Open the Instrument group to see the wavelength and the zero shift.",
+          "page": "experiment",
+          "target": "group.instrument",
+          "expected": "The Instrument group is open.",
+          "check": "open:group.instrument"
+        },
+        {
+          "title": "Wavelength",
+          "text": "The wavelength is 1.494 Å, the default and HRPT's.",
+          "page": "experiment",
+          "target": "instrument.setup_wavelength",
+          "expected": "The wavelength is 1.494 Å."
+        },
+        {
+          "title": "Zero shift",
+          "text": "Set the 2θ zero shift to 0.3°, where the fit starts.",
+          "page": "experiment",
+          "target": "instrument.calib_twotheta_offset",
+          "expected": "The zero shift is 0.3°.",
+          "check": "param:instrument.calib_twotheta_offset=0.3"
+        },
+        {
+          "title": "Open Peak profile",
+          "text": "Open the Peak profile group to see the peak shape.",
+          "page": "experiment",
+          "target": "group.peak",
+          "expected": "The Peak profile group is open.",
+          "check": "open:group.peak"
+        },
+        {
+          "title": "Peak shape",
+          "text": "The Thompson-Cox-Hastings pseudo-Voigt is the default profile, and V and W keep their defaults, −0.1 and 0.1. Set U to 0.08 and Y to 0.08.",
+          "page": "experiment",
+          "target": "peak.broad_gauss_u",
+          "expected": "U and Y are 0.08.",
+          "check": "param:peak.broad_gauss_u=0.08;param:peak.broad_lorentz_y=0.08"
+        },
+        {
+          "title": "Open Linked structures",
+          "text": "Open the Linked structures group to see lbco in the pattern.",
+          "page": "experiment",
+          "target": "group.linked_structure",
+          "expected": "The Linked structures group is open.",
+          "check": "open:group.linked_structure"
+        },
+        {
+          "title": "Scale",
+          "text": "lbco was linked to the experiment by itself. Set its scale to 9, where the fit starts.",
+          "page": "experiment",
+          "target": "linkedStructure.scale.0",
+          "expected": "The scale is 9.",
+          "check": "scale:9"
+        },
+        {
+          "title": "Open Background",
+          "text": "Open the Background group to see the background points.",
+          "page": "experiment",
+          "target": "group.background",
+          "expected": "The Background group is open.",
+          "check": "open:group.background"
+        },
+        {
+          "title": "Estimate background",
+          "text": "Estimate the background from the measured pattern.",
+          "page": "experiment",
+          "target": "background.estimate",
+          "expected": "The background points follow the bottom of the pattern.",
+          "check": "background-estimated"
+        },
+        {
+          "title": "Name the points",
+          "text": "Name the points by their position with Id from position.",
+          "page": "experiment",
+          "target": "background.namePoints",
+          "expected": "Each point is named by its position.",
+          "check": "background-named"
+        },
+        {
+          "title": "Open Analysis",
+          "text": "Open the Analysis page with its tab, or press Next.",
+          "page": "experiment",
+          "target": "appBar.tab.analysis",
+          "expected": "The Analysis page is open.",
+          "check": "page:analysis"
+        },
+        {
+          "title": "Show the scale",
+          "text": "Fit in stages, a few parameters at a time, with the table's filters. First show only the scale: choose Linked structures in the category filter.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "category:Linked structures",
+          "expected": "The table lists the scale."
+        },
+        {
+          "title": "Free the scale",
+          "text": "Open the menu of the free column's header and choose Free · all: it frees only the rows the filters show.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free:linked_structure.scale",
+          "expected": "The scale is free."
+        },
+        {
+          "title": "Show background",
+          "text": "Now choose Background: the intensities of the background points.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "category:Background",
+          "expected": "The table lists the background points."
+        },
+        {
+          "title": "Free the background",
+          "text": "Free the background points too. Open the menu of the free column's header and choose Free · all: it frees only the rows the filters show.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free:background.intensity",
+          "expected": "The background intensities are free."
+        },
+        {
+          "title": "Fit",
+          "text": "Start the fit.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fit-done",
+          "expected": "The fit has finished."
+        },
+        {
+          "title": "Fit results",
+          "text": "The fit's results: its status, the reduced chi-squared and the R values of each dataset. Close them with OK.",
+          "page": "analysis",
+          "target": "fit.results.ok",
+          "check": "results-closed",
+          "expected": "The results are closed."
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser before the next stage.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "expected": "Every parameter is listed."
+        },
+        {
+          "title": "Show the cell",
+          "text": "Next the cell: choose Cell. The cubic cell has one free length, a.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "category:Cell",
+          "expected": "The table lists the cell length a."
+        },
+        {
+          "title": "Free the cell",
+          "text": "Free the cell length. Open the menu of the free column's header and choose Free · all: it frees only the rows the filters show.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free:cell.length_a",
+          "expected": "The cell length a is free."
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "expected": "Every parameter is listed."
+        },
+        {
+          "title": "Filter by name",
+          "text": "The zero shift is one of the instrument's two parameters: type offset in the name filter to show it alone.",
+          "page": "analysis",
+          "target": "parameters.nameFilter",
+          "check": "name-filter:offset",
+          "expected": "The table lists the zero shift."
+        },
+        {
+          "title": "Free the zero",
+          "text": "Free the zero shift. Open the menu of the free column's header and choose Free · all: it frees only the rows the filters show.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free:instrument.calib_twotheta_offset",
+          "expected": "The zero shift is free."
+        },
+        {
+          "title": "Fit again",
+          "text": "Fit again, then close the results with OK.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fitted",
+          "expected": "The fit has finished and its results are closed."
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser before the next stage.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "expected": "Every parameter is listed."
+        },
+        {
+          "title": "Show the peak",
+          "text": "Then the peak profile: choose Peak profile.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "category:Peak profile",
+          "expected": "The table lists the peak profile."
+        },
+        {
+          "title": "Free the peak",
+          "text": "Free the peak profile. Open the menu of the free column's header and choose Free · all: it frees only the rows the filters show.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free:peak.broad_gauss_u,peak.broad_gauss_v,peak.broad_gauss_w,peak.broad_lorentz_x,peak.broad_lorentz_y",
+          "expected": "The peak profile is free."
+        },
+        {
+          "title": "Fit again",
+          "text": "Fit again, then close the results with OK.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fitted",
+          "expected": "The fit has finished and its results are closed."
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser before the next stage.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "expected": "Every parameter is listed."
+        },
+        {
+          "title": "Show B iso",
+          "text": "The symmetry of P m -3 m fixes every position, so the displacements are left: choose Atomic displacement.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "category:Atomic displacement",
+          "expected": "The table lists the B_iso of the sites."
+        },
+        {
+          "title": "Free the B iso",
+          "text": "Free every site's B_iso, La's and Ba's included. Open the menu of the free column's header and choose Free · all: it frees only the rows the filters show.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free:atom_site.adp_iso",
+          "expected": "Every B_iso is free."
+        },
+        {
+          "title": "Fit again",
+          "text": "Fit again, then close the results with OK.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fitted",
+          "expected": "The fit has finished and its results are closed."
+        },
+        {
+          "title": "Uncertainties",
+          "text": "Look at the s.u. column: La's and Ba's B_iso have large uncertainties, because the pattern cannot tell the two halves of one site apart.",
+          "page": "analysis",
+          "target": "parameters.su@La.adp_iso",
+          "expected": "The uncertainties are in the table."
+        },
+        {
+          "title": "Clear filters",
+          "text": "Clear the filters with the eraser.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "expected": "Every parameter is listed."
+        },
+        {
+          "title": "Correlations",
+          "text": "Open Correlations to see why.",
+          "page": "analysis",
+          "target": "mainArea.analysis.tab.correlations",
+          "expected": "The Correlations tab is open.",
+          "check": "open:mainArea.analysis.tab.correlations"
+        },
+        {
+          "title": "Correlated pair",
+          "text": "La's and Ba's B_iso are fully anticorrelated (−1.00): the fit only fixes them together. A constraint gives them one value.",
+          "page": "analysis",
+          "target": "correlations.cell@La.adp_iso|Ba.adp_iso",
+          "expected": "The correlations are shown."
+        },
+        {
+          "title": "Extra tab",
+          "text": "Open the Extra tab.",
+          "page": "analysis",
+          "target": "sideBar.tab.extras",
+          "expected": "The Extra tab is open.",
+          "check": "open:sideBar.tab.extras"
+        },
+        {
+          "title": "Open Aliases",
+          "text": "Open the Aliases group to name parameters for a constraint.",
+          "page": "analysis",
+          "target": "group.alias",
+          "expected": "The Aliases group is open.",
+          "check": "open:group.alias"
+        },
+        {
+          "title": "Add aliases",
+          "text": "Add two aliases: biso_La for La's B_iso and biso_Ba for Ba's.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "expected": "The two aliases are in the list.",
+          "check": "aliases:biso_La=La.adp_iso,biso_Ba=Ba.adp_iso"
+        },
+        {
+          "title": "Open Constraints",
+          "text": "Open the Constraints group to tie the two values.",
+          "page": "analysis",
+          "target": "group.constraint",
+          "expected": "The Constraints group is open.",
+          "check": "open:group.constraint"
+        },
+        {
+          "title": "Add a constraint",
+          "text": "Add a constraint and write biso_Ba = biso_La.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "expected": "The constraint is in the list.",
+          "check": "constraint:biso_Ba = biso_La"
+        },
+        {
+          "title": "Fit again",
+          "text": "Fit again, then close the results with OK: Ba's B_iso now follows La's, and the shared value has a small uncertainty.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "expected": "The fit finishes.",
+          "check": "fitted"
+        },
+        {
+          "title": "Correlations again",
+          "text": "Correlations again: the square of La's and Ba's B_iso is gone, since Ba's now follows La's.",
+          "page": "analysis",
+          "target": "mainArea.analysis.tab.correlations",
+          "check": "open:mainArea.analysis.tab.correlations",
+          "expected": "Correlations is shown."
+        },
+        {
+          "title": "Fit quality",
+          "text": "The fit's quality on Pattern: the calculated pattern lies on the measured one, the residual below is flat, and the experiment's line gives Rwp and the reduced chi-squared.",
+          "page": "analysis",
+          "target": "mainArea.analysis.tab.fitting",
+          "check": "open:mainArea.analysis.tab.fitting",
+          "expected": "Pattern is shown."
+        },
+        {
+          "title": "Your own work",
+          "text": "In your own work you would go on freeing or fixing parameters and fitting until the fit is good. This example fits well, so it stops here.",
+          "page": "analysis",
+          "target": "parameters.list",
+          "tab": "basic",
+          "expected": "The fit is good and needs no more stages."
+        },
+        {
+          "title": "Open Report",
+          "text": "The Report page summarises the fitted model: the structure, the experiment, the fit and its quality. Open the Report page with its tab, or press Next.",
+          "page": "analysis",
+          "target": "appBar.tab.report",
+          "expected": "The Report page is open.",
+          "check": "page:report"
+        },
+        {
+          "title": "Open Export",
+          "text": "Open the Export group to see how the report is saved.",
+          "page": "report",
+          "target": "group.reportExport",
+          "expected": "The Export group is open.",
+          "check": "open:group.reportExport"
+        },
+        {
+          "title": "Save the report",
+          "text": "Choose HTML, PDF or CIF and press Save to write the report.",
+          "page": "report",
+          "target": "report.save",
+          "expected": "The report can be saved."
+        },
+        {
+          "title": "Save the project",
+          "text": "Save the project with the save button in the app bar: the tutorial's project is not saved until you save it.",
+          "page": "report",
+          "target": "appBar.button.save",
+          "expected": "The project can be saved."
+        }
+      ],
+      "tags": ["purpose:refinement", "sampleForm:powder", "probe:neutron", "beamMode:constant wavelength", "scatteringType:bragg"]
+    }
+  ]
+}

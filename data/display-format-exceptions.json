@@ -18,7 +18,7 @@
   {
    "file": "app/qml/Components/SingleCrystalTable.qml",
    "match": "value.toFixed(2)",
-   "reason": "a single crystal's normalised residual (F² meas - F² calc)/s.u., no item's value, to two decimals as the report shows it"
+   "reason": "a single crystal's normalised residual (F\u00b2 meas - F\u00b2 calc)/s.u., no item's value, to two decimals as the report shows it"
   },
   {
    "file": "app/qml/Globals/NumberText.qml",
@@ -173,7 +173,7 @@
   {
    "file": "core/src/report_model.cpp",
    "match": "fixed_text((meas - calc[row]) / su, 2)",
-   "reason": "a single crystal's normalised residual (F² meas - F² calc)/s.u., no item's value, to two decimals as the app's reflection table shows it"
+   "reason": "a single crystal's normalised residual (F\u00b2 meas - F\u00b2 calc)/s.u., no item's value, to two decimals as the app's reflection table shows it"
   },
   {
    "file": "core/src/selectors.cpp",
@@ -214,6 +214,26 @@
    "file": "lib/edi/verification.py",
    "match": "metrics.correlation:.9f",
    "reason": "the verification report correlation against a reference engine, not a value of an item"
+  },
+  {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(options_.atom_scale, 'g', 6)",
+   "reason": "the `_structure_view.atom_scale` value a save writes, not a displayed value"
+  },
+  {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(options_.adp_probability, 'g', 6)",
+   "reason": "the `_structure_view.adp_probability` value a save writes, not a displayed value"
+  },
+  {
+   "file": "app/src/run_log.cpp",
+   "match": "QString::number(seconds, 'f', decimals)",
+   "reason": "the run log's seconds-since-the-previous-record column (ADR-0062), a duration rounded to five characters, not a value of an item"
+  },
+  {
+   "file": "app/src/run_log.cpp",
+   "match": "QString::number(seconds, 'f', 0)",
+   "reason": "the run log's seconds-since-the-previous-record column (ADR-0062), a duration rounded to five characters, not a value of an item"
   }
  ],
  "names": [
@@ -241,11 +261,6 @@
    "file": "app/qml/Components/ParameterCell.qml",
    "literal": "s.u.",
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
-  },
-  {
-   "file": "app/qml/Components/PatternChart.qml",
-   "literal": "points",
-   "reason": "a way of drawing the measured data, a chart preference; not the background points"
   },
   {
    "file": "app/qml/Components/ScanViewChart.qml",
@@ -301,6 +316,11 @@
    "file": "app/qml/Pages/Analysis/ParametersGroup.qml",
    "literal": "max",
    "reason": "the parameter table column of fit upper bounds, not the calculation range"
+  },
+  {
+   "file": "app/qml/Pages/Experiment/InstrumentGroup.qml",
+   "literal": "Instrument",
+   "reason": "the instrument that measured the experiment, a selector label, not the instrument category's title"
   },
   {
    "file": "app/qml/Pages/Experiment/LinkedStructureGroup.qml",
@@ -396,6 +416,26 @@
    "file": "app/qml/Pages/Report/ReportTable.qml",
    "literal": ".",
    "reason": "the decimal point of a number aligned on its point, not the inapplicable polarisation token"
+  },
+  {
+   "file": "app/qml/Components/AppPreferencesDialog.qml",
+   "literal": "Appearance",
+   "reason": "the preferences page of the app's look, not the structure view category"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/RefinementGroup.qml",
+   "literal": "all",
+   "reason": "the empty threshold's placeholder: every reflection is used, not the atoms option"
+  },
+  {
+   "file": "app/src/run_log.cpp",
+   "literal": "Auto",
+   "reason": "the run log header's engine-threads preference, outside the dictionary (I1)"
+  },
+  {
+   "file": "app/src/session.cpp",
+   "literal": "project saved",
+   "reason": "a run-log record of a save (ADR-0062), not a name shown to the user"
   }
  ]
 }

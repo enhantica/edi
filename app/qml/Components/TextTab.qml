@@ -88,6 +88,30 @@ EaComponents.SideBarColumn {
         };
         discardDialog.open();
     }
+    // Settles the unapplied edit before something replaces what the tab shows: `then` runs once the edit is applied
+    // or dropped; Cancel, or a refused apply, keeps the edit, shows it with the reason and runs nothing.
+    function settleEdit(then) {
+        const settled = () => {
+            tab.edited = false;
+            tab.showBlock();
+            then();
+        };
+        tab.askLeave(() => tab.applyTo(tab.source, textEdit.text), settled, settled, refusal => {
+            tab.refusal = refusal ?? "";
+            tab.stayRequested();
+        });
+    }
+    // The one tab with an unapplied edit is the one AppState settles (a tab left with its edit asks first).
+    onDirtyChanged: {
+        if (tab.dirty)
+            AppState.textEdit = tab;
+        else if (AppState.textEdit === tab)
+            AppState.textEdit = null;
+    }
+    Component.onDestruction: {
+        if (AppState.textEdit === tab)
+            AppState.textEdit = null;
+    }
     onShownTextChanged: {
         if (!tab.dirty)
             tab.showBlock();
@@ -156,22 +180,10 @@ EaComponents.SideBarColumn {
                 toolTip: qsTr("What the Text tab shows: the categories you can edit, or also the measured data and results, read-only")
                 model: [qsTr("Editable"), qsTr("Everything")]
                 shownIndex: Math.max(0, choices.indexOf(Preferences.textShow))
-                // Another Show choice with the edit unapplied changes only once the edit is discarded.
+                // Another Show choice with an edit unapplied changes once the edit is settled (AppState.setTextShow).
                 onActivated: index => {
-                    const choice = choices[index];
-                    if (!tab.dirty) {
-                        Preferences.textShow = choice;
-                        return;
-                    }
-                    const shown = () => {
-                        tab.edited = false;
-                        Preferences.textShow = choice;
-                        tab.showBlock();
-                    };
-                    tab.askLeave(() => tab.applyTo(tab.source, textEdit.text), shown, shown, refusal => {
-                        tab.refusal = refusal ?? "";
-                        showBox.currentIndex = Qt.binding(() => showBox.shownIndex);
-                    });
+                    AppState.setTextShow(choices[index]);
+                    showBox.currentIndex = Qt.binding(() => showBox.shownIndex);
                 }
             }
             // A disabled button takes no hover, so the reason it is disabled comes from here.
@@ -186,14 +198,15 @@ EaComponents.SideBarColumn {
                     enabled: tab.editable && tab.dirty
                     alert: true
                     fontIcon: "check"
-                    toolTip: qsTr("Apply the edited text to the project")
+                    // What it does, or why it cannot: one text, shown over the disabled button by the hover below.
+                    toolTip: tab.everything ? qsTr("Switch Show to Editable to edit the text") : !tab.dirty ? qsTr("Edit the text to apply it") : qsTr("Apply the edited text to the project")
                     onClicked: tab.applyEdit()
                 }
                 HoverHandler {
                     id: applyHover
                 }
                 EaElements.ToolTip {
-                    text: tab.everything ? qsTr("Switch Show to Editable to edit the text") : qsTr("Edit the text to apply it")
+                    text: applyButton.toolTip
                     visible: !applyButton.enabled && applyHover.hovered && EaGlobals.Vars.showToolTips
                 }
             }

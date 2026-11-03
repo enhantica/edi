@@ -34,7 +34,7 @@ class LineMaterial : public QSGMaterial {
     int compare(const QSGMaterial* other) const override {
         const auto* that = static_cast<const LineMaterial*>(other);
         if (placement != that->placement || colour != that->colour || half_width != that->half_width ||
-            pixel != that->pixel) {
+            pixel != that->pixel || paper != that->paper) {
             return this < that ? -1 : 1;
         }
         return 0;
@@ -44,6 +44,7 @@ class LineMaterial : public QSGMaterial {
     std::array<float, 4 * kGroup> colour{};
     float half_width = 1.0F;
     float pixel = 1.0F;  // one device pixel, in item pixels
+    std::array<float, 4> paper{1.0F, 1.0F, 1.0F, 1.0F};
 };
 
 class LineShader : public QSGMaterialShader {
@@ -53,7 +54,7 @@ class LineShader : public QSGMaterialShader {
         setShaderFileName(FragmentStage, QStringLiteral(":/edi/shaders/scan_line.frag.qsb"));
     }
     // The uniform block's std140 layout: the matrix, the placements, the colours, then the opacity, the half width and
-    // the device pixel.
+    // the device pixel, and the paper colour at the next 16-byte boundary.
     bool updateUniformData(RenderState& state, QSGMaterial* material, QSGMaterial* /*old*/) override {
         constexpr std::size_t kArray = 4 * kGroup * sizeof(float);
         char* buffer = state.uniformData()->data();
@@ -63,6 +64,7 @@ class LineShader : public QSGMaterialShader {
         std::memcpy(buffer + 64 + kArray, line->colour.data(), kArray);
         const float rest[3] = {state.opacity(), line->half_width, line->pixel};
         std::memcpy(buffer + 64 + 2 * kArray, rest, sizeof(rest));
+        std::memcpy(buffer + 64 + 2 * kArray + 16, line->paper.data(), sizeof(line->paper));
         return true;
     }
 };
@@ -165,6 +167,13 @@ void ScanLines::setBands(std::vector<QRectF> bands, const QColor& colour) {
     }
 }
 
+void ScanLines::setPaper(const QColor& paper) {
+    if (paper != paper_) {
+        paper_ = paper;
+        update();
+    }
+}
+
 void ScanLines::setYMin(double value) {
     if (value != y_min_) {
         y_min_ = value;
@@ -260,6 +269,7 @@ QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/)
         }
         material->half_width = static_cast<float>(line_width_ / 2.0);
         material->pixel = static_cast<float>(1.0 / (window() != nullptr ? window()->effectiveDevicePixelRatio() : 1.0));
+        material->paper = {paper_.redF(), paper_.greenF(), paper_.blueF(), 1.0F};
         node->markDirty(QSGNode::DirtyMaterial);
         child = node->nextSibling();
     }

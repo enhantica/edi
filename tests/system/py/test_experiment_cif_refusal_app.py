@@ -1,10 +1,11 @@
-"""The production native experiment loader refuses both orders of a mixed batch."""
+"""The production loader imports supported CIF and native experiments in either order."""
 
 import json
 import os
 import subprocess
 from pathlib import Path
 
+import edi
 import pytest
 
 from tests.fixtures import experiment_cif_refusal as case
@@ -53,7 +54,7 @@ TestCase {
 
 @pytest.mark.parametrize('style', case.STYLES)
 @pytest.mark.parametrize('order', ['cif-first', 'native-first'])
-def test_native_experiment_loader_refuses_a_cif_batch_atomically(tmp_path, style, order):
+def test_native_experiment_loader_imports_a_mixed_cif_batch(tmp_path, style, order):
     native.project(tmp_path)
     case.native_experiment(tmp_path)
     (tmp_path / 'input.edi').write_text(case.text(style))
@@ -84,20 +85,22 @@ def test_native_experiment_loader_refuses_a_cif_batch_atomically(tmp_path, style
         + result.stderr
     )
     outcome = json.loads((tmp_path / 'outcome.json').read_text())
-    assert not outcome['accepted'], (
-        'The application refuses a CIF even when it has a native suffix'
+    assert outcome['accepted'] and not outcome['error'], (
+        'The application imports supported CIF content even with a native suffix'
     )
-    checks.reason(outcome['error'])
-    assert not outcome['messages'], 'A refused batch has no partial-import warnings'
-    assert outcome['afterCount'] == outcome['beforeCount'], (
-        'Neither ordering of a refused mixed batch adds or removes an experiment'
+    assert outcome['afterCount'] == outcome['beforeCount'] + 2, (
+        'Either mixed-batch order adds both declared experiments exactly once'
     )
-    assert native.saved_model(tmp_path / 'after') == native.saved_model(tmp_path / 'before'), (
-        'A mixed experiment batch preserves every saved native model byte on refusal'
-    )
+    loaded = edi.Project.load(tmp_path / 'after')
+    checks.imported_values(loaded.experiments['cif_experiment'])
+    after = native.saved_model(tmp_path / 'after')
+    for name, contents in native.saved_model(tmp_path / 'before').items():
+        assert after[name] == contents, (
+            'Mixed CIF admission retains every pre-existing native model byte: ' + name
+        )
     assert (tmp_path / 'input.edi').read_text() == case.text(style), (
-        'The app never normalizes or rewrites a refused CIF input'
+        'The app never normalizes or rewrites its supplied CIF input'
     )
-    assert (tmp_path / 'control/experiments/extra.edi').is_file(), (
-        'The same production native loader imports and saves its native experiment control'
+    assert (tmp_path / 'after/experiments/extra.edi').is_file(), (
+        'The same mixed batch imports and saves its native experiment member'
     )

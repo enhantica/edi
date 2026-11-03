@@ -162,6 +162,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // `project.edi`'s categories with no designed group, each with a group made from the dictionary on the Project
     // page's Extras (CategoryListModel).
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
+    // The categories of the report's own file, reports/report.edi, for the Report page's groups.
+    Q_PROPERTY(edi_app::CategoryListModel* reportCategories READ reportCategories CONSTANT)
     // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0036 §7).
     Q_PROPERTY(edi_app::BlockText* reportText READ reportText CONSTANT)
     Q_PROPERTY(edi_app::BlockText* projectText READ projectText CONSTANT)
@@ -224,7 +226,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(QString mapDirection READ mapDirection WRITE setMapDirection NOTIFY mapDirectionChanged)
 
    public:
-    ProjectViewModel(edi::Project project, QObject* parent);
+    // `colourScheme` is the palette the blocks first take their positions in: the one selected when the project opens,
+    // so an opened project's positions are those of that palette (ADR-0038).
+    ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme = QStringLiteral("earth"));
     ~ProjectViewModel() override;
 
     QString name() const;
@@ -297,6 +301,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     FitViewModel* fit() const { return fit_; }
     BlockText* metadataText() const { return metadata_text_; }
     CategoryListModel* categories() const { return categories_; }
+    CategoryListModel* reportCategories() const { return report_categories_; }
     BlockText* reportText() const { return report_text_; }
     BlockText* projectText() const { return project_text_; }
     ReportViewModel* report() const { return report_; }
@@ -345,8 +350,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void pinTimestamps(const QString& timestamp);
     // The files a save of the project writes (path relative to the project, text), from one save
     // per change; a writer refusal is thrown as its message.
+    struct SavedFiles {
+        std::vector<std::pair<std::string, std::string>> files;
+        std::string refusal;
+    };
     const std::vector<std::pair<std::string, std::string>>& savedFiles() const;
     std::string savedFile(const std::string& relative) const;
+    // The same file as a save writes it without calculating: what finds the generated groups.
+    std::string discoveredFile(const std::string& relative) const;
     SavedFile savedFileFunction() const;
 
     // A Stacked view or Map says whether it is on screen: with every pattern waited for, a followed scan shows each
@@ -647,7 +658,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void syncUndo();
     BlockText* metadata_text_;
     CategoryListModel* categories_ = nullptr;
+    CategoryListModel* report_categories_ = nullptr;
     void syncCategories();
+    // Every block's category list against its saved text as it is now.
+    void refreshCategories();
     // The Structure view's options are the shown structure's: set from it when it is shown, saved to it on a change.
     void showStructureView();
     void keepStructureView();
@@ -687,6 +701,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString stacked_spacing_ = QStringLiteral("wide");
     QString map_direction_ = QStringLiteral("auto");
     QStringList scan_columns_;
+    std::string scan_declaration_;  // what the session was listed from (scanDeclaration)
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;
     std::optional<edi::Project> scan_template_;
@@ -737,6 +752,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A Continue's earlier provenance (its rows stay), for the run's own at its end.
     std::optional<ScanSession::Run> previous_run_;
     void loadScan();
+    // The scan declaration (_sequential_fit and its extraction rules) as one string, and the result columns it names.
+    static std::string scanDeclaration(const edi::Project& project);
+    static QStringList scanColumns(const edi::Project& project);
+    void makeScanSession();
+    // A changed declaration lists, reads and admits the scan again (publish).
+    void followScanDeclaration();
     // Re-derives whether the scan modes can run (a single template experiment and a listed scan).
     void syncScanAdmission();
     // Shows a dataset: its projection is read off the GUI thread and applied when ready. `refresh`: again, even
@@ -767,11 +788,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The results' outdated state, from their provenance against the template.
     void syncOutOfDate();
     void markTemplateChanged();
-    struct SavedFiles {
-        std::vector<std::pair<std::string, std::string>> files;
-        std::string refusal;
-    };
     mutable std::optional<SavedFiles> saved_files_;
+    mutable std::optional<SavedFiles> discovered_files_;  // a save of a copy: nothing calculated (discoveredFile)
     // ADR-0020: the calculation runs on the worker; every edit goes through the preview, which publishes a
     // result only if no newer request exists. Deliveries arrive here by a queued call, so every model write
     // and every signal of a publication happens on this object's (the GUI) thread. The preview goes first

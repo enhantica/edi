@@ -11,7 +11,7 @@ import edi.app
 // What the report holds besides what it always does (the owner, 2026-10-13): a box for each optional group, the
 // charts, the correlations, the reflections, the data (left out by default) and, for a scan, the evolution. The
 // correlation level and the x axis come from the Analysis page.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     // Only the top group opens on first view, as on the other pages; each remembers its state.

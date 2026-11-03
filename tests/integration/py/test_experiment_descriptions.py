@@ -14,6 +14,7 @@ import yaml
 
 from tests.fixtures import cif_import_cases as case
 from tests.fixtures.cif_import_baseline.generate_metadata import scalars
+from tests.fixtures.cif_import_baseline.generate_readers import source_path
 
 BASE = Path(__file__).resolve().parents[2] / 'fixtures/cif_import_baseline'
 PINS = json.loads((BASE / 'metadata-before.json').read_text())
@@ -31,12 +32,12 @@ RETIRED = re.compile(
 def test_each_tracked_record_migrates_all_experiments_and_preserves_scientific_bytes(
     tmp_path, row
 ):
-    record = case.ROOT / row['path']
+    record = source_path(row['path'])
     assert not RETIRED.search(record.read_text()), (
         'Every tracked project record drops the retired project-level description tags'
     )
     for experiment in row['experiments']:
-        path = case.ROOT / experiment['path']
+        path = source_path(experiment['path'])
         assert (
             hashlib.sha256(FIELDS.sub('', path.read_text()).encode()).hexdigest()
             == experiment['scientific_sha256']
@@ -47,6 +48,16 @@ def test_each_tracked_record_migrates_all_experiments_and_preserves_scientific_b
                 'Every experiment receives its own declared description: ' + tag
             )
     project = importlib.import_module(case.API).Project.load(record.parent)
+    if row['path'] == (
+        'tests/fixtures/background_estimate/projects/lifecycle-saved-auto/project.edi'
+    ):
+        # This negative estimate fixture also refuses on the recorded main API.
+        with pytest.raises(
+            importlib.import_module(case.API).IoError,
+            match='background points or terms differ',
+        ):
+            project.save_as(tmp_path / 'saved')
+        return
     project.save_as(tmp_path / 'saved')
     for experiment in row['experiments']:
         saved = tmp_path / 'saved/experiments' / Path(experiment['path']).name
@@ -163,7 +174,8 @@ def test_example_facets_follow_the_pre_move_catalogue_and_each_experiment():
         pytest.skip('The application catalogue belongs to the product repository')
     current = json.loads((case.ROOT / 'app/examples/metadata.json').read_text())
     for name, entry in PINS['catalogue']['examples'].items():
-        actual = current['examples'][name]['values']
+        current_name = source_path(name + '/').name
+        actual = current['examples'][current_name]['values']
         expected = dict(entry['values'])
         expected['dimensionality'] = ['1d']
         expected['polarisation'] = ['unpolarised'] if expected['probe'] == ['neutron'] else ['.']

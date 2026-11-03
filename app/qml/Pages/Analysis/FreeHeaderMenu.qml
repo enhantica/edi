@@ -11,7 +11,8 @@ import edi.app
 
 // The "free" column title's menu, in the parameter menu's style: whether the rows the filters show are all free, all
 // fixed or mixed, and Free or Fixed to make them so at once, one Undo step (the owner, 2026-10-11). Mixed is a state,
-// never a choice. Rows that can never be fitted (a fixed setting, a coordinate the symmetry fixes) are not counted.
+// never a choice. Rows a fit cannot vary (a setup value, a coordinate the symmetry fixes) are not counted unless they are
+// free, a flag set before a change that blocked them, which Fixed clears and the counts include.
 EaElements.Menu {
     id: menu
 
@@ -22,7 +23,7 @@ EaElements.Menu {
     // the table's selection follows them (ParametersGroup): reading a row of the filter model does not follow them.
     property int membership: 0
 
-    // The shown rows that can be fitted, as the filter model has them now.
+    // The shown rows that can be fitted, as the filter model has them now: what Free sets.
     function fittableRows() {
         const rows = [];
         if (menu.filter === null || menu.project === null)
@@ -48,12 +49,27 @@ EaElements.Menu {
         return rows;
     }
 
-    // The shown rows that can be fitted, and how many of them are free. Reading each row's `free` keeps it live. The
-    // count is used, not only read: the compiled binding drops a read whose value is unused (`void x`), and with it
-    // the dependency.
-    readonly property var shown: menu.membership >= 0 ? menu.fittableRows() : []
+    // The shown rows the menu acts on: those that can be fitted and those still free, what Free and Fixed between them
+    // set, as the filter model has them now.
+    function actedRows() {
+        const rows = [];
+        if (menu.filter === null || menu.project === null)
+            return rows;
+        for (let i = 0; i < menu.filter.rowCount(); ++i) {
+            const parameter = menu.filter.parameterAt(i);
+            if (parameter !== null && (parameter.fittable || parameter.free))
+                rows.push(parameter);
+        }
+        return rows;
+    }
+
+    // The rows acted on, how many of them are free and how many can be fitted. Reading each row's `free` keeps it live.
+    // The counts are used, not only read: the compiled binding drops a read whose value is unused (`void x`), and with
+    // it the dependency.
+    readonly property var shown: menu.membership >= 0 ? menu.actedRows() : []
     readonly property int freeCount: shown.filter(parameter => parameter.free).length
     readonly property int fixedCount: shown.length - freeCount
+    readonly property int fittableCount: shown.filter(parameter => parameter.fittable).length
 
     // Free or Fixed acts on the rows shown when it is chosen.
     function apply(free) {
@@ -119,7 +135,7 @@ EaElements.Menu {
         StateRow {
             objectName: "parameters.freeHeader.free"
             text: qsTr("Free · all %1").arg(menu.shown.length)
-            active: menu.shown.length > 0
+            active: menu.fittableCount > 0
             selected: menu.shown.length > 0 && menu.fixedCount === 0
             onChosen: menu.apply(true)
         }

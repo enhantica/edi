@@ -24,7 +24,11 @@ EaElements.ComboBox {
     // box always shows the kept choice, and a refused one goes back.
     property int shownIndex: 0
     currentIndex: shownIndex
-    onActivated: Qt.callLater(() => box.currentIndex = Qt.binding(() => box.shownIndex))
+    // The call runs a frame later, when the box may already be gone (a chart closed with its toolbar).
+    onActivated: Qt.callLater(() => {
+        if (box)
+            box.currentIndex = Qt.binding(() => box.shownIndex);
+    })
     // What the closed box shows for each entry (an axis box's "y: linear"), when it differs from the list's entry.
     property var closedTexts: []
     // The base's rich-text label leaves Qt's widest-text policy nothing to measure, so the entries, and the closed

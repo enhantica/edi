@@ -24,6 +24,7 @@
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
+#include "run_log.hpp"
 
 namespace edi_app {
 namespace {
@@ -155,6 +156,7 @@ void Session::releaseTemporaryFolder() {
 
 bool Session::openProject(const QUrl& location) {
     if (openProjectAt(location)) {
+        qCInfo(lcApp, "project opened");
         return true;
     }
     emit loadFailed(last_error_.isEmpty() ? tr("The project could not be opened") : last_error_);
@@ -163,6 +165,7 @@ bool Session::openProject(const QUrl& location) {
 
 bool Session::openExample(const QString& exampleId) {
     if (openExampleNamed(exampleId)) {
+        qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
         return true;
     }
     emit loadFailed(last_error_.isEmpty() ? tr("The project could not be opened") : last_error_);
@@ -212,7 +215,7 @@ bool Session::openProjectAt(const QUrl& location) {
             setLastError(QStringLiteral("cannot create a temporary copy of %1: %2").arg(source, extracted_->errorString()));
             return false;
         }
-        const QString target = extracted_->filePath(QStringLiteral("read-only/") + folder.fileName());
+        const QString target = extracted_->filePath(freeCopyName(QStringLiteral("read-only/") + folder.fileName()));
         if (!openCopy(source, target, {})) {
             return false;
         }
@@ -305,6 +308,10 @@ bool Session::needsSaveAs() const {
 }
 
 bool Session::save() {
+    const auto logged = [](const char* line) {
+        qCInfo(lcApp, "%s", line);
+        return true;
+    };
     if (project_ != nullptr && WebFiles::available()) {
         // Where the browser keeps nothing, nothing is saved: the project stays unsaved and the window says why
         // (owner, 2026-10-25).
@@ -350,7 +357,7 @@ bool Session::save() {
             }
             emit webSaveFinished(saved);
         });
-        return true;
+        return logged("project saved");
     }
     if (project_ == nullptr || needsSaveAs()) {
         setLastError(QStringLiteral("this project has no directory of its own yet: save it as"));
@@ -364,7 +371,7 @@ bool Session::save() {
             return false;
         }
         emit projectDirectoryUsed(archive_location_);
-        return true;
+        return logged("project saved");
     }
     const QString error = project_->saveTo(project_->path());
     setLastError(error);
@@ -372,7 +379,7 @@ bool Session::save() {
         return false;
     }
     emit projectDirectoryUsed(QFileInfo(project_->path()).absoluteFilePath());
-    return true;
+    return logged("project saved");
 }
 
 QString Session::writeBackReports() {
@@ -410,6 +417,9 @@ bool Session::saveAs(const QUrl& directory) {
     emit needsSaveAsChanged();
     emit locationTextChanged();
     emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
+    if (saved) {
+        qCInfo(lcApp, "project saved");
+    }
     return saved;
 }
 
@@ -432,6 +442,10 @@ void Session::leaveTemporaryOrigin() {
 }
 
 bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
+    const auto logged = [](const char* line) {
+        qCInfo(lcApp, "%s", line);
+        return true;
+    };
     if (project_ == nullptr) {
         return false;
     }
@@ -459,7 +473,7 @@ bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
     emit needsSaveAsChanged();
     emit locationTextChanged();
     emit projectDirectoryUsed(where);
-    return true;
+    return logged("project saved");
 }
 
 bool Session::publishArchive(const Staged& staged, const QString& archive) {
@@ -579,8 +593,10 @@ bool Session::openExampleNamed(const QString& exampleId) {
         return false;
     }
     // A fresh copy per open, so edits to an opened example never leak into the next open of it. A bundled example
-    // lives in the application's resources, which crysta cannot read: its scan data are copied with it.
-    const QString target = extracted_->filePath(exampleId + QStringLiteral("/project"));
+    // lives in the application's resources, which crysta cannot read: its scan data are copied with it. The copy
+    // goes to a folder no live project works in: the open project, a tutorial's set-aside one or a kept tutorial
+    // project may all have come from this example.
+    const QString target = extracted_->filePath(freeCopyName(exampleId) + QStringLiteral("/project"));
     QDir(target).removeRecursively();
     QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
     while (files.hasNext()) {
@@ -610,12 +626,13 @@ bool Session::createProject(const QString& name, const QString& description, con
             project.su_rule = suRule.toStdString();
         }
         project.report_html_offline = reportLibraries;
-        created = new ProjectViewModel(std::move(project), this);
+        created = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
     }
     replaceProject(created, {}, {});
+    qCInfo(lcApp, "%s", location.isEmpty() ? "project created, unsaved" : "project created");
     if (location.isEmpty()) {
         return true;
     }
@@ -633,6 +650,89 @@ bool Session::createProject(const QString& name, const QString& description, con
 }
 
 void Session::closeProject() { replaceProject(nullptr, {}, {}); }
+
+bool Session::openExampleAside(const QString& exampleId) {
+    if (aside_) {
+        setLastError(QStringLiteral("a tutorial already holds a project aside"));
+        return false;  // never a second one: the first would be lost
+    }
+    aside_next_ = true;
+    const bool opened = openExample(exampleId);
+    aside_next_ = false;
+    return opened && aside_.has_value();
+}
+
+bool Session::createProjectAside(const QString& name, const QString& description) {
+    if (aside_) {
+        setLastError(QStringLiteral("a tutorial already holds a project aside"));
+        return false;
+    }
+    aside_next_ = true;
+    const bool created = createProject(name, description);
+    aside_next_ = false;
+    return created && aside_.has_value();
+}
+
+bool Session::setProjectAside() {
+    if (aside_) {
+        setLastError(QStringLiteral("a tutorial already holds a project aside"));
+        return false;
+    }
+    aside_next_ = true;
+    replaceProject(nullptr, {}, {});
+    return aside_.has_value();
+}
+
+void Session::restoreProjectSetAside() {
+    if (!aside_) {
+        return;
+    }
+    SetAside aside = *std::move(aside_);
+    aside_.reset();
+    replaceProject(aside.project.data(), {}, aside.example);
+    temporary_folder_ = aside.temporary_folder;
+    archive_location_ = aside.archive_location;
+    setOpenedArchive(aside.opened_archive);
+    read_only_source_ = aside.read_only_source;
+    read_only_copy_ = aside.read_only_copy;
+    web_copy_ = aside.web_copy;
+    web_from_file_ = aside.web_from_file;
+    setWebPlace(aside.web_place);
+    emit projectLocationChanged();
+    emit locationTextChanged();
+    emit needsSaveAsChanged();
+    emit projectSetAsideChanged();
+    emit projectSetAsideNameChanged();
+    emit projectSetAsideModifiedChanged();
+}
+
+void Session::dropProjectSetAside() {
+    if (!aside_) {
+        return;
+    }
+    SetAside aside = *std::move(aside_);
+    aside_.reset();
+    if (!aside.project.isNull()) {
+        aside.project->deleteLater();
+    }
+    if (!aside.temporary_folder.isEmpty()) {
+        edi::remove_archive_directory(aside.temporary_folder.toStdString());
+    }
+    if (!aside.web_copy.isEmpty()) {
+        QDir(aside.web_copy).removeRecursively();
+    }
+    emit projectSetAsideChanged();
+    emit projectSetAsideNameChanged();
+    emit projectSetAsideModifiedChanged();
+}
+
+QString Session::projectSetAsideName() const {
+    return aside_ && !aside_->project.isNull() ? aside_->project->name() : QString();
+}
+
+bool Session::projectSetAsideModified() const {
+    return aside_ && !aside_->project.isNull() && aside_->project->modified();
+}
 
 void Session::syncCalculationMessages() {
     // One message per distinct refusal: a project-wide refusal reaches every experiment's pattern alike.
@@ -704,13 +804,30 @@ bool Session::open(const QString& directory, const QString& example) {
         for (const std::string& warning : edi::take_engine_warnings()) {
             warnings.append(QString::fromStdString(warning));
         }
-        opened = new ProjectViewModel(std::move(project), this);
+        opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
         return false;
     }
     replaceProject(opened, warnings, example);
     return true;
+}
+
+QString Session::freeCopyName(const QString& name) const {
+    const auto worksIn = [](const ProjectViewModel* project, const QString& folder) {
+        if (project == nullptr) {
+            return false;
+        }
+        const QString path = QDir::cleanPath(project->path());
+        return path == folder || path.startsWith(folder + QLatin1Char('/'));
+    };
+    for (int n = 1;; ++n) {
+        const QString candidate = n == 1 ? name : name + QLatin1Char('-') + QString::number(n);
+        const QString folder = QDir::cleanPath(extracted_->filePath(candidate));
+        if (!worksIn(project_, folder) && !(aside_ && worksIn(aside_->project.data(), folder))) {
+            return candidate;
+        }
+    }
 }
 
 bool Session::openCopy(const QString& source, const QString& target, const QString& example) {
@@ -740,13 +857,20 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         for (const std::string& warning : edi::take_engine_warnings()) {
             warnings.append(QString::fromStdString(warning));
         }
-        opened = new ProjectViewModel(std::move(project), this);
+        opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
         return false;
     }
     replaceProject(opened, warnings, example);
     return true;
+}
+
+void Session::setColourScheme(const QString& scheme) {
+    if (scheme != colour_scheme_) {
+        colour_scheme_ = scheme;
+        emit colourSchemeChanged();
+    }
 }
 
 void Session::setOpenedArchive(const QString& name) {
@@ -758,6 +882,16 @@ void Session::setOpenedArchive(const QString& name) {
 }
 
 void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
+    // A tutorial's project sets the open one aside instead of closing it (edi ADR-0064).
+    std::optional<SetAside> keep;
+    if (std::exchange(aside_next_, false)) {
+        keep = SetAside{project_,         opened_example_,  temporary_folder_, archive_location_,
+                        opened_archive_,  read_only_source_, read_only_copy_,  web_copy_,
+                        web_place_,       web_from_file_};
+        if (project_ != nullptr) {
+            disconnect(project_, nullptr, this, nullptr);
+        }
+    }
     keep_timer_->stop();
     // A web open still being read no longer replaces anything.
     ++open_request_;
@@ -808,17 +942,24 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     emit needsSaveAsChanged();
     // The replaced project's temporary folder goes with it, once it is gone.
     const QString previous_folder = std::exchange(temporary_folder_, QString());
-    if (previous != nullptr) {
+    if (keep) {
+        aside_ = std::move(keep);
+        emit projectSetAsideChanged();
+        emit projectSetAsideNameChanged();
+        emit projectSetAsideModifiedChanged();
+    } else if (previous != nullptr) {
         previous->deleteLater();
         // Free the replaced project's view-models, and the page items the views released for them,
         // now rather than at the next event-loop turn: projects opened back to back (a script, a
         // test) must hold one project's pages, not every one opened so far.
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
-    if (!previous_folder.isEmpty()) {
+    if (!previous_folder.isEmpty() && !aside_.has_value()) {
+        edi::remove_archive_directory(previous_folder.toStdString());
+    } else if (!previous_folder.isEmpty() && aside_->temporary_folder != previous_folder) {
         edi::remove_archive_directory(previous_folder.toStdString());
     }
-    if (!previous_web_copy.isEmpty()) {
+    if (!previous_web_copy.isEmpty() && !(aside_ && aside_->web_copy == previous_web_copy)) {
         QDir(previous_web_copy).removeRecursively();
     }
 }
@@ -1138,7 +1279,7 @@ QString from_bridge(Call&& call, const QString& fallback = QString()) {
     try {
         return QString::fromStdString(call());
     } catch (const std::exception& error) {
-        qWarning("dictionary: %s", error.what());
+        qCWarning(lcCrysta, "dictionary: %s", error.what());
         return fallback;
     }
 }
@@ -1163,6 +1304,15 @@ QString Session::optionLabel(const QString& uid, const QString& token) const {
 
 QString Session::optionTooltip(const QString& uid, const QString& token) const {
     return from_bridge([&] { return edi::option_tooltip(uid.toStdString(), token.toStdString()); });
+}
+
+QUrl Session::documentationUrl(const QString& uid) const {
+    // Only dictionary identities may become links; no user-provided URL or fragment.
+    if (!edi::has_item(uid.toStdString())) return {};
+    QString anchor = uid;
+    anchor.replace('_', '-');
+    anchor.replace('.', '-');
+    return QUrl(QStringLiteral("https://enhantica.github.io/edi/physics/parameters/#") + anchor);
 }
 
 QString Session::categoryTitle(const QString& id) const {
@@ -1191,7 +1341,7 @@ edi::FileText fitted(const QString& uid, double value, double su, const std::str
     try {
         return edi::fitted_text(uid.toStdString(), value, su, rule);
     } catch (const std::exception& error) {
-        qWarning("dictionary: %s", error.what());
+        qCWarning(lcCrysta, "dictionary: %s", error.what());
         return {};
     }
 }

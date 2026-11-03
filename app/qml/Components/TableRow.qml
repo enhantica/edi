@@ -44,26 +44,18 @@ EaComponents.ListViewDelegate {
         };
         for (const cell of row.contentRowData)
             focusOnClick(cell);
-        // A cell whose text changes after the row is made (a value the calculation publishes later) can widen its
-        // column, so the table fits its columns again (DataTable.fitColumns).
+        // Cells a Repeater makes later (a column per structure, once calculated) are sized and styled as the others:
+        // the base sizes a row's cells only when the row is made or the widths change. A row only takes the widths the
+        // table measured its whole model to (DataTable.fitWholeModel); what changes them is a change of the content.
         const table = row.listView as DataTable;
         if (table !== null) {
-            // Cells a Repeater makes later (a column per structure, once calculated) are sized as the others: the
-            // base sizes a row's cells only when the row is made or the widths change.
             const first = Array.from(row.contentRowData).find(cell => cell instanceof Item);
             const cells = first ? first.parent : null;
             if (cells !== null)
                 cells.childrenChanged.connect(() => {
                     table.applyWidths(cells);
-                    Qt.callLater(table.fitColumns);
+                    Qt.callLater(table.styleCells);
                 });
-            for (const cell of row.contentRowData) {
-                if (!(cell instanceof Item))
-                    continue;
-                cell.implicitWidthChanged.connect(() => Qt.callLater(table.fitColumns));
-                if ("numberChanged" in cell)
-                    cell.numberChanged.connect(() => Qt.callLater(table.fitColumns));
-            }
         }
         // The light row tint shows only under the mouse (the owner, 2026-10-22): the base also keeps it on a row whose
         // cell is being edited, which read as a second current-row mark. Its tint is the full-row rectangle with the

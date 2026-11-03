@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
 import EasyApplication.Gui.Globals as EaGlobals
@@ -10,7 +12,7 @@ import edi.app
 // id>`, its title, icon and title tooltip (the `.edi` category it shows) from the category model (a loop's row count
 // in the title), and the category's own content — a component per category id — inside. Used as the delegate of a Repeater
 // over a CategoryListModel, so a group exists exactly when the core returns its category.
-EaElements.GroupBox {
+SideBarGroup {
     id: group
 
     required property var model

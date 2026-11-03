@@ -56,7 +56,8 @@ The decisions it rests on, unchanged here:
   idea 1). It wraps, centred, at a width of 1.15 × one third of its one-line width, so it takes three lines of
   similar width.
 - **Online documentation** opens `https://docs.easydiffraction.org/app/` (`ApplicationInfo.docsUrl`, idea 4),
-  from Home and from the app bar.
+  from Home and from the app bar. **Amended 2026-11-02 (ADR-0065):** the documentation is `https://enhantica.github.io/edi/`, and Home's links
+  are two columns, Learn and Contact and about.
 
 ### 2. The main area and the Experiment type group
 
@@ -294,8 +295,8 @@ and `stepMaximum`.
   Editable. Leaving an unapplied edit (another block, page or Show choice) asks "Discard changes?": Apply applies it
   as ✓ does and leaves, a refused apply staying on the text; Don't apply drops it; Cancel keeps it and returns to it.
   ✓ is red with a white check while enabled, and Show and ✓ float over the text's top right. One category's items
-  follow each other without blank lines, one blank line between categories. A scan project is edited on its pages
-  only.
+  follow each other without blank lines, one blank line between categories. A scan project's text applies too: an
+  edit reaches its template as a page's edit does, and a changed scan declaration lists and reads the scan again.
 - **Continue is a pill** (the owner, 2026-09-29), on every page and tab that shows it: the base button's own
   background (`themeBackground`, hovered `themeBackgroundHovered1`) and 1-px border (`appBarComboBoxBorder`)
   shown, fully rounded ends (radius half its height, `sideBarButtonHeight`), as wide as its icon and text plus
@@ -431,11 +432,6 @@ one selected row, and the row's number in the first column, bold in the accent c
   experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app draws;
   ADR-0038), listed from the core, with the colour order under it (ADR-0038 §7); a stored earlier palette reads and
   is kept as its nearest new one;
-  **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner,
-  2026-09-29): edi has no choice of chart library.
-- **Appearance**: Theme; **Colour scheme — Edi Natural (the default), Edi Coast, Edi Garden, Edi Studio or Edi
-  Contrast** (the experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app
-  draws; ADR-0038), listed from the core; a stored scheme no longer offered reads and is kept as the default;
   **Sidebar — Left or Right** (the owner, 2026-09-29); One sidebar group open at a time (the owner, 2026-10-27; it
   was Auto collapse). **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
 - **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or

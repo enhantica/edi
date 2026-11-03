@@ -21,6 +21,7 @@ import yaml
 from tests.fixtures.background_estimate import manual_bytes as estimate_bytes
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -278,7 +279,7 @@ def test_loop_expectations_cover_fixture_bytes(source):
     # Read and authenticate the complete source once, not once per loop. The
     # archived data is still checked in full; large ASCII tables are not omitted.
     contents = (
-        path.read_bytes() if modes == {'current'} else original_tokens(pre_catalogue_bytes(path))
+        read_previous(path) if modes == {'current'} else original_tokens(pre_catalogue_bytes(path))
     )
     if source == 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi':
         # Before: whole input equals the original loop witness. After: only the

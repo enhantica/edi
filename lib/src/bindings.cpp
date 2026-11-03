@@ -39,6 +39,7 @@
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
+#include "edi/parameter_walk.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/report.hpp"
 #include "edi/report_html.hpp"
@@ -924,7 +925,8 @@ static void relations_changed(edi::Project& project) {
 // The project a parameter handle belongs to, through the row it is attached to (X12); null for one no
 // project holds. The row's collection names the project that adopted it, which may have been destroyed
 // (the link then reads none) or may no longer hold the row (removed, replaced or moved to another
-// project), so the project must still hold this very parameter.
+// project), so the project must still hold this very parameter: in a fit slot or among the values its
+// pages list, a setup value such as a bank angle included (edi ADR-0053).
 static edi::Project* project_of(const edi::Parameter& parameter) {
     const edi::detail::RowLink* link = parameter.category.get();
     const edi::detail::Membership* record = link != nullptr ? link->record() : nullptr;
@@ -935,6 +937,11 @@ static edi::Project* project_of(const edi::Parameter& parameter) {
     }
     for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
         if (slot.parameter == &parameter) {
+            return project;
+        }
+    }
+    for (const edi::ParameterEntry& entry : edi::parameter_entries(*project)) {
+        if (entry.parameter == &parameter) {
             return project;
         }
     }
@@ -968,12 +975,18 @@ static void fittability_now(edi::Parameter& parameter) {
     parameter.fit_reason = descriptor ? edi::fit_reason(edi::FitBlocker::Descriptor) : std::string();
 }
 
-// A parameter's name in a refusal: its unique name in the project holding it, else its own name.
+// A parameter's name in a refusal: its unique name in the project holding it, or its path there for a value no
+// fit slot names, else its own name.
 static std::string parameter_name(edi::Parameter& parameter) {
     if (edi::Project* project = project_of(parameter); project != nullptr) {
         for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
             if (slot.parameter == &parameter) {
                 return slot.unique_name;
+            }
+        }
+        for (const edi::ParameterEntry& entry : edi::parameter_entries(*project)) {
+            if (entry.parameter == &parameter) {
+                return entry.path;
             }
         }
     }
@@ -2697,7 +2710,7 @@ NB_MODULE(_edi, m) {
             "scattering_type",
             [](const edi::ExperimentType& t) { return t.effective_scattering_type(); },
             [](edi::ExperimentType& t, edi::ScatteringTypeEnum value) { t.scattering_type = value; })
-        // ADR-0052: the description, read as its effective value and set as declared.
+        // ADR-0054: the description, read as its effective value and set as declared.
         .def_prop_rw(
             "dimensionality", [](const edi::ExperimentType& t) { return t.effective_dimensionality(); },
             [](edi::ExperimentType& t, const std::string& value) {
@@ -2911,7 +2924,7 @@ NB_MODULE(_edi, m) {
     // presence-tracked.
     nb::class_<edi::views::InstrumentNode> instrument(m, "InstrumentBase");
     instrument.def("__setattr__", renewing_setattr<edi::views::InstrumentNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
-    // ADR-0052: the instrument's and its facility's names, `?` when unknown.
+    // ADR-0054: the instrument's and its facility's names, `?` when unknown.
     instrument.def_prop_rw(
         "name",
         [](const edi::views::InstrumentNode& self) {

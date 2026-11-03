@@ -30,13 +30,18 @@ app_capture_platform() {
 # Weston itself.) Both servers stop when the calling script exits.
 app_x_display() {
     local runtime
+    local capture_width=${EDI_CAPTURE_WIDTH:-1280} capture_height=${EDI_CAPTURE_HEIGHT:-768}
+    if ! [[ "$capture_width" =~ ^[1-9][0-9]*$ && "$capture_height" =~ ^[1-9][0-9]*$ ]]; then
+        echo "$1: capture dimensions must be positive integers" >&2
+        return 1
+    fi
     runtime=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/edi-xdg.XXXXXX")  # A cancel cannot strand it
-    XDG_RUNTIME_DIR="$runtime" weston --backend=headless --renderer=pixman --width=1280 --height=768 \
+    XDG_RUNTIME_DIR="$runtime" weston --backend=headless --renderer=pixman --width="$capture_width" --height="$capture_height" \
         --socket=edi-app --idle-time=0 >"$runtime/weston.log" 2>&1 &
     APP_DISPLAY_PIDS=$!
     trap 'kill $APP_DISPLAY_PIDS 2>/dev/null; wait $APP_DISPLAY_PIDS 2>/dev/null; rm -rf "'"$runtime"'"' EXIT
     _app_await "$1" "$APP_DISPLAY_PIDS" "[ -S '$runtime/edi-app' ]" "Weston" "$runtime/weston.log" || return 1
-    XDG_RUNTIME_DIR="$runtime" WAYLAND_DISPLAY=edi-app Xwayland -geometry 1280x768 -shm -nolisten tcp \
+    XDG_RUNTIME_DIR="$runtime" WAYLAND_DISPLAY=edi-app Xwayland -geometry "${capture_width}x${capture_height}" -shm -nolisten tcp \
         -displayfd 5 5>"$runtime/display" >"$runtime/xwayland.log" 2>&1 &
     local xwayland=$!
     APP_DISPLAY_PIDS="$xwayland $APP_DISPLAY_PIDS"

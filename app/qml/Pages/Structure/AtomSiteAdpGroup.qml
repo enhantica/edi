@@ -132,13 +132,9 @@ Column {
                 readOnly: true
                 value: row.label
             }
-            Item {
-                property int horizontalAlignment: Text.AlignLeft
-                height: parent.height
+            ComboCell {
                 SearchableComboBox {
-                    width: Math.min(parent.width, fittedWidth)
-                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignLeft
                     objectName: `atomSiteAdp.type.${row.index}`
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
