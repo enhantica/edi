@@ -14,7 +14,9 @@
   constraint: the nuclear and magnetic structure (Pnma.1, k = 0, moments free from Co1 (0, 1, 0) and Co2 (0, 1, 0)
   μB), the Thompson-Cox-Hastings
   pseudo-Voigt profile with Finger-Cox-Jephcoat asymmetry, the sixteen-point background, and the excluded regions
-  0–6°, 150–180° and 64.65–64.74°, the last holding only the dead D20 detector cell at 64.6953°.
+  0–6°, 150–180° and 64.65–64.74°, the last holding only the dead D20 detector cell at 64.6953°. The asymmetry's S/L
+  and D/L are held at 0.08393 and 0.03529, the values the 2.3 K example fits (and its FullProf reference holds): they
+  describe the instrument, not the sample, so they stay the same at every temperature.
 - **Analysis:** the 162-file scan's sequential settings (data directory, file pattern, temperature from each file's
   `TEMP` line, Co1 and Co2 sharing one displacement parameter) and the 2.3 K example's minimizer, with
   `_sequential_fit.reverse true`: the fit runs from 2.344 K upwards, each file starting from the previous result, so
