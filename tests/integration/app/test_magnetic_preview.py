@@ -49,7 +49,7 @@ def test_magnetic_preview_uses_rendered_production_controls(case):
         timeout=140
         if case.startswith(('fit_from_zero', 'analysis_filter_counts_survive'))
         else 90
-        if case.startswith('analysis_filter_counts')
+        if case.startswith(('analysis_filter_counts', 'visibility_keeps_camera'))
         else 45,
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
     )

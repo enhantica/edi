@@ -243,16 +243,88 @@ TestCase {
         verify(view !== null, "The magnetic case reaches the real structure view");
         tryVerify(() => view.current, 10000, "The magnetic scene is current before visibility edits");
         const controller = view.controller;
-        controller.viewAnimationDuration = 0;
-        const state = () => JSON.stringify({position: controller.cameraPosition, rotation: controller.cameraRotation, projection: controller.cameraProjection, zoom: controller.magnification});
-        const before = state();
         const options = Session.project.structureViewOptions;
-        for (const change of [["atoms", "none"], ["bonds", false], ["showMoments", false], ["showMoments", true], ["cell", false]]) {
-            options[change[0]] = change[1];
-            verify(waitForRendering(view), "A visibility edit reaches a rendered frame");
-            compare(state(), before, "Showing or hiding structure features preserves camera position, projection and zoom");
+        controller.viewAnimationDuration = 0;
+        const xyz = v => [v.x, v.y, v.z];
+        const quaternion = q => [q.scalar, q.x, q.y, q.z];
+        const projection = matrix => [matrix.m11, matrix.m22, matrix.m13, matrix.m23];
+        const differences = [];
+        function state() {
+            const camera = view.view3d ? view.view3d.camera : null;
+            const result = {
+                position: xyz(controller.cameraPosition),
+                orientation: quaternion(controller.cameraRotation),
+                zoom: controller.magnification,
+                projection: controller.projection,
+                effectiveZoom: controller.projection === "perspective"
+                    ? projection(controller.cameraProjection) : [controller.orthographicMagnification]
+            };
+            if (camera) {
+                result.drawnPosition = xyz(camera.scenePosition);
+                result.drawnOrientation = quaternion(camera.sceneRotation);
+                result.drawnZoom = controller.projection === "perspective"
+                    ? projection(camera.projection) : [camera.horizontalMagnification, camera.verticalMagnification];
+            }
+            return result;
         }
+        function toggle(control, property) {
+            const before = state();
+            const beforeValue = options[property];
+            const revision = controller.revision;
+            click("structure.toolbar." + control);
+            tryVerify(() => options[property] !== beforeValue && controller.revision > revision, 5000,
+                      control + " toolbar click publishes the changed visibility and scene");
+            appWindow.update();
+            verify(waitForRendering(view, 5000), control + " reaches a rendered frame with the new visibility");
+            const after = state();
+            for (const key of Object.keys(before)) {
+                if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
+                    differences.push(before.projection + " " + control + " " + beforeValue + " → " +
+                                     options[property] + " " + key + " " + JSON.stringify(before[key]) +
+                                     " → " + JSON.stringify(after[key]));
+            }
+        }
+        for (let mode = 0; mode < 2; ++mode) {
+            if (mode === 1) {
+                const beforeProjection = controller.projection;
+                click("structure.toolbar.projection");
+                tryVerify(() => controller.projection !== beforeProjection, 5000,
+                          "The second pass reaches the other projection");
+            }
+            const beforeZoom = controller.magnification;
+            controller.zoomAt(view.width * 0.42, view.height * 0.58, 120);
+            tryVerify(() => controller.magnification !== beforeZoom, 5000,
+                      "The visibility pass starts from a user-adjusted zoom");
+            appWindow.update();
+            verify(waitForRendering(view, 5000), "The adjusted camera reaches a rendered frame");
+            const baseline = state();
+            verify(baseline.position.concat(baseline.orientation, baseline.effectiveZoom).every(Number.isFinite),
+                   "The camera snapshot contains real position, orientation and effective zoom numbers");
+            const startingAtoms = options.atoms;
+            const visited = new Set();
+            for (let transition = 0; transition < 3; ++transition) {
+                toggle("atoms", "atoms");
+                visited.add(options.atoms);
+                if (options.atoms === startingAtoms)
+                    break;
+            }
+            compare(options.atoms, startingAtoms, "The atom control completes its whole display cycle");
+            verify(visited.has("none") && visited.size >= 2, "The atom cycle both hides and shows atoms");
+            for (const [control, property] of [["bonds", "bonds"], ["labels", "showLabels"],
+                                               ["moments", "showMoments"], ["cell", "cell"], ["axes", "axes"]]) {
+                const original = options[property];
+                toggle(control, property);
+                toggle(control, property);
+                compare(options[property], original, control + " is tested both hidden and shown");
+            }
+        }
+        for (let transition = 0; options.atoms !== "none" && transition < 3; ++transition)
+            toggle("atoms", "atoms");
+        compare(options.atoms, "none", "The final scene has hidden atoms");
+        if (!options.showMoments)
+            toggle("moments", "showMoments");
         verify(options.showMoments && controller.hasMoments, "Moments remain enabled and present with atoms hidden");
+        compare(differences.length, 0, "Every visibility change keeps the same camera before and after: " + differences.join("; "));
     }
     function test_analysis_contains_only_independent_magnetic_components() {
         click("appBar.tab.analysis");
