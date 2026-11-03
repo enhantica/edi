@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import operator
 import os
 import stat
 import sys
@@ -45,8 +46,7 @@ held_usage = []
 fixture_usage_response_index = 0
 pending_metadata = []
 pending_archive = None
-pending_turn_start = None
-fixture_unacked_start = None
+start_receipts = {'archived': None, 'unacked': None}
 client_originator = None
 if config.get('session_fixture'):
     with trace.open('a', encoding='utf-8') as output:
@@ -104,17 +104,17 @@ def persist():
     temporary.replace(state_path)
 
 
-def saved_thread(exclude_turns=False):
+def saved_thread(*, exclude_turns=False):
     value = dict(state['threads'][thread_id])
     if exclude_turns:
         value['turns'] = []
     return value
 
 
-def thread_response(exclude_turns=False):
+def thread_response(*, exclude_turns=False):
     effective = effective_configs.get(thread_id, {})
     return {
-        'thread': saved_thread(exclude_turns),
+        'thread': saved_thread(exclude_turns=exclude_turns),
         'model': effective.get('model', 'gpt-6.1-sol'),
         'modelProvider': 'openai',
         'serviceTier': None,
@@ -182,7 +182,8 @@ def reply_configured_original_usage(request, spec):
                     'captured_envelope_sha256': hashlib.sha256(
                         json.dumps(envelope, sort_keys=True).encode()
                     ).hexdigest(),
-                })
+                }),
+                encoding='utf-8',
             )
             token = os.read(descriptor, 1)
             assert token == b'R', (
@@ -226,7 +227,8 @@ def hold_original_usage_stdin_after_reply(spec):
                     'pid': os.getpid(),
                     'parent_pid': os.getppid(),
                     'event': original_event,
-                })
+                }),
+                encoding='utf-8',
             )
             assert os.read(descriptor, 1) == b'N'
             notify(original_event['method'], original_event['params'])
@@ -242,7 +244,8 @@ def hold_original_usage_stdin_after_reply(spec):
                 'pid': os.getpid(),
                 'parent_pid': os.getppid(),
                 'actual_stdin_read_held': True,
-            })
+            }),
+            encoding='utf-8',
         )
         assert os.read(descriptor, 1) == b'D'
     finally:
@@ -259,11 +262,10 @@ def metadata_reply(request, value, family):
 
 
 def settle_captured_archived_start():
-    global pending_turn_start
-    original = pending_turn_start
+    original = start_receipts['archived']
     if not original or not Path(original['hold']).exists():
         return
-    pending_turn_start = None
+    start_receipts['archived'] = None
     request = original['request']
     identity = original['thread']
     started = original['turn']
@@ -329,11 +331,10 @@ def finish_native_archive(request):
 def settle_fixture_unacked_start():
     # Exact actual received turn/start, server-side ACK scheduling only. Never
     # insert an app row/receipt, change its IDs, or execute scientific work.
-    global fixture_unacked_start
-    captured = fixture_unacked_start
+    captured = start_receipts['unacked']
     if not captured or not Path(captured['hold']).exists():
         return
-    fixture_unacked_start = None
+    start_receipts['unacked'] = None
     identity = captured['thread']
     original = captured['turn']
     reply(captured['request'], {'turn': original})
@@ -378,10 +379,10 @@ def agent_message(identity, text):
 
 
 def remember_actual_item(method, params):
-    if not config.get('observe_context_continuity') or method not in (
+    if not config.get('observe_context_continuity') or method not in {
         'item/started',
         'item/completed',
-    ):
+    }:
         return
     identity = params.get('threadId')
     assert (
@@ -435,7 +436,7 @@ def operands(value):
     return value
 
 
-def advance():
+def advance():  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     if cursor['position'] == len(calls):
         gate = config.get('final_gate')
         if gate and not Path(gate).exists():
@@ -458,7 +459,7 @@ def advance():
         completed = turn(terminal_fixture['status'] if terminal_fixture else 'completed')
         if terminal_fixture:
             presence = terminal_fixture['error_presence']
-            assert presence in ('absent', 'null', 'actual', 'malformed')
+            assert presence in {'absent', 'null', 'actual', 'malformed'}
             if presence == 'absent':
                 completed.pop('error')
             elif presence != 'null':
@@ -590,8 +591,9 @@ def advance():
             binding['item'] = item
         request_id = 'independent-human-envelope-' + str(cursor['sequence'])
         human_pending[request_id] = binding
-        for probe in spec.get('human_native_probes', []):
-            human_native_scheduled.append((request_id, probe))
+        human_native_scheduled.extend(
+            (request_id, probe) for probe in spec.get('human_native_probes', [])
+        )
         if 'item' in binding:
             notify('item/started', {**binding, 'startedAtMs': 1})
         emit({
@@ -1006,7 +1008,9 @@ for line in sys.stdin:
                 'id': request['id'],
                 'error': {
                     'code': -32602,
-                    'message': 'nonempty originators filter is unavailable on the local app-server',
+                    'message': (
+                        'nonempty originators filter is unavailable on the local app-server'
+                    ),
                 },
             })
             continue
@@ -1033,7 +1037,7 @@ for line in sys.stdin:
         if params.get('ancestorThreadId'):
             ancestor = params['ancestorThreadId']
 
-            def descendant(row):
+            def descendant(row, ancestor):
                 seen = {row['id']}
                 parent = row.get('parentThreadId')
                 while parent is not None:
@@ -1045,7 +1049,7 @@ for line in sys.stdin:
                     parent = state['threads'].get(parent, {}).get('parentThreadId')
                 return False
 
-            rows = [row for row in rows if row['id'] != ancestor and descendant(row)]
+            rows = [row for row in rows if row['id'] != ancestor and descendant(row, ancestor)]
         if params.get('sourceKinds'):
             rows = [row for row in rows if row['source'] in params['sourceKinds']]
         if params.get('modelProviders'):
@@ -1055,7 +1059,7 @@ for line in sys.stdin:
             rows = [row for row in rows if row['cwd'] in choices]
         key = 'updatedAt' if params.get('sortKey') == 'updated_at' else 'createdAt'
         rows.sort(
-            key=lambda row: (row[key], row['id']),
+            key=operator.itemgetter(key, 'id'),
             reverse=params.get('sortDirection', 'desc') == 'desc',
         )
         cursor_value = params.get('cursor')
@@ -1128,7 +1132,7 @@ for line in sys.stdin:
             'overrides_applied': not was_loaded or not subscribed,
         })
         persist()
-        reply(request, thread_response(params.get('excludeTurns') is True))
+        reply(request, thread_response(exclude_turns=params.get('excludeTurns') is True))
     elif method == 'thread/unsubscribe':
         target = params['threadId']
         status = (
@@ -1148,7 +1152,7 @@ for line in sys.stdin:
         if params.get('turnId'):
             entries = [entry for entry in entries if entry['turnId'] == params['turnId']]
         direction = params.get('sortDirection') or 'asc'
-        assert direction in ('asc', 'desc')
+        assert direction in {'asc', 'desc'}
         if direction == 'desc':
             entries.reverse()
         cursor_value = params.get('cursor')
@@ -1187,7 +1191,9 @@ for line in sys.stdin:
         original_id = thread_id
         thread_id = params['threadId']
         metadata_reply(
-            request, {'thread': saved_thread(not params.get('includeTurns', False))}, 'read'
+            request,
+            {'thread': saved_thread(exclude_turns=not params.get('includeTurns', False))},
+            'read',
         )
         thread_id = original_id
     elif method == 'thread/name/set':
@@ -1295,7 +1301,7 @@ for line in sys.stdin:
         cursor['position'] = 0
         unacked_hold = current.get('fixture_unacked_start_hold')
         if unacked_hold and not Path(unacked_hold).exists():
-            assert fixture_unacked_start is None and not calls, (
+            assert start_receipts['unacked'] is None and not calls, (
                 'The narrow ACK fixture holds only one actual read-only no-tool turn'
             )
             assert config.get('observe_context_continuity'), (
@@ -1304,7 +1310,7 @@ for line in sys.stdin:
             state.setdefault('item_history', {}).setdefault(thread_id, []).append(
                 actual_user_entry
             )
-            fixture_unacked_start = {
+            start_receipts['unacked'] = {
                 'request': json.loads(json.dumps(request)),
                 'thread': thread_id,
                 'turn': turn('inProgress'),
@@ -1318,13 +1324,13 @@ for line in sys.stdin:
             continue
         delayed = current.get('archive_before_start_reply')
         if delayed:
-            assert pending_turn_start is None, (
+            assert start_receipts['archived'] is None, (
                 'Only one actual original pending start belongs to this fixture hold'
             )
-            assert delayed['reply'] in ('success', 'refusal'), (
+            assert delayed['reply'] in {'success', 'refusal'}, (
                 'Closed original pending-start reply cases only'
             )
-            pending_turn_start = {
+            start_receipts['archived'] = {
                 'request': json.loads(json.dumps(request)),
                 'thread': thread_id,
                 'turn': turn('inProgress'),
@@ -1349,9 +1355,12 @@ for line in sys.stdin:
         notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
         advance()
     elif method == 'turn/interrupt':
-        if fixture_unacked_start and params.get('threadId') == fixture_unacked_start['thread']:
-            original = fixture_unacked_start
-            fixture_unacked_start = None
+        if (
+            start_receipts['unacked']
+            and params.get('threadId') == start_receipts['unacked']['thread']
+        ):
+            original = start_receipts['unacked']
+            start_receipts['unacked'] = None
             reply(original['request'], {'turn': original['turn']})
             reply(request, {})
             interrupted = {**original['turn'], 'status': 'interrupted'}
