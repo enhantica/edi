@@ -1530,8 +1530,9 @@ class Edit {
     }
 
     // The last fit undone back to the state just before it, for the assistant's Undo of a rejected trial (edi
-    // ADR-0055): undo_fit's restore, then the fit record the project held when that fit started instead of none,
-    // and, when the restored values are exactly those the previous adopted fit left, that fit's free flags too.
+    // ADR-0055): undo_fit's restore, then the fit record and the saved fit starts the project held when that fit
+    // started instead of none, and, when the restored values are exactly those the previous adopted fit left, that
+    // fit's free flags too.
     // `before` is the project as the undone fit started and `accepted` as the previous adopted fit left it; either
     // may be null, and one whose experiments or parameters no longer match is not used. Worked out on a copy first.
     static Edit undo_fit_to(Project& project, std::shared_ptr<const Project> before,
@@ -1545,7 +1546,25 @@ class Edit {
                     if (a.experiments[i]->name.value() != b.experiments[i]->name.value()) return false;
                 return true;
             };
-            if (undone && before && same_experiments(restored, *before)) copy_fit_result(restored, *before);
+            if (undone && before && same_experiments(restored, *before)) {
+                copy_fit_result(restored, *before);
+                // The fit starts the earlier fit saved (its _fit_parameter rows) come back with it, when every
+                // parameter is where and what it was as the undone fit started.
+                Project prior = *before;
+                const auto to = parameter_entries(restored);
+                const auto from = parameter_entries(prior);
+                bool same = to.size() == from.size();
+                for (std::size_t i = 0; same && i < to.size(); ++i) {
+                    same = to[i].path == from[i].path && to[i].parameter && from[i].parameter &&
+                           to[i].parameter->value.get() == from[i].parameter->value.get();
+                }
+                if (same) {
+                    for (std::size_t i = 0; i < to.size(); ++i) {
+                        to[i].parameter->start_value = from[i].parameter->start_value.get();
+                        to[i].parameter->start_uncertainty = from[i].parameter->start_uncertainty.get();
+                    }
+                }
+            }
             std::vector<bool> flags;
             if (undone && accepted) {
                 Project kept = *accepted;
