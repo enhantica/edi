@@ -571,6 +571,13 @@ TestCase {
                 test.lessonOpenedFileDialog = true;
         }
     }
+    function lessonWavelength() {
+        const experiment = Session.project.currentExperiment;
+        verify(experiment !== null, "The wavelength lesson uses the experiment created during the walk");
+        const row = Probe.rows(experiment.instrument).find(row => row.parameter && row.parameter.name === "setup_wavelength");
+        verify(row !== undefined, "The actual constant-wavelength instrument has a wavelength");
+        return row.parameter.value;
+    }
     function test_next_alone_performs_every_lesson_action(data) {
         // Accident: a first-time learner uses Next for every instruction, including
         // Create and file imports, instead of knowing which underlying control to use.
@@ -580,6 +587,7 @@ TestCase {
         lessonFitStarts = 0;
         lessonOpenedFileDialog = false;
         lessonWalking = true;
+        let wavelengthChanged = false;
         for (let index = 0; index + 1 < steps.length; ++index) {
             progress(index + 1, steps.length);
             finishPages();
@@ -591,6 +599,9 @@ TestCase {
                 fits: lessonFitStarts,
                 control: Ui.control(Probe, app, step.target)
             };
+            const wavelengthStep = step.target === "instrument.setup_wavelength";
+            if (wavelengthStep)
+                compare(lessonWavelength(), 1, "The new experiment starts at one angstrom before the HRPT lesson changes it");
             press(one(panel, "tutorial.next"), "Next-only lesson step " + (index + 1));
             tryVerify(() => {
                 OnboardingProbe.advanceClock(16);
@@ -601,11 +612,16 @@ TestCase {
                 tryCompare(Session.project, "calculating", false, 15000, "Next's model changes finish calculating before their state is checked");
             }
             assertActionResult(step, prior, lessonFitStarts);
+            if (wavelengthStep) {
+                compare(lessonWavelength(), 1.494, "Next sets the actual HRPT instrument wavelength");
+                wavelengthChanged = true;
+            }
             noStateHint();
             verify(!lessonOpenedFileDialog, "A Next-only tutorial never opens a file chooser, even transiently");
         }
         progress(steps.length, steps.length);
         lessonWalking = false;
+        verify(wavelengthChanged, "The completed lesson teaches the learner to change the wavelength");
         const project = Session.project;
         verify(project && project.currentStructure && project.currentExperiment, "Next alone reaches a real structure and experiment at the last step");
         compare(project.currentStructure.name, "lbco", "The completed lesson contains lbco rather than an unrelated prepared structure");
