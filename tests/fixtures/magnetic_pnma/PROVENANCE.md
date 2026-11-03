@@ -37,3 +37,8 @@ with p_n = 2.695 gives 4.560243525162284 in FullProf squared-factor units, while
 These values come from `reference.magnetic_squared` and the committed reflection rows.
 The current profile comparison retains its predeclared 0.01 bound. No strict per-reflection
 agreement is claimed until the amplitude convention is reconciled.
+
+The position-rounding contract also needs reconciliation. The exact PCR cell gives
+(200) d = 5.154032 Å, while `cosio.hkl` prints 5.154033 Å. The difference is 0.000001 Å,
+twice half the printed final digit. The strict position gate records this reference-contract
+failure separately from missing magnetic behavior. Its tolerance has not been enlarged.
