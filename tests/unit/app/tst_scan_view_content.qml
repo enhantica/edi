@@ -2128,6 +2128,111 @@ Rectangle {
                 }
             }
         }
+        function test_evolution_error_bars_and_range_survive_reload() {
+            Style.Colors.theme = Style.Colors.LightTheme;
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));
+            const rows = SettingsProof.text(root, "analysis/results.csv").trim().split(/\r?\n/);
+            const header = rows[0].split(",");
+            const valueColumn = header.indexOf("bank.background.P1.intensity");
+            const suColumn = header.indexOf("bank.background.P1.intensity.uncertainty");
+            verify(rows.length === 4 && valueColumn >= 0 && suColumn >= 0,
+                   "The saved scan has three fitted rows and the named value and s.u. columns");
+            const values = [2, 4, 8];
+            for (let i = 0; i < values.length; ++i) {
+                const cells = rows[i + 1].split(",");
+                cells[valueColumn] = values[i];
+                cells[suColumn] = i === 1 ? 1000 : 0.1;
+                rows[i + 1] = cells.join(",");
+            }
+            verify(SettingsProof.write(root, "analysis/results.csv", rows.join("\n") + "\n"),
+                   "The private scan has independent values and one plus-or-minus 1000 uncertainty");
+
+            let layer, axes, bars, range;
+            function openChart() {
+                verify(Session.openProject(root), "The saved fitted scan opens in the real app");
+                chart = evolutionFactory.createObject(surface, {project: Session.project});
+                verify(chart !== null, "The production Evolution chart opens");
+                const evolution = Session.project.evolution;
+                verify(evolution.xModes.length > 1, "The witness offers the recorded temperature x axis");
+                evolution.xMode = 0;
+                Session.project.currentExperimentIndex = 0;
+                tryCompare(evolution, "yTitle", "bank.background.P1.intensity", 3000,
+                           "Evolution shows the independently authored parameter column");
+                layer = findChild(chart, "evolution.points");
+                axes = findChild(chart, "evolution.view");
+                verify(layer && axes, "Evolution exposes the actual points layer and plotted axes");
+                tryCompare(layer, "count", 3, 3000, "Evolution renders the three fitted points");
+                chart.Window.window.update();
+                verify(waitForRendering(chart), "The fitted points and toolbar reach a rendered frame");
+                const toggles = Render.descendants(chart).filter(item => item.visible && typeof item.checked === "boolean");
+                const caption = item => String(item.toolTip || item.text || item.Accessible.name || "");
+                bars = toggles.find(item => /^Error bars(?:\b|$)/i.test(caption(item)));
+                range = toggles.find(item => /^Range(?:\b|$)/i.test(caption(item)));
+            }
+            function valuesOnly() {
+                return axes.axisY.min <= 2 && axes.axisY.max >= 8 &&
+                       axes.axisY.min >= -4 && axes.axisY.max <= 14;
+            }
+            function valuesAndBars() {
+                return axes.axisY.min <= -996 && axes.axisY.max >= 1004;
+            }
+            function hasInk(value) {
+                chart.Window.window.update();
+                verify(waitForRendering(chart), "The Evolution drawing is updated before inspecting its pixels");
+                const image = logicalImage(chart);
+                const plotX = (311.75 - layer.xMin) / (layer.xMax - layer.xMin) * layer.width;
+                const plotY = (layer.yMax - value) / (layer.yMax - layer.yMin) * layer.height;
+                const sample = layer.mapToItem(chart, plotX, plotY);
+                const x = Math.round(sample.x), y = Math.round(sample.y);
+                verify(plotX > 2 && plotX < layer.width - 3 && plotY > 2 && plotY < layer.height - 3,
+                       "The independent marker or bar sample is inside the rendered layer");
+                for (let dy = -1; dy <= 1; ++dy)
+                    for (let dx = -2; dx <= 2; ++dx) {
+                        const pixel = image.pixel(x + dx, y + dy);
+                        const color = layer.color;
+                        if (pixel.a > .4 && Math.abs(pixel.r - color.r) < .08 &&
+                            Math.abs(pixel.g - color.g) < .08 && Math.abs(pixel.b - color.b) < .08)
+                            return true;
+                    }
+                return false;
+            }
+            function toggle(control, label) {
+                const point = Ui.clickPoint(control);
+                verify(control.enabled && point !== null, "The " + label + " toggle accepts real pointer input");
+                const checked = control.checked;
+                mouseClick(control, point.x, point.y);
+                tryCompare(control, "checked", !checked, 2000, "The " + label + " toggle changes state");
+            }
+
+            openChart();
+            const defaultBarSample = valuesAndBars() ? 500 : 6;
+            const missing = [];
+            if (!hasInk(defaultBarSample)) missing.push("default error bar ink missing at " + defaultBarSample);
+            if (!bars) missing.push("Error bars control missing");
+            if (!range) missing.push("Range control missing");
+            if (!valuesOnly()) missing.push("default y range [" + axes.axisY.min + ", " + axes.axisY.max + "]");
+            compare(missing.length, 0, "Evolution offers both toggles and defaults to values only: " + missing.join("; "));
+            toggle(range, "Range");
+            tryVerify(valuesAndBars, 2000, "Values plus s.u. covers both ends of the 1000-unit bar");
+            verify(hasInk(500), "The expanded y range shows the bar well beyond all three fitted values");
+            toggle(bars, "Error bars");
+            verify(valuesAndBars() && !hasInk(500) && hasInk(4),
+                   "Hiding bars keeps the chosen range and the point marker while removing bar ink");
+
+            verify(Session.save(), "The expanded range and hidden error bars save with the project");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
+            openChart();
+            verify(bars && range, "Both toolbar toggles are available after reopening the saved project");
+            verify(valuesAndBars() && !hasInk(500) && hasInk(4),
+                   "The expanded range and hidden bars both survive save and reload");
+            toggle(bars, "Error bars");
+            verify(hasInk(500), "Showing error bars again restores their actual drawing");
+            toggle(range, "Range");
+            tryVerify(valuesOnly, 2000, "Values only restores the fitted values' y range");
+            verify(hasInk(6), "The long error bar remains visible inside the clipped values-only plot");
+        }
         function test_scan_axis_fonts_data() {
             return test_owner_indicator_data();
         }

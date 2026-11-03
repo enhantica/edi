@@ -48,6 +48,7 @@ void check_arrows(edi::Structure& structure) {
         CHECK_MESSAGE(options.moment_scale == .75,
                       "Moment arrows default to three quarters of an Angstrom per Bohr magneton");
         options.moments = true;
+        options.moment_colours = edi::MomentColours::Single;
         options.axes = options.bonds = options.cell = false;
         for (const double scale : {.5, .8}) {
             options.moment_scale = scale;
@@ -81,10 +82,8 @@ void check_arrows(edi::Structure& structure) {
             for (const auto& arrow : drawing.moments) {
                 CHECK_MESSAGE(arrow.shaft_radius == doctest::Approx(.12),
                               "The arrow shaft is twice the preview radius");
-                CHECK_MESSAGE(arrow.head_radius == doctest::Approx(.30),
-                              "The arrow head is twice the preview radius");
-                CHECK_MESSAGE(arrow.color.r == arrow.color.g && arrow.color.g == arrow.color.b,
-                              "Moment arrows use neutral grey instead of the preview magenta");
+                CHECK_MESSAGE((arrow.color.r == arrow.color.g && arrow.color.g == arrow.color.b),
+                              "The explicitly selected single-colour scheme draws neutral grey arrows");
                 const double length = arrow.shaft_length + arrow.head_length;
                 const std::array<double, 3> direction{arrow.direction.x, arrow.direction.y,
                                                       arrow.direction.z};
@@ -136,4 +135,35 @@ TEST_CASE("Cobalt moment arrows preserve the independent cell expansion and disp
     const std::string text{std::istreambuf_iterator<char>(input), {}};
     auto structure = edi::structure_from_edi_text(text);
     check_arrows<edi::SceneOptions, edi::SceneDrawing>(structure);
+}
+
+TEST_CASE("Moment arrow heads keep their proportion without changing the shaft width") {
+    constexpr double scale = 0.75;       // Angstrom per magneton in the viewer
+    constexpr double head_share = 0.30;  // kMomentHeadShare in structure_scene.cpp
+    constexpr double standard_head = 0.60;
+    constexpr double shaft_radius = 0.12;
+
+    edi::StructureScene scene;
+    scene.atoms.resize(2);
+    for (auto& atom : scene.atoms) {
+        atom.drawn = false;
+    }
+    scene.moments = {{0, {0, 0, 0}, {0, scale, 0}}, {1, {3, 0, 0}, {0, 10 * scale, 0}}};
+    const auto arrows = edi::scene_drawing(scene, {640, 480, 0}).moments;
+    REQUIRE_MESSAGE(arrows.size() == 2, "The 1 and 10 magneton witnesses each draw one arrow");
+
+    for (std::size_t i = 0; i < arrows.size(); ++i) {
+        const double length = (i == 0 ? 1 : 10) * scale;
+        const auto& arrow = arrows[i];
+        CHECK_MESSAGE(arrow.head_length == doctest::Approx(std::min(standard_head, head_share * length)),
+                      "A short arrow caps its head at the declared share and a long arrow keeps the standard head");
+        CHECK_MESSAGE(arrow.shaft_length == doctest::Approx(length - arrow.head_length),
+                      "The head and visible shaft preserve the full length from the given moment");
+        CHECK_MESSAGE(arrow.shaft_radius == doctest::Approx(shaft_radius),
+                      "Both moment lengths keep the same shaft width");
+    }
+    REQUIRE_MESSAGE(arrows[1].head_radius > 0, "The standard head has a positive width");
+    CHECK_MESSAGE(arrows[0].head_radius / arrows[1].head_radius ==
+                      doctest::Approx(arrows[0].head_length / arrows[1].head_length),
+                  "The short head narrows in proportion to its capped length");
 }

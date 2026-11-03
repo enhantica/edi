@@ -519,8 +519,7 @@ std::array<std::array<double, 3>, 3> tie_matrix(const std::string& symmform) {
 }
 
 // After a fit, the covariance of a moment's crystal-axis components and its structure's cell, from the parameters'
-// s.u. and the fit's correlations (relay decision 2026-11-03, "derived moment uncertainties come from the fit's
-// covariance"); none before a fit. A tied component follows its free ones through the symmetry form.
+// s.u. and the fit's correlations (edi ADR-0068); none before a fit. A tied component follows its free ones through the symmetry form.
 std::optional<std::array<double, 81>> moment_covariance(const edi::Project* project, const edi::Structure& structure,
                                                         const edi::AtomSiteMoment& moment) {
     if (project == nullptr || !project->fit_result.held()) {
