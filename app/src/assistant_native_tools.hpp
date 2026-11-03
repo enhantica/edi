@@ -19,7 +19,8 @@ QJsonArray assistant_native_tool_specs();
 bool assistant_native_tool(const QString& name);
 QString assistant_native_purpose(const QJsonObject& arguments, const QString& action = {});
 QString assistant_native_description(const QString& action, const QString& code = {});
-QString assistant_native_detail(const QString& action, const QJsonObject& args);
+// The text of one data-read step from its history row; see the definition.
+QString assistant_native_detail(const QJsonObject& row);
 std::optional<edi::Edit> assistant_native_edit(edi::Project& project, const QString& name, const QJsonObject& arguments, std::vector<std::pair<std::string, bool>>& beforeFlags);
 struct NativeBackgroundInput { edi::ExperimentBase* experiment = nullptr; edi::BackgroundPointInput input; bool names=false; };
 NativeBackgroundInput assistant_native_background(edi::Project&, const QJsonObject&);

@@ -14,6 +14,7 @@
 #include "edi/assistant_limits.hpp"
 #include "edi/assistant_files.hpp"
 #include <QSet>
+#include <QStringList>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -302,26 +303,82 @@ QString assistant_native_description(const QString& action,const QString& code) 
     if(code=="project_required")return QCoreApplication::translate("AssistantActions","This action needs an open project. Create or open a project before trying it.");
     return native_action_text(action,true);
 }
-// What one call read, from its own arguments, for the step's text: a read of data names the dataset and the rows or
-// parts it read, so a run of reads does not show one fixed sentence each time. Empty for an action this does not
-// describe.
-QString assistant_native_detail(const QString& action,const Object& args) {
-    const auto tr=[](const char* text){return QCoreApplication::translate("AssistantActions",text);};
-    if(action!="inspect_data")return {};
-    const auto dataset=args.value("dataset_id").toString();
-    const auto start=static_cast<qint64>(args.value("start").toDouble());
-    const auto count=static_cast<qint64>(args.value("count").toDouble());
-    if(dataset.isEmpty() || count<=0)return {};
-    const bool reflections=args.value("source").toString()=="bragg";
-    if(args.value("view").toString()=="summary") {
-        const auto parts=static_cast<qint64>(args.value("partitions").toDouble());
-        if(parts<=1)
-            return (reflections?tr("Summarized reflections %1 to %2 of %3."):tr("Summarized rows %1 to %2 of %3."))
-                .arg(start+1).arg(start+count).arg(dataset);
-        return (reflections?tr("Summarized reflections %1 to %2 of %3 in %4 parts."):tr("Summarized rows %1 to %2 of %3 in %4 parts."))
-            .arg(start+1).arg(start+count).arg(dataset).arg(parts);
+namespace {
+// An index a read asked for or returned: an exact nonnegative integer within a double's exact range, else nothing.
+std::optional<qint64> read_index(const QJsonValue& value) {
+    if(!value.isDouble())return {};
+    const auto n=value.toDouble();
+    if(!std::isfinite(n) || n<0 || n!=std::floor(n) || n>9007199254740991.0)return {};
+    return static_cast<qint64>(n);
+}
+QString read_text(const char* text) {return QCoreApplication::translate("AssistantActions",text);}
+// The rows or reflections one returned extent covers, with its parts for a summary; empty when the extent is not
+// a valid slice of its own total.
+QString observed_extent(const Object& part,const QString& where,bool reflections,bool summary) {
+    const auto start=read_index(part.value("start")),count=read_index(part.value("count")),total=read_index(part.value("total"));
+    if(!start || !count || !total || *start+*count>*total)return {};
+    if(*count==0)return (reflections?read_text("Read no reflections of %1."):read_text("Read no rows of %1.")).arg(where);
+    if(summary) {
+        const auto parts=read_index(part.value("summary").toObject().value("partitions"));
+        if(!parts || *parts==0 || *parts>*count)return {};
+        if(*parts==1)
+            return (reflections?read_text("Summarized reflections %1 to %2 of %3."):read_text("Summarized rows %1 to %2 of %3."))
+                .arg(*start+1).arg(*start+*count).arg(where);
+        return (reflections?read_text("Summarized reflections %1 to %2 of %3 in %4 parts."):read_text("Summarized rows %1 to %2 of %3 in %4 parts."))
+            .arg(*start+1).arg(*start+*count).arg(where).arg(*parts);
     }
-    return (reflections?tr("Read reflections %1 to %2 of %3."):tr("Read rows %1 to %2 of %3.")).arg(start+1).arg(start+count).arg(dataset);
+    return (reflections?read_text("Read reflections %1 to %2 of %3."):read_text("Read rows %1 to %2 of %3.")).arg(*start+1).arg(*start+*count).arg(where);
+}
+// What a completed read returned, from the extents and bins in its result; empty when they are missing or invalid.
+QString observed_read(const Object& data,const QString& dataset) {
+    const bool summary=data.value("view")=="summary";
+    if(data.value("source")=="bragg") {
+        const auto phases=data.value("phases").toArray();
+        if(!data.value("phases").isArray())return {};
+        if(phases.isEmpty())return read_text("No reflections of %1 are available.").arg(dataset);
+        QStringList parts;
+        for(const auto& value:phases) {
+            const auto phase=value.toObject();
+            auto label=phase.value("label").toString();if(label.isEmpty())label=phase.value("structure_id").toString();
+            const auto where=phases.size()==1?dataset:read_text("%1, phase %2").arg(dataset,label);
+            const auto text=observed_extent(phase,where,true,summary);
+            if(text.isEmpty())return {};
+            parts.append(text);
+        }
+        return parts.join(QLatin1Char(' '));
+    }
+    if(data.value("available")==false)return read_text("The data of %1 are unavailable.").arg(dataset);
+    return observed_extent(data,dataset,false,summary);
+}
+} // namespace
+// What one data read covered, for the step's text. A completed read names only the dataset, rows or reflections and
+// summary parts its result returned. Any other step (still running, refused, failed, or restored without its result)
+// names what was asked for and says so. Empty for another action, or when nothing valid can be said.
+QString assistant_native_detail(const Object& row) {
+    const auto payload=row.value("payload").toObject();
+    if(payload.value("tool").toString()!="inspect_data")return {};
+    const auto outcome=payload.value("nativeOutcome").toObject();
+    const auto status=row.value("status").toString();
+    const auto outcomeStatus=outcome.value("status").toString();
+    if(status=="completed" && outcomeStatus.isEmpty() && outcome.value("data").isObject() && row.value("historyOrigin")!="runtime") {
+        const auto data=outcome.value("data").toObject();
+        const auto dataset=data.value("dataset_id").toString();
+        return dataset.isEmpty()?QString{}:observed_read(data,dataset);
+    }
+    const auto args=payload.value("arguments").toObject();
+    const auto dataset=args.value("dataset_id").toString();
+    const auto start=read_index(args.value("start")),count=read_index(args.value("count"));
+    if(dataset.isEmpty() || !start || !count || *count==0)return {};
+    const bool reflections=args.value("source").toString()=="bragg";
+    const auto first=*start+1,last=*start+*count;
+    if(status=="completed")
+        return (reflections?read_text("Asked for reflections %1 to %2 of %3; what it returned is not recorded."):
+            read_text("Asked for rows %1 to %2 of %3; what it returned is not recorded.")).arg(first).arg(last).arg(dataset);
+    if(status=="failed" || status=="interrupted" || !outcomeStatus.isEmpty())
+        return (reflections?read_text("Asked for reflections %1 to %2 of %3; nothing was read."):
+            read_text("Asked for rows %1 to %2 of %3; nothing was read.")).arg(first).arg(last).arg(dataset);
+    return (reflections?read_text("Reading reflections %1 to %2 of %3."):read_text("Reading rows %1 to %2 of %3."))
+        .arg(first).arg(last).arg(dataset);
 }
 QString assistant_native_purpose(const Object& args,const QString& action) {
     if(!args.contains("purpose"))return native_action_text(action,false);
