@@ -20,10 +20,27 @@ BASELINE = json.loads(
 )
 
 
+UPDATES = json.loads(
+    (ROOT / 'tests/fixtures/assistant_dev_integration/source_updates.json').read_text()
+)
+
+
+def current_identity(name, previous):
+    if name not in UPDATES:
+        return previous
+    update = UPDATES[name]
+    assert update['before'] == previous, (
+        'An identity adaptation must retain its exact original source pin'
+    )
+    return update['after']
+
+
 def test_port_retains_current_gui_and_sdk_identities():
     gui = (ROOT / 'cmake/EdiGuiBase.cmake').read_text()
     pins = re.findall(r'(?m)^set\(EDI_GUI_COMPONENTS_SHA\s+([0-9a-f]{40})\)', gui)
-    assert pins == [BASELINE['gui_commit']], 'Assistant integration retains the current GUI pin'
+    assert pins == [current_identity('gui_commit', BASELINE['gui_commit'])], (
+        'Assistant integration retains the current GUI pin'
+    )
     config = tomllib.loads((ROOT / 'pixi.toml').read_text())
     platforms = config['target']
     observed = {
@@ -32,17 +49,18 @@ def test_port_retains_current_gui_and_sdk_identities():
         if 'CRYSTA_SDK_TAG' in target.get('activation', {}).get('env', {})
     }
     assert observed, 'The real platform SDK identities must remain declared'
-    assert set(observed.values()) == {BASELINE['sdk_tag']}, (
+    assert set(observed.values()) == {current_identity('sdk_tag', BASELINE['sdk_tag'])}, (
         'Assistant integration consumes the current dev SDK on every declared platform'
     )
 
 
 @pytest.mark.parametrize(('relative', 'expected'), BASELINE['preserved_files'].items())
 def test_port_preserves_current_estimator_and_existing_adr_identities(relative, expected):
+    expected = current_identity(relative, expected)
     path = ROOT / relative
     assert path.is_file(), f'Current dev source is retained: {relative}'
     assert hashlib.sha256(path.read_bytes()).hexdigest() == expected, (
-        f'{relative} is frozen dev source from {BASELINE["source_commit"]}; '
+        f'{relative} must match its declared source regression pin; '
         'assistant ADRs need distinct identities and native Estimate reuses its current algorithm'
     )
 
@@ -53,7 +71,9 @@ def test_port_does_not_restore_retired_local_gui_components():
         'app/qml/Base/Gui/Components/TableViewParameter.qml',
     ]
     present = [relative for relative in excluded if (ROOT / relative).exists()]
-    assert not present, f'The selective port excludes these retired local GUI components: {present}'
+    assert not present, (
+        f'The selective port excludes these retired local GUI components: {present}'
+    )
 
 
 def test_shipped_skills_have_exact_self_contained_content_identity():

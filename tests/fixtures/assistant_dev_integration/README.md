@@ -6,9 +6,9 @@ Each file digest is SHA-256 of `git show <source_commit>:<path>`, collected by t
 independent tests lane on 2026-10-27. GUI and SDK values are the existing declared
 pins in `cmake/EdiGuiBase.cmake` and `pixi.toml` at that same revision.
 
-The owning dev estimator algorithm is reused, and the existing exact-fraction,
-colour and scan-view ADR identities remain intact. Assistant ADRs receive new
-identities. These are source-preservation gates, not numerical correctness or
+The owning dev estimator algorithm and exact-fraction ADR retain their original
+identities. The colour and scan-view ADRs follow their subsequent documented
+feature changes. Assistant ADRs receive distinct identities. These are source-preservation gates, not numerical correctness or
 native integration evidence. Other integration surfaces intentionally remain
 adaptable and are checked through existing ordinary app behavior tests and new
 native OFF/ON witnesses.
@@ -39,3 +39,22 @@ length-a source and a dependent length-b target; the latter has no independent
 source-value payload in the old relation encoding. Original raw failures are
 retained; this restores a missing reference rule rather than rebasing to a new
 producer's output.
+
+
+`source_updates.json` records exact before/after source regression pins without
+rewriting the original baseline. Run `update_source_identities.py` to reproduce
+these values from the named committed sources, rather than the working tree.
+GUI pin `bfe8a386` becomes `10dc5828` in `8016dd52` (shared pointer animation).
+The SDK tag moves from `build-405b4f47` to `build-8ba9537c` in the integrated
+`f069972c` source. That commit also updates ADR-0038; the ADR-0041 pin comes from
+merge `4df77c9e`, which combines the current dev document with the native chart
+and scan-view additions in `032362a8` and `0f1cf11f`. Full digests and source
+commits are recorded beside each update. The gates still compare exact bytes or
+pin strings, and reject an update whose original value differs from the baseline.
+The historical parametrization stays unchanged, keeping every existing case.
+
+Main CI run [41443178406](https://github.com/enhantica/edi/actions/runs/41443178406)
+checked out `b176b5ab`. These assistant source gates do not exist at that commit,
+so that run supplies neither a green nor a red verdict for these cases. The
+adaptations follow the specific source changes above; they make no new runtime,
+SDK compatibility, or numerical correctness claim.

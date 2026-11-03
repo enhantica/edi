@@ -1,0 +1,26 @@
+{
+  "gui_commit": {
+    "before": "bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1",
+    "after": "10dc5828020c90666a1ef015835475936d56e819",
+    "source_commit": "8016dd521096e5e6985a3c8b68430ce464ee35ce",
+    "path": "cmake/EdiGuiBase.cmake"
+  },
+  "sdk_tag": {
+    "before": "build-405b4f477371bee24f3c4f410ad2157701bf52cc",
+    "after": "build-8ba9537cc90857afeedf768693f70635f607ee36",
+    "source_commit": "f069972c75913ae85e66197931b29324b499129c",
+    "path": "pixi.toml"
+  },
+  "docs/dev/adrs/0038-colour-schemes-and-their-rules.md": {
+    "before": "310772512c75ba9847054a813cc4d82191ada53a39abff62121d4585fd85f958",
+    "after": "dd957dd7ee6c8372b0fe89faf466fea32ba1091f41be0e6b8d830f54a2bef174",
+    "source_commit": "f069972c75913ae85e66197931b29324b499129c",
+    "path": "docs/dev/adrs/0038-colour-schemes-and-their-rules.md"
+  },
+  "docs/dev/adrs/0041-scan-pattern-views.md": {
+    "before": "ec76d8c0d6ce16c8bfb90fe756604560ed7a2363cf9c4c6c90be3f374219515d",
+    "after": "f11f6fef68569f8d767e5591aeff784b10a248b672d197e3e2ee4f3ea927cdf2",
+    "source_commit": "4df77c9ef2a5bb4ea32951f926f90b1684ac4167",
+    "path": "docs/dev/adrs/0041-scan-pattern-views.md"
+  }
+}
