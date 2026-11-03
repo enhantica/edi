@@ -9,6 +9,8 @@
 #include <limits>
 #include <filesystem>
 #include <map>
+#include <optional>
+#include <string>
 
 #include "crysta/magnetic.hpp"
 #include "edi/categories.hpp"
@@ -459,6 +461,134 @@ const edi::AtomSiteMoment* moment_of(const edi::Structure& structure, const edi:
     return nullptr;
 }
 
+// A symmetry form's components as combinations of the free ones (`Mx,-Mx,0`: y = -x), row k column s. A term
+// that does not parse leaves the component as its own.
+std::array<std::array<double, 3>, 3> tie_matrix(const std::string& symmform) {
+    std::array<std::array<double, 3>, 3> out{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+    std::vector<std::string> parts;
+    std::string part;
+    for (const char ch : symmform) {
+        if (ch == ',') {
+            parts.push_back(part);
+            part.clear();
+        } else if (ch != ' ') {
+            part += ch;
+        }
+    }
+    parts.push_back(part);
+    if (parts.size() != 3) {
+        return out;
+    }
+    for (std::size_t k = 0; k < 3; ++k) {
+        std::array<double, 3> row{};
+        const std::string& text = parts[k];
+        std::size_t at = 0;
+        bool parsed = true;
+        while (at < text.size() && parsed) {
+            std::size_t end = at + 1;
+            while (end < text.size() && text[end] != '+' && text[end] != '-') {
+                ++end;
+            }
+            std::string term = text.substr(at, end - at);
+            at = end;
+            if (term == "0" || term == "+0" || term == "-0") {
+                continue;
+            }
+            const std::size_t m = term.find('M');
+            if (m == std::string::npos || m + 2 != term.size() || term[m + 1] < 'x' || term[m + 1] > 'z') {
+                parsed = false;
+                break;
+            }
+            std::string coefficient = term.substr(0, m);
+            if (coefficient.empty() || coefficient == "+") {
+                coefficient = "1";
+            } else if (coefficient == "-") {
+                coefficient = "-1";
+            }
+            try {
+                row[static_cast<std::size_t>(term[m + 1] - 'x')] += std::stod(coefficient);
+            } catch (const std::exception&) {
+                parsed = false;
+            }
+        }
+        if (parsed) {
+            out[k] = row;
+        }
+    }
+    return out;
+}
+
+// After a fit, the covariance of a moment's crystal-axis components and its structure's cell, from the parameters'
+// s.u. and the fit's correlations (relay decision 2026-11-03, "derived moment uncertainties come from the fit's
+// covariance"); none before a fit. A tied component follows its free ones through the symmetry form.
+std::optional<std::array<double, 81>> moment_covariance(const edi::Project* project, const edi::Structure& structure,
+                                                        const edi::AtomSiteMoment& moment) {
+    if (project == nullptr || !project->fit_result.held()) {
+        return std::nullopt;
+    }
+    std::map<std::pair<std::string, std::string>, double> correlation;
+    for (const auto& row : project->fit_result.correlations) {
+        if (row->file_path.empty()) {
+            correlation[{row->parameter_unique_name_i.value(), row->parameter_unique_name_j.value()}] = row->correlation.get();
+        }
+    }
+    if (correlation.empty()) {
+        return std::nullopt;
+    }
+    const std::string block = structure.name.value();
+    const std::string site = moment.id.value();
+    const edi::Cell& cell = structure.cell;
+    // The nine inputs: the free components (as their own symbols), then the cell.
+    const std::array<const edi::Parameter*, 9> inputs{&moment.crystalaxis_x, &moment.crystalaxis_y, &moment.crystalaxis_z,
+                                                      &cell.length_a,        &cell.length_b,        &cell.length_c,
+                                                      &cell.angle_alpha,     &cell.angle_beta,      &cell.angle_gamma};
+    const std::array<std::string, 9> names{
+        block + ".atom_site_moment." + site + ".crystalaxis_x", block + ".atom_site_moment." + site + ".crystalaxis_y",
+        block + ".atom_site_moment." + site + ".crystalaxis_z", block + ".cell.length_a",
+        block + ".cell.length_b", block + ".cell.length_c", block + ".cell.angle_alpha",
+        block + ".cell.angle_beta", block + ".cell.angle_gamma"};
+    const std::array<std::array<double, 3>, 3> ties = tie_matrix(moment.symmform);
+    std::array<double, 81> free{};
+    for (std::size_t i = 0; i < 9; ++i) {
+        const bool tied = i < 3 && (ties[i][i] != 1.0 || ties[i][(i + 1) % 3] != 0.0 || ties[i][(i + 2) % 3] != 0.0);
+        const double sigma_i = !tied && inputs[i]->uncertainty.has_value() ? *inputs[i]->uncertainty : 0.0;
+        for (std::size_t j = 0; j < 9; ++j) {
+            const bool tied_j = j < 3 && (ties[j][j] != 1.0 || ties[j][(j + 1) % 3] != 0.0 || ties[j][(j + 2) % 3] != 0.0);
+            const double sigma_j = !tied_j && inputs[j]->uncertainty.has_value() ? *inputs[j]->uncertainty : 0.0;
+            double rho = i == j ? 1.0 : 0.0;
+            if (i != j) {
+                const auto found = correlation.find({names[i], names[j]});
+                const auto other = correlation.find({names[j], names[i]});
+                rho = found != correlation.end() ? found->second : other != correlation.end() ? other->second : 0.0;
+            }
+            free[9 * i + j] = rho * sigma_i * sigma_j;
+        }
+    }
+    // The components' covariance through the ties: T over the moment block, the identity over the cell.
+    std::array<std::array<double, 9>, 9> t{};
+    for (std::size_t k = 0; k < 3; ++k) {
+        for (std::size_t s = 0; s < 3; ++s) {
+            t[k][s] = ties[k][s];
+        }
+    }
+    for (std::size_t c = 3; c < 9; ++c) {
+        t[c][c] = 1.0;
+    }
+    std::array<double, 81> out{};
+    for (std::size_t i = 0; i < 9; ++i) {
+        for (std::size_t j = 0; j < 9; ++j) {
+            double sum = 0.0;
+            for (std::size_t a = 0; a < 9; ++a) {
+                for (std::size_t b = 0; b < 9; ++b) {
+                    sum += t[i][a] * free[9 * a + b] * t[j][b];
+                }
+            }
+            out[9 * i + j] = sum;
+        }
+    }
+    return out;
+}
+
 std::array<double, 3> in_form(const std::array<double, 6>& cell, const std::array<double, 3>& crystal,
                               const QString& form) {
     if (form == QLatin1String("cartesian")) {
@@ -499,23 +629,42 @@ QVariantList AtomSiteMomentListModel::components(int row, const QString& form) c
                                    moment->crystalaxis_z.uncertainty.value_or(0.0)};
     const std::array<double, 3> values = in_form(cell, crystal, form);
     const std::array<double, 3> spherical = crysta::moment_spherical(crysta::moment_cartesian(cell, crystal));
-    const std::array<double, 3> spherical_su = crysta::moment_spherical_su(cell, crystal, su);
+    std::array<double, 3> spherical_su = crysta::moment_spherical_su(cell, crystal, su);
     std::array<double, 3> values_su = su;
     if (form == QLatin1String("cartesian")) {
         values_su = crysta::moment_cartesian_su(cell, su);
     } else if (form == QLatin1String("spherical")) {
         values_su = spherical_su;
     }
+    // After a fit the s.u. come from its covariance, correlations and the cell included.
+    const std::optional<std::array<double, 81>> covariance = moment_covariance(editor_.currentProject(), structure_, *moment);
+    if (covariance.has_value() && has_su) {
+        const std::array<double, 4> fitted = crysta::moment_form_su(cell, crystal, form.toStdString(), *covariance);
+        values_su = {fitted[0], fitted[1], fitted[2]};
+        spherical_su[0] = fitted[3];
+    }
+    // The spherical values a moment does not determine: all three at a zero moment, the azimuth with no component
+    // across z. They show no s.u.
+    const std::array<double, 3> cartesian = crysta::moment_cartesian(cell, crystal);
+    const double across = std::hypot(cartesian[0], cartesian[1]);
+    const bool zero = std::hypot(across, cartesian[2]) < 1e-12;
+    int undetermined = 0;
+    if (form == QLatin1String("spherical")) {
+        undetermined = zero ? 0b110 : across < 1e-12 ? 0b100 : 0;
+    }
     const double nan = std::numeric_limits<double>::quiet_NaN();
     QVariantList out;
     for (const double value : values) {
         out.append(value);
     }
-    for (const double value : values_su) {
-        out.append(has_su ? value : nan);
+    for (std::size_t k = 0; k < 3; ++k) {
+        out.append(has_su && (undetermined & (1 << k)) == 0 ? values_su[k] : nan);
     }
     out.append(spherical[0]);
-    out.append(has_su ? spherical_su[0] : nan);
+    out.append(has_su && !zero ? spherical_su[0] : nan);
+    // How the s.u. were found, and which values the moment does not determine (bit k: value k).
+    out.append(covariance.has_value() && has_su);
+    out.append(undetermined);
     return out;
 }
 
