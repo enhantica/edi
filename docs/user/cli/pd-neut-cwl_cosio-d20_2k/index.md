@@ -12,7 +12,7 @@ as (100) near 2θ = 10.7° and (001) near 22.8°, that the nuclear structure in 
 Pnma.1 (BNS 62.441) with propagation vector k = 0. The site symmetry leaves Co1 free in all three moment components
 and Co2 only along b.
 
-The app lists it as **Co₂SiO₄ [Pnma.1] · D20 @ ILL · 2.3 K**.
+The app lists it as **Co₂SiO₄ [Pnma.1] · D20 @ ILL**.
 
 ## Three ways to run it
 

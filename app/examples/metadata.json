@@ -37,6 +37,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -87,6 +90,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -137,6 +143,9 @@
         ],
         "polarisation": [
           "__not_applicable__"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -187,6 +196,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -237,6 +249,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -287,6 +302,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -303,9 +321,9 @@
     },
     "pd-neut-cwl_cosio-d20_2k": {
       "samples": [
-        "Co₂SiO₄ [Pnma.1] · D20 @ ILL"
+        "Co₂SiO₄ [Pnma.1]"
       ],
-      "origin": "2.3 K",
+      "origin": "D20 @ ILL",
       "detail": "Olivine at 2.3 K · Magnetic structure, k = 0",
       "values": {
         "sampleForm": [
@@ -337,11 +355,15 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal",
+          "magnetic"
         ]
       },
       "searchAliases": [
         "pd-neut-cwl_cosio-d20_2k",
-        "Co₂SiO₄ [Pnma.1] · D20 @ ILL · 2.3 K",
+        "Co₂SiO₄ [Pnma.1] · D20 @ ILL",
         "Olivine at 2.3 K · Magnetic structure, k = 0"
       ],
       "sources": [
@@ -387,6 +409,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -437,6 +462,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -488,6 +516,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -539,6 +570,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -589,6 +623,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -639,6 +676,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -690,6 +730,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -741,6 +784,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -796,6 +842,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -848,6 +897,9 @@
         ],
         "polarisation": [
           "__not_applicable__"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -898,6 +950,9 @@
         ],
         "polarisation": [
           "__not_applicable__"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -952,6 +1007,9 @@
         "polarisation": [
           "__not_applicable__",
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -1003,6 +1061,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -1055,6 +1116,9 @@
         ],
         "polarisation": [
           "__not_applicable__"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -1107,6 +1171,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -1157,6 +1224,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -1207,6 +1277,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
