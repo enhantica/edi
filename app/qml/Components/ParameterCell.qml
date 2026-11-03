@@ -184,7 +184,8 @@ EaComponents.ListViewParameter {
     Binding {
         target: cell
         property: "text"
-        value: cell.activeFocus ? cell.editText : cell.value
+        // A cell whose parameter went away (an isotropic site's tensor) shows nothing; `value` keeps the last text.
+        value: cell.item === null ? "" : cell.activeFocus ? cell.editText : cell.value
         when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady && cell.commitInProgress === null && !cell.inputMethodComposing
         restoreMode: Binding.RestoreNone
     }
