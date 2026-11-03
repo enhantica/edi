@@ -250,6 +250,40 @@ TestCase {
         compare(String(magnet.color), String(structure.color), "The magnet uses the same phase colour as its nuclear structure icon");
         chart.destroy();
     }
+    function test_phase_contributions_draw_two_independent_curves_and_fills() {
+        Preferences.structureCurves = true;
+        Preferences.patternLegendShown = true;
+        const chart = pattern.createObject(appWindow.contentItem, {experiment: Session.project.currentExperiment});
+        verify(chart && waitForPolish(chart), "The contribution check uses the production chart");
+        const areas = () => Render.series(chart).filter(series => /^chart\.series\.structure\.\d+$/.test(series.objectName));
+        tryVerify(() => areas().length === 2 && areas().every(area => area.upperSeries.count > 0 && area.lowerSeries.count > 0), 5000, "One magnetic phase draws two populated contribution fills");
+        const [first, second] = areas();
+        for (const area of [first, second]) {
+            verify(area.outline.count > 0 && area.outline.color.a > 0 && area.color.a > 0, "Each contribution draws a populated visible outline and a visible fill");
+            verify(area.upperSeries.count === area.outline.count, "Each contribution fill follows its own curve");
+        }
+        verify(String(first.outline.color) !== String(second.outline.color), "Nuclear and magnetic contributions use different shades");
+        const legend = findChild(chart, "chart.legend");
+        verify(legend && legend.visible, "The real chart legend exposes the two phase controls");
+        const rows = Render.descendants(legend).filter(item => item.objectName === "chart.legend.entry" && item.visible && !item.bragg && item.segments.some(part => part.text === "cosio"));
+        compare(rows.length, 2, "The legend presents two independent controls for the same phase");
+        const ticks = Render.series(chart).filter(series => String(series.objectName).startsWith("chart.series.bragg.") && series.count > 0);
+        const tickLabels = Render.descendants(chart).filter(item => item.objectName === "chart.bragg.label" && item.visible);
+        for (const glyph of ["layer-group", "magnet"]) {
+            const label = tickLabels.find(item => item.segments.some(part => part.icon === glyph));
+            const entry = rows.find(item => item.segments.some(part => part.icon === glyph));
+            verify(label && entry, "The contribution and its tick row share the approved icon: " + glyph);
+            const tick = ticks.find(series => Math.abs(series.at(0).y - label.modelData.centre) < .5);
+            verify(tick, "Each contribution icon identifies an actual populated tick series");
+            verify(areas().some(area => String(area.outline.color) === String(tick.color)), "Each contribution curve matches its tick shade");
+        }
+        const magnetic = rows.find(item => item.segments.some(part => part.icon === "magnet"));
+        legend.toggled(magnetic.key);
+        tryVerify(() => areas().filter(area => area.outline.color.a > 0 && area.color.a > 0).length === 1, 2000, "The magnetic legend control hides one curve and fill independently");
+        legend.toggled(magnetic.key);
+        tryVerify(() => areas().every(area => area.outline.color.a > 0 && area.color.a > 0), 2000, "The magnetic legend control restores its curve and fill");
+        chart.destroy();
+    }
     function test_k_editor_refuses_without_changing_the_saved_model() {
         const propagation = group("parent_propagation_vector");
         const editors = Render.descendants(propagation).filter(item => typeof item.text === "string" && "readOnly" in item && !item.readOnly && item.enabled);

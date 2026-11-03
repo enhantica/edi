@@ -17,6 +17,7 @@ CASES = [
     'visibility_keeps_camera_and_independent_moments',
     'analysis_contains_only_independent_magnetic_components',
     'nuclear_and_magnetic_tick_rows_cover_the_independent_reflections',
+    'phase_contributions_draw_two_independent_curves_and_fills',
     'k_editor_refuses_without_changing_the_saved_model',
     'catalogue_count_and_selector_operator_replacement',
     'primitive_propagation_add_refuses_without_losing_rows',
