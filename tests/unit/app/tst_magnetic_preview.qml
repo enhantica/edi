@@ -11,6 +11,7 @@ import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "E04Review.js" as Review
 import "AtomsSelector.js" as Atoms
+import "NumericCellInk.js" as Ink
 import "ApprovedPalette.js" as Approved
 
 TestCase {
@@ -216,6 +217,41 @@ TestCase {
         const unit = Math.pow(10, Math.floor(Math.log10(su)) - 1);
         return Math.round(su / unit) === 100 ? 10 * unit : unit;
     }
+    function test_magnetic_numeric_cells_draw_the_full_value_and_uncertainty() {
+        Session.closeProject();
+        const path = "structures/cosio.edi";
+        const cobalt = Probe.readFile("tests/fixtures/magnetic_pnma/cosio-2k-reference.edi")
+            .replace(/^Co1 0\.701.*$/m, "Co1 1.500(29) 2.800(29) -0.697(29) Mx,My,Mz")
+            .replace(/^Co2 0 2\.967.*$/m, "Co2 0 2.640(44) 0 0,My,0");
+        verify(cobalt.includes("1.500(29)") && cobalt.includes("2.640(44)") && SettingsProof.write(scratch, path, cobalt),
+               "The frozen cobalt witness carries independent decimal values and uncertainties");
+        verify(Session.openProject(scratch), "The cobalt clipping witness opens at the default sidebar width");
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
+                  10000, "The reopened project builds its actual sidebar");
+        const moments = group("atom_site_moment");
+        const table = Render.descendants(moments).find(item => item.visible && item.headerItem &&
+            typeof item.itemAtIndex === "function");
+        verify(table && table.count >= 2, "The real moments table displays both cobalt rows");
+
+        // The orthogonal norm of (1.500,2.800,-0.697) rounds to 3.252. Equal
+        // component uncertainties propagate unchanged to its norm. Co2 lies on y.
+        const expected = [["1.500(29)", "2.800(29)", "-0.697(29)", "3.252(29)"],
+                          ["0", "2.640(44)", "0", "2.640(44)"]];
+        const issues = [];
+        for (const [rowIndex, values] of expected.entries()) {
+            table.positionViewAtIndex(rowIndex, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => table.itemAtIndex(rowIndex) !== null, 2000, "The actual cobalt row is materialised");
+            appWindow.update();
+            verify(waitForRendering(table, 5000), "The cobalt row reaches a rendered frame at the default width");
+            for (const [columnIndex, column] of ["mx", "my", "mz", "modulus"].entries()) {
+                const cell = findChild(table.itemAtIndex(rowIndex), "atomSiteMoment." + column + "." + rowIndex);
+                verify(cell !== null, "The cobalt row has the numeric column " + column);
+                issues.push(...Ink.problems(cell, values[columnIndex], "Co" + (rowIndex + 1) + " " + column));
+            }
+        }
+        compare(issues.length, 0, "Every cobalt cell draws its full value and uncertainty: " + issues.join("; "));
+    }
     function test_moment_form_layout_and_alignment() {
         openMonoclinicMomentWitness();
         const differences = [];
@@ -231,7 +267,7 @@ TestCase {
             if (Math.abs(box.width - table.width) > 1 ||
                 Math.abs(box.mapToItem(moments, 0, 0).x - table.mapToItem(moments, 0, 0).x) > 1)
                 differences.push(form + " selector width " + box.width + " differs from group content " + table.width);
-            if (box.label !== "moments as" ||
+            if (box.label !== "Moments as" ||
                 box.mapToItem(moments, 0, box.height).y > table.mapToItem(moments, 0, 0).y + 1)
                 differences.push(form + " selector is not labelled and placed above the table");
             if (form !== "Spherical" && magnitude) {
@@ -239,7 +275,7 @@ TestCase {
                 if (Math.max(...widths) - Math.min(...widths) > 1)
                     differences.push(form + " component and magnitude widths differ: " + widths.join(", "));
             }
-            if (names[names.length - 1] !== "symmetry")
+            if (names[names.length - 1] !== "Symmetry")
                 differences.push("the last " + form + " column is " + names[names.length - 1]);
             if (form === "Cartesian" && (!names.includes("Mx (x ∥ a)") || !names.includes("Mz (z ∥ c*)")))
                 differences.push("Cartesian headers do not use U+2225: " + names.join(", "));
@@ -390,7 +426,7 @@ TestCase {
         const table = findChild(moments, "atomSiteMoments.list");
         verify(table !== null, "The moments group exposes its rendered table");
         const headers = Render.cells(table.headerItem);
-        verify(headers.some(cell => cell.visible && String(cell.text).toLowerCase() === "magnetic"), "The moment choice column is headed magnetic");
+        verify(headers.some(cell => cell.visible && String(cell.text) === "Magnetic"), "The moment choice column is headed Magnetic");
         const boxes = [];
         for (let i = 0; i < table.count; ++i) {
             const box = findChild(table.itemAtIndex(i), "atomSiteMoment.ion." + i);

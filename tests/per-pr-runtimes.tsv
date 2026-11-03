@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T15:11:53Z
+# measured_utc = 2026-11-03T16:49:03Z
 #
 # Recorded from: measured test run (1 node(s) measured once, 166249 banked, 0 stale row(s) dropped)
-# Collected tests: 210351; with a reported duration: 70523
+# Collected tests: 210352; with a reported duration: 70524
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210351
+# inventory_python = 210352
 # inventory_cpp = 400
-# inventory_measured = 166249
+# inventory_measured = 166250
 # inventory_unmeasured = 44502
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66949
+# inventory_pr_python = 66950
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -736,6 +736,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.060	tests/integration/py/test_app_cache_closure.py::test_screen_receipt_seals_its_native_retention_recipe[browser-prepared]
 0.100	tests/integration/py/test_app_cache_closure.py::test_screen_receipt_seals_its_native_retention_recipe[desktop-cache]
 0.080	tests/integration/py/test_app_cache_closure.py::test_screen_receipt_seals_its_native_retention_recipe[desktop-prepared]
+0.500	tests/integration/py/test_app_caption_capitalisation.py::test_app_field_labels_and_table_headings_start_with_a_capital
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-receipt-screen]
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-receipt-selector]
 0.000	tests/integration/py/test_app_fixture_host_isolation.py::test_app_fixture_prepares_only_the_requested_host[browser-screen]
