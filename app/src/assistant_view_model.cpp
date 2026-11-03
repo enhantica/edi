@@ -806,6 +806,10 @@ QString folding_read(const Object& row) {
     const auto tool=payload.value("tool").toString();
     return tool=="inspect_data" || tool=="inspect_project" || tool=="list_parameters" || tool=="diagnostics"?tool:QString{};
 }
+#ifdef __EMSCRIPTEN__
+// The web build has no native tools (app/CMakeLists.txt), so a step carries no native detail.
+QString assistant_native_detail(const Object&) { return {}; }
+#endif
 // What one step read, for its details: the rows or parts of a data read, else the purpose the assistant gave.
 QString step_detail(const Object& row) {
     const auto detail=assistant_native_detail(row);
@@ -2028,8 +2032,6 @@ struct AssistantViewModel::State {
             return trial->fit()->restoreAccepted(owner);
         }catch(...){return false;}
     }
-    // Clearing or rebinding the session ends its trial without a rollback: the candidate is dropped for good.
-    void retire_trial() noexcept {if(project)try{project->fit()->dropCandidate();}catch(...){}}
     // A failed startup reopen keeps its saved association: a later Open or Create does not forget it.
     bool startup_reopen_kept=false;
     void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
@@ -15347,6 +15349,8 @@ struct AssistantViewModel::State {
     }
 #endif
 
+    // Clearing or rebinding the session ends its trial without a rollback: the candidate is dropped for good.
+    void retire_trial() noexcept {if(project)try{project->fit()->dropCandidate();}catch(...){}}
     void retire_file_selection(FileProjection* continuation = nullptr) noexcept {
         if (continuation && !continuation->input_current()) return;
 #ifndef __EMSCRIPTEN__
@@ -16004,7 +16008,11 @@ struct AssistantViewModel::State {
     }
     void notify() {
         // The trial lock holds while the assistant works a turn (FitViewModel::trialOpen).
+#ifndef __EMSCRIPTEN__
         if(project)project->fit()->setAssistantBusy(generic_busy || generic_connecting);
+#else
+        if(project)project->fit()->setAssistantBusy(false);
+#endif
         QElapsedTimer elapsed;
         const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
         if(observeElapsed)elapsed.start();

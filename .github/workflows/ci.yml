@@ -45,6 +45,7 @@ jobs:
     runs-on: &linux ubuntu-24.04
     outputs:
       app_build: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || steps.filter.outputs.app_build == 'true' }}
+      wasm_build: ${{ steps.filter.outputs.wasm_build == 'true' }}
       crysta_sha: ${{ steps.crysta-source.outputs.sha }}
     steps:
       - uses: actions/checkout@v5
@@ -57,6 +58,8 @@ jobs:
         with:
           filters: |
             app_build: ['tools/ci/app-build.sh']
+            # The assistant is native-only in parts, so its sources are the ones a wasm build catches out.
+            wasm_build: ['app/src/assistant*']
 
   pin-currency:
     name: pin currency
@@ -798,8 +801,9 @@ jobs:
   # wasm from the pinned SDK's source, per kit.
   app-wasm:
     name: app · WebAssembly
-    # About 40 minutes, so pull requests skip it; main pushes, the nightly and manual runs keep it.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && github.event_name != 'pull_request' && inputs.core_only != true }}
+    # About 40 minutes, so pull requests skip it unless they touch the assistant's sources; main pushes, the nightly
+    # and manual runs keep it.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && (github.event_name != 'pull_request' || needs.changes.outputs.wasm_build == 'true') && inputs.core_only != true }}
     environment: crysta-sdk
     # After the core tests, which take the runners first. It runs even when core fails, so one round lists
     # every failure.
