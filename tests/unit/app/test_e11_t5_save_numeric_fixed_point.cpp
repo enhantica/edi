@@ -26,10 +26,10 @@
 #include <QJsonObject>
 #include <QtQml/qqml.h>
 #include <algorithm>
-#include <charconv>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <locale>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -40,9 +40,11 @@
 
 namespace {
 double decimal(const std::string& text) {
-    double value=0;
-    const auto parsed=std::from_chars(text.data(),text.data()+text.size(),value);
-    if(parsed.ec!=std::errc() || parsed.ptr!=text.data()+text.size() || !std::isfinite(value))
+    std::istringstream input(text);
+    input.imbue(std::locale::classic());
+    double value = 0;
+    if (!(input >> std::noskipws >> value) ||
+        input.peek() != std::char_traits<char>::eof() || !std::isfinite(value))
         throw std::runtime_error("Native numeric spelling is not a complete finite decimal");
     return value;
 }
