@@ -30,6 +30,7 @@
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/scan.hpp"
+#include "run_log.hpp"
 
 namespace edi_app {
 namespace {
@@ -275,6 +276,11 @@ void Session::releaseTemporaryRoots(const QStringList& candidates,const QString&
             add(archive_location_);if(read_only_copy_)add(read_only_source_);
             add(temporary_folder_);add(web_copy_);add(web_source_path_);
         }
+        if(aside_) {  // a project a tutorial set aside still owns its folders
+            if(aside_->project)addModel(aside_->project);
+            add(aside_->temporary_folder);add(aside_->web_copy);add(aside_->archive_location);
+            if(aside_->read_only_copy)add(aside_->read_only_source);
+        }
         // Retirement cancels delivery, but an in-flight worker joins only in
         // the model's destructor. Every live child still owns its backing data.
         for(QObject* child:children())if(auto* held=qobject_cast<ProjectViewModel*>(child))
@@ -323,7 +329,10 @@ bool Session::openProject(const QUrl& location) {
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
-    if (openProjectAt(location)) return true;
+    if (openProjectAt(location)) {
+        qCInfo(lcApp, "project opened");
+        return true;
+    }
     if(receiver && assistant_->sessionProjectRestorePending())return false;
     // A stale outer Open neither reports its successor's error as its own nor
     // decorates that successor. False does not imply no partial adoption.
@@ -338,7 +347,10 @@ bool Session::openExample(const QString& exampleId) {
     const QPointer<Session> receiver(this);
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
-    if (openExampleNamed(exampleId)) return true;
+    if (openExampleNamed(exampleId)) {
+        qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
+        return true;
+    }
     // A stale outer Open neither reports its successor's error as its own nor
     // decorates that successor. False does not imply no partial adoption.
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
@@ -501,6 +513,10 @@ bool Session::needsSaveAs() const {
 }
 
 bool Session::save() {
+    const auto logged = [](const char* line) {
+        qCInfo(lcApp, "%s", line);
+        return true;
+    };
     if (project_ != nullptr && WebFiles::available()) {
         // Where the browser keeps nothing, nothing is saved: the project stays unsaved and the window says why
         // (owner, 2026-10-25).
@@ -546,7 +562,7 @@ bool Session::save() {
             }
             emit webSaveFinished(saved);
         });
-        return true;
+        return logged("project saved");
     }
     if (project_ == nullptr || needsSaveAs()) {
         setLastError(QStringLiteral("this project has no directory of its own yet: save it as"));
@@ -560,7 +576,7 @@ bool Session::save() {
             return false;
         }
         emit projectDirectoryUsed(archive_location_);
-        return true;
+        return logged("project saved");
     }
     const QString error = project_->saveTo(project_->path());
     setLastError(error);
@@ -568,7 +584,7 @@ bool Session::save() {
         return false;
     }
     emit projectDirectoryUsed(QFileInfo(project_->path()).absoluteFilePath());
-    return true;
+    return logged("project saved");
 }
 
 QString Session::writeBackReports() {
@@ -610,6 +626,9 @@ bool Session::saveAs(const QUrl& directory) {
     emit needsSaveAsChanged();
     emit locationTextChanged();
     emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
+    if (saved) {
+        qCInfo(lcApp, "project saved");
+    }
     return saved;
 }
 
@@ -706,6 +725,10 @@ bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
         const QFileInfo destination(target.toLocalFile());
         if(!destination.exists() && !destination.isSymLink())return saveProjectAsFresh(target,zip,copy);
     }
+    const auto logged = [](const char* line) {
+        qCInfo(lcApp, "%s", line);
+        return true;
+    };
     if (project_ == nullptr) {
         return false;
     }
@@ -733,7 +756,7 @@ bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
     emit needsSaveAsChanged();
     emit locationTextChanged();
     emit projectDirectoryUsed(where);
-    return true;
+    return logged("project saved");
 }
 
 bool Session::publishArchive(const Staged& staged, const QString& archive) {
@@ -958,6 +981,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     const auto current = [&] { return receiver && originalCreated && project_ == originalCreated &&
         committed && replacement_generation_ == committedReplacement; };
     if (!presented || !current()) return false;
+    qCInfo(lcApp, "%s", location.isEmpty() ? "project created, unsaved" : "project created");
     if (location.isEmpty()) {
         return true;
     }
@@ -985,6 +1009,89 @@ void Session::closeProject() {
     auto pending=assistant_->prepareProjectResetInputs();
     if(!receiver || !pending || project_!=original || replacement_generation_!=binding)return;
     replaceProject(nullptr, {}, {}, false, nullptr, nullptr, false, {}, pending);
+}
+
+bool Session::openExampleAside(const QString& exampleId) {
+    if (aside_) {
+        setLastError(QStringLiteral("a tutorial already holds a project aside"));
+        return false;  // never a second one: the first would be lost
+    }
+    aside_next_ = true;
+    const bool opened = openExample(exampleId);
+    aside_next_ = false;
+    return opened && aside_.has_value();
+}
+
+bool Session::createProjectAside(const QString& name, const QString& description) {
+    if (aside_) {
+        setLastError(QStringLiteral("a tutorial already holds a project aside"));
+        return false;
+    }
+    aside_next_ = true;
+    const bool created = createProject(name, description);
+    aside_next_ = false;
+    return created && aside_.has_value();
+}
+
+bool Session::setProjectAside() {
+    if (aside_) {
+        setLastError(QStringLiteral("a tutorial already holds a project aside"));
+        return false;
+    }
+    aside_next_ = true;
+    replaceProject(nullptr, {}, {});
+    return aside_.has_value();
+}
+
+void Session::restoreProjectSetAside() {
+    if (!aside_) {
+        return;
+    }
+    SetAside aside = *std::move(aside_);
+    aside_.reset();
+    replaceProject(aside.project.data(), {}, aside.example);
+    temporary_folder_ = aside.temporary_folder;
+    archive_location_ = aside.archive_location;
+    setOpenedArchive(aside.opened_archive);
+    read_only_source_ = aside.read_only_source;
+    read_only_copy_ = aside.read_only_copy;
+    web_copy_ = aside.web_copy;
+    web_from_file_ = aside.web_from_file;
+    setWebPlace(aside.web_place);
+    emit projectLocationChanged();
+    emit locationTextChanged();
+    emit needsSaveAsChanged();
+    emit projectSetAsideChanged();
+    emit projectSetAsideNameChanged();
+    emit projectSetAsideModifiedChanged();
+}
+
+void Session::dropProjectSetAside() {
+    if (!aside_) {
+        return;
+    }
+    SetAside aside = *std::move(aside_);
+    aside_.reset();
+    // Its folders go once the project itself is gone and nothing else uses them.
+    retainTemporaryRoots({aside.temporary_folder, aside.web_copy});
+    if (!aside.project.isNull()) {
+        connect(aside.project, &QObject::destroyed, this, [this] { releaseTemporaryRoots({}); }, Qt::QueuedConnection);
+        aside.project->retire();
+        aside.project->deleteLater();
+    } else {
+        releaseTemporaryRoots({});
+    }
+    emit projectSetAsideChanged();
+    emit projectSetAsideNameChanged();
+    emit projectSetAsideModifiedChanged();
+}
+
+QString Session::projectSetAsideName() const {
+    return aside_ && !aside_->project.isNull() ? aside_->project->name() : QString();
+}
+
+bool Session::projectSetAsideModified() const {
+    return aside_ && !aside_->project.isNull() && aside_->project->modified();
 }
 
 void Session::syncCalculationMessages() {
@@ -1188,6 +1295,14 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     const auto pathBinding=path_generation_;
     auto current=[&]{return receiver && replacement_generation_==replacement && pathBinding!=UINT64_MAX && path_generation_==pathBinding && (!hasTarget || target);};
     retireAssistantIntent(); if(!current())return false;
+    // A tutorial's project sets the open one aside instead of closing it (edi ADR-0064): kept alive and connected to
+    // nothing here, with its own temporary folders, until it is restored or dropped.
+    std::optional<SetAside> keep;
+    if (std::exchange(aside_next_, false)) {
+        keep = SetAside{project_,         opened_example_,  temporary_folder_, archive_location_,
+                        opened_archive_,  read_only_source_, read_only_copy_,  web_copy_,
+                        web_place_,       web_from_file_};
+    }
     keep_timer_->stop();
     // A web open still being read no longer replaces anything.
     ++open_request_;
@@ -1210,8 +1325,10 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // the new state of the others; then each property signals only if it changed.
     if(previous) {
         disconnect(previous,nullptr,this,nullptr);
-        connect(previous,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
-        previous->retire();
+        if(!keep) {
+            connect(previous,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
+            previous->retire();
+        }
     }
     if(!current())return false;
     if(!nativePrepared){emit projectAboutToChange();if(!current())return false;}
@@ -1263,7 +1380,12 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if(!current() || project_!=target)return false;
     // The replaced project's temporary folder goes with it, once it is gone.
     const QString previous_folder = std::exchange(temporary_folder_, QString());
-    if (previous != nullptr && previous_idle) {
+    if (keep) {
+        aside_ = std::move(keep);
+        emit projectSetAsideChanged();
+        emit projectSetAsideNameChanged();
+        emit projectSetAsideModifiedChanged();
+    } else if (previous != nullptr && previous_idle) {
         previous->deleteLater();
         // Free the replaced project's view-models, and the page items the views released for them,
         // now rather than at the next event-loop turn: projects opened back to back (a script, a
@@ -1605,7 +1727,7 @@ QString from_bridge(Call&& call, const QString& fallback = QString()) {
     try {
         return QString::fromStdString(call());
     } catch (const std::exception& error) {
-        qWarning("dictionary: %s", error.what());
+        qCWarning(lcCrysta, "dictionary: %s", error.what());
         return fallback;
     }
 }
@@ -1630,6 +1752,15 @@ QString Session::optionLabel(const QString& uid, const QString& token) const {
 
 QString Session::optionTooltip(const QString& uid, const QString& token) const {
     return from_bridge([&] { return edi::option_tooltip(uid.toStdString(), token.toStdString()); });
+}
+
+QUrl Session::documentationUrl(const QString& uid) const {
+    // Only dictionary identities may become links; no user-provided URL or fragment.
+    if (!edi::has_item(uid.toStdString())) return {};
+    QString anchor = uid;
+    anchor.replace('_', '-');
+    anchor.replace('.', '-');
+    return QUrl(QStringLiteral("https://enhantica.github.io/edi/physics/parameters/#") + anchor);
 }
 
 QString Session::categoryTitle(const QString& id) const {
@@ -1658,7 +1789,7 @@ edi::FileText fitted(const QString& uid, double value, double su, const std::str
     try {
         return edi::fitted_text(uid.toStdString(), value, su, rule);
     } catch (const std::exception& error) {
-        qWarning("dictionary: %s", error.what());
+        qCWarning(lcCrysta, "dictionary: %s", error.what());
         return {};
     }
 }

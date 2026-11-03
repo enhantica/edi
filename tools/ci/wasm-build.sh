@@ -97,9 +97,7 @@ build_kit() {
   fi
 
   echo "wasm-build: the app for $flavour"
-  # The version the app shows, refreshed on every build: app/CMakeLists.txt caches it at the first configure.
   local args=(-S . -B "$out/app" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Release
-    -DEDI_APP_VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0+unknown)"
     -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF -DEDI_WORKER_OWNER_THREAD="$owner"
     -DQT_HOST_PATH="$HOST" -DQT_HOST_PATH_CMAKE_DIR="$HOST/lib/cmake"
     -Dcrysta_DIR="$out/crysta-prefix/lib/cmake/crysta" -DEigen3_DIR="$EIGEN_DIR")

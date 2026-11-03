@@ -137,6 +137,7 @@ def candidates(data, template=None, *, preferred=None):
     payload = {key.decode(): value for key, value in entries}
     choices = [preferred] if preferred is not None else []
     choices += [layout(template), *layouts()] if template is not None else layouts()
+    seen_layouts = set()
     for old in choices:
         old_keys = [key for key, _ in old['entries']]
         missing = [key for key in keys if key not in old_keys]
@@ -147,6 +148,8 @@ def candidates(data, template=None, *, preferred=None):
             '_background_estimate.mode',
             '_background_estimate.method',
             'loop:_refln',
+            # The inactive-weight adapter restores this retired loop from input.
+            'loop:_joint_fit',
         }
         if not set(missing).issubset(late):
             continue
@@ -154,10 +157,10 @@ def candidates(data, template=None, *, preferred=None):
             continue  # The decision moves categories, never the items inside one.
         # Preserve every nonempty preamble line exactly, including its spacing.
         old_head = bytes.fromhex(old['head']).splitlines(keepends=True)
-        actual_head = [line for line in head.splitlines(keepends=True) if line.strip()]
-        if len(actual_head) != sum(bool(line.strip()) for line in old_head):
+        values = [line for line in head.splitlines(keepends=True) if line.strip()]
+        if len(values) != sum(bool(line.strip()) for line in old_head):
             continue
-        values = iter(actual_head)
+        values = iter(values)
         old_head = b''.join(next(values) if line.strip() else line for line in old_head)
         kept = [(key, bytes.fromhex(prefix)) for key, prefix in old['entries'] if key in payload]
         variants = [kept]
@@ -169,6 +172,9 @@ def candidates(data, template=None, *, preferred=None):
                 ]
                 variants.append(kept[:position] + inserted + kept[position:])
         for variant in variants:
+            if (old_head, tuple(variant), old['tail']) in seen_layouts:
+                continue  # Identical layout and payload produce the same complete bytes.
+            seen_layouts.add((old_head, tuple(variant), old['tail']))
             yield (
                 old_head
                 + b''.join(prefix + payload[key] for key, prefix in variant)

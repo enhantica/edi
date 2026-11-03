@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[3]
         ('chebyshev', 'chebyshev'),
     ],
 )
-@pytest.mark.parametrize('chunk', [0, 1, 2])
+@pytest.mark.parametrize('chunk', range(6))
 @pytest.mark.parametrize('id_style', ['named', 'numeric'])
 def test_every_offered_category_retains_its_complete_real_loop_rows(kind, suffix, id_style, chunk):
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
@@ -49,7 +49,7 @@ def test_every_offered_category_retains_its_complete_real_loop_rows(kind, suffix
     receipt = re.search(
         r'PARAMETER_LOOP_FILTERS '
         + kind
-        + r' groups=(\d+) background=(\d+) variability=all,free,fixed ids='
+        + r' groups=(\d+) background=(\d+) variability=all,free,fixed,not-fittable ids='
         + id_style,
         output,
     )
@@ -58,7 +58,7 @@ def test_every_offered_category_retains_its_complete_real_loop_rows(kind, suffix
         'Every bounded case must complete its exact partition of the offered category inventory'
     )
     assert int(receipt[2]) == (
-        12 if kind == 'line-segment' else 6 if kind == 'polynomial' else 8
+        24 if kind == 'line-segment' else 13 if kind == 'polynomial' else 18
     ), 'Background filtering must retain every height or coefficient, including later rows'
 
 
@@ -99,6 +99,9 @@ def test_background_filter_keeps_every_row_after_estimate_replaces_the_open_tabl
         'Estimate replaces the actual example rows, in All, Free and Fixed states: ' + output
     )
     assert re.search(
-        r'PARAMETER_HOT_FILTER ' + kind + r' count=\d+ variability=all,free,fixed route=' + route,
+        r'PARAMETER_HOT_FILTER '
+        + kind
+        + r' count=\d+ variability=all,free,fixed,not-fittable route='
+        + route,
         output,
     ), 'Every real background type must finish the post-estimate filter replacement workflow'

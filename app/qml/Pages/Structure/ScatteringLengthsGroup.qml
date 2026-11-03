@@ -22,7 +22,7 @@ Column {
 
     DataTable {
         objectName: "scatteringLengths.list"
-        defaultInfoText: qsTr("No custom scattering lengths: the built-in table applies")
+        defaultInfoText: qsTr("No custom scattering lengths: the standard values are used.")
         sourceModel: group.lengths
 
         columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]

@@ -35,7 +35,9 @@ structure or one experiment, or to undo every filter at once.
    checkboxes, its "free" header menu, and the free boxes of the parameter fields and cells on the other pages. The app's model refuses a free toggle that reaches it anyway. Values
    stay editable and the calculated pattern follows them. Loading measured data enables all of these at once; removing
    the last experiment that holds it, or undoing its load, disables them again. Undo still restores free flags it
-   recorded, since it returns the project to an earlier state.
+   recorded, since it returns the project to an earlier state. The filters stay shown in such a project; only the
+   free/fixed picker is disabled, its tooltip saying why. The Settings tab's Parameters shown group, which chooses rows by
+   why they cannot be fitted, is hidden there, as Pattern updates is.
 
 ## Consequences
 

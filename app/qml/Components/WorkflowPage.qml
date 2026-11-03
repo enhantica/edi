@@ -68,6 +68,11 @@ EaComponents.ContentPage {
     function showMainTab(index) {
         ApplicationInfo.showWorkflowMainTab(index);
     }
+    // The run log's line for a main-view tab chosen on the shown page (edi ADR-0062).
+    onMainTabIndexChanged: {
+        if (page.current)
+            RunLog.note(`${page.pageName} main tab: ${page.mainTabs[page.mainTabIndex]?.objectName ?? page.mainTabIndex}`);
+    }
 
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
@@ -111,6 +116,14 @@ EaComponents.ContentPage {
         property: "blockIndex"
         value: page.blockIndex
         when: textLoader.item !== null
+    }
+    // The run log's line for a sidebar tab chosen on the shown page.
+    Connections {
+        target: textTabButton.TabBar.tabBar
+        function onCurrentIndexChanged() {
+            if (page.current)
+                RunLog.note(`${page.pageName} sidebar tab: ${["basic", "extras", "text", "settings"][textTabButton.TabBar.tabBar.currentIndex] ?? textTabButton.TabBar.tabBar.currentIndex}`);
+        }
     }
     Connections {
         target: textLoader.item

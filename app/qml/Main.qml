@@ -19,6 +19,8 @@ import edi.app
 // is shown, so each is told whether it is the shown one (WorkflowPage.current).
 EaComponents.ApplicationWindow {
     id: window
+    appBar.objectName: "appBar"
+    appBarCentralTabs.objectName: "appBar.workflow"
 
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
@@ -286,8 +288,12 @@ EaComponents.ApplicationWindow {
         anchors.fill: parent
         z: 10
 
+        // Only while a tab is preparing: the handler takes the hover from the tabs under it, which then lose their
+        // hover colours.
         HoverHandler {
             id: tabBarHover
+
+            enabled: [projectTab, structureTab, experimentTab, analysisTab, reportTab].some(tab => tab.preparing)
         }
         readonly property WorkflowTabButton preparingTab: ApplicationInfo.workflowPreparingTab()
 
@@ -374,8 +380,10 @@ EaComponents.ApplicationWindow {
     statusBar: StatusBar {
         assistantChatShown: assistantPanel.visible && assistantPanel.shown
         assistantManualTakeover: window.assistantManualTakeover
+        objectName: "statusBar"
         pagesBuilt: window.pagesBuilt
         pagesWanted: window.pagesWanted
+        tutorial: tutorialPanel
     }
 
     AppPreferencesDialog {}
@@ -486,6 +494,41 @@ EaComponents.ApplicationWindow {
             color: EaStyle.Colors.appBorder
         }
     }
+    // Help and feedback, opened from anywhere through AppState (edi ADR-0063), and the popup offering a crashed run's log
+    // to it (edi ADR-0062).
+    FeedbackDialog {
+        id: feedbackDialog
+
+        roomWidth: window.width
+    }
+    // The run log's line for each page opened (edi ADR-0062).
+    Connections {
+        target: EaGlobals.Vars
+        function onAppBarCurrentIndexChanged() {
+            RunLog.note(`page: ${["home", "project", "structure", "experiment", "analysis", "report"][EaGlobals.Vars.appBarCurrentIndex] ?? EaGlobals.Vars.appBarCurrentIndex}`);
+        }
+    }
+    Connections {
+        target: AppState
+        function onFeedbackRequested(kind, log) {
+            feedbackDialog.openAs(kind, log);
+        }
+        function onTutorialRequested(tutorial) {
+            tutorialPanel.start(tutorial);
+        }
+        function onWhatsNewRequested() {
+            whatsNewDialog.open();
+        }
+    }
+    // What's new (edi ADR-0067), also opened once by itself at the first start after an update.
+    WhatsNewDialog {
+        id: whatsNewDialog
+    }
+    CrashDialog {}
+    // A running tutorial's steps (edi ADR-0064).
+    TutorialPanel {
+        id: tutorialPanel
+    }
 
     // Below the supported minimum, which only the browser's page can reach (the owner, 2026-10-25): the empty view's
     // background and a request for more room, over everything, dialogs included. Nothing beneath is torn down, so
@@ -569,6 +612,10 @@ EaComponents.ApplicationWindow {
         function onChangesQuestion(action, abandoned) {
             ApplicationInfo.projectChangesQuestion(action, abandoned);
         }
+        // The same question about the user's own project while a tutorial holds it aside (edi ADR-0064).
+        function onSetAsideChangesQuestion(action) {
+            ApplicationInfo.projectChangesQuestion(action, null, true);
+        }
     }
     AppDialog {
         id: unsavedChanges
@@ -615,6 +662,9 @@ EaComponents.ApplicationWindow {
         // ask again. In the web app the place is written after Save returns: the action waits until it is, and is
         // dropped if it is not (the window says why).
         property var afterSave: null
+        // The question is about the user's own project, which a tutorial holds aside: Save and Discard first bring it
+        // back and end the tutorial, on the next turn; Cancel leaves the tutorial running.
+        property bool setAside: false
         property var afterSaveAbandoned: null
         onAccepted: ApplicationInfo.acceptUnsavedProject()
 
@@ -670,6 +720,7 @@ EaComponents.ApplicationWindow {
 
         Column {
             id: saveAsChoiceColumn
+            objectName: "project.saveChoice"
 
             // Folder and Zip archive: one group, rows closer than the usual spacing, no heading (owner, 2026-10-25).
             // A disabled button takes no hover, so its tooltip comes from the item around it.

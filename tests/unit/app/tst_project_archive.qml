@@ -361,8 +361,12 @@ TestCase {
         } else {
             RecentProjects.remember(SettingsProof.localPath(input));
             RecentProjects.refresh();
-            const group = Ui.control(Probe, app, "group.recentProjects");
-            verify(group !== null, "Recent projects is present in the real Project page");
+            clickControl("appBar.tab.project");
+            let group;
+            tryVerify(() => {
+                group = Ui.control(Probe, app, "group.recentProjects");
+                return group !== null;
+            }, 4000, "Recent projects is present after the replaced project's real page finishes loading");
             if (group.collapsed)
                 mouseClick(group.titleArea, group.titleArea.width / 2, group.titleArea.height / 2);
             let index = -1;
@@ -504,12 +508,46 @@ TestCase {
         for (const name of Object.keys(expected))
             compare(actual[name], expected[name], "A folder copy retains the exact independently saved member bytes: " + name);
     }
+    function structureInput(value) {
+        const lines = Qt.atob(value).split("\n"), entries = [];
+        const derived = ["_atom_sites_cartn_transform", "_space_group_symop", "_expanded_atom_site", "_geom_bond"];
+        let head = [], body = [], key = "", quoted = false, loopKeys = false;
+        function finish() {
+            if (!key)
+                return;
+            while (body.length && !body[body.length - 1].trim())
+                body.pop();
+            const category = key.replace(/^loop:/, "").split(".")[0];
+            if (!derived.includes(category))
+                entries.push([key, body.join("\n").replace(/^_edi.schema_version [34]$/m, "_edi.schema_version <3-or-4>")]);
+        }
+        for (const line of lines) {
+            const start = !quoted && (line.trim() === "loop_" || (line.startsWith("_") && !(loopKeys && line.trim().split(/\s+/).length === 1)));
+            if (start) {
+                finish();
+                body = [];
+                key = line.trim() === "loop_" ? "loop" : line.split(/\s+/)[0];
+                loopKeys = key === "loop";
+            } else if (key === "loop" && loopKeys && line.startsWith("_")) {
+                key = "loop:" + line.split(".")[0];
+            } else if (loopKeys && line.trim() && !line.startsWith("_")) {
+                loopKeys = false;
+            }
+            if (!key)
+                head.push(line);
+            else
+                body.push(line);
+            if (line.startsWith(";"))
+                quoted = !quoted;
+        }
+        finish();
+        return JSON.stringify([head, entries.sort((a, b) => a[0].localeCompare(b[0]))]);
+    }
     function compareRecalculatedCopy(actual, expected) {
         compare(Object.keys(actual).sort().join("\n"), Object.keys(expected).sort().join("\n"), "A recalculated copy retains every member name");
         for (const name of Object.keys(expected)) {
             if (name.startsWith("structures/") && name.endsWith(".edi")) {
-                const input = value => Qt.atob(value).split("\n_atom_sites_cartn_transform.")[0].replace(/\s+$/, "").replace(/^_edi.schema_version [34]$/m, "_edi.schema_version <3-or-4>");
-                compare(input(actual[name]), input(expected[name]), "A recalculated copy retains every non-derived structure byte: " + name);
+                compare(structureInput(actual[name]), structureInput(expected[name]), "A recalculated copy retains every non-derived structure byte: " + name);
             } else if (name.startsWith("experiments/") && name.endsWith(".edi") && /^_experiment_type.sample_form[ \t]+"single crystal"$/m.test(Qt.atob(expected[name]))) {
                 verify(Qt.atob(actual[name]).includes("\n_refln.intensity_calc\n"), "A recalculated single-crystal copy writes its reflection results: " + name);
             } else {

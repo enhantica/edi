@@ -18,35 +18,57 @@ def advance_table_helper(root, previous):
     old_hash = hashlib.sha256(previous.read_bytes()).hexdigest()
     new_bytes = (repo / case / asset).read_bytes()
     new_hash = hashlib.sha256(new_bytes).hexdigest()
-    path = root / 'saved-main.json'
-    pins = json.loads(path.read_text())
+    pins = json.loads((root / 'saved-main.json').read_text())
     original = json.loads((root / 'saved-before-rounded.json').read_text())
     transition_path = root / 'rounded-save-transitions.json'
     transition = json.loads(transition_path.read_text())
     for rule in ['iucr_19', 'iucr_99']:
         expected = pins['projects'][case][rule]
-        if expected[asset] != old_hash or original['projects'][case][rule][asset] != old_hash:
-            raise ValueError('The copied helper must reproduce its historical regression hash')
+        baseline = original['projects'][case][rule][asset]
+        existing = [
+            row
+            for row in transition['changes']
+            if (row['case'], row['rule'], row['path']) == (case, rule, asset)
+        ]
+        if expected[asset] != old_hash:
+            raise ValueError('The copied helper must reproduce its current regression hash')
+        if existing:
+            if len(existing) != 1 or (existing[0]['before'], existing[0]['after']) != (
+                baseline,
+                old_hash,
+            ):
+                raise ValueError('The helper transition must bind its original and current pins')
+        elif baseline != old_hash:
+            raise ValueError('The first helper transition must reproduce its original pin')
         with tempfile.TemporaryDirectory() as folder:
             scratch = Path(folder)
-            actual = snapshot(importlib.import_module('edi'), repo / case, scratch, rule)
+            actual = snapshot(
+                importlib.import_module('edi'),
+                repo / case,
+                scratch,
+                rule,
+                order_reference=expected,
+            )
             if (scratch / 'saved' / asset).read_bytes() != new_bytes:
                 raise ValueError('The saved helper must preserve the source asset bytes exactly')
         if actual != {**expected, asset: new_hash}:
             raise ValueError('Any other saved path or byte change refuses the helper transition')
         expected[asset] = new_hash
-        transition['changes'].append({
-            'case': case,
-            'rule': rule,
-            'path': asset,
-            'before': old_hash,
-            'after': new_hash,
-        })
+        if existing:
+            existing[0]['after'] = new_hash
+        else:
+            transition['changes'].append({
+                'case': case,
+                'rule': rule,
+                'path': asset,
+                'before': old_hash,
+                'after': new_hash,
+            })
     transition['claim'] = (
         'Regression pins for rounded saving, experiment metadata and copied fixture helpers, '
         'not physical references'
     )
-    path.write_text(json.dumps(pins, indent=2, sort_keys=True) + '\n')
+    (root / 'saved-main.json').write_text(json.dumps(pins, indent=2, sort_keys=True) + '\n')
     transition_path.write_text(json.dumps(transition, indent=2) + '\n')
 
 

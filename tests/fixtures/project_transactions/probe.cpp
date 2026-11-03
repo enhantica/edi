@@ -7,6 +7,8 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QElapsedTimer>
+#include <QEventLoop>
+#include <QTimer>
 #include <QFile>
 #include <QGuiApplication>
 #include <QJsonArray>
@@ -1552,6 +1554,147 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
             {"messages", QJsonArray::fromStringList(messages)},
             {"drops", QJsonArray::fromStringList(drops)}};
 }
+
+// Accidents: Tutorials opens over a saved/uploaded project, Home starts a second
+// tutorial, or Examples reopens the user's same bundled project while it is aside.
+void tutorialSettled(Session& session) {
+    need(session.project(), "Tutorial ownership observations require a real active project");
+    if (!session.project()->calculating()) return;
+    QEventLoop loop;
+    QTimer deadline;
+    deadline.setSingleShot(true);
+    QObject::connect(&deadline, &QTimer::timeout, &loop, &QEventLoop::quit);
+    QObject::connect(session.project(), &ProjectViewModel::calculatingChanged, &loop, [&] {
+        if (!session.project()->calculating()) loop.quit();
+    });
+    deadline.start(10000);
+    loop.exec();
+    need(!session.project()->calculating(), "The actual tutorial calculation finishes before observation");
+}
+QJsonObject tutorialPlace(Session& session) {
+    return {{"path", session.project()->path()}, {"location", session.projectLocation()},
+            {"needsSaveAs", session.needsSaveAs()}, {"example", session.openedExample()},
+            {"archive", session.openedArchive()}, {"archiveLocation", session.archive_location_},
+            {"temporaryFolder", session.temporary_folder_},
+            {"readOnlySource", session.read_only_source_}, {"readOnlyCopy", session.read_only_copy_},
+            {"webKey", session.web_place_.key}, {"webKind", session.web_place_.kind},
+            {"webName", session.web_place_.name}, {"webCopy", session.web_copy_},
+            {"webFromFile", session.web_from_file_}};
+}
+QJsonObject tutorialOwnership(const QString& source, const QStringList& spec) {
+    need(spec.size() == 5, "Tutorial observations declare route, entry, ending and accident");
+    const QString route = spec[1], entry = spec[2], ending = spec[3], accident = spec[4];
+    const bool web = route.startsWith("web-");
+    const QString kind = route.endsWith("zip") ? "zip" : route.endsWith("browser") ? "browser" : "folder";
+    QTemporaryDir temp;
+    Session session;
+    browser = false;
+    QString input = copy(source, temp.filePath("user-project"));
+    if (route == "desktop-archive" || route.endsWith("zip")) {
+        const QString archive = temp.filePath("user-project.zip");
+        edi::write_project_archive(input.toStdString(), archive.toStdString());
+        input = archive;
+    }
+    if (route == "desktop-example")
+        need(session.openExample("pd-neut-cwl_cosio-d20"), "The user's actual bundled example opens");
+    else
+        need(session.openProject(QUrl::fromLocalFile(input)), "The user's actual saved project opens");
+    tutorialSettled(session);
+    if (web) {
+        browser = true;
+        WebStorage::instance()->usable_ = true;
+        jobs.clear();
+        if (route.startsWith("web-upload-")) session.openWebProject(kind);
+        else session.openStoredProject("user-chosen-place", route == "web-recovery");
+        need(jobs.size() == 1, "A real browser open reaches its asynchronous storage receiver");
+        jobs[0].kind = kind;
+        finish(0, true, input);
+        tutorialSettled(session);
+    }
+    // Accident: Keep makes a tutorial the user's project, then Home starts another.
+    // Repeated generations must not recycle any directory still owned by that project.
+    if (accident.startsWith("after-keep-")) {
+        const int generations = accident.mid(QString("after-keep-").size()).toInt();
+        need(generations >= 1 && generations <= 3, "A kept-project accident declares its generation count");
+        for (int generation = 0; generation < generations; ++generation) {
+            const bool entered = entry == "new"
+                ? session.createProjectAside("tutorial-only", "Temporary written simulation")
+                : session.openExampleAside("pd-neut-cwl_cosio-d20");
+            need(entered, "The first tutorial opens before its explicit Keep choice");
+            tutorialSettled(session);
+            session.dropProjectSetAside();
+            turn();
+            if (session.project()->path().isEmpty())
+                need(session.saveAs(QUrl::fromLocalFile(temp.filePath("kept-" + QString::number(generation)))),
+                     "The user saves a kept blank tutorial before importing owned files");
+        }
+    }
+    QPointer<ProjectViewModel> original = session.project();
+    original->setDescription("User's unsaved description before opening Tutorials");
+    tutorialSettled(session);
+    const auto before = tutorialPlace(session);
+    const QString originalPath = original->path();
+    need(!originalPath.isEmpty(), "A backing-file accident requires a real saved or extracted directory");
+    QFile sentinel(QDir(originalPath).filePath("user-owned-witness.txt"));
+    need(sentinel.open(QIODevice::WriteOnly), "The user's working tree accepts an ownership witness");
+    sentinel.write("User-owned bytes must survive until explicit Keep\n");
+    sentinel.close();
+    const auto bytes = image(originalPath);
+    QFile archive(input);
+    QByteArray archiveBytes;
+    if (route == "desktop-archive") {
+        need(archive.open(QIODevice::ReadOnly), "The user's archive destination remains readable");
+        archiveBytes = archive.readAll();
+        archive.close();
+    }
+    auto enter = [&] {
+        const bool accepted = entry == "new"
+            ? session.createProjectAside("tutorial-only", "Temporary written simulation")
+            : session.openExampleAside("pd-neut-cwl_cosio-d20");
+        tutorialSettled(session);
+        return accepted;
+    };
+    const bool accepted = enter();
+    QPointer<ProjectViewModel> temporary = session.project();
+    const bool distinct = temporary && temporary != original;
+    const bool directoryDistinct = temporary && (temporary->path().isEmpty() || temporary->path() != originalPath);
+    const bool aliveDuring = !original.isNull();
+    const bool bytesDuring = image(originalPath) == bytes;
+    const bool editDuring = original && original->description() == "User's unsaved description before opening Tutorials" && original->modified();
+    if (accident == "restart") enter();
+    if (accident == "reopen-example") session.openExample("pd-neut-cwl_cosio-d20");
+    turn();
+    const bool aliveBeforeChoice = !original.isNull();
+    const bool bytesBeforeChoice = image(originalPath) == bytes;
+    if (ending == "keep") session.dropProjectSetAside();
+    else session.restoreProjectSetAside();
+    turn();
+    QJsonObject after;
+    if (session.project()) after = tutorialPlace(session);
+    const bool restored = original && session.project() == original;
+    const bool editAfter = original && original->description() == "User's unsaved description before opening Tutorials" && original->modified();
+    const bool filesAfter = image(originalPath) == bytes;
+    bool saveAccepted = false;
+    QJsonObject write;
+    if (web && ending != "keep" && restored) {
+        jobs.clear();
+        saveAccepted = session.save();
+        for (const auto& job : jobs)
+            if (job.action == "write" && !job.recovery)
+                write = {{"key", job.key}, {"kind", job.kind}};
+    }
+    QByteArray archiveAfter;
+    if (route == "desktop-archive" && archive.open(QIODevice::ReadOnly)) archiveAfter = archive.readAll();
+    browser = false;
+    return {{"route", route}, {"entry", entry}, {"ending", ending}, {"accident", accident},
+            {"accepted", accepted}, {"distinct", distinct}, {"directoryDistinct", directoryDistinct},
+            {"aliveDuring", aliveDuring}, {"bytesDuring", bytesDuring}, {"editDuring", editDuring},
+            {"aliveBeforeChoice", aliveBeforeChoice}, {"bytesBeforeChoice", bytesBeforeChoice},
+            {"restored", restored}, {"editAfter", editAfter}, {"filesAfter", filesAfter},
+            {"before", before}, {"after", after}, {"kept", temporary && session.project() == temporary},
+            {"archiveUnchanged", archiveBytes == archiveAfter},
+            {"saveAccepted", saveAccepted}, {"write", write}};
+}
 }  // namespace
 extern "C" void transaction_real_archive(const std::string&, const std::string&);
 extern "C" std::string transaction_real_directory(const std::string&);
@@ -1689,7 +1832,9 @@ int main(int argc, char** argv) {
         need(argc == 3, "Requires the independent project folder and the named observation group");
         QString source = argv[1], group = argv[2];
         QJsonArray rows;
-        if (group.startsWith("save-conflict/") || group.startsWith("save-alias-") ||
+        if (group.startsWith("tutorial/"))
+            rows.append(tutorialOwnership(source, group.split('/')));
+        else if (group.startsWith("save-conflict/") || group.startsWith("save-alias-") ||
             group.startsWith("save-replaced-"))
             rows.append(saveConflict(source, group.split('/')));
         else if (group.startsWith("late-folder/"))

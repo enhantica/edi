@@ -78,10 +78,15 @@ QtObject {
     // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are
     // dealt with: at once when there are none, else after the window asks to save or discard them.
     signal changesQuestion(var action, var abandoned)
+    // The same question about the user's own project while a tutorial holds it aside (edi ADR-0064).
+    signal setAsideChangesQuestion(var action)
     // An action that replaces the project runs on the next turn of the event loop, never inside the handler that asked
     // for it: replacing the project rebuilds the pages, and the page holding that handler with them.
-    function afterChanges(action, abandoned) {
-        ApplicationInfo.afterProjectChanges(action, abandoned);
+    // `creating`: the action is Create a new project, which in a tutorial without a project of its own yet makes the
+    // tutorial's project; it never touches the user's project held aside, so it asks nothing about it.
+    // Opening, closing and quitting still do.
+    function afterChanges(action, abandoned, creating) {
+        ApplicationInfo.afterProjectChanges(action, abandoned, creating === true);
     }
     // The Text tab holding an edit not yet applied, or null. What would replace what it shows (another project,
     // closing the window, another Show choice) settles the edit first, as leaving the tab does (TextTab.settleEdit).
@@ -94,6 +99,20 @@ QtObject {
     signal createFailed
     // The Analysis page's Evolution tab, asked for from the results window after a scan (edi ADR-0017 §19).
     signal evolutionRequested
+    // Help and feedback, asked for from Home, About or the crash popup: the window's form opens on `kind` ("feedback",
+    // "question", "problem" or "idea"), with `log` attached instead of this run's when it is not empty (Main.qml).
+    signal feedbackRequested(string kind, string log)
+    // What's new, asked for from Home (Main.qml).
+    signal whatsNewRequested
+    // A built-in tutorial to run (its manifest entry), asked for from Home's Tutorials; the window's panel runs it.
+    signal tutorialRequested(var tutorial)
+    // A tutorial is running (TutorialPanel); while it is, no other starts.
+    // A fit's results window: open now, and how often it has opened (a tutorial waits for it to open and close).
+    property bool fitResultsOpen: false
+    property int fitResultsShown: 0
+    property bool tutorialRunning: false
+    // A replacement or a quit brought the user's set-aside project back, which ends the running tutorial.
+    signal tutorialEnded
 
     function open(page) {
         ApplicationInfo.openWorkflowPage(page);

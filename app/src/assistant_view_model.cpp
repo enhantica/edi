@@ -111,6 +111,7 @@
 #include "chatgpt_connection.hpp"
 #include "codex_agent.hpp"
 #include "assistant_outgoing.hpp"
+#include "build_version.hpp"
 #include "assistant_native_tools.hpp"
 #include "background_input.hpp"
 #include "assistant_native_create.hpp"
@@ -1006,7 +1007,7 @@ struct AssistantViewModel::State {
         auto identities=document.value("identity_inputs").toObject();auto build=identities.value("build").toObject();
         const auto builtCommit=QString::fromUtf8(edi::build_commit());
         if(builtCommit!="unknown")build["edi_commit"]=work_report_observed(builtCommit);
-        build["edi_version"]=work_report_observed(QStringLiteral(EDI_APP_VERSION));
+        build["edi_version"]=work_report_observed(QString::fromUtf8(edi_app::app_version()));
         if(!QStringLiteral(EDI_APP_CRYSTA_VERSION).isEmpty())build["sdk_version"]=work_report_observed(QStringLiteral(EDI_APP_CRYSTA_VERSION));
         build["sdk_source_kind"]=QStringLiteral(EDI_APP_SDK_SOURCE_KIND);
         if(QStringLiteral(EDI_APP_SDK_SOURCE_KIND)=="manifest")build["sdk_source_commit"]=work_report_observed(QStringLiteral(EDI_APP_CRYSTA_COMMIT));

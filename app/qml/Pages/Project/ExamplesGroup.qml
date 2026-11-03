@@ -16,45 +16,13 @@ SideBarGroup {
     title: qsTr("Examples")
     icon: "database"
 
-    function choiceIndex(model, value) {
-        return ApplicationInfo.exampleChoiceIndex(model, value);
-    }
-
     Column {
         // Hidden while collapsed, so each row's accessible box is placed when it shows: the web platform does
         // not move an accessible box when only an ancestor moves.
         visible: !group.collapsed || group.implicitHeight > group.topPadding
         spacing: AppSizes.groupContentSpacing
-        EaElements.GroupRow {
-            spacing: AppSizes.inputSpacing
-            EaElements.TextField {
-                objectName: "examples.search"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                placeholderText: qsTr("Search examples")
-                horizontalAlignment: TextInput.AlignLeft
-                text: Session.examples.searchText
-                onTextEdited: Session.examples.searchText = text
-            }
-            SearchableComboBox {
-                objectName: "examples.property"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                horizontalAlignment: Text.AlignLeft
-                model: Session.examples.filterProperties
-                textRole: "title"
-                searchThreshold: 1000
-                currentIndex: group.choiceIndex(Session.examples.filterProperties, Session.examples.filterProperty)
-                onActivated: index => Session.examples.filterProperty = Session.examples.filterProperties.text(index, "value")
-            }
-            SearchableComboBox {
-                objectName: "examples.value"
-                width: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
-                horizontalAlignment: Text.AlignLeft
-                model: Session.examples.filterOptions
-                textRole: "title"
-                popup.width: Math.max(width, optionWidth)
-                currentIndex: group.choiceIndex(Session.examples.filterOptions, Session.examples.filterValue)
-                onActivated: index => Session.examples.filterValue = Session.examples.filterOptions.text(index, "value")
-            }
+        ExampleFilters {
+            catalogue: Session.examples
         }
         DataTable {
             id: table
@@ -83,6 +51,8 @@ SideBarGroup {
                 required property string detail
                 required property list<string> tagLabels
                 required property list<string> tagIcons
+                required property list<string> tagColors
+                required property list<string> tagDarkColors
                 objectName: `examples.open.${exampleId}`
                 // Screen readers and browser checks find a row by its id and title, which the three lines show
                 // only in part. The row itself carries them, as the list moves the row.
@@ -101,85 +71,14 @@ SideBarGroup {
                     marksCurrentRow: true
                     text: row.index + 1
                 }
-                Item {
-                    id: descriptionCell
+                ExampleCell {
                     height: row.height
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                        spacing: EaStyle.Sizes.fontPixelSize * 0.25
-                        EaElements.Label {
-                            id: identityLabel
-                            width: parent.width
-                            horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideRight
-                            textFormat: Text.PlainText
-                            // PT Sans lacks several subscript digits; one bundled face keeps formula weights uniform. Regular
-                            // weight: only Noto Sans Regular is bundled, and a synthesised bold showed in the browser and on
-                            // Linux where macOS draws the regular face (the owner, 2026-10-13).
-                            font.family: "Noto Sans"
-                            text: row.sample + " · " + row.origin
-                        }
-                        Item {
-                            width: parent.width
-                            height: EaStyle.Sizes.fontPixelSize * 1.65
-                            clip: true
-                            Row {
-                                id: tagRow
-                                spacing: AppSizes.fieldSpacing / 2
-                                Repeater {
-                                    model: row.tagLabels
-                                    delegate: Rectangle {
-                                        id: badge
-                                        required property string modelData
-                                        required property int index
-                                        readonly property bool blueTechnique: ["pd", "neut", "tof", Session.optionLabel("experiment_type.scattering_type", "bragg")].includes(modelData)
-                                        readonly property color ink: index === 0 ? (modelData === qsTr("Simulation") ? (EaStyle.Colors.isDarkPalette ? "#cba1eb" : "#8354a9") : (EaStyle.Colors.isDarkPalette ? "#9ac776" : "#398648")) : index === 1 ? (EaStyle.Colors.isDarkPalette ? "#e3b06d" : "#96601d") : blueTechnique ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-                                        radius: 3
-                                        color: Qt.rgba(ink.r, ink.g, ink.b, 0.13)
-                                        width: badgeContent.implicitWidth + 2 * AppSizes.fieldSpacing
-                                        height: EaStyle.Sizes.fontPixelSize * 1.65
-                                        Row {
-                                            id: badgeContent
-                                            anchors.centerIn: parent
-                                            spacing: AppSizes.fieldSpacing / 2
-                                            EaElements.Label {
-                                                visible: text !== ""
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                font.family: EaStyle.Fonts.iconsFamily
-                                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.8
-                                                color: badge.ink
-                                                text: row.tagIcons[badge.index] ?? ""
-                                            }
-                                            EaElements.Label {
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                horizontalAlignment: Text.AlignHCenter
-                                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-                                                color: badge.ink
-                                                text: badge.modelData
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        EaElements.Label {
-                            id: detailLabel
-                            width: parent.width
-                            horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideRight
-                            textFormat: Text.PlainText
-                            color: EaStyle.Colors.themeForegroundMinor
-                            text: row.detail
-                        }
-                    }
-                    HoverHandler {
-                        id: hover
-                    }
-                    EaElements.ToolTip {
-                        visible: hover.hovered && EaGlobals.Vars.showToolTips && text !== ""
-                        text: ApplicationInfo.nativeListProjection(4)
-                    }
+                    title: row.sample + " · " + row.origin
+                    tagLabels: row.tagLabels
+                    tagIcons: row.tagIcons
+                    tagColors: row.tagColors
+                    tagDarkColors: row.tagDarkColors
+                    detail: row.detail
                 }
             }
         }

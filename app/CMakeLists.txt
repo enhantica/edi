@@ -7,16 +7,16 @@ set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 include(${PROJECT_SOURCE_DIR}/cmake/EdiGuiBase.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/EdiAssistantMath.cmake)
 
-# What the app tells its user about itself (ApplicationInfo): configured once, from git when available.
-execute_process(COMMAND git -C ${PROJECT_SOURCE_DIR} describe --tags --always --dirty
-                OUTPUT_VARIABLE EDI_APP_GIT_DESCRIBE OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-execute_process(COMMAND git -C ${PROJECT_SOURCE_DIR} log -1 --format=%cd --date=format:%d\ %b\ %Y
-                OUTPUT_VARIABLE EDI_APP_GIT_DATE OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-set(EDI_APP_VERSION "${EDI_APP_GIT_DESCRIBE}" CACHE STRING "Version shown by the app")
-if(EDI_APP_VERSION STREQUAL "")
-    set(EDI_APP_VERSION "0.0.0+unknown")
-endif()
-set(EDI_APP_DATE "${EDI_APP_GIT_DATE}")
+# What the app tells its user about itself (ApplicationInfo). Its version and date come from git at every build, as the
+# commit does, so a reused build folder never shows an old one (cmake/build_version.cmake).
+set(EDI_APP_BUILD_VERSION_CPP "${CMAKE_CURRENT_BINARY_DIR}/edi_app_build_version.cpp")
+set(EDI_APP_BUILD_VERSION_COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_VERSION_CPP}
+                                  -P "${PROJECT_SOURCE_DIR}/cmake/build_version.cmake")
+execute_process(COMMAND ${EDI_APP_BUILD_VERSION_COMMAND})
+add_custom_target(edi_app_build_version
+    COMMAND ${EDI_APP_BUILD_VERSION_COMMAND}
+    BYPRODUCTS "${EDI_APP_BUILD_VERSION_CPP}"
+    COMMENT "Embedding the version and date in the app")
 # The crysta the app links, for the diagnostics view: its package version, and the commit its SDK manifest
 # records (a local crysta build has no manifest).
 find_package(crysta CONFIG QUIET)
@@ -68,7 +68,11 @@ qt_add_qml_module(edi_app_module
         src/assistant_skill_import.hpp src/assistant_skill_import.cpp
         src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
-        src/demo_driver.hpp src/demo_driver.cpp
+        src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
+        src/run_log.hpp src/run_log.cpp
+        src/item_locator.hpp src/item_locator.cpp
+        src/user_action_log.hpp src/user_action_log.cpp
+        src/build_version.hpp
         src/test_observer.hpp src/test_observer.cpp
         src/web_page_hooks.hpp src/web_page_hooks.cpp
         src/project_editor.hpp
@@ -110,6 +114,7 @@ qt_add_qml_module(edi_app_module
         src/web_storage.hpp src/web_storage.cpp
     QML_FILES
         qml/Main.qml
+        feedback/Payload.js
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/AssistantPanel.qml
@@ -126,7 +131,9 @@ qt_add_qml_module(edi_app_module
         qml/Components/CategoryGroup.qml
         qml/Components/SideBarGroup.qml
         qml/Components/ComboCell.qml
+        qml/Components/CrashDialog.qml
         qml/Components/DiagnosticsDialog.qml
+        qml/Components/FeedbackDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
         qml/Components/DigitText.qml
@@ -161,6 +168,9 @@ qt_add_qml_module(edi_app_module
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
+        qml/Components/ExampleCell.qml
+        qml/Components/ExampleFilters.qml
+        qml/Components/IconLink.qml
         qml/Components/StatusBarButton.qml
         qml/Components/StatusBarFitButton.qml
         qml/Components/StatusBarItem.qml
@@ -172,6 +182,9 @@ qt_add_qml_module(edi_app_module
         qml/Components/GeneratedGroup.qml
         qml/Components/MultiLineField.qml
         qml/Components/TextTab.qml
+        qml/Components/TutorialPanel.qml
+        qml/Components/TutorialControls.qml
+        qml/Components/WhatsNewDialog.qml
         qml/Components/ToolbarComboBox.qml
         qml/Components/ToolbarLines.qml
         qml/Components/ValueField.qml
@@ -223,7 +236,9 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ReflectionsGroup.qml
         qml/Pages/Experiment/ScatteringSourceGroup.qml
         qml/Pages/Home/AboutDialog.qml
+        qml/Pages/Home/CitationDialog.qml
         qml/Pages/Home/HomePage.qml
+        qml/Pages/Home/TutorialsDialog.qml
         qml/Pages/Project/BlockNames.qml
         qml/Pages/Project/DescriptionRow.qml
         qml/Pages/Project/DescriptionTab.qml
@@ -253,9 +268,12 @@ qt_add_qml_module(edi_app_module
         resources/logo/AssistantWorking.svg
         resources/logo/AssistantSpinner.svg
 )
+target_sources(edi_app_module PRIVATE "${EDI_APP_BUILD_VERSION_CPP}")
+add_dependencies(edi_app_module edi_app_build_version)
 # The Stacked view's line shader (edi ADR-0041), compiled for every graphics API Qt Quick runs on.
 qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" FILES shaders/scan_line.vert shaders/scan_line.frag)
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
+target_compile_definitions(edi_app_module PUBLIC QT_MESSAGELOGCONTEXT)  # file and line in the run log (ADR-0062)
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
@@ -325,8 +343,14 @@ function(edi_app_bundle_examples root)
     endforeach()
 endfunction()
 edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
+qt_add_resources(edi_app_module "edi_tutorials" PREFIX "/edi/tutorials"
+                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/tutorials FILES tutorials/manifest.json tutorials/tour.json
+                 tutorials/files/lbco.cif tutorials/files/hrpt.xye)
+qt_add_resources(edi_app_module "edi_documentation_script" PREFIX "/edi/docs"
+                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/docs FILES docs/y2o3-spodi.js)
 qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"
-                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json)
+                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json
+                 ${CMAKE_CURRENT_SOURCE_DIR}/examples/tags.json)
 list(JOIN EDI_APP_EXAMPLE_IDS "\n" _index)
 file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt CONTENT "${_index}\n")
 qt_add_resources(edi_app_module "edi_example_index" PREFIX "/edi/examples"
@@ -341,6 +365,11 @@ set(EDI_APP_LICENCE_FILES
     ${PROJECT_SOURCE_DIR}/DEPENDENCIES.md ${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md
     ${PROJECT_SOURCE_DIR}/data/assistant/math/JKQtPlotter-LICENSE
     ${PROJECT_SOURCE_DIR}/data/assistant/math/XITS-OFL.txt)
+# How to cite (Home), read from the repository's one citation file.
+qt_add_resources(edi_app_module "edi_citation" PREFIX "/" BASE ${PROJECT_SOURCE_DIR} FILES ${PROJECT_SOURCE_DIR}/CITATION.cff)
+# What's new: the docs site's dated page, the one place the changes are written.
+qt_add_resources(edi_app_module "edi_changelog" PREFIX "/edi" BASE ${PROJECT_SOURCE_DIR}/website/surfaces/docs
+                 FILES ${PROJECT_SOURCE_DIR}/website/surfaces/docs/changelog.md)
 # Stored uncompressed, so the texts stay readable in the binary itself as well.
 qt_add_resources(edi_app_module "edi_licences" PREFIX "/" BASE ${PROJECT_SOURCE_DIR}
                  OPTIONS --no-compress FILES ${EDI_APP_LICENCE_FILES})
@@ -462,4 +491,10 @@ if(NOT EMSCRIPTEN)
         BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
     include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
     edi_bundle_assistant_runtime()
+endif()
+# Read-only documentation export, using the same linked dictionary as the app (ADR-0061).
+if(NOT EMSCRIPTEN)
+    qt_add_executable(edi_doc_metadata ${PROJECT_SOURCE_DIR}/tools/docs/reference-metadata.cpp)
+    target_link_libraries(edi_doc_metadata PRIVATE edi::core Qt6::Core)
+    set_target_properties(edi_doc_metadata PROPERTIES EXCLUDE_FROM_ALL TRUE WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 endif()

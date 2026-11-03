@@ -41,13 +41,18 @@ EaElements.Dialog {
     }
 
     property int inputFieldWidth: EaStyle.Sizes.fontPixelSize * 35
+    // False for a project that is not saved when it is made (a tutorial's): no location to show.
+    property bool showsLocation: true
 
     title: qsTr("Create project")
 
     standardButtons: Dialog.Ok
 
     onAccepted: projectLocation = projectLocationField.text
-    onOpened: ApplicationInfo.projectDescriptionOpened()
+    // OK is named as the dialog starts to show, and the name field takes the keyboard as it opens: what the user
+    // types goes into the name at once.
+    onAboutToShow: ApplicationInfo.projectDescriptionOpened(false)
+    onOpened: ApplicationInfo.projectDescriptionOpened(true)
 
     // Main layout
 
@@ -94,7 +99,7 @@ EaElements.Dialog {
 
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
-                placeholderText: qsTr("Enter project title here")
+                placeholderText: qsTr("Enter project title here (optional)")
 
                 Keys.onReturnPressed: dialog.accept()
                 Keys.onEnterPressed: dialog.accept()
@@ -116,7 +121,7 @@ EaElements.Dialog {
 
                 implicitWidth: dialog.inputFieldWidth
                 horizontalAlignment: TextInput.AlignLeft
-                placeholderText: qsTr("Enter authors here, separated by ;")
+                placeholderText: qsTr("Enter authors here, separated by ; (optional)")
 
                 Keys.onReturnPressed: dialog.accept()
                 Keys.onEnterPressed: dialog.accept()
@@ -137,13 +142,14 @@ EaElements.Dialog {
 
                 editorObjectName: "createProject.description"
                 implicitWidth: dialog.inputFieldWidth
-                placeholderText: qsTr("Enter project description here")
+                placeholderText: qsTr("Enter project description here (optional)")
             }
         }
 
         // Project location field
 
         Column {
+            visible: dialog.showsLocation
             EaElements.Label {
                 enabled: false
                 text: qsTr("Location")

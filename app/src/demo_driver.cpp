@@ -1268,14 +1268,23 @@ void DemoDriver::start() {
         fail(QStringLiteral("cannot create the output directory %1").arg(output_dir_.path()));
         return;
     }
+    if (documentation_ && !output_dir_.entryList(QStringList{"*.png", "manifest.json"}, QDir::Files).isEmpty()) {
+        fail(QStringLiteral("documentation output must not contain an earlier capture"));
+        return;
+    }
     park_pointer();
     QTimer::singleShot(0, this, [this] { run_step(); });
 }
 
 void DemoDriver::run_step() {
     if (current_ == steps_.size()) {
-        QCoreApplication::exit(0);
+        QCoreApplication::exit(!documentation_ || saveDocumentationManifest("complete") ? 0 : 1);
         return;
+    }
+    documentation_skip_ = false;
+    if (documentation_) {
+        std::fprintf(stdout, "docs-capture: %s\n", qPrintable(steps_[current_].image));
+        std::fflush(stdout);
     }
     action_ = 0;
     next_action();
@@ -1283,10 +1292,18 @@ void DemoDriver::run_step() {
 
 void DemoDriver::next_action() {
     const Step& step = steps_[current_];
+    if (documentation_skip_) {
+        documentation_scenes_.append(QJsonObject{{"id", step.image}, {"page", step.page},
+            {"sidebar", step.sidebar}, {"status", "skipped"}, {"reason", "sidebar tab is disabled"}});
+        ++current_;
+        run_step();
+        return;
+    }
     const bool unsettled = step.actions.contains(QStringLiteral("capture-now"));
     if (action_ < step.actions.size()) {
         const QString& action = step.actions.at(action_);
         ++action_;
+        if (documentation_) documentation_actions_.append(QJsonObject{{"scene", step.image}, {"action", action}});
         if (action == QLatin1String("capture-now")) {
             next_action();
             return;
@@ -1343,10 +1360,22 @@ void DemoDriver::next_action() {
         return;
     }
     const auto save = [this] {
+        if (!steps_[current_].capture) {
+            ++current_;
+            run_step();
+            return;
+        }
         const QString path = output_dir_.filePath(steps_[current_].image + QStringLiteral(".png"));
         if (!previous_frame_.save(path)) {
             fail(QStringLiteral("cannot write %1").arg(path));
             return;
+        }
+        if (documentation_) {
+            QString error;
+            if (!saveDocumentationFrame(path, &error)) {
+                fail(error);
+                return;
+            }
         }
         ++current_;
         run_step();
@@ -1380,6 +1409,9 @@ void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int fi
 }
 
 bool DemoDriver::perform(const QString& action) {
+    if (documentation_) {
+        if (auto handled = documentationAction(action)) return *handled;
+    }
     // Scrolls the view a control is in until the control shows (a sidebar column longer than the window).
     if (action.startsWith(QLatin1String("reveal:"))) {
         QQuickItem* item = find(action.mid(7), false);
@@ -1705,12 +1737,12 @@ bool DemoDriver::on_screen(QQuickItem* item) const {
     // What is left of the item inside the window and inside every clipping ancestor: a sidebar tab not
     // shown lies within the window, beside the shown one, but its view clips it away (the Extras
     // `group.peak` beside the Basic one).
-    QRectF shown = item->mapRectToScene(item->boundingRect())
+    QRectF shown = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()))
                        .intersected(QRectF(QPointF(0, 0), QSizeF(window_.width(), window_.height())));
     for (QQuickItem* ancestor = item->parentItem(); ancestor != nullptr && !shown.isEmpty();
          ancestor = ancestor->parentItem()) {
         if (ancestor->clip()) {
-            shown = shown.intersected(ancestor->mapRectToScene(ancestor->boundingRect()));
+            shown = shown.intersected(ancestor->mapRectToScene(ancestor->clipRect()));
         }
     }
     return !shown.isEmpty();
@@ -1781,15 +1813,18 @@ void DemoDriver::settle_then(std::function<void()> next) {
             next();
             return;
         }
-        if (++settle_attempts_ > kSettleMaxAttempts) {
+        const int max_attempts = documentation_ && documentation_workflow_ == "reference"
+                                     ? kSettleMaxAttempts * 10 : kSettleMaxAttempts;
+        if (++settle_attempts_ > max_attempts) {
             // The last two frames, to see what kept changing.
             previous_frame_.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-a.png")));
             frame.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-b.png")));
             fail(QStringLiteral("step %1 did not settle within %2 ms (%3)")
                      .arg(steps_[current_].image)
-                     .arg(kSettleIntervalMs * kSettleMaxAttempts)
+                     .arg(kSettleIntervalMs * max_attempts)
                      .arg(calculating ? QStringLiteral("a calculation is in flight")
-                                      : QStringLiteral("the window kept changing")));
+                                      : preparing ? QStringLiteral("a workflow page is preparing")
+                                                  : QStringLiteral("the window kept changing")));
             return;
         }
         previous_frame_ = frame;
@@ -2183,6 +2218,10 @@ bool DemoDriver::timed_slider(int count) {
 }
 
 void DemoDriver::fail(const QString& message) {
+    if (documentation_) {
+        window_.grabWindow().save(output_dir_.filePath("failure.png"));
+        saveDocumentationManifest("failed", message);
+    }
     std::fprintf(stderr, "edi_app --demo: %s\n", qPrintable(message));
     QCoreApplication::exit(1);
 }

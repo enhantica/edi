@@ -139,6 +139,9 @@ Rectangle {
                     placeholderText: qsTr("Enter project description here")
                     text: tab.project ? tab.project.description : ""
                     onEditingFinished: ApplicationInfo.descriptionCommit(3, undefined)
+                    // Tab moves on to the next field and commits, as from the one-line fields above.
+                    Keys.onTabPressed: event => ApplicationInfo.focusChainStep(event, true)
+                    Keys.onBacktabPressed: event => ApplicationInfo.focusChainStep(event, false)
                 }
             }
 

@@ -114,14 +114,26 @@ def migration_hits(paths, root):
     fixture = root / 'tests/fixtures/cwl_family'
     hashes = json.loads((fixture / 'rename-input-sha256.json').read_text())
     historical = fixture / 'rename_inputs/fcj/experiments/bank.edi'
+    # These immutable saved-byte captures include the old reader's refusal text.
+    # Only their complete recorded content is historical; an edit is scanned normally.
+    captures = {
+        'tests/fixtures/fittability/saved-before-rounded.json': (
+            '8fb45669c3061015a089fd17a85137a49b3a7cdda7fafa11d2ce4ea4824c8685'
+        ),
+        'tests/fixtures/fittability/saved-main.json': (
+            '358c2a5b254e6bdec09ad87d1e003af215e8650e14afd13fb3c36634b552dc5f'
+        ),
+    }
+    allowed = {historical: hashes['fcj/experiments/bank.edi']}
+    allowed.update({root / name: digest for name, digest in captures.items()})
     candidates = [
         path
         for path in paths
         if not (
-            path == historical
+            path in allowed
             and path.is_file()
             and not path.is_symlink()
-            and hashlib.sha256(path.read_bytes()).hexdigest() == hashes['fcj/experiments/bank.edi']
+            and hashlib.sha256(path.read_bytes()).hexdigest() == allowed[path]
         )
     ]
     hits = retired_hits(candidates)

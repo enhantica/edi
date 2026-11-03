@@ -20,6 +20,9 @@ import edi.app
 EaComponents.ListViewTextInput {
     id: cell
 
+    // The base takes its row's height; a cell made or dropped without a row yet has none.
+    height: parent ? parent.height : 0
+
     property var value: ""
     // The item a numeric cell shows, `category.name`.
     property string uid: ""
@@ -27,7 +30,10 @@ EaComponents.ListViewTextInput {
     // that would not fit the cell (NumberText.fitted; the owner, 2026-10-22), with the file's spelling, or the number
     // in full without an item, on hover.
     readonly property bool numeric: accepts === "number" && typeof value === "number" && isFinite(value)
-    readonly property string written: numeric ? (uid !== "" ? Session.written(uid, value) : NumberText.plain(value, 8)) : String(value)
+    // A read-only value the program computed (an output category's) is shown by its item's display format instead, as
+    // every read-only surface is (edi ADR-0051): rounded, so a value within rounding of zero reads as zero.
+    property bool displayed: false
+    readonly property string written: numeric ? (uid !== "" ? (displayed ? Session.display(uid, value) : Session.written(uid, value)) : NumberText.plain(value, 8)) : String(value)
     readonly property real room: width - leftPadding - rightPadding
     // Like ParameterCell, do not bind displayed text back to its own implicit width.
     property string shownValue: written
@@ -138,7 +144,7 @@ EaComponents.ListViewTextInput {
         active: cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
         sourceComponent: Component {
             EaElements.ToolTip {
-                text: cell.uid !== "" ? cell.written : NumberText.plainFull(cell.value)
+                text: cell.uid !== "" && !cell.displayed ? cell.written : NumberText.plainFull(cell.value)
                 visible: cell.shown !== cell.written && cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
             }
         }

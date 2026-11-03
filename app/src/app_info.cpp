@@ -5,7 +5,14 @@
 #include "assistant_view_model.hpp"
 #include "web_files.hpp"
 
+#include <QMap>
+#include <QJsonArray>
+
 #include "app_build_info.hpp"
+#include "build_version.hpp"
+#include "example_list_model.hpp"
+#include "user_action_log.hpp"
+#include "web_files.hpp"
 #include "engine_setup.hpp"
 #include "edi/palette.hpp"
 #include "edi/assistant_files.hpp"
@@ -16,6 +23,7 @@
 
 #include <QElapsedTimer>
 #include <QClipboard>
+#include <QDir>
 #include <QFile>
 #include <QGuiApplication>
 #include <QJSManagedValue>
@@ -33,6 +41,7 @@
 #include <QQmlListReference>
 #include <QRegularExpression>
 #include <QScreen>
+#include <QStandardPaths>
 #include <QSGRendererInterface>
 #include <QStringList>
 #include <QSysInfo>
@@ -177,7 +186,9 @@ bool assistant_device_available() {
 }  // namespace
 
 ApplicationInfo::ApplicationInfo(QObject* parent)
-    : QObject(parent), assistant_available_(assistant_device_available()) {}
+    : QObject(parent), assistant_available_(assistant_device_available()) {
+    edi_app::UserActionLog::install();
+}
 
 bool ApplicationInfo::assistantAvailable() const { return assistant_available_; }
 
@@ -190,16 +201,236 @@ void ApplicationInfo::useDemoIdentity() { g_demo_identity = true; }
 bool ApplicationInfo::demoIdentity() { return g_demo_identity; }
 
 QString ApplicationInfo::version() const {
-    return g_demo_identity ? QStringLiteral("demo") : QStringLiteral(EDI_APP_VERSION);
+    return g_demo_identity ? QStringLiteral("demo") : QString::fromUtf8(edi_app::app_version());
 }
 
 QString ApplicationInfo::releaseDate() const {
-    return g_demo_identity ? QStringLiteral("demo build") : QStringLiteral(EDI_APP_DATE);
+    return g_demo_identity ? QStringLiteral("demo build") : QString::fromUtf8(edi_app::app_date());
 }
 
 QString ApplicationInfo::description() const {
     return tr("EasyDiffraction is a software for calculating diffraction patterns based on structural models and "
               "refining their parameters against experimental data.");
+}
+
+QList<Tutorial> ApplicationInfo::tutorials() const {
+    const auto read = [](const QString& name) {
+        return QJsonDocument::fromJson(read_resource(QStringLiteral(":/edi/tutorials/") + name).toUtf8());
+    };
+    const auto text = [](const QJsonObject& object, const char* key) {
+        return object.value(QLatin1String(key)).toString();
+    };
+    const auto step = [&text](const QJsonObject& object, const QString& page) {
+        // A step's own page, else its tour page's: a step opening a page shows on the page before it.
+        return TutorialStep{text(object, "text"),
+                            object.contains(QStringLiteral("page")) ? text(object, "page") : page,
+                            text(object, "target"),
+                            text(object, "expected"),
+                            text(object, "via"),
+                            text(object, "check"),
+                            object.value(QStringLiteral("open")).toBool(),
+                            object.value(QStringLiteral("files")).toBool(),
+                            text(object, "tab"),
+                            text(object, "title"),
+                            object.value(QStringLiteral("coversTarget")).toBool()};
+    };
+    // A step without its own tab is on the tab the last sidebar-tab step on its page opened, so it sets up the same
+    // context on Next, Back or a jump.
+    const auto placeOnTabs = [](QList<TutorialStep>& steps) {
+        const QString prefix = QStringLiteral("sideBar.tab.");
+        QString page;
+        QString tab;
+        for (TutorialStep& step : steps) {
+            if (step.page != page) {
+                page = step.page;
+                tab.clear();
+            }
+            if (step.target.startsWith(prefix)) {
+                tab = step.target.mid(prefix.size());
+                continue;
+            }
+            if (step.tab.isEmpty()) {
+                step.tab = tab;
+            }
+        }
+    };
+    QList<Tutorial> tutorials;
+    for (const QJsonValue& entry : read(QStringLiteral("manifest.json")).object().value(QStringLiteral("tutorials")).toArray()) {
+        const QJsonObject object = entry.toObject();
+        Tutorial tutorial{text(object, "id"),      text(object, "title"), text(object, "description"),
+                          text(object, "project"), text(object, "start"), {},
+                          text(object, "stop"),    {}};
+        for (const QJsonValue& choice : object.value(QStringLiteral("completion")).toArray()) {
+            tutorial.completion.append(choice.toString());
+        }
+        for (const QJsonValue& value : object.value(QStringLiteral("steps")).toArray()) {
+            tutorial.steps.append(step(value.toObject(), {}));
+        }
+        // "family:value", as the examples' tags; a family the registry does not have is a neutral chip of the value.
+        for (const QJsonValue& value : object.value(QStringLiteral("tags")).toArray()) {
+            const QString tag = value.toString();
+            tutorial.tags.append(tag);
+            const qsizetype colon = tag.indexOf(QLatin1Char(':'));
+            const QString family = colon < 0 ? QString() : tag.left(colon);
+            const QString name = tag.mid(colon + 1);
+            const edi_app::TagChip chip = edi_app::tagChip(family, name, name);
+            tutorial.tag_labels.append(chip.label);
+            tutorial.tag_icons.append(chip.glyph);
+            tutorial.tag_colors.append(chip.light);
+            tutorial.tag_dark_colors.append(chip.dark);
+        }
+        // A tour's steps are their own file, one list per page (app/tutorials/tour.json), for other uses to share.
+        if (object.contains(QStringLiteral("tour"))) {
+            for (const QJsonValue& page : read(text(object, "tour")).object().value(QStringLiteral("pages")).toArray()) {
+                for (const QJsonValue& value : page.toObject().value(QStringLiteral("steps")).toArray()) {
+                    tutorial.steps.append(step(value.toObject(), text(page.toObject(), "page")));
+                }
+            }
+        }
+        placeOnTabs(tutorial.steps);
+        tutorials.append(tutorial);
+    }
+    return tutorials;
+}
+
+edi_app::ExampleListModel* ApplicationInfo::tutorialCatalogue() {
+    if (tutorial_catalogue_ == nullptr) {
+        QList<edi_app::ExampleListModel::Item> items;
+        for (const Tutorial& tutorial : tutorials()) {
+            items.append({tutorial.id, tutorial.title, tutorial.description, tutorial.tags});
+        }
+        tutorial_catalogue_ = new edi_app::ExampleListModel(items, this);
+    }
+    return tutorial_catalogue_;
+}
+
+namespace {
+
+// A changelog given to a test run through EDI_CHANGELOG_JSON: JSON text or a file holding it, either a list of
+// entries or an object with `entries`; each entry has a `date` and a `text`, or a `changes` list of lines.
+QList<ChangeDay> injected_changes(const QByteArray& given) {
+    QByteArray json = given.trimmed();
+    if (!json.startsWith('[') && !json.startsWith('{')) {
+        QFile file(QString::fromLocal8Bit(given));
+        json = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(json);
+    const QJsonArray entries =
+        document.isArray() ? document.array() : document.object().value(QStringLiteral("entries")).toArray();
+    QList<ChangeDay> days;
+    for (const QJsonValue& value : entries) {
+        const QJsonObject entry = value.toObject();
+        QString text = entry.value(QStringLiteral("text")).toString();
+        for (const QJsonValue& change : entry.value(QStringLiteral("changes")).toArray()) {
+            text += QStringLiteral("- ") + change.toString() + QLatin1Char('\n');
+        }
+        days.append(ChangeDay{entry.value(QStringLiteral("date")).toString(), text});
+    }
+    return days;
+}
+
+}  // namespace
+
+namespace {
+
+// Writes the tutorials' files into `folder`, made if missing, or hands each to the browser to download.
+bool write_tutorial_files(const QString& folder, bool download) {
+    const QDir source(QStringLiteral(":/edi/tutorials/files"));
+    if (!download && !QDir().mkpath(folder)) {
+        return false;
+    }
+    bool saved = true;
+    for (const QString& name : source.entryList(QDir::Files)) {
+        QFile file(source.filePath(name));
+        if (!file.open(QIODevice::ReadOnly)) {
+            saved = false;
+            continue;
+        }
+        const QByteArray data = file.readAll();
+        if (download) {
+            saved = edi_app::WebFiles::download(data, name) && saved;
+            continue;
+        }
+        QFile written(QDir(folder).filePath(name));
+        saved = written.open(QIODevice::WriteOnly | QIODevice::Truncate) && written.write(data) == data.size() && saved;
+    }
+    return saved;
+}
+
+}  // namespace
+
+bool ApplicationInfo::saveTutorialFiles(const QUrl& folder) const {
+    const bool download = edi_app::WebFiles::available();
+    return write_tutorial_files(download ? QString() : folder.toLocalFile(), download);
+}
+
+QUrl ApplicationInfo::stageTutorialFiles() const {
+    const QString folder = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
+                               .filePath(QStringLiteral("easydiffraction-tutorial"));
+    return write_tutorial_files(folder, false) ? QUrl::fromLocalFile(folder) : QUrl();
+}
+
+QList<ChangeDay> ApplicationInfo::changes() const {
+    QList<ChangeDay> days;
+    const QByteArray given = qgetenv("EDI_CHANGELOG_JSON");
+    if (!given.isEmpty()) {
+        days = injected_changes(given);
+    }
+    // A `## YYYY-MM-DD` heading starts a day; its lines up to the next heading are its entries.
+    static const QRegularExpression heading(QStringLiteral("^## (\\d{4}-\\d{2}-\\d{2})\\s*$"));
+    const QString bundled = given.isEmpty() ? read_resource(QStringLiteral(":/edi/changelog.md")) : QString();
+    for (const QString& line : bundled.split(QLatin1Char('\n'))) {
+        const QRegularExpressionMatch match = heading.match(line);
+        if (match.hasMatch()) {
+            days.append(ChangeDay{match.captured(1), {}});
+        } else if (line.startsWith(QLatin1String("## "))) {
+            days.append(ChangeDay{});  // an undated section belongs to no day
+        } else if (!days.isEmpty()) {
+            days.last().text += line + QLatin1Char('\n');
+        }
+    }
+    days.removeIf([](const ChangeDay& day) { return day.date.isEmpty(); });
+    for (ChangeDay& day : days) {
+        day.text = day.text.trimmed();
+    }
+    std::sort(days.begin(), days.end(), [](const ChangeDay& a, const ChangeDay& b) { return a.date > b.date; });
+    return days;
+}
+
+Citation ApplicationInfo::citation() const {
+    // The top-level `key: "value"` lines and the authors' names of a CITATION.cff; nothing else is read.
+    QMap<QString, QString> fields;
+    QStringList authors;
+    for (const QString& raw : read_resource(QStringLiteral(":/CITATION.cff")).split(QLatin1Char('\n'))) {
+        const QString line = raw.trimmed();
+        const auto value = [&](qsizetype colon) {
+            QString text = line.mid(colon + 1).trimmed();
+            if (text.size() >= 2 && text.startsWith(QLatin1Char('"')) && text.endsWith(QLatin1Char('"'))) {
+                text = text.mid(1, text.size() - 2);
+            }
+            return text;
+        };
+        if (line.startsWith(QLatin1String("- name:"))) {
+            authors.append(value(line.indexOf(QLatin1Char(':'))));
+        } else if (!raw.startsWith(QLatin1Char(' ')) && !line.startsWith(QLatin1Char('#'))) {
+            const qsizetype colon = line.indexOf(QLatin1Char(':'));
+            if (colon > 0) {
+                fields.insert(line.left(colon), value(colon));
+            }
+        }
+    }
+    const QString year = fields.value(QStringLiteral("date-released")).left(4);
+    const QString doi = fields.value(QStringLiteral("doi"));
+    const QString doi_url = doi.isEmpty() ? QString() : QStringLiteral("https://doi.org/") + doi;
+    const QString title = fields.value(QStringLiteral("title"));
+    const QString version = fields.value(QStringLiteral("version"));
+    const QString who = authors.join(QStringLiteral(", "));
+    const QString text = QStringLiteral("%1 (%2). %3 (version %4) [Computer software]. %5")
+                             .arg(who, year, title, version, doi_url);
+    const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {{%1}},\n  title = {%2},\n"
+                                          "  year = {%3},\n  version = {%4},\n  doi = {%5},\n  url = {%6}\n}")
+                               .arg(who, title, year, version, doi, doi_url);
+    return {text, bibtex, doi, doi_url};
 }
 
 QString ApplicationInfo::licenceText(const QString& url) const { return read_resource(bundled_resource(url)); }
@@ -473,7 +704,9 @@ QString graphics_api(QSGRendererInterface::GraphicsApi api) {
 QString ApplicationInfo::diagnostics() const {
     QStringList lines;
     const auto add = [&lines](const QString& name, const QString& value) { lines.append(name + QStringLiteral(": ") + value); };
-    add(QStringLiteral("EasyDiffraction"), QStringLiteral(EDI_APP_VERSION " (" EDI_APP_DATE ")"));
+    add(QStringLiteral("EasyDiffraction"),
+        QString::fromUtf8(edi_app::app_version()) + QStringLiteral(" (") + QString::fromUtf8(edi_app::app_date()) +
+            QStringLiteral(")"));
     add(QStringLiteral("crysta"), QStringLiteral(EDI_APP_CRYSTA_VERSION));
     add(QStringLiteral("crysta SDK commit"), QStringLiteral(EDI_APP_CRYSTA_COMMIT));
     add(QStringLiteral("Platform"), QSysInfo::prettyProductName() + QStringLiteral(" (") + QSysInfo::currentCpuArchitecture() +
@@ -2770,13 +3003,35 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     return QJSValuePrivate::convertToReturnedValue(frame.vm(), result);
 }
 
-void ApplicationInfo::afterProjectChanges(const QJSValue& action, const QJSValue& abandoned) const {
+void ApplicationInfo::afterProjectChanges(const QJSValue& action, const QJSValue& abandoned, bool creating) const {
     const auto frame = panelUsageEngine(this);
     // A Text tab's unapplied edit is settled first; settled, the changes are dealt with again.
     const auto edit = panelUsageContextRead(frame, "textEdit");
     if (!panelUsageReady(frame)) return;
     if (!edit.isNull() && !edit.isUndefined()) {
-        panelUsageMemberCall(frame, edit, "settleEdit", {panelUsageClosure(frame, 390, {action, abandoned}, 0), abandoned});
+        panelUsageMemberCall(frame, edit, "settleEdit", {panelUsageClosure(frame, 390, {action, abandoned, QJSValue(creating)}, 0), abandoned});
+        return;
+    }
+    // A tutorial's project is never what an open, a new project, a close or a quit leaves behind (edi ADR-0064).
+    const bool setAside = panelUsageTruth(assistantContextField(frame, "Session", "hasProjectSetAside"));
+    const bool making = setAside && assistantContextField(frame, "Session", "project").isNull() &&
+                        panelUsageTruth(panelUsageContextRead(frame, "tutorialRunning"));
+    // Create a new project in a tutorial without a project of its own yet: the action only opens the dialog, at once.
+    if (creating && making) {
+        projectCall(frame, action);
+        return;
+    }
+    // The user's own project waits aside with unsaved changes: the window asks about them first.
+    if (setAside && panelUsageTruth(assistantContextField(frame, "Session", "projectSetAsideModified"))) {
+        panelUsageGlobalCall(frame, "setAsideChangesQuestion", {action});
+        return;
+    }
+    if (making) {  // the tutorial is making its project: the action makes it
+        panelUsageMemberCall(frame, panelUsageContextRead(frame, "Qt"), "callLater", {action});
+        return;
+    }
+    if (setAside) {  // the user's project comes back first, on the next turn, and the action then runs as always
+        panelUsageMemberCall(frame, panelUsageContextRead(frame, "Qt"), "callLater", {panelUsageClosure(frame, 396, {action, abandoned}, 0)});
         return;
     }
     const auto project = assistantContextField(frame, "Session", "project");
@@ -2845,16 +3100,20 @@ void ApplicationInfo::cancelProjectSaveAs() const {
 void ApplicationInfo::projectWindowClosing(const QJSValue& close) const {
     const auto frame = panelUsageEngine(this);
     if (panelUsageTruth(panelUsageContextRead(frame, "quitting")) || !panelUsageReady(frame)) return;
-    if (assistantContextField(frame, "Session", "project").isNull()) return;
-    const auto project = assistantContextField(frame, "Session", "project");
-    // Unsaved changes, or a Text tab's unapplied edit, are dealt with first.
-    if (!panelUsageTruth(panelUsageRead(frame, project, "modified")) && assistantContextField(frame, "AppState", "textEdit").isNull()) return;
+    // A project a tutorial set aside comes back before the quit (edi ADR-0064); otherwise unsaved changes, or a Text
+    // tab's unapplied edit, are dealt with first.
+    if (!panelUsageTruth(assistantContextField(frame, "Session", "hasProjectSetAside"))) {
+        if (assistantContextField(frame, "Session", "project").isNull()) return;
+        const auto project = assistantContextField(frame, "Session", "project");
+        if (!panelUsageTruth(panelUsageRead(frame, project, "modified")) && assistantContextField(frame, "AppState", "textEdit").isNull()) return;
+    }
     if (!panelUsageReady(frame)) return;
     assistantMemberWrite(frame, close, "accepted", QJSValue(false));
     projectInvoke(frame, "AppState", "afterChanges", {projectGuardedClosure(frame, 23)});
 }
-void ApplicationInfo::projectChangesQuestion(const QJSValue& action, const QJSValue& abandoned) const {
+void ApplicationInfo::projectChangesQuestion(const QJSValue& action, const QJSValue& abandoned, bool setAside) const {
     const auto frame = panelUsageEngine(this);
+    projectWrite(frame, "unsavedChanges", "setAside", QJSValue(setAside));
     const auto previous = assistantContextField(frame, "unsavedChanges", "abandoned");
     projectWrite(frame, "unsavedChanges", "abandoned", consentNull());
     if (panelUsageTruth(previous)) projectCall(frame, previous);
@@ -2888,6 +3147,12 @@ void ApplicationInfo::abandonUnsavedProjectAction() const {
 }
 void ApplicationInfo::acceptUnsavedProject() const {
     const auto frame = panelUsageEngine(this);
+    // About the user's own project a tutorial holds aside: it comes back and the tutorial ends first, on the next turn.
+    if (panelUsageTruth(panelUsageContextRead(frame, "setAside"))) {
+        panelUsageContextWrite(frame, "setAside", QJSValue(false));
+        panelUsageCallLater(frame, panelUsageClosure(frame, 397, {}, 0));
+        return;
+    }
     const auto original = panelUsageContextRead(frame, "nativeCreation");
     const auto waiting = panelUsageContextRead(frame, "action");
     if (panelUsageTruth(assistantContextField(frame, "Session", "needsSaveAs"))) {
@@ -2956,6 +3221,11 @@ void ApplicationInfo::discardUnsavedProject() const {
     panelUsageContextWrite(frame, "action", consentNull());
     panelUsageContextWrite(frame, "abandoned", consentNull());
     panelUsageGlobalCall(frame, "close", {});
+    if (panelUsageTruth(panelUsageContextRead(frame, "setAside"))) {  // the set-aside project comes back, then is discarded
+        panelUsageContextWrite(frame, "setAside", QJSValue(false));
+        panelUsageCallLater(frame, panelUsageClosure(frame, 398, {waiting}, 0));
+        return;
+    }
     projectInvoke(frame, "Session", "discardKeptChanges");
     panelUsageCallLater(frame, waiting);
 }
@@ -3629,7 +3899,8 @@ void ApplicationInfo::ensureParameterSelection() const {
 // count counts; a completed group then selects a row.
 void ApplicationInfo::parameterMeasuredChanged(bool completed) const {
     const auto f = panelUsageEngine(this);
-    if (!panelUsageTruth(assistantContextField(f, "group", "measured"))) projectInvoke(f, "parameterFilter", "clearFilters");
+    // Without measured data only the free/fixed choice goes back to all; the other filters stay (the bar stays shown).
+    if (!panelUsageTruth(assistantContextField(f, "group", "measured"))) projectWrite(f, "parameterFilter", "variability", QJSValue(0));
     if (completed) projectInvoke(f, "group", "ensureSelection");
 }
 void ApplicationInfo::parameterSelectionChanged(bool projectChanged) const {
@@ -4129,7 +4400,7 @@ void ApplicationInfo::resetPreferences() const {
     projectWrite(f, "preferences", "assistantWidth", assistantContextField(f, "AppSizes", "assistantDefaultWidth"));
     const std::pair<const char*, QJSValue> defaults[] = {
         {"toolTips", QJSValue(true)}, {"autoCollapse", QJSValue(true)}, {"sideBarSide", QJSValue(QStringLiteral("Right"))},
-        {"engineThreads", QJSValue(0)}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
+        {"engineThreads", QJSValue(0)}, {"loggingLevel", QJSValue(QStringLiteral("Info"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
         {"analysisShowBySymmetry", QJSValue(false)}, {"analysisShowByConstraint", QJSValue(false)}, {"analysisShowFixedSettings", QJSValue(false)},
         {"showFitResults", QJSValue(true)}, {"scanRenderer", QJSValue(QStringLiteral("auto"))}, {"newProjectSuRule", QJSValue(QStringLiteral("iucr_99"))},
         {"newReportLibraries", QJSValue(QStringLiteral("online"))}, {"colourScheme", QJSValue(QStringLiteral("earth"))}, {"patternYScale", QJSValue(QStringLiteral("linear"))},
@@ -7143,7 +7414,8 @@ QJSValue ApplicationInfo::statusKeysFit() const {
     const auto spaces = viewArithmetic(f, controlMath(f, "max", {QJSValue(0), QJSValue(shown - 1)}), spacing, 1);
     const auto first = panelUsageAdd(f, panelUsageAdd(f, width, spaces), fitWidth); QJSValue assistantWidth(0);
     if (panelUsageTruth(assistantContextField(f, "assistantGroup", "visible"))) assistantWidth = panelUsageAdd(f, assistantContextField(f, "assistantGroup", "width"), spacing);
-    const auto total = panelUsageAdd(f, first, assistantWidth);
+    // The tutorial strip, when it shows, takes its room at the far right (stripRoom).
+    const auto total = panelUsageAdd(f, panelUsageAdd(f, first, assistantWidth), assistantContextField(f, "bar", "stripRoom"));
     const auto barWidth = assistantContextField(f, "bar", "width");
     const auto margin = viewArithmetic(f, QJSValue(2), controlStylePixel(f), 1);
     return QJSValue(assistantRelation(f, total, viewArithmetic(f, barWidth, margin, 0), 3));
@@ -7154,7 +7426,8 @@ QJSValue ApplicationInfo::statusRoomFor() const {
     const auto margin = viewArithmetic(f, QJSValue(2), controlStylePixel(f), 1); auto available = viewArithmetic(f, barWidth, margin, 0);
     QJSValue assistantWidth(0);
     if (panelUsageTruth(assistantContextField(f, "assistantGroup", "visible"))) assistantWidth = panelUsageAdd(f, assistantContextField(f, "assistantGroup", "width"), spacing);
-    available = viewArithmetic(f, available, assistantWidth, 0); QJSValue fitWidth(0);
+    available = viewArithmetic(f, available, assistantWidth, 0);
+    available = viewArithmetic(f, available, assistantContextField(f, "bar", "stripRoom"), 0); QJSValue fitWidth(0);
     if (panelUsageTruth(assistantContextField(f, "fitArea", "visible"))) fitWidth = panelUsageAdd(f, assistantContextField(f, "fitArea", "compactWidth"), spacing);
     else if (panelUsageTruth(assistantContextField(f, "openingProgress", "visible"))) fitWidth = panelUsageAdd(f, assistantContextField(f, "openingProgress", "width"), spacing);
     available = viewArithmetic(f, available, fitWidth, 0); QJSValue width(0);
@@ -9915,8 +10188,17 @@ QJSValue ApplicationInfo::projectJoinedPath(const QJSValue& folder, const QJSVal
     if (panelUsageTruth(panelUsageMemberCall(f, path, "endsWith", {slash})) || panelUsageTruth(panelUsageMemberCall(f, path, "endsWith", {backslash}))) return panelUsageAdd(f, path, name);
     const auto utils = panelUsageRead(f, panelUsageContextRead(f, "EaLogic"), "Utils"), separator = panelUsageMemberCall(f, utils, "osPathSep"); const auto first = panelUsageAdd(f, path, separator); return panelUsageAdd(f, first, name);
 }
-void ApplicationInfo::projectDescriptionOpened() const {
+void ApplicationInfo::projectDescriptionOpened(bool focusName) const {
     const auto f = panelUsageEngine(this); const auto create = panelUsageGlobalCall(f, "standardButton", {assistantContextField(f, "Dialog", "Ok")}); if (panelUsageTruth(create)) assistantMemberWrite(f, create, "objectName", QJSValue(QStringLiteral("createProject.accept")));
+    if (focusName && panelUsageReady(f)) projectInvoke(f, "projectNameField", "forceActiveFocus");
+}
+// Tab and Backtab move to the next or previous item in the focus chain, as in a one-line field (the event is taken).
+void ApplicationInfo::focusChainStep(const QJSValue& event, bool forward) const {
+    const auto f = panelUsageEngine(this);
+    const auto next = panelUsageGlobalCall(f, "nextItemInFocusChain", {QJSValue(forward)});
+    if (!panelUsageReady(f)) return;
+    panelUsageMemberCall(f, next, "forceActiveFocus", {QJSValue(int(forward ? Qt::TabFocusReason : Qt::BacktabFocusReason))});
+    if (panelUsageReady(f)) assistantMemberWrite(f, event, "accepted", QJSValue(true));
 }
 void ApplicationInfo::toolTipAboutToShow() const {
     const auto f = panelUsageEngine(this); if (!panelUsageTruth(panelUsageContextRead(f, "parent"))) return;
@@ -10118,7 +10400,7 @@ bool createSameProject(const PanelUsageFrame& f, const QJSValue& original) { ret
 bool createAlive(const PanelUsageFrame& f, const QJSValue& life) { return panelUsageTruth(panelUsageRead(f, life, "alive")); }
 QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& a) {
-    if (op == 380) { projectInvoke(f, "Preferences", "apply"); return projectInvoke(f, "RecentProjects", "refresh"); }
+    if (op == 380) { projectInvoke(f, "Preferences", "apply"); projectInvoke(f, "RecentProjects", "refresh"); return projectInvoke(f, "whatsNewDialog", "showIfUpdated"); }
     if (op == 381) return panelUsageRead(f, a(0), "wanted");
     if (op == 382) {
         const auto wanted = panelUsageRead(f, a(0), "wanted"); if (!panelUsageTruth(wanted)) return wanted;
@@ -10158,7 +10440,20 @@ QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
         if (!panelUsageTruth(panelUsageContextRead(f, "box"))) return {};
         return projectCall(f, saved(0));
     }
-    if (op == 390) return panelUsageGlobalCall(f, "afterChanges", {saved(0), saved(1)});
+    if (op == 390) return panelUsageGlobalCall(f, "afterChanges", {saved(0), saved(1), saved(2)});
+    if (op == 397 || op == 398) {
+        projectInvoke(f, "Session", "restoreProjectSetAside");
+        projectInvoke(f, "AppState", "tutorialEnded");
+        if (op == 397) return projectInvoke(f, "ApplicationInfo", "acceptUnsavedProject");
+        projectInvoke(f, "Session", "discardKeptChanges");
+        panelUsageCallLater(f, saved(0));
+        return {};
+    }
+    if (op == 396) {
+        projectInvoke(f, "Session", "restoreProjectSetAside");
+        panelUsageGlobalCall(f, "tutorialEnded");
+        return panelUsageGlobalCall(f, "afterChanges", {saved(0), saved(1)});
+    }
     if (op == 394) return panelUsageRead(f, a(0), "fittable");
     if (op == 395) {
         const auto table = saved(0), life = saved(1);
@@ -10189,6 +10484,9 @@ QJSValue ApplicationInfo::workflowPagesCount(bool built) const {
 }
 QJSValue ApplicationInfo::workflowPageTurn(const QJSValue& loader) const {
     const auto f = panelUsageEngine(this); const auto started = panelUsageContextRead(f, "pagesStarted"); if (!panelUsageTruth(started)) return started;
+    // None starts once the window is quitting: closing during a tutorial brings the user's project back just before the
+    // quit, and its pages would otherwise still be building when the engine goes.
+    if (panelUsageTruth(panelUsageContextRead(f, "quitting"))) return QJSValue(false);
     const auto loaders = panelUsageContextRead(f, "pageLoaders");
     const auto earlier = panelUsageDeferredMemberCall(f, loaders, "slice", [&] { return QJSValueList{QJSValue(0), panelUsageMemberCall(f, panelUsageContextRead(f, "pageLoaders"), "indexOf", {loader})}; });
     return panelUsageMemberCall(f, earlier, "every", {panelUsageClosure(f, 383, {}, 1)});
@@ -10307,7 +10605,7 @@ void ApplicationInfo::chooseCreateProject() const {
 }
 void ApplicationInfo::createProjectClicked() const {
     const auto f = panelUsageEngine(this); const auto original = createGroupField(f, "assistantCreate"), state = panelUsageContextRead(f, "AppState");
-    panelUsageMemberCall(f, state, "afterChanges", {panelUsageClosure(f, 384, {original}), panelUsageClosure(f, 385, {original})});
+    panelUsageMemberCall(f, state, "afterChanges", {panelUsageClosure(f, 384, {original}), panelUsageClosure(f, 385, {original}), QJSValue(true)});
 }
 void ApplicationInfo::createProjectDialogEvent(int kind) const {
     const auto f = panelUsageEngine(this); QJSValue life; if (kind >= 2) life = createGroupField(f, "createLife"); const auto original = createGroupField(f, "createIntent");
@@ -10326,7 +10624,8 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
     createGroupWrite(f, "createIntent", consentNull()); if (!createAlive(f, life) || !createGroupField(f, "createOperation").strictlyEquals(original) || !createSameProject(f, original)) return;
     if (!panelUsageRead(f, original, "assistant").isNull() && createGroupField(f, "assistantCreate").strictlyEquals(panelUsageRead(f, original, "assistant"))) createGroupWrite(f, "assistantCreate", consentNull());
     const auto name = assistantContextField(f, "createDialog", "projectName"), description = assistantContextField(f, "createDialog", "projectDescription");
-    const auto location = panelUsageTruth(assistantContextField(f, "WebFiles", "available")) ? QJSValue(QStringLiteral("")) : assistantContextField(f, "createDialog", "projectLocation");
+    const bool unsaved = panelUsageTruth(assistantContextField(f, "WebFiles", "available")) || assistantContextField(f, "createDialog", "showsLocation").strictlyEquals(QJSValue(false));
+    const auto location = unsaved ? QJSValue(QStringLiteral("")) : assistantContextField(f, "createDialog", "projectLocation");
     const auto title = assistantContextField(f, "createDialog", "projectTitle"), authors = assistantContextField(f, "createDialog", "projectAuthors");
     assistantMemberWrite(f, panelUsageRead(f, panelUsageContextRead(f, "EaGlobals"), "Vars"), "showProjectDescriptionDialog", QJSValue(false));
     const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors})});
@@ -10341,7 +10640,10 @@ void ApplicationInfo::windowSaveChoiceOpened() const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "nativeAcceptButton"))) assistantMemberWrite(f, panelUsageContextRead(f, "nativeAcceptButton"), "objectName", QJSValue(QStringLiteral("saveAs.accept")));
 }
 QJSValue ApplicationInfo::windowUnsavedText() const {
-    const auto f = panelUsageEngine(this); const auto text = mainText(f, QT_TRANSLATE_NOOP("Main", "The current project <b>%1</b> has unsaved changes."));
+    const auto f = panelUsageEngine(this);
+    if (panelUsageTruth(assistantContextField(f, "unsavedChanges", "setAside")))
+        return mainText(f, QT_TRANSLATE_NOOP("Main", "Your own project, set aside for the tutorial, has unsaved changes."));
+    const auto text = mainText(f, QT_TRANSLATE_NOOP("Main", "The current project <b>%1</b> has unsaved changes."));
     return panelUsageDeferredMemberCall(f, text, "arg", [&] {
         QJSValue name(QStringLiteral("")); if (!assistantContextField(f, "Session", "project").isNull()) {
             const auto first = panelUsageMemberCall(f, panelUsageRead(f, assistantContextField(f, "Session", "project"), "name"), "replace", {panelRegex(f, QStringLiteral("&"), QV4::CompiledData::RegExp::RegExp_Global), QJSValue(QStringLiteral("&amp;"))});

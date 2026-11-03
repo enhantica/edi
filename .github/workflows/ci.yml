@@ -366,6 +366,7 @@ jobs:
           path: |
             build/app/app/edi_app
             build/app/app/edi_app_tests
+            build/tutorial-transactions
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
           fail-on-cache-miss: true
       - name: Make them executable
@@ -721,6 +722,12 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Compiler cache statistics
         run: pixi run -e app ccache --show-stats
+      # The system tier's tutorial tests observe the app's project storage through an observer linked from this build.
+      # The task also packs the build files the observer's receipt names, which the system jobs unpack before their
+      # tests (tools/ci/tutorial_transaction_inputs.py).
+      - name: Build the tutorial transaction observer for the system jobs
+        if: github.event_name != 'pull_request'
+        run: pixi run -e app --skip-deps tutorial-transactions
       # The system jobs run this app and its test runner rather than building their own. They go through this run's
       # cache, not an artifact: anyone can download a public repository's artifacts, and these are binaries.
       - name: Keep the app and its test runner for the system jobs
@@ -729,6 +736,7 @@ jobs:
           path: |
             build/app/app/edi_app
             build/app/app/edi_app_tests
+            build/tutorial-transactions
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
       # The integration tests whose wiring vectors run on the real app skip in the core job, which has no app. They
       # run here, on every run, on the test runner just built from this commit; without it they fail.
@@ -740,6 +748,11 @@ jobs:
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing
         run: pixi run -e app --skip-deps app-format-check
+      # The onboarding tests' prerequisites, made before the tests that use them and outside their timing: the two
+      # standalone probes (the app group, the Qt Quick tier) and a documentation capture from the app just built.
+      - name: Prepare the onboarding test prerequisites
+        if: github.event_name != 'pull_request'
+        run: pixi run -e app --skip-deps onboarding-probes && pixi run -e app --skip-deps onboarding-capture
       # About 9 minutes on each platform, so main pushes, the nightly and manual runs only.
       - name: The app group's Python tests (tests/integration/app)
         if: github.event_name != 'pull_request'

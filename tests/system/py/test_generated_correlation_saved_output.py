@@ -13,6 +13,7 @@ import pytest
 
 from tests.conftest import corpus_case_dir, crysta_reference_prefix
 from tests.fixtures.background_estimate import manual_bytes as estimate_bytes
+from tests.fixtures.metadata_transition.source_bytes import previous_content
 from tests.fixtures.report_units.iucr_reference import rounded_correlation
 from tests.fixtures.shared_correlations.freeze_saved import HERE, hashes, loop_bytes
 
@@ -58,7 +59,7 @@ def test_real_fit_emits_every_pinned_single_or_template_correlation_row(
         if case == 'single' and directory == 'experiments':
             # Before: byte-identical corpus. After: exactly the manual-settings
             # addition; the original fit input and every fitted result pin stay fixed.
-            data = (corpus_project / 'experiments/hrpt.edi').read_bytes()
+            data = previous_content((corpus_project / 'experiments/hrpt.edi').read_bytes())
             current['hrpt.edi'] = hashlib.sha256(estimate_bytes.without_category(data)).hexdigest()
         assert hashes(source / directory) == current, (
             'The frozen fit input differs from the live corpus '

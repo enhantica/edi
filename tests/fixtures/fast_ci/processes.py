@@ -73,7 +73,8 @@ def process_guard(root):
             else command_tokens(argv)
         )
         state['launched'].append(words)
-        if app_command(words) or any(
+        cwd = args[2] if event == 'subprocess.Popen' else None
+        if app_command(words, cwd) or any(
             helper_builds(word) for word in words if word.endswith(('.mjs', '.sh'))
         ):
             state['blocked'].append(words)

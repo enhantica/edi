@@ -45,7 +45,8 @@ class RelationUndoObserver final : public QObject {
         auto* vm = qobject_cast<edi_app::ProjectViewModel*>(object);
         if (vm == nullptr) return false;
         auto& p = const_cast<edi::Project&>(vm->project());
-        p.constraints.erase_at(0);
+        // Structural setup uses the app's write door so table keys follow the live rows.
+        if (!vm->apply(edi::Edit::erase(p.constraints, 0), true).isEmpty()) return false;
         edi::refresh_relations(p);
         p.structure().atom_sites[0]->adp_iso.free = true;
         p.minimizer_max_iterations = 2;

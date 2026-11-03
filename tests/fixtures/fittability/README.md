@@ -24,8 +24,10 @@ Regenerate only against the recorded main tree, with the matching built API:
 The table-display project also carries its fixture helper as a copied asset. After an
 intentional helper change, use `PYTHONPATH=. python tests/fixtures/fittability/adapt_saved_pins.py --before-helper <previous-metadata_bytes.py>`. This reproduces the historical helper
 hash, requires its saved bytes to equal its current source, and refuses any other
-saved path or byte change under either uncertainty rule. The original baseline stays
-unchanged; the two exact asset transitions join the existing transition manifest.
+saved path or byte change under either uncertainty rule, using the existing checked
+layout projection. The original baseline stays unchanged. A later helper edit must
+match the current pin and its existing transition before advancing that transition
+to the new asset hash; git retains each earlier endpoint.
 
 The category and text-format adaptation keeps all current and original byte pins
 and transition seals unchanged. Its layout adapter must recover their complete

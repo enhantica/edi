@@ -88,8 +88,10 @@ not the project being read (measured with the app's software renderer, as on the
    this page…*; while pages build, the status bar shows *Opening project… N of M pages* with a progress bar in the fit
    area's place, gone once every page is built. A page past Project that was shown when another project opened gives
    way to the Project page. Opening another project meanwhile drops the pages being built, and the replaced project's
-   worker is gone with it, so nothing of the first reaches the second. A Save while pages or the first calculation are
-   pending runs the save sequence of decision 7 on the model, unaffected.
+   worker is gone with it, so nothing of the first reaches the second. Quitting stops the pages being built and starts
+   none: closing the window during a tutorial brings the user's project back just before the quit, and its pages were
+   still building when the QML engine went. A Save while pages or the first calculation are pending runs the save
+   sequence of decision 7 on the model, unaffected.
 
 1. **The web app** (owner, 2026-10-25). Every project there has a place, and Save writes into it: no download and no
    dialog. The place is the browser's own storage (its origin private file system, which survives a reload), shown as

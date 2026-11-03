@@ -91,3 +91,29 @@ def test_external_profile_literal_is_limited_to_its_reader_boundary(tmp_path, es
     assert profiles.migration_hits([path], tmp_path) == [str(path)], (
         'The external enum exemption rejects extra tokens, duplicates, changed dispatch and copies'
     )
+
+
+@pytest.mark.parametrize('name', ['saved-before-rounded.json', 'saved-main.json'])
+def test_historical_refusal_capture_requires_exact_bytes_and_location(tmp_path, name):
+    fixture = tmp_path / 'tests/fixtures/cwl_family'
+    fixture.mkdir(parents=True)
+    shutil.copyfile(
+        ROOT / 'tests/fixtures/cwl_family/rename-input-sha256.json',
+        fixture / 'rename-input-sha256.json',
+    )
+    original = ROOT / 'tests/fixtures/fittability' / name
+    historical = tmp_path / original.relative_to(ROOT)
+    historical.parent.mkdir(parents=True)
+    historical.write_bytes(original.read_bytes())
+    assert not profiles.migration_hits([historical], tmp_path), (
+        'An immutable old refusal record may retain its original diagnostic spelling'
+    )
+    copied = historical.with_name('copied.json')
+    copied.write_bytes(historical.read_bytes())
+    assert profiles.migration_hits([copied], tmp_path) == [str(copied)], (
+        'Copying an old refusal record to a new file cannot bypass the migration scan'
+    )
+    historical.write_bytes(historical.read_bytes() + b'\n')
+    assert profiles.migration_hits([historical], tmp_path) == [str(historical)], (
+        'Even a whitespace-only change removes the exact historical refusal exemption'
+    )

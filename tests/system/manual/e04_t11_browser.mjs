@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
+import { checkTutorialFileDownloads } from './web_tutorial_files.mjs';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
 import { statusActionLifetimeChecks } from './web_status_action_lifetime.mjs';
@@ -18,6 +19,7 @@ import { assertSavedProject, assertSavedNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
+const tutorialFilesOnly = process.argv.includes('--tutorial-files-only');
 const saveRouteOnly = process.argv.includes('--save-route-only');
 const exampleOnly = process.argv.includes('--example-only');
 const statusActionLifetimeOnly = process.argv.includes('--status-action-lifetime-only');
@@ -485,8 +487,13 @@ try {
     () => shot('develop-diagnostics'));
   if (process.argv.includes('--diagnostics-only')) {
     console.log(`${mode}: actual Develop-view diagnostics passed`);
+  } else if (tutorialFilesOnly) {
+    await checkTutorialFileDownloads({ click, event, output, evaluate, send, mode });
+    console.log(`${mode}: actual tutorial-file downloads passed`);
   } else {
   await shot('home');
+  if (!fileRequestsOnly && !exampleOnly)
+    await checkTutorialFileDownloads({ click, event, output, evaluate, send, mode });
   await click(/^Start$/);
   await click(/^Project$/);
   const statusActions=statusActionLifetimeOnly ? statusActionLifetimeChecks({send,evaluate,frame,output,mode}) : null;

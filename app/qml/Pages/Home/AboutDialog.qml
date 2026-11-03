@@ -42,24 +42,14 @@ AppDialog {
             font.family: EaStyle.Fonts.monoFontFamily
         }
     }
-    // A link-coloured label that runs `activated` on a click.
-    component LinkLabel: EaElements.Label {
-        id: link
-
-        signal activated
-
-        color: EaStyle.Colors.link
-        HoverHandler {
-            cursorShape: Qt.PointingHandCursor
-        }
-        TapHandler {
-            onTapped: link.activated()
-        }
-    }
 
     objectName: "about"
     visible: EaGlobals.Vars.showAppAboutDialog
-    onClosed: EaGlobals.Vars.showAppAboutDialog = false
+    // As soon as closing starts: a close before the opening has finished emits no closed(), and the flag would show
+    // the window again.
+    onAboutToHide: EaGlobals.Vars.showAppAboutDialog = false
+    // A window closed with About open does not leave it open for the next window.
+    Component.onDestruction: EaGlobals.Vars.showAppAboutDialog = false
 
     title: qsTr("About")
     standardButtons: Dialog.Ok
@@ -100,7 +90,19 @@ AppDialog {
                 text: descriptionLabel.text
             }
         }
-        // The two links, one under the other, each after the licence icon.
+        // Praise through Help and feedback (edi ADR-0063): an in-app link, so nothing goes to the system.
+        IconLink {
+            objectName: "about.tellUs"
+            anchors.horizontalCenter: parent.horizontalCenter
+            fontIcon: "comments"
+            text: qsTr("If you like it, tell us")
+            onClicked: {
+                EaGlobals.Vars.showAppAboutDialog = false;
+                AppState.feedbackRequested("feedback", "");
+            }
+        }
+        // The licence links, light links with the licence icon as Home's are: edi's own licences side by side, the
+        // third-party licences under them.
         Column {
             objectName: "about.links"
             anchors.horizontalCenter: parent.horizontalCenter
@@ -109,57 +111,30 @@ AppDialog {
             Row {
                 objectName: "about.licences"
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                spacing: EaStyle.Sizes.fontPixelSize * 1.5
 
-                IconLine {
-                    segments: [
-                        {
-                            "icon": "balance-scale",
-                            "color": EaStyle.Colors.themeForeground
-                        }
-                    ]
-                }
-                // The identifiers, a dot in the text colour between them: "BSD-3-Clause · GPL-3.0-only".
                 Repeater {
                     model: ApplicationInfo.appLicenceIds
 
-                    Row {
+                    IconLink {
                         id: licenceEntry
 
                         required property string modelData
                         required property int index
 
-                        spacing: EaStyle.Sizes.fontPixelSize * 0.5
-
-                        EaElements.Label {
-                            visible: licenceEntry.index > 0
-                            text: "·"
-                        }
-                        LinkLabel {
-                            objectName: "about.licence." + licenceEntry.modelData
-                            text: licenceEntry.modelData
-                            onActivated: ApplicationInfo.aboutOpenLicence()
-                        }
+                        objectName: "about.licence." + modelData
+                        fontIcon: "balance-scale"
+                        text: modelData
+                        onClicked: ApplicationInfo.aboutOpenLicence()
                     }
                 }
             }
-            Row {
+            IconLink {
+                objectName: "about.thirdParty"
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: EaStyle.Sizes.fontPixelSize * 0.5
-
-                IconLine {
-                    segments: [
-                        {
-                            "icon": "balance-scale",
-                            "color": EaStyle.Colors.themeForeground
-                        }
-                    ]
-                }
-                LinkLabel {
-                    objectName: "about.thirdParty"
-                    text: qsTr("Third-party licences")
-                    onActivated: thirdPartyPopup.open()
-                }
+                fontIcon: "balance-scale"
+                text: qsTr("Third-party licences")
+                onClicked: thirdPartyPopup.open()
             }
         }
         EaElements.Label {

@@ -455,9 +455,14 @@ def test_python_created_type_two_distribution_survives_save(tmp_path, tof, distr
 
 def test_python_free_cw_wavelength_cannot_be_silently_omitted(tmp_path):
     model = engine().Project.load(project(tmp_path / 'model', kind='becker-coppens-mixed'))
-    model.experiments[0].instrument.setup_wavelength.free = True
+    wavelength = model.experiments[0].instrument.setup_wavelength
+    before = wavelength.value
     with pytest.raises((ValueError, RuntimeError), match=r'(?i)wavelength'):
-        model.analysis.fit()
+        wavelength.free = True
+    assert not wavelength.free and wavelength.value == before, (
+        'An unidentifiable wavelength is refused at assignment '
+        'without changing its value or free flag'
+    )
 
 
 def test_python_type_transition_does_not_solve_an_inactive_slot(tmp_path):

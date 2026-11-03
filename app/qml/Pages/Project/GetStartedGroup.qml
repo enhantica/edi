@@ -95,6 +95,9 @@ SideBarGroup {
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
         visible: EaGlobals.Vars.showProjectDescriptionDialog
+        // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
+        // it (edi ADR-0064).
+        showsLocation: !AppState.tutorialRunning || !Session.hasProjectSetAside || Session.project !== null
         onOpened: ApplicationInfo.createProjectDialogEvent(0)
         onRejected: ApplicationInfo.createProjectDialogEvent(1)
         onClosed: ApplicationInfo.createProjectDialogEvent(2)
@@ -128,6 +131,7 @@ SideBarGroup {
 
         Column {
             id: openChoiceColumn
+            objectName: "project.openChoice"
 
             ChoiceRadioButton {
                 objectName: "open.folder"

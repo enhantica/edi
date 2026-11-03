@@ -56,7 +56,8 @@ The decisions it rests on, unchanged here:
   idea 1). It wraps, centred, at a width of 1.15 × one third of its one-line width, so it takes three lines of
   similar width.
 - **Online documentation** opens `https://docs.easydiffraction.org/app/` (`ApplicationInfo.docsUrl`, idea 4),
-  from Home and from the app bar.
+  from Home and from the app bar. **Amended 2026-11-02 (ADR-0065):** the documentation is `https://enhantica.github.io/edi/`, and Home's links
+  are two columns, Learn and Contact and about.
 
 ### 2. The main area and the Experiment type group
 

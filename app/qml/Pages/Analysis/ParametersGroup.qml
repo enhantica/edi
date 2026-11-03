@@ -22,10 +22,10 @@ SideBarGroup {
 
     property ProjectViewModel project: null
     property ParameterItem selected: null
-    // Some experiment holds measured data: without any, nothing can be fitted (edi ADR-0046), so the free column, its
-    // header menu and the listing filters are hidden (the owner, 2026-10-27); values stay editable. Hidden filters are
-    // cleared, so the table lists every parameter its category count counts: a free or fixed choice left from a project
-    // with data showed one row under "Atomic displacement (4)" (the owner, 2026-10-27).
+    // Some experiment holds measured data: without any, nothing can be fitted (edi ADR-0046), so the free column and its
+    // header menu are hidden (the owner, 2026-10-27) and the free or fixed choice is disabled; the other filters stay
+    // (the owner, 2026-11-02), and values stay editable. The disabled choice goes back to all parameters: one left from
+    // a project with data showed one row under "Atomic displacement (4)" (the owner, 2026-10-27).
     readonly property bool measured: project !== null && project.fit.measured
     onMeasuredChanged: ApplicationInfo.parameterMeasuredChanged(false)
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
@@ -135,7 +135,7 @@ SideBarGroup {
         Column {
             id: filters
 
-            visible: group.measured
+            // Shown with or without measured data: a calculation-only project filters its parameters too.
             readonly property real third: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
 
             spacing: AppSizes.groupContentSpacing
@@ -240,20 +240,36 @@ SideBarGroup {
                         }
                     }
                 }
-                SearchableComboBox {
-                    id: variabilityPicker
-                    readonly property var titles: [qsTr("All parameters (%1)").arg(parameterFilter.variabilityCounts[0]), qsTr("Free parameters (%1)").arg(parameterFilter.variabilityCounts[1]), qsTr("Fixed parameters (%1)").arg(parameterFilter.variabilityCounts[2]), qsTr("Not fittable (%1)").arg(parameterFilter.variabilityCounts[3])]
-                    function follow() {
-                        currentIndex = Qt.binding(() => parameterFilter.variability);
+                // A disabled control takes no hover, so the reason it is disabled comes from here.
+                Item {
+                    width: variabilityPicker.width
+                    height: variabilityPicker.height
+
+                    SearchableComboBox {
+                        id: variabilityPicker
+                        readonly property var titles: [qsTr("All parameters (%1)").arg(parameterFilter.variabilityCounts[0]), qsTr("Free parameters (%1)").arg(parameterFilter.variabilityCounts[1]), qsTr("Fixed parameters (%1)").arg(parameterFilter.variabilityCounts[2]), qsTr("Not fittable (%1)").arg(parameterFilter.variabilityCounts[3])]
+                        function follow() {
+                            currentIndex = Qt.binding(() => parameterFilter.variability);
+                        }
+                        objectName: "parameters.variability"
+                        // Free and fixed mean nothing before there are measured data to fit (edi ADR-0046). The reason is
+                        // the picker's own tooltip text, shown by the hover area around it while it is disabled.
+                        enabled: group.measured
+                        ToolTip.text: enabled ? "" : qsTr("Free and fixed parameters apply once an experiment has measured data")
+                        width: filters.third
+                        model: titles
+                        currentIndex: parameterFilter.variability
+                        displayText: titles[parameterFilter.variability]
+                        onModelChanged: ApplicationInfo.parameterPickerChanged(2, false, undefined)
+                        onActivated: index => ApplicationInfo.parameterPickerChanged(2, true, index)
                     }
-                    objectName: "parameters.variability"
-                    visible: group.measured
-                    width: filters.third
-                    model: titles
-                    currentIndex: parameterFilter.variability
-                    displayText: titles[parameterFilter.variability]
-                    onModelChanged: ApplicationInfo.parameterPickerChanged(2, false, undefined)
-                    onActivated: index => ApplicationInfo.parameterPickerChanged(2, true, index)
+                    HoverHandler {
+                        id: variabilityHover
+                    }
+                    EaElements.ToolTip {
+                        text: variabilityPicker.ToolTip.text
+                        visible: !variabilityPicker.enabled && variabilityHover.hovered && EaGlobals.Vars.showToolTips
+                    }
                 }
             }
             Row {
@@ -357,6 +373,8 @@ SideBarGroup {
                     // Whether the click area that takes the header's input is enabled: it is reparented over the
                     // header, so the title's own `enabled` does not follow it.
                     readonly property bool interactionEnabled: freeArea.enabled
+                    // Its menu, whose Free and Fixed a tutorial's Next chooses as the user would (edi ADR-0064).
+                    readonly property FreeHeaderMenu menu: freeMenu
 
                     EaElements.Label {
                         id: freeArrow
@@ -420,6 +438,10 @@ SideBarGroup {
                         anchors.verticalCenter: parent.verticalCenter
                         segments: ParameterNames.segments(row.parameter)
                     }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: valueCell.openContextMenu(valueCell)
+                    }
                     HoverHandler {
                         id: nameHover
                     }
@@ -429,6 +451,7 @@ SideBarGroup {
                     }
                 }
                 ParameterCell {
+                    id: valueCell
                     columnAlignment: Text.AlignRight
                     objectName: `parameters.value.${row.index}`
                     item: row.parameter
@@ -442,6 +465,7 @@ SideBarGroup {
                     text: row.units
                 }
                 NumberLabel {
+                    objectName: `parameters.su.${row.index}`
                     horizontalAlignment: Text.AlignRight
                     number: row.parameter ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
                     narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""

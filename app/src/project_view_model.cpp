@@ -2,6 +2,8 @@
 #include <utility>
 #include "project_view_model.hpp"
 
+#include "run_log.hpp"
+
 #include <QCoreApplication>
 #include <QJsonArray>
 #include <QHash>
@@ -1039,6 +1041,7 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
             syncUndo();
             if (!self || retired_) return true;
             setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+            qCInfo(lcApp, "structure loaded from a file");
             return true; // Actual addition; calculation/presentation is separate.
         }
     } catch (const std::exception& refusal) {
@@ -1150,6 +1153,7 @@ bool ProjectViewModel::createExperiment() {
     syncUndo();
     if (!self || retired_) return true;
     setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+    qCInfo(lcApp, "experiment added");
     return true;
 }
 
@@ -1446,6 +1450,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     emit message(text);
     if (!self || retired_) return true;
     setCurrentExperimentIndex(index);
+    qCInfo(lcApp, "measured data loaded");
     return true;
 }
 
@@ -1535,6 +1540,7 @@ bool ProjectViewModel::createStructure() {
     }
     if (!self || retired_) return applied;
     setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+    qCInfo(lcApp, "structure added");
     return applied;
 }
 
@@ -2982,6 +2988,7 @@ void ProjectViewModel::removeStructure(int index) {
                         static_cast<int>(linking.size()))
                          .arg(QString::fromStdString(name), linking.join(QStringLiteral(", "))));
     }
+    qCInfo(lcApp, "structure removed");
 }
 
 int ProjectViewModel::structureIndex(const QString& name) const {
@@ -3019,6 +3026,7 @@ void ProjectViewModel::removeExperiment(int index) {
     }
     edi::Project& project = *project_;
     apply(edi::Edit::erase_experiment(project, static_cast<std::size_t>(index)), true);
+    qCInfo(lcApp, "experiment removed");
 }
 
 void ProjectViewModel::pinTimestamps(const QString& timestamp) {

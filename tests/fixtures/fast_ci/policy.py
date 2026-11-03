@@ -1,9 +1,11 @@
 """Follow PR fixture dependencies and classify actual app-build commands."""
 
 import ast
+import hashlib
 import json
 import re
 import shlex
+import subprocess
 from pathlib import Path
 
 LAUNCHERS = {
@@ -72,7 +74,124 @@ def command_tokens(value):
         return value.split()
 
 
-def app_command(words):
+# Reviewed metadata producers may read git and write generated source, never compile it.
+# A changed producer requires a new review; a matching filename alone grants nothing.
+METADATA_PRODUCERS = {
+    'ece10e34254c2f9e331265f45cf0c5430c1eee9bd6a1729d71e8272ed254fe15',
+    'c55f262924042438c7eee8c759934be081fe4af3ac0e1238757533144c7e0c51',
+}
+
+
+def metadata_command(command, build):
+    """Prove one expanded graph command only runs a reviewed metadata producer."""
+    words = command_tokens(command)
+    if words[:1] == ['cd'] and words[2:3] == ['&&']:
+        words = words[3:]
+    if len(words) < 5 or Path(words[0]).name not in {'cmake', 'qt-cmake'} or words[-2] != '-P':
+        return False
+    options = {}
+    for word in words[1:-2]:
+        key, separator, value = word.removeprefix('-D').partition('=')
+        if not word.startswith('-D') or not separator or key in options:
+            return False
+        options[key] = value
+    if not {'SOURCE_DIR', 'OUT'} <= options.keys() or options.keys() - {
+        'SOURCE_DIR',
+        'OUT',
+        'MARKER',
+        'MARK_DIRTY',
+    }:
+        return False
+    if any(character in command for character in ('$', '`', ';', '|', '>', '<', '\n')):
+        return False
+    try:
+        output = Path(options['OUT']).resolve()
+        script = Path(words[-1])
+        return (
+            output.is_relative_to(build.resolve())
+            and hashlib.sha256(script.read_bytes()).hexdigest() in METADATA_PRODUCERS
+        )
+    except OSError:
+        return False
+
+
+def metadata_build_request(words, cwd):
+    """Resolve only explicit target requests; unsupported generators remain unproven."""
+    executable = Path(words[0]).name if words else ''
+    if executable in {'cmake', 'qt-cmake'} and '--build' in words and '--target' in words:
+        index = words.index('--build')
+        if index + 1 >= len(words):
+            return None
+        build = Path(words[index + 1])
+        targets = words[words.index('--target') + 1 :]
+    elif executable == 'ninja' and '-C' in words and '-t' not in words:
+        index = words.index('-C')
+        if index + 1 >= len(words):
+            return None
+        build = Path(words[index + 1])
+        targets = words[1:index] + words[index + 2 :]
+    else:
+        return None
+    if not targets or any(word.startswith('-') for word in targets):
+        return None
+    return (Path(cwd or Path.cwd()) / build).resolve(), targets
+
+
+def inspected_build_commands(build, targets):
+    """Inspect expanded commands and explicit/implicit regeneration prerequisites."""
+    cache = (build / 'CMakeCache.txt').read_text()
+    match = re.search(r'^CMAKE_MAKE_PROGRAM:(?:FILEPATH|UNINITIALIZED)=(.+)$', cache, re.MULTILINE)
+    if not match or Path(match[1]).name != 'ninja':
+        return None
+    query = subprocess.run(
+        [match[1], '-C', str(build), '-t', 'query', 'build.ninja'],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=True,
+    )
+    inputs = query.stdout.split('  input:', 1)[1].split('  outputs:', 1)[0].splitlines()[1:]
+    graph_time = (build / 'build.ninja').stat().st_mtime_ns
+    if any((build / line.strip().lstrip('| ')).stat().st_mtime_ns > graph_time for line in inputs):
+        return None
+    result = subprocess.run(
+        [match[1], '-C', str(build), '-t', 'commands', *targets],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=True,
+    )
+    return result.stdout.splitlines()
+
+
+def build_commands(words, cwd=None):
+    """Read a current explicit target closure, or leave its work unproven."""
+    request = metadata_build_request(words, cwd)
+    if request is None:
+        return None
+    try:
+        return inspected_build_commands(*request)
+    except (OSError, subprocess.SubprocessError, IndexError):
+        return None
+
+
+def metadata_graph(words, cwd=None):
+    """Prove the requested closure only produces metadata, regardless of target name."""
+    commands = build_commands(words, cwd)
+    request = metadata_build_request(words, cwd)
+    return bool(commands) and all(metadata_command(command, request[0]) for command in commands)
+
+
+def graph_query(tokens):
+    """These Ninja tools read the graph without building targets or regenerating it."""
+    return (
+        Path(tokens[0]).name == 'ninja'
+        and '-t' in tokens
+        and tokens[tokens.index('-t') + 1 :][:1] in (['commands'], ['query'])
+    )
+
+
+def app_command(words, cwd=None, *, inspect_graph=True):
     tokens = [token for word in words for token in command_tokens(str(word))]
     if not tokens:
         return False
@@ -85,16 +204,22 @@ def app_command(words):
                     chunk = []
                 else:
                     chunk.append(token)
-            return any(app_command(chunk) for chunk in [*chunks, chunk])
+            return any(
+                app_command(chunk, cwd, inspect_graph=inspect_graph) for chunk in [*chunks, chunk]
+            )
     executable = Path(tokens[0]).name
     if executable in {'bash', 'sh'} and '-c' in tokens:
-        return app_command(tokens[tokens.index('-c') + 1 :])
+        return app_command(tokens[tokens.index('-c') + 1 :], cwd, inspect_graph=inspect_graph)
     if executable == 'pixi' and tokens[1:2] == ['run']:
         return 'app-build' in tokens[2:]
-    if executable not in COMPILERS or set(tokens) & {'--version', '--help', '-fsyntax-only', '-E'}:
+    if (
+        executable not in COMPILERS
+        or set(tokens) & {'--version', '--help', '-fsyntax-only', '-E'}
+        or graph_query(tokens)
+    ):
         return False
-    # Targets and build/configure operands describe the invocation. Module comments,
-    # header includes and an adjacent app CMake file do not turn another probe into an app.
+    # Without a proven metadata graph these are conservative refusal signals.
+    # A target name alone cannot authorize a build or prove that it compiles app code.
     joined = ' '.join(tokens)
     source = any('app/' in token and token.endswith(('.cpp', '.cc', '.cxx')) for token in tokens)
     explicit = any(
@@ -111,7 +236,17 @@ def app_command(words):
     target = executable in {'ninja', 'make'} and any(
         Path(word).name == 'edi_app' for word in tokens[1:]
     )
-    return source or explicit or target
+    refused = source or explicit or target
+    commands = build_commands(tokens, cwd) if inspect_graph else None
+    if commands:
+        build, _ = metadata_build_request(tokens, cwd)
+        refused = not all(metadata_command(command, build) for command in commands) and (
+            source
+            or explicit
+            or target
+            or any(app_command([command], cwd, inspect_graph=False) for command in commands)
+        )
+    return refused
 
 
 def bindings(tree, nodes=None):

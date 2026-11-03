@@ -35,6 +35,8 @@ void use_design_font();
 // a fresh directory that lives as long as the process; it aborts when that directory cannot be created.
 // Call it before configure_engine().
 void use_fresh_settings();
+// The folder use_fresh_settings() made, or empty when this run uses the user's own settings.
+QString fresh_settings_dir();
 // Text renders with Qt's FreeType font engine (ADR-0015 §10). select_freetype_engine(), given main's
 // arguments, completes QT_QPA_PLATFORM before the QGuiApplication exists: on macOS and Windows the default
 // platform (cocoa, windows) gains fontengine=freetype; Linux platforms render with FreeType already.

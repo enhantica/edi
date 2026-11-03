@@ -105,3 +105,13 @@ MIGRATIONS[
         'test_executing_registry_accepts_lowercase_page_stems_and_seed_variants[pd-neut-cwl_lif]'
     )
 ]
+
+# The status-bar warning moved into the result banner; the real Qt actor exercises both scan modes.
+MIGRATIONS[
+    'tests/system/py/test_scan_projection_wiring_escapes.py::'
+    'test_actual_stale_markers_reject_constant_or_other_result_state[status]'
+] = [
+    'tests/system/py/test_status_fit_controls.py::'
+    f'test_status_fit_contract[test_outdated_results_banner:{mode}]'
+    for mode in ('sequential', 'independent')
+]

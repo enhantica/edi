@@ -28,8 +28,12 @@ EaElements.StatusBar {
     property int pagesBuilt: 0
     property int pagesWanted: 0
     readonly property bool opening: pagesWanted > 0 && pagesBuilt < pagesWanted
+    // The running tutorial (edi ADR-0064), whose strip sits at the bar's right end.
+    property TutorialPanel tutorial: null
+    readonly property bool tutorialShown: tutorial !== null && tutorial.tutorial !== null
+    readonly property real stripRoom: tutorialStrip.visible ? tutorialStrip.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0
 
-    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded || AppState.tutorialRunning
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
@@ -116,8 +120,9 @@ EaElements.StatusBar {
         keyIcon: "th-list"
         keyText: qsTr("Parameters")
         // What a fit can vary: the free and the fixed; the rows no fit can vary are not counted (edi ADR-0053).
-        valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.freeCount + bar.project.parameters.fixedCount).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
-        ToolTip.text: qsTr("Number of parameters: total, free and fixed")
+        // Free and fixed only mean something with measured data to fit (the owner, 2026-11-02); a simulation shows the count.
+        valueText: !bar.project ? "" : !bar.project.fit.measured ? String(bar.project.parameters.freeCount + bar.project.parameters.fixedCount) : qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.freeCount + bar.project.parameters.fixedCount).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount)
+        ToolTip.text: bar.project && !bar.project.fit.measured ? qsTr("Number of parameters") : qsTr("Number of parameters: total, free and fixed")
     }
     Item {
         id: assistantGroup
@@ -132,9 +137,9 @@ EaElements.StatusBar {
         implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) + (assistantArea.visible ? assistantArea.implicitWidth : 0) + (visibleMode.visible ? visibleMode.implicitWidth : 0) + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
-        // At the far right, after the fit area (the owner, 2026-11-02).
-        anchors.right: openingProgress.visible ? openingProgress.left : parent.right
-        anchors.rightMargin: openingProgress.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
+        // After the fit area and before the tutorial strip (the owner, 2026-11-02).
+        anchors.right: openingProgress.visible ? openingProgress.left : tutorialStrip.visible ? tutorialStrip.left : parent.right
+        anchors.rightMargin: openingProgress.visible || tutorialStrip.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         Rectangle {
             id: assistantRule
@@ -235,8 +240,9 @@ EaElements.StatusBar {
 
         objectName: "statusBar.fit"
         parent: bar
-        anchors.right: assistantGroup.visible ? assistantGroup.left : parent.right
-        anchors.rightMargin: assistantGroup.visible ? spacing : EaStyle.Sizes.fontPixelSize
+        // Left of the assistant's group when it shows, else of the tutorial strip, else at the bar's right end.
+        anchors.right: assistantGroup.visible ? assistantGroup.left : tutorialStrip.visible ? tutorialStrip.left : parent.right
+        anchors.rightMargin: assistantGroup.visible || tutorialStrip.visible ? spacing : EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         spacing: Math.round(EaStyle.Sizes.fontPixelSize * 1.2)
         // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one; hidden while a
@@ -454,8 +460,8 @@ EaElements.StatusBar {
         id: openingProgress
         objectName: "statusBar.opening"
         parent: bar
-        anchors.right: parent.right
-        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        anchors.right: tutorialStrip.visible ? tutorialStrip.left : parent.right
+        anchors.rightMargin: tutorialStrip.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         visible: bar.opening
         width: Math.ceil(openingProgress.textWidth + 2 * openingProgress.height)
@@ -470,5 +476,46 @@ EaElements.StatusBar {
     FitResultsDialog {
         id: fitResultsDialog
         objectName: "statusBar.fitResults"
+    }
+
+    // While a tutorial runs, its strip (the owner, 2026-11-02): a group of its own at the bar's far right, after the fit
+    // area with a separator between, so the fit status appearing never moves its buttons; Step N of M and the callout's
+    // Stop, Back and Next (TutorialControls) acting on the same tutorial. It goes when the tutorial ends.
+    Row {
+        id: tutorialStrip
+
+        objectName: "statusBar.tutorial"
+        parent: bar
+        anchors.right: parent.right
+        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: fitArea.spacing
+        visible: bar.tutorialShown
+
+        Rectangle {
+            width: EaStyle.Sizes.borderThickness
+            height: EaStyle.Sizes.fontPixelSize * 1.5
+            anchors.verticalCenter: parent.verticalCenter
+            color: EaStyle.Colors.appBarBorder
+        }
+        EaElements.Label {
+            objectName: "statusBar.tutorial.progress"
+            anchors.verticalCenter: parent.verticalCenter
+            // The tutorial's name, on hover.
+            ToolTip.text: bar.tutorial && bar.tutorial.tutorial ? bar.tutorial.tutorial.title : ""
+            ToolTip.visible: ToolTip.text !== "" && progressHover.hovered && EaGlobals.Vars.showToolTips
+
+            HoverHandler {
+                id: progressHover
+            }
+            color: EaStyle.Colors.themeForegroundHovered
+            text: bar.tutorial ? qsTr("Step %1 of %2").arg(bar.tutorial.shownStep + 1).arg(bar.tutorial.steps.length) : ""
+        }
+        TutorialControls {
+            anchors.verticalCenter: parent.verticalCenter
+            tutorial: bar.tutorial
+            namePrefix: "statusBar.tutorial"
+            round: true
+        }
     }
 }

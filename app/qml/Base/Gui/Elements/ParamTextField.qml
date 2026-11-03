@@ -114,11 +114,13 @@ EaElements.TextField {
             id: contextMenuComponent
 
             EaElements.Menu {
+                objectName: "parameter.contextPopup"
                 width: layout.implicitWidth
 
                 // Layout
                 Grid {
                     id: layout
+                    objectName: "parameter.contextMenu"
 
                     leftPadding: 1.25 * EaStyle.Sizes.fontPixelSize
                     rightPadding: 1.25 * EaStyle.Sizes.fontPixelSize
@@ -132,7 +134,7 @@ EaElements.TextField {
                     // Header
                     EaElements.Label {
                         color: EaStyle.Colors.themeForegroundMinor
-                        text: control.cifDict ? 'cif name' : 'cif-like name'
+                        text: qsTr("Edi key (documentation)")
                     }
                     EaElements.Label {
                         color: EaStyle.Colors.themeForegroundMinor
@@ -157,8 +159,11 @@ EaElements.TextField {
 
                     // Content
                     EaElements.Button {
+                        objectName: "parameter.documentation"
+                        readonly property url documentationUrl: control.url
                         text: `${control.category}.${control.name}`
                         checked: true
+                        enabled: control.url !== ""
                         onClicked: Qt.openUrlExternally(control.url)
                     }
                     EaElements.Label {
