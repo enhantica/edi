@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
@@ -131,11 +132,11 @@ TestCase {
                "The test replaces the disposable project structure with its monoclinic witness");
         verify(Session.openProject(scratch), "The monoclinic cobalt structure opens in the real app");
         tryCompare(Session.project, "calculating", false, 15000, "The monoclinic project settles before editing");
+        tryVerify(() => appWindow.pagesWanted > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
+                  10000, "The reopened witness finishes building its workflow pages");
         const forms = ["Crystal axes", "Cartesian", "Spherical"];
         function controls() {
             const moments = group("atom_site_moment");
-            const table = findChild(moments, "atomSiteMoments.list");
-            verify(table !== null, "The magnetic moment group has its visible component table");
             const candidates = Render.descendants(moments).filter(item => item.visible &&
                 typeof item.textAt === "function" &&
                 Array.from({length: item.count}, (_, i) => item.textAt(i)).includes("Crystal axes"));
@@ -143,49 +144,58 @@ TestCase {
             const box = candidates[0];
             compare(Array.from({length: box.count}, (_, i) => box.textAt(i)), forms,
                     "The form selector offers crystal axes, Cartesian and spherical coordinates");
-            verify(box.mapToItem(moments, 0, box.height).y <= table.mapToItem(moments, 0, 0).y + 1,
-                   "The form selector sits above the Magnetic moments table");
-            tryVerify(() => table.itemAtIndex(0) !== null, 3000,
-                      "The cobalt witness renders its magnetic moment row");
-            return {box, table};
+            return {box, moments};
         }
         function readToken(text) {
-            const match = String(text).trim().match(/^([+-]?\d+(?:\.(\d+))?)(?:\((\d+)\))?(?:[eE]([+-]?\d+))?$/);
+            const match = String(text).trim().replace(/−/g, "-")
+                .match(/^([+-]?\d+(?:\.(\d+))?)(?:\(\d+(?:\.\d+)?\))?(?:[eE]([+-]?\d+))?$/);
             verify(match !== null, "The displayed moment cell has a numeric value: " + text);
-            const unit = Math.pow(10, Number(match[4] || 0) - (match[2] || "").length);
-            return {value: Number(match[1]) * Math.pow(10, Number(match[4] || 0)),
-                    su: match[3] === undefined ? null : Number(match[3]) * unit, unit};
+            const scale = Math.pow(10, Number(match[3] || 0));
+            const unit = scale * Math.pow(10, -(match[2] || "").length);
+            return {value: Number(match[1]) * scale, unit};
         }
         function near(token, expected, reason) {
             verify(Math.abs(token.value - expected) <= token.unit / 2 + 1e-7,
                    reason + " expected " + expected + " observed " + token.value);
         }
+        near(readToken("13.00(22)"), 13, "Bracketed uncertainty preserves the preceding magnitude");
         function inspect(form, components, magnitude, uncertainties) {
-            const {box, table} = controls();
+            const {box, moments} = controls();
             const index = forms.indexOf(form);
-            if (box.currentIndex !== index) {
-                box.currentIndex = index;
+            if (box.currentIndex !== index)
                 box.activated(index);
-            }
             tryCompare(box, "currentText", form, 3000, "The selected coordinate form is displayed");
-            verify(waitForPolish(table), "The selected coordinate form settles the moment layout");
-            const headers = Render.cells(table.headerItem);
-            const magnitudeIndex = headers.findIndex(cell => cell.visible && /^\|\s*M\s*\|$/.test(String(cell.text).trim()));
-            verify(magnitudeIndex >= 0, "Every coordinate form shows the |M| column");
-            const cells = Render.cells(table.itemAtIndex(0));
-            const modulus = cells[magnitudeIndex];
-            verify(modulus && modulus.visible && (modulus.readOnly === true || typeof modulus.selectAll !== "function"),
-                   "The magnitude column reports a read-only value");
-            near(readToken(modulus.text || modulus.value), magnitude, form + " reports the physical moment norm");
-            const editors = cells.filter(cell => cell.visible && cell.enabled && cell.readOnly === false &&
-                typeof cell.selectAll === "function" && /^[+-]?\d/.test(String(cell.text).trim()));
-            compare(editors.length, 3, form + " presents three editable coordinates on the general site");
+            const crystalAxes = form === "Crystal axes";
+            const table = findChild(moments, crystalAxes ? "atomSiteMoments.list" : "atomSiteMoments.converted");
+            tryVerify(() => table && table.visible && table.headerItem && table.itemAtIndex(0) !== null, 3000,
+                      "The cobalt witness renders the selected form's magnetic moment row");
+            verify(box.mapToItem(moments, 0, box.height).y <= table.mapToItem(moments, 0, 0).y + 1,
+                   "The form selector sits above the Magnetic moments table");
+            const headers = Array.from(table.headerItem.contentRowData);
+            verify(headers.some(cell => cell.visible && /^\|\s*M\s*\|$/.test(String(cell.text).trim())),
+                   "Every coordinate form shows the |M| column");
+            const row = table.itemAtIndex(0);
+            const modulus = findChild(row, crystalAxes ? "atomSiteMoment.modulus.0" : "atomSiteMoment.formModulus.0");
+            verify(modulus && modulus.visible && modulus.readOnly,
+                   "The identified magnitude cell is visible and read-only");
+            near(readToken(modulus.value), magnitude, form + " reports the physical moment norm");
+            const editors = (crystalAxes ? ["mx", "my", "mz"] : ["form.0", "form.1", "form.2"])
+                .map(name => findChild(row, "atomSiteMoment." + name + ".0"));
+            verify(editors.every(cell => cell && cell.visible && cell.enabled && !cell.readOnly),
+                   form + " presents three editable coordinates on the general site");
             for (let axis = 0; axis < 3; ++axis) {
-                const token = readToken(editors[axis].text);
+                const cell = editors[axis];
+                const token = readToken(crystalAxes ? cell.valueText : cell.written);
                 near(token, components[axis], form + " displays component " + axis + " in its selected basis");
-                if (uncertainties) {
-                    verify(token.su !== null && Math.abs(token.su - uncertainties[axis]) <= token.unit / 2 + 1e-7,
-                           form + " displays the independently propagated standard uncertainty of component " + axis);
+                if (uncertainties && crystalAxes) {
+                    verify(cell.item.fileSu !== "", form + " shows a separate uncertainty for component " + axis);
+                    near(readToken(cell.item.fileSu), uncertainties[axis],
+                         form + " shows the independently referenced uncertainty of component " + axis);
+                } else if (uncertainties) {
+                    const tooltip = String(cell.ToolTip.text);
+                    verify(/^s\.u\.\s+/.test(tooltip), form + " identifies its component uncertainty in the tooltip");
+                    near(readToken(tooltip.replace(/^s\.u\.\s+/, "")), uncertainties[axis],
+                         form + " shows the independently propagated uncertainty of component " + axis);
                 }
             }
             return editors;
@@ -647,18 +657,9 @@ TestCase {
     function openMagneticFitExample() {
         return openCobaltProject("pd-neut-cwl_cosio-d20_2k");
     }
-    function test_experiment_reflections_match_crysta_data() {
-        return [
-            {tag: "magnetic", example: "pd-neut-cwl_cosio-d20_2k", magnetic: true},
-            {tag: "nuclear", example: "pd-neut-cwl_cosio-d20", magnetic: false}
-        ];
-    }
-    function test_experiment_reflections_match_crysta(data) {
-        openCobaltProject(data.example);
+    function experimentReflectionTable() {
         tryVerify(() => appWindow.pagesWanted > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
                   10000, "The new project's workflow pages finish rebuilding before navigation");
-        const text = SettingsProof.text(Probe.repoUrl("tests/fixtures/magnetic_pnma"), "reflection-table.json");
-        const expected = new Map(JSON.parse(text)[data.example].map(([hkl, ...values]) => [hkl, values]));
         Ui.click(test, Probe, appWindow, "appBar.tab.experiment", true);
         Ui.click(test, Probe, appWindow, "sideBar.tab.extras", true);
         let extra = null;
@@ -673,10 +674,25 @@ TestCase {
             table = findChild(extra, "reflections.list");
             return table !== null && table.headerItem !== null;
         }, 5000, "The powder reflection table is rendered in the Experiment Extra group");
+        return table;
+    }
+    function test_experiment_reflections_match_crysta_data() {
+        return [
+            {tag: "magnetic", example: "pd-neut-cwl_cosio-d20_2k", magnetic: true},
+            {tag: "nuclear", example: "pd-neut-cwl_cosio-d20", magnetic: false}
+        ];
+    }
+    function test_experiment_reflections_match_crysta(data) {
+        openCobaltProject(data.example);
+        const text = SettingsProof.text(Probe.repoUrl("tests/fixtures/magnetic_pnma"), "reflection-table.json");
+        const expected = new Map(JSON.parse(text)[data.example].map(([hkl, ...values]) => [hkl, values]));
+        const table = experimentReflectionTable();
         const cells = row => Array.from(row.contentRowData).filter(cell => typeof cell.text === "string" && cell.visible);
         const titles = ["", "h k l", "d (Å)", "2θ (deg)", "F² calc"];
-        if (data.magnetic)
-            titles.push("|M⊥|² calc");
+        if (data.magnetic) {
+            titles.push("|F_M⊥|² calc");
+            titles.push(Session.label("refln.f_squared_total_calc"));
+        }
         compare(cells(table.headerItem).map(cell => cell.text), titles,
                 "Experiment Extra labels the powder reflection columns with their crystallographic quantities and units");
         tryCompare(table, "count", expected.size, 5000, "The table lists all reflections in crysta's independent loop");
@@ -710,11 +726,61 @@ TestCase {
                            "The magnetic squared factor uses the table's three-decimal number style for " + hkl);
                 }
             }
+            if (data.magnetic) {
+                const [nuclear, magnetic, total] = row.slice(4).map(cell => Number(cell.full));
+                verify(total === nuclear + magnetic,
+                       "The calculated row displays the total beside its two factors for " + hkl);
+            }
         }
+    }
+    function test_reflection_table_reads_the_stored_total() {
+        const project = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"));
+        const file = "experiments/d20.edi";
+        const original = SettingsProof.text(project, file);
+        const data = original.indexOf("loop_\n_data.two_theta");
+        verify(data > 0, "The published example supplies the measured loop boundary");
+        // A calculation-only bank keeps the file's carried reflection rows in the table.
+        // The independent sentinel differs from F² + |F_M⊥|² so a GUI sum fails this check.
+        const input = original.slice(0, data) + [
+            "_data_range.two_theta_min 10",
+            "_data_range.two_theta_max 30",
+            "_data_range.two_theta_step 0.5",
+            "",
+            "loop_",
+            "_refln.id",
+            "_refln.structure_id",
+            "_refln.d_spacing",
+            "_refln.sin_theta_over_lambda",
+            "_refln.index_h",
+            "_refln.index_k",
+            "_refln.index_l",
+            "_refln.f_calc",
+            "_refln.f_squared_calc",
+            "_refln.f_m_perp_squared_calc",
+            "_refln.f_squared_total_calc",
+            "_refln.two_theta",
+            "1 cosio 4.78739 0.104441 0 0 1 0 0 29.25 42.125 22.8194",
+            ""
+        ].join("\n");
+        verify(SettingsProof.write(project, file, input) && Session.openProject(project),
+               "The app opens the isolated project with an explicitly stored total");
+        const table = experimentReflectionTable();
+        const headers = Array.from(table.headerItem.contentRowData).filter(cell => typeof cell.text === "string" && cell.visible);
+        const index = headers.findIndex(cell => cell.uid === "refln.f_squared_total_calc");
+        verify(index > 0 && headers[index - 1].uid === "refln.f_m_perp_squared_calc",
+               "The dictionary's total column follows the magnetic factor in Experiment Extra");
+        compare(headers[index].text, Session.label("refln.f_squared_total_calc"),
+                "The total column shows its dictionary title");
+        tryCompare(table, "count", 1, 5000, "The table exposes the one carried reflection");
+        tryVerify(() => table.itemAtIndex(0) !== null, 5000, "The stored reflection has its rendered delegate");
+        const cells = Array.from(table.itemAtIndex(0).contentRowData).filter(cell => typeof cell.text === "string" && cell.visible);
+        compare(cells[1].text.trim(), "0 0 1", "The table reads the carried nuclear-forbidden reflection");
+        compare(Number(cells[index].full), 42.125, "The rendered total comes from the saved cell");
+        compare(cells[index].number, "42.125", "The total uses the dictionary's three-decimal style");
     }
     function test_fitted_experiment_saves_magnetic_squared_factors() {
         const project = openMagneticFitExample();
-        const factor = "_refln.m_perp_squared_calc";
+        const factor = "_refln.f_m_perp_squared_calc";
         verify(!SettingsProof.text(project, "experiments/d20.edi").includes(factor),
                "The input experiment has no previously saved magnetic reflection loop");
         const fit = Session.project.fit;

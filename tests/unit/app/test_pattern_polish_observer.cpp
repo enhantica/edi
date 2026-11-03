@@ -88,7 +88,7 @@ public:
         if (!model) return {};
         const auto& refln = model->experiment()->refln;
         const auto& positions = refln.position.values();
-        const auto& intensity = magnetic ? refln.m_perp_squared_calc.values() : refln.f_squared_calc.values();
+        const auto& intensity = magnetic ? refln.f_m_perp_squared_calc.values() : refln.f_squared_calc.values();
         QVariantList points;
         for (std::size_t i = 0; i < std::min(positions.size(), intensity.size()); ++i) {
             if (intensity[i] > 0.0) points.append(positions[i]);

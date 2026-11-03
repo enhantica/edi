@@ -16,8 +16,8 @@ def reflection_rows(experiment):
     values = columns(experiment.read_text())
     hkl = zip(*(values['_refln.index_' + axis] for axis in 'hkl'), strict=True)
     keys = ['d_spacing', 'two_theta', 'f_squared_calc']
-    if '_refln.m_perp_squared_calc' in values:
-        keys.append('m_perp_squared_calc')
+    if '_refln.f_m_perp_squared_calc' in values:
+        keys.append('f_m_perp_squared_calc')
     return [
         [' '.join(indices), *map(float, row)]
         for indices, *row in zip(hkl, *(values['_refln.' + key] for key in keys), strict=True)

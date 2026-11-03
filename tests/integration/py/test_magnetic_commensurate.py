@@ -55,7 +55,7 @@ def test_grey_centred_structure_has_zero_moments_and_undoubled_nuclear_intensity
         'The grey-group identity with negative time sign fixes every moment to zero'
     )
     before = np.asarray(model.experiment.refln.f_squared_calc).copy()
-    assert np.all(np.asarray(model.experiment.refln.m_perp_squared_calc) == 0), (
+    assert np.all(np.asarray(model.experiment.refln.f_m_perp_squared_calc) == 0), (
         'Grey groups scatter no magnetic intensity'
     )
     model.save_as(tmp_path / 'saved')
