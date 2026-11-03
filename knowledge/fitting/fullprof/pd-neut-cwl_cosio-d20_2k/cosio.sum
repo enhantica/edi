@@ -8,7 +8,7 @@
                  Refinement of X-ray and/or Neutron Data
 
 
-    Date: 02/11/2026  Time: 22:42:03.898                              
+    Date: 03/11/2026  Time: 11:52:31.292                              
 
  => PCR file code: cosio
  => DAT file code: cosio.dat            -> Relative contribution: 1.0000                                                            
@@ -17,7 +17,7 @@
  ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
 
  => Global Refinement of neutron powder data                                                                                        
- => The    7th default profile function was selected
+ => The    5th default profile function was selected
 
  => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
  => Analysis of refinement at the end
@@ -31,19 +31,19 @@
  =>-------> Pattern#  1
  => Structural & Magnetic model: Refinement in terms of amplitudes of structural/magnetic symmetry modes for phase: 1
  => The density (volumic mass) of phase 1 is:    4.708 g/cm3
- => Scor: 2.4828
+ => Scor: 2.5753
 
  ==> RESULTS OF REFINEMENT:
 
 
- => No. of fitted parameters:   44
+ => No. of fitted parameters:   45
 
 
 ------------------------------------------------------------------------------
  => Phase No.  1 Co2SiO4 Pnma.1 magnetic modes           Pnma.1  number:  62.
 ------------------------------------------------------------------------------
 
- =>  No. of reflections for pattern#:   1:   247  
+ =>  No. of reflections for pattern#:   1:   246  
 
 
  ==> ATOM PARAMETERS:
@@ -60,137 +60,131 @@
 
  Atom        Mx     sMx       My     sMy       Mz     sMz       M        sM
 
- Co1_1     0.7008  0.0403   2.5957  0.0242   0.3416  0.1511   2.7103   0.0321
- Co2_1     0.0000  0.0000   2.9682  0.0372   0.0000  0.0000   2.9682   0.0062
+ Co1_1     0.8237  0.0434   2.8545  0.0250   0.1190  0.4686   2.9734   0.0980
+ Co2_1     0.0000  0.0000   2.9950  0.0401   0.0000  0.0000   2.9950   0.0067
 
                                             Ma  (sMa)        Mb  (sMb)        Mc  (sMc)
- => Magnetization Vector per unit cell:   0.000( 0.099)    0.000( 0.109)    0.000( 0.370)
- => Module of Magnetization per unit cell:   0.000( 0.398)
+ => Magnetization Vector per unit cell:   0.000( 0.106)    0.000( 0.116)    0.000( 1.148)
+ => Module of Magnetization per unit cell:   0.000( 1.159)
 
  => Amplitudes of symmetry modes  ==>
           Name            Value         Sigma
-     A1_GM1+            -0.022103      0.012863
-     A2_GM1+             0.017714      0.016274
-     A3_GM1+            -0.017500      0.009664
-     A4_GM1+            -0.018632      0.009234
-     A5_GM1+            -0.025844      0.007187
-     A6_GM1+             0.034563      0.007625
-     A7_GM1+            -0.016424      0.006260
-     A8_GM1+             0.022996      0.007937
-     A9_GM1+            -0.003733      0.007843 => Amplitude candidate to be nullified
-     A10_GM1+           -0.003581      0.006677 => Amplitude candidate to be nullified
-     A11_GM1+            0.004654      0.008041 => Amplitude candidate to be nullified
+     A1_GM1+            -0.049367      0.013562
+     A2_GM1+             0.045627      0.016949
+     A3_GM1+            -0.020219      0.010045
+     A4_GM1+            -0.008901      0.009825
+     A5_GM1+            -0.023794      0.007521
+     A6_GM1+             0.021038      0.007977
+     A7_GM1+            -0.017741      0.006604
+     A8_GM1+             0.012477      0.008404
+     A9_GM1+            -0.001140      0.008228 => Amplitude candidate to be nullified
+     A10_GM1+           -0.003642      0.006970 => Amplitude candidate to be nullified
+     A11_GM1+            0.014882      0.008376
 
  => Amplitudes of magnetic symmetry modes ==>
 
-     A1_mGM1+            0.699996      0.040294
-     A2_mGM1+            2.594555      0.024202
-     A3_mGM1+            0.191239      0.151469
-     A4_mGM1+            2.967129      0.037169
+     A1_mGM1+            0.822836      0.043352
+     A2_mGM1+            2.852587      0.025017
+     A3_mGM1+            0.119270      0.469703 => Amplitude candidate to be nullified
+     A4_mGM1+            2.992974      0.040038
 
  
 
  ==> PROFILE PARAMETERS FOR PATTERN#  1
 
  => Cell parameters      :
-                             10.30806   0.00026
-                              6.00219   0.00016
-                              4.78739   0.00012
+                             10.31135   0.00053
+                              6.00410   0.00031
+                              4.78873   0.00024
                              90.00000   0.00000
                              90.00000   0.00000
                              90.00000   0.00000
  
- => overall scale factor :   1.817226     0.1362885E-01
- => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => overall scale factor :   1.861712     0.1462521E-01
+ => Eta(p-v) or m(p-vii) :    0.48390   0.03287
  => Overall tem. factor  :    0.00000   0.00000
- => Halfwidth parameters :    0.27321   0.00779
-                             -0.58779   0.01508
-                              0.41099   0.00865
+ => Halfwidth parameters :    0.31632   0.00887
+                             -0.62012   0.01732
+                              0.40856   0.00895
  => Preferred orientation:    0.00000   0.00000
                               0.00000   0.00000
- => Asymmetry parameters :    0.00759   0.04131
-                              0.03673   0.01168
-                              0.16901   0.08774
-                              0.00780   0.02447
- => X and y parameters   :    0.00000   0.00000
-                              0.01760   0.00467
+ => Asymmetry parameters :   -0.09191   0.03943
+                              0.04091   0.01171
+                              0.45389   0.08199
+                              0.02268   0.02435
+ => X and y parameters   :   -0.00377   0.00046
+                              0.00000   0.00000
  => Strain parameters    :    0.00000   0.00000
                               0.00000   0.00000
                               0.00000   0.00000
  => Size parameters (G,L):    0.00000   0.00000
                               0.00000   0.00000
 
- => Add. shape parameters: 
-                              0.00000       0.00000    
-                              0.00000       0.00000    
-
-
-
  ==> GLOBAL PARAMETERS FOR PATTERN#  1
 
 
- => Zero-point:     0.2943    0.0035
+ => Zero-point:     0.3152    0.0035
  => Background Parameters (linear interpolation)  ==>
-                                 524.568        25.7238    
-                                 535.204        16.1996    
-                                 579.338        16.0613    
-                                 698.508        17.2699    
-                                 753.045        19.2449    
-                                 451.330        12.7658    
-                                 426.910        7.12470    
-                                 416.054        3.97426    
-                                 394.775        4.03264    
-                                 373.163        2.85932    
-                                 406.374        2.68909    
-                                 408.506        2.38677    
-                                 395.997        2.56225    
-                                 345.922        2.33344    
-                                 279.041        2.16226    
-                                 230.699        3.16453    
+                                 614.813        28.9264    
+                                 586.983        17.7725    
+                                 546.132        15.4370    
+                                 589.112        7.53227    
+                                 434.673        7.78287    
+                                 414.891        14.5197    
+                                 415.097        9.74303    
+                                 412.699        4.45981    
+                                 373.267        4.51727    
+                                 372.558        3.03861    
+                                 392.949        2.88417    
+                                 406.272        2.51766    
+                                 392.508        2.67189    
+                                 341.871        2.47677    
+                                 276.111        2.31466    
+                                 230.041        3.46020    
  => Cos(2theta)-shift parameter :   0.0000  0.0000
  => Sin(2theta)-shift parameter :   0.0000  0.0000
 
  ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
 
-  => Cycle:150 => MaxCycle:150
- => N-P+C:  1373
+  => Cycle: 36 => MaxCycle:150
+ => N-P+C:  1392
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  3.71     Rwp:  4.90     Rexp:    1.88 Chi2:  6.81      L.S. refinement
+ => Rp:  3.85     Rwp:  5.15     Rexp:    1.88 Chi2:  7.54      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  13.8     Rwp:  13.0     Rexp:    5.00 Chi2:  6.81    
- => Deviance:  0.176E+04     Dev*  :   1.282    
- => DW-Stat.:    0.5153     DW-exp:     1.8986
- => N-sigma of the GoF:      152.234
+ => Rp:  13.8     Rwp:  13.5     Rexp:    4.92 Chi2:  7.54    
+ => Deviance:  0.197E+04     Dev*  :   1.413    
+ => DW-Stat.:    0.4830     DW-exp:     1.9003
+ => N-sigma of the GoF:      172.537
 
  ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
 
- => N-P+C:  1373
+ => N-P+C:  1392
  =>  R-factors (not corrected for background) for Pattern:  1
- => Rp:  3.71     Rwp:  4.90     Rexp:    1.88 Chi2:  6.81      L.S. refinement
+ => Rp:  3.85     Rwp:  5.15     Rexp:    1.88 Chi2:  7.54      L.S. refinement
  => Conventional Rietveld R-factors for Pattern:  1
- => Rp:  13.8     Rwp:  13.0     Rexp:    5.00 Chi2:  6.81    
- => Deviance:  0.176E+04     Dev*  :   1.282    
- => DW-Stat.:    0.5153     DW-exp:     1.8986
- => N-sigma of the GoF:      152.234
+ => Rp:  13.8     Rwp:  13.5     Rexp:    4.92 Chi2:  7.54    
+ => Deviance:  0.197E+04     Dev*  :   1.413    
+ => DW-Stat.:    0.4830     DW-exp:     1.9003
+ => N-sigma of the GoF:      172.537
 
- => Global user-weigthed Chi2 (Bragg contrib.):   6.81    
+ => Global user-weigthed Chi2 (Bragg contrib.):   7.54    
 
    =======================================================================
    === FINAL ATOMS POSITIONS CALCULATED FROM SYMMETRY MODES FOR PHASE:   1
    =======================================================================
 
-   => Global Amplitude of Representation GM1+         :  0.065(10)
+   => Global Amplitude of Representation GM1+         :  0.082(14)
  
 
                            X             Y             Z           Biso           Occ     
      Atom Co1_1  MCO2   0.00000       0.00000       0.00000       0.26900       0.50000
-     Moment(mx,my,mz):  0.70(4)       2.60(3)       0.34(16)
-     Atom Co2_1  MCO2   0.2809(7)     0.25000       0.9836(17)    0.26900       0.50000
-     Moment(mx,my,mz):  0.00000       2.97(4)       0.00000
-     Atom Si_1   SI     0.0933(5)     0.25000       0.4278(10)    0.46600       0.50000
-     Atom O1_1   O      0.0896(4)     0.25000       0.7730(8)     0.77800       0.50000
-     Atom O2_1   O      0.4478(3)     0.25000       0.2179(9)     0.64200       0.50000
-     Atom O3_1   O      0.1639(3)     0.0321(4)     0.2805(6)     0.91700       1.00000
+     Moment(mx,my,mz):  0.82(5)       2.85(3)       0.1(5)
+     Atom Co2_1  MCO2   0.2796(7)     0.25000       0.9865(18)    0.26900       0.50000
+     Moment(mx,my,mz):  0.00000       3.00(4)       0.00000
+     Atom Si_1   SI     0.0932(5)     0.25000       0.4288(11)    0.46600       0.50000
+     Atom O1_1   O      0.0897(4)     0.25000       0.7716(9)     0.77800       0.50000
+     Atom O2_1   O      0.4477(4)     0.25000       0.2168(9)     0.64200       0.50000
+     Atom O3_1   O      0.1640(3)     0.0321(5)     0.2812(7)     0.91700       1.00000
 
 
      -----------------------------------------------------
@@ -198,8 +192,8 @@
      -----------------------------------------------------
 
  => Phase:  1     Co2SiO4 Pnma.1 magnetic modes           FIX xyz
- => Bragg R-factor:   7.94       Vol:  296.201( 0.013)  Fract(%):  100.00( 1.06)
- => Rf-factor=  7.19             ATZ:         839.800   Brindley:  1.0000
+ => Bragg R-factor:   7.70       Vol:  296.472( 0.026)  Fract(%):  100.00( 1.11)
+ => Rf-factor=  6.51             ATZ:         839.800   Brindley:  1.0000
 
 
        ----------------------------------------------------
@@ -210,29 +204,29 @@
  => GLOBAL INDICATORS:
 
     The first and last reflections appears at:
-    2theta(degrees)/T.O.F(microsecs)/Energy(KeV) =>         10.408       149.487
-    s (angstroms-1) =>     0.0970    1.0318
-    D (angstroms  ) =>    10.3081    0.9692
-    sin(theta/lamb) =>     0.0485    0.5159
-    Q (angstroms-1) =>     1.2191   12.9663
+    2theta(degrees)/T.O.F(microsecs)/Energy(KeV) =>         10.405       149.365
+    s (angstroms-1) =>     0.0970    1.0315
+    D (angstroms  ) =>    10.3113    0.9694
+    sin(theta/lamb) =>     0.0485    0.5158
+    Q (angstroms-1) =>     1.2187   12.9625
 
-    The average FWHM is:   0.4926  Fwhm(av)/step =   4.9231
+    The average FWHM is:   0.5131  Fwhm(av)/step =   5.1273
 
- => Sum(Yiobs-Yical):     -473.77    -194.14    2359.10    -583.94 <- Four regions
-            Total ->      1107.24
+ => Sum(Yiobs-Yical):       86.31     657.76    1978.28    -823.67 <- Four regions
+            Total ->      1898.68
 
-  Expected Rp (background uncorrected):     1.47 Observed->     3.71
-  Expected cRp(background   corrected):     5.45 Observed->    13.77
-  -> Ratio Rp/Exp=cRp/cExp:     2.53
-  Weighted Average Bragg R-factor:     7.94
-  Weighted Average      RF-factor:     7.19
-  Reduced Chi-square :     6.81
+  Expected Rp (background uncorrected):     1.52 Observed->     3.85
+  Expected cRp(background   corrected):     5.47 Observed->    13.81
+  -> Ratio Rp/Exp=cRp/cExp:     2.52
+  Weighted Average Bragg R-factor:     7.70
+  Weighted Average      RF-factor:     6.51
+  Reduced Chi-square :     7.54
 
  => Total number of "independent" reflections:    232
     Effective number (account for resolution) of reflections: 
-                      at level p=1.00  : 121.5
-                      at level p=0.50  : 163.8
-                      at level p=0.25  : 191.3
+                      at level p=1.00  : 120.4
+                      at level p=0.50  : 162.3
+                      at level p=0.25  : 190.3
 
     A reflection contributes as x/(x+nearest), where "x"  
     is the fraction of the total area of the current phase and 
@@ -243,14 +237,14 @@
    "nearest" is weighted by the corresponding "x(s)" 
 
  =>             Number of global  refined parameters:     17
-                Number of profile refined parameters:     27
+                Number of profile refined parameters:     28
     Number of intensity-affecting refined parameters:      0
       (Preferred orientation belongs to this class)   
 
  => (Effective Number of reflections)/(Number of intensity parameters)= refni
-      Ratio ( Optimistic view,p=0.25):  191.3
-      Ratio (Pessimistic view,p=1.00):  121.5
-      Ratio (   Eclectic view,p=0.50):  163.8
+      Ratio ( Optimistic view,p=0.25):  190.3
+      Ratio (Pessimistic view,p=1.00):  120.4
+      Ratio (   Eclectic view,p=0.50):  162.3
 
  => PHASE DEPENDENT INDICATORS:
 
@@ -258,15 +252,15 @@
 
      Phase  2Theta/TOF  FWHM     Q       DQ      Delta   Dd/d(%)
 
-       1      94.40   0.3218   4.9306  0.01282  0.00000  0.260
+       1      89.88   0.3238   4.7466  0.01344  0.00000  0.283
 
    Q ,DQ(FWHM in Q-space) and Delta are given in 1/angstroms
  Delta is the expected step between consecutive reflections at Q
 
  Phase    %Cont  Nintdp  Nprofp   Nref      Enref(Effective)
                                          R:p=1  R:p=1/2  R:p=1/4
-     1  100.00       0      27     232  121.45  163.83  191.33
-                                        121.45  163.83  191.33
+     1  100.00       0      28     232  120.43  162.33  190.33
+                                        120.43  162.33  190.33
   Where:
   %Cont: percentage of the total integrated intensity (100x)
  Nintdp: Number of intensity-affecting refined parameters
@@ -278,19 +272,19 @@ R:p=1/n: Ratio Enref(Effective)/Nintdp <- "Solvability Index"
 
  => ANALYSIS OF STANDARD DEVIATIONS
 
-    Phase:  1 Degrees of freedom for p=1, 1/2, 1/4:           121.45          163.83          191.33
-              Chi2 based on integrated intensities:            56.53           41.91           35.88
-              Calculated with Scott'S FORMULA     :    66.68   49.69   42.69
+    Phase:  1 Degrees of freedom for p=1, 1/2, 1/4:           120.43          162.33          190.33
+              Chi2 based on integrated intensities:            63.28           46.95           40.04
+              Calculated with Scott'S FORMULA     :    76.59   57.08   48.83
 
  => Standard deviations concern the PRECISION of parameters and
     represent ACCURACY only if there is no systematic errors
     A better estimate of the accuracy of structural parameters
     is obtained multiplying sigmas by the parameter SCOR
- -> SCOR =   2.4828 { Berar'S FORMULA}
- -> SCOR =   2.2188 {Pawley'S FORMULA}
+ -> SCOR =   2.5753 { Berar'S FORMULA}
+ -> SCOR =   2.2644 {Pawley'S FORMULA}
  -> Application of modified Scott'S FORMULA
-    SCOR(p=1,1/2,1/4) =             2.88            2.48            2.30
-    SCOR(expected Si) =       3.1291      2.7012      2.5038
+    SCOR(p=1,1/2,1/4) =             2.90            2.50            2.30
+    SCOR(expected Si) =       3.1870      2.7513      2.5447
    Warning! Do not take into account Scott'S SCOR
             These indicators are under test....
 
@@ -301,7 +295,7 @@ R:p=1/n: Ratio Enref(Effective)/Nintdp <- "Solvability Index"
  => Your refinement could still be improved!
 
  
-              CPU Time:     8.273 seconds
-                            0.138 minutes
+              CPU Time:     2.266 seconds
+                            0.038 minutes
 
- => Run finished at:     Date: 02/11/2026  Time: 22:42:12.171                              
+ => Run finished at:     Date: 03/11/2026  Time: 11:52:33.560                              

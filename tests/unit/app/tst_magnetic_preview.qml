@@ -74,13 +74,95 @@ TestCase {
         const headers = Render.cells(table.headerItem).filter(item => item.visible && item.width > 1);
         verify(headers.some(item => String(item.text).toLowerCase() === "id"), "The first identity column is id, as in Atomic displacement");
         verify(!headers.some(item => String(item.text).toLowerCase() === "label"), "The preview label heading is replaced by id");
-        verify(headers.some(item => /ion|form factor/i.test(String(item.text))), "Every moment row exposes its magnetic ion choice");
         verify(!headers.some(item => /[μµ]B|Bohr/.test(String(item.text))), "Moment units follow shared field tooltips rather than custom column headings");
         const forms = Render.descendants(moments).filter(item => /symmform|symmetry.?form/i.test(item.objectName || ""));
         verify(forms.length > 0, "The derived symmetry form is displayed");
         verify(forms.every(item => !("readOnly" in item) || item.readOnly || !item.enabled), "Symmetry form is read-only in every displayed editor");
         const displacement = group("atom_site_aniso");
         verify(/\(6\)/.test(displacement.title), "Atomic displacement reports all six site rows instead of zero");
+    }
+    function test_symmetry_form_column_has_room_and_a_gap_after_mz() {
+        const moments = group("atom_site_moment");
+        const form = findChild(moments, "atomSiteMoment.symmform.0");
+        const mx = findChild(moments, "atomSiteMoment.mx.0");
+        const my = findChild(moments, "atomSiteMoment.my.0");
+        const mz = findChild(moments, "atomSiteMoment.mz.0");
+        verify(form && mx && my && mz, "The first cobalt row lays out the symmetry form beside its three components");
+        verify(form.readOnly, "The wider symmetry form remains read-only");
+        const em = form.font.pixelSize;
+        verify(form.width - form.implicitWidth >= em / 2, "The symmetry form has spare width beyond its full expression");
+        const gap = (left, right) => right.mapToItem(moments, right.leftPadding, 0).x
+            - left.mapToItem(moments, left.width - left.rightPadding, 0).x;
+        verify(gap(mz, form) >= gap(mx, my) + em / 4, "The symmetry form has a distinct gap beyond normal component spacing");
+    }
+    function test_magnetic_column_shows_none_and_aligns_each_choice() {
+        const moments = group("atom_site_moment");
+        const table = findChild(moments, "atomSiteMoments.list");
+        verify(table !== null, "The moments group exposes its rendered table");
+        const headers = Render.cells(table.headerItem);
+        verify(headers.some(cell => cell.visible && String(cell.text).toLowerCase() === "magnetic"), "The moment choice column is headed magnetic");
+        const boxes = [];
+        for (let i = 0; i < table.count; ++i) {
+            const box = findChild(table.itemAtIndex(i), "atomSiteMoment.ion." + i);
+            verify(box && box.visible && box.width > 0, "Each site has a laid-out magnetic combo box");
+            boxes.push(box);
+        }
+        compare(boxes.length, 6, "Every cobalt, silicon and oxygen site has its own choice");
+        compare(boxes.map(box => box.currentText), ["Co2+", "Co2+", "none", "none", "none", "none"], "Nonmagnetic sites display none and the cobalt sites display their ion");
+        const left = box => box.mapToItem(moments, 0, 0).x;
+        for (const box of boxes) {
+            verify(Math.abs(left(box) - left(boxes[0])) <= 1, "Magnetic combo boxes share the same left edge");
+            verify(Math.abs(box.width - boxes[0].width) <= 1, "Magnetic combo boxes share the same right edge");
+        }
+        const co = boxes[0];
+        const none = Array.from({length: co.count}, (_, i) => i).find(i => co.textAt(i) === "none");
+        verify(none !== undefined, "A magnetic site offers none as an explicit choice");
+        co.currentIndex = none;
+        co.activated(none);
+        tryVerify(() => {
+            const box = findChild(table.itemAtIndex(0), "atomSiteMoment.ion.0");
+            return box && box.currentText === "none";
+        }, 3000, "Choosing none removes the cobalt moment from that site");
+        const cleared = findChild(table.itemAtIndex(0), "atomSiteMoment.mx.0");
+        verify(cleared && cleared.item === null, "Choosing none removes the site's moment parameter as well as its ion");
+    }
+    function test_moment_colour_preferences_offer_three_schemes() {
+        const dialog = preferences.createObject(appWindow.contentItem);
+        verify(dialog !== null, "The moment colour check uses the production Preferences dialog");
+        dialog.open();
+        tryCompare(dialog, "visible", true, 1000, "Preferences opens before checking colour schemes");
+        const appearanceTab = findChild(dialog.contentItem, "preferences.tab.appearance");
+        verify(appearanceTab !== null, "Preferences provides the Appearance tab");
+        mouseClick(appearanceTab);
+        verify(waitForPolish(dialog.contentItem), "The Appearance preferences complete layout");
+        const items = Render.descendants(dialog.contentItem);
+        verify(items.some(item => item.visible && /^Moment colours:?$/.test(item.text || "")), "Appearance labels the selector Moment colours");
+        const boxes = items.filter(item => item.visible && typeof item.textAt === "function" && item.count > 0 && item.textAt(0) === "Atom");
+        compare(boxes.length, 1, "There is one moment colour selector in Preferences");
+        const box = boxes[0];
+        compare(Array.from({length: box.count}, (_, i) => box.textAt(i)), ["Atom", "Greyed atom", "Single"], "The moment colour selector offers the three approved schemes");
+        compare(box.currentText, "Greyed atom", "Greyed atom is the default in a fresh preference store");
+        box.activated(0);
+        tryCompare(box, "currentText", "Atom", 1000, "Selecting Atom updates the moment colour preference");
+        box.activated(2);
+        tryCompare(box, "currentText", "Single", 1000, "Selecting Single updates the moment colour preference");
+        dialog.close();
+        click("appBar.tab.structure");
+        const view = Review.find(Ui.page(appWindow), "structure.view");
+        verify(view !== null, "The Single palette is available to the production structure viewer");
+        const controller = view.controller;
+        const wasDark = controller.dark;
+        controller.dark = false;
+        const light = controller.styleColor("moment");
+        controller.dark = true;
+        const dark = controller.styleColor("moment");
+        controller.dark = wasDark;
+        verify(light.a > 0 && dark.a > 0, "Single supplies a visible moment colour in both palettes");
+        verify(light.r === light.g && light.g === light.b && dark.r === dark.g && dark.g === dark.b, "Single retains neutral grey in both palettes");
+        verify(dark.r > light.r, "Single uses a lighter grey in the dark palette");
+        box.activated(1);
+        tryCompare(box, "currentText", "Greyed atom", 1000, "The selector can restore the default scheme");
+        dialog.destroy();
     }
     function test_magnetic_selector_and_scale_use_one_editing_surface() {
         const dialog = preferences.createObject(appWindow.contentItem);
@@ -118,14 +200,6 @@ TestCase {
         verify(view !== null, "The magnetic case reaches the real structure view");
         tryVerify(() => view.current, 10000, "The magnetic scene is current before visibility edits");
         const controller = view.controller;
-        controller.dark = false;
-        const light = controller.styleColor("moment");
-        controller.dark = true;
-        const dark = controller.styleColor("moment");
-        verify(light.a > 0 && dark.a > 0, "Moment arrows have a visible colour in both palettes");
-        verify(light.r === light.g && light.g === light.b && dark.r === dark.g && dark.g === dark.b, "Moment arrows use neutral grey in both palettes");
-        verify(dark.r > light.r, "The dark palette uses lighter moment grey than the light palette");
-        controller.dark = false;
         controller.viewAnimationDuration = 0;
         const state = () => JSON.stringify({position: controller.cameraPosition, rotation: controller.cameraRotation, projection: controller.cameraProjection, zoom: controller.magnification});
         const before = state();
@@ -151,19 +225,29 @@ TestCase {
         tryVerify(() => Probe.objectsWithProperty(chart, "braggLabels").length === 1, 5000, "The pattern uses one presentation controller");
         const controller = Probe.objectsWithProperty(chart, "braggLabels")[0];
         tryCompare(controller, "braggRows", 2, 5000, "A magnetic phase has separate nuclear and magnetic tick rows");
-        const labels = controller.braggLabels;
-        const magnetic = labels.find(row => /magnetic/i.test(row.text));
-        const nuclear = labels.find(row => /nuclear/i.test(row.text));
-        verify(magnetic !== undefined && nuclear !== undefined, "Both reflection row labels state their scattering contribution");
-        verify(String(magnetic.color) !== String(nuclear.color), "The two reflection rows use distinct fill colours");
-        const series = Render.series(chart).filter(item => String(item.objectName).startsWith("chart.series.bragg.") && item.at !== undefined);
-        const magneticRows = series.filter(row => row.count > 0 && Math.abs(row.at(0).y - magnetic.centre) < .5);
-        compare(magneticRows.length, 1, "The magnetic label belongs to one actual tick series");
-        const actual = [];
-        for (let i = 0; i < magneticRows[0].count; ++i) actual.push(magneticRows[0].at(i).x);
         const expected = JSON.parse(SettingsProof.text(Probe.repoUrl("tests/fixtures/magnetic_pnma"), "magnetic-ticks.json"));
-        for (const angle of expected)
-            verify(actual.some(x => Math.abs(x - angle) < .0001), "Every independent allowed magnetic reflection has its tick, including nuclear-forbidden peaks");
+        const series = Render.series(chart).filter(item => String(item.objectName).startsWith("chart.series.bragg.") && item.at !== undefined && item.count > 0);
+        const magneticRows = series.filter(row => {
+            const points = Array.from({length: row.count}, (_, i) => row.at(i).x);
+            return expected.every(angle => points.some(x => Math.abs(x - angle) < .0001));
+        });
+        compare(magneticRows.length, 1, "One tick series contains every independent magnetic reflection, including nuclear-forbidden peaks");
+        const magnetic = magneticRows[0];
+        const nuclear = series.find(row => row !== magnetic);
+        verify(nuclear !== undefined, "The nuclear tick series is present beside the magnetic series");
+        verify(String(magnetic.color) !== String(nuclear.color), "The two tick series retain their distinct fill colours");
+        const rendered = Render.descendants(chart).filter(item => item.objectName === "chart.bragg.label" && item.visible);
+        const labelFor = row => rendered.find(item => Math.abs(item.modelData.centre - row.at(0).y) < .5);
+        const magneticLabel = labelFor(magnetic);
+        const nuclearLabel = labelFor(nuclear);
+        verify(magneticLabel && nuclearLabel, "Each tick series has a visible label at its own row");
+        compare(magneticLabel.segments.find(part => part.text !== undefined)?.text, "cosio", "The magnetic tick row shows the phase name without a magnetic suffix");
+        compare(nuclearLabel.segments.find(part => part.text !== undefined)?.text, "cosio", "The nuclear tick row shows the same phase name");
+        const magnet = magneticLabel.segments.find(part => part.icon !== undefined);
+        const structure = nuclearLabel.segments.find(part => part.icon !== undefined);
+        compare(magnet?.icon, "magnet", "A magnet icon identifies the magnetic row");
+        compare(structure?.icon, "layer-group", "A structure icon identifies the nuclear row");
+        compare(String(magnet.color), String(structure.color), "The magnet uses the same phase colour as its nuclear structure icon");
         chart.destroy();
     }
     function test_k_editor_refuses_without_changing_the_saved_model() {

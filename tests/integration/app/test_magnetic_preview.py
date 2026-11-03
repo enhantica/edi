@@ -10,6 +10,9 @@ ROOT = Path(__file__).resolve().parents[3]
 CASES = [
     'extra_groups_are_single_ordered_and_human_readable',
     'main_order_all_sites_ids_ions_and_symmetry_form',
+    'symmetry_form_column_has_room_and_a_gap_after_mz',
+    'magnetic_column_shows_none_and_aligns_each_choice',
+    'moment_colour_preferences_offer_three_schemes',
     'magnetic_selector_and_scale_use_one_editing_surface',
     'visibility_keeps_camera_and_independent_moments',
     'analysis_contains_only_independent_magnetic_components',
