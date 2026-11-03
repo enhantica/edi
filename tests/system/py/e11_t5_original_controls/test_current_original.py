@@ -58,21 +58,43 @@ def _usage_header_input(bond, usage_phase):
     source, graph = _absolute(bond['root']), _absolute(bond['real_build_root'])
     selected = bond['selected_header']
     expected = USAGE_HEADER_HASHES[usage_phase]
-    assert _absolute(selected['path']) == source / USAGE_HEADER
-    assert selected['sha256'] == bond['selected_header_sha256'] == expected
-    assert _sha(_absolute(selected['path'])) == expected
+    assert _absolute(selected['path']) == source / USAGE_HEADER, (
+        " usage header input: require _absolute(selected['path']) == source / USAGE_HEADER"
+    )
+    assert selected['sha256'] == bond['selected_header_sha256'] == expected, (
+        " usage header input: require selected['sha256'] == "
+        "bond['selected_header_sha256'] == expected"
+    )
+    assert _sha(_absolute(selected['path'])) == expected, (
+        " usage header input: require _sha(_absolute(selected['path'])) == expected"
+    )
     usage_object = (
         'app/CMakeFiles/edi_app_tests.dir/__/tests/unit/app/test_e11_t5_usage_account.cpp.o'
     )
     assert selected['object'] == usage_object, 'The selected header belongs to the usage unit'
-    assert selected['selected_targets'] == ['edi_app_tests']
-    assert _sha(graph / usage_object) == selected['object_sha256']
+    assert selected['selected_targets'] == ['edi_app_tests'], (
+        " usage header input: require selected['selected_targets'] == ['edi_app_tests']"
+    )
+    assert _sha(graph / usage_object) == selected['object_sha256'], (
+        " usage header input: require _sha(graph / usage_object) == selected['object_sha256']"
+    )
     dependencies = selected['dependency_record']
     assert (
         hashlib.sha256(dependencies.encode()).hexdigest() == selected['dependency_record_sha256']
+    ), (
+        ' usage header input: require '
+        'hashlib.sha256(dependencies.encode()).hexdigest() == '
+        "selected['dependency_record_sha256']"
     )
-    assert '(VALID)' in dependencies.splitlines()[0]
-    assert str(source / USAGE_HEADER) in {line.strip() for line in dependencies.splitlines()[1:]}
+    assert '(VALID)' in dependencies.splitlines()[0], (
+        " usage header input: require '(VALID)' in dependencies.splitlines()[0]"
+    )
+    assert str(source / USAGE_HEADER) in {
+        line.strip() for line in dependencies.splitlines()[1:]
+    }, (
+        ' usage header input: require str(source / USAGE_HEADER) in {line.strip() '
+        'for line in dependencies.splitlines()[1:]}'
+    )
 
 
 def _activity_source_inputs(bond):
@@ -80,10 +102,21 @@ def _activity_source_inputs(bond):
     built = bond['build_observation']['data']
     for relative, digest in ACTIVITY_INPUTS.items():
         row = built['source_inputs'][relative]
-        assert _absolute(row['path']) == source / relative
-        assert row['sha256'] == _sha(_absolute(row['path'])) == digest, relative
+        assert _absolute(row['path']) == source / relative, (
+            " activity source inputs: require _absolute(row['path']) == source / relative"
+        )
+        assert row['sha256'] == _sha(_absolute(row['path'])) == digest, (
+            (
+                " activity source inputs: require row['sha256'] == "
+                "_sha(_absolute(row['path'])) == digest"
+            ),
+            relative,
+        )
     probe_source = 'tests/integration/py/assistant_ui_probe/probe.cpp'
-    assert bond['compiled_sources'][probe_source] == ACTIVITY_INPUTS[probe_source]
+    assert bond['compiled_sources'][probe_source] == ACTIVITY_INPUTS[probe_source], (
+        " activity source inputs: require bond['compiled_sources'][probe_source] "
+        '== ACTIVITY_INPUTS[probe_source]'
+    )
 
 
 def _activity_object_input(bond):
@@ -92,47 +125,84 @@ def _activity_object_input(bond):
     activity_object = 'assistant-ui-probe/CMakeFiles/assistant_real_owner_probe.dir/probe.cpp.o'
     object_path = graph / activity_object
     witness = built['object_witnesses'][activity_object]
-    assert _absolute(witness['path']) == object_path
-    assert _sha(object_path) == witness['sha256']
+    assert _absolute(witness['path']) == object_path, (
+        " activity object input: require _absolute(witness['path']) == object_path"
+    )
+    assert _sha(object_path) == witness['sha256'], (
+        " activity object input: require _sha(object_path) == witness['sha256']"
+    )
     target = 'assistant_real_owner_probe'
     record = built['active_target_input_records'][target]
-    assert _sha(_absolute(record['path'])) == record['sha256']
-    assert record['sha256'] == bond['active_target_inputs'][target]['record_sha256']
+    assert _sha(_absolute(record['path'])) == record['sha256'], (
+        " activity object input: require _sha(_absolute(record['path'])) == record['sha256']"
+    )
+    assert record['sha256'] == bond['active_target_inputs'][target]['record_sha256'], (
+        " activity object input: require record['sha256'] == "
+        "bond['active_target_inputs'][target]['record_sha256']"
+    )
     inputs = _absolute(record['path']).read_text().splitlines()
-    assert str(object_path) in {str((graph / value).resolve()) for value in inputs if value}
+    assert str(object_path) in {str((graph / value).resolve()) for value in inputs if value}, (
+        ' activity object input: require str(object_path) in {str((graph / '
+        'value).resolve()) for value in inputs if value}'
+    )
     _activity_compile_command(bond, graph, object_path)
 
 
 def _activity_compile_command(bond, graph, object_path):
     database = bond['native_consumer_graph']
     commands = _absolute(database['compile_commands'])
-    assert _sha(commands) == database['compile_commands_sha256']
+    assert _sha(commands) == database['compile_commands_sha256'], (
+        " activity compile command: require _sha(commands) == database['compile_commands_sha256']"
+    )
     probe_source = _absolute(bond['root']) / 'tests/integration/py/assistant_ui_probe/probe.cpp'
     rows = [row for row in json.loads(commands.read_text()) if Path(row['file']) == probe_source]
     assert len(rows) == 1, 'Activity has one genuine owning probe translation unit'
     arguments = shlex.split(rows[0]['command'])
     output = Path(arguments[arguments.index('-o') + 1])
-    assert _absolute(rows[0]['directory']) == graph
-    assert (graph / output).resolve() == object_path
+    assert _absolute(rows[0]['directory']) == graph, (
+        " activity compile command: require _absolute(rows[0]['directory']) == graph"
+    )
+    assert (graph / output).resolve() == object_path, (
+        ' activity compile command: require (graph / output).resolve() == object_path'
+    )
 
 
 def _compiled_callers(bond, bond_hash, record, registry_path):
     expected = record['generated_inputs']
     assert set(expected) == CALLER_KEYS, 'Both actual Composer/Panel caller units are mandatory'
     for key, digest in expected.items():
-        assert isinstance(digest, str) and len(digest) == 64
+        assert isinstance(digest, str) and len(digest) == 64, (
+            ' compiled callers: require isinstance(digest, str) and len(digest) == 64'
+        )
         observed = bond['generated_inputs'][key]
-        assert observed['sha256'] == digest, key
-        assert _sha(_absolute(observed['path'])) == digest, key
+        assert observed['sha256'] == digest, (
+            (" compiled callers: require observed['sha256'] == digest"),
+            key,
+        )
+        assert _sha(_absolute(observed['path'])) == digest, (
+            (" compiled callers: require _sha(_absolute(observed['path'])) == digest"),
+            key,
+        )
     reference = record['source_proof']
     path = _absolute(reference['path'])
     assert _sha(path) == reference['sha256'], 'Caller attribution is an immutable source proof'
     proof = json.loads(path.read_text())
-    assert proof['bond_sha256'] == bond_hash
-    assert proof['compiled_source'] == bond['source'] and proof['compiled_tree'] == bond['tree']
-    assert proof['family_phases'] == bond['family_phases']
-    assert proof['generated_inputs'] == expected
-    assert proof['case_registry_sha256'] == _sha(registry_path)
+    assert proof['bond_sha256'] == bond_hash, (
+        " compiled callers: require proof['bond_sha256'] == bond_hash"
+    )
+    assert proof['compiled_source'] == bond['source'] and proof['compiled_tree'] == bond['tree'], (
+        " compiled callers: require proof['compiled_source'] == bond['source'] "
+        "and proof['compiled_tree'] == bond['tree']"
+    )
+    assert proof['family_phases'] == bond['family_phases'], (
+        " compiled callers: require proof['family_phases'] == bond['family_phases']"
+    )
+    assert proof['generated_inputs'] == expected, (
+        " compiled callers: require proof['generated_inputs'] == expected"
+    )
+    assert proof['case_registry_sha256'] == _sha(registry_path), (
+        " compiled callers: require proof['case_registry_sha256'] == _sha(registry_path)"
+    )
     assert proof['cases'] == json.loads(registry_path.read_text()), (
         'Source attribution covers the complete exact six-case registry, not only generated hashes'
     )
@@ -147,7 +217,9 @@ def _source_inputs():
         'Both fresh caller maps require source proof'
     )
     assert os.environ['EDI_E11_T5_A2A_PHASE'] == 'native', 'Activity header07 stays native'
-    assert os.environ['EDI_E11_COMPOSER_BROWSER_PHASE'] == binding['phase']
+    assert os.environ['EDI_E11_COMPOSER_BROWSER_PHASE'] == binding['phase'], (
+        " source inputs: require os.environ['EDI_E11_COMPOSER_BROWSER_PHASE'] == binding['phase']"
+    )
     assert binding['phase'] in {
         'native-complete-final',
         'native-composer-browser-original-usage',
@@ -159,42 +231,91 @@ def _source_inputs():
         'browser': 'native',
         'usage': expected_usage,
     }
-    assert binding['family_phases'] == families
-    assert _sha(frozen) == binding['frozen266_sha256']
+    assert binding['family_phases'] == families, (
+        " source inputs: require binding['family_phases'] == families"
+    )
+    assert _sha(frozen) == binding['frozen266_sha256'], (
+        " source inputs: require _sha(frozen) == binding['frozen266_sha256']"
+    )
     active_path = Path(__file__).with_name('native_cases.py').resolve(strict=True)
-    assert _sha(active_path) == binding['active_native_cases_sha256']
+    assert _sha(active_path) == binding['active_native_cases_sha256'], (
+        " source inputs: require _sha(active_path) == binding['active_native_cases_sha256']"
+    )
     for row in binding['required_files'] + binding['production_files']:
-        assert _sha(root / row['path']) == row['sha256'], row['path']
+        assert _sha(root / row['path']) == row['sha256'], (
+            (" source inputs: require _sha(root / row['path']) == row['sha256']"),
+            row['path'],
+        )
     receipt_path = _absolute(os.environ['EDI_E11_POST_BINARY_BOND'])
     expected = os.environ['EDI_E11_POST_BINARY_BOND_SHA256']
-    assert len(expected) == 64 and all(character in '0123456789abcdef' for character in expected)
-    assert expected == binding['current_bond_sha256']
-    assert _sha(receipt_path) == expected
+    assert len(expected) == 64 and all(
+        character in '0123456789abcdef' for character in expected
+    ), (
+        ' source inputs: require len(expected) == 64 and all(character in '
+        "'0123456789abcdef' for character in expected)"
+    )
+    assert expected == binding['current_bond_sha256'], (
+        " source inputs: require expected == binding['current_bond_sha256']"
+    )
+    assert _sha(receipt_path) == expected, ' source inputs: require _sha(receipt_path) == expected'
     receipt = json.loads(receipt_path.read_text())
-    assert receipt['source'] == os.environ['EDI_E11_POST_SOURCE_SHA'] == binding['current_source']
-    assert receipt['family_phases'] == families
+    assert (
+        receipt['source'] == os.environ['EDI_E11_POST_SOURCE_SHA'] == binding['current_source']
+    ), (
+        " source inputs: require receipt['source'] == "
+        "os.environ['EDI_E11_POST_SOURCE_SHA'] == binding['current_source']"
+    )
+    assert receipt['family_phases'] == families, (
+        " source inputs: require receipt['family_phases'] == families"
+    )
     original_path = _absolute(os.environ['EDI_E11_COMPARISON_ORIGINAL_BINARY_BOND'])
-    assert _sha(original_path) == binding['original_bond_sha256']
+    assert _sha(original_path) == binding['original_bond_sha256'], (
+        " source inputs: require _sha(original_path) == binding['original_bond_sha256']"
+    )
     original = json.loads(original_path.read_text())
-    assert original['source'] == binding['original_source']
-    assert original['family_phases'] == {**families, 'usage': 'original'}
+    assert original['source'] == binding['original_source'], (
+        " source inputs: require original['source'] == binding['original_source']"
+    )
+    assert original['family_phases'] == {**families, 'usage': 'original'}, (
+        " source inputs: require original['family_phases'] == {**families, 'usage': 'original'}"
+    )
     for name, value in binding['comparison_native'].items():
-        assert receipt['native'][name] == value, name
-        assert original['native'][name] == value, name
+        assert receipt['native'][name] == value, (
+            (" source inputs: require receipt['native'][name] == value"),
+            name,
+        )
+        assert original['native'][name] == value, (
+            (" source inputs: require original['native'][name] == value"),
+            name,
+        )
     for bond in (receipt, original):
         assert (
             _sha(_absolute(bond['native']['archive']))
             == binding['comparison_native']['archive_sha256']
+        ), (
+            " source inputs: require _sha(_absolute(bond['native']['archive'])) == "
+            "binding['comparison_native']['archive_sha256']"
         )
-    assert receipt['bundled_runtime']['config_sha256'] == binding['current_runtime_config_sha256']
+    assert (
+        receipt['bundled_runtime']['config_sha256'] == binding['current_runtime_config_sha256']
+    ), (
+        " source inputs: require receipt['bundled_runtime']['config_sha256'] == "
+        "binding['current_runtime_config_sha256']"
+    )
     assert (
         original['bundled_runtime']['config_sha256'] == binding['original_runtime_config_sha256']
+    ), (
+        " source inputs: require original['bundled_runtime']['config_sha256'] == "
+        "binding['original_runtime_config_sha256']"
     )
     for bond, key in (
         (receipt, 'current_runtime_config_sha256'),
         (original, 'original_runtime_config_sha256'),
     ):
-        assert _sha(_absolute(bond['bundled_runtime']['config'])) == binding[key]
+        assert _sha(_absolute(bond['bundled_runtime']['config'])) == binding[key], (
+            ' source inputs: require '
+            "_sha(_absolute(bond['bundled_runtime']['config'])) == binding[key]"
+        )
     for bond, key in ((receipt, 'current'), (original, 'original')):
         _compiled_phase_inputs(bond, bond['family_phases']['usage'])
         _compiled_callers(
@@ -211,23 +332,41 @@ def _source_inputs():
     assert (
         binding['native_attribution_proof']
         == (binding['compiled_caller_proof']['current']['source_proof']['sha256'])
+    ), (
+        " source inputs: require binding['native_attribution_proof'] == "
+        "(binding['compiled_caller_proof']['current']['source_proof']['sha256'])"
     )
     for row in binding['production_files']:
         if row['compiled']:
-            assert receipt['compiled_sources'][row['path']] == row['sha256'], row['path']
+            assert receipt['compiled_sources'][row['path']] == row['sha256'], (
+                (
+                    " source inputs: require receipt['compiled_sources'][row['path']] == "
+                    "row['sha256']"
+                ),
+                row['path'],
+            )
     assert receipt['compiled_sources']['tests/integration/py/assistant_ui_probe/probe.cpp'] == (
         '5cace5b63a55b0b373848242d63646121e4532f4a7071d8ac6a4c3e68930bd5c'
+    ), (
+        ' source inputs: require '
+        "receipt['compiled_sources']['tests/integration/py/assistant_ui_probe/probe.cpp'] "
+        "== ( '5cace5b63a55b0b373848242d63646121e4532f4a7071d8ac6a4c3e68930bd5c' "
+        ')'
     )
     assert (
         _sha(_absolute(os.environ['EDI_ASSISTANT_UI_PROBE']))
         == receipt['binaries']['assistant_real_owner_probe']['sha256']
+    ), (
+        ' source inputs: require '
+        "_sha(_absolute(os.environ['EDI_ASSISTANT_UI_PROBE'])) == "
+        "receipt['binaries']['assistant_real_owner_probe']['sha256']"
     )
     historical87 = _absolute(os.environ['EDI_E11_ORIGINAL_BINARY_BOND'])
     assert _sha(historical87) == (
         '317201f07568bcdec51f93294b41554d9db7560c8ffe2739534a5868d7b1db5d'
     ), 'Original87 remains immutable protocol custody, never the fresh kit authority'
     if expected_usage == 'original':
-        assert receipt == original
+        assert receipt == original, ' source inputs: require receipt == original'
     _require_stable_dependencies(receipt, original)
     return root, frozen
 
@@ -240,7 +379,13 @@ def _require_stable_dependencies(receipt, original):
         'bundled_runtime': ['files'],
     }.items():
         for key in keys:
-            assert receipt[section][key] == original[section][key], (section, key)
+            assert receipt[section][key] == original[section][key], (
+                (
+                    ' require stable dependencies: require receipt[section][key] == '
+                    'original[section][key]'
+                ),
+                (section, key),
+            )
 
 
 def _load_bound_module(name, path):
@@ -250,8 +395,8 @@ def _load_bound_module(name, path):
         assert _absolute(existing.__file__) == path, 'No same-name module from another checkout'
         return existing
     spec = importlib.util.spec_from_file_location(name, path)
-    assert spec
-    assert spec.loader
+    assert spec, ' load bound module: require spec'
+    assert spec.loader, ' load bound module: require spec.loader'
     module = importlib.util.module_from_spec(spec)
     with ExitStack() as rollback:
         sys.modules[name] = module
@@ -386,8 +531,12 @@ class CommandScopes:
         self.case = case
         self.contract_steps = {row['step'] for row in owner.contract['expected']}
         self.original = actor.command
-        assert self.original.__self__ is actor
-        assert self.original.__func__ is ACTUAL.MainActor.command
+        assert self.original.__self__ is actor, (
+            'CommandScopes.  init  : require self.original.__self__ is actor'
+        )
+        assert self.original.__func__ is ACTUAL.MainActor.command, (
+            'CommandScopes.  init  : require self.original.__func__ is ACTUAL.MainActor.command'
+        )
         self.depth = 0
         self.occurrences = Counter()
 

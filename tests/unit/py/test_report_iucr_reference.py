@@ -43,9 +43,19 @@ PARAMETER_TOKEN = re.compile(
 
 def test_quantum_exponent_is_distinct_from_its_numeric_value():
     # The operand's exponent, not equality or magnitude, selects the last place.
-    assert Decimal('1.0') == Decimal(1)
-    assert Decimal('12.5').quantize(Decimal('1.0'), rounding=ROUND_HALF_UP) == Decimal('12.5')
-    assert Decimal('12.5').quantize(Decimal(1), rounding=ROUND_HALF_UP) == Decimal(13)
+    assert Decimal('1.0') == Decimal(1), (
+        "quantum exponent is distinct from its numeric value: require Decimal('1.0') == Decimal(1)"
+    )
+    assert Decimal('12.5').quantize(Decimal('1.0'), rounding=ROUND_HALF_UP) == Decimal('12.5'), (
+        'quantum exponent is distinct from its numeric value: require '
+        "Decimal('12.5').quantize(Decimal('1.0'), rounding=ROUND_HALF_UP) == "
+        "Decimal('12.5')"
+    )
+    assert Decimal('12.5').quantize(Decimal(1), rounding=ROUND_HALF_UP) == Decimal(13), (
+        'quantum exponent is distinct from its numeric value: require '
+        "Decimal('12.5').quantize(Decimal(1), rounding=ROUND_HALF_UP) == "
+        'Decimal(13)'
+    )
 
 
 @pytest.mark.parametrize('case', CARRY_CASES)
@@ -64,12 +74,24 @@ def test_decade_carry_direct_pair_keeps_the_literal_su_last_place(case, rule):
 @pytest.mark.parametrize('value', [-1.23456789, 1.23456789, -0.0, 0.0])
 @pytest.mark.parametrize('rule', ['iucr_19', 'iucr_99'])
 def test_pair_absent_and_zero_uncertainties_keep_the_original_passthrough(value, rule):
-    assert rounded_pair(value, None, rule) == (value, None)
+    assert rounded_pair(value, None, rule) == (value, None), (
+        'pair absent and zero uncertainties keep the original passthrough: '
+        'require rounded_pair(value, None, rule) == (value, None)'
+    )
     for zero in (0.0, -0.0):
         actual = rounded_pair(value, zero, rule)
-        assert actual == (value, zero)
-        assert math.copysign(1, actual[0]) == math.copysign(1, value)
-        assert math.copysign(1, actual[1]) == math.copysign(1, zero)
+        assert actual == (value, zero), (
+            'pair absent and zero uncertainties keep the original passthrough: '
+            'require actual == (value, zero)'
+        )
+        assert math.copysign(1, actual[0]) == math.copysign(1, value), (
+            'pair absent and zero uncertainties keep the original passthrough: '
+            'require math.copysign(1, actual[0]) == math.copysign(1, value)'
+        )
+        assert math.copysign(1, actual[1]) == math.copysign(1, zero), (
+            'pair absent and zero uncertainties keep the original passthrough: '
+            'require math.copysign(1, actual[1]) == math.copysign(1, zero)'
+        )
     assert rounded_pair(-0.0001, 0.02, rule) == (-0.0001, 0.02), (
         'The separate nonzero-value fallback must remain unchanged'
     )
@@ -78,7 +100,10 @@ def test_pair_absent_and_zero_uncertainties_keep_the_original_passthrough(value,
 @pytest.mark.parametrize('rule', ['iucr_19', 'iucr_99'])
 def test_record_absent_and_zero_markers_remain_literal(rule):
     source = b'_background.coef -1.23456789()\n_background.intensity 1.23456789(0)\n'
-    assert rounded_record(source, rule) == source
+    assert rounded_record(source, rule) == source, (
+        'record absent and zero markers remain literal: require '
+        'rounded_record(source, rule) == source'
+    )
 
 
 @pytest.mark.parametrize('case', CARRY_CASES)
@@ -89,14 +114,34 @@ def test_token_record_and_triplet_carry_agree_with_independent_literals(case, ru
     token = case[4 if rule == 'iucr_19' else 5]
     original = f'{value}({su})'.encode()
     match = PARAMETER_TOKEN.fullmatch(original)
-    assert match is not None
-    assert expected_pair(value, su, rule) == expected
-    assert saved_triplet(value, su, True, rule) == (*expected, True)
-    assert saved_triplet(*expected, True, rule) == (*expected, True)
-    assert rounded_token(match, rule) == token
+    assert match is not None, (
+        'token record and triplet carry agree with independent literals: require match is not None'
+    )
+    assert expected_pair(value, su, rule) == expected, (
+        'token record and triplet carry agree with independent literals: require '
+        'expected_pair(value, su, rule) == expected'
+    )
+    assert saved_triplet(value, su, True, rule) == (*expected, True), (
+        'token record and triplet carry agree with independent literals: require '
+        'saved_triplet(value, su, True, rule) == (*expected, True)'
+    )
+    assert saved_triplet(*expected, True, rule) == (*expected, True), (
+        'token record and triplet carry agree with independent literals: require '
+        'saved_triplet(*expected, True, rule) == (*expected, True)'
+    )
+    assert rounded_token(match, rule) == token, (
+        'token record and triplet carry agree with independent literals: require '
+        'rounded_token(match, rule) == token'
+    )
     repeated = PARAMETER_TOKEN.fullmatch(token)
-    assert repeated is not None
-    assert rounded_token(repeated, rule) == token
+    assert repeated is not None, (
+        'token record and triplet carry agree with independent literals: require '
+        'repeated is not None'
+    )
+    assert rounded_token(repeated, rule) == token, (
+        'token record and triplet carry agree with independent literals: require '
+        'rounded_token(repeated, rule) == token'
+    )
     source = (
         b'data_control\n_metadata.title "opaque 12.345(0.0991)"\n_background.coef '
         + original
@@ -111,14 +156,29 @@ def test_token_record_and_triplet_carry_agree_with_independent_literals(case, ru
     wanted += (
         b'loop_\n_background.id\n_background.order\n_background.coef\nrow0 0 ' + token + b'\n'
     )
-    assert rounded_record(source, rule) == wanted
-    assert rounded_record(wanted, rule) == wanted
+    assert rounded_record(source, rule) == wanted, (
+        'token record and triplet carry agree with independent literals: require '
+        'rounded_record(source, rule) == wanted'
+    )
+    assert rounded_record(wanted, rule) == wanted, (
+        'token record and triplet carry agree with independent literals: require '
+        'rounded_record(wanted, rule) == wanted'
+    )
 
 
 @pytest.mark.parametrize('rule', ['iucr_19', 'iucr_99'])
 @pytest.mark.parametrize(('value', 'written'), [(1.23456789, 1.23457), (-1.23456789, -1.23457)])
 def test_persisted_scalar_fixed_absent_and_zero_branches_remain_exact(rule, value, written):
     for su in (None, 0.0):
-        assert saved_triplet(value, su, False, rule) == (written, 0.0, False)
-    assert saved_triplet(value, None, True, rule) == (written, None, True)
-    assert saved_triplet(value, 0.0, True, rule) == (written, 0.0, True)
+        assert saved_triplet(value, su, False, rule) == (written, 0.0, False), (
+            'persisted scalar fixed absent and zero branches remain exact: require '
+            'saved_triplet(value, su, False, rule) == (written, 0.0, False)'
+        )
+    assert saved_triplet(value, None, True, rule) == (written, None, True), (
+        'persisted scalar fixed absent and zero branches remain exact: require '
+        'saved_triplet(value, None, True, rule) == (written, None, True)'
+    )
+    assert saved_triplet(value, 0.0, True, rule) == (written, 0.0, True), (
+        'persisted scalar fixed absent and zero branches remain exact: require '
+        'saved_triplet(value, 0.0, True, rule) == (written, 0.0, True)'
+    )

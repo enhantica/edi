@@ -64,11 +64,23 @@ def test_category_order_only_aligns_without_changing_old_coordinates_or_bytes():
         actual['structures/sample.edi'][0],
     ]
     actual['analysis/analysis.edi'].reverse()  # Distinct categories, one record each.
-    assert actual != frozen
+    assert actual != frozen, (
+        'category order only aligns without changing old coordinates or bytes: '
+        'require actual != frozen'
+    )
     aligned = align(actual, frozen)
-    assert aligned == frozen
-    assert compare_scientific(aligned, frozen)
-    assert json.dumps(frozen) == before
+    assert aligned == frozen, (
+        'category order only aligns without changing old coordinates or bytes: '
+        'require aligned == frozen'
+    )
+    assert compare_scientific(aligned, frozen), (
+        'category order only aligns without changing old coordinates or bytes: '
+        'require compare_scientific(aligned, frozen)'
+    )
+    assert json.dumps(frozen) == before, (
+        'category order only aligns without changing old coordinates or bytes: '
+        'require json.dumps(frozen) == before'
+    )
     # An actual measurement corruption still reaches the unchanged comparator.
     actual['experiments/bank.edi'][-1][-1] = '111'
     with pytest.raises(ValueError, match='operand'):
@@ -94,7 +106,10 @@ def test_category_order_only_aligns_without_changing_old_coordinates_or_bytes():
 )
 def test_identity_mutations_refuse_after_the_genuine_positive(mutation):
     frozen = reference()
-    assert align(frozen, frozen) == frozen
+    assert align(frozen, frozen) == frozen, (
+        'identity mutations refuse after the genuine positive: require '
+        'align(frozen, frozen) == frozen'
+    )
     actual = copy.deepcopy(frozen)
     experiment = actual['experiments/bank.edi']
     structure = actual['structures/sample.edi']
@@ -128,7 +143,9 @@ def test_identity_mutations_refuse_after_the_genuine_positive(mutation):
 
 def test_site_row_order_is_not_normalized():
     frozen = reference()
-    assert align(frozen, frozen) == frozen
+    assert align(frozen, frozen) == frozen, (
+        'site row order is not normalized: require align(frozen, frozen) == frozen'
+    )
     actual = copy.deepcopy(frozen)
     actual['structures/sample.edi'][-2:] = reversed(actual['structures/sample.edi'][-2:])
     with pytest.raises(ValueError, match='inventory or order'):
@@ -146,13 +163,19 @@ def test_actual_block_name_is_mandatory_and_cannot_be_inferred_from_the_path():
 
 def test_coherent_renamed_bank_still_cannot_retarget_the_independent_reference():
     frozen = reference()
-    assert align(frozen, frozen) == frozen
+    assert align(frozen, frozen) == frozen, (
+        'coherent renamed bank still cannot retarget the independent reference: '
+        'require align(frozen, frozen) == frozen'
+    )
     actual = copy.deepcopy(frozen)
     actual['analysis/analysis.edi'][1][2] = 'renamed'
     actual['analysis/analysis.edi'][2][3] = 'renamed'
     blocks = {**BLOCKS, 'experiments/bank.edi': 'renamed'}
     # The changed source is internally coherent; refusal must reach correspondence.
-    assert bridge.semantic_index(actual, blocks)
+    assert bridge.semantic_index(actual, blocks), (
+        'coherent renamed bank still cannot retarget the independent reference: '
+        'require bridge.semantic_index(actual, blocks)'
+    )
     with pytest.raises(ValueError, match='inventory or order'):
         bridge.align_to_frozen(actual, frozen, actual_blocks=blocks, frozen_blocks=BLOCKS)
 
@@ -161,7 +184,10 @@ def test_column_identity_is_semantic_but_old_tag_coordinates_are_unchanged():
     frozen = reference()
     actual = copy.deepcopy(frozen)
     actual['structures/sample.edi'][2] = ['_atom_site.fract_x', '_atom_site.id', '0.25', 'A']
-    assert align(actual, frozen) == frozen
+    assert align(actual, frozen) == frozen, (
+        'column identity is semantic but old tag coordinates are unchanged: '
+        'require align(actual, frozen) == frozen'
+    )
 
 
 @pytest.mark.parametrize(
@@ -178,15 +204,28 @@ def test_column_identity_is_semantic_but_old_tag_coordinates_are_unchanged():
     ],
 )
 def test_first_decimal_reference_projects_declared_rule_and_parameter_role(rule, token, literal):
-    assert bridge.projected_parameter(token, rule) == literal
+    assert bridge.projected_parameter(token, rule) == literal, (
+        'first decimal reference projects declared rule and parameter role: '
+        'require bridge.projected_parameter(token, rule) == literal'
+    )
 
 
 def test_wrong_rule_and_absent_zero_free_mutations_remain_distinguishable():
     expected = bridge.projected_parameter('0.1234(.0196)', 'iucr_99')
-    assert expected == '0.123(20)'
-    assert bridge.projected_parameter('0.1234(.0196)', 'iucr_19') != expected
+    assert expected == '0.123(20)', (
+        'wrong rule and absent zero free mutations remain distinguishable: '
+        "require expected == '0.123(20)'"
+    )
+    assert bridge.projected_parameter('0.1234(.0196)', 'iucr_19') != expected, (
+        'wrong rule and absent zero free mutations remain distinguishable: '
+        "require bridge.projected_parameter('0.1234(.0196)', 'iucr_19') != "
+        'expected'
+    )
     roles = [bridge.projected_parameter(token, None) for token in ('2.125', '2.125()', '2.125(0)')]
-    assert len(set(roles)) == 3
+    assert len(set(roles)) == 3, (
+        'wrong rule and absent zero free mutations remain distinguishable: '
+        'require len(set(roles)) == 3'
+    )
     for rule in ('', '99', 'unknown'):
         with pytest.raises(ValueError, match='declared IUCr rule'):
             bridge.projected_parameter('0.1234(.0196)', rule)
@@ -195,11 +234,25 @@ def test_wrong_rule_and_absent_zero_free_mutations_remain_distinguishable():
 def test_actual_project_declaration_drives_the_first_decimal_projection(tmp_path):
     project = tmp_path / 'project.edi'
     project.write_text('_edi.schema_version 3\n')
-    assert declared_rule(tmp_path) == 'iucr_99'
-    assert bridge.projected_parameter('0.1234(.0196)', declared_rule(tmp_path)) == '0.123(20)'
+    assert declared_rule(tmp_path) == 'iucr_99', (
+        'actual project declaration drives the first decimal projection: require '
+        "declared_rule(tmp_path) == 'iucr_99'"
+    )
+    assert bridge.projected_parameter('0.1234(.0196)', declared_rule(tmp_path)) == '0.123(20)', (
+        'actual project declaration drives the first decimal projection: require '
+        "bridge.projected_parameter('0.1234(.0196)', declared_rule(tmp_path)) == "
+        "'0.123(20)'"
+    )
     project.write_text('_edi.schema_version 3\n_su_format.rule iucr_19\n')
-    assert declared_rule(tmp_path) == 'iucr_19'
-    assert bridge.projected_parameter('0.1234(.0196)', declared_rule(tmp_path)) == '0.12(2)'
+    assert declared_rule(tmp_path) == 'iucr_19', (
+        'actual project declaration drives the first decimal projection: require '
+        "declared_rule(tmp_path) == 'iucr_19'"
+    )
+    assert bridge.projected_parameter('0.1234(.0196)', declared_rule(tmp_path)) == '0.12(2)', (
+        'actual project declaration drives the first decimal projection: require '
+        "bridge.projected_parameter('0.1234(.0196)', declared_rule(tmp_path)) == "
+        "'0.12(2)'"
+    )
 
 
 def test_conditioning_frame_and_mixed_provenance_are_not_rebased():
@@ -224,8 +277,15 @@ def test_conditioning_frame_and_mixed_provenance_are_not_rebased():
         bridge.Cell('structures/sample.edi', 'sample', '_cell', (), '_cell.length_a'),
         0,
         'cell_length_a',
+    ), (
+        'conditioning frame and mixed provenance are not rebased: require '
+        "mapping[coordinate] == ( bridge.Cell('structures/sample.edi', 'sample', "
+        "'_cell', (), '_cell.length_a'), 0, 'cell_length_a', )"
     )
-    assert json.dumps([scientific, conditioning]) == before
+    assert json.dumps([scientific, conditioning]) == before, (
+        'conditioning frame and mixed provenance are not rebased: require '
+        'json.dumps([scientific, conditioning]) == before'
+    )
     changed = copy.deepcopy(scientific)
     changed['structures/sample.edi'][0][1] = '1.235(.01)'
     with pytest.raises(ValueError, match='exact scientific reference'):
@@ -236,10 +296,18 @@ def test_conditioning_frame_and_mixed_provenance_are_not_rebased():
             ['structures/sample.edi', 0, 1, 0, '1.23(1)', '1.234(.01)'],
         ],
     }
-    assert bridge.frozen_domains(fixture, blocks)[coordinate] == 'native-raw-parameter'
+    assert bridge.frozen_domains(fixture, blocks)[coordinate] == 'native-raw-parameter', (
+        'conditioning frame and mixed provenance are not rebased: require '
+        'bridge.frozen_domains(fixture, blocks)[coordinate] == '
+        "'native-raw-parameter'"
+    )
     assert (
         bridge.frozen_domains(fixture, blocks)['structures/sample.edi', 1, 1]
         == 'historical-written'
+    ), (
+        'conditioning frame and mixed provenance are not rebased: require '
+        "bridge.frozen_domains(fixture, blocks)['structures/sample.edi', 1, 1] == "
+        "'historical-written'"
     )
     fixture['native_precision_bindings'][0][-1] = '1.235(.01)'
     with pytest.raises(ValueError, match='frozen token'):
@@ -266,6 +334,11 @@ def test_omitted_raw_scale_and_calibration_bind_storage_not_equal_numbers():
         '_linked_structure',
         (('_linked_structure.structure_id', 'sample'),),
         '_linked_structure.scale',
+    ), (
+        'omitted raw scale and calibration bind storage not equal numbers: '
+        "require bound['bank.scale'].key == bridge.Cell( 'experiments/bank.edi', "
+        "'bank', '_linked_structure', (('_linked_structure.structure_id', "
+        "'sample'),), '_linked_structure.scale', )"
     )
     assert bound['bank.calib_twotheta_offset'].key == bridge.Cell(
         'experiments/bank.edi',
@@ -273,12 +346,33 @@ def test_omitted_raw_scale_and_calibration_bind_storage_not_equal_numbers():
         '_instrument',
         (),
         '_instrument.calib_twotheta_offset',
+    ), (
+        'omitted raw scale and calibration bind storage not equal numbers: '
+        "require bound['bank.calib_twotheta_offset'].key == bridge.Cell( "
+        "'experiments/bank.edi', 'bank', '_instrument', (), "
+        "'_instrument.calib_twotheta_offset', )"
     )
-    assert bound['bank.scale'].column == 0
-    assert bound['bank.calib_twotheta_offset'].column == 1
-    assert bound['bank.scale'].value == bound['bank.calib_twotheta_offset'].value == 2
-    assert bound['bank.scale'].uncertainty == 0.5
-    assert json.dumps(raw) == before
+    assert bound['bank.scale'].column == 0, (
+        'omitted raw scale and calibration bind storage not equal numbers: '
+        "require bound['bank.scale'].column == 0"
+    )
+    assert bound['bank.calib_twotheta_offset'].column == 1, (
+        'omitted raw scale and calibration bind storage not equal numbers: '
+        "require bound['bank.calib_twotheta_offset'].column == 1"
+    )
+    assert bound['bank.scale'].value == bound['bank.calib_twotheta_offset'].value == 2, (
+        'omitted raw scale and calibration bind storage not equal numbers: '
+        "require bound['bank.scale'].value == "
+        "bound['bank.calib_twotheta_offset'].value == 2"
+    )
+    assert bound['bank.scale'].uncertainty == 0.5, (
+        'omitted raw scale and calibration bind storage not equal numbers: '
+        "require bound['bank.scale'].uncertainty == 0.5"
+    )
+    assert json.dumps(raw) == before, (
+        'omitted raw scale and calibration bind storage not equal numbers: '
+        'require json.dumps(raw) == before'
+    )
 
 
 @pytest.mark.parametrize(
@@ -288,7 +382,10 @@ def test_omitted_raw_scale_and_calibration_bind_storage_not_equal_numbers():
 def test_omitted_parameter_storage_escapes_refuse_after_positive(mutation):
     raw = raw_capture()
     banks = {'experiments/bank.edi': ('bank', ('sample',))}
-    assert bridge.omitted_raw_parameters(raw, banks)
+    assert bridge.omitted_raw_parameters(raw, banks), (
+        'omitted parameter storage escapes refuse after positive: require '
+        'bridge.omitted_raw_parameters(raw, banks)'
+    )
     if mutation == 'wrong-bank':
         banks = {'experiments/bank.edi': ('other', ('sample',))}
     elif mutation == 'ambiguous-link':

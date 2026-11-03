@@ -21,12 +21,29 @@ def _read_and_retain(actor, label, **setup):
 
 
 def _assert_current_publications(facts):
-    assert facts['fired'] and facts['entry']['same_owner_before']
-    assert facts['same_owner'] and facts['entry']['same_owner_after']
+    assert facts['fired'] and facts['entry']['same_owner_before'], (
+        " assert current publications: require facts['fired'] and "
+        "facts['entry']['same_owner_before']"
+    )
+    assert facts['same_owner'] and facts['entry']['same_owner_after'], (
+        " assert current publications: require facts['same_owner'] and "
+        "facts['entry']['same_owner_after']"
+    )
     for property_fact in facts['properties']:
-        assert property_fact['owner_alive']
-        assert not property_fact['duplicate'], property_fact
-        assert property_fact['last_announced'] == property_fact['current'], property_fact
+        assert property_fact['owner_alive'], (
+            " assert current publications: require property_fact['owner_alive']"
+        )
+        assert not property_fact['duplicate'], (
+            (" assert current publications: require not property_fact['duplicate']"),
+            property_fact,
+        )
+        assert property_fact['last_announced'] == property_fact['current'], (
+            (
+                " assert current publications: require property_fact['last_announced'] == "
+                "property_fact['current']"
+            ),
+            property_fact,
+        )
 
 
 @pytest.mark.parametrize('action', ['nested', 'delete'])
@@ -44,7 +61,10 @@ def test_genuine_restored_draft_notice_retires_after_same_owner_callback(main_ac
     base._type_original_draft(actor, 'A actual draft in the other genuine view.')
     actor.command('click', name='assistant.sessions')
     rows = base._session_wait(actor)
-    assert other in {row['id'] for row in rows}
+    assert other in {row['id'] for row in rows}, (
+        'genuine restored draft notice retires after same owner callback: require '
+        "other in {row['id'] for row in rows}"
+    )
     replacement = 'C assigned by the real restored-draft callback.'
     arm = actor.command(
         'property_notification_arm', mode='draft', action=action, replacement=replacement
@@ -52,21 +72,42 @@ def test_genuine_restored_draft_notice_retires_after_same_owner_callback(main_ac
     assert arm['armed'], 'New notifier metadata is a required precondition, including baseline'
     before = len(base._session_wire(actor, 'turn/start'))
     clicked = actor.command('session_row_click', thread_id=other)['reply']
-    assert clicked['reached'] and clicked['actual_pressed_changes'] > 0
+    assert clicked['reached'] and clicked['actual_pressed_changes'] > 0, (
+        'genuine restored draft notice retires after same owner callback: require '
+        "clicked['reached'] and clicked['actual_pressed_changes'] > 0"
+    )
     actor.until(lambda _row: actor.command('property_notification_read')['reply']['fired'])
     facts = _read_and_retain(actor, 'actual-draft-notice-reentry', thread=other, click=clicked)
-    assert facts['entry']['thread'] == other
-    assert facts['entry']['restored_text'] == restored
-    assert facts['entry']['getter_before'] == restored
+    assert facts['entry']['thread'] == other, (
+        'genuine restored draft notice retires after same owner callback: require '
+        "facts['entry']['thread'] == other"
+    )
+    assert facts['entry']['restored_text'] == restored, (
+        'genuine restored draft notice retires after same owner callback: require '
+        "facts['entry']['restored_text'] == restored"
+    )
+    assert facts['entry']['getter_before'] == restored, (
+        'genuine restored draft notice retires after same owner callback: require '
+        "facts['entry']['getter_before'] == restored"
+    )
     assert len(base._session_wire(actor, 'turn/start')) == before, 'View restoration stays unsent'
     if action == 'delete':
-        assert not facts['same_owner'] and not facts['entry']['same_owner_after']
-        assert all(not item['owner_alive'] for item in facts['properties'])
+        assert not facts['same_owner'] and not facts['entry']['same_owner_after'], (
+            'genuine restored draft notice retires after same owner callback: require '
+            "not facts['same_owner'] and not facts['entry']['same_owner_after']"
+        )
+        assert all(not item['owner_alive'] for item in facts['properties']), (
+            'genuine restored draft notice retires after same owner callback: require '
+            "all(not item['owner_alive'] for item in facts['properties'])"
+        )
         assert not actor.last['ui']['alive'], 'The actual owning QQmlEngine was destroyed'
     else:
         _assert_current_publications(facts)
         draft = next(item for item in facts['properties'] if item['name'] == 'sessionDraft')
-        assert draft['current'] == replacement
+        assert draft['current'] == replacement, (
+            'genuine restored draft notice retires after same owner callback: require '
+            "draft['current'] == replacement"
+        )
         assert draft['events'].count(replacement) == 1, 'Old restore tail cannot announce C twice'
 
 
@@ -74,29 +115,53 @@ def test_genuine_restored_draft_notice_retires_after_same_owner_callback(main_ac
 def test_connected_consent_notice_retires_after_same_owner_approval(main_actor, tmp_path, action):
     actor = main_actor([[]])
     actor.connect()
-    assert not actor.last['ui']['context_consent_required']
+    assert not actor.last['ui']['context_consent_required'], (
+        'connected consent notice retires after same owner approval: require not '
+        "actor.last['ui']['context_consent_required']"
+    )
     armed = actor.command('property_notification_arm', mode='consent', action=action)['reply']
     assert armed['armed'], 'Actual dedicated-notifier metadata is required'
     project = base.copied_estimate_project(tmp_path)
     opened = actor.command('open', path=str(project))
     facts = _read_and_retain(actor, 'actual-consent-notice-reentry', open_reply=opened['reply'])
     assert facts['fired'], 'The actual context-preview legacy event reaches required consent'
-    assert facts['entry']['required_before'] and facts['entry']['connected_before']
-    assert facts['entry']['same_owner_before']
+    assert facts['entry']['required_before'] and facts['entry']['connected_before'], (
+        'connected consent notice retires after same owner approval: require '
+        "facts['entry']['required_before'] and facts['entry']['connected_before']"
+    )
+    assert facts['entry']['same_owner_before'], (
+        'connected consent notice retires after same owner approval: require '
+        "facts['entry']['same_owner_before']"
+    )
     if action == 'delete':
-        assert not facts['same_owner'] and not facts['entry']['same_owner_after']
-        assert all(not item['owner_alive'] for item in facts['properties'])
+        assert not facts['same_owner'] and not facts['entry']['same_owner_after'], (
+            'connected consent notice retires after same owner approval: require not '
+            "facts['same_owner'] and not facts['entry']['same_owner_after']"
+        )
+        assert all(not item['owner_alive'] for item in facts['properties']), (
+            'connected consent notice retires after same owner approval: require '
+            "all(not item['owner_alive'] for item in facts['properties'])"
+        )
         assert not opened['ui']['alive'], 'The actual owner dies inside the notification'
     else:
-        assert opened['reply']['opened']
+        assert opened['reply']['opened'], (
+            'connected consent notice retires after same owner approval: require '
+            "opened['reply']['opened']"
+        )
         _assert_current_publications(facts)
         consent = next(
             item for item in facts['properties'] if item['name'] == 'contextConsentRequired'
         )
-        assert consent['current'] is False
+        assert consent['current'] is False, (
+            'connected consent notice retires after same owner approval: require '
+            "consent['current'] is False"
+        )
         assert consent['events'] in ([], [True, False]), (
             'Nested approval may coalesce to initial false or announce true then false; '
             'it never announces stale or duplicate consent'
         )
-        assert not actor.last['ui']['context_consent_required']
+        assert not actor.last['ui']['context_consent_required'], (
+            'connected consent notice retires after same owner approval: require not '
+            "actor.last['ui']['context_consent_required']"
+        )
     assert not base._session_wire(actor, 'turn/start'), 'Consent observation starts no model work'

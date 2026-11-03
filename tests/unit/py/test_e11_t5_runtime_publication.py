@@ -820,7 +820,10 @@ def test_original_direct_sidecar_io_refuses_unsafe_kind_before_touching_target(
     publication = fixture.publication()
     published = _inventory(publication)
     checkers = list(fixture.build.glob('verify_assistant_runtime_*.cmake'))
-    assert len(checkers) == 1
+    assert len(checkers) == 1, (
+        'original direct sidecar io refuses unsafe kind before touching target: '
+        'require len(checkers) == 1'
+    )
     checker = checkers[0]
     if role == 'lock':
         path = publication.parent / 'stage.lock'
@@ -929,7 +932,10 @@ def test_original_owned_regular_verifier_temporary_still_publishes_exact_checker
     publication = fixture.publication()
     original = _inventory(publication)
     checkers = list(fixture.build.glob('verify_assistant_runtime_*.cmake'))
-    assert len(checkers) == 1
+    assert len(checkers) == 1, (
+        'original owned regular verifier temporary still publishes exact checker: '
+        'require len(checkers) == 1'
+    )
     checker = checkers[0]
     original_checker = checker.read_bytes()  # Original actual constructor regression pin.
     checker.unlink()
@@ -998,7 +1004,10 @@ def test_copy_trace_observes_each_supported_ordinary_operation_for_both_source_o
 def _original_runtime_select_literal_manifest(fixture, original_caller, spelling):
     # Public CMake caller variable only; actual module and every200 owner stay intact.
     call = 'edi_bundle_assistant_runtime()\n'
-    assert original_caller.count(call) == 1 and ']==]' not in spelling
+    assert original_caller.count(call) == 1 and ']==]' not in spelling, (
+        ' original runtime select literal manifest: require '
+        "original_caller.count(call) == 1 and ']==]' not in spelling"
+    )
     (fixture.project / 'CMakeLists.txt').write_text(
         original_caller.replace(
             call, 'set(EDI_CODEX_INPUT_MANIFEST [==[' + spelling + ']==])\n' + call
@@ -1033,7 +1042,13 @@ def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_le
     selected_a.write_bytes(fixture.manifest.read_bytes())
     competing_b = fixture.project / 'input.json'
     competing_b.write_bytes(other.manifest.read_bytes())
-    assert stat.S_ISREG(selected_a.lstat().st_mode) and stat.S_ISREG(competing_b.lstat().st_mode)
+    assert stat.S_ISREG(selected_a.lstat().st_mode) and stat.S_ISREG(
+        competing_b.lstat().st_mode
+    ), (
+        'original explicit manifest spelling selects filesystem owner without '
+        'lexical collapse: require stat.S_ISREG(selected_a.lstat().st_mode) and '
+        'stat.S_ISREG(competing_b.lstat().st_mode)'
+    )
     selector = fixture.project / 'selector'
     selector.symlink_to((selected_parent / 'child'), target_is_directory=True)
     refs = (
@@ -1078,7 +1093,10 @@ def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_le
             ' manifest A; no terminal symlink or inferred path identity is admitted'
         )
     else:
-        assert not (fixture.project / component).exists()
+        assert not (fixture.project / component).exists(), (
+            'original explicit manifest spelling selects filesystem owner without '
+            'lexical collapse: require not (fixture.project / component).exists()'
+        )
         with pytest.raises(FileNotFoundError):
             selected_path.read_bytes()
     _original_runtime_select_literal_manifest(fixture, original_caller, spelling)

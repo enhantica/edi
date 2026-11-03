@@ -47,20 +47,28 @@ def theme_actor(main_actor):
     state = {'installed': False}
     yield actor, state, phase
     # Separate pytest teardown preserves a prior body exception and restores actual theme.
-    assert actor.process.poll() is None and not getattr(actor, '_stream_unusable', None)
+    assert actor.process.poll() is None and not getattr(actor, '_stream_unusable', None), (
+        'theme actor: require actor.process.poll() is None and not getattr(actor, '
+        "'_stream_unusable', None)"
+    )
     value = _command(actor, 'cleanup')
     if state['installed']:
-        assert value == {'found': 1, 'restored': True}
+        assert value == {'found': 1, 'restored': True}, (
+            "theme actor: require value == {'found': 1, 'restored': True}"
+        )
     else:
-        assert value['found'] in {0, 1}
+        assert value['found'] in {0, 1}, "theme actor: require value['found'] in {0, 1}"
         if value['found'] == 1:
-            assert value['restored']
+            assert value['restored'], "theme actor: require value['restored']"
     actor.until(lambda _row: _command(actor, 'absent')['remaining'] == 0)
 
 
 def _snapshot(actor, action='snapshot'):
     value = _command(actor, action)
-    assert isinstance(value['problem'], str) and not value['problem'], value
+    assert isinstance(value['problem'], str) and not value['problem'], (
+        (" snapshot: require isinstance(value['problem'], str) and not value['problem']"),
+        value,
+    )
     assert all(
         value[key]
         for key in (
@@ -73,9 +81,18 @@ def _snapshot(actor, action='snapshot'):
             'visible',
             'enabled',
         )
+    ), (
+        " snapshot: require all( value[key] for key in ( 'owner', 'same_owner', "
+        "'same_button', 'same_label', 'same_colors', 'actual_window', 'visible', "
+        "'enabled', ) )"
     )
-    assert not value['hovered'] and not value['down'] and not value['visual_focus']
-    assert value['remaining'] == 63 and value['text'] == '37% used'
+    assert not value['hovered'] and not value['down'] and not value['visual_focus'], (
+        " snapshot: require not value['hovered'] and not value['down'] and not "
+        "value['visual_focus']"
+    )
+    assert value['remaining'] == 63 and value['text'] == '37% used', (
+        " snapshot: require value['remaining'] == 63 and value['text'] == '37% used'"
+    )
     assert all(
         actor.last['ui'][key]
         for key in (
@@ -83,6 +100,9 @@ def _snapshot(actor, action='snapshot'):
             'engine_parent',
             'cpp_ownership',
         )
+    ), (
+        " snapshot: require all( actor.last['ui'][key] for key in ( "
+        "'singleton_identity', 'engine_parent', 'cpp_ownership', ) )"
     )
     return value
 
@@ -94,8 +114,12 @@ def _settled(actor, dark):
 
     actor.until(current)
     value = _snapshot(actor)
-    assert value['dark'] is dark and value['matches_foreground']
-    assert value['actual'] == value['expected']
+    assert value['dark'] is dark and value['matches_foreground'], (
+        " settled: require value['dark'] is dark and value['matches_foreground']"
+    )
+    assert value['actual'] == value['expected'], (
+        " settled: require value['actual'] == value['expected']"
+    )
     return value
 
 
@@ -128,15 +152,34 @@ def test_original_usage_same_label_observes_actual_light_dark_light_theme(theme_
     _snapshot(actor, 'dark')
     dark = _settled(actor, True)
     canonical._retain(actor, 'actual-theme-dark', dark)
-    assert dark['actual'] != light['actual'] and dark['changes'] > light['changes']
+    assert dark['actual'] != light['actual'] and dark['changes'] > light['changes'], (
+        'original usage same label observes actual light dark light theme: '
+        "require dark['actual'] != light['actual'] and dark['changes'] > "
+        "light['changes']"
+    )
     _snapshot(actor, 'light')
     again = _settled(actor, False)
     canonical._retain(actor, 'actual-theme-light-again', again)
-    assert again['actual'] == light['actual'] and again['changes'] > dark['changes']
+    assert again['actual'] == light['actual'] and again['changes'] > dark['changes'], (
+        'original usage same label observes actual light dark light theme: '
+        "require again['actual'] == light['actual'] and again['changes'] > "
+        "dark['changes']"
+    )
     wire = base._session_wire(actor)
     canonical._retain(actor, 'actual-theme-wire', wire)
-    assert not any(row.get('method') in {'turn/start', 'account/logout'} for row in wire)
+    assert not any(row.get('method') in {'turn/start', 'account/logout'} for row in wire), (
+        'original usage same label observes actual light dark light theme: '
+        "require not any(row.get('method') in {'turn/start', 'account/logout'} "
+        'for row in wire)'
+    )
     assert {method: len(base._session_wire(actor, method)) for method in metadata_before} == (
         metadata_before
+    ), (
+        'original usage same label observes actual light dark light theme: '
+        'require {method: len(base._session_wire(actor, method)) for method in '
+        'metadata_before} == ( metadata_before )'
     )
-    assert canonical._phase() == phase
+    assert canonical._phase() == phase, (
+        'original usage same label observes actual light dark light theme: '
+        'require canonical._phase() == phase'
+    )

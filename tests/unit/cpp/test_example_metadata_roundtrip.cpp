@@ -89,16 +89,29 @@ std::map<std::string, std::string> scientific_blocks(const edi::Project& project
 }
 
 void converted_description(const edi::Project& project, bool declared) {
-    REQUIRE_FALSE(project.experiments.empty());
+    REQUIRE_FALSE_MESSAGE(project.experiments.empty(),
+                          "The gate requires false for project.experiments.empty()");
     for (const auto& experiment : project.experiments) {
         const bool protected_bank = declared && experiment->name.value() == "bank";
-        CHECK(experiment->experiment_type.dimensionality == "1d");
-        CHECK(experiment->experiment_type.effective_dimensionality() == "1d");
-        CHECK(experiment->experiment_type.polarisation == "unpolarised");
-        CHECK(experiment->experiment_type.effective_polarisation() == "unpolarised");
-        CHECK(experiment->instrument.name == (protected_bank ? "?" : "D20"));
-        CHECK(experiment->instrument.facility ==
-              (protected_bank ? "Existing named facility" : "Institut Laue–Langevin (ILL)"));
+        CHECK_MESSAGE(experiment->experiment_type.dimensionality == "1d",
+                      "The gate requires experiment->experiment_type.dimensionality == \"1d\"");
+        CHECK_MESSAGE(
+            experiment->experiment_type.effective_dimensionality() == "1d",
+            "The gate requires experiment->experiment_type.effective_dimensionality() == \"1d\"");
+        CHECK_MESSAGE(
+            experiment->experiment_type.polarisation == "unpolarised",
+            "The gate requires experiment->experiment_type.polarisation == \"unpolarised\"");
+        CHECK_MESSAGE(experiment->experiment_type.effective_polarisation() == "unpolarised",
+                      "The gate requires experiment->experiment_type.effective_polarisation() == "
+                      "\"unpolarised\"");
+        CHECK_MESSAGE(
+            experiment->instrument.name == (protected_bank ? "?" : "D20"),
+            "The gate requires experiment->instrument.name == (protected_bank ? \"?\" : \"D20\")");
+        CHECK_MESSAGE(
+            experiment->instrument.facility ==
+                (protected_bank ? "Existing named facility" : "Institut Laue–Langevin (ILL)"),
+            "The gate requires experiment->instrument.facility == (protected_bank ? \"Existing "
+            "named facility\" : \"Institut Laue\u2013Langevin (ILL)\")");
     }
 }
 }  // namespace
@@ -111,7 +124,7 @@ TEST_CASE("Example legacy descriptions convert once through save PROJECT reopen 
     SUBCASE("current experiment declarations including unknown instrument keep precedence") {
         declared = true;
         std::ofstream experiment(source / "experiments/bank.edi", std::ios::app);
-        REQUIRE(experiment.is_open());
+        REQUIRE_MESSAGE(experiment.is_open(), "The gate requires experiment.is_open()");
         experiment << "\n_experiment_type.dimensionality 1d\n"
                       "_experiment_type.polarisation unpolarised\n"
                       "_instrument.name ?\n"
@@ -131,7 +144,7 @@ TEST_CASE("Example legacy descriptions convert once through save PROJECT reopen 
     };
     {
         std::ofstream record(source / "project.edi", std::ios::app);
-        REQUIRE(record.is_open());
+        REQUIRE_MESSAGE(record.is_open(), "The gate requires record.is_open()");
         record << '\n';
         for (const auto& line : extra) record << line << '\n';
     }
@@ -141,11 +154,20 @@ TEST_CASE("Example legacy descriptions convert once through save PROJECT reopen 
         source.string(), [&](const std::string& notice) { notices.push_back(notice); });
     retired_notices(notices, 1);
     converted_description(project, declared);
-    CHECK(scientific_blocks(project) == science);
-    CHECK(read_example_record(source / "experiments/bank.edi") == source_experiment);
-    CHECK(read_example_record(source / "structures/phase.edi") == source_structure);
-    CHECK(read_example_record(source / "analysis/analysis.edi") == source_analysis);
-    CHECK(read_example_record(source / "project.edi") == legacy_record);
+    CHECK_MESSAGE(scientific_blocks(project) == science,
+                  "The gate requires scientific_blocks(project) == science");
+    CHECK_MESSAGE(read_example_record(source / "experiments/bank.edi") == source_experiment,
+                  "The gate requires read_example_record(source / \"experiments/bank.edi\") == "
+                  "source_experiment");
+    CHECK_MESSAGE(read_example_record(source / "structures/phase.edi") == source_structure,
+                  "The gate requires read_example_record(source / \"structures/phase.edi\") == "
+                  "source_structure");
+    CHECK_MESSAGE(read_example_record(source / "analysis/analysis.edi") == source_analysis,
+                  "The gate requires read_example_record(source / \"analysis/analysis.edi\") == "
+                  "source_analysis");
+    CHECK_MESSAGE(
+        read_example_record(source / "project.edi") == legacy_record,
+        "The gate requires read_example_record(source / \"project.edi\") == legacy_record");
     project.metadata.title = "Edited example title";
     edi::save_project(project, (directory.path / "saved").string());
     const auto first = read_example_record(directory.path / "saved/project.edi");
@@ -153,28 +175,34 @@ TEST_CASE("Example legacy descriptions convert once through save PROJECT reopen 
                   "The genuine title edit survives native save");
     no_retired_tags(first);
     const auto shown = edi::block_edi_text(project, edi::BlockKind::PROJECT);
-    CHECK(shown.find("Edited example title") != std::string::npos);
+    CHECK_MESSAGE(shown.find("Edited example title") != std::string::npos,
+                  "The gate requires shown.find(\"Edited example title\") != std::string::npos");
     no_retired_tags(shown);
     notices.clear();
     auto reopened =
         edi::load_project((directory.path / "saved").string(),
                           [&](const std::string& notice) { notices.push_back(notice); });
-    CHECK(reopened.metadata.title == "Edited example title");
+    CHECK_MESSAGE(reopened.metadata.title == "Edited example title",
+                  "The gate requires reopened.metadata.title == \"Edited example title\"");
     retired_notices(notices, 0);
     converted_description(reopened, declared);
-    CHECK(scientific_blocks(reopened) == science);
+    CHECK_MESSAGE(scientific_blocks(reopened) == science,
+                  "The gate requires scientific_blocks(reopened) == science");
     edi::save_project(reopened, (directory.path / "resaved").string());
     const auto second = read_example_record(directory.path / "resaved/project.edi");
     no_retired_tags(second);
-    CHECK(second.find("Edited example title") != std::string::npos);
+    CHECK_MESSAGE(second.find("Edited example title") != std::string::npos,
+                  "The gate requires second.find(\"Edited example title\") != std::string::npos");
     notices.clear();
     const auto resaved =
         edi::load_project((directory.path / "resaved").string(),
                           [&](const std::string& notice) { notices.push_back(notice); });
-    CHECK(resaved.metadata.title == "Edited example title");
+    CHECK_MESSAGE(resaved.metadata.title == "Edited example title",
+                  "The gate requires resaved.metadata.title == \"Edited example title\"");
     retired_notices(notices, 0);
     converted_description(resaved, declared);
-    CHECK(scientific_blocks(resaved) == science);
+    CHECK_MESSAGE(scientific_blocks(resaved) == science,
+                  "The gate requires scientific_blocks(resaved) == science");
 }
 
 TEST_CASE("Retired project polarisation unknown is refused rather than converted as none") {
@@ -182,11 +210,13 @@ TEST_CASE("Retired project polarisation unknown is refused rather than converted
     const auto source = copy_example_fixture(directory.path);
     {
         std::ofstream record(source / "project.edi", std::ios::app);
-        REQUIRE(record.is_open());
+        REQUIRE_MESSAGE(record.is_open(), "The gate requires record.is_open()");
         record << "\n_metadata.polarisation ?\n";
     }
-    CHECK_THROWS_WITH_AS(edi::load_project(source.string()),
-                         doctest::Contains("_metadata.polarisation"), edi::IoError);
+    CHECK_THROWS_WITH_AS_MESSAGE(edi::load_project(source.string()),
+                                 doctest::Contains("_metadata.polarisation"), edi::IoError,
+                                 "The gate requires edi::load_project(source.string()), "
+                                 "doctest::Contains(\"_metadata.polarisation\"), edi::IoError");
 }
 
 TEST_CASE("Example descriptive metadata survives native save reopen and shown PROJECT text") {

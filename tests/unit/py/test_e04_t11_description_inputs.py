@@ -220,10 +220,19 @@ def test_catalogue_description_pairs_preserve_whole_newer_source(
     name, prior, current, instrument, facility
 ):
     raw = (ROOT / name).read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == current
+    assert hashlib.sha256(raw).hexdigest() == current, (
+        'catalogue description pairs preserve whole newer source: require '
+        'hashlib.sha256(raw).hexdigest() == current'
+    )
     retained = metadata_bytes.pre_description_bytes(name, raw)
-    assert hashlib.sha256(retained).hexdigest() == prior
-    assert metadata_bytes.pre_catalogue_bytes(ROOT / name) == retained
+    assert hashlib.sha256(retained).hexdigest() == prior, (
+        'catalogue description pairs preserve whole newer source: require '
+        'hashlib.sha256(retained).hexdigest() == prior'
+    )
+    assert metadata_bytes.pre_catalogue_bytes(ROOT / name) == retained, (
+        'catalogue description pairs preserve whole newer source: require '
+        'metadata_bytes.pre_catalogue_bytes(ROOT / name) == retained'
+    )
     if name.endswith('/project.edi'):
         fields = {
             '_metadata.purpose': 'refinement',
@@ -232,8 +241,14 @@ def test_catalogue_description_pairs_preserve_whole_newer_source(
             '_metadata.facility': facility,
             '_metadata.polarisation': 'none',
         }
-        assert metadata_bytes.records(retained, fields) == fields
-        assert metadata_bytes.records(raw, fields) == {}
+        assert metadata_bytes.records(retained, fields) == fields, (
+            'catalogue description pairs preserve whole newer source: require '
+            'metadata_bytes.records(retained, fields) == fields'
+        )
+        assert metadata_bytes.records(raw, fields) == {}, (
+            'catalogue description pairs preserve whole newer source: require '
+            'metadata_bytes.records(raw, fields) == {}'
+        )
     else:
         fields = {
             '_experiment_type.dimensionality': '1d',
@@ -241,13 +256,27 @@ def test_catalogue_description_pairs_preserve_whole_newer_source(
             '_instrument.name': instrument,
             '_instrument.facility': facility,
         }
-        assert metadata_bytes.records(raw, fields) == fields
-        assert metadata_bytes.records(retained, fields) == {}
+        assert metadata_bytes.records(raw, fields) == fields, (
+            'catalogue description pairs preserve whole newer source: require '
+            'metadata_bytes.records(raw, fields) == fields'
+        )
+        assert metadata_bytes.records(retained, fields) == {}, (
+            'catalogue description pairs preserve whole newer source: require '
+            'metadata_bytes.records(retained, fields) == {}'
+        )
         assert metadata_bytes.records(retained, {'_peak.type'}) == metadata_bytes.records(
             raw, {'_peak.type'}
         ), 'Catalogue creation already owned its actual CWL/TOF profile spelling'
-    assert metadata_bytes.remainder(raw, fields) == metadata_bytes.remainder(retained, fields)
-    assert metadata_bytes.records(raw, {'_edi.schema_version'}) == {'_edi.schema_version': '3'}
+    assert metadata_bytes.remainder(raw, fields) == metadata_bytes.remainder(retained, fields), (
+        'catalogue description pairs preserve whole newer source: require '
+        'metadata_bytes.remainder(raw, fields) == '
+        'metadata_bytes.remainder(retained, fields)'
+    )
+    assert metadata_bytes.records(raw, {'_edi.schema_version'}) == {'_edi.schema_version': '3'}, (
+        'catalogue description pairs preserve whole newer source: require '
+        "metadata_bytes.records(raw, {'_edi.schema_version'}) == "
+        "{'_edi.schema_version': '3'}"
+    )
 
 
 @pytest.mark.parametrize('pair', CATALOGUE_INPUTS)
@@ -257,12 +286,19 @@ def test_catalogue_whole_pair_refuses_unowned_or_malformed_changes(
 ):
     name, prior, current, instrument, _facility = pair
     raw = (ROOT / name).read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == current
+    assert hashlib.sha256(raw).hexdigest() == current, (
+        'catalogue whole pair refuses unowned or malformed changes: require '
+        'hashlib.sha256(raw).hexdigest() == current'
+    )
     path = tmp_path / name
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
     monkeypatch.setattr(metadata_bytes, 'ROOT', tmp_path)
-    assert hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest() == prior
+    assert hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest() == prior, (
+        'catalogue whole pair refuses unowned or malformed changes: require '
+        'hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest() == '
+        'prior'
+    )
     project = name.endswith('/project.edi')
     if damage == 'schema':
         changed = raw.replace(b'_edi.schema_version 3', b'_edi.schema_version 2', 1)
@@ -279,7 +315,9 @@ def test_catalogue_whole_pair_refuses_unowned_or_malformed_changes(
         )
     else:
         changed = raw + b'_unowned.scientific_parameter 1.25\n'
-    assert changed != raw
+    assert changed != raw, (
+        'catalogue whole pair refuses unowned or malformed changes: require changed != raw'
+    )
     path.write_bytes(changed)
     with pytest.raises(
         AssertionError,
@@ -303,7 +341,11 @@ def test_catalogue_reversal_refuses_cross_source_pair_and_leaves_unlisted_paths_
         ),
     ):
         metadata_bytes.pre_description_bytes(other, raw)
-    assert metadata_bytes.pre_description_bytes('unlisted/' + name, raw) == raw
+    assert metadata_bytes.pre_description_bytes('unlisted/' + name, raw) == raw, (
+        'catalogue reversal refuses cross source pair and leaves unlisted paths '
+        "raw: require metadata_bytes.pre_description_bytes('unlisted/' + name, "
+        'raw) == raw'
+    )
 
 
 @pytest.mark.parametrize(
@@ -341,12 +383,19 @@ def test_catalogue_reversal_refuses_real_scientific_and_data_edits(
 ):
     name, prior, current, _instrument, _facility = pair
     raw = (ROOT / name).read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == current
+    assert hashlib.sha256(raw).hexdigest() == current, (
+        'catalogue reversal refuses real scientific and data edits: require '
+        'hashlib.sha256(raw).hexdigest() == current'
+    )
     path = tmp_path / name
     path.parent.mkdir(parents=True)
     path.write_bytes(raw)
     monkeypatch.setattr(metadata_bytes, 'ROOT', tmp_path)
-    assert hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest() == prior
+    assert hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest() == prior, (
+        'catalogue reversal refuses real scientific and data edits: require '
+        'hashlib.sha256(metadata_bytes.pre_catalogue_bytes(path)).hexdigest() == '
+        'prior'
+    )
     lines = raw.splitlines(keepends=True)
     if damage == 'profile-number':
         prefix = b'_peak.broad_gauss_'
@@ -359,7 +408,9 @@ def test_catalogue_reversal_refuses_real_scientific_and_data_edits(
         else:
             lines[first], lines[first + 1] = lines[first + 1], lines[first]
             changed = b''.join(lines)
-    assert changed != raw
+    assert changed != raw, (
+        'catalogue reversal refuses real scientific and data edits: require changed != raw'
+    )
     path.write_bytes(changed)
     with pytest.raises(
         AssertionError,

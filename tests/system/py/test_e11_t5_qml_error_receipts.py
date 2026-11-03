@@ -55,7 +55,10 @@ def _sample():
 
 
 def test_exact_required_warning_passes_only_complete_receipt():
-    assert assess_qml_contract(*_sample()) == []
+    assert assess_qml_contract(*_sample()) == [], (
+        'exact required warning passes only complete receipt: require '
+        'assess_qml_contract(*_sample()) == []'
+    )
 
 
 @pytest.mark.parametrize(
@@ -74,7 +77,10 @@ def test_exact_required_warning_passes_only_complete_receipt():
 def test_wrong_step_source_or_owner_is_not_an_expected_error(field, value):
     events, scopes, contract, stderr = _sample()
     events[1][field] = value
-    assert assess_qml_contract(events, scopes, contract, stderr)
+    assert assess_qml_contract(events, scopes, contract, stderr), (
+        'wrong step source or owner is not an expected error: require '
+        'assess_qml_contract(events, scopes, contract, stderr)'
+    )
 
 
 @pytest.mark.parametrize(
@@ -114,7 +120,10 @@ def test_receipt_completeness_and_unrelated_failure_escapes_refuse(escape):
         contract = None
     elif escape == 'extra_stderr':
         stderr += 'TypeError: independent unrelated QML failure\n'
-    assert assess_qml_contract(events, scopes, contract, stderr)
+    assert assess_qml_contract(events, scopes, contract, stderr), (
+        'receipt completeness and unrelated failure escapes refuse: require '
+        'assess_qml_contract(events, scopes, contract, stderr)'
+    )
 
 
 @pytest.mark.parametrize(
@@ -129,7 +138,10 @@ def test_receipt_completeness_and_unrelated_failure_escapes_refuse(escape):
 )
 def test_unreviewed_or_coding_error_prefix_cannot_consume_expected_warning(prefix):
     events, scopes, contract, stderr = _sample()
-    assert assess_qml_contract(events, scopes, contract, prefix + stderr)
+    assert assess_qml_contract(events, scopes, contract, prefix + stderr), (
+        'unreviewed or coding error prefix cannot consume expected warning: '
+        'require assess_qml_contract(events, scopes, contract, prefix + stderr)'
+    )
 
 
 @pytest.mark.parametrize(
@@ -143,7 +155,10 @@ def test_unreviewed_or_coding_error_prefix_cannot_consume_expected_warning(prefi
 def test_multiple_errors_on_one_line_never_count_as_one_expected_counterpart(line):
     events, scopes, contract, stderr = _sample()
     actual = line.format(expected=stderr.rstrip('\n')) + '\n'
-    assert assess_qml_contract(events, scopes, contract, actual)
+    assert assess_qml_contract(events, scopes, contract, actual), (
+        'multiple errors on one line never count as one expected counterpart: '
+        'require assess_qml_contract(events, scopes, contract, actual)'
+    )
 
 
 def _suffix_pair():
@@ -165,9 +180,19 @@ def _suffix_pair():
 
 def test_suffix_overlap_requires_two_separate_exact_stderr_counterparts():
     events, scopes, contract, long_line, short_line = _suffix_pair()
-    assert assess_qml_contract(events, scopes, contract, long_line)
-    assert assess_qml_contract(events, scopes, contract, short_line)
-    assert assess_qml_contract(events, scopes, contract, long_line + short_line) == []
+    assert assess_qml_contract(events, scopes, contract, long_line), (
+        'suffix overlap requires two separate exact stderr counterparts: require '
+        'assess_qml_contract(events, scopes, contract, long_line)'
+    )
+    assert assess_qml_contract(events, scopes, contract, short_line), (
+        'suffix overlap requires two separate exact stderr counterparts: require '
+        'assess_qml_contract(events, scopes, contract, short_line)'
+    )
+    assert assess_qml_contract(events, scopes, contract, long_line + short_line) == [], (
+        'suffix overlap requires two separate exact stderr counterparts: require '
+        'assess_qml_contract(events, scopes, contract, long_line + short_line) == '
+        '[]'
+    )
 
 
 class _SyntheticActor:
@@ -264,19 +289,33 @@ def _assert_exception_identity(caught, primary, body_failed):
     if body_failed:
         assert caught.value is primary, 'A finalizer failure cannot replace the semantic exception'
     else:
-        assert caught.value is not primary
-        assert 'Intentional QML contract failed' in str(caught.value)
+        assert caught.value is not primary, (
+            ' assert exception identity: require caught.value is not primary'
+        )
+        assert 'Intentional QML contract failed' in str(caught.value), (
+            " assert exception identity: require 'Intentional QML contract failed' in "
+            'str(caught.value)'
+        )
 
 
 def _assert_assessment_identity(actor, facts, body_failed, primary):
-    assert facts['body_failed'] is body_failed
+    assert facts['body_failed'] is body_failed, (
+        " assert assessment identity: require facts['body_failed'] is body_failed"
+    )
     assert facts['problems'], 'Evidence loss never becomes an empty successful warning list'
-    assert facts['secondary_errors']
-    assert actor.close_calls == 1
+    assert facts['secondary_errors'], (
+        " assert assessment identity: require facts['secondary_errors']"
+    )
+    assert actor.close_calls == 1, ' assert assessment identity: require actor.close_calls == 1'
     if body_failed:
-        assert facts['primary_error']['representation'] == repr(primary)
+        assert facts['primary_error']['representation'] == repr(primary), (
+            ' assert assessment identity: require '
+            "facts['primary_error']['representation'] == repr(primary)"
+        )
     else:
-        assert facts['primary_error'] is None
+        assert facts['primary_error'] is None, (
+            " assert assessment identity: require facts['primary_error'] is None"
+        )
 
 
 def _assert_capture_facts(actor, facts, defect):
@@ -287,35 +326,72 @@ def _assert_capture_facts(actor, facts, defect):
         assert (
             bytes.fromhex(facts['raw_warning_log_hex'])
             == (actor.folder / 'qml-warning-events.jsonl').read_bytes()
+        ), (
+            ' assert capture facts: require '
+            "bytes.fromhex(facts['raw_warning_log_hex']) == (actor.folder / "
+            "'qml-warning-events.jsonl').read_bytes()"
         )
     else:
-        assert facts['raw_warning_log'] is None
-        assert facts['raw_warning_log_hex'] is None
+        assert facts['raw_warning_log'] is None, (
+            " assert capture facts: require facts['raw_warning_log'] is None"
+        )
+        assert facts['raw_warning_log_hex'] is None, (
+            " assert capture facts: require facts['raw_warning_log_hex'] is None"
+        )
     if defect != 'missing_stderr':
         assert facts['stderr'], 'Other collection failures cannot prevent obtaining stderr'
-        assert bytes.fromhex(facts['stderr_hex']) == (actor.folder / 'host.stderr').read_bytes()
+        assert bytes.fromhex(facts['stderr_hex']) == (actor.folder / 'host.stderr').read_bytes(), (
+            " assert capture facts: require bytes.fromhex(facts['stderr_hex']) == "
+            "(actor.folder / 'host.stderr').read_bytes()"
+        )
     else:
-        assert facts['stderr'] is None
+        assert facts['stderr'] is None, " assert capture facts: require facts['stderr'] is None"
 
 
 def _assert_persistence(facts, body_failed, defect, caught, capsys, primary):
     if defect in {'all_persistence_errors', 'all_evidence_sinks_error'}:
-        assert facts['receipt_path'] is None
+        assert facts['receipt_path'] is None, (
+            " assert persistence: require facts['receipt_path'] is None"
+        )
         if defect == 'all_evidence_sinks_error':
-            assert any(row['stage'] == 'secondary_stderr' for row in facts['secondary_errors'])
+            assert any(row['stage'] == 'secondary_stderr' for row in facts['secondary_errors']), (
+                " assert persistence: require any(row['stage'] == 'secondary_stderr' for "
+                "row in facts['secondary_errors'])"
+            )
             notes = caught.value.__notes__
-            assert any('raw_warning_log' in note for note in notes)
+            assert any('raw_warning_log' in note for note in notes), (
+                " assert persistence: require any('raw_warning_log' in note for note in notes)"
+            )
         else:
-            assert 'No file receipt could be persisted' in capsys.readouterr().err
+            assert 'No file receipt could be persisted' in capsys.readouterr().err, (
+                " assert persistence: require 'No file receipt could be persisted' in "
+                'capsys.readouterr().err'
+            )
         if body_failed:
-            assert any('No file receipt could be persisted' in note for note in primary.__notes__)
+            assert any(
+                'No file receipt could be persisted' in note for note in primary.__notes__
+            ), (
+                " assert persistence: require any('No file receipt could be persisted' in "
+                'note for note in primary.__notes__)'
+            )
     else:
         saved = json.loads(Path(facts['receipt_path']).read_text(encoding='utf-8'))
-        assert saved['secondary_errors'] == facts['secondary_errors']
-        assert saved['raw_warning_log'] == facts['raw_warning_log']
-        assert saved['raw_warning_log_hex'] == facts['raw_warning_log_hex']
-        assert saved['stderr_hex'] == facts['stderr_hex']
-        assert saved['stderr'] == facts['stderr']
+        assert saved['secondary_errors'] == facts['secondary_errors'], (
+            " assert persistence: require saved['secondary_errors'] == facts['secondary_errors']"
+        )
+        assert saved['raw_warning_log'] == facts['raw_warning_log'], (
+            " assert persistence: require saved['raw_warning_log'] == facts['raw_warning_log']"
+        )
+        assert saved['raw_warning_log_hex'] == facts['raw_warning_log_hex'], (
+            " assert persistence: require saved['raw_warning_log_hex'] == "
+            "facts['raw_warning_log_hex']"
+        )
+        assert saved['stderr_hex'] == facts['stderr_hex'], (
+            " assert persistence: require saved['stderr_hex'] == facts['stderr_hex']"
+        )
+        assert saved['stderr'] == facts['stderr'], (
+            " assert persistence: require saved['stderr'] == facts['stderr']"
+        )
 
 
 def _run_owned(host, primary, body_failed):
@@ -364,14 +440,26 @@ def test_clean_receipt_control_really_finalizes_and_persists(tmp_path):
     actor, host = _owned_sample(tmp_path)
     with host:
         pass
-    assert actor.close_calls == 1
-    assert host._last_facts['problems'] == []
-    assert host._last_facts['assessment_completed'] is True
+    assert actor.close_calls == 1, (
+        'clean receipt control really finalizes and persists: require actor.close_calls == 1'
+    )
+    assert host._last_facts['problems'] == [], (
+        'clean receipt control really finalizes and persists: require '
+        "host._last_facts['problems'] == []"
+    )
+    assert host._last_facts['assessment_completed'] is True, (
+        'clean receipt control really finalizes and persists: require '
+        "host._last_facts['assessment_completed'] is True"
+    )
     assert (
         json.loads(Path(host._last_facts['receipt_path']).read_text(encoding='utf-8'))[
             'body_failed'
         ]
         is False
+    ), (
+        'clean receipt control really finalizes and persists: require '
+        "json.loads(Path(host._last_facts['receipt_path']).read_text(encoding='utf-8'))[ "
+        "'body_failed' ] is False"
     )
 
 
@@ -380,12 +468,27 @@ def test_semantic_body_failure_remains_primary_even_when_receipt_is_clean(tmp_pa
     primary = AssertionError('clean-capture semantic sentinel')
     with pytest.raises(AssertionError) as caught, host:
         raise primary
-    assert caught.value is primary
-    assert actor.close_calls == 1
-    assert host._last_facts['problems'] == []
-    assert host._last_facts['body_failed'] is True
+    assert caught.value is primary, (
+        'semantic body failure remains primary even when receipt is clean: '
+        'require caught.value is primary'
+    )
+    assert actor.close_calls == 1, (
+        'semantic body failure remains primary even when receipt is clean: '
+        'require actor.close_calls == 1'
+    )
+    assert host._last_facts['problems'] == [], (
+        'semantic body failure remains primary even when receipt is clean: '
+        "require host._last_facts['problems'] == []"
+    )
+    assert host._last_facts['body_failed'] is True, (
+        'semantic body failure remains primary even when receipt is clean: '
+        "require host._last_facts['body_failed'] is True"
+    )
     saved = json.loads(Path(host._last_facts['receipt_path']).read_text(encoding='utf-8'))
-    assert saved['primary_error']['representation'] == repr(primary)
+    assert saved['primary_error']['representation'] == repr(primary), (
+        'semantic body failure remains primary even when receipt is clean: '
+        "require saved['primary_error']['representation'] == repr(primary)"
+    )
 
 
 @pytest.mark.parametrize('mode', ['recording', 'missing-contract'])
@@ -397,6 +500,13 @@ def test_recording_and_missing_contract_still_fail_with_complete_synthetic_captu
         host.recording_original = True
     with pytest.raises(AssertionError), host:
         pass
-    assert actor.close_calls == 1
+    assert actor.close_calls == 1, (
+        'recording and missing contract still fail with complete synthetic '
+        'capture: require actor.close_calls == 1'
+    )
     expected = 'unqualified' if mode == 'missing-contract' else 'recording'
-    assert any(expected in problem for problem in host._last_facts['problems'])
+    assert any(expected in problem for problem in host._last_facts['problems']), (
+        'recording and missing contract still fail with complete synthetic '
+        'capture: require any(expected in problem for problem in '
+        "host._last_facts['problems'])"
+    )

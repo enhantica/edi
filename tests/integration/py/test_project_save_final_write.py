@@ -25,13 +25,19 @@ def test_final_save_write_contains_the_adopted_complement_and_optional_dependent
     )
     structure = source / 'structures/phase.edi'
     text = structure.read_text()
-    assert text.count('A La a Biso 0.17 0.23 0.31') == 1
+    assert text.count('A La a Biso 0.17 0.23 0.31') == 1, (
+        'final save write contains the adopted complement and optional dependent: '
+        "require text.count('A La a Biso 0.17 0.23 0.31') == 1"
+    )
     structure.write_text(
         text.replace('A La a Biso 0.17 0.23 0.31', 'A La a Biso 0.91234567 0.23 0.31')
     )
     experiment = source / 'experiments/bank.edi'
     text = experiment.read_text()
-    assert text.count('_experiment_type.radiation_probe neutron\n') == 1
+    assert text.count('_experiment_type.radiation_probe neutron\n') == 1, (
+        'final save write contains the adopted complement and optional dependent: '
+        "require text.count('_experiment_type.radiation_probe neutron\\n') == 1"
+    )
     experiment.write_text(
         text.replace(
             '_experiment_type.radiation_probe neutron\n', '_experiment_type.radiation_probe xray\n'
@@ -40,32 +46,63 @@ def test_final_save_write_contains_the_adopted_complement_and_optional_dependent
     project = engine.Project.load(source)
     if calculated:
         project.analysis.calculate()
-    assert project.structure.atom_sites[0].fract_x.value == 0.91234567
+    assert project.structure.atom_sites[0].fract_x.value == 0.91234567, (
+        'final save write contains the adopted complement and optional dependent: '
+        'require project.structure.atom_sites[0].fract_x.value == 0.91234567'
+    )
     reference = saved_parameters(project, 'iucr_99')
     # These are input-derived decimal and binary-arithmetic literals, not a
     # copy of the reference's vector or of a current saved-file observation.
     adopted = 1 - 0.912346
     destination = tmp_path / 'saved'
     project.save_as(destination)
-    assert project.structure.atom_sites[0].fract_x.value == 0.912346
-    assert project.structure.atom_sites[1].occupancy.value == adopted
+    assert project.structure.atom_sites[0].fract_x.value == 0.912346, (
+        'final save write contains the adopted complement and optional dependent: '
+        'require project.structure.atom_sites[0].fract_x.value == 0.912346'
+    )
+    assert project.structure.atom_sites[1].occupancy.value == adopted, (
+        'final save write contains the adopted complement and optional dependent: '
+        'require project.structure.atom_sites[1].occupancy.value == adopted'
+    )
     optional = project.experiment.instrument.setup_monochromator_twotheta
-    assert (optional.value, optional.uncertainty, optional.free) == (adopted, 0.0, False)
+    assert (optional.value, optional.uncertainty, optional.free) == (adopted, 0.0, False), (
+        'final save write contains the adopted complement and optional dependent: '
+        'require (optional.value, optional.uncertainty, optional.free) == '
+        '(adopted, 0.0, False)'
+    )
     require_saved_parameters(project.parameters, reference, model=project, phase='completed')
     final_experiment = (destination / 'experiments/bank.edi').read_text()
     assert re.findall(
         r'(?m)^_instrument\.setup_monochromator_twotheta[ \t]+(\S+)[ \t]*$',
         final_experiment,
-    ) == ['0.087654']
+    ) == ['0.087654'], (
+        'final save write contains the adopted complement and optional dependent: '
+        "require re.findall( r'(?m)^_instrument\\.setup_monochromator_twotheta[ "
+        "\\t]+(\\S+)[ \\t]*$', final_experiment, ) == ['0.087654']"
+    )
     reopened = engine.Project.load(destination)
-    assert reopened.structure.atom_sites[1].occupancy.value == 0.087654
+    assert reopened.structure.atom_sites[1].occupancy.value == 0.087654, (
+        'final save write contains the adopted complement and optional dependent: '
+        'require reopened.structure.atom_sites[1].occupancy.value == 0.087654'
+    )
     optional = reopened.experiment.instrument.setup_monochromator_twotheta
-    assert (optional.value, optional.uncertainty, optional.free) == (0.087654, 0.0, False)
+    assert (optional.value, optional.uncertainty, optional.free) == (0.087654, 0.0, False), (
+        'final save write contains the adopted complement and optional dependent: '
+        'require (optional.value, optional.uncertainty, optional.free) == '
+        '(0.087654, 0.0, False)'
+    )
     require_saved_parameters(reopened.parameters, reference, model=reopened, phase='loaded')
     reopened.analysis.calculate()
-    assert reopened.structure.atom_sites[1].occupancy.value == adopted
+    assert reopened.structure.atom_sites[1].occupancy.value == adopted, (
+        'final save write contains the adopted complement and optional dependent: '
+        'require reopened.structure.atom_sites[1].occupancy.value == adopted'
+    )
     optional = reopened.experiment.instrument.setup_monochromator_twotheta
-    assert (optional.value, optional.uncertainty, optional.free) == (adopted, 0.0, False)
+    assert (optional.value, optional.uncertainty, optional.free) == (adopted, 0.0, False), (
+        'final save write contains the adopted complement and optional dependent: '
+        'require (optional.value, optional.uncertainty, optional.free) == '
+        '(adopted, 0.0, False)'
+    )
     require_saved_parameters(reopened.parameters, reference, model=reopened, phase='completed')
     reopened.save()
     require_saved_parameters(reopened.parameters, reference, model=reopened, phase='completed')

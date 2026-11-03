@@ -68,19 +68,31 @@ def capture(case):
     fixture = json.loads(original[native_path])
     conditioning = json.loads(original[conditioning_path])
     raw = json.loads(original[raw_path])
-    assert hashlib.sha256(original[raw_path]).hexdigest() == conditioning['raw_capture_sha256']
+    assert hashlib.sha256(original[raw_path]).hexdigest() == conditioning['raw_capture_sha256'], (
+        'capture: require hashlib.sha256(original[raw_path]).hexdigest() == '
+        "conditioning['raw_capture_sha256']"
+    )
     return fixture, conditioning, raw, original
 
 
 def assert_domains(fixture, conditioning, blocks):
     mapping = bridge.conditioning_semantics(fixture['scientific'], conditioning, blocks)
-    assert set(mapping) == {tuple(binding[:3]) for binding in conditioning['bindings']}
+    assert set(mapping) == {tuple(binding[:3]) for binding in conditioning['bindings']}, (
+        'assert domains: require set(mapping) == {tuple(binding[:3]) for binding '
+        "in conditioning['bindings']}"
+    )
     domains = bridge.frozen_domains(fixture, blocks)
     raw_coordinates = {tuple(binding[:3]) for binding in fixture['native_precision_bindings']}
     assert {
         key for key, domain in domains.items() if domain == 'native-raw-parameter'
-    } == raw_coordinates
-    assert any(domain == 'historical-written' for domain in domains.values())
+    } == raw_coordinates, (
+        'assert domains: require { key for key, domain in domains.items() if '
+        "domain == 'native-raw-parameter' } == raw_coordinates"
+    )
+    assert any(domain == 'historical-written' for domain in domains.values()), (
+        "assert domains: require any(domain == 'historical-written' for domain in "
+        'domains.values())'
+    )
 
 
 def assert_omitted(raw, banks, index):
@@ -90,16 +102,25 @@ def assert_omitted(raw, banks, index):
         for label in raw['labels']
         if label.rsplit('.', 1)[-1] == 'scale' or label.rsplit('.', 1)[-1].startswith('calib_')
     }
-    assert anchors.keys() == expected_labels
-    assert anchors
+    assert anchors.keys() == expected_labels, (
+        'assert omitted: require anchors.keys() == expected_labels'
+    )
+    assert anchors, 'assert omitted: require anchors'
     assert all(anchor.key not in index.cells for anchor in anchors.values()), (
         'Old scientific whitelist omitted these raw-anchored roles; do not pretend it covered them'
     )
     for label, anchor in anchors.items():
-        assert raw['labels'][anchor.column] == label
-        assert anchor.value == raw['values'][anchor.column]
+        assert raw['labels'][anchor.column] == label, (
+            "assert omitted: require raw['labels'][anchor.column] == label"
+        )
+        assert anchor.value == raw['values'][anchor.column], (
+            "assert omitted: require anchor.value == raw['values'][anchor.column]"
+        )
         assert anchor.uncertainty == math.sqrt(
             raw['covariance'][anchor.column * len(raw['labels']) + anchor.column]
+        ), (
+            'assert omitted: require anchor.uncertainty == math.sqrt( '
+            "raw['covariance'][anchor.column * len(raw['labels']) + anchor.column] )"
         )
 
 
@@ -114,12 +135,24 @@ def test_frozen_catalogue_coordinates_domains_and_omitted_raw_storage(case):
     aligned = bridge.align_to_frozen(
         reordered, scientific, actual_blocks=blocks, frozen_blocks=blocks
     )
-    assert aligned == scientific
+    assert aligned == scientific, (
+        'frozen catalogue coordinates domains and omitted raw storage: require '
+        'aligned == scientific'
+    )
     # Existing bounds and OLD-coordinate conditioning authentication, unchanged.
-    assert compare_scientific(aligned, scientific, conditioning=conditioning)
+    assert compare_scientific(aligned, scientific, conditioning=conditioning), (
+        'frozen catalogue coordinates domains and omitted raw storage: require '
+        'compare_scientific(aligned, scientific, conditioning=conditioning)'
+    )
     assert_omitted(raw, banks, bridge.semantic_index(scientific, blocks))
-    assert [fixture, conditioning, raw] == frozen_before
-    assert all(path.read_bytes() == data for path, data in original.items())
+    assert [fixture, conditioning, raw] == frozen_before, (
+        'frozen catalogue coordinates domains and omitted raw storage: require '
+        '[fixture, conditioning, raw] == frozen_before'
+    )
+    assert all(path.read_bytes() == data for path, data in original.items()), (
+        'frozen catalogue coordinates domains and omitted raw storage: require '
+        'all(path.read_bytes() == data for path, data in original.items())'
+    )
 
 
 def test_declared_input_change_refuses_before_storage_can_be_retargeted(tmp_path):
