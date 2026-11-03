@@ -124,6 +124,122 @@ TestCase {
         const displacement = group("atom_site_aniso");
         verify(/\(6\)/.test(displacement.title), "Atomic displacement reports all six site rows instead of zero");
     }
+    function test_monoclinic_moment_form_selector_edits_and_saves_crystal_axes() {
+        Session.closeProject();
+        const structureFile = "structures/cosio.edi";
+        const fixture = Probe.readFile("tests/fixtures/magnetic_pnma/moment-forms-monoclinic.edi");
+        verify(fixture.length > 0 && SettingsProof.write(scratch, structureFile, fixture),
+               "The test replaces the disposable project structure with its monoclinic witness");
+        verify(Session.openProject(scratch), "The monoclinic cobalt structure opens in the real app");
+        tryCompare(Session.project, "calculating", false, 15000, "The monoclinic project settles before editing");
+        const forms = ["Crystal axes", "Cartesian", "Spherical"];
+        function controls() {
+            const moments = group("atom_site_moment");
+            const table = findChild(moments, "atomSiteMoments.list");
+            verify(table !== null, "The magnetic moment group has its visible component table");
+            const candidates = Render.descendants(moments).filter(item => item.visible &&
+                typeof item.textAt === "function" &&
+                Array.from({length: item.count}, (_, i) => item.textAt(i)).includes("Crystal axes"));
+            compare(candidates.length, 1, "The Magnetic moments group has one form selector");
+            const box = candidates[0];
+            compare(Array.from({length: box.count}, (_, i) => box.textAt(i)), forms,
+                    "The form selector offers crystal axes, Cartesian and spherical coordinates");
+            verify(box.mapToItem(moments, 0, box.height).y <= table.mapToItem(moments, 0, 0).y + 1,
+                   "The form selector sits above the Magnetic moments table");
+            tryVerify(() => table.itemAtIndex(0) !== null, 3000,
+                      "The cobalt witness renders its magnetic moment row");
+            return {box, table};
+        }
+        function readToken(text) {
+            const match = String(text).trim().match(/^([+-]?\d+(?:\.(\d+))?)(?:\((\d+)\))?(?:[eE]([+-]?\d+))?$/);
+            verify(match !== null, "The displayed moment cell has a numeric value: " + text);
+            const unit = Math.pow(10, Number(match[4] || 0) - (match[2] || "").length);
+            return {value: Number(match[1]) * Math.pow(10, Number(match[4] || 0)),
+                    su: match[3] === undefined ? null : Number(match[3]) * unit, unit};
+        }
+        function near(token, expected, reason) {
+            verify(Math.abs(token.value - expected) <= token.unit / 2 + 1e-7,
+                   reason + " expected " + expected + " observed " + token.value);
+        }
+        function inspect(form, components, magnitude, uncertainties) {
+            const {box, table} = controls();
+            const index = forms.indexOf(form);
+            if (box.currentIndex !== index) {
+                box.currentIndex = index;
+                box.activated(index);
+            }
+            tryCompare(box, "currentText", form, 3000, "The selected coordinate form is displayed");
+            verify(waitForPolish(table), "The selected coordinate form settles the moment layout");
+            const headers = Render.cells(table.headerItem);
+            const magnitudeIndex = headers.findIndex(cell => cell.visible && /^\|\s*M\s*\|$/.test(String(cell.text).trim()));
+            verify(magnitudeIndex >= 0, "Every coordinate form shows the |M| column");
+            const cells = Render.cells(table.itemAtIndex(0));
+            const modulus = cells[magnitudeIndex];
+            verify(modulus && modulus.visible && (modulus.readOnly === true || typeof modulus.selectAll !== "function"),
+                   "The magnitude column reports a read-only value");
+            near(readToken(modulus.text || modulus.value), magnitude, form + " reports the physical moment norm");
+            const editors = cells.filter(cell => cell.visible && cell.enabled && cell.readOnly === false &&
+                typeof cell.selectAll === "function" && /^[+-]?\d/.test(String(cell.text).trim()));
+            compare(editors.length, 3, form + " presents three editable coordinates on the general site");
+            for (let axis = 0; axis < 3; ++axis) {
+                const token = readToken(editors[axis].text);
+                near(token, components[axis], form + " displays component " + axis + " in its selected basis");
+                if (uncertainties) {
+                    verify(token.su !== null && Math.abs(token.su - uncertainties[axis]) <= token.unit / 2 + 1e-7,
+                           form + " displays the independently propagated standard uncertainty of component " + axis);
+                }
+            }
+            return editors;
+        }
+        const root3 = Math.sqrt(3);
+        const crystal = [3 + 4 * root3, 4, 8 * root3];
+        const degrees = 180 / Math.PI;
+        const spherical = y => [Math.hypot(3, y, 12), Math.atan2(Math.hypot(3, y), 12) * degrees,
+                                Math.atan2(y, 3) * degrees];
+        inspect("Crystal axes", crystal, 13, [0.1, 0.2, 0.3]);
+        inspect("Spherical", spherical(4), 13);
+        const cartesian = inspect("Cartesian", [3, 4, 12], 13,
+                                  [Math.hypot(0.1, 0.15), 0.2, 0.15 * root3]);
+        const y = cartesian[1];
+        Ui.scrollIntoView(y);
+        verify(Ui.exposed(y), "The Cartesian Y editor is reachable by real input");
+        mouseClick(y);
+        y.selectAll();
+        keyClick(Qt.Key_6);
+        keyClick(Qt.Key_Return);
+        tryVerify(() => /^6(?:\D|$)/.test(String(y.text)), 3000, "The Cartesian Y edit commits to the moment");
+        const changed = spherical(6);
+        inspect("Crystal axes", [crystal[0], 6, crystal[2]], changed[0]);
+        inspect("Spherical", changed, changed[0]);
+        verify(Session.save(), "The edited spherical view saves the project");
+        const saved = SettingsProof.text(scratch, structureFile);
+        for (const axis of ["x", "y", "z"])
+            verify(saved.includes("_atom_site_moment.crystalaxis_" + axis), "The saved moment has its crystal-axis " + axis + " column");
+        verify(!/_atom_site_moment[._](?:Cartn|spherical)_/i.test(saved),
+               "The displayed coordinate form leaves alternate moment columns out of the saved structure");
+        const momentLoop = saved.split(/^\s*loop_\s*$/m)
+            .find(block => /^\s*_atom_site_moment\.label\s*$/m.test(block));
+        verify(momentLoop !== undefined, "The saved structure contains the canonical moment loop");
+        const tags = [];
+        const rows = [];
+        for (const line of momentLoop.trim().split(/\r?\n/)) {
+            const field = line.trim();
+            if (field.startsWith("_atom_site_moment."))
+                tags.push(field);
+            else if (field.startsWith("CoWitness "))
+                rows.push(field.split(/\s+/));
+        }
+        compare(rows.length, 1, "The canonical moment loop saves one row for the edited site");
+        for (const [i, axis] of ["x", "y", "z"].entries()) {
+            const column = tags.indexOf("_atom_site_moment.crystalaxis_" + axis);
+            verify(column >= 0, "The saved crystal-axis column identifies its numeric field");
+            near(readToken(rows[0][column]), [crystal[0], 6, crystal[2]][i],
+                 "The saved crystal-axis value preserves the cross-view edit");
+        }
+        Session.closeProject();
+        verify(Session.openProject(scratch), "The saved monoclinic project reopens");
+        tryCompare(controls().box, "currentText", "Spherical", 3000, "The form choice persists as a project view preference");
+    }
     function test_symmetry_form_column_has_room_and_a_gap_after_mz() {
         const moments = group("atom_site_moment");
         const form = findChild(moments, "atomSiteMoment.symmform.0");

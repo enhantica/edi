@@ -11,6 +11,7 @@ CASES = [
     'sidebar_categories_follow_crysta_dictionary_order',
     'extra_groups_are_single_ordered_and_human_readable',
     'main_order_all_sites_ids_ions_and_symmetry_form',
+    'monoclinic_moment_form_selector_edits_and_saves_crystal_axes',
     'symmetry_form_column_has_room_and_a_gap_after_mz',
     'magnetic_column_shows_none_and_aligns_each_choice',
     'moment_colour_preferences_offer_three_schemes',
