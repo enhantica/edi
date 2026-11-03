@@ -110,9 +110,27 @@ def read_curves(path: Path) -> dict[str, np.ndarray]:
     return columns
 
 
+def read_tab_prf(lines: list[str]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """x, observed and calculated from FullProf's tab-separated profile.
+
+    It writes every point, excluded ones too, then one row per reflection; only the five-field
+    point rows after the ``2Theta`` header are read.
+    """
+    start = next(i for i, line in enumerate(lines) if line.split('\t')[0].strip() == '2Theta')
+    rows = [
+        [float(field) for field in line.split('\t')[:3]]
+        for line in lines[start + 1 :]
+        if len(line.split('\t')) == 5
+    ]
+    data = np.array(rows)
+    return data[:, 0], data[:, 1], data[:, 2]
+
+
 def read_prf(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """x, observed and calculated from a FullProf IGOR profile."""
+    """x, observed and calculated from a FullProf IGOR or tab-separated profile."""
     lines = path.read_text(encoding='utf-8').splitlines()
+    if 'BEGIN' not in lines:
+        return read_tab_prf(lines)
     rows = []
     for line in lines[lines.index('BEGIN') + 1 : lines.index('END')]:
         # Four 12-character fields; large intensities can run together.
@@ -163,14 +181,16 @@ def match_rows(reference: np.ndarray, x: np.ndarray) -> tuple[np.ndarray, np.nda
 def fullprof_banks(root: Path, case: str, banks: list[str], grids: dict) -> dict:
     """FullProf's calculated curve on each bank's points; ``found`` is false where it has none."""
     home = root / FULLPROF / case
-    names = read_json(home / 'reference.json')['banks']
+    reference = read_json(home / 'reference.json')
+    names = reference['banks']
     if names != banks:
         raise ValueError(f'{case}: FullProf banks {names} differ from edi banks {banks}')
+    # A run made outside the usual fit.pcr layout names its profile files, one per bank.
+    default = [f'fit_{index}.prf' for index in range(1, len(banks) + 1)]
+    profiles = reference.get('profiles') or (['fit.prf'] if len(banks) == 1 else default)
     out = {}
-    for index, bank in enumerate(banks, start=1):
-        x, observed, calculated = read_prf(
-            home / ('fit.prf' if len(banks) == 1 else f'fit_{index}.prf')
-        )
+    for bank, profile in zip(banks, profiles, strict=True):
+        x, observed, calculated = read_prf(home / profile)
         # Only included points are compared, so only they take part in the matching: FullProf
         # writes no row for an excluded point, and one must not take an included point's row.
         included = grids[bank]['included']
@@ -186,8 +206,23 @@ def fullprof_banks(root: Path, case: str, banks: list[str], grids: dict) -> dict
     return out
 
 
+def summary_cells(path: Path, phases: list[str]) -> dict[str, list[float]]:
+    """Each phase's a, b, c from a FullProf ``.sum``, whose cell blocks come in phase order."""
+    lines = path.read_text(encoding='latin-1').splitlines()
+    starts = [index for index, line in enumerate(lines) if '=> Cell parameters' in line]
+    if len(starts) != len(phases):
+        raise ValueError(f'{path}: {len(starts)} cell blocks for phases {phases}')
+    return {
+        phase: [float(lines[start + k].split()[0]) for k in (1, 2, 3)]
+        for phase, start in zip(phases, starts, strict=True)
+    }
+
+
 def fullprof_cells(root: Path, case: str) -> dict[str, list[float]]:
-    """Each phase's a, b, c in FullProf's fitted ``.new``."""
+    """Each phase's a, b, c in FullProf's fitted ``.new``, or in the ``.sum`` its record names."""
+    reference = read_json(root / FULLPROF / case / 'reference.json')
+    if 'summary' in reference:
+        return summary_cells(root / FULLPROF / case / reference['summary'], reference['phases'])
     lines = (root / FULLPROF / case / 'fit.new').read_text(encoding='utf-8').splitlines()
     cells, phase = {}, None
     for index, line in enumerate(lines):
@@ -244,15 +279,21 @@ def compare(root: Path, case: str) -> dict:
     banks = edi['banks']
     grids = {bank: read_curves(edi_dir / f'{bank}.csv') for bank in banks}
     fullprof = read_json(root / FULLPROF / case / 'reference.json')
-    fp_curves = fullprof_banks(root, case, banks, grids)
     reasons = {}
     calculated = {'edi': {bank: grids[bank]['calculated'] for bank in banks}}
-    free = {'edi': edi['n_free'], 'FullProf': fullprof['n_free']}
-    gap = fullprof_gap(case, banks, grids, fp_curves)
-    if gap:
-        reasons['FullProf'] = gap
+    free = {'edi': edi['n_free']}
+    # Like diffraction-lib's, a FullProf record may say the case has no FullProf fit, and why.
+    fullprof_fitted = fullprof.get('model_compatible', True)
+    if fullprof_fitted:
+        free['FullProf'] = fullprof['n_free']
+        fp_curves = fullprof_banks(root, case, banks, grids)
+        gap = fullprof_gap(case, banks, grids, fp_curves)
+        if gap:
+            reasons['FullProf'] = gap
+        else:
+            calculated['FullProf'] = {bank: fp_curves[bank]['calculated'] for bank in banks}
     else:
-        calculated['FullProf'] = {bank: fp_curves[bank]['calculated'] for bank in banks}
+        reasons['FullProf'] = fullprof['reason']
     dl = read_json(root / COMPARISON / case / 'diffraction-lib' / 'reference.json')
     if dl['model_compatible']:
         free['diffraction-lib'] = dl['n_free']
@@ -271,7 +312,9 @@ def compare(root: Path, case: str) -> dict:
             for bank in banks
         ]
         rows[program] = agreement_factors(banks_data, free[program]) | {'n_free': free[program]}
-    cells = {'edi': edi['cells'], 'FullProf': fullprof_cells(root, case)}
+    cells = {'edi': edi['cells'], 'FullProf': {}}
+    if fullprof_fitted:
+        cells['FullProf'] = fullprof_cells(root, case)
     if dl['model_compatible']:
         cells['diffraction-lib'] = dl['cells']
     return {'rows': rows, 'reasons': reasons, 'free': free, 'cells': cells}
