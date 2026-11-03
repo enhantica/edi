@@ -22,6 +22,14 @@ EaElements.Dialog {
     property alias projectAuthors: projectAuthorsField.text
     property alias projectDescription: projectDescriptionField.text
 
+    function acceptsProjectName(value) {
+        return ApplicationInfo.projectDescriptionAdmitted(value, false);
+    }
+    function acceptsProjectTitle(value) {
+        return ApplicationInfo.projectDescriptionAdmitted(value, true);
+    }
+    readonly property int projectTitleMaximumLength: projectTitleField.maximumLength
+
     property string projectLocation: ""
     property string projectParentDirectory: ""
     property string defaultProjectParentDirectory: projectLocation
@@ -29,12 +37,7 @@ EaElements.Dialog {
     // A folder and a name joined by one separator, whatever separators the folder ends with (a folder chosen in
     // the dialog arrives as a URL that may end in one).
     function joinedPath(folder, name) {
-        let path = folder;
-        while (path.length > 1 && (path.endsWith("/") || path.endsWith("\\")))
-            path = path.slice(0, -1);
-        if (path === "")
-            return name;
-        return path.endsWith("/") || path.endsWith("\\") ? path + name : path + EaLogic.Utils.osPathSep() + name;
+        return ApplicationInfo.projectJoinedPath(folder, name);
     }
 
     property int inputFieldWidth: EaStyle.Sizes.fontPixelSize * 35
@@ -48,16 +51,8 @@ EaElements.Dialog {
     onAccepted: projectLocation = projectLocationField.text
     // OK is named as the dialog starts to show, and the name field takes the keyboard as it opens: what the user
     // types goes into the name at once.
-    function nameAccept() {
-        const create = standardButton(Dialog.Ok);
-        if (create)
-            create.objectName = "createProject.accept";
-    }
-    onAboutToShow: nameAccept()
-    onOpened: {
-        nameAccept();
-        projectNameField.forceActiveFocus();
-    }
+    onAboutToShow: ApplicationInfo.projectDescriptionOpened(false)
+    onOpened: ApplicationInfo.projectDescriptionOpened(true)
 
     // Main layout
 
@@ -145,7 +140,7 @@ EaElements.Dialog {
             MultiLineField {
                 id: projectDescriptionField
 
-                objectName: "createProject.description"
+                editorObjectName: "createProject.description"
                 implicitWidth: dialog.inputFieldWidth
                 placeholderText: qsTr("Enter project description here (optional)")
             }

@@ -10,6 +10,11 @@ from pathlib import Path
 import pytest
 
 from tests.conftest import corpus_case_dir
+from tests.fixtures.cif_import_baseline.canonical_positions import (
+    PRASEODYMIUM,
+    SILICON,
+    restore_representative,
+)
 from tests.fixtures.fittability.saved_reference import fingerprints, fit_snapshot, snapshot, staged
 from tests.fixtures.project_categories.historical_bytes import check_project_spacing, prior_digest
 
@@ -54,14 +59,16 @@ def _pin_fitted_line(content, prefix, expected):
 @pytest.mark.parametrize('case', tuple(REFERENCE['projects']))
 @pytest.mark.parametrize('rule', ['iucr_19', 'iucr_99'])
 def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
+    transitioned = dict(ORIGINAL['projects'][case][rule])
     for change in TRANSITIONS:
         if (change['case'], change['rule']) == (case, rule):
-            assert ORIGINAL['projects'][case][rule][change['path']] == change['before'], (
-                'Each byte transition binds its exact frozen main regression hash'
+            assert transitioned[change['path']] == change['before'], (
+                'Each byte transition binds the exact preceding immutable regression hash'
             )
-            assert REFERENCE['projects'][case][rule][change['path']] == change['after'], (
-                'Each adapted byte pin binds the recorded rounded-save transition'
-            )
+            transitioned[change['path']] = change['after']
+    assert transitioned == REFERENCE['projects'][case][rule], (
+        'The complete ordered transition chain must reach exactly the current saved-byte pins'
+    )
     api = importlib.import_module(API)
     if case == 'tests/fixtures/e04_t1/reference/unused-free':
         with warnings.catch_warnings(record=True) as notes:
@@ -95,13 +102,18 @@ def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
         actual = snapshot(
             api, ROOT / case, tmp_path, rule, order_reference=REFERENCE['projects'][case][rule]
         )
+    if case == SILICON or case in PRASEODYMIUM:
+        name = 'structures/si.edi' if case == SILICON else 'structures/structure.edi'
+        actual[name] = prior_digest(
+            restore_representative((tmp_path / 'saved' / name).read_bytes(), case),
+            REFERENCE['projects'][case][rule][name],
+            name=name,
+        )
     check_project_spacing(tmp_path / 'saved')
     assert actual == REFERENCE['projects'][case][rule], (
         'The rounded-save regression preserves every saved path and byte under both s.u. rules; '
-        'only immutable-hash category movement, clocks and the checked free flag are normalized: '
-        + case
-        + ' / '
-        + rule
+        'only independently checked orbit representatives, immutable-hash category movement, '
+        'clocks and the checked free flag are normalized: ' + case + ' / ' + rule
     )
 
 

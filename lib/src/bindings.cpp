@@ -3198,7 +3198,6 @@ NB_MODULE(_edi, m) {
                 nb::object out = cwl ? nb::cast(edi::PdCwlData(std::move(node)))
                                      : nb::cast(edi::PdTofData(std::move(node)));
                 nb::cast<edi::PdDataBase&>(out).source.link(self, self.data->epoch.value());
-                nb::detail::keep_alive(out.ptr(), self_object.ptr());
                 return out;
             },
             [](edi::ExperimentBase& self, std::optional<edi::PdDataBase> incoming) {
@@ -3210,13 +3209,14 @@ NB_MODULE(_edi, m) {
                 }
                 self.data = std::move(incoming);
                 self.refln.clear();
-            })
+            },
+            nb::for_getter(nb::keep_alive<0, 1>()))
         // The reflections crysta computed, as the leaf matching the beam mode. The getter itself
         // never calculates; a column read does (live_refln).
         .def_prop_ro("refln",
                      [](nb::handle self_object) -> nb::object {
-                         // Linked to this experiment and kept alive by it, so a retained object is
-                         // read against the experiment as it is then.
+                         // Linked to this experiment; the getter's keep_alive makes the view
+                         // retain its experiment and read it as it is then.
                          edi::ExperimentBase& self = nb::cast<edi::ExperimentBase&>(self_object);
                          // A single crystal's reflections are its measured ones with their F2calc.
                          if (self.reflections) {
@@ -3224,7 +3224,6 @@ NB_MODULE(_edi, m) {
                                  self.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH
                                      ? nb::cast(edi::views::ScCwlReflnView(&self))
                                      : nb::cast(edi::views::ScTofReflnView(&self));
-                             nb::detail::keep_alive(view.ptr(), self_object.ptr());
                              return view;
                          }
                          edi::PowderReflnDataBase rows =
@@ -3234,9 +3233,9 @@ NB_MODULE(_edi, m) {
                                  ? nb::cast(edi::PowderCwlReflnData(std::move(rows)))
                                  : nb::cast(edi::PowderTofReflnData(std::move(rows)));
                          nb::cast<edi::PowderReflnDataBase&>(out).source.link(self, 0);
-                         nb::detail::keep_alive(out.ptr(), self_object.ptr());
                          return out;
-                     })
+                     },
+                     nb::keep_alive<0, 1>())
         // A single crystal's extinction; None for a powder.
         .def_prop_ro(
             "extinction",

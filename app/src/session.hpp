@@ -6,7 +6,7 @@
 #include <QPointer>
 #include <optional>
 #include <QString>
-#include <QTemporaryDir>
+#include <QStringList>
 #include <QTimer>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
@@ -14,9 +14,14 @@
 #include <memory>
 #include <vector>
 
+#include "assistant_values.hpp"
 #include "example_list_model.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
+#include "assistant_view_model.hpp"
+
+class QQmlEngine;
+class QJSEngine;
 #include "web_storage.hpp"
 
 namespace edi_app {
@@ -77,6 +82,8 @@ class Session : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
+    Q_PROPERTY(edi_app::AssistantViewModel* assistant READ assistant CONSTANT)
+    Q_PROPERTY(bool assistantWorkReportsAutomatic READ assistantWorkReportsAutomatic CONSTANT)
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
     // A project set aside while a tutorial works in its own (edi ADR-0064), and whether it has unsaved changes.
@@ -107,7 +114,13 @@ class Session : public QObject {
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
 
    public:
-    explicit Session(QObject* parent = nullptr);
+    explicit Session(QObject* parent, AssistantWorkReportOptions options = {});
+    static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
+    AssistantViewModel* assistant() const { return assistant_; }
+    bool assistantWorkReportsAutomatic() const { return work_report_options_.automatic; }
+#ifndef __EMSCRIPTEN__
+    Session(edi::assistant::native::NativeDependencies, QObject* parent=nullptr, AssistantWorkReportOptions options={});
+#endif
     ~Session() override;
 
     ProjectViewModel* project() const { return project_; }
@@ -118,6 +131,9 @@ class Session : public QObject {
     QString openedExample() const { return opened_example_; }
     QString openedArchive() const { return opened_archive_; }
     QString locationText() const;
+    // The folder holding `path` when it exists, else empty: the folder of the last project opened, where a new project
+    // goes unless one was chosen.
+    Q_INVOKABLE QString existingParentFolder(const QString& path) const;
     QString projectLocation() const;
     bool needsSaveAs() const;
     QString colourScheme() const { return colour_scheme_; }
@@ -136,7 +152,9 @@ class Session : public QObject {
     // the new project's `_report.html_offline` (ADR-0036 §7); no other project takes the preference.
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
                                    const QString& suRule = QStringLiteral("iucr_99"), const QString& title = QString(),
-                                   const QString& authors = QString(), bool reportLibraries = false);
+                                   const QString& authors = QString(), bool reportLibraries = false, const QString& assistantIntent = QString());
+    Q_INVOKABLE edi_app::ProjectCreationResult createProjectWithOutcome(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&);
+    Q_INVOKABLE bool creationOutcomeCurrent(const edi_app::ProjectCreationResult&) const;
     Q_INVOKABLE void closeProject();
     // A tutorial's project (edi ADR-0064): the open project, unsaved changes and all, is set aside rather than closed
     // while a bundled example or a new empty project opens. False, with nothing set aside, when that fails.
@@ -172,6 +190,10 @@ class Session : public QObject {
     // name (the project's name for one with neither), `.zip` for an archive, in the folder the project is in, else in
     // the user's documents.
     Q_INVOKABLE QUrl suggestedSaveTarget(bool zip) const;
+    Q_INVOKABLE bool assistantSaveAsCurrent(const QString& token) const;
+    Q_INVOKABLE QUrl assistantSaveAsTarget(const QString& token, bool zip) const;
+    Q_INVOKABLE bool completeAssistantSaveAs(const QString& token, const QUrl& target, bool zip, bool copy);
+    Q_INVOKABLE void cancelAssistantSaveAs(const QString& token);
 
     // The web app (edi ADR-0052 §9). Every project there has a place: the browser's own storage, or in Chrome and Edge
     // a folder or a .zip on the disk; Save writes into it, never a download.
@@ -216,6 +238,7 @@ class Session : public QObject {
     // Just before the open project is replaced (or closed): the pages let go of it first (edi ADR-0052).
     void projectAboutToChange();
     void projectChanged();
+    void assistantSaveAsRequested(const QString& token);
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
     void projectSetAsideChanged();
@@ -246,27 +269,52 @@ class Session : public QObject {
    private:
     bool openProjectAt(const QUrl& directory);
     bool openExampleNamed(const QString& exampleId);
-    bool open(const QString& directory, const QString& example);
+    bool open(const QString& directory,const QString& example,const std::function<bool()>& afterOpen = {});
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
-    bool openCopy(const QString& source, const QString& target, const QString& example);
-    // The first of `name`, `name-2`, `name-3`, ... that, in the temporary directory, neither the open project nor the
-    // set-aside one works in, so a new copy never replaces a live project's files (ADR-0064). A name in that directory.
-    QString freeCopyName(const QString& name) const;
-    void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
+    bool openCopy(const QString& source,const QString& target,const QString& example,const std::function<bool()>& afterOpen = {});
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={}, const std::shared_ptr<AssistantViewModel::ProjectResetInputs>& resetInputs={});
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
     bool saveInto(const QString& folder);
     // After a Save as: the project is no longer an example's, an archive's or a read-only tree's temporary copy.
     void leaveTemporaryOrigin();
     bool saveCopy(const QString& target, bool zip);
+    bool saveProjectAsFresh(const QUrl& target,bool zip,bool copy,bool notify = true);
 
+    const AssistantWorkReportOptions work_report_options_;
+    void initializeSession();
+    struct ProjectCreationOutcome;
+    bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*);
+    friend class AssistantViewModel;
+    quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
+    bool assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept;
+    bool emptyAssistantOwner(quint64 epoch) const noexcept;
+    void retireAssistantIntent() noexcept;
+    std::unique_ptr<ProjectViewModel> prepareAssistantNativeModel(edi::Project, quint64, const std::function<bool()>&);
+    bool commitAssistantNativeModel(std::unique_ptr<ProjectViewModel>, quint64, const std::function<bool()>&, bool&);
+    quint64 assistant_epoch_=0, replacement_generation_=0;
+    bool assistant_epoch_exhausted_=false;
+    std::uint64_t assistant_save_origin_=0;
+    struct AssistantSaveChoice {
+        QString token, suggestion;
+        QPointer<ProjectViewModel> owner;
+        quint64 epoch=0;
+        std::function<bool()> current;
+        std::function<bool(const QUrl&,bool,bool)> accepted;
+        std::function<void()> cancelled;
+    };
+    std::unique_ptr<AssistantSaveChoice> assistant_save_choice_;
+    bool requestAssistantSaveAs(const QString&, const QString&, ProjectViewModel*, quint64,
+        std::function<bool()>, std::function<bool(const QUrl&,bool,bool)>, std::function<void()>);
+    friend void configure_engine(QQmlEngine&, std::unique_ptr<Session>);
+    bool engine_bound_ = false;
+    AssistantViewModel* assistant_ = nullptr;
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
     ExampleListModel* examples_;
     WarningListModel* warnings_;
     int project_messages_ = 0;  // the keys of the project's messages
-    std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
     QString opened_archive_;
     QString colour_scheme_ = QStringLiteral("earth");
@@ -277,6 +325,14 @@ class Session : public QObject {
     // The temporary folder the project works in (an unpacked archive), removed when it is no longer the project's.
     QString temporary_folder_;
     void releaseTemporaryFolder();
+    // Cleanup authority only: never an inherited origin/Save destination.
+    QStringList retained_temporary_roots_;
+    QString prepareCopyRoot(const char* kind);
+    void retainTemporaryRoots(const QStringList& candidates);
+    struct PendingOpenSource;
+    QStringList pending_open_sources_;
+    quint64 path_generation_=0;
+    void releaseTemporaryRoots(const QStringList& candidates, const QString& openedFrom = {}) noexcept;
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
     bool read_only_copy_ = false;
     // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
@@ -304,7 +360,7 @@ class Session : public QObject {
     // The open project's place is the browser's own storage until a Save as onto the disk.
     void setWebPlace(const WebPlace& place);
     // The answer to a browser chooser that copied a project into `root` in memory: opens it there.
-    WebStorage::Answer webOpenAnswer(const QString& root);
+    WebStorage::Answer webOpenAnswer(const QString& root, bool fromFile = true, bool recovery = false);
     // Opens the project folder or archive the browser copied into memory at `path`, from the place `place`.
     bool openWebCopy(const QString& path, const WebPlace& place);
     // Writes `folder` into `place`; `done` hears whether it was written.
@@ -316,12 +372,12 @@ class Session : public QObject {
     struct Staged {
         QString root;
         QString folder;
-        std::shared_ptr<const edi::Project> project;  // the staged copy: what the open project takes once published
+        std::shared_ptr<edi::Project> project;  // the staged copy: what the open project takes once published
         ProjectViewModel::StagedScan scan;             // what a scan project reads there, read before publication
     };
     // What a Save writes (round, adopt, recalculate, write), done on a copy in `name` inside a new folder (the folder
     // itself for an empty name), once the project may be saved; the open project is left as it is.
-    bool stageCopy(const char* purpose, const QString& name, Staged& staged);
+    bool stageCopy(const char* purpose, const QString& name, Staged& staged, const QString& parent = {});
     // Writes the staged snapshot into the .zip `archive`, then the project takes it and works in its folder.
     bool publishArchive(const Staged& staged, const QString& archive);
     // The browser's place holds the staged snapshot: the project takes it and works in its folder, unless it was
@@ -342,6 +398,7 @@ class Session : public QObject {
     QTimer* keep_timer_ = nullptr;
     // The memory folder the browser copied the open project into, released with it.
     QString web_copy_;
+    QString web_source_path_; // Current Open/staged input dependency, never a displayed origin.
 };
 
 }  // namespace edi_app

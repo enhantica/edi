@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 
@@ -67,13 +69,12 @@ EaComponents.ListViewParameter {
     // Its scientific form: the written token's own digits, every one of them (NumberText.compact); without one, digits
     // that follow the uncertainty and the project's rule when the plain text does not change (9e5 or 9.0e5 for
     // 900000 ± 200000).
-    readonly property string narrowText: item === null || fitDigits ? "" : written ? NumberText.compact(item.fileValue) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits)
+    readonly property string narrowText: item === null || fitDigits ? "" : written ? NumberText.writtenNarrow(item.fileValue, item.fileSu) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits)
     // Set from the changes it follows rather than bound, and only once the table has given the cell its column's width:
     // until then the cell is as wide as its own text, which fits, and following that width back to the text would loop.
     property string shownValue: valueText
     function refit() {
-        const sized = Math.abs(width - implicitWidth) >= 0.5;
-        shownValue = fitDigits || !sized || item === null ? valueText : NumberText.fitted(valueText, room, shownMetrics, narrowText);
+        ApplicationInfo.parameterCellRefit();
     }
     onRoomChanged: refit()
     onValueTextChanged: refit()
@@ -90,13 +91,7 @@ EaComponents.ListViewParameter {
         font.bold: cell.fit && cell.enabled
     }
     // Width scales about linearly with the size; the size found is checked once more, as hinting can differ a pixel.
-    readonly property int scaledPixelSize: {
-        const full = EaStyle.Sizes.fontPixelSize;
-        if (!fitDigits || room <= 0)
-            return full;
-        const needed = fullMetrics.advanceWidth(fullText);
-        return needed > room ? Math.max(1, Math.floor(full * room / needed)) : full;
-    }
+    readonly property int scaledPixelSize: ApplicationInfo.parameterCellScaledPixelSize()
     readonly property FontMetrics scaledMetrics: FontMetrics {
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: cell.scaledPixelSize
@@ -110,24 +105,24 @@ EaComponents.ListViewParameter {
     // The value as edited: the same text, so a cell left as it was changes nothing.
     readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
 
-    onActiveFocusChanged: {
-        if (activeFocus && text === value) {
-            text = editText;
-        } else if (!activeFocus) {
-            commit();
-            cursorPosition = 0;
-        }
-    }
-    onTextChanged: if (!activeFocus)
-        cursorPosition = 0
+    onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor)
+    onTextChanged: ApplicationInfo.editorTextChanged()
     // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
     // On hover: the value as written when the cell shows it shorter or clipped, else the item's label and `.edi` name
     // (edi ADR-0051).
-    EaElements.ToolTip {
-        text: cell.shownValue !== cell.valueText ? (cell.written ? cell.valueText : NumberText.plainFull(cell.item.value)) : cell.contentWidth > cell.width ? cell.text : cell.item !== null ? cell.item.toolTip : ""
-        visible: text !== "" && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+    // The tooltips are made only when they can show: a table makes and drops whole rows to measure them, and a
+    // popup per cell was a third of a row's cost.
+    Loader {
+        anchors.fill: parent
+        active: cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
+        sourceComponent: Component {
+            EaElements.ToolTip {
+                text: cell.shownValue !== cell.valueText ? (cell.written ? cell.valueText : NumberText.plainFull(cell.item.value)) : cell.contentWidth > cell.width ? cell.text : cell.item !== null ? cell.item.toolTip : ""
+                visible: text !== "" && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+            }
+        }
     }
 
     enabled: refinable
@@ -148,39 +143,81 @@ EaComponents.ListViewParameter {
     // A help text set as `ToolTip.text` shows in the app's tooltip on hover, unless the cell shows why its value is
     // red (never the attached tooltip Qt draws in its own style).
     property bool helpToolTip: false
-    EaElements.ToolTip {
-        text: cell.ToolTip.text
-        visible: cell.helpToolTip && text !== "" && cell.hovered && !cell.warned && EaGlobals.Vars.showToolTips
-    }
-    ToolTip.text: warningText
-    WarningToolTip {
-        text: cell.warningText
-        visible: cell.warned && (cell.hovered || cell.activeFocus)
-    }
-
-    onValueChanged: typedRefusal = ""
-    onAccepted: commit()
-    onEditingFinished: commit()
-
-    // Return and leaving the cell both commit; the second of the two finds nothing new. Text left as shown, rounded or
-    // in full, changes nothing.
-    function commit() {
-        if (item === null)
-            return;
-        if (locked) {
-            text = Qt.binding(() => cell.value);
-            return;
-        }
-        if (text !== cell.value && text !== cell.editText) {
-            typedRefusal = TypedInput.refusal(text, "number");
-            if (typedRefusal === "") {
-                item.value = Number(text);
+    Loader {
+        anchors.fill: parent
+        active: cell.helpToolTip && cell.hovered && !cell.warned && EaGlobals.Vars.showToolTips
+        sourceComponent: Component {
+            EaElements.ToolTip {
+                text: cell.ToolTip.text
+                visible: cell.helpToolTip && text !== "" && cell.hovered && !cell.warned && EaGlobals.Vars.showToolTips
             }
         }
-        text = Qt.binding(() => cell.value);
     }
-    onFitToggled: checked => {
-        if (item !== null)
-            item.free = checked;
+    ToolTip.text: warningText
+    Loader {
+        anchors.fill: parent
+        active: cell.warned && (cell.hovered || cell.activeFocus)
+        sourceComponent: Component {
+            WarningToolTip {
+                text: cell.warningText
+                visible: cell.warned && (cell.hovered || cell.activeFocus)
+            }
+        }
     }
+
+    readonly property var editOwner: Session.project
+    property var ownerToken: ({})
+    property var draft: null
+    property var commitInProgress: null
+    property var editorLife: ({
+            alive: true
+        })
+    property bool assistantEditing: false
+    property bool assistantCommitReady: false
+    readonly property bool manualEditing: draft !== null && draft.kind === "manual"
+    readonly property ParameterItem manualItem: manualEditing ? draft.item : null
+    readonly property ParameterItem manualDraftParameter: manualItem
+    readonly property bool assistantManualDraft: inputMethodComposing || (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
+    onEditOwnerChanged: ApplicationInfo.editorRetireOwner()
+    onObjectNameChanged: ApplicationInfo.editorRetireOwner()
+    Component.onDestruction: ApplicationInfo.editorDestroyed()
+    onItemChanged: ApplicationInfo.parameterEditorItemChanged(ApplicationInfo.ParameterCellEditor)
+    Binding {
+        target: cell
+        property: "text"
+        // A cell whose parameter went away (an isotropic site's tensor) shows nothing; `value` keeps the last text.
+        value: cell.item === null ? "" : cell.activeFocus ? cell.editText : cell.value
+        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady && cell.commitInProgress === null && !cell.inputMethodComposing
+        restoreMode: Binding.RestoreNone
+    }
+    function refreshCleanText() {
+        ApplicationInfo.editorRefreshCleanText();
+    }
+    function rememberManualDraft() {
+        ApplicationInfo.editorRememberDraft(ApplicationInfo.ParameterCellEditor);
+    }
+    onTextEdited: rememberManualDraft()
+    onInputMethodComposingChanged: ApplicationInfo.editorCompositionChanged(ApplicationInfo.ParameterCellEditor)
+    onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.ParameterCellEditor)
+    onEditTextChanged: refreshCleanText()
+    function beginAssistantEdit() {
+        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterCellEditor);
+    }
+    function allowAssistantCommit() {
+        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterCellEditor);
+    }
+    function resetEditorText() {
+        ApplicationInfo.parameterEditorReset();
+    }
+    function cancelAssistantEdit() {
+        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterCellEditor);
+    }
+    Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.ParameterCellEditor, event)
+    // editingFinished owns Return as well as focus loss; accepted is the same
+    // Return's second signal and cannot acquire a successor draft.
+    onEditingFinished: commit()
+    function commit() {
+        ApplicationInfo.editorCommit(ApplicationInfo.ParameterCellEditor);
+    }
+    onFitToggled: checked => ApplicationInfo.parameterEditorFitToggled(checked)
 }

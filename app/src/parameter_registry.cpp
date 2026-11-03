@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "parameter_registry.hpp"
+#include <QPointer>
+#include <QScopeGuard>
 
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
@@ -13,6 +15,9 @@ namespace edi_app {
 ParameterRegistry::ParameterRegistry(ProjectEditor& editor, QObject* parent) : QObject(parent), editor_(editor) {}
 
 void ParameterRegistry::rebuild(edi::Project& project) {
+    const QPointer<ParameterRegistry> receiver(this);
+    const auto filePublication=beginFileText(project);
+    const auto releaseFileText=qScopeGuard([receiver]{if(receiver)--receiver->file_text_publication_depth_;});
     QList<ParameterItem*> items;
     std::map<std::pair<const edi::Parameter*, std::string>, ParameterItem*> by_key;
     // Each block's place in its list (edi ADR-0017 §8).
@@ -94,6 +99,7 @@ void ParameterRegistry::rebuild(edi::Project& project) {
     for (ParameterItem* item : removed) {
         item->deleteLater();
     }
+    if(receiver)receiver->finishFileText(filePublication,project);
 }
 
 void ParameterRegistry::refreshElements(const edi::Project& project) {
@@ -269,6 +275,9 @@ void ParameterRegistry::refreshDefiniteness(const edi::Project& project) {
 }
 
 void ParameterRegistry::publish(edi::Project& project) {
+    const QPointer<ParameterRegistry> receiver(this);
+    const auto filePublication=beginFileText(project);
+    const auto releaseFileText=qScopeGuard([receiver]{if(receiver)--receiver->file_text_publication_depth_;});
     refreshElements(project);
     refreshRefinable(project);
     refreshFittability(project);
@@ -278,8 +287,45 @@ void ParameterRegistry::publish(edi::Project& project) {
     for (ParameterItem* item : items_) {
         item->publish();
     }
+    if(receiver)receiver->finishFileText(filePublication,project);
 }
 
+std::shared_ptr<ParameterRegistry::FileTextPublication> ParameterRegistry::beginFileText(const edi::Project& project) noexcept {
+    ++file_text_publication_depth_;file_text_publication_.reset();
+    try {
+    auto publication=std::make_shared<FileTextPublication>();
+    publication->project=&project;publication->stamps=edi::work_stamps(project);publication->rule=project.su_rule;
+    for(const auto& experiment:project.experiments)
+        publication->calculations.emplace_back(experiment->computed_source,experiment->carried_calculation);
+    file_text_publication_=publication;
+    return publication;
+    }catch(...){return {};} // Optional spelling evidence cannot veto ordinary publication.
+}
+bool ParameterRegistry::matchesFileText(const FileTextPublication& publication,const edi::Project& project) const {
+    if(publication.project!=&project || publication.rule!=project.su_rule ||
+        publication.calculations.size()!=project.experiments.size() || !edi::unchanged_since(project,publication.stamps))return false;
+    for(std::size_t i=0;i<publication.calculations.size();++i) {
+        const auto& experiment=*project.experiments[i];
+        if(publication.calculations[i].first!=experiment.computed_source ||
+            publication.calculations[i].second!=experiment.carried_calculation)return false;
+    }
+    return true;
+}
+void ParameterRegistry::finishFileText(const std::shared_ptr<FileTextPublication>& publication,const edi::Project& project) noexcept {
+    if(!publication)return;
+    try {
+    // A nested successor may have published while this outer invocation still
+    // wrote text afterward. Its pair is conservatively unavailable until republished.
+    if(file_text_publication_!=publication){file_text_publication_.reset();return;}
+    if(matchesFileText(*publication,project))publication->ready=true;
+    }catch(...){publication->ready=false;}
+}
+bool ParameterRegistry::fileTextCurrent(const edi::Project& project) const noexcept {
+    try {
+    const auto publication=file_text_publication_;
+    return file_text_publication_depth_==0 && publication && publication->ready && matchesFileText(*publication,project);
+    }catch(...){return false;}
+}
 ParameterItem* ParameterRegistry::find(const edi::Parameter* parameter) const {
     const auto found = by_parameter_.find(parameter);
     return found != by_parameter_.end() ? found->second : nullptr;

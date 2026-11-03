@@ -133,3 +133,202 @@ not the project being read (measured with the app's software renderer, as on the
 | Archives with one top folder, as the web app wrote them                            | Rejected for writing: members relative to the folder are what Python's `zipfile` and other tools produce from it; both layouts are still read.               |
 | Separate *Open a project folder*, *Export project* buttons beside Open and Save as | Rejected by the owner (2026-10-25): six buttons whose differences are unclear; one Open and one Save as, with a format and a copy choice, do both jobs.      |
 | Save the open project's unsaved changes into an export                             | Rejected for the command line and Python: export writes the project as saved, as the folder does. In the app, *Save a copy* writes the project as it stands. |
+
+
+### 2026-10-28: Open publication belongs to its original replacement
+
+The assistant port made Session replacement return actual publication/currentness. Ordinary
+Open/Open-copy now propagate that result; a false result may follow a genuine partial adoption.
+Original receiver/target/replacement identity also fences archive/read-only/example/web location
+bookkeeping and failure notifications. A stale outer Open cannot decorate a successor with its
+origin, location or error, nor delete staging after another actual replacement. Unadopted local
+candidates can be retired, while actual adopted state is never rolled back to manufacture no effect.
+
+The original complete-only GUI Open policy below is superseded by the owner's construction-state
+roundtrip requirement (2026-10-28). FIRST load_project now has an explicit Construction role for
+ordinary Session Open/Open-copy and Text scratch reload. Saved empty, structure-only and
+not-yet-loaded experiment states restore their actual members, with no placeholders or promised
+unserialized UI selection. Present data/grid/category/scan/template/relation content and held
+structure links still pass the original parser/integrity checks. This is distinct from saved-value
+readback, whose prior reference policy is unchanged. The original default load_project overload,
+Python/CLI consumers and strict captured assistant-result loader retain complete-model semantics.
+Folder/project-record/archive, read-only/example/web/recovery and session restoration converge on
+the same ordinary Session role. The older app6 refusal identified that former completeness policy,
+not writer corruption. Actual partial-state roundtrip/tab qualification remains required.
+
+Picked-file and stored/recovery Open answers share that same guarded webOpenAnswer continuation.
+Recovery marks only its actual successfully adopted current target unsaved. Shared openRequest
+checks receiver/project/request again after setLastError notifications, and a stale/duplicate
+answer never removes an accepted or successor's staging root. Only a still-current failed parse
+with genuinely unadopted local staging may clean it up; no false publication result is rollback.
+
+Replacement cleanup proves filesystem independence as well as currentness. The existing archive
+owner exposes, read-only, the exact recorded ancestor its remover would delete; Session retains
+that ownership while any current project/file/scan/data/retained-result closure still uses it.
+Canonical ancestors and filesystem equivalence cover same roots, descendants and alias spellings.
+An unresolved closure keeps ownership safely; it never causes deletion or a scientific veto.
+Actual pending Open source is part of that proof before outer archive/web origin bookkeeping,
+including an archive inside an older root whose unpacked work folder is elsewhere. Retention is
+cleanup authority only and does not give a successor another project's displayed origin or Save
+location. Later independent replacement/closure reclaims genuinely unused registered roots.
+Active retired publication stacks keep their reads until deferred destruction; cleanup retries
+through the existing QObject lifetime. Session stops/deletes its owned model workers before
+archive cleanup or QTemporaryDir member destruction, so automatic temporary ownership cannot
+remove their backing files first. No directory relocation, new registry or whole-loader change
+is introduced.
+
+
+### 2026-10-28: live retirement and pending Open source lifetime
+
+Retirement stops old presentation; only ProjectViewModel destruction closes its fit and joins
+the Worker. Every live Session child therefore contributes its actual backing closure, including
+idle retired models. Replacement preowns both old temporary-root obligations before callbacks and
+a QPointer-based unwind obligation schedules an idle retired model even when publication is
+superseded. Active publication scopes retain their original deferred destruction rule. Actual
+destruction retries the existing root cleanup; final Session teardown still joins workers first.
+
+An actual Open source stays in scoped Session ownership through the original caller's final
+archive/web/location bookkeeping, including nested Open scopes and same-owner SaveAs callbacks.
+Scope release removes only that original dependency and retries ordinary unused-root reclamation.
+The actual current model's pathChanged writes also carry a Session-private identity. Open permits
+its own workIn notification, but an additional genuine path write retires the old continuation,
+even if the project pointer is unchanged. It cannot reinstall an old archive origin over a
+completed SaveAs. Replacement/project identity, explicit SaveAs effects, loader completeness,
+filesystem permissions and displayed origin policy remain unchanged.
+
+
+### 2026-10-28: independent ordinary preparation copies
+
+Read-only folder and bundled-example Open each prepare a fresh root through the
+existing archive temporary owner. The Session remembers that root before copying,
+and scope exit invokes its normal closure/lifetime cleanup. Repeated IDs or source
+basenames never reuse/delete an old destination. Open-copy refuses an existing
+target or a target physically beneath its source rather than removing that tree.
+A failed preparation leaves the original current backing and worker untouched; an
+adopted or still-live model retains its actual new root until ordinary release.
+
+Example identity, read-only source, demo path masking and SaveAs behavior keep
+their original presentation and normal adoption owners. The old shared fixed-name
+QTemporaryDir destination is replaced by the same registered temporary owner used
+elsewhere in Session, with no second directory registry, loader or science rule.
+
+### Verify the final adopted value/s.u. state
+
+Review126 (hub `826f6a232d4689509f3872785d442e509f55cca9`) records successful ordinary Save with current La0.5/s.u.83 while the original structure file holds1(83). The native nonzero IUCr fallback had crossed its own half-rounding boundary, so the second serialization changed the first adopted value. The shared native formatter is corrected at that FIRST owner; app file-value/SU and Text still use it, with no number shadow store or assistant formatter.
+
+The FIRST adopt_saved_project additionally checks the final original files after its rewrite, through the same SavedValues reader used by ordinary adoption. Exact parameter identities, numeric values/s.u.s and the separately adopted bank setting must agree with the current model under that original reader's relation semantics before success returns. It is an actual persisted readback, not equality of formatted strings or a scratch export. A project without results and without a rewrite already has its initial readback; changed/incomplete projects retain that original load role, not a new whole-project requirement. Calculated projects retain the original deferred-estimate recalculation/agreement refresh and failure restoration. A final mismatch is an ordinary Save failure with its existing partial-file/unsaved handling; it is never marked saved or silently refitted.
+
+An optional profile coefficient the project leaves unset is not written, and reading the file gives it the profile's declared default (0, or 180° for the Bérar–Baldinozzi limit). The check counts such a slot as the same project rather than a changed parameter list; every other parameter must still match.
+
+Normal current Save, Save As, folder/ZIP and Save a copy already pass through these original core owners (a copy adopts its own temporary project, not the live original). Native const/adopting writer, Text and optional file-value consumers share the central pair fix. No retry loop, scientific veto, fitted-value seed, extra permission or model-quality conclusion is introduced. The large uncertainty remains unresolved scientific information. Actual disk/current/calculation agreement and ordinary pair/half-boundary/incomplete behavior require independent qualification; this source change alone does not establish it.
+
+### Completed relation semantics in Save-value readback
+
+FIRST private SavedValues readback now completes dependent values through the
+existing complete_relations native applier before adoption or final comparison.
+A cubic independent axis may have an s.u.-rounded token while redundant tied
+axes have ordinary fixed-value precision; recalculation correctly restores those
+tied axes from the saved independent value. Comparing that completed live state
+against uncompleted redundant tokens can falsely fail the exact final check.
+The same reader role now supplies completed values to both stages, without an
+epsilon, retry loop, second formatter, refit or skip of the final check.
+
+Independent values and all written uncertainties retain the exact final-file
+comparison. Declared/symmetry dependents come from the same original native graph;
+invalid relations still refuse. Ordinary construction/strict Open parsing and
+CIF intake remain unchanged; this is only the existing private Save/adoption
+reader role. Uncomputed/incomplete Save still uses its original native supported
+model/relations, not a complete-data requirement. The paired owner reports support
+this candidate with differently spelled tied axes and completed post-failure live
+values; their original error/native SDK identity is absent, so exclusive runtime
+cause and complete Save success still require the named-error discriminator and
+both-mode/current/disk/calculation qualification.
+
+### A partially adopted failed Save publishes retained state
+
+FIRST ProjectViewModel::adoptSave owns a PublicationScope through both success
+and failure. Its failure retains the original error/partial-write/dirty facts,
+then uses ordinary parameter/Text/cache/report publication for the actual retained
+values. Existing experiment/structure stale-frame owners invalidate only native
+calculations/geometry whose original input proof no longer matches; the last
+frames may remain visible as noncurrent. No calculation, fit, write, Undo or
+fictitious rollback is triggered by this settlement.
+
+Retirement is checked after each callback-capable publication and prevents old
+work from touching a successor. If that presentation itself fails, original cached
+Text exports are invalidated and the existing publication-failure fence retains
+the first Save error. Normal current/direct/fresh/archive/copy staging paths retain
+their original owners: failed staging copies do not mutate the original live model;
+any live partial adoption through adoptSave receives this same settlement. Actual
+fault/copy/currentness/publication qualification remains required.
+
+
+## Native browser-storage persistence policy
+
+WebStorage now owns the first browser persistence rules previously inside its EM_JS adapter: place-key formatting; per-place write/drop sequencing; project-owned document classification; stale worker file/directory and folder-obsolete-file planning; saved/recovery/time record transitions; load destination selection; drop disposition; and list metadata projection. Its existing QObject/job owner holds the original per-place queue and known-file state. No second persistence controller, metadata store, cache or backend is introduced. Session/project save/open/recovery ownership remains unchanged.
+
+The existing Emscripten val bridge passes actual browser values and opaque handles, without JSON-normalizing records. Native policy controls the original property/primitive operations, truthiness, Date.now points, UTF-16 path identity and output metadata. A one-operation browser-realm addition adapter preserves default-hint coercion for key/path concatenation; native code alone chooses operands and order, and it performs the first key concatenation before reading Math.random. No mutable String-global normalization is added. Known filename collections contain only the original UTF8ToString/FS enumeration strings, with first-occurrence Set ordering retained natively. Browser adapters retain the platform's IndexedDB/OPFS/permission/chooser/FS/worker I/O and actual opaque handles; small array mappings only marshal filenames or dispatch each actual record to its native projection. The worker writes first, enumerates afterward, sends only path/kind metadata to the main-thread native retention planner and applies its reverse-order removal list. Native known-file state advances only after every obsolete-file removal succeeds.
+
+Per-place queue selection is native, using the same null-terminated UTF-8 transport key the original browser queue received, so distinct native spellings that crossed that boundary as the same browser key still serialize together. Browser promise turns only launch stored opaque I/O callbacks and report settlement. Settlement releases the next native-selected job independently of answer delivery, with the original ordering of promise reactions; failed jobs cannot wedge a place or overtake later writes/discards. Answers still enter Qt on the original queued connection. Worker planning replies have their original job ID and a transport-only resolver, not a policy store or a new runtime. Existing worker bootstrap remains browser worker installation, with no code-string policy interpreter.
+
+A separately identified prior defect is corrected: OPFS drop suppresses only NotFoundError. Every other lookup/remove refusal propagates and cannot delete place metadata or report success. If an earlier recovery removal is already proven before a later whole-place removal refuses, the record is retained and its recovery flag is updated only for that proven removal; the original removal refusal remains the reported cause even if recording that partial progress also fails. Normal successful removal order is unchanged. The original distinction in removePath is the first precedent; queue-liveness settlement is not an I/O-error suppression rule.
+
+Browser persistence source completion is subject to normal WASM compilation, reload/recovery/save/partial-refusal/ordering/worker checks and repairs. The previously stated source-completion boundary excluded genuine host bootstrap/I/O; it did not exempt these portable persistence rules, which are now native.
+
+
+## Incubation controllers belong to individual engines
+
+FIRST configure_engine already composes an independent Session for each accepted
+QQmlEngine and rejects repeated composition. The page incubation controller must
+have that same per-engine scope. The previous static PageIncubation was attached
+to every engine. Pinned Qt's setIncubationController changes the controller's
+reverse engine pointer without clearing another engine's old forward pointer.
+Thus configuring B after A left A pointing at a controller that drove B; retiring
+B could null that controller while A still had pending asynchronous pages.
+
+Each accepted engine now gets its own PageIncubation parented as a QObject child.
+Qt does not take controller ownership in setIncubationController; QObject
+parenting supplies that ownership. No controller is shared or restored onto an
+older engine. The existing QTimer interval zero, one timeout connection,
+incubateFor(50), count-based start/stop, page order and readiness protocol remain
+unchanged on desktop and WASM. There is no extra timer, event pump, observer,
+private Qt call, reattachment hook or longer readiness deadline.
+
+Pinned Qt destroys QObject children in QObject's destructor body, before its
+private-data scoped pointer is destroyed. Therefore the engine-owned controller
+normally retires before QQmlEnginePrivate. Its timer member is destroyed before
+its QQmlIncubationController base; the base detaches its native engine link while
+that private data still exists. If detached earlier, its null reverse pointer
+makes that step a no-op. QQmlEnginePrivate's later destructor also clears any
+remaining controller link. No callback is installed on a partly destroyed engine.
+
+The static-link defect is established by native source, not by a claimed cause
+of the observed status timeout. Independent engine A/B ownership, asynchronous
+liveness through either destruction order, explicit replacement/detachment and
+ordinary one-engine workflow verification must precede acceptance. Existing
+Session/model/currentness, page cancellation and readiness gates remain intact.
+
+
+### Existing unsaved-work choices have native view identities
+
+FIRST is Main's ordinary unsavedChanges Save/Discard/Cancel guard and its Save-as
+counterpart: saveAsChoice exposes the actual standardButton(Dialog.Ok), and the
+existing opened callback names that original item saveAs.accept. The unsaved
+choices now follow the same view-identity principle using declarative bindings:
+while the original dialog is opened, its actual native Discard, Save and Cancel
+buttons are named unsavedChanges.discard, .save and .cancel, and its existing
+header label is named unsavedChanges.title. Null/missing native buttons stay
+unnamed; no alternate control is created. Normal Binding target/when retirement
+restores prior names when inactive or retargeted.
+
+Qt's standardButton API returns the existing standard button or null, without
+opening, pressing or constructing one. The title remains the actual translated
+header, and the dialog's flags/order/labels/layout/roles/availability, native
+pointer handling and original accepted/discarded/rejected continuations remain.
+This is metadata on the real controls, not a second input/action path or a new
+backend/export. The existing read-only named geometry hook can report the real
+visible title/button and its scene rectangle; physical input still has to reach
+the original offered choice. Closing/dismissing the guard is not a Discard
+receipt, and Reset never bypasses unsaved work merely because the browser lacks
+an accessibility node. No missing browser accessibility subtree is claimed fixed
+by naming: its Qt/WASM role/lifecycle propagation is a separate platform issue.

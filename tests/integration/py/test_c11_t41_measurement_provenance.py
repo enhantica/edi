@@ -419,20 +419,39 @@ def test_i5_no_completion_evidence_is_refused_at_every_entry_point(
 
 
 def test_i5_the_cli_refuses_update_without_the_artifact(tmp_path: Path) -> None:
-    """End-to-end through the documented command, not only the library callable."""
+    """Real CLI parsing in a fresh child; collection is an authored boundary input."""
     log = tmp_path / 'durations.txt'
-    log.write_text('1.0s call t.py::a\n', encoding='utf-8')
-    # : an unchanged collection reads no evidence, so force a measurement of a banked
-    # node by name — the committed manifest's first python row — and the CLI must still refuse.
+    original = (ROOT / 'tests/per-pr-runtimes.tsv').read_bytes()
     banked = next(
         line.split('\t', 1)[1]
-        for line in (ROOT / 'tests/per-pr-runtimes.tsv').read_text(encoding='utf-8').splitlines()
+        for line in original.decode().splitlines()
         if '\t' in line and not line.startswith('#') and '.py::' in line
     )
+    log.write_text('1.0s call ' + banked + '\n', encoding='utf-8')
+    manifest = tmp_path / 'per-pr-runtimes.tsv'
+    manifest.write_bytes(original)
+    # Exercise the real current parser/update/refusal in another interpreter.
+    # This gate is about absent completion evidence, not repository collection;
+    # unrelated optional tiers must not prevent reaching that requirement.
+    loader = """
+import runpy, sys
+from pathlib import Path
+script = sys.argv.pop(1)
+manifest = Path(sys.argv.pop(1))
+sys.argv[0] = script
+subject = runpy.run_path(script, run_name='authored_collection_cli')
+namespace = subject['main'].__globals__
+namespace['MANIFEST'] = manifest
+namespace['collect_nodeids'] = lambda: [sys.argv[-1]]
+raise SystemExit(subject['main']())
+"""
     completed = subprocess.run(
         [
             sys.executable,
+            '-c',
+            loader,
             str(ROOT / 'tools/checks/per_pr_runtimes.py'),
+            str(manifest),
             '--update',
             str(log),
             '--remeasure',
@@ -443,8 +462,15 @@ def test_i5_the_cli_refuses_update_without_the_artifact(tmp_path: Path) -> None:
         check=False,
         cwd=ROOT,
     )
-    assert completed.returncode == 1
-    assert 'requires --fixture-costs' in completed.stderr
+    assert completed.returncode == 1, (
+        'The actual CLI must refuse remeasurement without its completion artifact'
+    )
+    assert 'requires --fixture-costs' in completed.stderr, (
+        'The CLI refusal must name the absent mandatory completion-evidence argument'
+    )
+    assert manifest.read_bytes() == original, (
+        'A refused CLI remeasurement must preserve every existing manifest byte'
+    )
 
 
 def test_i5_an_interrupted_artifact_holes_end_to_end(

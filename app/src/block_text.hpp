@@ -6,6 +6,7 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -62,6 +63,9 @@ class BlockText : public QObject {
     File file_;
     Fixed fixed_;
     Source discovery_;
+    mutable std::optional<QString> observed_file_;
+    mutable std::optional<QString> observed_input_;
+    quint64 notification_publication_ = 0;
     mutable bool valid_ = false;
     mutable QString text_;
     mutable QString error_;

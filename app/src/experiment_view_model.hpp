@@ -3,6 +3,7 @@
 #define EDI_APP_EXPERIMENT_VIEW_MODEL_HPP
 
 #include <QObject>
+#include <QVariantMap>
 #include <QSet>
 #include <QtNumeric>
 #include <QString>
@@ -398,6 +399,8 @@ class ExperimentViewModel : public QObject {
     void patternShownChanged();
 
    private:
+    QVariantMap property_notifications_;
+    quint64 notification_publication_ = 0;
     edi::Category category(const char* id) const;
     void setLastError(const QString& error);
     // The experiment's place in the project.

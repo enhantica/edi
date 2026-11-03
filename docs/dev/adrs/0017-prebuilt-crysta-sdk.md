@@ -140,3 +140,20 @@ macro is defined by hand.
 | A conda channel for the SDK | Deferred: the release-asset transport needs no channel hosting; a later ADR can move it. |
 | Pin in `pixi.lock` | Not possible with release assets: the lock does not carry activation environment. |
 | Keep osx-64 | Rejected by the owner, 2026-09-30. |
+
+## Local native checkout launcher
+
+The existing `app-with-crysta` development command builds the selected checkout's
+`crysta_core` and `crysta_cli`, installs them under `build/edi-local`, and launches
+edi against that prefix. Its CI refusal preserves the pinned SDK boundary above.
+The native-only app launch contract also follows ADR-0057's removal of Python
+binding bootstrap from this launcher.
+
+Its former `cpp-ci` install selected crysta's editable Python package and test
+extras, although neither is consumed by this build. Use crysta's `cpp-toolchain`
+environment, sharing its existing compiler/platform/activation
+feature without installing the root package. Remove the conditional editable
+package skip logic; install that environment frozen and run the same native CMake
+commands in it. Keep clean-environment isolation, Mac developer-tool preflight,
+source selection, targets, install prefix and app arguments unchanged. This does
+not qualify the local build as a tested SDK or change CI/release SDK selection.

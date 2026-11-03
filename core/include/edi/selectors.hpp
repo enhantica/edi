@@ -8,6 +8,7 @@
 // rules unchanged (owner, 2026-09-27); where a rule is shared the function below reproduces it and a
 // parity test holds the two equal.
 
+#include <functional>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -91,11 +92,22 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
 // The peak profiles an experiment of this beam mode can use: the shipped ones in their `.edi` order,
 // then any registered extension for the mode.
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode);
+/// Visit the same supported profile catalog without copying its tokens.
+void visit_supported_peak_profiles(BeamModeEnum mode, const std::function<void(const std::string&)>& visitor);
 // The profile a new experiment of this beam mode gets: the TCH pseudo-Voigt for constant wavelength.
 std::string default_peak_profile(BeamModeEnum mode);
 // The absorption families of a beam mode, as a file spells them: CW none / cylinder-hewat /
 // cylinder-lobanov (the mu_r body), TOF none / cylinder (the ABSCOR pair). Read from crysta's
 // vocabulary table (ADR-0017).
+// FIRST capacity contract carried from assistant77ba02de selectors.hpp: the
+// unchanged integrated058166 Crysta tokens.cpp AbsorptionType table has CW3 /
+// TOF2 entries, longest16 bytes. Its initializer-list6 strings, copied
+// Spelling-vector6, result capacity4 and three same() argument temporaries can
+// overlap. This bounds logical owning payload, not allocator RSS; the options
+// themselves continue to come exclusively from Crysta's vocabulary.
+inline constexpr std::size_t absorption_option_count_bound=3, absorption_option_bytes_bound=16;
+inline constexpr std::size_t absorption_options_preparation_bytes=
+    3*sizeof(std::vector<std::string>)+19*(sizeof(std::string)+absorption_option_bytes_bound);
 std::vector<std::string> supported_absorption_families(BeamModeEnum mode);
 // The background models edi computes through crysta.
 std::vector<std::string> supported_background_types();

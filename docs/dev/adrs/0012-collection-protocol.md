@@ -85,3 +85,30 @@ lens plane, and upstream R15.
   alive — retained-reference semantics, not dangling pointers.
 - The copy-out/mutate/write-back idiom (`examples/fit_lbco_hrpt.py`) is retired: mutations
   through views reach the model directly.
+
+
+### Linked data and reflection getters use the public lifetime policy
+
+FIRST is this ADR's immediate-lender lifetime rule and the existing public
+nb::keep_alive<0,1> registrations for collection views, peak and extinction nodes.
+Experiment.data returns a leaf copy linked to its original experiment/data epoch;
+refln returns either a live single-crystal view or linked powder reflection data.
+All of these borrowers must retain the experiment wrapper, never the reverse.
+
+The data and reflection getters now declare that same public keep_alive policy
+instead of invoking nanobind's internal detail::keep_alive manually. The writable
+data property's annotation is wrapped in for_getter, so its original replacement
+setter gains no new lifetime edge. A None data result retains nothing. The
+reflection policy covers both beam modes and both single-crystal/powder returns;
+source linking, epoch/current-computation handling, copying and reads are exact.
+
+Both currently locked nanobind2.13 and3.1 expose keep_alive and for_getter; their
+headers dispatch the public policy to their own correct internal implementation.
+This avoids the removed internal symbol and3.1's changed internal-context API
+without a dependency repin, version conditional or manually supplied internals.
+The postcall attaches returned object (nurse0) to self (patient1) before Python
+receives the result, with the argument/result held by the normal call dispatcher.
+No lender-to-borrower backedge, wrapper cache, production weak-reference flag,
+scientific model operation or new Python surface is introduced. Existing lifetime
+release/retained-read checks and normal builds still must qualify both supported
+binding dependency cohorts; source compatibility is not runtime/GC acceptance.

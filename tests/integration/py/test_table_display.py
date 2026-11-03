@@ -1,6 +1,7 @@
 """Exercise the app's real QML arithmetic against the owner's declared display rules."""
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -9,6 +10,8 @@ import pytest
 import yaml
 
 from tests.integration.py.test_scan_app_contract import (
+    block,
+    javascript,
     object_id,
     property_value,
     status_item_results,
@@ -19,6 +22,22 @@ RUNNER = ROOT / 'tests/fixtures/table_display/run_functions.cjs'
 
 
 def run_functions(source, names, calls, *, fit=None, consumer=None, bridge=None):
+    if consumer is None:
+        text = source.read_text()
+        functions = {
+            match[1]: block(text, 'function ' + match[1] + '(')
+            for match in re.finditer(r'function (\w+)\(', text)
+        }
+        assert set(names) <= functions.keys(), (
+            'The scientific display observer must reach every requested actual QML function'
+        )
+        program = 'const Session={project:null};' + '\n'.join(functions.values())
+        program += 'const NumberText={' + ','.join(functions) + '};'
+        program += 'const calls=' + json.dumps(calls) + ';'
+        program += (
+            'console.log(JSON.stringify(calls.map(call=>NumberText[call.name](...call.args))));'
+        )
+        return javascript(program)
     node = shutil.which('node')
     assert node, 'Scientific display gates require the declared Node runtime'
     request = {

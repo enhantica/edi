@@ -114,6 +114,12 @@ NOT_MODEL = {
     'BankMetric': 'a fit report',
     'FitResultBase': 'a fit report',
     'LeastSquaresFitResult': 'a fit report',
+    'PreparedPeakRestore': 'a peak family Undo, prepared before it is written',
+    'PreparedAbsorptionRestore': 'an absorption family Undo, prepared before it is written',
+    'PreparedExtinctionRestore': 'an extinction family Undo, prepared before it is written',
+    'PeakRetirement': 'a peak parameter an Undo retires (ADR-0012)',
+    'AbsorptionRetirement': 'an absorption parameter an Undo retires (ADR-0012)',
+    'ExtinctionRetirement': 'an extinction parameter an Undo retires (ADR-0012)',
 }
 # Members of a model class that are not model storage, each with its reason.
 NOT_STORAGE = {

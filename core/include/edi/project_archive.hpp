@@ -50,6 +50,21 @@ std::string fresh_archive_directory(const std::string& kind);
 // project may sit in its one top folder); nothing for any other path.
 void remove_archive_directory(const std::string& path);
 
+namespace detail {
+/// Same recorded temporary owner beside an explicitly chosen native destination;
+/// its child holds engine sidecars, never a reservation of the final path.
+std::string fresh_archive_directory_at(const std::string& kind, const std::string& parent);
+/// Same native encoder with an exclusively owned temporary and no-replace final.
+void write_project_archive_fresh(const std::string& directory, const std::string& archive);
+/// Publish a child of an existing recorded temporary root atomically to a fresh
+/// final name. Refuses any final collision; owns no user destination reservation.
+void publish_fresh_project_path(const std::string& staged, const std::string& target);
+/// App cleanup needs the actual recorded ancestor remove_archive_directory would
+/// remove, not merely the supplied descendant. Read-only; no new cleanup owner.
+std::string archive_directory_root(const std::string& path);
+}
+
+
 // Remove the temporary directories whose process is no longer running: what a crash left behind.
 void remove_stale_archive_directories();
 

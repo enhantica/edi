@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration.py.test_e04_t1_app_contract import GUI_ARCHIVE_SHA256
+from tests.integration.py.test_scan_app_contract import block
 
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCE = json.loads((ROOT / 'tests/fixtures/display_fonts/cmaps.json').read_text())
@@ -306,9 +307,20 @@ def test_structure_legend_uses_the_atom_table_icon_pipeline():
     assert 'QStringLiteral("atom")' in controller, (
         'Every structure legend element must carry the atom icon instead of a circle'
     )
-    assert re.search(r'["\']icon["\']\s*:\s*(?:entry\.mark|["\']atom["\'])', legend), (
-        'The element legend must send its atom through the same icon segment pipeline as the table'
+    native = (ROOT / 'app/src/app_info.cpp').read_text()
+    assert 'segments: ApplicationInfo.legendSegments()' in legend, (
+        'The actual legend delegate must consume its native segment producer'
     )
+    segments = block(native, 'QJSValue ApplicationInfo::legendSegments(')
+    mark = block(native, 'QJSValue ApplicationInfo::legendMarkPiece(')
+    assert 'panelUsageMemberCall(f, legend, "markPiece", {kind, width, color})' in segments, (
+        'The native legend segment producer must forward the actual entry mark and colour'
+    )
+    assert (
+        'return ApplicationInfo.legendMarkPiece(mark, width, color);' in legend
+        and 'mark.strictlyEquals(QJSValue(QStringLiteral("atom")))' in mark
+        and 'panelUsageWrite(f, record.value, "icon", QJSValue(QStringLiteral("atom")))' in mark
+    ), 'The actual atom branch must produce the same icon segment consumed by the atom table'
     assert 'row.fractX.categoryIcon' in table and 'AppColors.element(row.typeSymbol)' in table, (
         'The parity witness must remain connected to the actual table element icon and colour'
     )

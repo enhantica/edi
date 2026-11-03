@@ -15,6 +15,7 @@ import edi.app
 // free, a flag set before a change that blocked them, which Fixed clears and the counts include.
 EaElements.Menu {
     id: menu
+    objectName: "parameters.freeHeader.menu"
 
     property ProjectViewModel project: null
     property ParameterFilterModel filter: null
@@ -25,78 +26,52 @@ EaElements.Menu {
 
     // The shown rows that can be fitted, as the filter model has them now: what Free sets.
     function fittableRows() {
-        const rows = [];
-        if (menu.filter === null || menu.project === null)
-            return rows;
-        for (let i = 0; i < menu.filter.rowCount(); ++i) {
-            const parameter = menu.filter.parameterAt(i);
-            if (parameter !== null && parameter.fittable)
-                rows.push(parameter);
-        }
-        return rows;
+        return ApplicationInfo.parameterFreeRows(true);
     }
 
     // The shown rows that are free, fittable or not: Fixed clears a flag set before a change that blocked it too.
     function freeRows() {
-        const rows = [];
-        if (menu.filter === null || menu.project === null)
-            return rows;
-        for (let i = 0; i < menu.filter.rowCount(); ++i) {
-            const parameter = menu.filter.parameterAt(i);
-            if (parameter !== null && parameter.free)
-                rows.push(parameter);
-        }
-        return rows;
+        return ApplicationInfo.parameterFreeRows(false);
     }
 
     // The shown rows the menu acts on: those that can be fitted and those still free, what Free and Fixed between them
     // set, as the filter model has them now.
     function actedRows() {
-        const rows = [];
-        if (menu.filter === null || menu.project === null)
-            return rows;
-        for (let i = 0; i < menu.filter.rowCount(); ++i) {
-            const parameter = menu.filter.parameterAt(i);
-            if (parameter !== null && (parameter.fittable || parameter.free))
-                rows.push(parameter);
-        }
-        return rows;
+        return ApplicationInfo.parameterActedRows();
     }
 
     // The rows acted on, how many of them are free and how many can be fitted. Reading each row's `free` keeps it live.
     // The counts are used, not only read: the compiled binding drops a read whose value is unused (`void x`), and with
     // it the dependency.
     readonly property var shown: menu.membership >= 0 ? menu.actedRows() : []
-    readonly property int freeCount: shown.filter(parameter => parameter.free).length
+    readonly property int freeCount: ApplicationInfo.parameterFreeCount()
     readonly property int fixedCount: shown.length - freeCount
-    readonly property int fittableCount: shown.filter(parameter => parameter.fittable).length
+    readonly property int fittableCount: ApplicationInfo.parameterFittableCount()
 
     // Free or Fixed acts on the rows shown when it is chosen.
     function apply(free) {
-        if (menu.project !== null)
-            menu.project.setParametersFree(free ? menu.fittableRows() : menu.freeRows(), free);
-        menu.close();
+        ApplicationInfo.applyParametersFree(free);
     }
 
     Connections {
         target: menu.filter
         function onRowsInserted() {
-            ++menu.membership;
+            ApplicationInfo.parameterMenuMembershipChanged();
         }
         function onRowsRemoved() {
-            ++menu.membership;
+            ApplicationInfo.parameterMenuMembershipChanged();
         }
         function onModelReset() {
-            ++menu.membership;
+            ApplicationInfo.parameterMenuMembershipChanged();
         }
         function onLayoutChanged() {
-            ++menu.membership;
+            ApplicationInfo.parameterMenuMembershipChanged();
         }
     }
     Connections {
         target: menu.project
         function onCurrentExperimentIndexChanged() {
-            ++menu.membership;
+            ApplicationInfo.parameterMenuMembershipChanged();
         }
     }
 
@@ -104,6 +79,7 @@ EaElements.Menu {
     parent: Overlay.overlay
     x: Math.round((parent.width - width) / 2)
     y: Math.round((parent.height - height) / 2)
+    anchors.centerIn: Overlay.overlay
     width: layout.implicitWidth
     verticalPadding: 0
 

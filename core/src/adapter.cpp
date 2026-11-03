@@ -34,7 +34,9 @@
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
 #include "number_token.hpp"
-#include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
+#include "canonical_encoding.hpp"
+#include "assistant_project_io.hpp"  // edi-only logic: core/src-private, never installed
+#include "import_symmetry.hpp"
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
@@ -429,6 +431,22 @@ const std::vector<std::string>& new_site_elements() {
 }
 
 }  // namespace
+
+std::string detail::inferred_wyckoff_letter(const Structure& structure,const AtomSite& site) {
+    const auto group=resolve_group(structure);
+    const auto cell=completed_cell(structure);
+    // Crysta's CIF site policy is 0.01 Angstrom (ADR-0103); use its
+    // matcher rather than adding a positional classifier here (edi ADR-0057).
+    constexpr double native_site_tolerance_angstrom=0.01;
+    std::array<double,3> tolerance{};
+    for(std::size_t axis=0;axis<tolerance.size();++axis) {
+        const double length=cell.parameters[axis].value();
+        if(!std::isfinite(length) || length<=0)throw std::invalid_argument("Automatic Wyckoff assignment needs a valid native cell");
+        tolerance[axis]=native_site_tolerance_angstrom/length;
+    }
+    const std::array<double,3> fract{site.fract_x.value.get(),site.fract_y.value.get(),site.fract_z.value.get()};
+    return crysta::wyckoff_position_of(group,fract,tolerance).letter;
+}
 
 AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random) {
     const auto draw_index = [&random](std::size_t count) {
@@ -1435,20 +1453,39 @@ PlainDataRows read_plain_data(const std::string& path) {
                          read.counts.reordered,     read.counts.derived};
 }
 
-PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
-                                         bool take_file_name) {
-    PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment,const std::string& path,bool take_file_name) {
+    return experiment_with_plain_data(experiment,path,path,take_file_name);
+}
+
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
+                                         const std::string& source_path, bool take_file_name) {
+    PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(source_path).filename().string()};
     // New data starts with an unknown facility and instrument, which the user chooses (ADR-0054); the previous
     // data's description does not carry over.
     load.experiment.description_chosen = true;
     load.experiment.instrument.name.clear();
     load.experiment.instrument.facility.clear();
     if (experiment.reflections.has_value()) {
+        const auto fullprof=[](const std::string& path){
+            auto extension=std::filesystem::path(path).extension().string();
+            std::transform(extension.begin(),extension.end(),extension.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
+            return extension==".int";
+        };
+        if(fullprof(reader_path)!=fullprof(source_path))
+            throw IoError("The approved reflection capture must preserve the original FullProf/plain format selector");
         // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
         // reader), taking a FullProf file's wavelength at constant wavelength.
         const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
-        const crysta::ReflectionFile file = crysta::read_reflection_file(
-            path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+        const crysta::ReflectionFile file = [&] {
+            try {
+                return crysta::read_reflection_file(reader_path,
+                    cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+            } catch (const std::invalid_argument& error) {
+                // The FIRST reader owns parsing/diagnostics; Edi owns its public
+                // file-load exception type, shared by ordinary and captured loads.
+                throw IoError(error.what());
+            }
+        }();
         load.unweighted = file.skipped_unweighted;
         load.skipped_lines = file.skipped_lines;
         load.skipped = file.skipped_lines.size();
@@ -1491,7 +1528,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         }
         load.experiment.data_file = load.file_name;
         if (take_file_name) {
-            std::string stem = std::filesystem::path(path).stem().string();
+            std::string stem = std::filesystem::path(source_path).stem().string();
             for (char& character : stem) {
                 const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
                                   (character >= '0' && character <= '9') || character == '_' || character == '-';
@@ -1513,7 +1550,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         }
         return load;
     }
-    PlainDataRows read = read_plain_data(path);
+    PlainDataRows read = read_plain_data(reader_path);
     load.points = read.x.size();
     load.skipped = read.skipped;
     load.nonpositive = read.nonpositive;
@@ -1531,7 +1568,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
     if (take_file_name) {
         // The file's stem, with anything a datablock name cannot hold made an underscore; a stem the save would
         // still refuse (a reserved device name) leaves the name as it was.
-        std::string stem = std::filesystem::path(path).stem().string();
+        std::string stem = std::filesystem::path(source_path).stem().string();
         for (char& character : stem) {
             const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
                               (character >= '0' && character <= '9') || character == '_' || character == '-';
@@ -4242,6 +4279,20 @@ void Project::publish_calculation(DueEstimates due) {
 }
 // --- (edi ADR-0020 §1): the publication transaction -------------------------------
 
+namespace {
+void capture_work_memberships(const Project& live,WorkStamps& stamps,
+                              std::shared_ptr<const detail::EditRecord> edits) {
+    stamps.experiments = live.experiments.record();
+    stamps.structures = live.structures.record();
+    stamps.experiments_generation = live.experiments.generation();
+    stamps.structures_generation = live.structures.generation();
+    stamps.edits = std::move(edits);
+    stamps.edits_at = stamps.edits->epoch.value();
+    stamps.aliases = live.aliases.record();
+    stamps.constraints = live.constraints.record();
+}
+}
+
 WorkStamps work_stamps(const Project& live) {
     WorkStamps stamps;
     stamps.experiment_inputs.reserve(live.experiments.size());
@@ -4252,15 +4303,39 @@ WorkStamps work_stamps(const Project& live) {
     for (const auto& structure_item : live.structures) {
         stamps.structure_inputs.push_back(detail::geometry_inputs(*structure_item));
     }
-    stamps.experiments = live.experiments.record();
-    stamps.structures = live.structures.record();
-    stamps.experiments_generation = live.experiments.generation();
-    stamps.structures_generation = live.structures.generation();
-    stamps.edits = live.edits_.record();
-    stamps.edits_at = live.edits_.record()->epoch.value();
-    stamps.aliases = live.aliases.record();
-    stamps.constraints = live.constraints.record();
+    capture_work_memberships(live,stamps,live.edits_.record());
     stamps.relations = detail::relation_inputs(live.aliases, live.constraints);
+    return stamps;
+}
+
+WorkStamps work_stamps(const Project& live,std::size_t construction_bytes) {
+    std::size_t used=0;
+    const auto charge=[&](std::size_t bytes){if(bytes>construction_bytes-used)throw std::length_error("Scientific stamp capture exceeds capacity");used+=bytes;};
+    charge(sizeof(WorkStamps));
+    for(const auto count:{live.experiments.size(),live.structures.size()}) {
+        if(count>(construction_bytes-used)/sizeof(std::string))throw std::length_error("Scientific stamp rows exceed capacity");
+        charge(count*sizeof(std::string));
+    }
+    if(!live.aliases.empty())charge(detail::relation_name_preparation_bytes(live,construction_bytes-used));
+    // Count and write share the original canonical traversals. No scientific
+    // model is copied and no callback can alter the source between these passes.
+    for(const auto& experiment:live.experiments){charge(detail::calculation_inputs_size(live.structures,*experiment,construction_bytes-used));charge(1);}
+    for(const auto& structure:live.structures){charge(detail::geometry_inputs_size(*structure,construction_bytes-used));charge(1);}
+    charge(detail::relation_inputs_size(live.aliases,live.constraints,construction_bytes-used));charge(1);
+    WorkStamps stamps;
+    stamps.experiment_inputs.reserve(live.experiments.size());
+    for(const auto& experiment:live.experiments) {
+        std::string inputs;inputs.reserve(detail::calculation_inputs_size(live.structures,*experiment,construction_bytes));
+        detail::calculation_inputs_into(inputs,live.structures,*experiment);stamps.experiment_inputs.push_back(std::move(inputs));
+    }
+    stamps.structure_inputs.reserve(live.structures.size());
+    for(const auto& structure:live.structures) {
+        std::string inputs;inputs.reserve(detail::geometry_inputs_size(*structure,construction_bytes));
+        detail::geometry_inputs_into(inputs,*structure);stamps.structure_inputs.push_back(std::move(inputs));
+    }
+    stamps.relations.reserve(detail::relation_inputs_size(live.aliases,live.constraints,construction_bytes));
+    detail::relation_inputs_into(stamps.relations,live.aliases,live.constraints);
+    capture_work_memberships(live,stamps,live.edits_.record());
     return stamps;
 }
 
@@ -4537,7 +4612,8 @@ namespace {
 // keeps the public surface engine-free and independently compilable.
 edi::IterationRecord to_edi(const crysta::IterationRecord& record) {
     return {record.iteration, record.rwp, record.reduced_chi_square, record.elapsed_ms,
-            record.unevaluable_trials};
+            record.unevaluable_trials, {},
+            std::isfinite(record.chi_square) ? std::optional<double>(record.chi_square) : std::nullopt};
 }
 
 std::vector<edi::IterationRecord> to_edi(const std::vector<crysta::IterationRecord>& history) {
@@ -4589,7 +4665,8 @@ crysta::IterationCallback to_engine_callback(const IterationCallback& subscriber
                                       std::chrono::steady_clock::now() - started)
                                       .count();
         IterationRecord record{progress.iteration, progress.rwp, progress.chi_square / dof, elapsed_ms,
-                               progress.unevaluable_trials};
+                               progress.unevaluable_trials, {},
+                               std::isfinite(progress.chi_square) ? std::optional<double>(progress.chi_square) : std::nullopt};
         if (progress.parameters.size() == paths.size()) {
             for (std::size_t index = 0; index < paths.size(); ++index) {
                 if (!paths[index].empty()) {
@@ -5108,7 +5185,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
             const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
                                           crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
-                                          crysta_pre_fit.unevaluable_trials};
+                                          crysta_pre_fit.unevaluable_trials, {},
+                                          std::isfinite(crysta_pre_fit.chi_square) ? std::optional<double>(crysta_pre_fit.chi_square) : std::nullopt};
             // Preamble: fired ONCE here — after the provider is built (so the counts are
             // known) and the pre-fit is evaluated, BEFORE the LM loop. Empty callback => no host
             // crossing. Single-bank path: `banks` empty, mode single (mirrors crysta).
@@ -5907,7 +5985,8 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
             const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
                                           crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
-                                          crysta_pre_fit.unevaluable_trials};
+                                          crysta_pre_fit.unevaluable_trials, {},
+                                          std::isfinite(crysta_pre_fit.chi_square) ? std::optional<double>(crysta_pre_fit.chi_square) : std::nullopt};
             // Preamble: fired ONCE before the loop with the joint bank names + counts.
             if (on_start) {
                 std::vector<std::string> bank_names;

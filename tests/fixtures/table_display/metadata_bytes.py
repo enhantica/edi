@@ -137,6 +137,143 @@ def pair(name):
     return before, after
 
 
+# Exact source-only transition from accepted5ee12a7b, not a saved-output pin.
+# Old archive/JSON identities remain untouched and still own the next stage.
+_DESCRIPTION_INPUTS = {
+    'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/project.edi': {
+        'before': 'b47088ce8a1198fba99f4cca2fdee1b317230e0c66fbdc2602273344bdbab721',
+        'after': 'e32ac6ec6bcb5f5e793fd830ec0674abba9981663077bd86560adf3cf252cee5',
+        'remove': (),
+        'restore': (
+            b'_metadata.purpose "refinement"\n'
+            b'_metadata.dimensionality "1D"\n'
+            b'_metadata.instrument "HRPT"\n'
+            b'_metadata.facility "PSI"\n'
+            b'_metadata.polarisation "none"\n'
+        ),
+    },
+    'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi': {
+        'before': 'c7a093e4cdee2aeca6553b84cca81293b748caeb6270d2083b5a043724128c26',
+        'after': '645318644c24043b73c2aff1878a59720dd509b47db16a559b3c01ffeb0a545e',
+        'remove': (
+            b'_experiment_type.dimensionality 1d\n',
+            b'_experiment_type.polarisation unpolarised\n',
+            b'_instrument.name HRPT\n',
+            b'_instrument.facility PSI\n',
+        ),
+        'restore': b'',
+    },
+    'docs/user/cli/pd-neut-cwl_lbco-hrpt/project/experiments/hrpt.edi': {
+        'before': '502941566652e6acfff532d1c9a4b5b73e7827a66d22d3fb8903078d2d310286',
+        'after': 'f0c0e3839ffa3b6043992fb768eef3794ced6c869ceb7da52a57b8a387cac3f2',
+        'remove': (
+            b'_experiment_type.dimensionality 1d\n',
+            b'_experiment_type.polarisation unpolarised\n',
+            b'_instrument.name HRPT\n',
+            b'_instrument.facility PSI\n',
+        ),
+        'restore': b'',
+    },
+    'docs/user/cli/pd-neut-cwl_lbco-hrpt/project/project.edi': {
+        'before': '55a1f672b1825145203ea9e39399e8cb3f9df106ac390a8b58258a03ba222aa2',
+        'after': '5898148607293d5d298bd619d43bf7bda5bb19b808b5d25f16eae690690d89e1',
+        'remove': (),
+        'restore': (
+            b'_metadata.purpose "refinement"\n'
+            b'_metadata.dimensionality "1D"\n'
+            b'_metadata.instrument "HRPT"\n'
+            b'_metadata.facility "PSI"\n'
+            b'_metadata.polarisation "none"\n'
+        ),
+    },
+    'docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_1_10.edi': {
+        'before': '24dd6b5278ac7369ad528da944b324e3a5d0472cd2f448c289faeb57ec78bd27',
+        'after': '2b9be49af490454d817f78e200852c640a025a14607efe41ff0b18683c9e918b',
+        'remove': (
+            b'_experiment_type.dimensionality 1d\n',
+            b'_experiment_type.polarisation unpolarised\n',
+            b'_instrument.name WISH\n',
+            b'_instrument.facility ISIS\n',
+        ),
+        'restore': b'',
+    },
+    'docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_2_9.edi': {
+        'before': 'cc447addb349b2956750e4e8d4da74e42325acd3be70163c533f2a2b76beca65',
+        'after': '2e921f4c31ed9dd39f7a26475cf0798db7fcfe34fcfca2e34479de26d5644012',
+        'remove': (
+            b'_experiment_type.dimensionality 1d\n',
+            b'_experiment_type.polarisation unpolarised\n',
+            b'_instrument.name WISH\n',
+            b'_instrument.facility ISIS\n',
+        ),
+        'restore': b'',
+    },
+    'docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_3_8.edi': {
+        'before': '14265d219fe6a6efa50b4b074d33ac8713ad6cb7d3cd7b013f13085cb976857f',
+        'after': 'f42e3b7a75128300f69a93d4e1c0628f160ef1c42f998f8b86c2f3227d5ce3c0',
+        'remove': (
+            b'_experiment_type.dimensionality 1d\n',
+            b'_experiment_type.polarisation unpolarised\n',
+            b'_instrument.name WISH\n',
+            b'_instrument.facility ISIS\n',
+        ),
+        'restore': b'',
+    },
+    'docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_4_7.edi': {
+        'before': 'a3833fabd3d3c4b59403d5c0d995e7ece5db4e40efcdc208024d1f0fd19c8c5f',
+        'after': '21dbc4f9632d817bdba4bb0cc27529535a964ad1805d358454d05ccedebc861c',
+        'remove': (
+            b'_experiment_type.dimensionality 1d\n',
+            b'_experiment_type.polarisation unpolarised\n',
+            b'_instrument.name WISH\n',
+            b'_instrument.facility ISIS\n',
+        ),
+        'restore': b'',
+    },
+    'docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_5_6.edi': {
+        'before': '2db147368b28fac20b85d9dd62479e73cf6c1c620e3d97c7a65224f34a29836d',
+        'after': '710d2a36a973081d25cec22d09c159684ed0df8b38a08951fd948f3d8c888556',
+        'remove': (
+            b'_experiment_type.dimensionality 1d\n',
+            b'_experiment_type.polarisation unpolarised\n',
+            b'_instrument.name WISH\n',
+            b'_instrument.facility ISIS\n',
+        ),
+        'restore': b'',
+    },
+    'docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi': {
+        'before': '075fc2c6b70a7588dd716e34b83a9deb965592bf3fa04dfcd77ba602887c465f',
+        'after': 'e2b045f18bd1be45f64da214a3ec30bdf21a642924f48f21f709ee1e88997af0',
+        'remove': (),
+        'restore': (
+            b'_metadata.purpose "refinement"\n'
+            b'_metadata.dimensionality "1D"\n'
+            b'_metadata.instrument "WISH"\n'
+            b'_metadata.facility "ISIS"\n'
+            b'_metadata.polarisation "none"\n'
+        ),
+    },
+}
+
+
+def pre_description_bytes(name, data):
+    """Reverse only individually source-proven, complete metadata migrations."""
+    row = _DESCRIPTION_INPUTS.get(name)
+    if row is None:
+        return data
+    assert hashlib.sha256(data).hexdigest() == row['after'], (
+        'A complete committed description-migration input is required before retaining old bytes'
+    )
+    for line in row['remove']:
+        assert data.count(line) == 1, 'Each declared migrated experiment field occurs exactly once'
+        data = data.replace(line, b'', 1)
+    data += row['restore']
+    assert hashlib.sha256(data).hexdigest() == row['before'], (
+        'Metadata reversal must recover the complete independently committed prior source'
+    )
+    return data
+
+
 def pre_catalogue_bytes(path):
     """Bind a live descriptive file to its whole source pair before retaining old bytes."""
     data = path.read_bytes()

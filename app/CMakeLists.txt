@@ -5,6 +5,7 @@
 
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 include(${PROJECT_SOURCE_DIR}/cmake/EdiGuiBase.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/EdiAssistantMath.cmake)
 
 # What the app tells its user about itself (ApplicationInfo). Its version and date come from git at every build, as the
 # commit does, so a reused build folder never shows an old one (cmake/build_version.cmake).
@@ -29,6 +30,13 @@ if(EXISTS "${_edi_crysta_manifest}")
         set(EDI_APP_CRYSTA_COMMIT "unreadable SDK manifest")
     endif()
 endif()
+set(EDI_APP_SDK_SOURCE_KIND "unknown")
+string(LENGTH "${EDI_APP_CRYSTA_COMMIT}" _edi_sdk_source_length)
+if(_edi_sdk_source_length EQUAL 40 AND EDI_APP_CRYSTA_COMMIT MATCHES "^[0-9a-f]+$")
+    set(EDI_APP_SDK_SOURCE_KIND "manifest")
+elseif(EDI_APP_CRYSTA_COMMIT STREQUAL "a local build (no SDK manifest)")
+    set(EDI_APP_SDK_SOURCE_KIND "local_without_manifest")
+endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
@@ -45,6 +53,19 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/assistant_message_presentation.hpp
+        src/assistant_values.hpp
+        src/assistant_panel_presentation.hpp
+        src/assistant_view_model.hpp src/assistant_view_model.cpp
+        src/assistant_widget_input.hpp src/assistant_widget_input.cpp
+        src/assistant_result.hpp src/assistant_result.cpp
+        src/assistant_file_primitives.hpp src/assistant_file_primitives.cpp
+        src/assistant_work_report.hpp src/assistant_work_report.cpp
+        src/assistant_history.hpp src/assistant_history.cpp
+        src/assistant_data.hpp
+        src/assistant_data_summary.hpp
+        src/assistant_markdown.hpp src/assistant_markdown.cpp
+        src/assistant_skill_import.hpp src/assistant_skill_import.cpp
         src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
@@ -96,6 +117,15 @@ qt_add_qml_module(edi_app_module
         feedback/Payload.js
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
+        qml/Components/AssistantPanel.qml
+        qml/Components/AssistantWorking.qml
+        qml/Components/AssistantMessage.qml
+        qml/Components/AssistantComposer.qml
+        qml/Components/AssistantPlan.qml
+        qml/Components/AssistantQuestion.qml
+        qml/Components/AssistantTrial.qml
+        qml/Components/AssistantSkillsDialog.qml
+        qml/Components/AssistantConnectionDialog.qml
         qml/Components/BlockSelector.qml
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
@@ -235,6 +265,8 @@ qt_add_qml_module(edi_app_module
         qml/Style/AppSizes.qml
     RESOURCES
         resources/logo/App.svg
+        resources/logo/AssistantWorking.svg
+        resources/logo/AssistantSpinner.svg
 )
 target_sources(edi_app_module PRIVATE "${EDI_APP_BUILD_VERSION_CPP}")
 add_dependencies(edi_app_module edi_app_build_version)
@@ -245,6 +277,12 @@ target_compile_definitions(edi_app_module PUBLIC QT_MESSAGELOGCONTEXT)  # file a
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
+find_package(Qt6QmlPrivate REQUIRED)
+target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
+if(NOT EMSCRIPTEN)
+    target_link_libraries(edi_app_module PRIVATE EdiMath::JKQTMathTextEdi)
+    target_compile_definitions(edi_app_module PRIVATE EDI_HAS_NATIVE_MATH=1)
+endif()
 if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
@@ -324,7 +362,9 @@ qt_add_resources(edi_app_module "edi_example_index" PREFIX "/edi/examples"
 # ...), beside the built app, and installed with it.
 set(EDI_APP_LICENCE_FILES
     ${PROJECT_SOURCE_DIR}/COPYING ${PROJECT_SOURCE_DIR}/LICENSE ${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES
-    ${PROJECT_SOURCE_DIR}/DEPENDENCIES.md ${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md)
+    ${PROJECT_SOURCE_DIR}/DEPENDENCIES.md ${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md
+    ${PROJECT_SOURCE_DIR}/data/assistant/math/JKQtPlotter-LICENSE
+    ${PROJECT_SOURCE_DIR}/data/assistant/math/XITS-OFL.txt)
 # How to cite (Home), read from the repository's one citation file.
 qt_add_resources(edi_app_module "edi_citation" PREFIX "/" BASE ${PROJECT_SOURCE_DIR} FILES ${PROJECT_SOURCE_DIR}/CITATION.cff)
 # What's new: the docs site's dated page, the one place the changes are written.
@@ -424,7 +464,7 @@ add_custom_target(edi_app_build_marker
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_MARKER_CPP}")
 add_dependencies(edi_app edi_app_build_marker)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
-                                            Qt6::QuickTest)
+                                            Qt6::QuickTest Qt6::QmlPrivate)
 # The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).
 set_source_files_properties(src/demo_driver.cpp PROPERTIES
                             COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")
@@ -436,6 +476,22 @@ include(GNUInstallDirs)
 install(TARGETS edi_app RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
+    # C++ observers include Session's native interface, as the real Main probe does.
+    target_link_libraries(edi_app_tests PRIVATE edi_assistant_native)
+endif()
+if(NOT EMSCRIPTEN)
+    target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp
+        src/assistant_native_tools.hpp src/assistant_native_tools.cpp
+        src/assistant_native_create.hpp src/assistant_native_create.cpp)
+    file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
+         ${PROJECT_SOURCE_DIR}/data/assistant/skills/*)
+    qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"
+        BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
+    include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
+    edi_bundle_assistant_runtime()
+endif()
 # Read-only documentation export, using the same linked dictionary as the app (ADR-0061).
 if(NOT EMSCRIPTEN)
     qt_add_executable(edi_doc_metadata ${PROJECT_SOURCE_DIR}/tools/docs/reference-metadata.cpp)

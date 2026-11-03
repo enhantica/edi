@@ -12,6 +12,7 @@ import edi as crysta
 import numpy as np
 import pytest
 
+from tests.conftest import crysta_reference_prefix
 from tests.fixtures.cwl_family import profiles
 from tests.fixtures.cwl_family.regression_comparison import (
     compare,
@@ -35,7 +36,7 @@ def test_tch_rename_preserves_pre_change_regression_bytes(tmp_path, name, token)
     project.analysis.calculate()
     actual = np.asarray(project.experiments[0].data.intensity_calc, dtype='<f8').tobytes()
     manifest = json.loads(
-        (ROOT / 'build/crysta-prefix/share/crysta-sdk/manifest.json').read_text()
+        (crysta_reference_prefix() / 'share/crysta-sdk/manifest.json').read_text()
     )
     assert (
         manifest['platform'] == {'Linux': 'linux-64', 'Darwin': 'osx-arm64'}[platform.system()]

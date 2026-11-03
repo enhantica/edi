@@ -1,6 +1,7 @@
 """Main-reader regression pins retain the models the published files already gave."""
 
 import gzip
+import hashlib
 import importlib
 import json
 import math
@@ -11,6 +12,11 @@ import pytest
 
 from tests.fixtures import cif_import_cases as case
 from tests.fixtures.cif_import_baseline import generate_readers as reference
+from tests.fixtures.cif_import_baseline.canonical_positions import (
+    SILICON,
+    reader_values,
+    restore_representative,
+)
 
 BASE = Path(__file__).resolve().parents[2] / 'fixtures/cif_import_baseline'
 PINS = json.loads(gzip.decompress((BASE / 'readers-before.json.gz').read_bytes()))
@@ -45,6 +51,7 @@ def test_main_reader_model_regression_pin_changes_only_published_parameter_state
             expected.pop(name)
         else:
             expected[name] = transition['after']
+    expected = reader_values(row['path'], expected, row['values'])
     published = Path(row['path']).suffix.lower() == '.cif'
     assert set(actual) == set(expected), (
         'The regression pin retains exactly the declared saved model fields'
@@ -84,6 +91,22 @@ def test_reader_regression_pin_population_is_not_empty():
     for broken in (control.replace('2 [. .]', '2'), control.replace('[. .]', '[. .')):
         with pytest.raises(ValueError, match=r'Wrong number|Unterminated'):
             reference.saved_columns(broken)
+    unrelated = {'_atom_site_fract_' + axis: ['0'] for axis in 'xyz'}
+    assert reader_values(SILICON + '/structures/lbco.edi', unrelated, unrelated) == unrelated, (
+        'An orbit transition must not alter another structure in the same project'
+    )
+    before = b'Si Si 0 0 0 a 8 1 0.5 Biso\n'
+    after = b'Si Si 0.25 0.25 0.25 a 8 1 0.5 Biso\n'
+    assert restore_representative(after, SILICON) == before, (
+        'The orbit adapter reverses exactly the independently checked representative'
+    )
+    for damaged in (after.replace(b'0.25', b'0.5', 1), after + after, b''):
+        with pytest.raises(ValueError, match=r'representative|Exactly one'):
+            restore_representative(damaged, SILICON)
+    changed_adp = after.replace(b'0.5 Biso', b'0.6 Biso')
+    assert hashlib.sha256(restore_representative(changed_adp, SILICON)).digest() != (
+        hashlib.sha256(before).digest()
+    ), 'An unrelated ADP byte change must still escape no immutable saved-file hash'
     assert PINS['rows'], 'The frozen reader baseline must contain real tracked entity documents'
     assert any(Path(row['path']).suffix.lower() == '.cif' for row in PINS['rows']), (
         'The baseline includes successfully read published CIF structures'

@@ -1,0 +1,972 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.impl as ControlsImpl
+import QtQuick.Layouts
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
+import edi.app
+
+Popup {
+    id: panel
+    objectName: "assistant.popup"
+    required property AssistantViewModel assistant
+    readonly property var usageData: ApplicationInfo.assistantUsageData(panel)
+    readonly property var usageWindow: ApplicationInfo.assistantUsageWindow(panel)
+    readonly property real remainingPercent: usageWindow ? Math.max(0, Math.min(100, 100 - usageWindow.usedPercent)) : -1
+    readonly property var accountData: panel.assistant.account
+    readonly property string accountPlan: ApplicationInfo.assistantAccountPlan(panel)
+    readonly property string accountInitial: ApplicationInfo.assistantAccountInitial(panel)
+    function usageResetLabel(value, now) {
+        return ApplicationInfo.assistantUsageResetLabel(value, now);
+    }
+    function usageCaption() {
+        return ApplicationInfo.assistantUsageCaption(panel);
+    }
+    function allowanceColor(remaining) {
+        return ApplicationInfo.assistantAllowanceColor(remaining, EaStyle.Colors);
+    }
+    function allowanceWindow(minutes) {
+        return ApplicationInfo.assistantAllowanceWindow(panel, minutes);
+    }
+    readonly property string accountPlanLabel: ApplicationInfo.assistantAccountPlanLabel(panel)
+    readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
+    readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
+    property var noticeState: null
+    property var noticeProjection: ({})
+    function captureNotice() {
+        ApplicationInfo.panelCaptureNotice();
+    }
+    readonly property bool noticeAnchorPresent: ApplicationInfo.panelNoticeAnchorPresent()
+    onAssistantChanged: ApplicationInfo.panelNoticeOwnerChanged(0)
+    Component.onCompleted: ApplicationInfo.panelCompleted()
+    component EdiNotice: Item {
+        id: notice
+        required property string noticeText
+        objectName: noticeText.length > 0 ? "assistant.currentNotice" : ""
+        visible: noticeText.length > 0
+        implicitHeight: visible ? noticeContent.implicitHeight + AppSizes.unit * 0.5 : 0
+        height: implicitHeight
+        Column {
+            id: noticeContent
+            y: AppSizes.unit * 0.5
+            width: parent.width
+            spacing: AppSizes.unit * 0.25
+            TextEdit {
+                width: parent.width
+                text: notice.noticeText
+                textFormat: TextEdit.PlainText
+                readOnly: true
+                selectByMouse: true
+                persistentSelection: true
+                wrapMode: TextEdit.Wrap
+                color: EaStyle.Colors.themeForeground
+                selectionColor: EaStyle.Colors.themeAccent
+                selectedTextColor: EaStyle.Colors.themeBackground
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                Accessible.role: Accessible.StaticText
+                Accessible.name: qsTr("Edi notice: %1").arg(text)
+            }
+        }
+    }
+    property var consentSend: null
+    function retireConsentSend() {
+        ApplicationInfo.panelRetireConsentSend();
+    }
+    function ownsConsentSend(intent) {
+        return ApplicationInfo.panelOwnsConsentSend(intent);
+    }
+    function resumeConsentSend() {
+        ApplicationInfo.panelResumeConsentSend();
+    }
+    function scheduleConsentSend() {
+        ApplicationInfo.panelScheduleConsentSend();
+    }
+    Connections {
+        target: panel.assistant
+        function onConversationRetired() {
+            ApplicationInfo.panelNoticeOwnerChanged(1);
+        }
+        function onConnectedChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onAccountChanged() {
+            ApplicationInfo.panelNoticeOwnerChanged(2);
+        }
+        function onSelectedModelChanged() {
+            panel.retireConsentSend();
+        }
+        function onSelectedEffortChanged() {
+            panel.retireConsentSend();
+        }
+        function onStateChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onCanCancelChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onDraftAdmissionReadyChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onLastErrorChanged() {
+            panel.captureNotice();
+        }
+        function onContextPreviewChanged() {
+            ApplicationInfo.panelConsentContextChanged();
+        }
+    }
+    Connections {
+        target: Session
+        function onProjectChanged() {
+            panel.retireConsentSend();
+        }
+    }
+    Connections {
+        target: composer
+        function onTextRevisionChanged() {
+            panel.retireConsentSend();
+        }
+        function onDraftOwnerRevisionChanged() {
+            panel.retireConsentSend();
+        }
+    }
+    Connections {
+        target: panel.assistant.selectedFiles
+        function onCountChanged() {
+            panel.retireConsentSend();
+        }
+        function onDataChanged() {
+            panel.retireConsentSend();
+        }
+    }
+    Connections {
+        target: panel.assistant
+        function onSessionProjectRequested(threadId, location, intent) {
+            ApplicationInfo.restoreSessionProject(threadId, location, intent);
+        }
+        function onSessionConsentRequested(threadId) {
+            ApplicationInfo.panelSessionConsentRequested();
+        }
+    }
+    Component.onDestruction: retireConsentSend()
+    // A user navigation link always refers to the current project's normal
+    // Report page. Other links retain their completed-row/file ownership checks.
+    function openReportLink(sourceRowId, link) {
+        return ApplicationInfo.panelOpenReportLink(sourceRowId, link);
+    }
+    required property Item toggleControl
+    readonly property Item firstFocusItem: connectionButton
+    property bool shown: Preferences.assistantShown
+    onShownChanged: ApplicationInfo.panelShownChanged()
+    visible: ApplicationInfo.assistantAvailable && shown
+    x: 0
+    y: 0
+    width: parent ? parent.width : 0
+    height: parent ? parent.height : 0
+    padding: 0
+    margins: 0
+    modal: false
+    dim: false
+    focus: true
+    popupType: Popup.Item
+    closePolicy: Popup.NoAutoClose
+    // Clip the moving sheet at the fixed sidebar viewport, including intermediate frames.
+    clip: true
+    background: null
+    enter: Transition {
+        NumberAnimation {
+            target: assistantSheet
+            property: "x"
+            from: Preferences.sideBarOnLeft ? -panel.width : panel.width
+            to: 0
+            duration: EaStyle.Times.translationChange
+            easing.type: Easing.OutCirc
+        }
+    }
+    exit: Transition {
+        NumberAnimation {
+            target: assistantSheet
+            property: "x"
+            to: Preferences.sideBarOnLeft ? -panel.width : panel.width
+            duration: EaStyle.Times.translationChange
+            easing.type: Easing.InCirc
+        }
+    }
+    function focusComposer() {
+        ApplicationInfo.panelFocusComposer();
+    }
+
+    contentItem: Item {
+        objectName: "assistant.panel"
+        clip: true
+        // The complete fixed strip remains covered until Popup's actual exit finishes.
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.AllButtons
+            preventStealing: true
+            onWheel: wheel => wheel.accepted = true
+        }
+        Item {
+            id: assistantSheet
+            width: parent.width
+            height: parent.height
+            enabled: panel.shown
+            Rectangle {
+                id: assistantChatBackground
+                anchors.fill: parent
+                color: EaStyle.Colors.appBarBackground
+            }
+            Rectangle {
+                z: 3
+                width: EaStyle.Sizes.borderThickness
+                height: parent.height
+                x: Preferences.sideBarOnLeft ? parent.width - width : 0
+                color: EaStyle.Colors.appBorder
+            }
+            Item {
+                id: header
+                width: parent.width
+                height: EaStyle.Sizes.tabBarHeight
+                Rectangle {
+                    anchors.fill: parent
+                    color: EaStyle.Colors.contentBackground
+                }
+                EaElements.Label {
+                    anchors.left: parent.left
+                    anchors.leftMargin: EaStyle.Sizes.fontPixelSize * 0.5
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.max(0, parent.width - headerActions.implicitWidth - AppSizes.unit * 2)
+                    elide: Text.ElideRight
+                    textFormat: Text.PlainText
+                    text: qsTr("Assistant")
+                    font.bold: true
+                    color: EaStyle.Colors.themeForegroundHovered
+                }
+                RowLayout {
+                    id: headerActions
+                    anchors.right: parent.right
+                    anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.5
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: AppSizes.unit * 0.5
+                    EaElements.Button {
+                        id: sessionsButton
+                        objectName: "assistant.sessions"
+                        visible: panel.assistant.connected
+                        text: qsTr("Sessions")
+                        leftPadding: AppSizes.unit * 0.75
+                        rightPadding: leftPadding
+                        enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
+                        contentItem: RowLayout {
+                            spacing: AppSizes.unit * 0.4
+                            EaElements.Label {
+                                text: "history"
+                                font.family: EaStyle.Fonts.iconsFamily
+                                color: sessionsButton.foregroundColor()
+                                Accessible.ignored: true
+                            }
+                            EaElements.Label {
+                                text: sessionsButton.text
+                                color: sessionsButton.foregroundColor()
+                            }
+                        }
+                        background: Rectangle {
+                            border.width: 0
+                            implicitHeight: EaStyle.Sizes.toolButtonHeight * 0.75
+                            radius: height * 0.5
+                            color: sessionsButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
+                        }
+                        ToolTip.text: qsTr("Browse this application's saved assistant sessions")
+                        Accessible.name: text
+                        onClicked: ApplicationInfo.openSessionBrowser(panel, sessionsDialog)
+                    }
+                    EaElements.Button {
+                        id: clearButton
+                        objectName: "assistant.clear"
+                        visible: panel.assistant.connected
+                        text: qsTr("New session")
+                        leftPadding: AppSizes.unit * 0.75
+                        rightPadding: leftPadding
+                        implicitHeight: usageButton.implicitHeight
+                        contentItem: RowLayout {
+                            spacing: AppSizes.unit * 0.4
+                            EaElements.Label {
+                                text: "plus"
+                                font.family: EaStyle.Fonts.iconsFamily
+                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75 * 1.25
+                                color: clearButton.foregroundColor()
+                                Accessible.ignored: true
+                            }
+                            EaElements.Label {
+                                text: clearButton.text
+                                color: clearButton.foregroundColor()
+                            }
+                        }
+                        background: Rectangle {
+                            border.width: 0
+                            implicitHeight: EaStyle.Sizes.toolButtonHeight * 0.75
+                            radius: height * 0.5
+                            color: clearButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
+                        }
+                        ToolTip.text: qsTr("Start a new session. Keep the previous session, project and sign-in.")
+                        Accessible.name: clearButton.text
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: panel.toggleControl
+                        KeyNavigation.tab: usageButton
+                        onClicked: panel.assistant.clearHistory()
+                    }
+                    EaElements.Button {
+                        id: usageButton
+                        visible: panel.assistant.connected
+                        objectName: "assistant.usage"
+                        text: panel.usageWindow ? qsTr("%1% used").arg(panel.usageWindow.usedPercent) : panel.usageData.caption || qsTr("Usage")
+                        font.bold: false
+                        leftPadding: AppSizes.unit * 0.75
+                        rightPadding: AppSizes.unit * 0.75
+                        background: Rectangle {
+                            border.width: 0
+                            implicitHeight: EaStyle.Sizes.toolButtonHeight * 0.75
+                            radius: height * 0.5
+                            color: usageButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
+                        }
+                        contentItem: EaElements.Label {
+                            text: usageButton.text
+                            font: usageButton.font
+                            color: !usageButton.enabled ? EaStyle.Colors.themeForegroundDisabled : usageButton.hovered || usageButton.down || usageButton.visualFocus ? EaStyle.Colors.themeAccent : panel.allowanceColor(panel.remainingPercent)
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        ToolTip.text: panel.usageCaption()
+                        Accessible.name: ToolTip.text
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: clearButton
+                        KeyNavigation.tab: connectionButton
+                        onClicked: usageDialog.open()
+                    }
+                    EaElements.Button {
+                        id: connectionButton
+                        objectName: "assistant.connection"
+                        readonly property bool pendingConnection: panel.assistant.state === "connecting"
+                        readonly property bool accountView: !pendingConnection && panel.assistant.connected
+                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? panel.accountInitial : qsTr("Connect ChatGPT")
+                        enabled: !pendingConnection || panel.assistant.canCancel
+                        leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
+                        rightPadding: leftPadding
+                        contentItem: Item {
+                            implicitWidth: connectionButton.accountView ? avatarText.implicitWidth : connectionText.implicitWidth
+                            implicitHeight: connectionButton.accountView ? avatarText.implicitHeight : connectionText.implicitHeight
+                            EaElements.Label {
+                                id: avatarText
+                                anchors.fill: parent
+                                visible: connectionButton.accountView
+                                text: panel.accountInitial.length ? panel.accountInitial : "user"
+                                font.family: panel.accountInitial.length ? EaStyle.Fonts.fontFamily : EaStyle.Fonts.iconsFamily
+                                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                            }
+                            RowLayout {
+                                id: connectionText
+                                anchors.centerIn: parent
+                                visible: !connectionButton.accountView
+                                spacing: AppSizes.unit * 0.4
+                                EaElements.Label {
+                                    text: connectionButton.pendingConnection ? "times" : "comment-dots"
+                                    font.family: EaStyle.Fonts.iconsFamily
+                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                    Accessible.ignored: true
+                                }
+                                EaElements.Label {
+                                    text: connectionButton.text
+                                    font: connectionButton.font
+                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                }
+                            }
+                        }
+                        Layout.preferredWidth: connectionButton.accountView ? panel.headerActionExtent : implicitWidth
+                        Layout.minimumWidth: connectionButton.accountView ? panel.headerActionExtent : 0
+                        Layout.maximumWidth: connectionButton.accountView ? panel.headerActionExtent : Math.max(0, header.width - AppSizes.unit)
+                        Layout.preferredHeight: EaStyle.Sizes.toolButtonHeight
+                        Layout.minimumHeight: EaStyle.Sizes.toolButtonHeight
+                        Layout.maximumHeight: EaStyle.Sizes.toolButtonHeight
+                        background: Item {
+                            implicitWidth: connectionButton.accountView ? panel.headerActionExtent : EaStyle.Sizes.toolButtonHeight
+                            implicitHeight: implicitWidth
+                            Rectangle {
+                                border.width: 0
+                                objectName: "assistant.avatarCircle"
+                                anchors.centerIn: parent
+                                width: connectionButton.accountView ? EaStyle.Sizes.toolButtonHeight * 0.75 : parent.width
+                                height: EaStyle.Sizes.toolButtonHeight * 0.75
+                                radius: height * 0.5
+                                color: !connectionButton.enabled ? panel.actionBackground : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                            }
+                        }
+                        ToolTip.text: connectionButton.accountView ? qsTr("Account") : text
+                        Accessible.name: ToolTip.text
+                        KeyNavigation.priority: KeyNavigation.BeforeItem
+                        KeyNavigation.backtab: connectionButton.accountView ? usageButton : panel.toggleControl
+                        KeyNavigation.tab: connectionButton.accountView ? composer.firstFocusItem : panel.toggleControl
+                        onClicked: ApplicationInfo.panelConnectionActivated()
+                    }
+                }
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: EaStyle.Sizes.borderThickness
+                    color: EaStyle.Colors.appBorder
+                }
+            }
+            ColumnLayout {
+                id: chatBody
+                visible: panel.assistant.conversationAvailable
+                enabled: visible
+                z: 1
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: header.bottom
+                anchors.bottom: parent.bottom
+                anchors.margins: AppSizes.unit
+                spacing: AppSizes.unit * 0.855
+                ListView {
+                    id: conversation
+                    objectName: "assistant.messages"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    spacing: AppSizes.unit * 0.5
+                    model: panel.assistant.messages
+                    reuseItems: true
+                    footer: Column {
+                        width: conversation.width
+                        spacing: chatBody.spacing
+                        onPositioningComplete: conversation.followOutput()
+                        AssistantPlan {
+                            width: parent.width
+                            assistant: panel.assistant
+                        }
+                        AssistantQuestion {
+                            width: parent.width
+                            assistant: panel.assistant
+                        }
+                        AssistantTrial {
+                            width: parent.width
+                            assistant: panel.assistant
+                        }
+                        Item {
+                            width: parent.width
+                            visible: workingCue.working && workingCue.presented
+                            height: visible ? workingCue.height + chatBody.spacing : 0
+                            AssistantWorking {
+                                id: workingCue
+                                objectName: "assistant.working"
+                                y: chatBody.spacing
+                                width: parent.width
+                                height: Math.max(implicitHeight, iconExtent)
+                                assistant: panel.assistant
+                                presented: panel.shown && panel.visible
+                            }
+                        }
+                    }
+                    header: EdiNotice {
+                        width: conversation.width
+                        noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && !panel.noticeAnchorPresent ? panel.noticeState.text : ""
+                    }
+                    delegate: Column {
+                        id: messageDelegate
+                        required property var model
+                        required property int index
+                        readonly property string rowId: model.id
+                        readonly property string kind: model.kind
+                        readonly property string text: model.text
+                        readonly property var payload: model.payload
+                        readonly property string status: model.status
+                        width: conversation.width
+                        spacing: chatBody.spacing
+                        onPositioningComplete: conversation.followOutput()
+                        ListView.onPooled: ApplicationInfo.assistantMessageReset(messageItem)
+                        ListView.onReused: ApplicationInfo.assistantMessageReset(messageItem)
+                        AssistantMessage {
+                            id: messageItem
+                            assistant: panel.assistant
+                            chatBackgroundColor: assistantChatBackground.color
+                            width: parent.width
+                            kind: messageDelegate.kind
+                            text: messageDelegate.text
+                            payload: messageDelegate.payload
+                            status: messageDelegate.status
+                            rowId: messageDelegate.rowId
+                            stepNumber: messageDelegate.index + 1
+                            onReportRequested: (sourceRowId, link) => panel.openReportLink(sourceRowId, link)
+                            onDetailsChanging: ApplicationInfo.conversationDetailsChanging()
+                            highlighted: kind === "user" && rowId === conversation.jumpedUserId
+                        }
+                        EdiNotice {
+                            width: parent.width
+                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && panel.noticeAnchorPresent && panel.noticeState.anchor === messageDelegate.rowId ? panel.noticeState.text : ""
+                        }
+                    }
+                    property bool followsTail: true
+                    property string jumpedUserId: ""
+                    readonly property int previousUserIndex: userTarget(-1)
+                    readonly property int nextUserIndex: userTarget(1)
+                    function userTarget(direction) {
+                        return ApplicationInfo.conversationUserTarget(direction);
+                    }
+                    function jumpToUser(direction) {
+                        ApplicationInfo.conversationJumpToUser(direction);
+                    }
+                    property string lastUserId: ""
+                    function observeUserAdmission() {
+                        ApplicationInfo.conversationObserveAdmission();
+                    }
+                    function revealCurrentNotice() {
+                        ApplicationInfo.conversationRevealNotice();
+                    }
+                    function positionAtTail() {
+                        ApplicationInfo.conversationPositionAtTail();
+                    }
+                    function followOutput() {
+                        ApplicationInfo.conversationFollowOutput();
+                    }
+                    onCountChanged: ApplicationInfo.conversationUpdated(false)
+                    onContentHeightChanged: followOutput()
+                    onHeightChanged: followOutput()
+                    onContentYChanged: ApplicationInfo.conversationContentYChanged()
+                    onMovementStarted: ApplicationInfo.conversationMovementChanged(true)
+                    onMovementEnded: ApplicationInfo.conversationMovementChanged(false)
+                    Component.onCompleted: ApplicationInfo.conversationUpdated(false)
+                    Connections {
+                        target: panel.assistant.messages
+                        function onDataChanged() {
+                            ApplicationInfo.conversationUpdated(true);
+                        }
+                    }
+                    ScrollBar.vertical: EaElements.ScrollBar {
+                        id: historyScrollBar
+                        parent: assistantSheet
+                        x: assistantSheet.width - width
+                        y: chatBody.y + conversation.y
+                        height: conversation.height
+                        policy: ScrollBar.AsNeeded
+                        interactive: false
+                        onPressedChanged: ApplicationInfo.conversationScrollChanged(false)
+                        onPositionChanged: ApplicationInfo.conversationScrollChanged(true)
+                    }
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: -AppSizes.unit
+                    Layout.rightMargin: -AppSizes.unit
+                    implicitHeight: EaStyle.Sizes.borderThickness
+                    color: EaStyle.Colors.appBorder
+                }
+                AssistantComposer {
+                    id: composer
+                    Layout.fillWidth: true
+                    assistant: panel.assistant
+                    toggleControl: panel.toggleControl
+                    popupBoundary: panel.contentItem
+                    previousFocusItem: composer.actionsControl.enabled ? composer.actionsControl : usageButton
+                    hasPreviousUserMessage: conversation.previousUserIndex >= 0
+                    hasNextUserMessage: conversation.nextUserIndex >= 0
+                    onPreviousUserRequested: conversation.jumpToUser(-1)
+                    onNextUserRequested: conversation.jumpToUser(1)
+                    onSubmissionBlocked: ApplicationInfo.panelSubmissionBlocked()
+                    onSubmissionRequested: draft => ApplicationInfo.panelSubmissionRequested(draft)
+                    onContextApprovalRequested: draft => ApplicationInfo.panelContextApprovalRequested(draft)
+                }
+            }
+            Rectangle {
+                objectName: "assistant.signedOut"
+                visible: !panel.assistant.conversationAvailable
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: header.bottom
+                anchors.bottom: parent.bottom
+                color: EaStyle.Colors.contentBackground
+                Flickable {
+                    id: signedOutNoticeViewport
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: AppSizes.unit
+                    height: Math.min(contentHeight, Math.max(0, signInPrompt.y - AppSizes.unit * 2))
+                    clip: true
+                    contentWidth: width
+                    contentHeight: signedOutControls.height
+                    flickableDirection: Flickable.VerticalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: contentHeight > height
+                    visible: signedOutNotice.noticeText.length > 0 || (panel.assistant.canCancel && panel.assistant.state !== "connecting")
+                    Column {
+                        id: signedOutControls
+                        width: parent.width
+                        spacing: AppSizes.unit
+                        EdiNotice {
+                            id: signedOutNotice
+                            width: parent.width
+                            visible: noticeText.length > 0
+                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant ? panel.noticeState.text : ""
+                        }
+                        EaElements.Button {
+                            id: authCancel
+                            objectName: "assistant.authCancel"
+                            visible: panel.assistant.canCancel && panel.assistant.state !== "connecting"
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            leftPadding: panel.assistant.state === "connecting" ? AppSizes.unit * 0.75 : 0
+                            rightPadding: leftPadding
+                            text: panel.assistant.state === "connecting" ? qsTr("Cancel connection") : qsTr("Stop")
+                            background: Rectangle {
+                                visible: panel.assistant.state === "connecting"
+                                implicitHeight: panel.assistant.state === "connecting" ? EaStyle.Sizes.toolButtonHeight * 0.75 : 0
+                                radius: height * 0.5
+                                border.width: 0
+                                color: !authCancel.enabled ? panel.actionBackground : authCancel.hovered || authCancel.down || authCancel.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                            }
+                            contentItem: EaElements.Label {
+                                text: authCancel.text
+                                font: authCancel.font
+                                color: panel.assistant.state === "connecting" && authCancel.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : authCancel.foregroundColor()
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            onClicked: panel.assistant.cancel()
+                        }
+                    }
+                    ScrollBar.vertical: ScrollBar {}
+                }
+                EmptyStateLabel {
+                    id: signInPrompt
+                    objectName: "assistant.signInPrompt"
+                    anchors.centerIn: parent
+                    width: Math.max(0, parent.width - AppSizes.unit * 2)
+                    text: panel.assistant.state === "connecting" ? panel.assistant.connectionLabel : qsTr("No ChatGPT connection")
+                }
+            }
+            // One real file boundary covers transcript and composer, not ordinary text or the header.
+            DropArea {
+                id: chatFilesDrop
+                anchors.fill: chatBody
+                z: 2
+                enabled: panel.visible && panel.shown && panel.assistant.connected && ApplicationInfo.assistantAvailable && !WebFiles.available
+                onEntered: drag => ApplicationInfo.panelFilesEntered(drag)
+                onDropped: drop => ApplicationInfo.panelFilesDropped(drop)
+            }
+        }
+        AppDialog {
+            id: usageDialog
+            objectName: "assistant.usageDialog"
+            title: qsTr("Usage")
+            standardButtons: Dialog.Close
+            property real resetClock: ApplicationInfo.assistantUsageNow()
+            readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
+            width: Math.min(AppSizes.unit * 30, Math.max(0, parent.width - AppSizes.unit * 2))
+            height: Math.min(implicitHeight, viewportHeight)
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: Math.min(Math.max(usageContent.implicitHeight, usageStatus.implicitHeight), Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+            onAboutToShow: panel.assistant.refreshUsage()
+            onOpened: ApplicationInfo.refreshAssistantUsageClock(usageDialog)
+            Timer {
+                interval: 60000
+                repeat: true
+                running: usageDialog.visible && panel.assistant.connected
+                onTriggered: ApplicationInfo.refreshAssistantUsageClock(usageDialog)
+            }
+            ScrollView {
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                width: usageDialog.contentWidth
+                height: usageDialog.contentHeight
+                clip: true
+                ScrollBar.vertical: EaElements.ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                    interactive: false
+                }
+                Column {
+                    id: usageContent
+                    width: Math.max(0, usageDialog.contentWidth - AppSizes.unit)
+                    spacing: AppSizes.unit * 1.5
+                    EaElements.Label {
+                        id: usageStatus
+                        objectName: "assistant.usageUnavailable"
+                        visible: panel.usageData.loading || panel.usageData.stale || panel.usageData.state !== "ready" || usageAllowances.count === 0
+                        width: parent.width
+                        text: panel.usageData.state === "ready" && usageAllowances.count === 0 ? qsTr("Session and weekly usage were not reported.") : panel.usageData.statusText || qsTr("Usage unavailable")
+                        wrapMode: Text.WordWrap
+                    }
+                    Repeater {
+                        id: usageAllowances
+                        model: ApplicationInfo.assistantUsageAllowances(panel)
+                        Column {
+                            id: allowance
+                            required property var modelData
+                            readonly property var window: ApplicationInfo.assistantAllowanceWindow(panel, modelData.minutes)
+                            objectName: "assistant.usage." + modelData.key
+                            width: usageContent.width
+                            spacing: AppSizes.unit * 0.35
+                            RowLayout {
+                                width: parent.width
+                                EaElements.Label {
+                                    text: allowance.modelData.title
+                                    Layout.fillWidth: true
+                                }
+                                EaElements.Label {
+                                    objectName: allowance.objectName + ".percent"
+                                    text: allowance.window ? qsTr("%1% used").arg(allowance.window.usedPercent) : qsTr("Unavailable")
+                                }
+                            }
+                            Rectangle {
+                                objectName: allowance.objectName + ".bar"
+                                width: parent.width
+                                height: AppSizes.unit * 0.5
+                                radius: height * 0.5
+                                color: EaStyle.Colors.themeBackground
+                                border.width: EaStyle.Sizes.borderThickness
+                                border.color: EaStyle.Colors.appBorder
+                                Rectangle {
+                                    objectName: allowance.objectName + ".fill"
+                                    x: parent.border.width
+                                    y: parent.border.width
+                                    width: allowance.window ? Math.max(0, parent.width - parent.border.width * 2) * Math.max(0, Math.min(1, allowance.window.usedPercent / 100)) : 0
+                                    height: Math.max(0, parent.height - parent.border.width * 2)
+                                    radius: height * 0.5
+                                    color: allowance.window && 100 - allowance.window.usedPercent < 5 ? EaStyle.Colors.red : allowance.window && 100 - allowance.window.usedPercent < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent
+                                }
+                            }
+                            EaElements.Label {
+                                objectName: allowance.objectName + ".reset"
+                                visible: allowance.window !== null
+                                text: allowance.window ? panel.usageResetLabel(allowance.window.resetsAt, usageDialog.resetClock) : ""
+                                color: EaStyle.Colors.themeForegroundMinor
+                                textFormat: Text.PlainText
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        AppDialog {
+            id: reportPageUnavailable
+            objectName: "assistant.reportPageUnavailable"
+            title: qsTr("Report page unavailable")
+            width: Math.min(AppSizes.unit * 28, Math.max(0, parent.width - AppSizes.unit * 2))
+            standardButtons: Dialog.Close
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: reportPageUnavailableText.implicitHeight
+            EaElements.Label {
+                id: reportPageUnavailableText
+                width: reportPageUnavailable.contentWidth
+                text: qsTr("The current project's Report page is unavailable. Open a project with a structure and an experiment to use its report preview and export controls.")
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+            }
+        }
+        AppDialog {
+            id: accountDialog
+            objectName: "assistant.accountDialog"
+            title: qsTr("Account")
+            standardButtons: Dialog.Close
+            readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
+            width: Math.min(AppSizes.unit * 24, Math.max(0, parent.width - AppSizes.unit * 2))
+            height: Math.min(implicitHeight, viewportHeight)
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: Math.min(accountContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+            Connections {
+                target: panel.assistant
+                function onConnectedChanged() {
+                    ApplicationInfo.assistantAccountConnectionChanged(panel, accountDialog);
+                }
+            }
+            ScrollView {
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                width: accountDialog.contentWidth
+                height: accountDialog.contentHeight
+                clip: true
+                Column {
+                    id: accountContent
+                    width: Math.max(0, accountDialog.contentWidth - AppSizes.unit)
+                    spacing: 0
+                    Column {
+                        width: parent.width
+                        spacing: AppSizes.unit * 0.25
+                        EaElements.Label {
+                            objectName: "assistant.accountIdentity"
+                            width: parent.width
+                            text: panel.accountData.email || qsTr("Account email unavailable")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.WrapAnywhere
+                        }
+                        EaElements.Label {
+                            objectName: "assistant.accountPlan"
+                            width: parent.width
+                            visible: panel.accountPlanLabel.length > 0
+                            text: panel.accountPlanLabel
+                            color: EaStyle.Colors.themeForegroundMinor
+                            textFormat: Text.PlainText
+                            wrapMode: Text.WrapAnywhere
+                        }
+                    }
+                    Item {
+                        width: 1
+                        height: AppSizes.unit * 1.5
+                    }
+                    EaElements.Button {
+                        id: signOutButton
+                        objectName: "assistant.signOut"
+                        text: qsTr("Sign out")
+                        contentItem: Row {
+                            spacing: AppSizes.unit * 0.5
+                            EaElements.Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "sign-out-alt"
+                                font.family: EaStyle.Fonts.iconsFamily
+                                color: signOutButton.foregroundColor()
+                            }
+                            EaElements.Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: signOutButton.text
+                                color: signOutButton.foregroundColor()
+                            }
+                        }
+                        width: Math.min(implicitWidth, parent.width)
+                        enabled: panel.assistant.connected
+                        Accessible.name: text
+                        onClicked: panel.assistant.signOut()
+                    }
+                }
+            }
+        }
+        AppDialog {
+            id: sessionsDialog
+            objectName: "assistant.sessionsDialog"
+            parent: Overlay.overlay
+            title: qsTr("Assistant sessions")
+            width: Math.min(AppSizes.unit * 64, Math.max(0, parent.width - AppSizes.unit * 2))
+            readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: Math.min(sessionsContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+            standardButtons: Dialog.Close
+            Column {
+                id: sessionsContent
+                width: sessionsDialog.contentWidth
+                spacing: AppSizes.unit * 0.5
+                DataTable {
+                    id: sessionsTable
+                    objectName: "assistant.sessions.list"
+                    width: parent.width
+                    maxRowCountShow: 8
+                    onContentYChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
+                    onContentHeightChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
+                    onHeightChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
+                    sourceModel: panel.assistant.sessions
+                    defaultInfoText: panel.assistant.sessionsLoading ? qsTr("Loading sessions…") : qsTr("No app-created sessions")
+                    columns: [numberColumnWidth, -1, AppSizes.unit * 14, AppSizes.iconColumnWidth]
+                    header: EaComponents.ListViewHeader {
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Session")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Last modified")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewLabel {}
+                    }
+                    delegate: TableRow {
+                        id: sessionRow
+                        required property var model
+                        readonly property string threadId: model.id
+                        required property string name
+                        required property string modified
+                        required property bool canArchive
+                        MouseArea {
+                            parent: sessionRow
+                            height: sessionRow.height
+                            width: Math.max(0, sessionRow.width - AppSizes.iconColumnWidth - sessionsTable.rowPadding - EaStyle.Sizes.tableColumnSpacing)
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
+                            onClicked: ApplicationInfo.activateSessionBrowserRow(panel, sessionRow)
+                        }
+                        EaComponents.ListViewLabel {
+                            text: sessionRow.index + 1
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                        EaComponents.ListViewLabel {
+                            text: sessionRow.name
+                            horizontalAlignment: Text.AlignLeft
+                            ToolTip.text: text
+                        }
+                        EaComponents.ListViewLabel {
+                            text: sessionRow.modified
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewButton {
+                            id: archiveSessionButton
+                            objectName: "assistant.session.archive." + sessionRow.index
+                            fontIcon: "archive"
+                            horizontalAlignment: Text.AlignHCenter
+                            contentItem: EaElements.Label {
+                                text: archiveSessionButton.fontIcon
+                                font.family: EaStyle.Fonts.iconsFamily
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                color: archiveSessionButton.foregroundColor()
+                            }
+                            enabled: sessionRow.canArchive && !panel.assistant.canCancel && !panel.assistant.sessionsLoading
+                            ToolTip.text: qsTr("Archive session")
+                            onClicked: panel.assistant.archiveSession(sessionRow.threadId)
+                        }
+                    }
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: panel.assistant.sessionsError
+                    visible: text.length > 0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    color: EaStyle.Colors.red
+                }
+            }
+            Connections {
+                target: panel.assistant
+                function onSessionSelected(threadId) {
+                    sessionsDialog.accept();
+                }
+            }
+            footer: EaElements.DialogButtonBox {
+                id: sessionButtons
+                EaElements.Button {
+                    text: qsTr("Refresh")
+                    DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                    enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
+                    onClicked: panel.assistant.refreshSessions()
+                }
+                readonly property real naturalButtonWidth: ApplicationInfo.sessionBrowserButtonsWidth(panel, sessionButtons)
+                contentWidth: naturalButtonWidth
+                contentItem: ListView {
+                    implicitWidth: sessionButtons.naturalButtonWidth
+                    model: sessionButtons.contentModel
+                    spacing: sessionButtons.spacing
+                    orientation: ListView.Horizontal
+                    boundsBehavior: Flickable.StopAtBounds
+                    snapMode: ListView.SnapToItem
+                }
+                standardButtons: Dialog.Close
+                onRejected: sessionsDialog.reject()
+            }
+        }
+        AssistantConnectionDialog {
+            id: connectionDialog
+            assistant: panel.assistant
+            onRejected: ApplicationInfo.panelConnectionRejected()
+            onContextApproved: offer => ApplicationInfo.panelContextApproved(offer)
+        }
+    }
+}

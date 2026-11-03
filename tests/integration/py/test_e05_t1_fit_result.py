@@ -21,6 +21,7 @@ import edi
 import pytest
 import yaml
 
+from tests.fixtures.e05_t1 import declarations
 from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.project_save.agreement import rounded_model_reference
 from tests.fixtures.project_save.reference import (
@@ -101,6 +102,7 @@ def test_cli_fixture_inventory():
             '_metadata.',
         ).get('_metadata.purpose')
         != 'simulation'
+        and declarations.has_measured_data(ROOT / 'docs/user/cli' / row['id'] / 'project')
     }
     assert len(CASES) == len(expected) and {row['id'] for row in CASES} == expected, (
         ' gate 1 every registered measured single and joint project has exactly one CLI fixture; '
@@ -257,8 +259,8 @@ def test_legacy_project_without_fit_result_keeps_model_state(case, tmp_path):
     after = edi.Project.load(target)
     actual = [(p.value, p.uncertainty, p.free) for p in after.parameters]
     assert len(actual) == len(before), ' gate 8 legacy persistence retains every model parameter'
-    require_saved_parameters(after.parameters, expected)
-    require_saved_parameters(project.parameters, expected)
+    require_saved_parameters(after.parameters, expected, model=after, phase='loaded')
+    require_saved_parameters(project.parameters, expected, model=project, phase='completed')
 
 
 @pytest.mark.parametrize('status', ['done', 'cancelled', 'maxiter', 'nostep'])
@@ -419,6 +421,26 @@ def test_zero_gain_converges_and_domain_blocked_positive_gain_stalls(stalled, tm
     )
 
 
+def test_valid_stop_fixture_still_refuses_a_missing_experiment_schema(tmp_path):
+    materialize = runpy.run_path(str(ROOT / 'tests/fixtures/e05_t1/stop_projects.py'))[
+        'materialize'
+    ]
+    source = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
+    target = materialize(edi, source, tmp_path / 'source', stalled=True)
+    assert edi.Project.load(str(target)) is not None, (
+        'The genuine generated domain fixture must load before its missing-schema adversary'
+    )
+    experiment = target / 'experiments/hrpt.edi'
+    lines = experiment.read_text().splitlines()
+    declarations = [line for line in lines if line.split()[:1] == ['_edi.schema_version']]
+    assert len(declarations) == 1, (
+        'The actual normal writer supplies exactly one schema declaration'
+    )
+    experiment.write_text('\n'.join(line for line in lines if line not in declarations) + '\n')
+    with pytest.raises(edi.IoError, match=r'_edi\.schema_version'):
+        edi.Project.load(str(target))
+
+
 def test_committed_nostep_witness_has_positive_gain_and_only_domain_rejections():
     cases = json.loads((ROOT / 'tests/fixtures/e05_t1/stops.json').read_text())['cases']
     case = next(row for row in cases if row['id'] == 'stop-nostep')
@@ -445,3 +467,30 @@ def test_committed_nostep_witness_has_positive_gain_and_only_domain_rejections()
     assert expected['predicted_gain'] == 3.0 and expected['chi_square'] == 3.0, (
         'the independently derived scalar gradient and normal matrix give positive gain three'
     )
+
+
+def test_materialized_stop_keeps_actual_cwl_profile_and_refuses_its_removal(tmp_path):
+    materialize = runpy.run_path(str(ROOT / 'tests/fixtures/e05_t1/stop_projects.py'))[
+        'materialize'
+    ]
+    source = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
+    target = materialize(edi, source, tmp_path / 'source', stalled=True)
+    experiment = target / 'experiments/hrpt.edi'
+    text = experiment.read_text()
+    assert scalars(text, '_experiment_type.')['_experiment_type.beam_mode'] == (
+        'constant wavelength'
+    ), 'The independently declared original CWL beam is retained rather than retagged'
+    assert scalars(text, '_peak.')['_peak.type'] == 'cwl-tch-pseudo-voigt', (
+        'The actual saved profile must survive the synthetic background/data replacement'
+    )
+    assert edi.Project.load(str(target)) is not None, (
+        'The complete real saved profile/calibration source loads before its typed adversary'
+    )
+    lines = text.splitlines()
+    profile = [line for line in lines if line.split()[:1] == ['_peak.type']]
+    assert len(profile) == 1, 'The normal writer supplies one actual profile declaration'
+    experiment.write_text('\n'.join(line for line in lines if line not in profile) + '\n')
+    with pytest.raises(
+        edi.DomainValidationError, match=r'_experiment_type\.beam_mode.*_peak\.type'
+    ):
+        edi.Project.load(str(target))

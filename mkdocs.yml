@@ -28,6 +28,7 @@ nav:
       - dev/index.md
       - dev/features.md
       - dev/local-crysta.md
+      - dev/assistant-protocol.md
       - Adrs:
           - dev/adrs/index.md
           - dev/adrs/0001-product-scope-and-relation-to-crysta.md
@@ -85,6 +86,11 @@ nav:
           - dev/adrs/0052-project-folders-archives-and-opening.md
           - dev/adrs/0053-what-a-fit-can-free.md
           - dev/adrs/0054-experiment-description.md
+          - dev/adrs/0055-assistant-controller-and-tools.md
+          - dev/adrs/0056-subscription-provider-connections.md
+          - dev/adrs/0057-assistant-panel-and-history.md
+          - dev/adrs/0058-assistant-product-skills.md
+          - dev/adrs/0059-defined-background-editing.md
           - dev/adrs/0060-scripted-gui-documentation-captures.md
           - dev/adrs/0061-linked-parameter-reference.md
           - dev/adrs/0062-run-log-and-crash-detection.md
@@ -173,6 +179,7 @@ nav:
           - user/guides/the-text-tab.md
           - user/guides/fit-quality.md
           - user/guides/which-values-a-fit-can-free.md
+          - user/guides/the-assistant.md
       - Tutorials:
           - user/tutorials/index.md
           - user/tutorials/pd-neut-cwl_lbco_simulation.ipynb

@@ -11,8 +11,11 @@ pixi run -e app app-with-crysta ../crysta
 
 Here `../crysta` is a crysta checkout next to edi. When a change spans both, check out the same branch in each.
 
-- crysta is built as it is in the checkout, uncommitted changes included, in crysta's own `cpp-ci` pixi
-  environment, and installed under `<crysta>/build/edi-local`. crysta's tests are not run.
+- crysta is built as it is in the checkout, uncommitted changes included, in crysta's own `cpp-toolchain`
+  pixi environment, and installed under `<crysta>/build/edi-local`. This environment uses the shared native
+  toolchain without installing crysta's Python package or its test extras. crysta's tests are not run.
+  The crysta checkout must include this environment and its updated lock file; frozen installation refuses
+  a missing or stale lock rather than falling back to a test environment.
 - The app is built into `build/app` against that install. The next plain `pixi run -e app app` goes back
   to the pinned SDK and configures `build/app` afresh.
 - Arguments after the checkout go to the app, for example `--demo <dir>`.

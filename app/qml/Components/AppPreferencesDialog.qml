@@ -2,10 +2,12 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
@@ -66,30 +68,21 @@ AppDialog {
 
     // Every item under `item` that `wanted` accepts.
     function itemsUnder(item, wanted) {
-        let found = [];
-        for (const child of item.children) {
-            if (wanted(child))
-                found.push(child);
-            found = found.concat(itemsUnder(child, wanted));
-        }
-        return found;
+        return ApplicationInfo.preferenceItemsUnder(item, wanted);
     }
     // The width a box needs for its longest item: its paddings, its text's own and its arrow, which the box draws inside
     // its content.
     function boxNeed(box) {
-        let widest = 0;
-        for (let i = 0; i < box.count; ++i)
-            widest = Math.max(widest, boxMetrics.advanceWidth(box.textAt(i)));
-        return Math.ceil(widest + box.leftPadding + box.rightPadding + box.indicator.width + box.contentItem.leftPadding + box.contentItem.rightPadding);
+        return ApplicationInfo.preferenceBoxNeed(box);
     }
     // The width a button needs for its text with an em at each side (its content reports no width of its own).
     function buttonNeed(button) {
-        return Math.ceil(boxMetrics.advanceWidth(button.text) + 2 * EaStyle.Sizes.fontPixelSize);
+        return ApplicationInfo.preferenceButtonNeed(button);
     }
 
-    readonly property var rowItems: pages.contentChildren.reduce((all, page) => all.concat(itemsUnder(page, item => item.rowLabel === true || item.rowBox === true || item.rowButton === true)), [])
-    readonly property real labelWidth: rowItems.reduce((widest, item) => item.rowLabel === true ? Math.max(widest, item.implicitWidth) : widest, 0)
-    readonly property real controlWidth: rowItems.reduce((widest, item) => Math.max(widest, item.rowBox === true ? boxNeed(item) : item.rowButton === true ? buttonNeed(item) : 0), 0)
+    readonly property var rowItems: ApplicationInfo.preferenceRowItems()
+    readonly property real labelWidth: ApplicationInfo.preferenceRowWidth(false)
+    readonly property real controlWidth: ApplicationInfo.preferenceRowWidth(true)
     readonly property real stackSpacing: EaStyle.Sizes.fontPixelSize * 0.5
     readonly property real rowHeight: themeBox.implicitHeight
     // A label's line, centred on a control's height.
@@ -97,14 +90,15 @@ AppDialog {
 
     objectName: "preferences"
     visible: Preferences.dialogShown
-    onClosed: Preferences.dialogShown = false
+    onClosed: ApplicationInfo.preferencesClosed()
+    onOpened: Session.assistant.refreshSkillSources()
 
     title: qsTr("Preferences")
     standardButtons: Dialog.Ok
 
     contentWidth: Math.max(bar.implicitWidth, pages.leftPadding + pages.rightPadding + labelWidth + EaStyle.Sizes.fontPixelSize + controlWidth)
     // As tall as the tallest tab's rows need, so no tab's last row is cut (the owner, 2026-10-13).
-    contentHeight: bar.implicitHeight + pages.topPadding + pages.bottomPadding + pages.contentChildren.reduce((tallest, page) => Math.max(tallest, page.implicitHeight), 0)
+    contentHeight: ApplicationInfo.preferenceContentHeight()
 
     EaElements.TabBar {
         id: bar
@@ -139,6 +133,13 @@ AppDialog {
             objectName: "preferences.tab.projects"
             fontIcon: "archive"
             text: qsTr("Projects")
+        }
+        EaElements.AppBarTabButton {
+            objectName: "preferences.tab.aiAssistance"
+            fontIcon: "robot"
+            text: qsTr("AI assistance")
+            enabled: ApplicationInfo.assistantAvailable
+            ToolTip.text: ApplicationInfo.assistantUnavailableReason
         }
         EaElements.AppBarTabButton {
             objectName: "preferences.tab.experimental"
@@ -246,9 +247,7 @@ AppDialog {
                 objectName: "preferences.theme"
                 model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
                 currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
-                onActivated: index => {
-                    EaStyle.Colors.theme = index === 1 ? EaStyle.Colors.DarkTheme : index === 2 ? EaStyle.Colors.SystemTheme : EaStyle.Colors.LightTheme;
-                }
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
             }
 
             // The figure palette, one for experiments and structures (the owner, 2026-10-26), the palettes' tokens and
@@ -266,7 +265,7 @@ AppDialog {
                     objectName: "preferences.colours"
                     model: ApplicationInfo.colourSchemeTitles
                     currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)))
-                    onActivated: index => Preferences.colourScheme = schemes[index]
+                    onActivated: index => ApplicationInfo.preferenceActivated(index, 1)
                     ToolTip.text: qsTr("The colours of experiments and structures: their icons, patterns, Bragg ticks and curves")
                 }
                 PaletteStrip {
@@ -277,14 +276,14 @@ AppDialog {
                 text: qsTr("Stacked") + ":"
             }
             RowBox {
-                readonly property var choices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
+                readonly property var choices: ApplicationInfo.preferenceStackedChoices()
                 // Empty follows the palette.
                 readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme
 
                 objectName: "preferences.stackedColours"
-                model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
+                model: ApplicationInfo.preferenceColourTitles()
                 currentIndex: Math.max(0, choices.indexOf(current))
-                onActivated: index => Preferences.scanStackedPalette = choices[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 2)
                 ToolTip.text: qsTr("The Stacked view's patterns")
             }
             RowLabel {
@@ -294,9 +293,9 @@ AppDialog {
                 readonly property var choices: ApplicationInfo.scanColourMaps
 
                 objectName: "preferences.mapColours"
-                model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
+                model: ApplicationInfo.preferenceColourTitles()
                 currentIndex: Math.max(0, choices.indexOf(Preferences.scanMapColours))
-                onActivated: index => Preferences.scanMapColours = choices[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 3)
                 ToolTip.text: qsTr("The Map's colour map, also chosen on the Map's toolbar")
             }
             RowLabel {
@@ -308,18 +307,31 @@ AppDialog {
                 objectName: "preferences.hiddenRange"
                 model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
                 currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
-                onActivated: index => Preferences.chartHiddenRange = choices[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
                 ToolTip.text: qsTr("What the pattern chart's y range does when a click on its legend hides or shows a curve")
             }
 
             RowLabel {
-                text: qsTr("Sidebar") + ":"
+                text: qsTr("Workflow sidebar side") + ":"
             }
             RowBox {
                 objectName: "preferences.sideBarSide"
                 model: [qsTr("Left"), qsTr("Right")]
                 currentIndex: Preferences.sideBarOnLeft ? 0 : 1
-                onActivated: index => Preferences.sideBarSide = index === 0 ? "Left" : "Right"
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 6)
+            }
+
+            RowLabel {
+                visible: !ApplicationInfo.assistantAvailable
+                text: qsTr("Assistant") + ":"
+            }
+            EaElements.Label {
+                objectName: "preferences.assistantUnavailableReason"
+                visible: !ApplicationInfo.assistantAvailable
+                width: dialog.controlWidth
+                text: ApplicationInfo.assistantUnavailableReason
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
             }
 
             RowLabel {
@@ -342,10 +354,9 @@ AppDialog {
                 model: [qsTr("Editable"), qsTr("Everything")]
                 currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
                 // Through the Text tabs, which settle an unapplied edit first; until then the box shows the setting.
-                onActivated: index => {
-                    AppState.setTextShow(choices[index]);
-                    currentIndex = Qt.binding(() => Math.max(0, choices.indexOf(Preferences.textShow)));
-                }
+                onActivated: index => ApplicationInfo.textTabShowChoice(index, () => {
+                        currentIndex = Qt.binding(() => Math.max(0, choices.indexOf(Preferences.textShow)));
+                    })
                 ToolTip.text: qsTr("What every Text tab shows: the categories you can edit, or also the measured data and results, read-only")
             }
         }
@@ -360,7 +371,7 @@ AppDialog {
                 objectName: "preferences.newProjectSuRule"
                 model: [qsTr("IUCr recommendation"), qsTr("Always 2 digits")]
                 currentIndex: Preferences.newProjectSuRule === "iucr_99" ? 1 : 0
-                onActivated: index => Preferences.newProjectSuRule = index === 1 ? "iucr_99" : "iucr_19"
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 7)
                 ToolTip.text: qsTr("How a new project writes values with a standard uncertainty: 1 digit, or 2 from 10 to 19, or always 2")
             }
 
@@ -371,8 +382,250 @@ AppDialog {
                 objectName: "preferences.newReportLibraries"
                 model: [qsTr("Online"), qsTr("Embedded")]
                 currentIndex: Preferences.newReportLibraries === "embedded" ? 1 : 0
-                onActivated: index => Preferences.newReportLibraries = index === 1 ? "embedded" : "online"
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 8)
                 ToolTip.text: qsTr("Whether a new project's HTML reports load plotly.js and three.js from the web or carry them, so they open offline")
+            }
+        }
+
+        ScrollView {
+            id: aiPage
+            implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height - bar.implicitHeight - AppSizes.unit * 8))
+            readonly property var original: Session.assistant
+            property string copyError: ""
+            onOriginalChanged: ApplicationInfo.preferenceAssistantChanged()
+            function copyDiagnostics(button, report) {
+                ApplicationInfo.preferenceCopyDiagnostics(button, report);
+            }
+            clip: true
+            Column {
+                id: aiContent
+                width: Math.max(0, aiPage.availableWidth)
+                spacing: AppSizes.unit
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("Skill sources")
+                    font.bold: true
+                }
+                DataTable {
+                    id: sourceTable
+                    objectName: "preferences.ai.sources"
+                    width: parent.width
+                    maxRowCountShow: 5
+                    sourceModel: aiPage.original ? aiPage.original.skillSources : null
+                    defaultInfoText: qsTr("No skill sources")
+                    columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                    header: EaComponents.ListViewHeader {
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Source")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {}
+                    }
+                    delegate: TableRow {
+                        id: sourceRow
+                        readonly property string sourceId: model.id || ""
+                        required property string label
+                        required property string path
+                        required property bool builtin
+                        required property string status
+                        required property var model
+                        readonly property var original: aiPage.original
+                        property int presentation: 0
+                        onSourceIdChanged: ApplicationInfo.preferenceSourceRevision()
+                        onOriginalChanged: ApplicationInfo.preferenceSourceRevision()
+                        EaComponents.ListViewLabel {
+                            text: sourceRow.index + 1
+                            horizontalAlignment: Text.AlignHCenter
+                            marksCurrentRow: true
+                        }
+                        EaComponents.ListViewLabel {
+                            objectName: "preferences.ai.source.label." + sourceRow.sourceId
+                            text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.label.startsWith("https://github.com/") ? sourceRow.label : sourceRow.path
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideMiddle
+                            ToolTip.text: text + (sourceRow.status.length ? "\n" + sourceRow.status : "")
+                        }
+                        EaComponents.ListViewButton {
+                            id: sourceEnabled
+                            objectName: "preferences.ai.source.enabled." + sourceRow.sourceId
+                            fontIcon: sourceRow.model.enabled ? "toggle-on" : "toggle-off"
+                            enabled: ApplicationInfo.assistantAvailable && sourceRow.original && !sourceRow.original.canCancel
+                            ToolTip.text: sourceRow.model.enabled ? qsTr("Disable this skill source") : qsTr("Enable this skill source")
+                            Accessible.name: ToolTip.text
+                            Accessible.checkable: true
+                            Accessible.checked: sourceRow.model.enabled
+                            property var gesture: null
+                            onPressed: ApplicationInfo.preferenceSourceGesture(false, true)
+                            onCanceled: gesture = null
+                            onClicked: ApplicationInfo.preferenceSourceGesture(false, false)
+                            Connections {
+                                target: sourceRow.original
+                                function onSkillSourcesChanged() {
+                                    sourceEnabled.gesture = null;
+                                }
+                            }
+                        }
+                        EaComponents.ListViewButton {
+                            id: sourceRemove
+                            objectName: "preferences.ai.source.remove." + sourceRow.sourceId
+                            fontIcon: "minus-circle"
+                            enabled: ApplicationInfo.assistantAvailable && !sourceRow.builtin && sourceRow.original && !sourceRow.original.canCancel
+                            ToolTip.text: sourceRow.builtin ? qsTr("The built-in source cannot be removed") : qsTr("Remove this skill source")
+                            Accessible.name: ToolTip.text
+                            property var gesture: null
+                            onPressed: ApplicationInfo.preferenceSourceGesture(true, true)
+                            onCanceled: gesture = null
+                            onClicked: ApplicationInfo.preferenceSourceGesture(true, false)
+                            Connections {
+                                target: sourceRow.original
+                                function onSkillSourcesChanged() {
+                                    sourceRemove.gesture = null;
+                                }
+                            }
+                        }
+                    }
+                }
+                Row {
+                    width: parent.width
+                    spacing: AppSizes.unit
+                    EaElements.SideBarButton {
+                        objectName: "preferences.ai.sources.add"
+                        width: (parent.width - parent.spacing) / 2
+                        text: qsTr("Add skill source")
+                        fontIcon: "plus-circle"
+                        enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel && !Session.assistant.skillSourceImporting
+                        onClicked: ApplicationInfo.preferenceBeginSourceSelection(false)
+                    }
+                    EaElements.SideBarButton {
+                        objectName: "preferences.ai.sources.web"
+                        width: (parent.width - parent.spacing) / 2
+                        text: Session.assistant.skillSourceImporting ? qsTr("Cancel web import") : qsTr("Add skills from web")
+                        fontIcon: Session.assistant.skillSourceImporting ? "times-circle" : "globe"
+                        enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
+                        onClicked: ApplicationInfo.preferenceBeginSourceSelection(true)
+                    }
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: Session.assistant.skillSourceError
+                    visible: text.length > 0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
+                    color: EaStyle.Colors.red
+                }
+                EaElements.Label {
+                    text: qsTr("Diagnostics")
+                    font.bold: true
+                }
+                EaElements.CheckBox {
+                    objectName: "preferences.ai.copyTechnicalDetails"
+                    text: qsTr("Include technical details when copying steps")
+                    checked: Preferences.assistantCopyTechnicalDetails
+                    onToggled: Preferences.assistantCopyTechnicalDetails = checked
+                }
+                Row {
+                    width: parent.width
+                    spacing: AppSizes.unit
+                    EaElements.SideBarButton {
+                        id: copyWorkReport
+                        objectName: "preferences.ai.workReport"
+                        width: (parent.width - parent.spacing) / 2
+                        property bool copied: false
+                        text: copied ? qsTr("Copied") : qsTr("Copy work report")
+                        fontIcon: copied ? "check" : "copy"
+                        contentItem: Item {
+                            implicitWidth: copyWorkReportContent.implicitWidth
+                            Row {
+                                id: copyWorkReportContent
+                                anchors.centerIn: parent
+                                spacing: AppSizes.unit * 0.5
+                                EaElements.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: copyWorkReport.fontIcon
+                                    font.family: EaStyle.Fonts.iconsFamily
+                                    color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                    Accessible.ignored: true
+                                }
+                                EaElements.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: copyWorkReport.text
+                                    color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                }
+                            }
+                        }
+                        onClicked: aiPage.copyDiagnostics(copyWorkReport, true)
+                        Timer {
+                            id: reportCopyFeedback
+                            interval: EaStyle.Times.introAnimation
+                            onTriggered: copyWorkReport.copied = false
+                        }
+                    }
+                    EaElements.SideBarButton {
+                        id: copyConnection
+                        objectName: "preferences.ai.copyConnection"
+                        width: (parent.width - parent.spacing) / 2
+                        property bool copied: false
+                        text: copied ? qsTr("Copied") : qsTr("Copy connection details")
+                        fontIcon: copied ? "check" : "copy"
+                        contentItem: Item {
+                            implicitWidth: copyConnectionContent.implicitWidth
+                            Row {
+                                id: copyConnectionContent
+                                anchors.centerIn: parent
+                                spacing: AppSizes.unit * 0.5
+                                EaElements.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: copyConnection.fontIcon
+                                    font.family: EaStyle.Fonts.iconsFamily
+                                    color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                    Accessible.ignored: true
+                                }
+                                EaElements.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: copyConnection.text
+                                    color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                }
+                            }
+                        }
+                        onClicked: aiPage.copyDiagnostics(copyConnection, false)
+                        Timer {
+                            id: connectionCopyFeedback
+                            interval: EaStyle.Times.introAnimation
+                            onTriggered: copyConnection.copied = false
+                        }
+                    }
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: aiPage.copyError
+                    visible: text.length > 0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    color: EaStyle.Colors.red
+                }
+                EaElements.Label {
+                    text: qsTr("History")
+                    font.bold: true
+                }
+                EaElements.SideBarButton {
+                    objectName: "preferences.ai.clearCachedHistory"
+                    width: parent.width
+                    text: Session.assistant.cachedHistoryClearing ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
+                    fontIcon: "eraser"
+                    enabled: !Session.assistant.canCancel && !Session.assistant.cachedHistoryClearing
+                    ToolTip.text: qsTr("Clear the app's saved chat display only. Projects, reports, runtime sessions and sign-in are kept.")
+                    onClicked: Session.assistant.clearCachedHistory()
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: Session.assistant.cachedHistoryError
+                    visible: text.length > 0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
+                    color: EaStyle.Colors.red
+                }
             }
         }
 
@@ -435,19 +688,9 @@ AppDialog {
             RowBox {
                 objectName: "preferences.engineThreads"
                 enabled: ApplicationInfo.engineThreadsSelectable
-                model: {
-                    if (!ApplicationInfo.engineThreadsSelectable)
-                        return [qsTr("1 (single-thread build)")];
-                    const counts = [qsTr("Auto")];
-                    for (let count = 1; count <= ApplicationInfo.engineThreadsMaximum; ++count)
-                        counts.push(String(count));
-                    return counts;
-                }
+                model: ApplicationInfo.preferenceEngineThreads()
                 currentIndex: ApplicationInfo.engineThreadsSelectable ? Math.min(Preferences.engineThreads, ApplicationInfo.engineThreadsMaximum) : 0
-                onActivated: index => {
-                    if (ApplicationInfo.engineThreadsSelectable)
-                        Preferences.engineThreads = index;
-                }
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 9)
             }
 
             // What Qt draws with (edi ADR-0041): its graphics API and renderer, read in the first frame, and whether that
@@ -473,7 +716,7 @@ AppDialog {
                 readonly property var values: ["auto", "gpu", "software"]
                 model: [qsTr("Automatic"), qsTr("GPU"), qsTr("Software painter")]
                 currentIndex: Math.max(0, values.indexOf(Preferences.scanRenderer))
-                onActivated: index => Preferences.scanRenderer = values[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 10)
             }
 
             // What the app runs on and with, to read and to copy (the owner, 2026-10-06).
@@ -522,6 +765,68 @@ AppDialog {
                     text: qsTr("Reset to defaults")
                     onClicked: resetConfirm.open()
                 }
+            }
+        }
+    }
+
+    AppDialog {
+        id: webSource
+        objectName: "preferences.ai.sources.webDialog"
+        property var selection: null
+        readonly property string intent: selection ? selection.id : ""
+        readonly property var original: selection ? selection.owner : null
+        parent: Overlay.overlay
+        title: qsTr("Add skills from web")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        // The FIRST footer derives its available width from this dialog. Give
+        // the dialog one intrinsic upstream width, independent of that footer.
+        width: contentItem.implicitWidth + leftPadding + rightPadding
+        contentItem: Item {
+            implicitWidth: dialog.controlWidth
+            implicitHeight: webContent.implicitHeight
+            Column {
+                id: webContent
+                width: parent.width
+                spacing: AppSizes.unit
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("Public GitHub repository or skill folder URL. Companion files are captured; repository code is never run.")
+                    wrapMode: Text.Wrap
+                }
+                EaElements.TextField {
+                    id: sourceUrl
+                    objectName: "preferences.ai.sources.webUrl"
+                    width: parent.width
+                    placeholderText: "https://github.com/owner/repo/tree/main/skills"
+                    selectByMouse: true
+                }
+            }
+        }
+        onAccepted: ApplicationInfo.preferenceCompleteSourceSelection(true, true)
+        onRejected: ApplicationInfo.preferenceCompleteSourceSelection(true, false)
+        Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(true, false)
+        Connections {
+            target: webSource.original
+            function onSkillSourceSelectionRetired(token) {
+                ApplicationInfo.preferenceRetireSourceSelection(token, true);
+            }
+        }
+    }
+
+    FolderDialog {
+        id: sourcesFolder
+        objectName: "preferences.ai.sources.folder"
+        property var selection: null
+        readonly property string intent: selection ? selection.id : ""
+        readonly property var original: selection ? selection.owner : null
+        title: qsTr("Choose a skill folder or collection")
+        onAccepted: ApplicationInfo.preferenceCompleteSourceSelection(false, true)
+        onRejected: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
+        Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
+        Connections {
+            target: sourcesFolder.original
+            function onSkillSourceSelectionRetired(token) {
+                ApplicationInfo.preferenceRetireSourceSelection(token, false);
             }
         }
     }
