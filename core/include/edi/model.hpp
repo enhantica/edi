@@ -4243,6 +4243,9 @@ struct FitPreamble {
     std::size_t n_points_fitted = 0;
     std::size_t n_free = 0;
     IterationRecord pre_fit;
+    // What crysta's fit starts away from 0 because the model has no gradient there (FCJ asymmetry, magnetic moments),
+    // one message each, as crysta::zero_starts reports them.
+    std::vector<std::string> zero_starts;
 };
 
 // Optional one-shot preamble subscriber, fired exactly once before the LM loop. Like
