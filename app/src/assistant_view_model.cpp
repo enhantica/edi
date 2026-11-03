@@ -4660,7 +4660,11 @@ struct AssistantViewModel::State {
         const auto receiver = run->receiver;
         if (run->tool == "undo_fit") {
             native_retain_fit_undo(run->call);
-            try { native_finish(false, fit_undo_result(run, false)); }
+            try {
+                auto result = fit_undo_result(run, false);
+                if (!message.isEmpty() && !result.contains("message")) result["message"] = bounded_error(message);
+                native_finish(false, result);
+            }
             catch (...) {
                 if (run->receiver && run->receiver->state_.get() == this && widget_owned(run)) {
                     native_fence();
@@ -7407,7 +7411,9 @@ struct AssistantViewModel::State {
     }
     void apply_fit_undo(const std::shared_ptr<NativeWidget>& run) {
         if (!widget_current(run) || !run->project->fitUndoAvailable()) {
-            if (widget_owned(run)) widget_refuse(run, widget_outcome_error);
+            // The trial lock names its reason in the result as well as on screen (edi ADR-0055).
+            const auto lock = widget_current(run) ? run->project->trialLockRefusal() : QString();
+            if (widget_owned(run)) widget_refuse(run, lock.isEmpty() ? widget_outcome_error : lock);
             return;
         }
         const auto undo = run->call.record->fit_undo;
@@ -7458,6 +7464,7 @@ struct AssistantViewModel::State {
         native_widget = run;
 
         if (!widget_current(run)) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return; }
+        if (const auto lock = run->project->trialLockRefusal(); !lock.isEmpty()) { widget_refuse(run, lock); return; }
         {
             // Own BOTH published-bit variants before a cue/prearm/live Undo.
             // FIRST native_row owns canonical payload + purpose twice + row;
@@ -10186,6 +10193,10 @@ struct AssistantViewModel::State {
             if(target.exists() || target.isSymLink()) {
                 native_save_refused(task,"The suggested Save As destination already exists; it was not overwritten. Supply a fresh name through save_project.");return false;
             }
+        }
+        // The trial lock refuses every Save, with its own reason, before anything is written (edi ADR-0055).
+        if(task->project) if(const auto lock=task->project->trialLockRefusal().toUtf8();!lock.isEmpty()) {
+            native_save_refused(task,lock.constData());return false;
         }
         const auto replacement=session->replacement_generation_;const auto own=begin_own_edit(true);
         const auto release=qScopeGuard([this,receiver,own]{if(receiver && receiver->state_.get()==this)end_own_edit(own);});

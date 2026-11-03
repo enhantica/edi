@@ -2180,8 +2180,8 @@ QString ProjectViewModel::criticalEditRefusal(bool restoring, bool trial) const 
     if (retired_) return tr("This project owner has been replaced or closed");
     // While an assistant trial is open only the trial itself edits: its own edits, its visible controls, its fit
     // and the rollback. Manual edits, Undo and Clear wait until it ends (edi ADR-0055).
-    if (!trial && fit_ != nullptr && fit_->trialOpen() && !fit_->restoring() && !fit_->fitWriting() && assistant_edit_ == 0 && !widget_input_executing_)
-        return tr("The assistant is trying a change. Let it finish or press Stop before editing the project.");
+    if (!trial && fit_ != nullptr && !fit_->restoring() && !fit_->fitWriting() && assistant_edit_ == 0 && !widget_input_executing_)
+        if (const QString lock = trialLockRefusal(); !lock.isEmpty()) return lock;
     if (editing_) return tr("The current project edit is still being published");
     if (fit_undo_invoking_ && (!fit_undo_input_ || fit_undo_input_->started))
         return tr("The current ordinary fit Undo is still being completed");
@@ -4150,11 +4150,15 @@ void ProjectViewModel::workIn(const QString& folder) {
     emit pathChanged();
 }
 
+QString ProjectViewModel::trialLockRefusal() const {
+    return fit_ != nullptr && fit_->trialOpen()
+               ? tr("The assistant is trying a change. Let it finish or press Stop before editing or saving the project.")
+               : QString();
+}
+
 QString ProjectViewModel::saveRefusal() const {
     // Nothing is saved while an assistant trial is open, by anyone: a save ends no trial halfway (edi ADR-0055).
-    if (fit_ != nullptr && fit_->trialOpen()) {
-        return tr("The project cannot be saved while the assistant is trying a change. Let it finish or press Stop.");
-    }
+    if (const QString lock = trialLockRefusal(); !lock.isEmpty()) return lock;
     // A running fit owns the project's output (a scan appends its results there): nothing is saved under it.
     if (fit_ != nullptr && fit_->running()) {
         return tr("The project cannot be saved while a fit is running");
