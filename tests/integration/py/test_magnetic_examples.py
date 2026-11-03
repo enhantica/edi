@@ -125,9 +125,9 @@ def test_magnetic_examples_share_cobalt_displacements_and_exclude_only_dead_cell
         assert sample.free and not detector.free, 'The single fit frees exactly one axial aperture'
         sample.value = 0.04
         model.analysis.calculate()
-        assert detector.value == sample.value, 'The detector aperture follows the fitted sample aperture'
+        assert detector.value == sample.value, 'The detector aperture follows the sample aperture'
     else:
-        assert not sample.free and not detector.free, 'The full scan holds both axial apertures fixed'
+        assert not sample.free and not detector.free, 'The scan fixes both axial apertures'
         assert sample.value == pytest.approx(0.0595, abs=4 * 0.0009), (
             'The scan holds the shared aperture within four s.u. of the ADR-0110 fitted width'
         )

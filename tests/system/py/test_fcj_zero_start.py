@@ -38,9 +38,8 @@ def test_zero_fcj_start_reaches_the_nonzero_start_minimum():
     result = zero.analysis.fit()
     positive = project_from((0.08, 0.0), (True, False))
     reference = positive.analysis.fit()
-    assert widths(zero)[0] != 0 and widths(zero)[1] == 0, (
-        'The single free aperture must leave zero while the other aperture remains fixed'
-    )
+    assert widths(zero)[0] != 0, 'The single free aperture leaves zero'
+    assert widths(zero)[1] == 0, 'The fixed detector aperture stays at zero'
     assert result.reduced_chi_square == pytest.approx(reference.reduced_chi_square, rel=2e-5), (
         'The FCJ minimum must be independent of zero or positive starting widths'
     )
@@ -94,7 +93,8 @@ def test_completed_fit_preserves_every_fixed_fcj_coefficient(start, free):
                 'Every fixed FCJ coefficient must keep its input value through fit completion'
             )
         elif original == 0 and not any(start):
-            assert math.isfinite(value) and value != 0, (
+            assert math.isfinite(value), 'The fitted aperture stays finite'
+            assert value != 0, (
                 'An independently free zero FCJ coefficient leaves zero in the single fit'
             )
 
