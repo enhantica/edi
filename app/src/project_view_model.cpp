@@ -4097,7 +4097,12 @@ QString ProjectViewModel::restoreProject(const edi::Project& accepted) {
     const PublicationScope publication(*this);
     if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) return pending;
     auto before = std::make_shared<const edi::Project>(*project_);
-    const QString error = apply(edi::Edit::replace_project(*project_, edi::Project(accepted)), true);
+    // Where the project is saved, and what its last Save recorded, stay as they are: a restore is scientific state.
+    edi::Project restored(accepted);
+    restored.path = project_->path;
+    restored.metadata = project_->metadata;
+    restored.scan_data_root = project_->scan_data_root;
+    const QString error = apply(edi::Edit::replace_project(*project_, std::move(restored)), true);
     if (!error.isEmpty()) return error;
     undo_history_.emplace_back(AppliedText{std::move(before)});
     syncUndo();
@@ -4183,7 +4188,10 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         setLastError(message);
         return message;
     }
-    return adoptSave(directory, saved.metadata);
+    const QString adopted = adoptSave(directory, saved.metadata);
+    // What was saved is the new accepted baseline: no assistant rollback reaches behind a Save (edi ADR-0055).
+    if (adopted.isEmpty() && fit_ != nullptr && !retired_) fit_->saved();
+    return adopted;
 }
 
 QString ProjectViewModel::stageScan(const QString& directory, const edi::Project& staged, StagedScan& scan) {

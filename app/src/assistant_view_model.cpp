@@ -2024,6 +2024,8 @@ struct AssistantViewModel::State {
             return trial->fit()->restoreAccepted(owner);
         }catch(...){return false;}
     }
+    // Clearing or rebinding the session ends its trial without a rollback: the candidate is dropped for good.
+    void retire_trial() noexcept {if(project)try{project->fit()->dropCandidate();}catch(...){}}
     void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
     // The automatic reopen of the last conversation at startup failed. It is retired, so Connect no longer repeats it;
     // the saved association is kept; the reason is shown in plain words; and the ordinary Connect ChatGPT offer,
@@ -13136,6 +13138,7 @@ struct AssistantViewModel::State {
         retire_file_selection(&publication);
         if (!publication.input_current()) return;
         consented_context.clear();
+        retire_trial();
         publication.generation = ++generation;
         generic_clear_pending = true; generic_context_pending = false;
         generic_clear_interrupt_sent = generic_interrupt_thread == generic_thread &&
@@ -16052,7 +16055,7 @@ struct AssistantViewModel::State {
 #ifndef __EMSCRIPTEN__
         retire_web_skill_import();
 #endif
-        retire_file_selection(); timer.stop(); ++generation;
+        retire_file_selection(); timer.stop(); retire_trial(); ++generation;
 #ifndef __EMSCRIPTEN__
         try { native_retire(false, true, true); } catch (...) {}
         native_fit.clear();
@@ -16846,6 +16849,7 @@ struct AssistantViewModel::State {
         work_end("retired","project_binding_retired");
         if(!receiver || receiver->state_.get()!=this || generation!=reportBinding || (has_target && !target))return false;
         work_cancel_failure();work_reports.retireScope();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();work_registration={};
+        retire_trial();
         const auto binding = ++generation;
 #ifndef __EMSCRIPTEN__
         auto resetAccount=usage_epoch;const auto resetWindow=action_window;auto resetFiles=file_epoch;

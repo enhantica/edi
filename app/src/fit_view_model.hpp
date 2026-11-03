@@ -268,12 +268,17 @@ class FitViewModel : public QObject {
     // back over the owner's open candidate as one Undo step and answers whether it did; restoreAcceptedOnStop does it
     // now, or when a running fit ends.
     void markCandidate(quint64 owner) noexcept {
-        if (accepted_fit_ && !restoring_) { candidate_ = true; candidate_owner_ = owner; }
+        if (!accepted_fit_ || restoring_ || manual_since_accepted_) return;  // disarmed until the next accepted fit
+        if (candidate_ && candidate_owner_ != owner) { dropCandidate(); return; }  // another session's edit
+        candidate_ = true;
+        candidate_owner_ = owner;
     }
     void dropCandidate() noexcept {
         if (!restoring_) { candidate_ = stop_rollback_ = false; manual_since_accepted_ = true; }
     }
     bool restoreAccepted(quint64 owner);
+    // A Save ends the trial: what was saved is the new accepted baseline, and nothing before it is rolled back.
+    void saved();
     void restoreAcceptedOnStop(quint64 owner);
 
    signals:
@@ -349,6 +354,8 @@ class FitViewModel : public QObject {
     // The project's Undo depth when the accepted fit was taken: a whole-project restore drops the trial's own Undo
     // entries above it, so a later ordinary Undo cannot bring back a fragment of the trial.
     std::size_t accepted_history_depth_ = 0;
+    // The project as an adopted fit left it, accepted only once its presentation completes.
+    std::shared_ptr<const edi::Project> pending_accept_;
     void dropTrialHistory() noexcept;
     bool presenting_ = false, submitted_single_joint_ = false;
     friend class AssistantViewModel;

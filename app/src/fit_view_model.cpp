@@ -431,6 +431,7 @@ void FitViewModel::close() {
     accepted_fit_.reset();
     starting_ = undo_target_ = {};
     candidate_ = stop_rollback_ = manual_since_accepted_ = false;
+    pending_accept_.reset();
     latest_attempt_ = submitted_attempt_ = finished_attempt_ = native_attempt_ = 0;
     catch_up_.clear();
     caught_up_pending_ = false;
@@ -613,20 +614,27 @@ bool FitViewModel::undo() {
 
 bool FitViewModel::restoreAccepted(quint64 owner) {
     if (!candidate_ || candidate_owner_ != owner || !accepted_fit_ || running_ || owner_.retired_) return false;
+    // The candidate and its Undo history stay until the restore has applied: a refused restore spends nothing.
     const auto accepted = accepted_fit_;
-    candidate_ = stop_rollback_ = false;
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
-    dropTrialHistory();
     const QString refusal = owner_.restoreProject(*accepted);
     if (!self) return false;
     restoring_ = false;
-    // The rejected trial leaves no Undo step behind: Undo continues from the accepted fit, never into the trial.
-    if (refusal.isEmpty()) dropTrialHistory();
     if (!refusal.isEmpty() || owner_.retired_) return false;
+    // The rejected trial leaves no Undo step behind: Undo continues from the accepted fit, never into the trial.
+    candidate_ = stop_rollback_ = false;
+    dropTrialHistory();
     manual_since_accepted_ = false;
     results_->setRecord(project_);
     return true;
+}
+
+void FitViewModel::saved() {
+    if (!accepted_fit_) return;
+    accepted_fit_ = std::make_shared<const edi::Project>(project_);
+    accepted_history_depth_ = owner_.undo_history_.size();
+    candidate_ = stop_rollback_ = manual_since_accepted_ = false;
 }
 
 void FitViewModel::dropTrialHistory() noexcept {
@@ -1095,16 +1103,24 @@ void FitViewModel::ended(const edi::FitReport& report) {
     const bool automatic_results = !completion;
     std::exception_ptr failure;
     const bool visible = !owner_.retired_;
+    pending_accept_.reset();
     try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
     presenting_ = previous_presentation;
-    // An assistant fit that ends refused, failed or stopped leaves no candidate behind: the accepted state comes back.
-    // A fit the user's Stop interrupted after its assistant call had retired: the accepted state comes back now. An
-    // assistant fit still owned by its call is settled there (native_finish), with the result saying so.
-    if (std::exchange(stop_rollback_, false) && !completion && visible && (!report.adopted() || report.status == edi::FitStatus::CANCELLED))
-        try { (void)restoreAccepted(candidate_owner_); } catch (...) {}
+    // The adopted fit becomes the accepted state only once its presentation has completed; until then the trial it
+    // ends is still open and a failed presentation settles like any other unaccepted ending.
+    if (auto accepted = std::exchange(pending_accept_, nullptr); accepted && !failure && visible && !owner_.retired_) {
+        accepted_fit_ = std::move(accepted);
+        accepted_history_depth_ = owner_.undo_history_.size();
+        candidate_ = stop_rollback_ = manual_since_accepted_ = false;
+    }
+    const bool stopped = std::exchange(stop_rollback_, false);
     // Even a presentation failure has a real completed optimizer/publication
     // report. Contain the internal callback independently of ordinary Qt signals.
     if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
+    // A Stop or disconnect armed during this fit: if its call (retired by then, or not) did not settle the trial, the
+    // accepted state comes back now. The attempt's own facts were already reported or are in its report.
+    if (stopped && candidate_ && visible && !owner_.retired_ && (!report.adopted() || report.status == edi::FitStatus::CANCELLED || failure))
+        try { (void)restoreAccepted(candidate_owner_); } catch (...) {}
     if (failure) std::rethrow_exception(failure); // Existing FitJob retains its report; no fake UI success.
 }
 
@@ -1145,11 +1161,7 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
         if (submitted_single_joint_) {
             undo_target_ = starting_.attempt == attempt ? starting_ : UndoTarget{};
             // A fit stopped part way is not accepted: a candidate it ends goes back to the accepted state.
-            if (report.status != edi::FitStatus::CANCELLED) {
-                accepted_fit_ = std::make_shared<const edi::Project>(project_);
-                accepted_history_depth_ = owner_.undo_history_.size();
-                candidate_ = manual_since_accepted_ = false;
-            }
+            if (report.status != edi::FitStatus::CANCELLED) pending_accept_ = std::make_shared<const edi::Project>(project_);
         }
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
