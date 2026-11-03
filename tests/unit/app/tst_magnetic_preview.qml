@@ -4,6 +4,7 @@ import edi.app
 import EdiAcceptance 1.0
 import OnboardingAcceptance 1.0
 import ReportAcceptance 1.0
+import ProjectTextAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "E04Review.js" as Review
@@ -15,6 +16,7 @@ TestCase {
     property var appWindow
     property var scratch
     property var repeatFitPreferences: null
+    ProjectTextProof { id: dictionaryProof }
     Component { id: application; Main {} }
     Component { id: preferences; AppPreferencesDialog {} }
     Component { id: fitPublication; SignalSpy { signalName: "finished" } }
@@ -51,6 +53,38 @@ TestCase {
         Ui.scrollIntoView(found[0]);
         verify(waitForPolish(found[0]), "The opened magnetic category completes layout");
         return found[0];
+    }
+    function test_sidebar_categories_follow_crysta_dictionary_order() {
+        const ranks = dictionaryProof.categoryRanks();
+        const differences = [];
+        for (const page of ["structure", "experiment"]) {
+            for (const tier of ["basic", "extras"]) {
+                const context = page + " " + tier;
+                const shownTier = tier === "basic" ? "Basic" : "Extras";
+                const listed = groups(page, tier).filter(item => item.visible &&
+                    item.shownTier === shownTier && item.objectName === "group." + item.categoryId);
+                verify(listed.length >= 2, context + " renders multiple dictionary categories");
+                const laidOut = listed.map(item => ({
+                    id: item.categoryId, y: item.mapToItem(appWindow.contentItem, 0, 0).y
+                })).sort((a, b) => a.y - b.y);
+                const actual = laidOut.map(item => item.id);
+                compare(new Set(actual).size, actual.length, context + " lists every category once: " + actual.join(", "));
+                for (let i = 0; i < laidOut.length; ++i) {
+                    verify(Number.isInteger(ranks[actual[i]]), context + " category is in crysta's dictionary: " + actual[i]);
+                    if (i > 0)
+                        verify(laidOut[i].y > laidOut[i - 1].y, context + " gives each category a distinct position");
+                }
+                if (page === "structure" && tier === "extras") {
+                    for (const id of ["geom_bond", "space_group_symop_magn_operation",
+                                      "space_group_symop_magn_centering", "expanded_atom_site_moment"])
+                        verify(actual.includes(id), context + " reaches the category whose order matters: " + id);
+                }
+                const expected = actual.slice().sort((a, b) => ranks[a] - ranks[b]);
+                if (actual.join(",") !== expected.join(","))
+                    differences.push(context + " actual [" + actual.join(", ") + "] expected [" + expected.join(", ") + "]");
+            }
+        }
+        compare(differences.length, 0, "All four sidebars use crysta's category order: " + differences.join("; "));
     }
     function test_extra_groups_are_single_ordered_and_human_readable() {
         const shown = groups("structure", "extras");

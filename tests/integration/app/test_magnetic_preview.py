@@ -8,6 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
+    'sidebar_categories_follow_crysta_dictionary_order',
     'extra_groups_are_single_ordered_and_human_readable',
     'main_order_all_sites_ids_ions_and_symmetry_form',
     'symmetry_form_column_has_room_and_a_gap_after_mz',
