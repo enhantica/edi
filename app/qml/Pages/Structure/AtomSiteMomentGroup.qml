@@ -60,17 +60,24 @@ Column {
             return "";
         return group.derivedText(parts[6], parts[7], crystal);
     }
-    // Value k of a form (0-2): "undetermined" where the moment does not fix it (index 9 marks them, bit k), else
-    // the value with its s.u.
+    // Value k of a form (0-2): a dash where the moment does not fix it (index 9 marks them, bit k), else the value
+    // with its s.u.
     function formText(parts, k, crystal) {
         if (!parts || parts.length < 6)
             return "";
-        if (parts.length > 9 && (parts[9] & (1 << k)) !== 0)
-            return qsTr("undetermined");
+        if (group.undetermined(parts, k))
+            return "\u2014";
         return group.derivedText(parts[k], parts[k + 3], crystal);
     }
+    function undetermined(parts, k) {
+        return parts.length > 9 && (parts[9] & (1 << k)) !== 0;
+    }
+    // Why an undetermined angle has no value: a zero moment fixes neither angle, one along z no azimuth.
+    function undeterminedTip(parts) {
+        return group.undetermined(parts, 1) ? qsTr("Undetermined: the moment is zero") : qsTr("Undetermined: the moment is along z");
+    }
     // A derived value's tooltip: its s.u. and how it was found, from the fit's covariance (index 8) or propagated
-    // from the components' own s.u. as if they were uncorrelated (relay decision 2026-11-03).
+    // from the components' own s.u. as if they were uncorrelated (edi ADR-0068).
     function suTip(parts, su) {
         if (typeof su !== "number" || !isFinite(su))
             return "";
@@ -349,7 +356,7 @@ Column {
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
                 value: group.formText(formRow.parts, 0, formRow.crystal)
-                ToolTip.text: formRow.parts.length > 3 ? group.suTip(formRow.parts, formRow.parts[3]) : ""
+                ToolTip.text: group.undetermined(formRow.parts, 0) ? group.undeterminedTip(formRow.parts) : formRow.parts.length > 3 ? group.suTip(formRow.parts, formRow.parts[3]) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 0, Number(text))
             }
             TextCell {
@@ -363,7 +370,7 @@ Column {
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
                 value: group.formText(formRow.parts, 1, formRow.crystal)
-                ToolTip.text: formRow.parts.length > 4 ? group.suTip(formRow.parts, formRow.parts[4]) : ""
+                ToolTip.text: group.undetermined(formRow.parts, 1) ? group.undeterminedTip(formRow.parts) : formRow.parts.length > 4 ? group.suTip(formRow.parts, formRow.parts[4]) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 1, Number(text))
             }
             TextCell {
@@ -377,7 +384,7 @@ Column {
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
                 value: group.formText(formRow.parts, 2, formRow.crystal)
-                ToolTip.text: formRow.parts.length > 5 ? group.suTip(formRow.parts, formRow.parts[5]) : ""
+                ToolTip.text: group.undetermined(formRow.parts, 2) ? group.undeterminedTip(formRow.parts) : formRow.parts.length > 5 ? group.suTip(formRow.parts, formRow.parts[5]) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 2, Number(text))
             }
             TextCell {
