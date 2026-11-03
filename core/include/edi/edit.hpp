@@ -363,6 +363,10 @@ class Edit {
     static Edit adp_type(Structure& structure, AtomSite& site, std::string type) {
         return Edit([&structure, &site, type = std::move(type)] { change_adp_type(structure, site, type); });
     }
+    // The propagation vectors, checked as a whole (set_propagation_vectors).
+    static Edit propagation_vectors(Structure& structure, std::vector<std::pair<std::string, std::string>> rows) {
+        return Edit([&structure, rows = std::move(rows)] { set_propagation_vectors(structure, rows); });
+    }
     // Whether a site carries a magnetic moment (edi ADR-0068): marking it adds its moment row, all three
     // components zero; unmarking removes the row.
     static Edit moment_site(Structure& structure, const AtomSite& site, bool magnetic) {

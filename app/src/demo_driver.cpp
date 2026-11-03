@@ -290,6 +290,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Its pattern: the nuclear and the magnetic Bragg tick rows.
     steps_.push_back({"magnetic-05-pattern-ticks",
                       start + open_example("pd-neut-cwl_cosio-d20_2k") + QStringList{"wait-fit", experiment, basic}});
+    // The propagation vectors, and a vector the cell cannot carry refused with its reason.
+    steps_.push_back({"magnetic-06-propagation-vectors",
+                      start + open_example("pd-neut-cwl_cosio-d20_2k")
+                          + QStringList{"wait-fit", structure, basic, "expand:group.parent_propagation_vector",
+                                        "propagationVectors.append"}});
     // The Examples list filtered by the structure tag: only the magnetic examples.
     steps_.push_back({"magnetic-02-examples-filter",
                       start + QStringList{"appBar.tab.project", "sideBar.tab.basic", "examples.property",

@@ -227,6 +227,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Structure/AtomSiteAdpGroup.qml
         qml/Pages/Structure/AtomSiteMomentGroup.qml
         qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
         qml/Pages/Structure/CellGroup.qml
         qml/Pages/Structure/ScatteringLengthsGroup.qml
