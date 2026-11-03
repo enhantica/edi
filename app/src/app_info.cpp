@@ -6494,7 +6494,8 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
         if (!fits[index]) { widths[index] = columns[index]; continue; }
         const bool spreads = std::find(spreadColumns.cbegin(), spreadColumns.cend(), static_cast<double>(index)) != spreadColumns.cend();
         const double text = capped(fitted[index], index, textLimit);
-        widths[index] = capped(std::floor(text * scale + margin + (spreads ? spread : 0)), index, cap);
+        // The cap bounds a column's own text; the spare width a spread column is given comes on top of it, as on main.
+        widths[index] = capped(std::floor(text * scale + margin), index, cap) + (spreads ? std::floor(spread) : 0);
     }
     if (fillerIndex >= 0 && static_cast<std::size_t>(fillerIndex) < count) {
         double used = 0;
