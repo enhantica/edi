@@ -521,6 +521,11 @@ void StructureViewController::draw() {
         shafts.push_back(arrow_part(themed, 0.0, themed.shaft_length, themed.shaft_radius));
         heads.push_back(arrow_part(themed, themed.shaft_length, themed.head_length, themed.head_radius));
     }
+    // The magnetic moments share the arrow meshes; their arrows are placed in the scene (edi ADR-0068).
+    for (const edi::SceneArrow& arrow : drawing_.moments) {
+        shafts.push_back(arrow_part(arrow, 0.0, arrow.shaft_length, arrow.shaft_radius));
+        heads.push_back(arrow_part(arrow, arrow.shaft_length, arrow.head_length, arrow.head_radius));
+    }
     if (triad_shafts_ != nullptr) {
         triad_shafts_->setEntries(shafts);
     }

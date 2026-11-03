@@ -32,6 +32,10 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(bool bonds READ bonds WRITE setBonds NOTIFY bondsChanged)
     Q_PROPERTY(bool cell READ cell WRITE setCell NOTIFY cellChanged)
     Q_PROPERTY(bool axes READ axes WRITE setAxes NOTIFY axesChanged)
+    // Whether the magnetic moments are drawn (`_structure_view.show_moments`), and their arrows' length in
+    // Angstrom per Bohr magneton, an app setting the preferences set (edi ADR-0068).
+    Q_PROPERTY(bool showMoments READ showMoments WRITE setShowMoments NOTIFY showMomentsChanged)
+    Q_PROPERTY(double momentScale READ momentScale WRITE setMomentScale NOTIFY momentScaleChanged)
     // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
 
@@ -56,6 +60,10 @@ class StructureViewOptions : public QObject {
     void setCell(bool shown);
     bool axes() const { return options_.axes; }
     void setAxes(bool shown);
+    bool showMoments() const { return options_.moments; }
+    void setShowMoments(bool shown);
+    double momentScale() const { return options_.moment_scale; }
+    void setMomentScale(double scale);  // above 0
 
     // The atom subset's next state, as diffraction-lib's atoms button: all, asymmetric unit, none; with no
     // atom outside the asymmetric unit, all and none.
@@ -78,6 +86,8 @@ class StructureViewOptions : public QObject {
     void bondsChanged();
     void cellChanged();
     void axesChanged();
+    void showMomentsChanged();
+    void momentScaleChanged();
     // Any option changed: what the views re-present on.
     void changed();
 
@@ -85,6 +95,8 @@ class StructureViewOptions : public QObject {
     template <class T>
     void assign(T& field, T value, void (StructureViewOptions::*notify)());
     edi::SceneOptions options_;
+    // Whether the structure states show_moments, so a structure that does not keeps its bytes.
+    bool moments_declared_ = false;
     OptionListModel* atom_view_options_;
 };
 
