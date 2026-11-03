@@ -48,8 +48,6 @@ excluded:
     unblocked_by: tutorial-runner
   - notebook: pd-neut-xray-cwl_pbso4-d1a-lab.ipynb
     unblocked_by: tutorial-runner
-  - notebook: pd-neut-cwl_cosio-d20_scan.ipynb
-    unblocked_by: sequential-scan-tutorial
   - notebook: pd-neut-cwl_cosio-d20_scan-213f.ipynb
     unblocked_by: sequential-scan-tutorial
   - notebook: pd-xray-cwl_latp-bm01_scan.ipynb
