@@ -436,7 +436,7 @@ Item {
                 row = Ui.find(group, "examples.open." + id);
                 return row !== null && Ui.exposed(row);
             }, 5000, "The magnetic filter exposes the sequential example's real row");
-            for (const tag of ["Fitting", "Sequential", "pd", "neut", "cwl", "Bragg", "Crystal structure", "Magnetic structure"])
+            for (const tag of ["Fitting", "Sequential", "pd", "neut", "cwl", "Bragg", "Crystal", "Magnetic"])
                 verify(row.tagLabels.includes(tag), "The sequential magnetic row carries the " + tag + " chip");
             catalogue.filterProperty = "fittingMode";
             catalogue.filterValue = "sequential";
