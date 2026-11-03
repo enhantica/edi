@@ -118,6 +118,19 @@ def test_magnetic_examples_share_cobalt_displacements_and_exclude_only_dead_cell
     assert directory.is_dir(), 'Each magnetic example delivers a loadable native project'
     model = edi.Project.load(directory)
     model.analysis.calculate()
+    peak = model.experiment.peak
+    sample, detector = peak.asym_fcj_1, peak.asym_fcj_2
+    assert sample.value == detector.value, 'The cobalt example uses equal axial apertures'
+    if name.endswith('_2k'):
+        assert sample.free and not detector.free, 'The single fit frees exactly one axial aperture'
+        sample.value = 0.04
+        model.analysis.calculate()
+        assert detector.value == sample.value, 'The detector aperture follows the fitted sample aperture'
+    else:
+        assert not sample.free and not detector.free, 'The full scan holds both axial apertures fixed'
+        assert sample.value == pytest.approx(0.0595, abs=4 * 0.0009), (
+            'The scan holds the shared aperture within four s.u. of the ADR-0110 fitted width'
+        )
     structure = model.structure
     structure.atom_sites['Co1'].adp_iso.value = 0.42
     model.analysis.calculate()

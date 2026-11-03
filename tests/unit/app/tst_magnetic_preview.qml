@@ -1485,8 +1485,10 @@ TestCase {
         const result = Probe.rows(fit.results.agreement).find(row => row.place >= 0);
         verify(result, "The fit publishes the observed bank's agreement");
         const rwp = Number(result.values[1]);
-        verify(Number.isFinite(rwp) && rwp.toFixed(2) === "4.73",
-               "The fit reaches the owner's 4.73 percent reference minimum: Rwp=" + rwp);
+        const path = Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k");
+        const reference = JSON.parse(SettingsProof.text(path, "expected.json")).quantities.rwp;
+        verify(Number.isFinite(rwp) && Math.abs(rwp / 100 - reference.value) <= reference.value * reference.tol_rel,
+               "The continuous FCJ fit reaches the independent FullProf Rwp interval: Rwp=" + rwp);
     }
     function test_fit_from_zero_moments_reaches_reference_and_logs_start() {
         const path = Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k");
