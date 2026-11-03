@@ -14,8 +14,10 @@ TestCase {
     when: windowShown
     property var appWindow
     property var scratch
+    property var repeatFitPreferences: null
     Component { id: application; Main {} }
     Component { id: preferences; AppPreferencesDialog {} }
+    Component { id: fitPublication; SignalSpy { signalName: "finished" } }
     Component { id: analysisParameters; ParametersGroup { width: 760; y: 60; z: 1000; tableViewportHeight: 500 } }
     Component { id: pattern; PatternChart { width: 1200; height: 800 } }
     function init() {
@@ -28,6 +30,11 @@ TestCase {
     }
     function cleanup() {
         Session.closeProject();
+        if (repeatFitPreferences !== null) {
+            Preferences.engineThreads = repeatFitPreferences.threads;
+            Preferences.showFitResults = repeatFitPreferences.showResults;
+            repeatFitPreferences = null;
+        }
         appWindow.destroy();
     }
     function click(name) { Ui.click(test, Probe, appWindow, name); }
@@ -291,6 +298,29 @@ TestCase {
         verify(Session.openProject(project), "The gate opens a disposable copy of the documented 2.3 K fit");
         tryCompare(Session.project, "calculating", false, 15000, "The example's initial measured pattern finishes");
     }
+    function checkAnalysisRows(table, block, category, variability, transition) {
+        const model = table.sourceModel;
+        function count(text) {
+            const match = /\((\d+)\)\s*$/.exec(text);
+            verify(match !== null, "The active selector publishes its concrete row count");
+            return Number(match[1]);
+        }
+        const scope = [transition, block.displayText, category.displayText, variability.displayText].join(" / ");
+        const promised = count(variability.displayText);
+        compare(count(category.displayText), promised, "The selected category and parameter counts agree: " + scope);
+        if (model.categoryFilter === "")
+            compare(count(block.displayText), promised, "The datablock count agrees when all its categories are selected: " + scope);
+        tryCompare(table, "count", promised, 1000, "The visible table model lists the promised number of parameters: " + scope);
+        const paths = Probe.rows(model).map(row => String(row.path));
+        compare(paths.length, promised, "The filter model preserves every promised row: " + scope);
+        compare(new Set(paths).size, promised, "The active filters never repeat a parameter identity: " + scope);
+        for (let row = 0; row < promised; ++row) {
+            table.positionViewAtIndex(row, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => Ui.rendered(table.itemAtIndex(row)), 500, "Every promised parameter row becomes visible after scrolling: " + scope + " row " + (row + 1));
+            compare(String(table.itemAtIndex(row).path), paths[row], "The rendered row is the actual matching parameter: " + scope);
+        }
+    }
     function test_analysis_filter_counts_match_every_rendered_row() {
         openMagneticFitExample();
         const controls = analysisParameters.createObject(appWindow.contentItem, {project: Session.project});
@@ -306,28 +336,6 @@ TestCase {
             block.activated(blockIndex);
             category.activated(categoryIndex);
             variability.activated(parameterIndex);
-        }
-        function count(text) {
-            const match = /\((\d+)\)\s*$/.exec(text);
-            verify(match !== null, "The active selector publishes its concrete row count");
-            return Number(match[1]);
-        }
-        function checkRows() {
-            const scope = [block.displayText, category.displayText, variability.displayText].join(" / ");
-            const promised = count(variability.displayText);
-            compare(count(category.displayText), promised, "The selected category and parameter counts agree: " + scope);
-            if (model.categoryFilter === "")
-                compare(count(block.displayText), promised, "The datablock count agrees when all its categories are selected: " + scope);
-            tryCompare(table, "count", promised, 1000, "The visible table model lists the promised number of parameters: " + scope);
-            const paths = Probe.rows(model).map(row => String(row.path));
-            compare(paths.length, promised, "The filter model preserves every promised row: " + scope);
-            compare(new Set(paths).size, promised, "The active filters never repeat a parameter identity: " + scope);
-            for (let row = 0; row < promised; ++row) {
-                table.positionViewAtIndex(row, ListView.Contain);
-                table.forceLayout();
-                tryVerify(() => Ui.rendered(table.itemAtIndex(row)), 500, "Every promised parameter row becomes visible after scrolling: " + scope + " row " + (row + 1));
-                compare(String(table.itemAtIndex(row).path), paths[row], "The rendered row is the actual matching parameter: " + scope);
-            }
         }
         const moments = model.categories.indexOf("atom_site_moment");
         verify(moments > 0, "The cobalt fit exposes its magnetic moment category");
@@ -347,7 +355,7 @@ TestCase {
             verify(waitForPolish(table), "The four-row cobalt repro completes its Analysis layout");
             for (let i = 0; i < 4; ++i)
                 verify(Ui.rendered(table.itemAtIndex(i)), "The four cobalt components are visible together without scrolling");
-            checkRows();
+            checkAnalysisRows(table, block, category, variability, "Static census");
             const components = Probe.rows(model).map(row => String(row.rowLabel) + "." + String(row.name)).sort();
             compare(components, expected, "The four rows identify the independent cobalt components");
         }
@@ -361,11 +369,101 @@ TestCase {
                     select(b, c, v);
                     compare(model.datablockFilter, blocks[b], "The datablock selection survives the other filter changes");
                     compare(model.categoryFilter, categories[c], "The category selection survives the parameter filter changes");
-                    checkRows();
+                    checkAnalysisRows(table, block, category, variability, "Static census");
                 }
             }
         }
         controls.destroy();
+    }
+    function test_analysis_filter_counts_survive_repeated_fit_publications_and_tabs() {
+        openMagneticFitExample();
+        repeatFitPreferences = {threads: Preferences.engineThreads, showResults: Preferences.showFitResults};
+        Preferences.engineThreads = 1;
+        Preferences.showFitResults = false;
+        const fit = Session.project.fit;
+        const publication = fitPublication.createObject(appWindow, {target: fit});
+        verify(publication && publication.valid, "The repeat witness observes real fit publications");
+        function analysisPage() {
+            AppState.open(AppState.Page.Analysis);
+            tryVerify(() => {
+                const page = Ui.page(appWindow);
+                return page && page.item && typeof page.item.showMainTab === "function"
+                    && Ui.find(page.item, "parameters.list", true)
+                    && Math.abs(page.mapToItem(appWindow.contentItem, 0, 0).x) < 1;
+            }, 5000, "The real Analysis page returns to the viewport with its Parameters table");
+            return Ui.page(appWindow).item;
+        }
+        function view() {
+            const page = Ui.page(appWindow);
+            const table = Ui.find(page, "parameters.list", true);
+            const block = Ui.find(page, "parameters.datablock", true);
+            const category = Ui.find(page, "parameters.category", true);
+            const variability = Ui.find(page, "parameters.variability", true);
+            verify(table && block && category && variability, "The current Analysis page has the real table and selectors");
+            return {table, block, category, variability, model: table.sourceModel};
+        }
+        function check(transition) {
+            const current = view();
+            checkAnalysisRows(current.table, current.block, current.category, current.variability, transition);
+        }
+        function change(kind, key, transition) {
+            const current = view();
+            const model = current.model;
+            const index = kind === "block" ? model.datablocks.indexOf(key)
+                : kind === "category" ? model.categories.indexOf(key) : key;
+            verify(index >= 0 && index < current[kind].count, "The selected filter option is offered: " + transition);
+            current[kind].activated(index);
+            const selected = kind === "block" ? model.datablockFilter
+                : kind === "category" ? model.categoryFilter : model.variability;
+            compare(selected, key, "The production selector applies the requested filter: " + transition);
+            check(transition);
+        }
+        analysisPage();
+        const blocks = Array.from(view().model.datablocks);
+        const structure = blocks.find(key => key.startsWith("structure:"));
+        const experiment = blocks.find(key => key.startsWith("experiment:"));
+        verify(structure && experiment, "The repeat witness covers both structure and experiment datablocks");
+        change("category", "atom_site_moment", "Initial magnetic category");
+        change("variability", ParameterFilterModel.Free, "Initial free moments");
+        for (let round = 0; round < 3; ++round) {
+            if (round > 0) {
+                const moment = Probe.rows(Session.project.parameters).find(row =>
+                    row.category === "atom_site_moment" && row.free);
+                verify(moment !== undefined, "A subsequent fit can start from a fresh magnetic parameter edit");
+                const start = moment.parameter.value + .02;
+                moment.parameter.value = start;
+                compare(moment.parameter.value, start, "The edited moment reaches the live project before the next fit");
+                tryCompare(Session.project, "calculating", false, 15000, "The edited example finishes recalculating");
+            }
+            const before = publication.count;
+            verify(fit.available, "Each repeat round admits a real fit");
+            fit.start();
+            verify(fit.running, "The fit starts before the page switch");
+            AppState.open(AppState.Page.Experiment);
+            tryVerify(() => publication.count > before && !fit.running, 25000,
+                      "A new fit result is published while Analysis is offscreen");
+            verify(Probe.rows(fit.results.agreement).some(row => row.place >= 0),
+                   "The new publication contains real measured agreement values");
+            const page = analysisPage();
+            check("Round " + (round + 1) + " after publication and returning to Analysis");
+            page.showMainTab(1);
+            tryCompare(page, "mainTabIndex", 1, 1000, "The repeat reaches the Correlations tab");
+            check("Round " + (round + 1) + " after Correlations");
+            page.showMainTab(0);
+            tryCompare(page, "mainTabIndex", 0, 1000, "The repeat returns to the Pattern tab");
+            check("Round " + (round + 1) + " after Pattern");
+            change("block", structure, "Structure datablock");
+            change("category", round % 2 === 0 ? "cell" : "atom_site_moment", "Structure category");
+            change("variability", ParameterFilterModel.Free, "Free structure parameters");
+            change("category", round % 2 === 0 ? "atom_site_moment" : "cell", "Second structure category");
+            change("variability", ParameterFilterModel.All, "All structure parameters");
+            change("block", experiment, "Experiment datablock");
+            change("category", "instrument", "Instrument category");
+            change("variability", ParameterFilterModel.Fixed, "Fixed instrument parameters");
+            change("block", "", "All datablocks");
+        }
+        compare(publication.count, 3, "The filter and tab sequence spans three fresh fit publications");
+        publication.destroy();
     }
     function test_fit_from_zero_moments_reaches_reference_and_logs_start() {
         const path = Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k");
