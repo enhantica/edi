@@ -112,14 +112,18 @@ SideBarGroup {
                 onAccepted: commit()
                 onEditingFinished: commit()
             }
-            // Holds the left column so the moment scale sits below the atom scale.
-            Item {
+            // Where each moment's arrow sits on its atom, left of the moment scale (the owner, 2026-11-03).
+            SelectorField {
+                objectName: "structure.appearance.momentView"
                 visible: momentScale.visible
                 width: grid.fieldWidth
-                height: 1
+                uid: "structure_view.moment_view"
+                options: group.options ? group.options.momentViewOptions : null
+                token: group.options ? group.options.momentView : ""
+                onSelected: token => group.options.momentView = token
             }
-            // The moment arrows' length per Bohr magneton, in the right column below the atom scale (the owner,
-            // 2026-11-03).
+            // The moment arrows' length per Bohr magneton, in the right column below the atom scale, beside the moment
+            // view (the owner, 2026-11-03).
             EaElements.ParamTextField {
                 id: momentScale
 

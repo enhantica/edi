@@ -838,6 +838,7 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             }
             scene.moments.push_back({atom, scene.atoms[atom].centre, mul(vector, options.moment_scale)});
             scene.moment_colours = options.moment_colours;
+            scene.moment_view = options.moment_view;
         }
     }
     if (options.labels) {
@@ -1016,7 +1017,7 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
         arrow.letter_anchor = mul(arrow.direction, length + overhang + style_value("axis.letter.offset") * h);
         drawing.triad.push_back(arrow);
     }
-    // A moment arrow is centred on its atom; its thickness is fixed in Angstrom, so it reads at every zoom
+    // A moment arrow sits on its atom as moment_view says; its thickness is fixed in Angstrom, so it reads at every zoom
     // like the bonds.
     constexpr double kMomentShaftRadius = 0.12;
     constexpr double kMomentHeadRadius = 0.3;
@@ -1038,7 +1039,11 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
                           ? own
                           : Rgb{greyed(own.r), greyed(own.g), greyed(own.b)};
         arrow.direction = divided(moment.vector, length);
-        arrow.origin = sub(moment.centre, mul(moment.vector, 0.5));
+        // Through the atom (centred), from its centre, or from its surface (moment_view).
+        arrow.origin = scene.moment_view == MomentView::FromCentre ? moment.centre
+                       : scene.moment_view == MomentView::FromSurface
+                           ? add(moment.centre, mul(arrow.direction, atom.radius))
+                           : sub(moment.centre, mul(moment.vector, 0.5));
         arrow.head_length = std::min(kMomentHeadShare * length, 0.6);
         arrow.shaft_length = length - arrow.head_length;
         arrow.shaft_radius = kMomentShaftRadius;

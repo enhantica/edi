@@ -37,6 +37,9 @@ enum class AtomSubset : std::uint8_t { All, AsymmetricUnit, None };
 // How the moment arrows are coloured (the owner, 2026-11-03): each in its atom's colour, in that colour
 // greyed so arrows stand apart from the atoms while the types stay distinct, or all in one grey.
 enum class MomentColours : std::uint8_t { Atom, GreyedAtom, Single };
+// Where a moment's arrow sits on its atom (`_structure_view.moment_view`; the owner, 2026-11-03): centred on it, starting
+// at its centre, or starting at its surface, so the visible length is proportional to the moment.
+enum class MomentView : std::uint8_t { ThroughAtom, FromCentre, FromSurface };
 
 // The element tables: data/elements/element-styles.tsv, embedded in the core at build time. 118 rows,
 // H to Og. Parsed once; a malformed row throws std::runtime_error naming it.
@@ -107,6 +110,7 @@ struct SceneOptions {
     bool moments = true;        // `_structure_view.show_moments`
     double moment_scale = 0.75;  // Angstrom of arrow per Bohr magneton (`_structure_view.moment_scale`)
     MomentColours moment_colours = MomentColours::GreyedAtom;  // the app's preference
+    MomentView moment_view = MomentView::ThroughAtom;          // `_structure_view.moment_view`
 };
 
 struct ScenePart {  // one site at a position
@@ -176,6 +180,7 @@ struct StructureScene {
     std::vector<SceneLabel> labels;
     std::vector<SceneMoment> moments;
     MomentColours moment_colours = MomentColours::GreyedAtom;  // as the options asked
+    MomentView moment_view = MomentView::ThroughAtom;          // as the options asked
     std::vector<SceneLegendEntry> legend;
     std::vector<std::string> substituted_elements;  // sorted, once each; "" for parts with no element
     SceneFrame frame;
