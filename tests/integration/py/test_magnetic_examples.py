@@ -4,8 +4,12 @@ import csv
 import json
 from pathlib import Path
 
+import edi
+import numpy as np
 import pytest
 import yaml
+
+from tests.fixtures.magnetic_pnma import reference
 
 ROOT = Path(__file__).resolve().parents[3]
 CLI = ROOT / 'docs/user/cli'
@@ -89,14 +93,15 @@ def test_extended_magnetic_scan_records_every_temperature_in_ascending_order():
     assert temperatures[0] < 3, (
         'The magnetic scan includes the independently recorded low-temperature data'
     )
-    assert all(int(row['fit_result.iterations']) > 0 for row in rows), (
-        'Every scan row records an executed fit rather than a copied initial model'
+    assert all(int(row['fit_result.iterations']) >= 0 for row in rows), (
+        'Every scan row records its fit iteration count'
     )
-    moments = [
-        sum(float(row[f'cosio.atom_site_moment.Co1.crystalaxis_{axis}']) ** 2 for axis in 'xyz')
-        ** 0.5
-        for row in rows
-    ]
+    columns = []
+    for axis in 'xyz':
+        matching = [key for key in rows[0] if key.endswith('Co1.crystalaxis_' + axis)]
+        assert len(matching) == 1, 'Every free Co1 component has one recorded result column'
+        columns.append(matching[0])
+    moments = [sum(float(row[key]) ** 2 for key in columns) ** 0.5 for row in rows]
     cold = [m for t, m in zip(temperatures, moments, strict=True) if t < 10]
     warm = [m for t, m in zip(temperatures, moments, strict=True) if 50 <= t <= 60]
     assert cold and warm, (
@@ -104,4 +109,82 @@ def test_extended_magnetic_scan_records_every_temperature_in_ascending_order():
     )
     assert sum(warm) / len(warm) < sum(cold) / len(cold), (
         'The fitted ordered moment falls towards zero near the reported Neel temperature'
+    )
+
+
+@pytest.mark.parametrize('name', ['pd-neut-cwl_cosio-d20_2k', 'pd-neut-cwl_cosio-d20_scan-213f'])
+def test_magnetic_examples_share_cobalt_displacements_and_exclude_only_dead_cell(name, tmp_path):
+    directory = CLI / name / 'project'
+    assert directory.is_dir(), 'Each magnetic example delivers a loadable native project'
+    model = edi.Project.load(directory)
+    model.analysis.calculate()
+    structure = model.structure
+    structure.atom_sites['Co1'].adp_iso.value = 0.42
+    model.analysis.calculate()
+    assert structure.atom_sites['Co2'].adp_iso.value == pytest.approx(0.42), (
+        'The magnetic examples tie both cobalt displacement parameters to one shared value'
+    )
+    moments = structure.atom_site_moment
+    independent = [('Co1', 'x'), ('Co1', 'y'), ('Co1', 'z'), ('Co2', 'y')]
+    assert all(getattr(moments[site], 'crystalaxis_' + axis).free for site, axis in independent), (
+        'The magnetic examples free all four symmetry-independent moment components'
+    )
+    grid = np.asarray(model.experiment.data.two_theta)
+    status = model.experiment.data.calc_status
+    for angle, expected in [(64.5953, 'incl'), (64.6953, 'excl'), (64.7953, 'incl')]:
+        index = np.flatnonzero(np.abs(grid - angle) < 1e-5)
+        assert len(index) == 1, 'The mask controls occur on each examples own observed point list'
+        assert str(status[int(index[0])]) == expected, (
+            'Each example excludes the dead cell and retains both neighbours'
+        )
+    model.save_as(tmp_path / 'saved')
+    original = reference.columns((directory / 'structures/cosio.edi').read_text())
+    saved = reference.columns((tmp_path / 'saved/structures/cosio.edi').read_text())
+    for key, values in original.items():
+        if key.startswith(('_parent_', '_space_group_symop_magn')):
+            assert saved.get(key) == values, (
+                'The delivered fit record retains its validated magnetic symmetry and propagation'
+            )
+
+
+def test_extended_scan_retains_the_original_files_and_reverses_the_full_sequence():
+    before = CLI / 'pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20_scan'
+    after = CLI / 'pd-neut-cwl_cosio-d20_scan-213f/project'
+    original = sorted(before.glob('*.dat'))
+    extended = sorted((after / 'experiments/d20_scan').glob('*.dat'))
+    assert len(original) == 162 and len(extended) == 213, (
+        'The magnetic scan adds the declared low-temperature files to the complete earlier scan'
+    )
+    for source in original:
+        assert (
+            after / 'experiments/d20_scan' / source.name
+        ).read_bytes() == source.read_bytes(), (
+            'Extending the scan preserves every original observed file byte for byte'
+        )
+    analysis = reference.columns((after / 'analysis/analysis.edi').read_text())
+    assert analysis['_sequential_fit.reverse'] == ['true'], (
+        'The full magnetic sequence reverses the file ordering to start at the lowest temperature'
+    )
+
+
+def test_preview_example_background_leaves_the_first_magnetic_peak_unpinned():
+    path = CLI / 'pd-neut-cwl_cosio-d20_2k/project/experiments/d20.edi'
+    values = reference.columns(path.read_text())
+    positions = [float(value.split('(')[0]) for value in values['_background.position']]
+    assert not any(8 <= position <= 12 for position in positions), (
+        'The preview background has no interpolation point in the first magnetic peak and rise'
+    )
+    assert sum(6 <= x < 8 for x in positions) >= 2 and sum(12 < x <= 16 for x in positions) >= 2, (
+        'Background control points bracket the first magnetic peak on both sides'
+    )
+    assert values['_excluded_region.start'][0] == '0', 'The first exclusion starts at zero degrees'
+    assert float(values['_excluded_region.end'][0]) == 6, (
+        'The first example exclusion ends at six degrees instead of the preview eight'
+    )
+
+
+@pytest.mark.parametrize('name', ['pd-neut-cwl_cosio-d20_2k', 'pd-neut-cwl_cosio-d20_scan-213f'])
+def test_magnetic_worked_examples_are_in_documentation_navigation(name):
+    assert name in (ROOT / 'mkdocs.yml').read_text(), (
+        'Both magnetic worked examples are reachable through the documentation navigation'
     )

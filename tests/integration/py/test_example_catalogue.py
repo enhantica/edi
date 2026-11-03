@@ -199,6 +199,9 @@ def test_magnetic_structure_tag_registry_defines_labels_icons_and_tones(value, l
     assert tag.get('meaning') and tag.get('icon') and tag.get('glyph'), (
         'Each structure chip has a meaning and a visible icon'
     )
+    assert tag['icon'] == {'crystal': 'layer-group', 'magnetic': 'magnet'}[value], (
+        'Structure chips use the same structure and magnet symbols as the Structure page'
+    )
     assert tag.get('tone') in registry['tones'], 'Structure chips use a registered colour tone'
 
 
