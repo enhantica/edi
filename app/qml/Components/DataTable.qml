@@ -357,9 +357,24 @@ EaComponents.ListView {
             Qt.callLater(styleCells);
         }
     }
-    onModelRevisionChanged: refit()
-    onCountChanged: refit()
+    onModelRevisionChanged: {
+        refit();
+        Qt.callLater(repairRows);
+    }
+    onCountChanged: {
+        refit();
+        Qt.callLater(repairRows);
+    }
+    onHeightChanged: Qt.callLater(repairRows)
     Component.onCompleted: refit()
+    // A view whose rows were all replaced before it laid out again could stop filling and show one stale row of what
+    // its count promised (the owner, 2026-11-03): once it has laid out, such a view is rebuilt (ViewRows).
+    function repairRows() {
+        if (gone || !visible || count === 0)
+            return;
+        forceLayout();
+        ViewRows.refill(table);
+    }
     Connections {
         target: table.contentItem
         function onChildrenChanged() {
