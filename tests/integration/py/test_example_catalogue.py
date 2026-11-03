@@ -36,10 +36,17 @@ def app_cases(root=ROOT):
     assert not declared, (
         'Every user example now has its catalogue form; app-only entries are retired'
     )
-    assert selected(root) == SELECTED, (
-        'App-only entries must leave the independent catalogue membership and order intact'
+    actual = selected(root)
+    magnetic = ['pd-neut-cwl_cosio-d20_2k']
+    if 'pd-neut-cwl_cosio-d20_scan-213f' in actual:
+        magnetic.append('pd-neut-cwl_cosio-d20_scan-213f')
+    assert set(actual) == set(SELECTED + magnetic), (
+        'The catalogue adds the magnetic examples to the independently selected cases'
     )
-    return SELECTED
+    assert [name for name in actual if name not in magnetic] == SELECTED, (
+        'Adding magnetic examples preserves the relative order of existing examples'
+    )
+    return actual
 
 
 def page_cases(path):
@@ -75,7 +82,7 @@ def test_selected_cases_and_order_match_the_independent_owner_selection(surface)
         actual = list(json.loads((ROOT / 'app/examples/metadata.json').read_text())['examples'])
     else:
         actual = page_cases((CLI if surface == 'cli-page' else TUTORIALS) / 'index.md')
-    expected = app_cases() if surface == 'metadata' else SELECTED
+    expected = app_cases() if surface in {'registry', 'metadata'} else SELECTED
     assert actual == expected, (
         'Every catalogue and the app retain the same owner-selected cases in order'
     )
@@ -178,3 +185,37 @@ def test_committed_data_has_a_source_and_content_digest(case):
             assert (
                 path.name in sources and hashlib.sha256(path.read_bytes()).hexdigest() in sources
             ), 'Every committed dataset must be named with its actual content digest'
+
+
+@pytest.mark.parametrize(
+    ('value', 'label'), [('crystal', 'Crystal structure'), ('magnetic', 'Magnetic structure')]
+)
+def test_magnetic_structure_tag_registry_defines_labels_icons_and_tones(value, label):
+    registry = json.loads((ROOT / 'app/examples/tags.json').read_text())
+    family = registry['tags'].get('structure', {})
+    assert value in family, 'The example tag registry declares both structure values'
+    tag = family[value]
+    assert tag['label'] == label, 'Structure chips use the owner-requested labels'
+    assert tag.get('meaning') and tag.get('icon') and tag.get('glyph'), (
+        'Each structure chip has a meaning and a visible icon'
+    )
+    assert tag.get('tone') in registry['tones'], 'Structure chips use a registered colour tone'
+
+
+def test_magnetic_structure_membership_and_filter_counts_have_independent_expectations():
+    examples = json.loads((ROOT / 'app/examples/metadata.json').read_text())['examples']
+    known = {'pd-neut-cwl_cosio-d20_2k', 'pd-neut-cwl_cosio-d20_scan-213f'}
+    assert 'pd-neut-cwl_cosio-d20_2k' in examples, (
+        'The low-temperature magnetic example appears in Examples'
+    )
+    for name, row in examples.items():
+        expected = {'crystal', 'magnetic'} if name in known else {'crystal'}
+        assert set(row['values'].get('structure', [])) == expected, (
+            'Every example is crystal and each magnetic example carries both structure tags'
+        )
+    for name in known & examples.keys():
+        row = examples[name]
+        assert all(
+            row.get(field)
+            for field in ['samples', 'origin', 'detail', 'values', 'sources', 'searchAliases']
+        ), 'Magnetic Examples entries provide the same complete descriptive metadata'
