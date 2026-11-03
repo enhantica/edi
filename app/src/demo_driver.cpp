@@ -186,7 +186,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                       ? QStringList{"theme:light"}
                                       : QStringList{};
         const QString group = crystal ? QStringLiteral("group.extinction") : QStringLiteral("group.peak");
-        steps_.push_back({QStringLiteral("ex-") + id, theme + start + open_example(id) + QStringList{experiment, basic, group}});
+        // A scan's Experiments group lists its datasets, which can push the group below the sidebar's fold.
+        steps_.push_back({QStringLiteral("ex-") + id,
+                          theme + start + open_example(id) + QStringList{experiment, basic, "uncover:" + group, group}});
     }
     // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
     // the ADP atom view with its probability, and the space-group name picker with its search field.
@@ -298,7 +300,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The Examples list filtered by the structure tag: only the magnetic examples.
     steps_.push_back({"magnetic-02-examples-filter",
                       start + QStringList{"appBar.tab.project", "sideBar.tab.basic", "examples.property",
-                                          "choose:Structure", "examples.value", "choose:Magnetic structure (1)"}});
+                                          "choose:Structure", "examples.value", "choose:Magnetic structure (2)"}});
     // A scan's datasets as experiments: the bundled 162-file example, before any scan has been fitted.
     steps_.push_back({"t16-50-scan-experiment", start + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
                                                     + QStringList{experiment, basic, "expand:group.experiments"}});
@@ -1433,6 +1435,14 @@ void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int fi
 bool DemoDriver::perform(const QString& action) {
     if (documentation_) {
         if (auto handled = documentationAction(action)) return *handled;
+    }
+    // `uncover:` reveals a control only when none of it can be seen, so a page where it shows is captured as it is.
+    if (action.startsWith(QLatin1String("uncover:"))) {
+        QQuickItem* item = find(action.mid(8), false);
+        if (item != nullptr && on_screen(item)) {
+            return true;
+        }
+        return perform(QStringLiteral("reveal:") + action.mid(8));
     }
     // Scrolls the view a control is in until the control shows (a sidebar column longer than the window).
     if (action.startsWith(QLatin1String("reveal:"))) {
