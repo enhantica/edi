@@ -57,6 +57,7 @@ lists each one with what it waits for.
 | tutorial | what it shows |
 | --- | --- |
 | [Sequential fit: Co₂SiO₄, D20 temperature scan](pd-neut-cwl_cosio-d20_scan.ipynb) | Co₂SiO₄ [Pnma] · D20 @ ILL |
+| [Sequential magnetic fit: Co₂SiO₄, D20 scan from 2.3 K](pd-neut-cwl_cosio-d20_scan-213f.ipynb) | Co₂SiO₄ [Pnma.1] · D20 @ ILL |
 | [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan.ipynb) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF |
 
 ## Single crystal

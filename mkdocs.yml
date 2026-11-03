@@ -160,6 +160,7 @@ nav:
           - user/cli/pd-xray-cwl_lam7o3-p021/index.md
           - user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md
           - user/cli/pd-neut-cwl_cosio-d20_scan/index.md
+          - user/cli/pd-neut-cwl_cosio-d20_scan-213f/index.md
           - user/cli/pd-xray-cwl_latp-bm01_scan/index.md
           - user/cli/sc-neut-cwl_tb2ti2o7-heidi/index.md
           - user/cli/sc-neut-cwl_pr2nio4-5c2/index.md
@@ -197,6 +198,7 @@ nav:
           - user/tutorials/pd-xray-cwl_lam7o3-p021.ipynb
           - user/tutorials/pd-neut-xray-cwl_pbso4-d1a-lab.ipynb
           - user/tutorials/pd-neut-cwl_cosio-d20_scan.ipynb
+          - user/tutorials/pd-neut-cwl_cosio-d20_scan-213f.ipynb
           - user/tutorials/pd-xray-cwl_latp-bm01_scan.ipynb
           - user/tutorials/sc-neut-cwl_tb2ti2o7-heidi.ipynb
           - user/tutorials/sc-neut-cwl_pr2nio4-5c2.ipynb
