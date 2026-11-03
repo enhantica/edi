@@ -21,6 +21,7 @@ import edi.app
 Column {
     id: group
 
+    objectName: "background.rows"
     property ExperimentViewModel experiment: null
     readonly property BackgroundListModel points: experiment ? experiment.background : null
     readonly property BackgroundTermListModel terms: experiment ? experiment.backgroundTerms : null

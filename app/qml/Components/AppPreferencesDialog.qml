@@ -403,25 +403,29 @@ AppDialog {
             }
         }
 
-        // Develop, as the base's
+        // Develop, as the base's. The run log goes to the terminal and to a file of each run (edi ADR-0062).
         RowGrid {
-            RowLabel {
-                enabled: false
-                text: qsTr("Logging to") + ":"
-            }
-            RowBox {
-                enabled: false
-                model: ["Disabled", "Terminal", "File"]
-                currentIndex: 1
-            }
-
             RowLabel {
                 text: qsTr("Logging level") + ":"
             }
             RowBox {
+                objectName: "preferences.loggingLevel"
                 model: ["Debug", "Info", "Error", "Disabled"]
-                currentIndex: model.indexOf(EaGlobals.Vars.loggingLevel)
-                onActivated: EaGlobals.Vars.loggingLevel = currentValue
+                currentIndex: model.indexOf(Preferences.loggingLevel)
+                onActivated: Preferences.loggingLevel = currentValue
+            }
+
+            // Help and feedback's service (edi ADR-0063): empty keeps Send off.
+            RowLabel {
+                text: qsTr("Feedback address") + ":"
+            }
+            EaElements.TextField {
+                objectName: "preferences.feedbackEndpoint"
+                width: dialog.controlWidth
+                horizontalAlignment: TextInput.AlignLeft
+                placeholderText: qsTr("Not set up")
+                text: Preferences.feedbackEndpoint
+                onEditingFinished: Preferences.feedbackEndpoint = text.trim()
             }
 
             // The engine's threads for every fill: Auto (the engine's policy) or a count, saved per machine.

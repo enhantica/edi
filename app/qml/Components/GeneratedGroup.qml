@@ -183,6 +183,7 @@ Column {
                                     horizontalAlignment: Text.AlignHCenter
                                     accepts: modelData.kind === "number" ? "number" : "text"
                                     uid: isNumber ? `${group.categoryId}.${modelData.name}` : ""
+                                    displayed: category.output
                                     value: isNumber ? Number(cellText) : cellText
                                     readOnly: category.output || group.source === null || group.source.file === ""
                                     onCommitted: text => group.apply(row.index, modelData.name, text)

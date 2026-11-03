@@ -1,0 +1,16 @@
+/* The theme's min-content child sizing collapses percentage-constrained SVGs in WebKit.
+   Let the outer math block scroll, with one intrinsic-width equation inside it. */
+.md-typeset div.arithmatex {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.md-typeset div.arithmatex > mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  padding-block: .2rem;
+}
+.md-typeset mjx-container[jax="SVG"] > svg {
+  max-width: none;
+}

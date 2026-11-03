@@ -18,7 +18,7 @@ def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeyp
             'sourceModel: group.project ? group.project.experiments : null',
             'sourceModel: null',
         ),
-        'number-width': ('columnWidths: [numberColumnWidth,', 'columnWidths: [0,'),
+        'number-width': ('columns: [numberColumnWidth,', 'columns: [0,'),
         'number-label': (
             'header: EaComponents.ListViewHeader {\n                EaComponents.ListViewLabel {',
             (

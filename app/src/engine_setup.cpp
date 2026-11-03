@@ -350,6 +350,8 @@ void use_design_font() {
     }
 }
 
+QString fresh_settings_dir() { return fresh_config_dir(); }
+
 void use_fresh_settings() {
     static QTemporaryDir dir;  // removed at exit
     // A directory that could not be created has an empty path, which configure_engine() would read as

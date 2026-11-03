@@ -14,7 +14,7 @@ import yaml
 from tests.fixtures.fast_ci.generate import run_record
 from tests.fixtures.fast_ci.policy import app_build_sites
 from tests.fixtures.fast_ci.processes import process_guard, stop_observer_tree
-from tests.fixtures.fast_ci.workflow import artifact_routes, timing_route
+from tests.fixtures.fast_ci.workflow import APP_CACHE_PATHS, artifact_routes, timing_route
 from tests.system.py.test_latest_fit_uncertainty import vehicle
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -244,7 +244,17 @@ def test_system_jobs_restore_the_app_artifact_instead_of_building_it(tmp_path):
 
 
 @pytest.mark.parametrize(
-    'defect', ['producer-run', 'consumer-run', 'fallback', 'miss', 'payload', 'optional']
+    'defect',
+    [
+        'producer-run',
+        'consumer-run',
+        'producer-platform',
+        'consumer-platform',
+        'fallback',
+        'miss',
+        'payload',
+        'optional',
+    ],
 )
 def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_path, defect):
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
@@ -263,6 +273,9 @@ def test_normal_app_cache_reuse_refuses_cross_run_and_unenforced_transfers(tmp_p
     if defect.endswith('-run'):
         target = producer if defect == 'producer-run' else consumer
         target['with']['key'] = 'edi-app-${{ matrix.platform }}-main'
+    elif defect.endswith('-platform'):
+        target = producer if defect == 'producer-platform' else consumer
+        target['with']['key'] = 'edi-app-fixed-platform-${{ github.run_id }}'
     elif defect == 'fallback':
         consumer['with']['restore-keys'] = 'edi-app-${{ matrix.platform }}-'
     elif defect == 'miss':
@@ -291,6 +304,7 @@ def app_cache_step(workflow, role):
     [
         'missing-app',
         'missing-runner',
+        'missing-observer',
         'extra-file',
         'duplicate',
         'empty',
@@ -303,10 +317,15 @@ def test_app_cache_payload_rejects_missing_duplicate_extra_or_malformed_paths(
 ):
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
     artifact_routes(workflow, tmp_path / 'valid')
-    paths = ['build/app/app/edi_app', 'build/app/app/edi_app_tests']
+    paths = list(APP_CACHE_PATHS)
     payloads = {
-        'missing-app': [paths[1]],
-        'missing-runner': [paths[0]],
+        'missing-app': ['\n'.join(path for path in paths if path != 'build/app/app/edi_app')],
+        'missing-runner': [
+            '\n'.join(path for path in paths if path != 'build/app/app/edi_app_tests')
+        ],
+        'missing-observer': [
+            '\n'.join(path for path in paths if path != 'build/tutorial-transactions')
+        ],
         'extra-file': ['\n'.join([*paths, 'build/app/app/edi_imgdiff'])],
         'duplicate': ['\n'.join([*paths, path]) for path in paths],
         'empty': [''],

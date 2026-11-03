@@ -1,0 +1,788 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "joint-experiment-before"
+        },
+        {
+            "action": "theme:light",
+            "scene": "joint-experiment-before"
+        },
+        {
+            "action": "home.start",
+            "scene": "joint-experiment-before"
+        },
+        {
+            "action": "appBar.tab.project",
+            "scene": "joint-experiment-before"
+        },
+        {
+            "action": "open-cli-project:pd-neut-xray-cwl_pbso4-d1a-lab",
+            "scene": "joint-experiment-before"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "joint-experiment-before"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "joint-experiment-before"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-experiment-before"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-run"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-run"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "joint-run"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "joint-run"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "joint-run"
+        },
+        {
+            "action": "appBar.tab.project",
+            "scene": "joint-project-basic"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.basic",
+            "scene": "joint-project-basic"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-project-basic"
+        },
+        {
+            "action": "appBar.tab.project",
+            "scene": "joint-project-extras"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.extras",
+            "scene": "joint-project-extras"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-project-extras"
+        },
+        {
+            "action": "appBar.tab.project",
+            "scene": "joint-project-text"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.text",
+            "scene": "joint-project-text"
+        },
+        {
+            "action": "sideBar.tab.text",
+            "scene": "joint-project-text"
+        },
+        {
+            "action": "appBar.tab.project",
+            "scene": "joint-project-settings"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.settings",
+            "scene": "joint-project-settings"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "joint-structure-basic"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.basic",
+            "scene": "joint-structure-basic"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-structure-basic"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "joint-structure-extras"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.extras",
+            "scene": "joint-structure-extras"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-structure-extras"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "joint-structure-text"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.text",
+            "scene": "joint-structure-text"
+        },
+        {
+            "action": "sideBar.tab.text",
+            "scene": "joint-structure-text"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "joint-structure-settings"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.settings",
+            "scene": "joint-structure-settings"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "joint-experiment-basic"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.basic",
+            "scene": "joint-experiment-basic"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-experiment-basic"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "joint-experiment-extras"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.extras",
+            "scene": "joint-experiment-extras"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-experiment-extras"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "joint-experiment-text"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.text",
+            "scene": "joint-experiment-text"
+        },
+        {
+            "action": "sideBar.tab.text",
+            "scene": "joint-experiment-text"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "joint-experiment-settings"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.settings",
+            "scene": "joint-experiment-settings"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-analysis-basic"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.basic",
+            "scene": "joint-analysis-basic"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-analysis-basic"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-analysis-extras"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.extras",
+            "scene": "joint-analysis-extras"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-analysis-extras"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-analysis-text"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.text",
+            "scene": "joint-analysis-text"
+        },
+        {
+            "action": "sideBar.tab.text",
+            "scene": "joint-analysis-text"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-analysis-settings"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.settings",
+            "scene": "joint-analysis-settings"
+        },
+        {
+            "action": "sideBar.tab.settings",
+            "scene": "joint-analysis-settings"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "joint-report-basic"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.basic",
+            "scene": "joint-report-basic"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-report-basic"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "joint-report-extras"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.extras",
+            "scene": "joint-report-extras"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "joint-report-text"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.text",
+            "scene": "joint-report-text"
+        },
+        {
+            "action": "sideBar.tab.text",
+            "scene": "joint-report-text"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "joint-report-settings"
+        },
+        {
+            "action": "if-enabled:sideBar.tab.settings",
+            "scene": "joint-report-settings"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-mode"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-mode"
+        },
+        {
+            "action": "reveal:group.fitting_mode",
+            "scene": "joint-mode"
+        },
+        {
+            "action": "expand:group.fitting_mode",
+            "scene": "joint-mode"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-weights"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-weights"
+        },
+        {
+            "action": "reveal:group.joint_fit",
+            "scene": "joint-weights"
+        },
+        {
+            "action": "expand:group.joint_fit",
+            "scene": "joint-weights"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-result"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-result"
+        },
+        {
+            "action": "reveal:group.fit_result",
+            "scene": "joint-result"
+        },
+        {
+            "action": "expand:group.fit_result",
+            "scene": "joint-result"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-experiment-results"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-experiment-results"
+        },
+        {
+            "action": "reveal:group.fit_result_bank",
+            "scene": "joint-experiment-results"
+        },
+        {
+            "action": "expand:group.fit_result_bank",
+            "scene": "joint-experiment-results"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-structure-results"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "joint-structure-results"
+        },
+        {
+            "action": "reveal:group.fit_result_phase",
+            "scene": "joint-structure-results"
+        },
+        {
+            "action": "expand:group.fit_result_phase",
+            "scene": "joint-structure-results"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "joint-experiment-stacked"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-experiment-stacked"
+        },
+        {
+            "action": "mainArea.experiment.tab.stacked",
+            "scene": "joint-experiment-stacked"
+        },
+        {
+            "action": "wait-scan:stacked",
+            "scene": "joint-experiment-stacked"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "joint-experiment-map"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-experiment-map"
+        },
+        {
+            "action": "mainArea.experiment.tab.map",
+            "scene": "joint-experiment-map"
+        },
+        {
+            "action": "wait-scan:map",
+            "scene": "joint-experiment-map"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-analysis-stacked"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-analysis-stacked"
+        },
+        {
+            "action": "mainArea.analysis.tab.stacked",
+            "scene": "joint-analysis-stacked"
+        },
+        {
+            "action": "wait-scan:stacked",
+            "scene": "joint-analysis-stacked"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-analysis-map"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "joint-analysis-map"
+        },
+        {
+            "action": "mainArea.analysis.tab.map",
+            "scene": "joint-analysis-map"
+        },
+        {
+            "action": "wait-scan:map",
+            "scene": "joint-analysis-map"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "joint-correlations"
+        },
+        {
+            "action": "mainArea.analysis.tab.correlations",
+            "scene": "joint-correlations"
+        }
+    ],
+    "binary_sha256": "60c260e6b4fa8eeaed4cb06aaa6a9dd09e7dafaf55e9d40daaa587effd3c6b8c",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "17f359c213950f1f635d83d1a22a465491101031b51a0e79e72297d5d7e58d4e"
+        },
+        {
+            "file": "inputs/experiments/lab.edi",
+            "sha256": "03612d4eb40d09e8e223e85f2f1f139aa558bca595a93efac4daf6bf08b8525e"
+        }
+    ],
+    "error": "",
+    "example": "pd-neut-xray-cwl_pbso4-d1a-lab",
+    "fixture": {
+        "detail": "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly",
+        "id": "pd-neut-xray-cwl_pbso4-d1a-lab",
+        "origin": "D1A @ ILL and laboratory X-ray",
+        "samples": [
+            "PbSO₄ [Pnma]"
+        ],
+        "searchAliases": [
+            "pd-neut-xray-cwl_pbso4-d1a-lab",
+            "PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray",
+            "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly"
+        ],
+        "sources": [
+            "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/project.edi",
+            "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/analysis/analysis.edi",
+            "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/d1a.edi",
+            "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/lab.edi",
+            "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/structures/pbso4.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "",
+                "ILL"
+            ],
+            "fittingMode": [
+                "joint"
+            ],
+            "instruments": [
+                "",
+                "D1A"
+            ],
+            "polarisation": [
+                "__not_applicable__",
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron",
+                "xray"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "powder"
+            ],
+            "scatteringType": [
+                "bragg"
+            ]
+        }
+    },
+    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/d1a.edi",
+            "sha256": "c406a2d1db09164700276a9d4f788ae4f313e0b3c8b49a2efdd5b9d99070a87e"
+        },
+        "structure": {
+            "file": "inputs/structures/pbso4.edi",
+            "sha256": "24770242effa8a4d410836f2cef855fc6454d84e5f3cd2d2bd7ab760f21b3ba5"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Select an experiment or dataset",
+            "id": "joint-experiment-before",
+            "image": "joint-experiment-before.png",
+            "metadata": "joint-experiment-before.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's project controls",
+            "id": "joint-project-basic",
+            "image": "joint-project-basic.png",
+            "metadata": "joint-project-basic.json",
+            "page": "project",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's project controls",
+            "id": "joint-project-extras",
+            "image": "joint-project-extras.png",
+            "metadata": "joint-project-extras.json",
+            "page": "project",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's project controls",
+            "id": "joint-project-text",
+            "image": "joint-project-text.png",
+            "metadata": "joint-project-text.json",
+            "page": "project",
+            "sidebar": "Text",
+            "status": "captured"
+        },
+        {
+            "id": "joint-project-settings",
+            "page": "project",
+            "reason": "sidebar tab is disabled",
+            "sidebar": "Settings",
+            "status": "skipped"
+        },
+        {
+            "description": "Inspect the project's structure controls",
+            "id": "joint-structure-basic",
+            "image": "joint-structure-basic.png",
+            "metadata": "joint-structure-basic.json",
+            "page": "structure",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's structure controls",
+            "id": "joint-structure-extras",
+            "image": "joint-structure-extras.png",
+            "metadata": "joint-structure-extras.json",
+            "page": "structure",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's structure controls",
+            "id": "joint-structure-text",
+            "image": "joint-structure-text.png",
+            "metadata": "joint-structure-text.json",
+            "page": "structure",
+            "sidebar": "Text",
+            "status": "captured"
+        },
+        {
+            "id": "joint-structure-settings",
+            "page": "structure",
+            "reason": "sidebar tab is disabled",
+            "sidebar": "Settings",
+            "status": "skipped"
+        },
+        {
+            "description": "Inspect the project's experiment controls",
+            "id": "joint-experiment-basic",
+            "image": "joint-experiment-basic.png",
+            "metadata": "joint-experiment-basic.json",
+            "page": "experiment",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's experiment controls",
+            "id": "joint-experiment-extras",
+            "image": "joint-experiment-extras.png",
+            "metadata": "joint-experiment-extras.json",
+            "page": "experiment",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's experiment controls",
+            "id": "joint-experiment-text",
+            "image": "joint-experiment-text.png",
+            "metadata": "joint-experiment-text.json",
+            "page": "experiment",
+            "sidebar": "Text",
+            "status": "captured"
+        },
+        {
+            "id": "joint-experiment-settings",
+            "page": "experiment",
+            "reason": "sidebar tab is disabled",
+            "sidebar": "Settings",
+            "status": "skipped"
+        },
+        {
+            "description": "Inspect the project's analysis controls",
+            "id": "joint-analysis-basic",
+            "image": "joint-analysis-basic.png",
+            "metadata": "joint-analysis-basic.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's analysis controls",
+            "id": "joint-analysis-extras",
+            "image": "joint-analysis-extras.png",
+            "metadata": "joint-analysis-extras.json",
+            "page": "analysis",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's analysis controls",
+            "id": "joint-analysis-text",
+            "image": "joint-analysis-text.png",
+            "metadata": "joint-analysis-text.json",
+            "page": "analysis",
+            "sidebar": "Text",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's analysis controls",
+            "id": "joint-analysis-settings",
+            "image": "joint-analysis-settings.png",
+            "metadata": "joint-analysis-settings.json",
+            "page": "analysis",
+            "sidebar": "Settings",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the project's report controls",
+            "id": "joint-report-basic",
+            "image": "joint-report-basic.png",
+            "metadata": "joint-report-basic.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "id": "joint-report-extras",
+            "page": "report",
+            "reason": "sidebar tab is disabled",
+            "sidebar": "Extra",
+            "status": "skipped"
+        },
+        {
+            "description": "Inspect the project's report controls",
+            "id": "joint-report-text",
+            "image": "joint-report-text.png",
+            "metadata": "joint-report-text.json",
+            "page": "report",
+            "sidebar": "Text",
+            "status": "captured"
+        },
+        {
+            "id": "joint-report-settings",
+            "page": "report",
+            "reason": "sidebar tab is disabled",
+            "sidebar": "Settings",
+            "status": "skipped"
+        },
+        {
+            "description": "Inspect joint fitting for the project's experiments",
+            "id": "joint-mode",
+            "image": "joint-mode.png",
+            "metadata": "joint-mode.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Set the relative weights of the experiments in the joint fit",
+            "id": "joint-weights",
+            "image": "joint-weights.png",
+            "metadata": "joint-weights.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the overall outcome and statistics of the completed fit",
+            "id": "joint-result",
+            "image": "joint-result.png",
+            "metadata": "joint-result.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Compare fit statistics for the individual experiments",
+            "id": "joint-experiment-results",
+            "image": "joint-experiment-results.png",
+            "metadata": "joint-experiment-results.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the structure contributions recorded for each experiment",
+            "id": "joint-structure-results",
+            "image": "joint-structure-results.png",
+            "metadata": "joint-structure-results.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the scan in the stacked view",
+            "id": "joint-experiment-stacked",
+            "image": "joint-experiment-stacked.png",
+            "metadata": "joint-experiment-stacked.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the scan in the map view",
+            "id": "joint-experiment-map",
+            "image": "joint-experiment-map.png",
+            "metadata": "joint-experiment-map.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the scan in the stacked view",
+            "id": "joint-analysis-stacked",
+            "image": "joint-analysis-stacked.png",
+            "metadata": "joint-analysis-stacked.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the scan in the map view",
+            "id": "joint-analysis-map",
+            "image": "joint-analysis-map.png",
+            "metadata": "joint-analysis-map.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect correlations for the selected measurement",
+            "id": "joint-correlations",
+            "image": "joint-correlations.png",
+            "metadata": "joint-correlations.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
+    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "status": "complete",
+    "workflow": "reference"
+}

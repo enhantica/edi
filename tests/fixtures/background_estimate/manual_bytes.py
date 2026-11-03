@@ -11,6 +11,8 @@ from pathlib import Path
 
 from tests.fixtures.c34_t28_baseline import generate_bytes as legacy
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.metadata_transition.source_bytes import previous_content
+from tests.fixtures.project_categories.historical_bytes import prior_digest
 from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 
 HERE = Path(__file__).resolve().parent
@@ -54,12 +56,21 @@ def adapted_pin(expected, source):
 
 
 def require_input(source, before, after):
-    require_bytes(original_tokens((source / EXPERIMENT).read_bytes()), before, after)
+    require_bytes(
+        original_tokens(previous_content((source / EXPERIMENT).read_bytes())), before, after
+    )
 
 
 def require_saved(directory, before, after):
     contents = historical_single_fraction(EXPERIMENT, (directory / EXPERIMENT).read_bytes())
-    require_bytes(legacy.without_saved_calculator(EXPERIMENT, contents), before, after)
+    data = legacy.without_saved_calculator(EXPERIMENT, contents)
+    assert prior_digest(data, after, name=EXPERIMENT) == after, (
+        'The manual estimate output retains every byte apart from the declared category ordering'
+    )
+    # Validate the category independently before removing it; block spacing is still exact.
+    assert prior_digest(without_category(data), before, name=EXPERIMENT) == before, (
+        'Removing only the declared manual estimate block recovers the immutable prior output'
+    )
 
 
 def main():
@@ -77,7 +88,7 @@ def main():
         key: baseline['cases'][case][key][EXPERIMENT] for key in ('input_sha256', 'saved_sha256')
     }
     source = legacy.inputs()[case]
-    data = original_tokens((source / EXPERIMENT).read_bytes())
+    data = original_tokens(previous_content((source / EXPERIMENT).read_bytes()))
     after = {'input_sha256': hashlib.sha256(data).hexdigest()}
     require_bytes(data, before['input_sha256'], after['input_sha256'])
     with tempfile.TemporaryDirectory() as temporary:

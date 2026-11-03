@@ -1,4 +1,5 @@
-# The documentation site on GitHub Pages, with the web app at /webapp/. The site is built from main (or
+# The site on GitHub Pages: the public site (website/) at the root, the contributor documentation (mkdocs.yml) at
+# /dev/ and the web app at /webapp/. The site is built from main (or
 # by dispatch) with the notebooks executed for rendering, which needs crysta's SDK; the web app is built
 # as CI's `app · WebAssembly` job builds it and placed into the site (ADR-0023). A dispatch may name a
 # crysta commit to build the web app from instead of the pinned SDK, for a preview of unreleased crysta work;
@@ -67,8 +68,16 @@ jobs:
         run: pixi run notebook-exec-ci
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-      - name: Strict docs build
+      - name: Strict contributor docs build  # mkdocs.yml writes site/dev
         run: pixi run docs-build
+      - name: Build the public site  # website/, Zensical, strict, its links checked
+        run: pixi run site-build --base-url https://enhantica.github.io/edi/
+      - name: Place the public site at the root
+        run: |
+          for path in dev webapp; do
+            [ ! -e "website/_build/$path" ] || { echo "the public site must not own /$path/"; exit 1; }
+          done
+          cp -R website/_build/. site/
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
       - name: Build both kits and pack the web app

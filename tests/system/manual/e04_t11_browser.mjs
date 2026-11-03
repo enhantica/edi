@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
+import { checkTutorialFileDownloads } from './web_tutorial_files.mjs';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
@@ -16,6 +17,7 @@ import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
+const tutorialFilesOnly = process.argv.includes('--tutorial-files-only');
 const saveRouteOnly = process.argv.includes('--save-route-only');
 const exampleOnly = process.argv.includes('--example-only');
 const fileRequestsOnly = saveRouteOnly || process.argv.includes('--file-requests-only');
@@ -431,8 +433,13 @@ try {
     () => shot('develop-diagnostics'));
   if (process.argv.includes('--diagnostics-only')) {
     console.log(`${mode}: actual Develop-view diagnostics passed`);
+  } else if (tutorialFilesOnly) {
+    await checkTutorialFileDownloads({ click, event, output, evaluate, send, mode });
+    console.log(`${mode}: actual tutorial-file downloads passed`);
   } else {
   await shot('home');
+  if (!fileRequestsOnly && !exampleOnly)
+    await checkTutorialFileDownloads({ click, event, output, evaluate, send, mode });
   await click(/^Start$/);
   await click(/^Project$/);
   const beforeExample=await send('Accessibility.getFullAXTree');

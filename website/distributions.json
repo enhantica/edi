@@ -1,0 +1,12 @@
+{
+  "desktop": [
+    {"platform": "macOS", "url": null},
+    {"platform": "Windows", "url": null},
+    {"platform": "Linux", "url": null}
+  ],
+  "command-line": [
+    {"platform": "macOS", "url": null},
+    {"platform": "Windows", "url": null},
+    {"platform": "Linux", "url": null}
+  ]
+}

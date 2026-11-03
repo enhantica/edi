@@ -1110,13 +1110,29 @@ def publication_scan_files():
     )
 
 
-@pytest.mark.parametrize('part', range(8))
+@pytest.mark.parametrize('part', range(32))
 def test_secret_scanner_checks_the_prepared_tree(tmp_path, publication_scan_files, part):
     # Each path belongs to exactly one part. Hard links preserve every source byte;
     # symlinks preserve their literal targets, never substitute target content.
     prepared = tmp_path / 'publication'
     prepared.mkdir()
-    for relative in publication_scan_files[part::8]:
+    # The measured runtime table is plain line-oriented TSV, larger than one
+    # bounded scanner call. Retain every complete record, exactly once across
+    # contiguous slices. Archive members and symlink targets are never split.
+    runtime_table = 'tests/per-pr-runtimes.tsv'
+    ordinary = [name for name in publication_scan_files if name != runtime_table]
+    if runtime_table in publication_scan_files:
+        source = ROOT / runtime_table
+        assert source.is_file() and not source.is_symlink(), (
+            'Only the regular plain-text runtime table may be divided at record boundaries'
+        )
+        lines = source.read_bytes().splitlines(keepends=True)
+        target = prepared / runtime_table
+        target.parent.mkdir(parents=True)
+        target.write_bytes(
+            b''.join(lines[len(lines) * part // 32 : len(lines) * (part + 1) // 32])
+        )
+    for relative in ordinary[part::32]:
         source, target = ROOT / relative, prepared / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         if source.is_symlink():

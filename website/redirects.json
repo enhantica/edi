@@ -1,0 +1,17 @@
+{
+  "learn/fit-quality/": "user-guide/fit-quality/",
+  "learn/fitting-modes/": "user-guide/fitting-modes/",
+  "learn/glossary/": "user-guide/glossary/",
+  "learn/concepts/": "user-guide/concepts/",
+  "learn/projects/": "user-guide/analysis-workflow/project/",
+  "learn/examples/": "user-guide/examples/",
+  "learn/parameters/": "user-guide/parameters/",
+  "learn/": "user-guide/",
+  "learn/data-formats/": "user-guide/data-formats/",
+  "get-started/": "user-guide/",
+  "get-started/interfaces/": "user-guide/",
+  "get-started/setup/": "user-guide/",
+  "get-started/first-refinement/": "user-guide/",
+  "application/y2o3-walkthrough/": "application/first-refinement/",
+  "application/screen-reference/": "application/workspace/"
+}

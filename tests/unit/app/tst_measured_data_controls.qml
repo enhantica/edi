@@ -146,7 +146,7 @@ TestCase {
     function freeMenuOpen() {
         return Probe.visiblePopups(appWindow).some(popup => Render.descendants(popup.contentItem ?? popup).some(item => /^parameters\.freeHeader\.(free|fixed|mixed)$/.test(item.objectName)));
     }
-    function analysisControls(measured, relationsApply) {
+    function analysisControls(measured) {
         const basic = page("analysis", "basic");
         const parameters = groups(basic, "parameters");
         compare(parameters.length, 1, "The Analysis parameter values remain available for a calculation");
@@ -169,7 +169,12 @@ TestCase {
         const free = active(table, item => /^parameters\.free\.\d+$/.test(item.objectName));
         compare(header.length > 0, measured, "The free-column header is hidden without measured data and restored afterwards");
         compare(free.length > 0, measured, "Free checkboxes are hidden without measured data and restored afterwards");
-        compare(listingControls(basic).length > 0, measured, "The parameter listing filters are hidden without measured data and restored afterwards");
+        verify(listingControls(basic).length > 0, "The parameter listing filters remain visible for simulation and measured data");
+        const variability = active(basic, item => item.objectName === "parameters.variability");
+        compare(variability.length, 1, "The variability selector remains visible without measured data");
+        compare(variability[0].enabled, measured, "Measured data enables variability without hiding the other listing filters");
+        if (!measured)
+            verify(String(variability[0].toolTip || variability[0].ToolTip.text || "").trim().length > 0, "The disabled simulation variability selector explains why in its tooltip");
         if (measured) {
             exposed(header[0]);
             click("parameters.freeHeader");
@@ -181,10 +186,10 @@ TestCase {
             mouseClick(table.headerItem, table.headerItem.width - 2, table.headerItem.height / 2);
             verify(!freeMenuOpen(), "A reparented or hidden header input area cannot expose the free menu without data");
         }
-        const fit = active(basic, item => item.objectName === "fitting.start");
-        compare(fit.length, 1, "The Analysis fit action remains discoverable in a simulation");
+        const fit = active(Ui.windowRoot(appWindow), item => item.objectName === "statusBar.fit.button");
+        compare(fit.length, 1, "The status-bar Fit action remains discoverable while Analysis shows a simulation");
         if (!measured)
-            verify(!fit[0].enabled, "The simulation cannot start a fit without measured data");
+            verify(fit[0].clickable === false && !Session.project.fit.available, "The simulation disables the status-bar Fit action and its command without measured data");
         const dictionary = reference.dictionary();
         verify(dictionary.categories && dictionary.categories.length > 0, "Fit-only category identities come from the captured dictionary reference");
         const reflectionSelection = dictionary.categories.find(item => item.title === "Fitted reflections");
@@ -200,7 +205,7 @@ TestCase {
                 for (const category of hidden)
                     compare(groups(extras, category).length, 0, "Fit-only Analysis groups are hidden when no experiment has measured data");
                 compare(groups(extras, "patternUpdates").length, 0, "Pattern updates cannot escape the no-data rule by living in Extras");
-                compare(listingControls(extras).length, 0, "The listing group cannot escape the no-data rule by living in Extras");
+                compare(groups(extras, "shownParameters").length, 0, "The fit-only Parameters shown group stays hidden without measurements, including in Extras");
             }
         } else {
             verify(extras !== null, "Measured data restores the Analysis fit-settings pane");
@@ -211,11 +216,11 @@ TestCase {
             }
         }
         for (const category of ["alias", "constraint"])
-            compare(extras ? groups(extras, category).length > 0 : false, measured || relationsApply, "Aliases and constraints stay available when they affect a calculation without measurements");
+            verify(extras !== null && groups(extras, category).length > 0, "Aliases and constraints can affect calculations, so their editors remain available even before the first relation is added");
         const settings = page("analysis", "settings");
         compare(settings ? groups(settings, "patternUpdates").length > 0 : false, measured, "Pattern updates is hidden without measurements and restored after loading data");
         if (!measured && settings) {
-            compare(listingControls(settings).length, 0, "The listing group cannot escape the no-data rule by living in Settings");
+            compare(groups(settings, "shownParameters").length, 0, "The fit-only Parameters shown settings stay hidden without measurements; the general parameter filter bar remains available");
             for (const category of hidden)
                 compare(groups(settings, category).length, 0, "Fit-only groups cannot escape the no-data rule by living in Settings");
         }
@@ -239,9 +244,9 @@ TestCase {
         experimentControls(true);
     }
     function test_analysis_transition() {
-        analysisControls(false, false);
+        analysisControls(false);
         loadMeasurements();
-        analysisControls(true, false);
+        analysisControls(true);
     }
     function test_project_wide_correlations_keep_data_from_other_experiments() {
         loadMeasurements();
@@ -262,9 +267,9 @@ TestCase {
         verify(project.analysis.constraints.setText(0, "expression", "edge = 4.125"), "A nontrivial independent cell-edge constraint is applied through the real project editor");
         ready();
         compare(project.currentStructure.cell.lengthA.value, 4.125, "A calculation without observations actually adopts the declared constraint value");
-        analysisControls(false, true);
+        analysisControls(false);
         loadMeasurements();
-        analysisControls(true, true);
+        analysisControls(true);
         compare(project.currentStructure.cell.lengthA.value, 4.125, "Loading measurements preserves the calculation's applied constraint");
     }
 }

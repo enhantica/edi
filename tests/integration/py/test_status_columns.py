@@ -14,7 +14,7 @@ from tests.integration.py.test_scan_app_contract import block
 ROOT = Path(__file__).resolve().parents[3]
 PAGES = ROOT / 'app/qml/Pages'
 COLUMNS = {
-    'Project/RecentProjectsGroup.qml': ('Status', 2),
+    'Project/RecentProjectsGroup.qml': ('', 2),
     'Experiment/ExperimentsGroup.qml': ('Fit', 2),
     'Experiment/MeasuredRangeGroup.qml': ('status', 8),
 }
@@ -82,10 +82,23 @@ def test_every_status_column_is_in_the_convention_census():
         headings = re.findall(r'text\s*:\s*qsTr\("(Status|status|Fit)"\)', header)
         if re.search(r'HeaderLabel\s*\{[^}]*uid:\s*"data.calc_status"', header):
             headings.append('status')
+        relative = path.relative_to(PAGES).as_posix()
+        expected = COLUMNS.get(relative)
+        if expected is not None and not expected[0]:
+            # Recent projects retains the icon column, with its header cell unnamed.
+            labels = children(header, header.index('{') + 1, len(header) - 1)
+            assert len(labels) == 4, 'Recent projects retains its four aligned header cells'
+            status_header = labels[expected[1]][1]
+            text = re.search(r'(?m)^\s*text\s*:\s*(.+)', status_header)
+            assert text is None or text[1].strip() in {'""', "''", 'qsTr("")', "qsTr('')"}, (
+                'The Recent projects status header is empty while its row icons keep word tooltips'
+            )
+            headings.append('')
         if headings:
-            actual[path.relative_to(PAGES).as_posix()] = headings
+            actual[relative] = headings
     assert actual == {path: [heading] for path, (heading, _) in COLUMNS.items()}, (
-        'Every table Status or Fit column belongs to the coloured-icon convention census'
+        'Every named or headerless table status column belongs to the coloured-icon '
+        'convention census'
     )
 
 

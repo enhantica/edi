@@ -14,7 +14,7 @@ from pathlib import Path
 import edi
 import pytest
 
-from tests.fixtures.project_archive.recalculated_copy import compare_members
+from tests.fixtures.project_archive.recalculated_copy import compare_members, input_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = tuple(
@@ -73,8 +73,7 @@ CASES += tuple(
 )
 
 
-@pytest.mark.parametrize('case', CASES)
-def test_real_app_opens_project_routes_and_cancels_pending_work(case, tmp_path):
+def run_archive_actor(case):
     binary = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert binary.is_file(), 'Project opening gates require the actual built app test host'
     result = subprocess.run(
@@ -90,15 +89,47 @@ def test_real_app_opens_project_routes_and_cancels_pending_work(case, tmp_path):
         ],
         capture_output=True,
         text=True,
-        timeout=45,
+        timeout=90 if case == 'test_save_copy' else 45,
         check=False,
     )
     output = result.stdout + result.stderr
+    assert result.returncode == 0, 'The real app executes the project opening contract: ' + output
+    return output
+
+
+@pytest.fixture(scope='module')
+def copy_actors():
+    # One display and Qt process; the real test still opens, saves and tears down
+    # each independent folder/ZIP case. Keep each actor's evidence separate.
+    output = run_archive_actor('test_save_copy')
+    return {
+        case: '\n'.join(
+            line
+            for line in output.splitlines()
+            if 'ProjectArchive::test_save_copy(' + case.split(':', 1)[1] + ')' in line
+        )
+        for case in CASES
+        if case.startswith('test_save_copy:')
+    }
+
+
+@pytest.fixture
+def archive_actor(request):
+    case = request.node.callspec.params['case']
+    return (
+        request.getfixturevalue('copy_actors')[case]
+        if case.startswith('test_save_copy:')
+        else run_archive_actor(case)
+    )
+
+
+@pytest.mark.parametrize('case', CASES)
+def test_real_app_opens_project_routes_and_cancels_pending_work(case, tmp_path, archive_actor):
+    output = archive_actor
     if case.startswith(('test_create_completion:', 'test_open_choice_completion:')):
         (tmp_path / 'dialog-completion.log').write_text(output)
     name, _, tag = case.partition(':')
     identity = re.escape('ProjectArchive::' + name + '(' + tag + ')')
-    assert result.returncode == 0, 'The real app executes the project opening contract: ' + output
     assert (
         len(re.findall(r'^PASS\s*:\s*(?:edi_app::)?' + identity + r'\s*$', output, re.MULTILINE))
         == 1
@@ -220,3 +251,24 @@ def test_opening_measurement_declares_both_targets_for_every_real_route():
                 'The retained baseline separates loading, view models, '
                 'page rebuild, publication and frames'
             )
+
+
+@pytest.mark.parametrize('changed', ['scalar', 'loop'])
+def test_recalculated_copy_cannot_hide_inputs_after_computed_categories(changed):
+    before = (
+        b'data_phase\n_cell.length_a 5.123\n\nloop_\n_atom_site.id\n_atom_site.fract_x\nA 0.125\n'
+    )
+    derived = b'loop_\n_space_group_symop.id\n_space_group_symop.operation_xyz\n1 x,y,z\n\n'
+    after = before.replace(b'loop_', derived + b'loop_', 1)
+    assert input_bytes(after) == input_bytes(before), (
+        'Dictionary-ordered computed geometry may appear between unchanged input categories'
+    )
+    escaped = (
+        after.replace(b'5.123', b'5.124')
+        if changed == 'scalar'
+        else after.replace(b'0.125', b'0.126')
+    )
+    assert input_bytes(escaped) != input_bytes(before), (
+        'A changed scientific input before or after computed geometry '
+        'cannot borrow the copy exemption'
+    )

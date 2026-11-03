@@ -23,6 +23,21 @@ const QStringList allTitles{"All purposes",     "All fitting modes",    "All fac
                             "All instruments",  "All sample forms",     "All beam modes",
                             "All probes",       "All scattering types", "All dimensionalities",
                             "All polarisations"};
+const QJsonObject& tagRegistry() {
+    static const auto registry = [] {
+        QFile file(QStringLiteral(":/edi/examples/tags.json"));
+        if (!file.open(QIODevice::ReadOnly)) qFatal("Bundled tag registry is missing");
+        QJsonParseError error;
+        const auto result = QJsonDocument::fromJson(file.readAll(), &error).object();
+        if (error.error != QJsonParseError::NoError || result.value("schema").toInt() != 1)
+            qFatal("Invalid tag registry");
+        return result;
+    }();
+    return registry;
+}
+QJsonObject tagDefinition(const QString& family, const QString& value) {
+    return tagRegistry().value("tags").toObject().value(family).toObject().value(value).toObject();
+}
 QString normalize(const QString& text) {
     return text.normalized(QString::NormalizationForm_KD).toCaseFolded();
 }
@@ -38,36 +53,81 @@ QString label(const QString& value) {
     if (!result.isEmpty()) result[0] = result[0].toUpper();
     return result;
 }
+// An example's title is its sample and origin; an item's, its title alone.
+QString entryTitle(const QString& sample, const QString& origin) {
+    return origin.isEmpty() ? sample : sample + QStringLiteral(" · ") + origin;
+}
+const QStringList roles{"exampleId", "name",     "description", "sample",    "origin",
+                        "detail",    "tagLabels", "tagIcons",   "tagColors", "tagDarkColors"};
 QStringList strings(const QJsonArray& array) {
     QStringList result;
     for (const auto& item : array) result.append(item.toString());
     return result;
 }
-QString tag(const QString& value) {
-    static const QHash<QString, QString> tags{
-        {"powder", "pd"},         {"single crystal", "sc"}, {"neutron", "neut"},
-        {"x-ray", "xray"},        {"xray", "xray"},         {"constant wavelength", "cwl"},
-        {"time-of-flight", "tof"}};
-    return tags.value(value, label(value));
-}
 }  // namespace
+
+TagChip tagChip(const QString& family, const QString& value, const QString& fallback) {
+    const auto definition = tagDefinition(family, value);
+    const auto tones = tagRegistry().value("tones").toObject();
+    const auto tone = tones.value(definition.value("tone").toString("neutral")).toObject();
+    return {definition.value("label").toString(fallback), definition.value("glyph").toString(),
+            tone.value("light").toString(), tone.value("dark").toString()};
+}
 
 QStringList ExampleListModel::bundledIds() {
     QFile index(QStringLiteral(":/edi/examples/index.txt"));
     if (!index.open(QIODevice::ReadOnly | QIODevice::Text)) return {};
     return QString::fromUtf8(index.readAll()).split(QLatin1Char('\n'), Qt::SkipEmptyParts);
 }
-ExampleListModel::ExampleListModel(QObject* parent)
-    : RowTableModel({"exampleId", "name", "description", "sample", "origin", "detail", "tagLabels",
-                     "tagIcons"},
-                    parent),
-      properties_({"value", "title"}, this),
-      options_({"value", "title", "matchingCount"}, this) {
+void ExampleListModel::publishProperties() {
     QList<Row> properties;
     for (qsizetype i = 0; i < keys.size(); ++i)
         properties.append(
             {reinterpret_cast<const void*>(i + 1), {keys[i], tr(qPrintable(titles[i]))}});
     properties_.publish(properties);
+}
+void ExampleListModel::addTag(Entry& entry, const QString& family, const QString& value,
+                              const QString& fallback) {
+    const TagChip chip = tagChip(family, value, fallback);
+    if (entry.tags.contains(chip.label)) return;
+    entry.tags.append(chip.label);
+    entry.tag_icons.append(chip.glyph);
+    entry.tag_colors.append(chip.light);
+    entry.tag_dark_colors.append(chip.dark);
+}
+ExampleListModel::ExampleListModel(const QList<Item>& items, QObject* parent)
+    : RowTableModel(roles, parent),
+      properties_({"value", "title"}, this),
+      options_({"value", "title", "matchingCount"}, this) {
+    publishProperties();
+    for (const Item& item : items) {
+        Entry entry;
+        entry.id = item.id;
+        entry.sample = item.title;
+        entry.detail = item.detail;
+        entry.search = item.id + " " + item.title + " " + item.detail;
+        for (const QString& tag : item.tags) {
+            const qsizetype colon = tag.indexOf(QLatin1Char(':'));
+            const QString family = colon < 0 ? QString() : tag.left(colon);
+            const QString value = tag.mid(colon + 1).trimmed();
+            addTag(entry, family, value, value);
+            if (!keys.contains(family)) continue;
+            QStringList& data = entry.values[family];
+            if (!data.contains(value)) data.append(value);
+            entry.search += " " + value + " " + label(value);
+        }
+        for (const auto& key : keys)
+            if (entry.values.value(key).isEmpty()) entry.values.insert(key, {unknown});
+        entry.search = normalize(entry.search + " " + entry.tags.join(' '));
+        entries_.append(entry);
+    }
+    refresh();
+}
+ExampleListModel::ExampleListModel(QObject* parent)
+    : RowTableModel(roles, parent),
+      properties_({"value", "title"}, this),
+      options_({"value", "title", "matchingCount"}, this) {
+    publishProperties();
     QFile file(QStringLiteral(":/edi/examples/metadata.json"));
     if (!file.open(QIODevice::ReadOnly)) qFatal("Bundled example metadata is missing");
     const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
@@ -96,30 +156,11 @@ ExampleListModel::ExampleListModel(QObject* parent)
             if (data.isEmpty()) data.append(unknown);
             entry.values.insert(key, data);
         }
-        const QHash<QString, QString> purpose_icons{{"refinement", "\uf140"},
-                                                    {"simulation", "\uf83e"}};
-        for (const auto& purpose : entry.values.value("purpose")) {
-            entry.tags.append(label(purpose));
-            entry.tag_icons.append(purpose_icons.value(purpose));
-        }
-        // Glyphs in the bundled Font Awesome 5 face; select by stored enum, never translated
-        // label.
-        const QHash<QString, QString> mode_icons{{"single", "\uf192"},
-                                                 {"joint", "\uf0c1"},
-                                                 {"sequential", "\uf101"},
-                                                 {"independent", "\uf074"}};
-        for (const auto& mode : entry.values.value("fittingMode")) {
-            if (mode == unknown) continue;
-            entry.tags.append(label(mode));
-            entry.tag_icons.append(mode_icons.value(mode));
-        }
-        for (const QString& key : {QStringLiteral("sampleForm"), QStringLiteral("probe"),
+        for (const QString& key : {QStringLiteral("purpose"), QStringLiteral("fittingMode"),
+                                   QStringLiteral("sampleForm"), QStringLiteral("probe"),
                                    QStringLiteral("beamMode"), QStringLiteral("scatteringType")})
             for (const auto& value : entry.values.value(key))
-                if (value != unknown && !entry.tags.contains(tag(value))) {
-                    entry.tags.append(tag(value));
-                    entry.tag_icons.append(QString());
-                }
+                if (value != unknown) addTag(entry, key, value, label(value));
         entry.search = normalize(entry.search + " " + entry.tags.join(' '));
         entries_.append(entry);
     }
@@ -160,7 +201,7 @@ void ExampleListModel::setFilterValue(const QString& value) {
 QString ExampleListModel::titleOf(const QString& id) const {
     for (const auto& entry : entries_) {
         if (entry.id == id) {
-            return entry.sample + QStringLiteral(" · ") + entry.origin;
+            return entryTitle(entry.sample, entry.origin);
         }
     }
     return {};
@@ -185,9 +226,9 @@ void ExampleListModel::refresh() {
         if (!filter_value_.isEmpty() && !values.contains(filter_value_)) continue;
         rows.append(
             {reinterpret_cast<const void*>(i + 1),
-             {entry.id, entry.sample + QStringLiteral(" · ") + entry.origin,
+             {entry.id, entryTitle(entry.sample, entry.origin),
               entry.tags.join(QStringLiteral(" · ")) + QStringLiteral(" · ") + entry.detail,
-              entry.sample, entry.origin, entry.detail, entry.tags, entry.tag_icons}});
+              entry.sample, entry.origin, entry.detail, entry.tags, entry.tag_icons, entry.tag_colors, entry.tag_dark_colors}});
     }
     QStringList choices = counts.keys();
     std::sort(choices.begin(), choices.end(), [](const QString& a, const QString& b) {

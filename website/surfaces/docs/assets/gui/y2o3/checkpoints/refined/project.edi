@@ -1,0 +1,15 @@
+_metadata.name             pd-neut-cwl_y2o3-spodi
+_metadata.title            "Y₂O₃ [Ia-3] · SPODI @ FRM II"
+_metadata.description
+;
+Anisotropic β tensors tied by site symmetry · Coordinates, profile and
+background
+;
+_metadata.authors          "EasyDiffraction documentation"
+_metadata.created          "01 Jan 2026 12:00:00"
+_metadata.last_modified    "30 Oct 2026 16:52:09"
+_metadata.timestamp        ?
+
+_su_format.rule iucr_99
+
+_edi.schema_version 3

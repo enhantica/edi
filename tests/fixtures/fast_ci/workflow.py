@@ -24,7 +24,11 @@ def resolve(value, matrix):
 
 
 FULL_EVENTS = ('push', 'schedule', 'workflow_dispatch')
-APP_CACHE_PATHS = ('build/app/app/edi_app', 'build/app/app/edi_app_tests')
+APP_CACHE_PATHS = (
+    'build/app/app/edi_app',
+    'build/app/app/edi_app_tests',
+    'build/tutorial-transactions',
+)
 
 
 def reachable(node, jobs, matrix, event='push'):
@@ -159,7 +163,10 @@ def _artifact_routes(workflow, root, event):
                     assert (
                         isinstance(options.get('path'), str)
                         and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
-                    ), 'The app cache must transfer exactly the app and its native test runner'
+                    ), (
+                        'The app cache must transfer exactly the app, native test runner '
+                        'and tutorial observer package'
+                    )
                     assert (
                         options.get('key') == 'edi-app-${{ matrix.platform }}-${{ github.run_id }}'
                     ), 'The app cache identity must bind the platform and this exact workflow run'
@@ -197,7 +204,10 @@ def _artifact_routes(workflow, root, event):
                     assert (
                         isinstance(options.get('path'), str)
                         and tuple(sorted(options['path'].splitlines())) == APP_CACHE_PATHS
-                    ), 'System reuse must restore exactly the app and its native test runner'
+                    ), (
+                        'System reuse must restore exactly the app, native test runner '
+                        'and tutorial observer package'
+                    )
                 pattern = resolve(
                     options.get('key' if cached else 'name', options.get('pattern', '')), matrix
                 )

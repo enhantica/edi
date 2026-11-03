@@ -1,0 +1,4 @@
+.md-typeset figure.ed-interface-preview { display: block; width: 100%; margin: 1.6rem 0; }
+.ed-downloads { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1rem 0; }
+.md-typeset .ed-downloads .md-button { gap: .45em; }
+.ed-downloads svg { width: 1.1em; height: 1.1em; fill: currentColor; }

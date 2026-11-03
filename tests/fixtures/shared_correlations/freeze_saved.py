@@ -13,6 +13,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from tests.fixtures.metadata_transition.source_bytes import previous_content
+
 REFERENCE = 'bd72193898d2dc6fefb1d692703d1f7a4137c731'
 HERE = Path(__file__).resolve().parent
 SUBJECTS = {
@@ -23,7 +25,9 @@ SUBJECTS = {
 
 def hashes(root):
     return {
-        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        path.relative_to(root).as_posix(): hashlib.sha256(
+            previous_content(path.read_bytes())
+        ).hexdigest()
         for path in sorted(root.rglob('*'))
         if path.is_file()
     }

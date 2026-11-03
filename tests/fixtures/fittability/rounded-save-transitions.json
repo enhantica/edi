@@ -2374,14 +2374,14 @@
       "rule": "iucr_19",
       "path": "metadata_bytes.py",
       "before": "06f2a2b46b2169e3fa5cd05dd787bd02424ccad8aadf1dcaff2dbf91f84a2da4",
-      "after": "da278754e88332d8536dee183238484e50344ab0e54d1d8b7511adfd714ed39c"
+      "after": "a68c753d5c2e5ec44463a2922d9069a10f7e04d08a372132362a309b68fde66d"
     },
     {
       "case": "tests/fixtures/table_display",
       "rule": "iucr_99",
       "path": "metadata_bytes.py",
       "before": "06f2a2b46b2169e3fa5cd05dd787bd02424ccad8aadf1dcaff2dbf91f84a2da4",
-      "after": "da278754e88332d8536dee183238484e50344ab0e54d1d8b7511adfd714ed39c"
+      "after": "a68c753d5c2e5ec44463a2922d9069a10f7e04d08a372132362a309b68fde66d"
     }
   ],
   "retained_path_mismatches": []

@@ -68,6 +68,8 @@ hatchling = "*"
 versioningit = "*"
 mkdocs = "*"
 mkdocs-material = "*"
+# The public site's capture validator parses SVG safely.
+defusedxml = "*"
 # Notebook plane: jupytext py:percent sources + stripped committed .ipynb, executed by nbmake as
 # the verification gate and rendered pre-executed by mkdocs-jupyter (plotly plots).
 mkdocs-jupyter = "*"
@@ -247,8 +249,19 @@ app-run = { cmd = ["bash", "tools/ci/app-run.sh"] }
 # Development only: build crysta from a local checkout, link the app to it and start it
 # (`pixi run -e app app-with-crysta ../crysta`; docs/dev/local-crysta.md).
 app-with-crysta = { cmd = ["bash", "tools/dev/app-with-crysta.sh"] }
+# The onboarding tests' prerequisites, made outside each test's timing (tests/fixtures/onboarding/README.md): the two
+# standalone probes the logging and feedback tests launch, and a native documentation capture from the built app.
+onboarding-probes = "python tests/fixtures/onboarding/build_native.py log_probe && python tests/fixtures/onboarding/build_native.py payload_probe"
+# The capture tool refuses a folder holding an earlier capture, so each run starts from an empty one.
+onboarding-capture = { cmd = "rm -rf build/onboarding-capture && python tests/fixtures/onboarding/capture_bundle.py", depends-on = ["app-build"] }
+# The observer the system tier's tutorial tests read project storage through, linked from the app build, and the app
+# build files its receipt names packed beside it for the system jobs (tools/ci/tutorial_transaction_inputs.py).
+tutorial-transactions = { cmd = "python -m tests.fixtures.project_transactions.build --root . --native build/app --output build/tutorial-transactions && python tools/ci/tutorial_transaction_inputs.py pack", depends-on = ["app-build"] }
+# Before the system tier: unpacks those files in a system job, or builds the observer locally when it is missing or
+# older than the app build.
+tutorial-transactions-ready = "python tools/ci/tutorial_transaction_inputs.py ensure"
 # Run the app's Qt Quick Test tier with the runner app-build built (refuses a vacuous run).
-app-test = { cmd = ["bash", "tools/ci/app-test.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
+app-test = { cmd = ["bash", "tools/ci/app-test.sh"], depends-on = [{ task = "app-build", environment = "app" }, { task = "onboarding-probes", environment = "app" }] }
 # The drawn cases (tests/unit/app/tst_*_drawn.qml) on the capture platform, where Qt Quick 3D draws; by hand while
 # the app tests are off, and the macOS runner's `bank_frames` dispatch (edi ADR-0017 §16).
 app-test-3d = { cmd = ["bash", "tools/ci/app-test-3d.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
@@ -294,6 +307,8 @@ easydiffraction = { path = ".", editable = true }
 nanobind = "*"
 # An independent CIF reader for the CIF report checks.
 gemmi = "==0.7.5"
+# The public documentation site (website/, Zensical), built by `pixi run site-build`.
+zensical = "==0.0.73"
 
 [tasks]
 # --- lint / format -----------------------------------------------------------------
@@ -350,7 +365,7 @@ weekly-only-tests = { cmd = [
 # times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection, except that only the
 # nightly schedule runs the nightly-only group and the Sunday schedule the weekly-only group.
 core-tests = { cmd = ["bash", "tools/ci/core-tests.sh"], depends-on = ["core-build"] }
-system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build"] }
+system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build", { task = "onboarding-probes", environment = "app" }, { task = "tutorial-transactions-ready", environment = "app" }] }
 # --- core (C++) ---------------------------------------------------------------------- / item 8: the
 # pinned crysta SDK (downloaded or reused, never compiled) and its source, for every prefix reader — also
 # in a consumer job, where core-build only restores the native build.
@@ -424,7 +439,7 @@ group-nightly-only = { depends-on = ["nightly-only-tests"] }
 group-weekly-only = { depends-on = ["weekly-only-tests"] }
 # Run on its own it builds first, as every app step does: the core the suite's conftest imports and the app,
 # in its own environment; app-verify runs it with --skip-deps on its one build.
-group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "-q"], depends-on = ["core-build", { task = "app-build", environment = "app" }] }
+group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "-q"], depends-on = ["core-build", { task = "app-build", environment = "app" }, { task = "onboarding-probes", environment = "app" }, { task = "onboarding-capture", environment = "app" }] }
 # The packed web app (wasm-build's zip): the given pytest files and the browser driver in each case, in this
 # environment (the tests import edi): tools/ci/wasm-check.sh.
 wasm-check = { cmd = ["bash", "tools/ci/wasm-check.sh"] }
@@ -503,6 +518,9 @@ app-verify = { depends-on = [
 cpp-coverage-unit = { cmd = ["bash", "tools/ci/cpp-coverage-unit.sh"] }
 # --- docs ----------------------------------------------------------------------------
 docs-build = "mkdocs build --strict"
+# The public site (website/, Zensical) into website/_build, its generated pages and links checked; Pages passes
+# `--base-url https://enhantica.github.io/edi/`.
+site-build = "python website/build.py"
 docs-clean = "rm -rf site"
 docs-serve = "mkdocs serve"
 # --- the full local gate --------------------------------------------------------------:

@@ -52,6 +52,20 @@ def comparison_case(root, banks, missing, *, excluded=False, rounded=False):
             fp.append(f'{x:.3f} 10 {calculated} 0')
         for program in ['edi', 'diffraction-lib']:
             write(root, f'{comparison}/{program}/{bank}.csv', '\n'.join(rows) + '\n')
+        write(
+            root,
+            f'docs/user/cli/{case}/project/experiments/{bank}.edi',
+            'data_' + bank + '\n_experiment_type.sample_form powder\n'
+            '_experiment_type.beam_mode "time-of-flight"\n'
+            'loop_\n_data.time_of_flight\n_data.intensity_meas\n_data.intensity_meas_su\n'
+            + ''.join(
+                ','.join(row.split(',')[:1] + [row.split(',')[1], row.split(',')[3]]).replace(
+                    ',', ' '
+                )
+                + '\n'
+                for row in rows[1:]
+            ),
+        )
         name = 'fit.prf' if len(banks) == 1 else f'fit_{bank_index + 1}.prf'
         write(root, f'{reference}/{name}', '\n'.join([*fp, 'END']) + '\n')
     return case, n_points

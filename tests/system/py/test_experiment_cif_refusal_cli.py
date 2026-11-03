@@ -1,4 +1,4 @@
-"""Both CLIs preserve main native-only discovery and unsupported native-file refusal."""
+"""The CLI admits supported experiment CIF content and keeps source bytes intact."""
 
 import os
 import subprocess
@@ -10,14 +10,13 @@ import pytest
 from tests.fixtures import cif_accounting as account
 from tests.fixtures import experiment_cif_refusal as case
 from tests.fixtures import structure_cif_refusal as native
-from tests.integration.py import experiment_cif_refusal_checks as checks
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.mark.parametrize('style', case.STYLES)
 @pytest.mark.parametrize('layout', case.LAYOUTS)
-def test_cli_preserves_main_experiment_discovery_and_refusal(tmp_path, style, layout):
+def test_cli_discovers_experiment_cif_members(tmp_path, style, layout):
     source = case.poisoned_project(tmp_path, style, layout)
     before = native.snapshot(source)
     if account.API == 'edi':
@@ -35,25 +34,19 @@ def test_cli_preserves_main_experiment_discovery_and_refusal(tmp_path, style, la
         assert binary.is_file(), 'The experiment refusal actor uses the actual built CLI'
         command = [str(binary), str(source), 'calc', '--dry']
     result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
-    if layout == 'native-suffix':
-        assert result.returncode != 0, 'Main refuses this unsupported CIF in a native .edi file'
-        checks.reason(result.stderr)
-        assert not (tmp_path / 'report.html').exists(), (
-            'Refused experiment input writes no partial report'
+    assert result.returncode == 0, (
+        'The CLI imports supported experiment CIF content independently of its suffix: '
+        + result.stdout
+        + result.stderr
+    )
+    if layout == 'shadow':
+        assert 'bank.cif' in result.stderr and 'not read' in result.stderr, (
+            'The CLI reports native precedence over a same-stem experiment CIF'
         )
-    else:
-        assert result.returncode == 0, (
-            'Main ignores sidecar experiment CIFs through the real CLI: '
-            + result.stdout
-            + result.stderr
+    if account.API == 'edi':
+        assert (tmp_path / 'report.html').is_file(), (
+            'The CIF project report command produces its requested report'
         )
-        assert 'Reading CIF files is not supported yet' not in result.stderr, (
-            'An ignored experiment sidecar does not turn a native project into a refusal'
-        )
-        if account.API == 'edi':
-            assert (tmp_path / 'report.html').is_file(), (
-                'The actual native-only report command still produces its requested report'
-            )
     assert native.snapshot(source) == before, (
         'CLI discovery preserves every native and CIF source byte'
     )

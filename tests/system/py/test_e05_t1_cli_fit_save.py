@@ -15,6 +15,7 @@ import edi
 import pytest
 
 from conftest import corpus_case_dir
+from tests.fixtures.metadata_transition.source_bytes import previous_content
 from tests.fixtures.project_save.agreement import rounded_model_reference
 from tests.fixtures.project_save.reference import six_digits
 
@@ -49,8 +50,13 @@ def run_cli_fit_save_reopen_and_undo(case, tmp_path):
         ROOT / case['path'], source, ignore=shutil.ignore_patterns('experiments', 'structures')
     )
     for category in ('experiments', 'structures'):
-        expected = {p.name: p.read_bytes() for p in (ROOT / case['path'] / category).glob('*.edi')}
-        actual = {p.name: p.read_bytes() for p in (authority / category).glob('*.edi')}
+        expected = {
+            p.name: previous_content(p.read_bytes())
+            for p in (ROOT / case['path'] / category).glob('*.edi')
+        }
+        actual = {
+            p.name: previous_content(p.read_bytes()) for p in (authority / category).glob('*.edi')
+        }
         assert actual == expected, (
             ' gate 8 CLI save oracle uses exactly the pinned corpus data and structures'
         )

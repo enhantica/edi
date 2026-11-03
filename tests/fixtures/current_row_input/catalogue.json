@@ -275,5 +275,16 @@
     "editable": [],
     "passive": false,
     "textColumn": null
+  },
+  {
+    "type": "GeneratedGroup",
+    "table": "generated.atom_site.list",
+    "path": "Components/GeneratedGroup.qml",
+    "owner": "",
+    "editable": [
+      1
+    ],
+    "passive": false,
+    "textColumn": 1
   }
 ]

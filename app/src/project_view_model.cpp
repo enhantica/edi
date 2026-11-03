@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "project_view_model.hpp"
 
+#include "run_log.hpp"
+
 #include <QCoreApplication>
 #include <QHash>
 #include <QMetaObject>
@@ -705,6 +707,7 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
         return false;
     }
     setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+    qCInfo(lcApp, "structure loaded from a file");
     return true;
 }
 
@@ -770,6 +773,7 @@ bool ProjectViewModel::createExperiment() {
     syncLoadState();
     noteAddedExperiments(project.experiments.size() - 1);
     setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+    qCInfo(lcApp, "experiment added");
     return true;
 }
 
@@ -1001,6 +1005,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
     }
     emit message(text);
     setCurrentExperimentIndex(index);
+    qCInfo(lcApp, "measured data loaded");
     return true;
 }
 
@@ -1050,6 +1055,7 @@ bool ProjectViewModel::createStructure() {
     undo_history_.emplace_back(std::move(before));
     syncUndo();
     setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+    qCInfo(lcApp, "structure added");
     return true;
 }
 
@@ -2365,6 +2371,7 @@ void ProjectViewModel::removeStructure(int index) {
                         static_cast<int>(linking.size()))
                          .arg(QString::fromStdString(name), linking.join(QStringLiteral(", "))));
     }
+    qCInfo(lcApp, "structure removed");
 }
 
 int ProjectViewModel::structureIndex(const QString& name) const {
@@ -2402,6 +2409,7 @@ void ProjectViewModel::removeExperiment(int index) {
     }
     edi::Project& project = *project_;
     apply(edi::Edit::erase_experiment(project, static_cast<std::size_t>(index)), true);
+    qCInfo(lcApp, "experiment removed");
 }
 
 void ProjectViewModel::pinTimestamps(const QString& timestamp) {

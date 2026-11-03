@@ -1,10 +1,11 @@
-"""Load CIF refuses atomically in the production Qt session."""
+"""Load CIF admits supported structures and refuses ambiguous blocks atomically."""
 
 import json
 import os
 import subprocess
 from pathlib import Path
 
+import edi
 import pytest
 
 from tests.fixtures import structure_cif_refusal as case
@@ -42,7 +43,7 @@ TestCase {
 
 
 @pytest.mark.parametrize('style', ['dot', 'underscore', 'upper', 'multiblock'])
-def test_load_cif_refuses_with_one_reason_and_keeps_the_model(tmp_path, style):
+def test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks(tmp_path, style):
     case.project(tmp_path)
     (tmp_path / 'input.cif').write_text(case.text(style))
     (tmp_path / 'outcome.json').touch()
@@ -68,14 +69,30 @@ def test_load_cif_refuses_with_one_reason_and_keeps_the_model(tmp_path, style):
         'The actual Load CIF actor reaches both save boundaries: ' + result.stdout + result.stderr
     )
     outcome = json.loads((tmp_path / 'outcome.json').read_text())
-    assert not outcome['accepted'], 'Load CIF refuses the deferred structure import'
-    checks.reason(outcome['error'])
-    assert all(note == outcome['error'] for note in outcome['messages']), (
-        'The refused import has one reason rather than partial-import warnings'
-    )
-    assert outcome['afterCount'] == outcome['beforeCount'], (
-        'Load CIF refusal adds and removes no structure in the existing project'
-    )
-    assert case.saved_model(tmp_path / 'after') == case.saved_model(tmp_path / 'before'), (
-        'Every saved structure, experiment and analysis byte survives the refused Load CIF action'
+    if style == 'multiblock':
+        assert not outcome['accepted'] and '2 structure blocks' in outcome['error'], (
+            'A singular Load CIF refuses ambiguous multiple structure blocks with their count'
+        )
+        assert outcome['afterCount'] == outcome['beforeCount'], (
+            'An ambiguous structure import leaves the existing model intact'
+        )
+        assert case.saved_model(tmp_path / 'after') == case.saved_model(tmp_path / 'before'), (
+            'Ambiguous CIF refusal preserves every saved model byte'
+        )
+    else:
+        assert outcome['accepted'] and not outcome['error'], (
+            'Load CIF accepts supported dot, underscore and uppercase declarations'
+        )
+        assert outcome['afterCount'] == outcome['beforeCount'] + 1, (
+            'A supported CIF adds exactly its one declared structure'
+        )
+        loaded = edi.Project.load(tmp_path / 'after')
+        checks.main_values(loaded.structures['cif_only'])
+        after = case.saved_model(tmp_path / 'after')
+        del after['structures/cif_only.edi']
+        assert after == case.saved_model(tmp_path / 'before'), (
+            'CIF admission preserves every pre-existing structure, experiment and analysis byte'
+        )
+    assert (tmp_path / 'input.cif').read_text() == case.text(style), (
+        'The real application never rewrites the supplied CIF'
     )
