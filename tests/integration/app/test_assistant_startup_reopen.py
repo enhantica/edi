@@ -104,6 +104,11 @@ def browser_report(actor):
     return json.loads(report)['scope_coverage']['current_session_browser']
 
 
+def owns_startup_selection(actor, thread):
+    # Read the live owner without priming the work-report snapshot cache.
+    return native.qml(actor, 'Session.assistant.sessionSelection').endswith(':' + thread)
+
+
 def startup_receipt(actor, thread):
     ui = actor.command('inspect')['ui']
     return {
@@ -604,7 +609,7 @@ def deferred_startup_observation(tmp_path_factory):
             folder, monkeypatch, sources, [], prepare_peer=prepare_peer
         )
         try:
-            actor.until(lambda _row: browser_report(actor)['startup_target'] == thread)
+            actor.until(lambda _row: owns_startup_selection(actor, thread))
             assert not native._session_wire(actor, 'account/read'), (
                 'Required: the retiring transport defers the real startup account request.'
             )
@@ -668,10 +673,9 @@ def fallback_observation(tmp_path_factory):
         try:
             ready = actor.folder / 'fallback-preflight.ready.json'
             actor.until(lambda _row: ready.is_file())
-            before = browser_report(actor)
-            assert before['startup_target'] == thread and before['loading'], (
-                'Required: the real retained startup operation owns this exact selection.'
-            )
+            assert owns_startup_selection(actor, thread) and native.qml(
+                actor, 'Session.assistant.sessionsLoading'
+            ), 'Required: the real retained startup operation owns this exact selection.'
             native.qml(
                 actor, 'Session.assistant.continueSessionRestore(' + json.dumps(thread) + ')'
             )
