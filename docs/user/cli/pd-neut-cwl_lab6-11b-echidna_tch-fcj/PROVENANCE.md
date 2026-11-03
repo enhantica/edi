@@ -37,3 +37,5 @@ coefficient within 0.20.
 | `n_free` | reference | the `.sum`'s number of fitted parameters, 17 |
 | `param.<name>.value`, `param.background[<m>].value` | reference, tolerance 4 sigma | `ECH0030684_LaB6_1p622A.sum` |
 | `iterations`, `reduced_chi_square`, `rwp` | regression pin | the check run above |
+
+The regression pins for iterations, reduced_chi_square, rwp were retaken with `python -m edi fit <project> --report machine` using crysta `2b75771b` and its continuous axial-offset FCJ quadrature.

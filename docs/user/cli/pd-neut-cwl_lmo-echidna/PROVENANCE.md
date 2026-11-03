@@ -49,3 +49,5 @@ descent first meets its convergence test at R<sub>wp</sub> 13 % with the Li1 occ
 final linear step shows that this is not the minimum, so the descent goes on to 5.00 %. An edi built on an engine
 that stops at that first convergence test ends at 13 %. The fully ordered start (Li1 1) reaches the same
 minimum in 6 iterations, but FullProf cannot fit from it.
+
+The regression pins for reduced_chi_square were retaken with `python -m edi fit <project> --report machine` using crysta `2b75771b` and its continuous axial-offset FCJ quadrature.

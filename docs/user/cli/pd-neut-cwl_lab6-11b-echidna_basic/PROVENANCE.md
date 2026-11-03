@@ -14,3 +14,5 @@ Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_cw_cases.p
   term at the level read off the pattern, four more terms at 0).
 - **Free (17):** the source project's set: the wavelength, the zero shift, displacement and transparency, U, V, W, Y,
   B x, both Biso, the scale and the five polynomial terms. The cell stays fixed: it is the standard's.
+
+The regression pins for reduced_chi_square, rwp were retaken with `python -m edi fit <project> --report machine` using crysta `2b75771b` and its continuous axial-offset FCJ quadrature.
