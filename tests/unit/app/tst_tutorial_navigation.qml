@@ -599,6 +599,11 @@ TestCase {
                 fits: lessonFitStarts,
                 control: Ui.control(Probe, app, step.target)
             };
+            if (step.target === "createProject.name") {
+                const dialog = SettingsProof.creationDialog(app);
+                verify(dialog !== null && dialog.visible, "The tutorial names its own scratch project");
+                dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
+            }
             const wavelengthStep = step.target === "instrument.setup_wavelength";
             if (wavelengthStep)
                 compare(lessonWavelength(), 1, "The new experiment starts at one angstrom before the HRPT lesson changes it");
