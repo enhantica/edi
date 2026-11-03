@@ -16,7 +16,8 @@ ENGINE = importlib.import_module('edi')
 def project_from(start, free):
     project = ENGINE.Project.load(corpus_case_dir('lab6-echidna-fcj') / 'project')
     for parameter in project.parameters:
-        parameter.free = False
+        if parameter.free:
+            parameter.free = False
     peak = project.experiments[0].peak
     for parameter, value, active in zip(
         (peak.asym_fcj_1, peak.asym_fcj_2), start, free, strict=True
