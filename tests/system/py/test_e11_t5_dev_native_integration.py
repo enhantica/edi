@@ -11535,7 +11535,7 @@ def _finish_genuine_restart_sources(actor, manifest):
 
 
 def _start_exact_original_fixture_restart(
-    tmp_path, monkeypatch, sources, turn_calls, *, session_fixture=None
+    tmp_path, monkeypatch, sources, turn_calls, *, session_fixture=None, prepare_peer=None
 ):
     monkeypatch.setenv('EDI_TEST_ASSISTANT_APPLICATION_NAME', sources['application_name'])
     monkeypatch.setenv('EDI_TEST_ASSISTANT_RESTORE_SETTINGS', sources['settings_source'])
@@ -11560,6 +11560,8 @@ def _start_exact_original_fixture_restart(
         },
         'observe_context_continuity': True,
     }
+    if prepare_peer is not None:
+        prepare_peer(folder, config)
     # Same existing class, host, stdio protocol, normal controls and isolation;
     # explicit initial config exists before any genuine auto-bootstrap can run.
     actor = MainActor.__new__(MainActor)

@@ -40,9 +40,20 @@ def test_dependency_manifest_and_about_notice_match_the_owner_decision():
     assert 'model: ApplicationInfo.appLicenceIds' in about, (
         'About shows one clickable identifier for each app and source licence'
     )
-    assert 'onActivated: ApplicationInfo.aboutOpenLicence()' in about, (
-        'Each licence identifier activates its original licence-opening procedure'
+    icon_link = (ROOT / 'app/qml/Components/IconLink.qml').read_text()
+    assert re.search(r'^EaElements\.Button\s*\{', icon_link, re.MULTILINE), (
+        'Required: the licence delegate uses the original Button click signal.'
     )
+    licence_delegate = re.search(
+        r'Repeater\s*\{\s*model: ApplicationInfo\.appLicenceIds\s+'
+        r'IconLink\s*\{([^{}]*)\}',
+        about,
+    )
+    assert licence_delegate and re.search(
+        r'^\s*onClicked: ApplicationInfo\.aboutOpenLicence\(\)\s*$',
+        licence_delegate.group(1),
+        re.MULTILINE,
+    ), 'Required: clicking each app licence IconLink calls its native licence-opening procedure.'
     opener = re.search(
         r'void ApplicationInfo::aboutOpenLicence\(\) const\s*{(.*?)\n}', info, re.DOTALL
     )
