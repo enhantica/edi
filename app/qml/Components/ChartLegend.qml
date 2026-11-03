@@ -93,6 +93,7 @@ Rectangle {
                 required property color color
                 required property string mark
                 required property bool bragg
+                required property bool magnetic
                 required property real markWidth
                 required property list<string> labelTexts
                 required property list<string> labelColors
@@ -114,7 +115,8 @@ Rectangle {
                                 "text": qsTr("Bragg peaks")
                             },
                             {
-                                "icon": "layer-group",
+                                // A magnetic structure's magnetic reflections: the magnet, as on its tick row.
+                                "icon": entry.magnetic ? "magnet" : "layer-group",
                                 "color": ink(entry.color)
                             },
                             {

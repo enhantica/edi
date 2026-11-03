@@ -4284,6 +4284,8 @@ void Project::publish_calculation(DueEstimates due) {
         columns.intensity_bkg = shared_column(computed.intensity_bkg);
         columns.calc_status = status_column(computed.calc_status);
         columns.component_intensities_net = shared_column(computed.component_intensities_net);
+        columns.component_intensities_magnetic = shared_column(computed.component_intensities_magnetic);
+        columns.component_intensities_nuclear = shared_column(computed.component_intensities_nuclear);
         columns.component_order = shared_column(computed.component_order);
         columns.residual = shared_column(crysta::residual(engine.experiments[index]));
         data.push_back(std::move(columns));
@@ -4317,6 +4319,8 @@ void Project::publish_calculation(DueEstimates due) {
         target.intensity_bkg = std::move(data[index].intensity_bkg);
         target.calc_status = std::move(data[index].calc_status);
         target.component_intensities_net = std::move(data[index].component_intensities_net);
+        target.component_intensities_magnetic = std::move(data[index].component_intensities_magnetic);
+        target.component_intensities_nuclear = std::move(data[index].component_intensities_nuclear);
         target.component_order = std::move(data[index].component_order);
         target.residual = std::move(data[index].residual);
         bank.refln = std::move(reflections[index]);
@@ -4467,6 +4471,8 @@ CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, s
             columns.intensity_bkg = computed.intensity_bkg;
             columns.calc_status = computed.calc_status;
             columns.component_intensities_net = computed.component_intensities_net;
+            columns.component_intensities_magnetic = computed.component_intensities_magnetic;
+            columns.component_intensities_nuclear = computed.component_intensities_nuclear;
             columns.component_order = computed.component_order;
             columns.residual = computed.residual;
         }
@@ -4599,6 +4605,8 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         target.intensity_bkg = std::move(result.data[index].intensity_bkg);
         target.calc_status = std::move(result.data[index].calc_status);
         target.component_intensities_net = std::move(result.data[index].component_intensities_net);
+        target.component_intensities_magnetic = std::move(result.data[index].component_intensities_magnetic);
+        target.component_intensities_nuclear = std::move(result.data[index].component_intensities_nuclear);
         target.component_order = std::move(result.data[index].component_order);
         target.residual = std::move(result.data[index].residual);
         bank.refln = std::move(result.refln[index]);
@@ -5584,7 +5592,8 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     // Each structure's curve, which crysta's snapshot leaves out, from the fit's own computed columns.
     const crysta::ComputedData& computed = fitted.experiment().computed().data();
     source.components = structure_components(computed.component_order.values(), computed.component_intensities_net.values(),
-                                             view.data.axis.size(), names);
+                                             view.data.axis.size(), names, computed.component_intensities_magnetic.values(),
+                                             computed.component_intensities_nuclear.values());
     return source;
 }
 

@@ -4877,6 +4877,8 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
             keep(data.intensity_bkg);
             keep(data.calc_status);
             keep(data.component_intensities_net);
+            keep(data.component_intensities_magnetic);
+            keep(data.component_intensities_nuclear);
             keep(data.component_order);
             keep(data.residual);
         }

@@ -508,7 +508,8 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
                                       refln.index_l.values(), names, refln.f_squared_calc.values(),
                                       refln.m_perp_squared_calc.values());
     source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
-                                              data.axis().size(), names);
+                                              data.axis().size(), names, data.component_intensities_magnetic.values(),
+                                              data.component_intensities_nuclear.values());
     if (axis == PatternAxis::DSpacing) {
         to_d_axis(source, data, refln);
     }
@@ -517,11 +518,22 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
 
 std::vector<PatternSource::Component> structure_components(std::span<const std::string> order,
                                                            std::span<const double> net, std::size_t points,
-                                                           std::span<const std::string> structure_names) {
+                                                           std::span<const std::string> structure_names,
+                                                           std::span<const double> magnetic,
+                                                           std::span<const double> nuclear) {
     std::vector<PatternSource::Component> components;
     if (order.empty() || net.size() != points * order.size()) {
         return components;
     }
+    const bool split = magnetic.size() == net.size() && nuclear.size() == net.size();
+    const auto column = [&](std::span<const double> table, std::size_t k) {
+        std::vector<double> values(points);
+        for (std::size_t row = 0; row < points; ++row) {
+            values[row] = table[row * order.size() + k];
+        }
+        return values;
+    };
+    std::vector<PatternSource::Component> magnetic_parts;
     for (std::size_t k = 0; k < order.size(); ++k) {
         PatternSource::Component component;
         component.structure_id = order[k];
@@ -532,14 +544,28 @@ std::vector<PatternSource::Component> structure_components(std::span<const std::
                 component.place = place;
             }
         }
-        std::vector<double> values(points);
-        for (std::size_t row = 0; row < points; ++row) {
-            values[row] = net[row * order.size() + k];
+        std::vector<double> magnetic_values = split ? column(magnetic, k) : std::vector<double>();
+        const bool has_magnetic = std::any_of(magnetic_values.begin(), magnetic_values.end(),
+                                              [](double value) { return value != 0.0 && !std::isnan(value); });
+        if (has_magnetic) {
+            PatternSource::Component part = component;
+            part.magnetic = true;
+            part.place = std::max(structure_names.size(), order.size()) + magnetic_parts.size();
+            part.net = std::make_shared<const std::vector<double>>(std::move(magnetic_values));
+            magnetic_parts.push_back(std::move(part));
+            component.net = std::make_shared<const std::vector<double>>(column(nuclear, k));
+        } else {
+            component.net = std::make_shared<const std::vector<double>>(column(net, k));
         }
-        component.net = std::make_shared<const std::vector<double>>(std::move(values));
         components.push_back(std::move(component));
     }
+    components.insert(components.end(), std::make_move_iterator(magnetic_parts.begin()),
+                      std::make_move_iterator(magnetic_parts.end()));
     return components;
+}
+
+std::string bragg_series_id(const PatternSource::Phase& phase) {
+    return "bragg/" + phase.structure_id + (phase.magnetic ? "/magnetic" : "");
 }
 
 std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,
@@ -805,7 +831,7 @@ PatternPresentation present_pattern(const PatternSource& given, const PatternVie
             PatternSeries series;
             series.kind = SeriesKind::StructureCurve;
             series.pane = Pane::Main;
-            series.id = "structure/" + component.structure_id;
+            series.id = "structure/" + component.structure_id + (component.magnetic ? "/magnetic" : "");
             series.label = component.label;
             series.style = style_key("structure", component.place);
             fill_points(series, decimate(x, kept_low, display, out.x.min, out.x.max, view.columns, crossing), x,
@@ -878,7 +904,7 @@ PatternPresentation present_pattern(const PatternSource& given, const PatternVie
         PatternSeries series;
         series.kind = SeriesKind::BraggTicks;
         series.pane = Pane::Bragg;
-        series.id = "bragg/" + phase.structure_id;
+        series.id = bragg_series_id(phase);
         series.label = phase.label;
         series.style = style_key("bragg", phase.place);
         const double row_bottom = static_cast<double>(phases.size() - k - 1);
@@ -962,7 +988,7 @@ std::string hover_text(const PatternSource& source, const PatternSeries& series,
     const std::size_t row = series.rows[point];
     if (series.kind == SeriesKind::BraggTicks) {
         for (const PatternSource::Phase& phase : source.phases) {
-            if ("bragg/" + phase.structure_id != series.id || !phase.hkl) {
+            if (bragg_series_id(phase) != series.id || !phase.hkl) {
                 continue;
             }
             // The tick's place among this phase's reflections.
@@ -1004,7 +1030,7 @@ std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternS
     const std::size_t row = series.rows[point];
     if (series.kind == SeriesKind::BraggTicks) {
         for (const PatternSource::Phase& phase : source.phases) {
-            if ("bragg/" + phase.structure_id != series.id || !phase.hkl || !phase.position) {
+            if (bragg_series_id(phase) != series.id || !phase.hkl || !phase.position) {
                 continue;
             }
             std::size_t index = row;

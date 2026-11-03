@@ -743,6 +743,7 @@ void PatternChartController::refresh() {
                        bragg, width, texts, colours});
         legend.back().key = QString::fromStdString(series.id);
         legend.back().hidden = hidden_.contains(legend.back().key);
+        legend.back().magnetic = bragg && series.id.ends_with("/magnetic");
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
