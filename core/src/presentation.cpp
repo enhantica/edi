@@ -329,10 +329,11 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
                                                 : colour_positions(scheme, experiments, structures);
     const std::vector<std::size_t> spare_measured =
         free_positions(scheme, FigureKind::Experiment, measured_rows - experiments, held);
-    std::vector<std::size_t> taken = held;
-    taken.insert(taken.end(), spare_measured.begin(), spare_measured.end());
+    // The structure rows past the project's own (a magnetic structure's magnetic part, edi ADR-0068) take the
+    // positions further structures would: the next ones after those held, in palette order, as a second phase's
+    // contribution would (the owner, 2026-11-03).
     const std::vector<std::size_t> spare_structure =
-        free_positions(scheme, FigureKind::Structure, structure_rows - structures, taken);
+        free_positions(scheme, FigureKind::Structure, structure_rows - structures, held);
     // Shades past the palette spread over the positions the project itself uses.
     const std::size_t count = held.empty() ? 0 : *std::max_element(held.begin(), held.end()) + 1;
     const auto colour = [&](std::size_t position, bool dark) { return figure_colour(scheme, position, count, dark); };
