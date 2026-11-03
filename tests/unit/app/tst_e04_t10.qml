@@ -6,6 +6,7 @@ import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "E04Review.js" as Review
+import "AtomsSelector.js" as Atoms
 
 //  I17-I20. Hand-run while app-test is owner-disabled.
 // Buttons and tooltips are transcribed from diffraction-lib structure.html.j2,
@@ -194,12 +195,16 @@ TestCase {
         compare(projection.toolTip, "Perspective view", " I18 reset preserves the selected projection");
         click("projection");
         compare(projection.toolTip, "Parallel (orthographic) view", " I18 opposite toggle restores orthographic projection");
-        click("atoms");
-        verify(object("structure.toolbar.atoms").checked, " I18 first atom toggle keeps the asymmetric unit visible");
-        click("atoms");
-        verify(!object("structure.toolbar.atoms").checked, " I18 second atom toggle hides all atoms");
-        click("atoms");
-        verify(object("structure.toolbar.atoms").checked, " I18 third atom toggle restores all atoms");
+        const atoms = object("structure.toolbar.atoms");
+        Atoms.checkEntries(test, atoms, ["All", "Asymmetric unit (crystal)", "None"]);
+        const all = view.controller.spheres.count;
+        Atoms.select(test, appWindow, atoms, "Asymmetric unit (crystal)");
+        tryVerify(() => view.controller.spheres.count > 0 && view.controller.spheres.count < all, 2000,
+                  "The nuclear asymmetric-unit choice draws a proper subset");
+        Atoms.select(test, appWindow, atoms, "None");
+        tryCompare(view.controller.spheres, "count", 0, 2000, "None removes all nuclear atoms");
+        Atoms.select(test, appWindow, atoms, "All");
+        tryCompare(view.controller.spheres, "count", all, 2000, "All restores the nuclear spheres");
         ["labels", "bonds", "cell", "axes"].forEach(name => {
             const button = object("structure.toolbar." + name);
             const before = button.checked;

@@ -10,6 +10,7 @@ import ProjectTextAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "E04Review.js" as Review
+import "AtomsSelector.js" as Atoms
 import "ApprovedPalette.js" as Approved
 
 TestCase {
@@ -483,7 +484,9 @@ TestCase {
         verify(Session.openProject(scratch), "The saved magnetic appearance reopens");
         compare(Session.project.structureViewOptions.momentScale, 1.125, "Moment scale survives project save and reload");
     }
-    function test_visibility_keeps_camera_and_independent_moments() {
+    function checkVisibilityViews(reference) {
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted,
+                  10000, "The Structure pages finish building");
         click("appBar.tab.structure");
         const view = Review.find(Ui.page(appWindow), "structure.view");
         verify(view !== null, "The magnetic case reaches the real structure view");
@@ -491,86 +494,190 @@ TestCase {
         const controller = view.controller;
         const options = Session.project.structureViewOptions;
         controller.viewAnimationDuration = 0;
+        options.momentView = "through_atom";
         const xyz = v => [v.x, v.y, v.z];
         const quaternion = q => [q.scalar, q.x, q.y, q.z];
-        const projection = matrix => [matrix.m11, matrix.m22, matrix.m13, matrix.m23];
-        const differences = [];
-        function state() {
+        const projection = m => [m.m11, m.m22, m.m13, m.m23];
+        function cameraState() {
             const camera = view.view3d ? view.view3d.camera : null;
-            const result = {
-                position: xyz(controller.cameraPosition),
-                orientation: quaternion(controller.cameraRotation),
-                zoom: controller.magnification,
-                projection: controller.projection,
-                effectiveZoom: controller.projection === "perspective"
-                    ? projection(controller.cameraProjection) : [controller.orthographicMagnification]
-            };
-            if (camera) {
-                result.drawnPosition = xyz(camera.scenePosition);
-                result.drawnOrientation = quaternion(camera.sceneRotation);
-                result.drawnZoom = controller.projection === "perspective"
-                    ? projection(camera.projection) : [camera.horizontalMagnification, camera.verticalMagnification];
-            }
-            return result;
+            return [
+                xyz(controller.cameraPosition), quaternion(controller.cameraRotation),
+                controller.magnification, controller.projection,
+                controller.projection === "perspective" ? projection(controller.cameraProjection) : [controller.orthographicMagnification],
+                camera ? [xyz(camera.scenePosition), quaternion(camera.sceneRotation),
+                          controller.projection === "perspective" ? projection(camera.projection) :
+                              [camera.horizontalMagnification, camera.verticalMagnification]] : []
+            ];
         }
-        function toggle(control, property) {
-            const before = state();
-            const beforeValue = options[property];
+        function change(control, property, action = null) {
+            const before = cameraState();
+            const prior = options[property];
             const revision = controller.revision;
-            click("structure.toolbar." + control);
-            tryVerify(() => options[property] !== beforeValue && controller.revision > revision, 5000,
-                      control + " toolbar click publishes the changed visibility and scene");
+            if (action)
+                action();
+            else
+                click("structure.toolbar." + control);
+            tryVerify(() => options[property] !== prior && controller.revision > revision, 5000,
+                      control + " input publishes changed visibility and scene");
             appWindow.update();
             verify(waitForRendering(view, 5000), control + " reaches a rendered frame with the new visibility");
-            const after = state();
-            for (const key of Object.keys(before)) {
-                if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
-                    differences.push(before.projection + " " + control + " " + beforeValue + " → " +
-                                     options[property] + " " + key + " " + JSON.stringify(before[key]) +
-                                     " → " + JSON.stringify(after[key]));
+            compare(cameraState(), before, reference.name + " " + control + " keeps camera position, orientation and zoom");
+        }
+        function samePoint(left, right) {
+            return left.every((coordinate, axis) => Math.abs(coordinate - right[axis]) < 0.0001);
+        }
+        function verifySites(orbits, positions, context) {
+            const hits = orbits.map(() => 0);
+            for (const p of positions) {
+                const index = orbits.findIndex(orbit => orbit.some(q => samePoint(p, q)));
+                verify(index >= 0, context + " draws only reference coordinates: " + JSON.stringify(p));
+                ++hits[index];
             }
+            compare(hits, orbits.map(() => 1), context + " draws one instance per expected position or orbit");
+        }
+        const combo = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+        const entries = ["All", "Asymmetric unit (crystal)", "Asymmetric unit (magnetic)", "Magnetic atoms", "None"];
+        const spheres = controller.spheres;
+        verifySites(reference.all, Array.from({length: spheres.count}, (_, row) => xyz(spheres.instancePosition(row))),
+                    reference.name + " default All atoms");
+        Atoms.checkEntries(test, combo, entries);
+        function select(index) {
+            const label = entries[index];
+            if (combo.currentText !== label)
+                change("atoms", "atoms", () => Atoms.select(test, appWindow, combo, label));
+        }
+        function verifyView(index, moments, atomOrbits, arrowOrbits) {
+            select(index);
+            if (moments !== options.showMoments)
+                change("moments", "showMoments");
+            const context = reference.name + " " + entries[index] + " moments " + (moments ? "on" : "off");
+            const spheres = controller.spheres;
+            const shafts = controller.triadShafts;
+            const heads = controller.triadHeads;
+            const centres = Array.from({length: spheres.count}, (_, row) => xyz(spheres.instancePosition(row)));
+            verifySites(atomOrbits, centres, context + " atoms");
+            compare(shafts.count, heads.count, context + " every arrow has a shaft and a head");
+            const anchors = Array.from({length: shafts.count}, (_, row) => {
+                // Recover the centre of the whole arrow from the two mesh centres and lengths.
+                const shaft = xyz(shafts.instancePosition(row));
+                const head = xyz(heads.instancePosition(row));
+                const headLength = heads.instanceScale(row).y;
+                const fraction = headLength / (shafts.instanceScale(row).y + headLength);
+                return shaft.map((v, axis) => v + fraction * (head[axis] - v));
+            });
+            verifySites(arrowOrbits, anchors, context + " moments");
+            if (atomOrbits.length)
+                verify(anchors.every(anchor => centres.some(centre => samePoint(anchor, centre))),
+                       context + " anchors every arrow on a displayed magnetic atom");
         }
         for (let mode = 0; mode < 2; ++mode) {
             if (mode === 1) {
                 const beforeProjection = controller.projection;
                 click("structure.toolbar.projection");
-                tryVerify(() => controller.projection !== beforeProjection, 5000,
-                          "The second pass reaches the other projection");
+                tryVerify(() => controller.projection !== beforeProjection, 5000, "Both projections are exercised");
             }
             const beforeZoom = controller.magnification;
             controller.zoomAt(view.width * 0.42, view.height * 0.58, 120);
-            tryVerify(() => controller.magnification !== beforeZoom, 5000,
-                      "The visibility pass starts from a user-adjusted zoom");
+            tryVerify(() => controller.magnification !== beforeZoom, 5000, "Visibility starts from an adjusted zoom");
             appWindow.update();
             verify(waitForRendering(view, 5000), "The adjusted camera reaches a rendered frame");
-            const baseline = state();
-            verify(baseline.position.concat(baseline.orientation, baseline.effectiveZoom).every(Number.isFinite),
-                   "The camera snapshot contains real position, orientation and effective zoom numbers");
-            const startingAtoms = options.atoms;
-            const visited = new Set();
-            for (let transition = 0; transition < 3; ++transition) {
-                toggle("atoms", "atoms");
-                visited.add(options.atoms);
-                if (options.atoms === startingAtoms)
-                    break;
-            }
-            compare(options.atoms, startingAtoms, "The atom control completes its whole display cycle");
-            verify(visited.has("none") && visited.size >= 2, "The atom cycle both hides and shows atoms");
+            const [position, orientation, zoom] = cameraState();
+            verify(position.concat(orientation, zoom).every(Number.isFinite),
+                   "The camera contains finite position, orientation and zoom");
+            if (options.axes)
+                change("axes", "axes");
+            for (const args of [
+                [0, false, reference.all, []], [1, false, reference.crystal, []],
+                [2, false, reference.magnetic, []], [0, true, reference.all, reference.cobalt],
+                [3, true, reference.cobalt, reference.cobalt], [4, true, [], reference.cobalt],
+                [1, true, reference.crystal, reference.crystalCobalt],
+                [2, true, reference.magnetic, reference.magneticCobalt], [4, true, [], reference.cobalt]
+            ])
+                verifyView(...args);
             for (const [control, property] of [["bonds", "bonds"], ["labels", "showLabels"],
                                                ["moments", "showMoments"], ["cell", "cell"], ["axes", "axes"]]) {
+                if (!Ui.control(Probe, appWindow, "structure.toolbar." + control)) {
+                    verify(control === "bonds" && reference.name === "Doubled parent cell",
+                           "Every applicable visibility control is available");
+                    continue;
+                }
                 const original = options[property];
-                toggle(control, property);
-                toggle(control, property);
+                change(control, property);
+                change(control, property);
                 compare(options[property], original, control + " is tested both hidden and shown");
             }
         }
-        for (let transition = 0; options.atoms !== "none" && transition < 3; ++transition)
-            toggle("atoms", "atoms");
-        compare(options.atoms, "none", "The final scene has hidden atoms");
-        if (!options.showMoments)
-            toggle("moments", "showMoments");
-        verify(options.showMoments && controller.hasMoments, "Moments remain enabled and present with atoms hidden");
-        compare(differences.length, 0, "Every visibility change keeps the same camera before and after: " + differences.join("; "));
+    }
+    function test_visibility_keeps_camera_and_independent_moments_data() {
+        return [{tag: "pnma", doubled: false}, {tag: "doubled", doubled: true}];
+    }
+    function test_visibility_keeps_camera_and_independent_moments(data) {
+        const flatten = lists => [].concat(...lists);
+        const singletons = points => points.map(point => [point]);
+        if (!data.doubled) {
+            // ISODISTORT Pnma.1 operations and the published 2.344 K sites.
+            const operations = [
+                ([x,y,z]) => [x,y,z], ([x,y,z]) => [x+0.5,-y+0.5,-z+0.5],
+                ([x,y,z]) => [-x,y+0.5,-z], ([x,y,z]) => [-x+0.5,-y,z+0.5],
+                ([x,y,z]) => [-x,-y,-z], ([x,y,z]) => [-x+0.5,y+0.5,z+0.5],
+                ([x,y,z]) => [x,-y+0.5,z], ([x,y,z]) => [x+0.5,y,-z+0.5]
+            ];
+            const sites = [[0,0,0], [0.2809,0.25,0.9836], [0.0933,0.25,0.4278],
+                           [0.0896,0.25,0.773], [0.4478,0.25,0.2179], [0.1639,0.0321,0.2805]];
+            const periodic = sites.map(site => [...new Set(operations.map(op =>
+                op(site).map(x => (x - Math.floor(x)).toFixed(6)).join(",")))].map(key => key.split(",").map(Number)));
+            compare(periodic.map(orbit => orbit.length), [4,4,4,4,4,8],
+                    "Independent Pnma and Pnma.1 operations give the published Wyckoff multiplicities");
+            // A closed cell includes the adjacent image on each face of a boundary site.
+            const images = x => x === 0 ? [0, 1] : [x];
+            const display = periodic.map(orbit => {
+                const points = [];
+                for (const [x, y, z] of orbit)
+                    for (const a of images(x))
+                        for (const b of images(y))
+                            for (const c of images(z))
+                                points.push([a*10.308064, b*6.002187, c*4.787394]);
+                return points;
+            });
+            checkVisibilityViews({
+                name: "2.344 K cobalt olivine", all: singletons(flatten(display)),
+                crystal: display, magnetic: display, cobalt: singletons(flatten(display.slice(0, 2))),
+                crystalCobalt: display.slice(0, 2), magneticCobalt: display.slice(0, 2)
+            });
+            return;
+        }
+
+        Session.closeProject();
+        const file = Probe.readFile("tests/fixtures/magnetic_pnma/doubled-atom-orbits.edi");
+        verify(file.length > 0 && SettingsProof.write(scratch, "structures/cosio.edi", file),
+               "The scratch project carries the doubled parent-cell witness");
+        verify(Session.openProject(scratch), "The doubled parent-cell project opens");
+        // The P1 child's magnetic identity leaves each site alone. Parent translation
+        // (1/2,0,0) in the child basis pairs the two Co and two O sites.
+        const positions = [[1,1.5,3], [5,1.5,3], [2,3,6], [6,3,6]];
+        const magnetic = singletons(positions);
+        checkVisibilityViews({
+            name: "Doubled parent cell", all: magnetic, magnetic: magnetic,
+            crystal: [positions.slice(0, 2), positions.slice(2)], cobalt: magnetic.slice(0, 2),
+            crystalCobalt: [positions.slice(0, 2)], magneticCobalt: magnetic.slice(0, 2)
+        });
+        for (const label of ["Asymmetric unit (crystal)", "Asymmetric unit (magnetic)", "Magnetic atoms", "None", "All"]) {
+            const combo = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+            Atoms.select(test, appWindow, combo, label);
+            const selected = Session.project.structureViewOptions.atoms;
+            verify(Session.save(), "The project saves with the selected Atoms view");
+            Session.closeProject();
+            verify(Session.openProject(scratch), "The saved Atoms view reopens from disk");
+            tryCompare(Session.project.structureViewOptions, "atoms", selected, 2000,
+                       "The selected appearance value survives save and reload");
+            tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted, 10000,
+                      "The saved Structure pages rebuild before reading the Atoms selector");
+            click("appBar.tab.structure");
+            tryVerify(() => {
+                const reopened = Ui.control(Probe, appWindow, "structure.toolbar.atoms");
+                return reopened && reopened.currentText === label;
+            }, 5000, "The toolbar restores the selected view after reload");
+        }
     }
     function test_analysis_contains_only_independent_magnetic_components() {
         click("appBar.tab.analysis");
