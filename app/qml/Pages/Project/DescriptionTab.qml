@@ -153,6 +153,15 @@ Rectangle {
                         if (tab.project && text !== tab.project.description)
                             tab.project.description = text;
                     }
+                    // Tab moves on to the next field and commits, as from the one-line fields above.
+                    Keys.onTabPressed: event => {
+                        nextItemInFocusChain(true).forceActiveFocus(Qt.TabFocusReason);
+                        event.accepted = true;
+                    }
+                    Keys.onBacktabPressed: event => {
+                        nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason);
+                        event.accepted = true;
+                    }
                 }
             }
 

@@ -19,6 +19,8 @@ import edi.app
 // is shown, so each is told whether it is the shown one (WorkflowPage.current).
 EaComponents.ApplicationWindow {
     id: window
+    appBar.objectName: "appBar"
+    appBarCentralTabs.objectName: "appBar.workflow"
 
     // The supported minimum (AppSizes): the window cannot be made smaller than every page is made for.
     minimumWidth: AppSizes.minimumAppWidth
@@ -163,8 +165,10 @@ EaComponents.ApplicationWindow {
     // The opening's progress, which the status bar shows until every page is built.
     readonly property int pagesWanted: Session.hasProject ? pageLoaders.filter(loader => loader.wanted).length : 0
     readonly property int pagesBuilt: Session.hasProject ? pageLoaders.filter(loader => loader.wanted && loader.status === Loader.Ready).length : 0
+    // None starts, and one being built stops, once the window is quitting: closing during a tutorial brings the user's
+    // project back just before the quit, and its pages would otherwise still be building when the engine goes.
     function pageTurn(loader) {
-        return pagesStarted && pageLoaders.slice(0, pageLoaders.indexOf(loader)).every(earlier => !earlier.wanted || earlier.status === Loader.Ready);
+        return pagesStarted && !quitting && pageLoaders.slice(0, pageLoaders.indexOf(loader)).every(earlier => !earlier.wanted || earlier.status === Loader.Ready);
     }
     Connections {
         target: Session
@@ -192,8 +196,12 @@ EaComponents.ApplicationWindow {
         anchors.fill: parent
         z: 10
 
+        // Only while a tab is preparing: the handler takes the hover from the tabs under it, which then lose their
+        // hover colours.
         HoverHandler {
             id: tabBarHover
+
+            enabled: [projectTab, structureTab, experimentTab, analysisTab, reportTab].some(tab => tab.preparing)
         }
         readonly property WorkflowTabButton preparingTab: {
             if (!tabBarHover.hovered)
@@ -216,7 +224,9 @@ EaComponents.ApplicationWindow {
     }
 
     contentArea: [
-        HomePage {},
+        HomePage {
+            objectName: "workflow.home.mainContent"
+        },
         Loader {
             id: projectLoader
 
@@ -280,11 +290,49 @@ EaComponents.ApplicationWindow {
     ]
 
     statusBar: StatusBar {
+        objectName: "statusBar"
         pagesBuilt: window.pagesBuilt
         pagesWanted: window.pagesWanted
+        tutorial: tutorialPanel
     }
 
     AppPreferencesDialog {}
+
+    // Help and feedback, opened from anywhere through AppState (edi ADR-0063), and the popup offering a crashed run's log
+    // to it (edi ADR-0062).
+    FeedbackDialog {
+        id: feedbackDialog
+
+        roomWidth: window.width
+    }
+    // The run log's line for each page opened (edi ADR-0062).
+    Connections {
+        target: EaGlobals.Vars
+        function onAppBarCurrentIndexChanged() {
+            RunLog.note(`page: ${["home", "project", "structure", "experiment", "analysis", "report"][EaGlobals.Vars.appBarCurrentIndex] ?? EaGlobals.Vars.appBarCurrentIndex}`);
+        }
+    }
+    Connections {
+        target: AppState
+        function onFeedbackRequested(kind, log) {
+            feedbackDialog.openAs(kind, log);
+        }
+        function onTutorialRequested(tutorial) {
+            tutorialPanel.start(tutorial);
+        }
+        function onWhatsNewRequested() {
+            whatsNewDialog.open();
+        }
+    }
+    // What's new (edi ADR-0067), also opened once by itself at the first start after an update.
+    WhatsNewDialog {
+        id: whatsNewDialog
+    }
+    CrashDialog {}
+    // A running tutorial's steps (edi ADR-0064).
+    TutorialPanel {
+        id: tutorialPanel
+    }
 
     // Below the supported minimum, which only the browser's page can reach (the owner, 2026-10-25): the empty view's
     // background and a request for more room, over everything, dialogs included. Nothing beneath is torn down, so
@@ -359,7 +407,7 @@ EaComponents.ApplicationWindow {
     // project's temporary folder goes with it.
     property bool quitting: false
     onClosing: close => {
-        if (!quitting && Session.project !== null && (Session.project.modified || AppState.textEdit !== null)) {
+        if (!quitting && (Session.hasProjectSetAside || Session.project !== null && (Session.project.modified || AppState.textEdit !== null))) {
             close.accepted = false;
             AppState.afterChanges(() => {
                 window.quitting = true;
@@ -371,6 +419,12 @@ EaComponents.ApplicationWindow {
         target: AppState
         function onChangesQuestion(action) {
             unsavedChanges.action = action;
+            unsavedChanges.setAside = false;
+            unsavedChanges.open();
+        }
+        function onSetAsideChangesQuestion(action) {
+            unsavedChanges.action = action;
+            unsavedChanges.setAside = true;
             unsavedChanges.open();
         }
     }
@@ -387,7 +441,17 @@ EaComponents.ApplicationWindow {
         // ask again. In the web app the place is written after Save returns: the action waits until it is, and is
         // dropped if it is not (the window says why).
         property var afterSave: null
-        onAccepted: {
+        // The question is about the user's own project, which a tutorial holds aside: Save and Discard first bring it
+        // back and end the tutorial, on the next turn; Cancel leaves the tutorial running.
+        property bool setAside: false
+        function restoreThen(next) {
+            Qt.callLater(() => {
+                Session.restoreProjectSetAside();
+                AppState.tutorialEnded();
+                next();
+            });
+        }
+        function saveThenAct() {
             if (Session.needsSaveAs) {
                 window.saveProjectAs();
             } else if (Session.save()) {
@@ -398,6 +462,12 @@ EaComponents.ApplicationWindow {
             } else if (Session.lastError !== "") {
                 saveError.open();
             }
+        }
+        onAccepted: {
+            if (setAside)
+                restoreThen(saveThenAct);
+            else
+                saveThenAct();
         }
         Connections {
             target: Session
@@ -411,8 +481,14 @@ EaComponents.ApplicationWindow {
         }
         onDiscarded: {
             close();
-            Session.discardKeptChanges();
-            Qt.callLater(action);
+            const discard = () => {
+                Session.discardKeptChanges();
+                Qt.callLater(action);
+            };
+            if (setAside)
+                restoreThen(discard);
+            else
+                discard();
         }
 
         // The app's warning icon, then the project's name in bold (owner, 2026-10-25).
@@ -430,7 +506,7 @@ EaComponents.ApplicationWindow {
                 id: unsavedText
                 anchors.verticalCenter: parent.verticalCenter
                 textFormat: Text.StyledText
-                text: qsTr("The current project <b>%1</b> has unsaved changes.").arg(Session.project !== null ? Session.project.name.replace(/&/g, "&amp;").replace(/</g, "&lt;") : "")
+                text: unsavedChanges.setAside ? qsTr("Your own project, set aside for the tutorial, has unsaved changes.") : qsTr("The current project <b>%1</b> has unsaved changes.").arg(Session.project !== null ? Session.project.name.replace(/&/g, "&amp;").replace(/</g, "&lt;") : "")
             }
         }
     }
@@ -469,6 +545,7 @@ EaComponents.ApplicationWindow {
 
         Column {
             id: saveAsChoiceColumn
+            objectName: "project.saveChoice"
 
             // Folder and Zip archive: one group, rows closer than the usual spacing, no heading (owner, 2026-10-25).
             // A disabled button takes no hover, so its tooltip comes from the item around it.
@@ -873,6 +950,7 @@ EaComponents.ApplicationWindow {
         Qt.callLater(() => {
             Preferences.apply();
             RecentProjects.refresh();
+            whatsNewDialog.showIfUpdated();
         });
     }
 }

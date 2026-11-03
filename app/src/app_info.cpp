@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "app_info.hpp"
 
+#include <QMap>
+#include <QJsonArray>
+
 #include "app_build_info.hpp"
+#include "build_version.hpp"
+#include "example_list_model.hpp"
+#include "user_action_log.hpp"
+#include "web_files.hpp"
 #include "engine_setup.hpp"
 #include "edi/palette.hpp"
 #include "edi/scan_views.hpp"
@@ -9,6 +16,7 @@
 #include "edi/threading.hpp"
 
 #include <QClipboard>
+#include <QDir>
 #include <QFile>
 #include <QGuiApplication>
 #include <QJsonDocument>
@@ -16,6 +24,7 @@
 #include <QQuickWindow>
 #include <QRegularExpression>
 #include <QScreen>
+#include <QStandardPaths>
 #include <QSGRendererInterface>
 #include <QStringList>
 #include <QSysInfo>
@@ -55,21 +64,243 @@ QString read_resource(const QString& path) {
 }
 }  // namespace
 
+ApplicationInfo::ApplicationInfo(QObject* parent) : QObject(parent) { edi_app::UserActionLog::install(); }
+
 void ApplicationInfo::useDemoIdentity() { g_demo_identity = true; }
 
 bool ApplicationInfo::demoIdentity() { return g_demo_identity; }
 
 QString ApplicationInfo::version() const {
-    return g_demo_identity ? QStringLiteral("demo") : QStringLiteral(EDI_APP_VERSION);
+    return g_demo_identity ? QStringLiteral("demo") : QString::fromUtf8(edi_app::app_version());
 }
 
 QString ApplicationInfo::releaseDate() const {
-    return g_demo_identity ? QStringLiteral("demo build") : QStringLiteral(EDI_APP_DATE);
+    return g_demo_identity ? QStringLiteral("demo build") : QString::fromUtf8(edi_app::app_date());
 }
 
 QString ApplicationInfo::description() const {
     return tr("EasyDiffraction is a software for calculating diffraction patterns based on structural models and "
               "refining their parameters against experimental data.");
+}
+
+QList<Tutorial> ApplicationInfo::tutorials() const {
+    const auto read = [](const QString& name) {
+        return QJsonDocument::fromJson(read_resource(QStringLiteral(":/edi/tutorials/") + name).toUtf8());
+    };
+    const auto text = [](const QJsonObject& object, const char* key) {
+        return object.value(QLatin1String(key)).toString();
+    };
+    const auto step = [&text](const QJsonObject& object, const QString& page) {
+        // A step's own page, else its tour page's: a step opening a page shows on the page before it.
+        return TutorialStep{text(object, "text"),
+                            object.contains(QStringLiteral("page")) ? text(object, "page") : page,
+                            text(object, "target"),
+                            text(object, "expected"),
+                            text(object, "via"),
+                            text(object, "check"),
+                            object.value(QStringLiteral("open")).toBool(),
+                            object.value(QStringLiteral("files")).toBool(),
+                            text(object, "tab"),
+                            text(object, "title"),
+                            object.value(QStringLiteral("coversTarget")).toBool()};
+    };
+    // A step without its own tab is on the tab the last sidebar-tab step on its page opened, so it sets up the same
+    // context on Next, Back or a jump.
+    const auto placeOnTabs = [](QList<TutorialStep>& steps) {
+        const QString prefix = QStringLiteral("sideBar.tab.");
+        QString page;
+        QString tab;
+        for (TutorialStep& step : steps) {
+            if (step.page != page) {
+                page = step.page;
+                tab.clear();
+            }
+            if (step.target.startsWith(prefix)) {
+                tab = step.target.mid(prefix.size());
+                continue;
+            }
+            if (step.tab.isEmpty()) {
+                step.tab = tab;
+            }
+        }
+    };
+    QList<Tutorial> tutorials;
+    for (const QJsonValue& entry : read(QStringLiteral("manifest.json")).object().value(QStringLiteral("tutorials")).toArray()) {
+        const QJsonObject object = entry.toObject();
+        Tutorial tutorial{text(object, "id"),      text(object, "title"), text(object, "description"),
+                          text(object, "project"), text(object, "start"), {},
+                          text(object, "stop"),    {}};
+        for (const QJsonValue& choice : object.value(QStringLiteral("completion")).toArray()) {
+            tutorial.completion.append(choice.toString());
+        }
+        for (const QJsonValue& value : object.value(QStringLiteral("steps")).toArray()) {
+            tutorial.steps.append(step(value.toObject(), {}));
+        }
+        // "family:value", as the examples' tags; a family the registry does not have is a neutral chip of the value.
+        for (const QJsonValue& value : object.value(QStringLiteral("tags")).toArray()) {
+            const QString tag = value.toString();
+            tutorial.tags.append(tag);
+            const qsizetype colon = tag.indexOf(QLatin1Char(':'));
+            const QString family = colon < 0 ? QString() : tag.left(colon);
+            const QString name = tag.mid(colon + 1);
+            const edi_app::TagChip chip = edi_app::tagChip(family, name, name);
+            tutorial.tag_labels.append(chip.label);
+            tutorial.tag_icons.append(chip.glyph);
+            tutorial.tag_colors.append(chip.light);
+            tutorial.tag_dark_colors.append(chip.dark);
+        }
+        // A tour's steps are their own file, one list per page (app/tutorials/tour.json), for other uses to share.
+        if (object.contains(QStringLiteral("tour"))) {
+            for (const QJsonValue& page : read(text(object, "tour")).object().value(QStringLiteral("pages")).toArray()) {
+                for (const QJsonValue& value : page.toObject().value(QStringLiteral("steps")).toArray()) {
+                    tutorial.steps.append(step(value.toObject(), text(page.toObject(), "page")));
+                }
+            }
+        }
+        placeOnTabs(tutorial.steps);
+        tutorials.append(tutorial);
+    }
+    return tutorials;
+}
+
+edi_app::ExampleListModel* ApplicationInfo::tutorialCatalogue() {
+    if (tutorial_catalogue_ == nullptr) {
+        QList<edi_app::ExampleListModel::Item> items;
+        for (const Tutorial& tutorial : tutorials()) {
+            items.append({tutorial.id, tutorial.title, tutorial.description, tutorial.tags});
+        }
+        tutorial_catalogue_ = new edi_app::ExampleListModel(items, this);
+    }
+    return tutorial_catalogue_;
+}
+
+namespace {
+
+// A changelog given to a test run through EDI_CHANGELOG_JSON: JSON text or a file holding it, either a list of
+// entries or an object with `entries`; each entry has a `date` and a `text`, or a `changes` list of lines.
+QList<ChangeDay> injected_changes(const QByteArray& given) {
+    QByteArray json = given.trimmed();
+    if (!json.startsWith('[') && !json.startsWith('{')) {
+        QFile file(QString::fromLocal8Bit(given));
+        json = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(json);
+    const QJsonArray entries =
+        document.isArray() ? document.array() : document.object().value(QStringLiteral("entries")).toArray();
+    QList<ChangeDay> days;
+    for (const QJsonValue& value : entries) {
+        const QJsonObject entry = value.toObject();
+        QString text = entry.value(QStringLiteral("text")).toString();
+        for (const QJsonValue& change : entry.value(QStringLiteral("changes")).toArray()) {
+            text += QStringLiteral("- ") + change.toString() + QLatin1Char('\n');
+        }
+        days.append(ChangeDay{entry.value(QStringLiteral("date")).toString(), text});
+    }
+    return days;
+}
+
+}  // namespace
+
+namespace {
+
+// Writes the tutorials' files into `folder`, made if missing, or hands each to the browser to download.
+bool write_tutorial_files(const QString& folder, bool download) {
+    const QDir source(QStringLiteral(":/edi/tutorials/files"));
+    if (!download && !QDir().mkpath(folder)) {
+        return false;
+    }
+    bool saved = true;
+    for (const QString& name : source.entryList(QDir::Files)) {
+        QFile file(source.filePath(name));
+        if (!file.open(QIODevice::ReadOnly)) {
+            saved = false;
+            continue;
+        }
+        const QByteArray data = file.readAll();
+        if (download) {
+            saved = edi_app::WebFiles::download(data, name) && saved;
+            continue;
+        }
+        QFile written(QDir(folder).filePath(name));
+        saved = written.open(QIODevice::WriteOnly | QIODevice::Truncate) && written.write(data) == data.size() && saved;
+    }
+    return saved;
+}
+
+}  // namespace
+
+bool ApplicationInfo::saveTutorialFiles(const QUrl& folder) const {
+    const bool download = edi_app::WebFiles::available();
+    return write_tutorial_files(download ? QString() : folder.toLocalFile(), download);
+}
+
+QUrl ApplicationInfo::stageTutorialFiles() const {
+    const QString folder = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
+                               .filePath(QStringLiteral("easydiffraction-tutorial"));
+    return write_tutorial_files(folder, false) ? QUrl::fromLocalFile(folder) : QUrl();
+}
+
+QList<ChangeDay> ApplicationInfo::changes() const {
+    QList<ChangeDay> days;
+    const QByteArray given = qgetenv("EDI_CHANGELOG_JSON");
+    if (!given.isEmpty()) {
+        days = injected_changes(given);
+    }
+    // A `## YYYY-MM-DD` heading starts a day; its lines up to the next heading are its entries.
+    static const QRegularExpression heading(QStringLiteral("^## (\\d{4}-\\d{2}-\\d{2})\\s*$"));
+    const QString bundled = given.isEmpty() ? read_resource(QStringLiteral(":/edi/changelog.md")) : QString();
+    for (const QString& line : bundled.split(QLatin1Char('\n'))) {
+        const QRegularExpressionMatch match = heading.match(line);
+        if (match.hasMatch()) {
+            days.append(ChangeDay{match.captured(1), {}});
+        } else if (line.startsWith(QLatin1String("## "))) {
+            days.append(ChangeDay{});  // an undated section belongs to no day
+        } else if (!days.isEmpty()) {
+            days.last().text += line + QLatin1Char('\n');
+        }
+    }
+    days.removeIf([](const ChangeDay& day) { return day.date.isEmpty(); });
+    for (ChangeDay& day : days) {
+        day.text = day.text.trimmed();
+    }
+    std::sort(days.begin(), days.end(), [](const ChangeDay& a, const ChangeDay& b) { return a.date > b.date; });
+    return days;
+}
+
+Citation ApplicationInfo::citation() const {
+    // The top-level `key: "value"` lines and the authors' names of a CITATION.cff; nothing else is read.
+    QMap<QString, QString> fields;
+    QStringList authors;
+    for (const QString& raw : read_resource(QStringLiteral(":/CITATION.cff")).split(QLatin1Char('\n'))) {
+        const QString line = raw.trimmed();
+        const auto value = [&](qsizetype colon) {
+            QString text = line.mid(colon + 1).trimmed();
+            if (text.size() >= 2 && text.startsWith(QLatin1Char('"')) && text.endsWith(QLatin1Char('"'))) {
+                text = text.mid(1, text.size() - 2);
+            }
+            return text;
+        };
+        if (line.startsWith(QLatin1String("- name:"))) {
+            authors.append(value(line.indexOf(QLatin1Char(':'))));
+        } else if (!raw.startsWith(QLatin1Char(' ')) && !line.startsWith(QLatin1Char('#'))) {
+            const qsizetype colon = line.indexOf(QLatin1Char(':'));
+            if (colon > 0) {
+                fields.insert(line.left(colon), value(colon));
+            }
+        }
+    }
+    const QString year = fields.value(QStringLiteral("date-released")).left(4);
+    const QString doi = fields.value(QStringLiteral("doi"));
+    const QString doi_url = doi.isEmpty() ? QString() : QStringLiteral("https://doi.org/") + doi;
+    const QString title = fields.value(QStringLiteral("title"));
+    const QString version = fields.value(QStringLiteral("version"));
+    const QString who = authors.join(QStringLiteral(", "));
+    const QString text = QStringLiteral("%1 (%2). %3 (version %4) [Computer software]. %5")
+                             .arg(who, year, title, version, doi_url);
+    const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {{%1}},\n  title = {%2},\n"
+                                          "  year = {%3},\n  version = {%4},\n  doi = {%5},\n  url = {%6}\n}")
+                               .arg(who, title, year, version, doi, doi_url);
+    return {text, bibtex, doi, doi_url};
 }
 
 QString ApplicationInfo::licenceText(const QString& url) const { return read_resource(bundled_resource(url)); }
@@ -343,7 +574,9 @@ QString graphics_api(QSGRendererInterface::GraphicsApi api) {
 QString ApplicationInfo::diagnostics() const {
     QStringList lines;
     const auto add = [&lines](const QString& name, const QString& value) { lines.append(name + QStringLiteral(": ") + value); };
-    add(QStringLiteral("EasyDiffraction"), QStringLiteral(EDI_APP_VERSION " (" EDI_APP_DATE ")"));
+    add(QStringLiteral("EasyDiffraction"),
+        QString::fromUtf8(edi_app::app_version()) + QStringLiteral(" (") + QString::fromUtf8(edi_app::app_date()) +
+            QStringLiteral(")"));
     add(QStringLiteral("crysta"), QStringLiteral(EDI_APP_CRYSTA_VERSION));
     add(QStringLiteral("crysta SDK commit"), QStringLiteral(EDI_APP_CRYSTA_COMMIT));
     add(QStringLiteral("Platform"), QSysInfo::prettyProductName() + QStringLiteral(" (") + QSysInfo::currentCpuArchitecture() +

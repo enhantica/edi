@@ -43,7 +43,9 @@ Control {
     property bool shown: valueText !== ""
     // The hover frame's height, which the fit's progress bar shares (the owner, 2026-10-13): two font sizes, so a
     // framed item that shows its icon alone is a circle (the owner, 2026-10-26).
-    readonly property real frameHeight: Math.round(font.pixelSize * 2)
+    property real frameHeight: Math.round(font.pixelSize * 2)
+    // The icon's size: the item's font size unless set (the tutorial strip's round buttons, as the assistant's).
+    property real iconPixelSize: font.pixelSize
     readonly property bool wordShown: framed && (showWord || !dropsWord)
     readonly property bool iconOnly: framed && !wordShown
     // A framed item's padding before its icon and after its word.
@@ -64,8 +66,9 @@ Control {
     // A clickable or framed item keeps its frame clear of its icon and text (the owner, 2026-10-13). A framed one has
     // less space between its icon and word and more after the word, so the three look even, and with its icon alone it
     // is as wide as it is tall, the icon centred (the owner, 2026-10-26).
-    leftPadding: iconOnly ? (frameHeight - iconLabel.implicitWidth) / 2 : clickable || framed ? sidePadding : 0
-    rightPadding: iconOnly ? leftPadding : wordShown ? afterWordPadding : leftPadding
+    // An icon alone is centred by what it draws, not its advance: a chevron's ink sits off its advance's middle.
+    leftPadding: iconOnly ? frameHeight / 2 - ink.tightBoundingRect.x - ink.tightBoundingRect.width / 2 : clickable || framed ? sidePadding : 0
+    rightPadding: iconOnly ? frameHeight - iconLabel.implicitWidth - leftPadding : wordShown ? afterWordPadding : leftPadding
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 
@@ -98,7 +101,7 @@ Control {
             height: font.pixelSize
             verticalAlignment: Text.AlignVCenter
             font.family: EaStyle.Fonts.iconsFamily
-            font.pixelSize: control.font.pixelSize
+            font.pixelSize: control.iconPixelSize
             color: control.hoverTinted ? EaStyle.Colors.themeAccent : control.iconColor
             Behavior on color {
                 EaAnimations.ThemeChange {}
@@ -165,6 +168,11 @@ Control {
         }
     }
 
+    TextMetrics {
+        id: ink
+        font: iconLabel.font
+        text: control.keyIcon
+    }
     HoverHandler {
         id: hover
         cursorShape: control.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor

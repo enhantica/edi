@@ -1,0 +1,348 @@
+{
+  "edi_build_commit": "570424f574d10fc82cfc20b919138d3aa7c14852",
+  "examples": [
+    "pd-neut-cwl_lbco_simulation",
+    "pd-neut-tof_si_simulation",
+    "pd-xray-cwl_nacl_simulation",
+    "pd-neut-cwl_lbco-hrpt",
+    "pd-neut-cwl_hs-hrpt",
+    "pd-neut-cwl_cosio-d20",
+    "pd-neut-cwl_lmo-echidna",
+    "pd-neut-cwl_y2o3-spodi",
+    "pd-neut-cwl_yalo3-al2o3-spodi",
+    "pd-neut-tof_si-sepd",
+    "pd-neut-tof_cecoal-polaris",
+    "pd-neut-tof_ceo2-pearl",
+    "pd-neut-tof_lbco-si-mcstas",
+    "pd-neut-tof_ncaf-wish",
+    "pd-neut-tof_ferrite-austenite-beer",
+    "pd-xray-cwl_pbso4-lab",
+    "pd-xray-cwl_lam7o3-p021",
+    "pd-neut-xray-cwl_pbso4-d1a-lab",
+    "pd-neut-cwl_cosio-d20_scan",
+    "pd-xray-cwl_latp-bm01_scan",
+    "sc-neut-cwl_tb2ti2o7-heidi",
+    "sc-neut-cwl_pr2nio4-5c2",
+    "sc-neut-tof_taurine-senju"
+  ],
+  "paths": {
+    "absorption.abscor1": [
+      "project.experiments[0].absorption.abscor1"
+    ],
+    "absorption.abscor2": [
+      "project.experiments[0].absorption.abscor2"
+    ],
+    "absorption.mu_r": [
+      "project.experiments[0].absorption.mu_r"
+    ],
+    "absorption.type": [
+      "project.experiments[0].absorption.type"
+    ],
+    "atom_site.adp_iso": [
+      "project.structures[0].atom_sites[0].adp_iso"
+    ],
+    "atom_site.adp_type": [
+      "project.structures[0].atom_sites[0].adp_type"
+    ],
+    "atom_site.fract_x": [
+      "project.structures[0].atom_sites[0].fract_x"
+    ],
+    "atom_site.fract_y": [
+      "project.structures[0].atom_sites[0].fract_y"
+    ],
+    "atom_site.fract_z": [
+      "project.structures[0].atom_sites[0].fract_z"
+    ],
+    "atom_site.id": [
+      "project.structures[0].atom_sites[0].id"
+    ],
+    "atom_site.occupancy": [
+      "project.structures[0].atom_sites[0].occupancy"
+    ],
+    "atom_site.type_symbol": [
+      "project.structures[0].atom_sites[0].type_symbol"
+    ],
+    "atom_site.wyckoff_letter": [
+      "project.structures[0].atom_sites[0].wyckoff_letter"
+    ],
+    "atom_site_aniso.adp_11": [
+      "project.structures[0].atom_site_aniso[0].adp_11"
+    ],
+    "atom_site_aniso.adp_12": [
+      "project.structures[0].atom_site_aniso[0].adp_12"
+    ],
+    "atom_site_aniso.adp_13": [
+      "project.structures[0].atom_site_aniso[0].adp_13"
+    ],
+    "atom_site_aniso.adp_22": [
+      "project.structures[0].atom_site_aniso[0].adp_22"
+    ],
+    "atom_site_aniso.adp_23": [
+      "project.structures[0].atom_site_aniso[0].adp_23"
+    ],
+    "atom_site_aniso.adp_33": [
+      "project.structures[0].atom_site_aniso[0].adp_33"
+    ],
+    "atom_site_aniso.id": [
+      "project.structures[0].atom_site_aniso[0].id"
+    ],
+    "background.id": [
+      "project.experiments[0].background[0].id"
+    ],
+    "background.intensity": [
+      "project.experiments[0].background[0].intensity"
+    ],
+    "background.origin": [
+      "project.experiments[0].background_origin"
+    ],
+    "background.position": [
+      "project.experiments[0].background[0].position"
+    ],
+    "background.type": [
+      "project.experiments[0].background_type"
+    ],
+    "background.x_max": [
+      "project.experiments[0].background_x_max"
+    ],
+    "background.x_min": [
+      "project.experiments[0].background_x_min"
+    ],
+    "cell.angle_alpha": [
+      "project.structures[0].cell.angle_alpha"
+    ],
+    "cell.angle_beta": [
+      "project.structures[0].cell.angle_beta"
+    ],
+    "cell.angle_gamma": [
+      "project.structures[0].cell.angle_gamma"
+    ],
+    "cell.length_a": [
+      "project.structures[0].cell.length_a"
+    ],
+    "cell.length_b": [
+      "project.structures[0].cell.length_b"
+    ],
+    "cell.length_c": [
+      "project.structures[0].cell.length_c"
+    ],
+    "experiment.data_": [
+      "project.experiments[0].name"
+    ],
+    "experiment_type.beam_mode": [
+      "project.experiments[0].experiment_type.beam_mode"
+    ],
+    "experiment_type.dimensionality": [
+      "project.experiments[0].experiment_type.dimensionality"
+    ],
+    "experiment_type.polarisation": [
+      "project.experiments[0].experiment_type.polarisation"
+    ],
+    "experiment_type.radiation_probe": [
+      "project.experiments[0].experiment_type.radiation_probe"
+    ],
+    "experiment_type.sample_form": [
+      "project.experiments[0].experiment_type.sample_form"
+    ],
+    "experiment_type.scattering_type": [
+      "project.experiments[0].experiment_type.scattering_type"
+    ],
+    "fitting_mode.type": [
+      "project.fitting_mode"
+    ],
+    "geom.bond_distance_inc": [
+      "project.structures[0].geom.bond_distance_inc"
+    ],
+    "geom.min_bond_distance_cutoff": [
+      "project.structures[0].geom.min_bond_distance_cutoff"
+    ],
+    "instrument.calib_d_to_tof_linear": [
+      "project.experiments[0].instrument.calib_d_to_tof_linear"
+    ],
+    "instrument.calib_d_to_tof_offset": [
+      "project.experiments[0].instrument.calib_d_to_tof_offset"
+    ],
+    "instrument.calib_d_to_tof_quadratic": [
+      "project.experiments[0].instrument.calib_d_to_tof_quadratic"
+    ],
+    "instrument.calib_d_to_tof_reciprocal": [
+      "project.experiments[0].instrument.calib_d_to_tof_reciprocal"
+    ],
+    "instrument.calib_sample_displacement": [
+      "project.experiments[0].instrument.calib_sample_displacement"
+    ],
+    "instrument.calib_sample_transparency": [
+      "project.experiments[0].instrument.calib_sample_transparency"
+    ],
+    "instrument.calib_twotheta_offset": [
+      "project.experiments[0].instrument.calib_twotheta_offset"
+    ],
+    "instrument.facility": [
+      "project.experiments[0].instrument.facility"
+    ],
+    "instrument.name": [
+      "project.experiments[0].instrument.name"
+    ],
+    "instrument.setup_monochromator_twotheta": [
+      "project.experiments[0].instrument.setup_monochromator_twotheta"
+    ],
+    "instrument.setup_polarization_coefficient": [
+      "project.experiments[0].instrument.setup_polarization_coefficient"
+    ],
+    "instrument.setup_twotheta_bank": [
+      "project.experiments[0].instrument.setup_twotheta_bank"
+    ],
+    "instrument.setup_wavelength": [
+      "project.experiments[0].instrument.setup_wavelength"
+    ],
+    "instrument.setup_wavelength_2": [
+      "project.experiments[0].instrument.setup_wavelength_2"
+    ],
+    "instrument.setup_wavelength_2_to_1_ratio": [
+      "project.experiments[0].instrument.setup_wavelength_2_to_1_ratio"
+    ],
+    "joint_fit.weight": [
+      "project.experiments[0].dataset_weight"
+    ],
+    "linked_structure.enabled": [
+      "project.experiments[0].linked_structures[0].enabled"
+    ],
+    "linked_structure.scale": [
+      "project.experiments[0].linked_structures[0].scale"
+    ],
+    "linked_structure.structure_id": [
+      "project.experiments[0].linked_structures[0].structure_id"
+    ],
+    "metadata.authors": [
+      "project.metadata.authors"
+    ],
+    "metadata.created": [
+      "project.metadata.created"
+    ],
+    "metadata.description": [
+      "project.metadata.description"
+    ],
+    "metadata.last_modified": [
+      "project.metadata.last_modified"
+    ],
+    "metadata.name": [
+      "project.metadata.name"
+    ],
+    "metadata.path": [
+      "project.metadata.path"
+    ],
+    "metadata.timestamp": [
+      "project.metadata.timestamp"
+    ],
+    "metadata.title": [
+      "project.metadata.title"
+    ],
+    "minimizer.descent": [
+      "project.descent"
+    ],
+    "peak.asym_beba_a0": [
+      "project.experiments[0].peak.asym_beba_a0"
+    ],
+    "peak.asym_beba_a1": [
+      "project.experiments[0].peak.asym_beba_a1"
+    ],
+    "peak.asym_beba_b0": [
+      "project.experiments[0].peak.asym_beba_b0"
+    ],
+    "peak.asym_beba_b1": [
+      "project.experiments[0].peak.asym_beba_b1"
+    ],
+    "peak.asym_beba_limit": [
+      "project.experiments[0].peak.asym_beba_limit"
+    ],
+    "peak.asym_fcj_1": [
+      "project.experiments[0].peak.asym_fcj_1"
+    ],
+    "peak.asym_fcj_2": [
+      "project.experiments[0].peak.asym_fcj_2"
+    ],
+    "peak.broad_gauss_sigma_0": [
+      "project.experiments[0].peak.broad_gauss_sigma_0"
+    ],
+    "peak.broad_gauss_sigma_1": [
+      "project.experiments[0].peak.broad_gauss_sigma_1"
+    ],
+    "peak.broad_gauss_sigma_2": [
+      "project.experiments[0].peak.broad_gauss_sigma_2"
+    ],
+    "peak.broad_gauss_size": [
+      "project.experiments[0].peak.broad_gauss_size"
+    ],
+    "peak.broad_gauss_strain": [
+      "project.experiments[0].peak.broad_gauss_strain"
+    ],
+    "peak.broad_gauss_u": [
+      "project.experiments[0].peak.broad_gauss_u"
+    ],
+    "peak.broad_gauss_v": [
+      "project.experiments[0].peak.broad_gauss_v"
+    ],
+    "peak.broad_gauss_w": [
+      "project.experiments[0].peak.broad_gauss_w"
+    ],
+    "peak.broad_lorentz_gamma_0": [
+      "project.experiments[0].peak.broad_lorentz_gamma_0"
+    ],
+    "peak.broad_lorentz_gamma_1": [
+      "project.experiments[0].peak.broad_lorentz_gamma_1"
+    ],
+    "peak.broad_lorentz_gamma_2": [
+      "project.experiments[0].peak.broad_lorentz_gamma_2"
+    ],
+    "peak.broad_lorentz_size": [
+      "project.experiments[0].peak.broad_lorentz_size"
+    ],
+    "peak.broad_lorentz_strain": [
+      "project.experiments[0].peak.broad_lorentz_strain"
+    ],
+    "peak.broad_lorentz_x": [
+      "project.experiments[0].peak.broad_lorentz_x"
+    ],
+    "peak.broad_lorentz_y": [
+      "project.experiments[0].peak.broad_lorentz_y"
+    ],
+    "peak.cutoff_fwhm": [
+      "project.experiments[0].peak.cutoff_fwhm"
+    ],
+    "peak.decay_beta_0": [
+      "project.experiments[0].peak.decay_beta_0"
+    ],
+    "peak.decay_beta_1": [
+      "project.experiments[0].peak.decay_beta_1"
+    ],
+    "peak.mixing_eta_0": [
+      "project.experiments[0].peak.mixing_eta_0"
+    ],
+    "peak.mixing_eta_1": [
+      "project.experiments[0].peak.mixing_eta_1"
+    ],
+    "peak.rise_alpha_0": [
+      "project.experiments[0].peak.rise_alpha_0"
+    ],
+    "peak.rise_alpha_1": [
+      "project.experiments[0].peak.rise_alpha_1"
+    ],
+    "peak.type": [
+      "project.experiments[0].peak.type"
+    ],
+    "space_group.coord_system_code": [
+      "project.structures[0].space_group.coord_system_code"
+    ],
+    "space_group.it_number": [
+      "project.structures[0].space_group.it_number"
+    ],
+    "space_group.name_h_m": [
+      "project.structures[0].space_group.name_h_m"
+    ],
+    "structure.data_": [
+      "project.structures[0].name"
+    ],
+    "su_format.rule": [
+      "project.su_rule"
+    ]
+  }
+}

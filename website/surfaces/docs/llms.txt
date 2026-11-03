@@ -1,0 +1,7 @@
+# EasyDiffraction
+
+Physics: physics/
+Model and parameter catalogue: physics/catalogue.json
+Interface coverage: user-guide/features/
+
+Identify experiment type, model and units before applying an equation. Cite its exact section. Stored-only fields are not active calculation terms. Planned features are not available features.

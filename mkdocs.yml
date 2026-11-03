@@ -3,11 +3,12 @@
 # joins them.
 site_name: edi
 site_description: "Diffraction data analysis"
-# Where GitHub Pages publishes the site once the repository is public (the Pages workflow).
-site_url: https://enhantica.github.io/edi/
+# The contributor documentation, published under /dev/ beside the public site (website/) at the root and the web
+# app at /webapp/ (the Pages workflow).
+site_url: https://enhantica.github.io/edi/dev/
 repo_url: https://github.com/enhantica/edi
 docs_dir: docs
-site_dir: site
+site_dir: site/dev
 
 theme:
   name: material
@@ -84,6 +85,14 @@ nav:
           - dev/adrs/0052-project-folders-archives-and-opening.md
           - dev/adrs/0053-what-a-fit-can-free.md
           - dev/adrs/0054-experiment-description.md
+          - dev/adrs/0060-scripted-gui-documentation-captures.md
+          - dev/adrs/0061-linked-parameter-reference.md
+          - dev/adrs/0062-run-log-and-crash-detection.md
+          - dev/adrs/0063-help-and-feedback.md
+          - dev/adrs/0064-built-in-tutorials.md
+          - dev/adrs/0065-public-site-and-contributor-docs.md
+          - dev/adrs/0066-finding-a-control-by-name.md
+          - dev/adrs/0067-whats-new.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

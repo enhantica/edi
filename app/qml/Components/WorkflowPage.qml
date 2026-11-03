@@ -59,11 +59,19 @@ EaComponents.ContentPage {
     function showMainTab(index) {
         mainContent.children[0].currentIndex = index;
     }
+    // The run log's line for a main-view tab chosen on the shown page (edi ADR-0062).
+    onMainTabIndexChanged: {
+        if (page.current)
+            RunLog.note(`${page.pageName} main tab: ${page.mainTabs[page.mainTabIndex]?.objectName ?? page.mainTabIndex}`);
+    }
 
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
     // names it nowhere, so it is found as the SideBar's child with a gradient.
     Component.onCompleted: {
+        // The page's regions by name, for the documentation captures and the user guides.
+        sideBar.parent.objectName = "workflow." + page.pageName + ".sidebarHost";
+        mainContent.parent.objectName = "workflow." + page.pageName + ".mainContent";
         for (let i = 0; i < sideBar.children.length; ++i) {
             const child = sideBar.children[i];
             if (child.gradient)
@@ -139,6 +147,14 @@ EaComponents.ContentPage {
         value: page.blockIndex
         when: textLoader.item !== null
     }
+    // The run log's line for a sidebar tab chosen on the shown page.
+    Connections {
+        target: textTabButton.TabBar.tabBar
+        function onCurrentIndexChanged() {
+            if (page.current)
+                RunLog.note(`${page.pageName} sidebar tab: ${["basic", "extras", "text", "settings"][textTabButton.TabBar.tabBar.currentIndex] ?? textTabButton.TabBar.tabBar.currentIndex}`);
+        }
+    }
     Connections {
         target: textLoader.item
         ignoreUnknownSignals: true
@@ -185,6 +201,7 @@ EaComponents.ContentPage {
 
     sideBar: EaComponents.SideBar {
         id: sideBar
+        objectName: "workflow." + page.pageName + ".manualSidebar"
 
         tabs: [
             EaElements.TabButton {

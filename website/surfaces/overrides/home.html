@@ -1,0 +1,24 @@
+{% extends "main.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:400,500,600,700,800&amp;display=swap">
+  <link rel="stylesheet" href="{{ 'assets/landing.css' | url }}?v=network-14">
+  <link rel="stylesheet" href="{{ 'assets/network-animation.css' | url }}?v=5">
+  <script defer src="{{ 'assets/network-pulse-engine.js' | url }}?v=8"></script>
+{% endblock %}
+
+{% block container %}
+  <section id="network-pulse-preview" data-network-hero>
+    <div class="ed-network-art">
+      {% include "partials/network.svg" %}
+    </div>
+    <div class="md-grid" data-network-content>
+      {{ super() }}
+    </div>
+  </section>
+{% endblock %}
+
+{% block footer %}{% endblock %}

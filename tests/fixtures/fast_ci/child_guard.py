@@ -24,7 +24,8 @@ def install():
         if isinstance(argv, bytes):
             argv = argv.decode()
         words = list(argv) if isinstance(argv, (tuple, list)) else policy.command_tokens(argv)
-        blocked = policy.app_command(words)
+        cwd = args[2] if event == 'subprocess.Popen' else None
+        blocked = policy.app_command(words, cwd)
         with Path(log).open('a', encoding='utf-8') as receipt:
             receipt.write(json.dumps({'argv': words, 'blocked': blocked}) + '\n')
         if blocked:

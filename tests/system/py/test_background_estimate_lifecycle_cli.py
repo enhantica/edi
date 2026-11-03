@@ -26,6 +26,7 @@ from tests.fixtures.background_estimate.lifecycle import (
     prime,
 )
 from tests.fixtures.background_estimate.settings import points, read_settings
+from tests.fixtures.metadata_transition.source_bytes import previous_content
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = corpus_case_dir('lbco-hrpt-s2') / 'project'
@@ -194,7 +195,9 @@ def saved_auto_input():
         'The saved stability witness must declare automatic model-guided estimation'
     )
     observed = {
-        p.relative_to(seed).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+        p.relative_to(seed).as_posix(): hashlib.sha256(
+            previous_content(p.read_bytes())
+        ).hexdigest()
         for p in seed.rglob('*')
         if p.is_file()
     }

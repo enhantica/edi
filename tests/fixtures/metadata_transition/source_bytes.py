@@ -1,5 +1,6 @@
 """Compare historical oracles through exact, archived metadata migrations."""
 
+import functools
 import hashlib
 import json
 import zipfile
@@ -33,3 +34,22 @@ def read_previous(path):
     if not path.is_relative_to(ROOT):
         return data
     return previous_bytes(path.relative_to(ROOT).as_posix(), data)
+
+
+@functools.cache
+def archived_content_pairs():
+    """Exact input identities also apply when the runner stages a private source copy."""
+    rows = json.loads((HERE / 'sources.json').read_text())['files']
+    return {row['after_sha256']: row['before_sha256'] for row in rows.values()}
+
+
+def previous_content(data):
+    before_hash = archived_content_pairs().get(hashlib.sha256(data).hexdigest())
+    if before_hash is None:
+        return data
+    with zipfile.ZipFile(HERE / 'sources.zip') as archive:
+        before = archive.read(before_hash)
+    assert hashlib.sha256(before).hexdigest() == before_hash, (
+        'A staged input adaptation retains the complete archived pre-migration bytes'
+    )
+    return before

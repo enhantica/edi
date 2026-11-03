@@ -1,0 +1,58 @@
+{
+  "example": "pd-neut-cwl_y2o3-spodi",
+  "result": {
+    "rwp": 0.013446755754526528,
+    "reduced_chi_square": 1.1985645956835669,
+    "converged": true
+  },
+  "edi_build_commit": "570424f574d10fc82cfc20b919138d3aa7c14852",
+  "axis_ranges": {
+    "initial": {
+      "xaxis": [
+        0.95,
+        153.9
+      ],
+      "xaxis2": [
+        0.95,
+        153.9
+      ],
+      "yaxis": [
+        -304.9913654163281,
+        31743.775500824533
+      ],
+      "yaxis2": [
+        -4670.123082763201,
+        4670.123082763201
+      ]
+    },
+    "refined": {
+      "xaxis": [
+        0.95,
+        153.9
+      ],
+      "xaxis2": [
+        0.95,
+        153.9
+      ],
+      "yaxis": [
+        -304.9913654163281,
+        31743.775500824533
+      ],
+      "yaxis2": [
+        -4670.123082763201,
+        4670.123082763201
+      ]
+    }
+  },
+  "generator_sha256": "655b21667e94cdfb7200078b2bac44e3b3b1df4d812e4c57b75747739d1aa6ce",
+  "input_sha256": {
+    "analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+    "experiments/spodi.edi": "c6ff7236515100d6a5559271a52772142d435583d2b477f87b82411848a45eb3",
+    "project.edi": "ef813084d41d24156e35956bc943a1351031f9d9b6da9f19b4ce57ce91287277",
+    "structures/y2o3.edi": "0035a2409b1fa26521d4b59c9520c37d8c4bb8c2ec9e53c50ff227ad87d53ccf"
+  },
+  "assets_sha256": {
+    "initial.svg": "f06fa4f9ee38c9a585c974042e42acb0043ad46e6fedd6692b96209c9a095a1d",
+    "refined.svg": "8c5fe4e476e6752938e2810db14d78b4f5083f308ad50d41e1b85b8e42e6d939"
+  }
+}

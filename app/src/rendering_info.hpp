@@ -3,6 +3,7 @@
 #define EDI_APP_RENDERING_INFO_HPP
 
 #include <QObject>
+#include <QSGRendererInterface>
 #include <QPointer>
 #include <QQuickWindow>
 #include <QString>
@@ -40,6 +41,9 @@ class RenderingInfo : public QObject {
 
     /// Whether an API and renderer string name a software renderer.
     static bool isSoftware(const QString& api, const QString& renderer);
+
+    /// The name `api` shows as: one of the names `api` takes, or "Unknown".
+    static QString apiName(QSGRendererInterface::GraphicsApi api);
 
    signals:
     void detectedChanged();

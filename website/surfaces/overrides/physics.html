@@ -1,0 +1,7 @@
+{% extends "main.html" %}
+{% block extrahead %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ 'assets/math/equations.css' | url }}?v=2">
+  <script src="{{ 'assets/math/config-full.js' | url }}"></script>
+  <script defer src="{{ 'assets/math/tex-svg-full-3.2.2.js' | url }}"></script>
+{% endblock %}

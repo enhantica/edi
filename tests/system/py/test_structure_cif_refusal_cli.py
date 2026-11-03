@@ -1,4 +1,4 @@
-"""The actual CLI preserves main native-only structure file discovery."""
+"""The actual CLI discovers CIF members, with native shadowing and ambiguity refusal."""
 
 import os
 import subprocess
@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 @pytest.mark.parametrize('style', ['dot', 'underscore', 'upper', 'multiblock'])
 @pytest.mark.parametrize('layout', ['distinct', 'shadow', 'upper-suffix'])
-def test_cli_keeps_main_native_only_structure_discovery(tmp_path, style, layout):
+def test_cli_discovers_structure_cif_members(tmp_path, style, layout):
     source = case.poisoned_project(tmp_path, style, layout)
     before = case.snapshot(source)
     if account.API == 'edi':
@@ -26,16 +26,25 @@ def test_cli_keeps_main_native_only_structure_discovery(tmp_path, style, layout)
         assert binary.is_file(), 'The structure refusal uses the actual built native CLI'
         command = [str(binary), str(source), 'calc', '--dry']
     result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=15)
-    assert result.returncode == 0, (
-        'Main ignores sidecar structure CIFs through the actual CLI: '
-        + result.stdout
-        + result.stderr
-    )
-    assert 'Reading CIF files is not supported yet' not in result.stderr, (
-        'Main-accepted native projects never acquire a CIF refusal from ignored sidecar files'
-    )
-    assert case.snapshot(source) == before, 'Native-only CLI discovery preserves all source bytes'
-    if account.API == 'edi':
-        assert (tmp_path / 'report.html').is_file(), (
-            'The actual native-only report command still produces its requested report'
+    if style == 'multiblock' and layout != 'shadow':
+        assert result.returncode != 0 and '2 structure blocks' in result.stderr, (
+            'The CLI refuses an ambiguous discovered CIF member before producing a report'
         )
+        assert not (tmp_path / 'report.html').exists(), (
+            'A refused project never leaves a partial report'
+        )
+    else:
+        assert result.returncode == 0, (
+            'The CLI admits supported CIF members and retains native shadow precedence: '
+            + result.stdout
+            + result.stderr
+        )
+        if layout == 'shadow':
+            assert 'phase.cif' in result.stderr and 'not read' in result.stderr, (
+                'The CLI names the shadowed CIF member without importing it twice'
+            )
+        if account.API == 'edi':
+            assert (tmp_path / 'report.html').is_file(), (
+                'A discovered supported project produces its requested report'
+            )
+    assert case.snapshot(source) == before, 'CLI discovery preserves every source byte'

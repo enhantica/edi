@@ -237,7 +237,7 @@ TestCase {
             },
             {
                 tag: "constraint",
-                project: "sc-neut-tof_taurine_fit",
+                project: "sc-neut-tof_taurine-senju",
                 block: "experiment:senju_2",
                 category: "extinction",
                 field: "coefficient_11",

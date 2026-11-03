@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {"date":"2031-02-05","changes":["middle-release-sentinel"]},
+    {"date":"2031-02-28","changes":["newest-release-sentinel"]},
+    {"date":"2030-12-31","changes":["old-release-sentinel"]},
+    {"date":"2031-02-16","changes":["recent-release-sentinel"]}
+  ],
+  "lastSeen":"2031-02-05",
+  "newest":"2031-02-28"
+}

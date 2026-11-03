@@ -28,6 +28,19 @@ QtObject {
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
     // The engine's thread count for every fill (Develop): 0 is Auto, the engine's own policy.
     property int engineThreads: 0
+    // The lowest level the run log writes (Develop; edi ADR-0062): "Debug", "Info", "Error" or "Disabled".
+    property string loggingLevel: "Info"
+    onLoggingLevelChanged: RunLog.level = loggingLevel
+    // Where Help and feedback posts (Develop; edi ADR-0063): the feedback service's `/feedback` address. A user may set
+    // their own or clear it, which turns Send off.
+    property string feedbackEndpoint: "https://edi-feedback.savanna-animas-0g.workers.dev/feedback"
+    // What Help and feedback offers to send as the user's contact, each optional, kept for the next message.
+    property string feedbackName: ""
+    property string feedbackEmail: ""
+    property string feedbackAffiliation: ""
+    // The newest changelog date the user has seen in What's new (edi ADR-0067), empty before the first start.
+    property string whatsNewSeen: ""
+    Component.onCompleted: RunLog.level = loggingLevel
     // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
@@ -65,6 +78,7 @@ QtObject {
         preferences.autoCollapse = true;
         preferences.sideBarSide = "Right";
         preferences.engineThreads = 0;
+        preferences.loggingLevel = "Info";
         preferences.scanPatternUpdates = 2;
         preferences.analysisShowNotMeasured = true;
         preferences.analysisShowBySymmetry = false;
@@ -102,6 +116,20 @@ QtObject {
         property alias sideBarSide: preferences.sideBarSide
     }
 
+    property Settings feedbackSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Feedback"
+        property alias name: preferences.feedbackName
+        property alias email: preferences.feedbackEmail
+        property alias affiliation: preferences.feedbackAffiliation
+    }
+
+    property Settings whatsNewSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "WhatsNew"
+        property alias seen: preferences.whatsNewSeen
+    }
+
     // ADR-0031: the Appearance tab's colour scheme, and the Projects tab's defaults for new projects.
     property Settings appearanceSettings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -122,6 +150,9 @@ QtObject {
         location: EaGlobals.Vars.settingsFile
         category: "develop"
         property alias engineThreads: preferences.engineThreads
+        property alias loggingLevel: preferences.loggingLevel
+        // Stored under a key no earlier build wrote: those saved an empty address, which would outrank the default.
+        property alias feedbackAddress: preferences.feedbackEndpoint
     }
 
     // ADR-0031 §2: the one pattern chart's settings (every page shows the same chart): its y scale ("linear", "sqrt"

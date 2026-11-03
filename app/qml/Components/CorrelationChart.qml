@@ -324,6 +324,7 @@ Item {
                     readonly property int column: index % chart.count
                     readonly property real value: chart.valueAt(index)
 
+                    objectName: `correlations.cell.${row}.${column}`
                     x: column * area.cell
                     y: row * area.cell
                     width: area.cell

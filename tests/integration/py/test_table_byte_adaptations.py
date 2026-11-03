@@ -6,6 +6,7 @@ import zipfile
 
 import pytest
 
+from tests.fixtures.metadata_transition import source_bytes
 from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
 from tests.system.py import test_c34_t28_saved_bytes as pins
 
@@ -197,3 +198,34 @@ def test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_ca
         pins.test_save_matches_the_labelled_pre_move_regression_pin(
             tmp_path / 'escape', case, record_property
         )
+
+
+def test_plain_description_wrapping_keeps_paragraphs_and_scientific_bytes():
+    source = b'_metadata.description "two words"\n\n_cell.length_a 4.125\n'
+    wrapped = b'_metadata.description\n;\ntwo\nwords\n;\n\n_cell.length_a 4.125\n'
+    assert metadata_bytes.records(source) == metadata_bytes.records(wrapped), (
+        'Plain semicolon descriptions read a single wrapped line break as a space'
+    )
+    assert metadata_bytes.remainder(source) == metadata_bytes.remainder(wrapped), (
+        'A multiline description owns only its complete scalar span, never the next input'
+    )
+    paragraphs = wrapped.replace(b'two\nwords', b'two\n\nwords')
+    assert metadata_bytes.records(paragraphs)['_metadata.description'] == 'two\n\nwords', (
+        'An empty description line remains a paragraph break and cannot be normalized away'
+    )
+
+
+@pytest.mark.parametrize('damage', ['scientific-byte', 'extra-byte'])
+def test_staged_metadata_adapter_requires_the_whole_archived_input(damage):
+    path = source_bytes.ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20/project/experiments/d20.edi'
+    current = path.read_bytes()
+    assert source_bytes.previous_content(current) == source_bytes.read_previous(path), (
+        'A private runner copy recovers the same sealed historical input as its named source'
+    )
+    changed = (
+        current.replace(b'1.87', b'1.88', 1) if damage == 'scientific-byte' else current + b'\n'
+    )
+    assert changed != current, 'The archive escape must actually alter its authored input'
+    assert source_bytes.previous_content(changed) == changed, (
+        'A changed scientific value or extra byte cannot borrow the exact archived identity'
+    )

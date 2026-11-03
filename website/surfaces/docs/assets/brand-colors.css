@@ -1,0 +1,17 @@
+/* Accent sampled from the owner-approved colour reference (2026-10-29). */
+:root {
+  --ed-brand-accent: #0084c7;
+}
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color: var(--ed-brand-accent);
+  --md-primary-fg-color--light: #339dd2;
+  --md-primary-fg-color--dark: #00699f;
+  --md-primary-bg-color: #fff;
+  --md-primary-bg-color--light: #ffffffb3;
+}
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color: var(--ed-brand-accent);
+  --md-accent-fg-color--transparent: #0084c71a;
+  --md-accent-bg-color: #fff;
+  --md-accent-bg-color--light: #ffffffb3;
+}

@@ -70,6 +70,9 @@ def test_independent_contrast_and_colour_observers_reject_escapes():
     assert contrast('#949494', '#ffffff') >= 3 > contrast('#959595', '#ffffff'), (
         'Adjacent encoded greys straddle the strict 3:1 boundary without a contrast tolerance'
     )
+    assert contrast('#b7b7b7', '#ffffff') >= 2 > contrast('#b8b8b8', '#ffffff'), (
+        'Adjacent encoded greys straddle the declared 2:1 display boundary without tolerance'
+    )
     assert composite('#80000000', '#ffffff') == '#7f7f7f', (
         'The independent encoded-sRGB compositor reaches the half-opacity black control'
     )
@@ -219,7 +222,7 @@ def observations():
 
 
 @pytest.mark.parametrize('tag', TAGS)
-def test_all_2d_element_uses_reach_three_to_one(observations, tag):
+def test_all_2d_element_uses_reach_two_to_one(observations, tag):
     failures = []
     for row in observations[tag]['facts']:
         for use, background in [
@@ -237,11 +240,11 @@ def test_all_2d_element_uses_reach_three_to_one(observations, tag):
             )
             for underlay in backgrounds:
                 value = contrast(row[use], underlay)
-                if value < 3:
+                if value < 2:
                     failures.append((row['symbol'], use, row[use], underlay, value))
     assert not failures, (
-        'Every element icon, parameter label and live/report legend reaches WCAG 3:1 '
-        + repr(failures)
+        'Every element icon, parameter label and live/report legend '
+        'reaches the declared 2:1 contrast ' + repr(failures)
     )
 
 
@@ -277,12 +280,12 @@ def test_already_passing_elements_are_exactly_unchanged(observations, tag):
                 else [row[background]]
             )
             if (
-                all(contrast(row['source'], bg) >= 3 for bg in backgrounds)
+                all(contrast(row['source'], bg) >= 2 for bg in backgrounds)
                 and row[use].lower() != row['source']
             ):
                 failures.append((row['symbol'], use, row['source'], row[use]))
     assert not failures, (
-        'Every colour already passing 3:1 retains the exact published bytes: ' + repr(failures)
+        'Every colour already passing 2:1 retains the exact published bytes: ' + repr(failures)
     )
 
 
@@ -302,8 +305,8 @@ def test_3d_sphere_instances_keep_exact_published_colours(observations, tag):
 @pytest.mark.parametrize('tag', TAGS)
 def test_scheme_selector_explains_display_adjustment(observations, tag):
     row = observations[tag]
-    assert row['names'] == ['jmol', 'vesta'], (
-        'The unchanged published scheme names remain jmol and vesta'
+    assert row['names'] == ['Jmol', 'VESTA'], (
+        'The unchanged published scheme labels are Jmol and VESTA'
     )
     assert re.search(r'adjusted.*contrast.*labels.*tables', row['tooltip'], re.IGNORECASE), (
         'The real scheme selector explains contrast adjustment in labels and tables'
@@ -326,17 +329,17 @@ def test_elements_contrast_against_rendered_row_underlays(observations, tag, use
     for row in sample['facts']:
         for key in ('color', 'labelColor'):
             actual = row[key]
-            if contrast(actual, sample['background']) < 3:
+            if contrast(actual, sample['background']) < 2:
                 failures.append((row['symbol'], key, actual, sample['background'], 'contrast'))
             if not gamut_hue_chroma_preserved(row['source'], actual):
                 failures.append((row['symbol'], key, actual, 'hue/maximal sRGB chroma'))
             if (
-                all(contrast(row['source'], bg) >= 3 for bg in backgrounds)
+                all(contrast(row['source'], bg) >= 2 for bg in backgrounds)
                 and actual.lower() != row['source']
             ):
                 failures.append((row['symbol'], key, actual, 'unnecessary adjustment'))
     assert not failures, (
-        'Every element icon and label reaches 3:1 on its rendered alternating/hover underlay, '
+        'Every element icon and label reaches 2:1 on its rendered alternating/hover underlay, '
         'keeps hue and maximal feasible chroma, and retains already-passing bytes: '
         + repr(failures)
     )

@@ -1,0 +1,42 @@
+{
+  "retrieved": "2026-10-31",
+  "source_page": "https://docs.easydiffraction.org/lib/latest/user-guide/concept/",
+  "credit": "Illustrations reused from the prior EasyDiffraction concept guide. That guide credits DOI 10.1126/science.1238932 for instrument, detector, reduced pattern and refinement figures.",
+  "assets": [
+    {
+      "file": "data-acquisition_instrument.png",
+      "source": "https://docs.easydiffraction.org/lib/latest/assets/images/user-guide/data-acquisition_instrument.png",
+      "sha256": "c7fdd3926ae6629982cfec566b5c17ed0c88c7ae5d2515f6c97a355e486c6c34"
+    },
+    {
+      "file": "data-acquisition_2d-raw-data.jpg",
+      "source": "https://docs.easydiffraction.org/lib/latest/assets/images/user-guide/data-acquisition_2d-raw-data.jpg",
+      "sha256": "4dff81b631addefd1fbfea0fbcf38887528414a0eab59a025fa59e915c554d69"
+    },
+    {
+      "file": "data-reduction_1d-pattern.png",
+      "source": "https://docs.easydiffraction.org/lib/latest/assets/images/user-guide/data-reduction_1d-pattern.png",
+      "sha256": "b044fa8796c2db30606e7cbd946f8928d6600b0f3c7de3be1b96a82ec6ea16cf"
+    },
+    {
+      "file": "data-analysis_refinement.png",
+      "source": "https://docs.easydiffraction.org/lib/latest/assets/images/user-guide/data-analysis_refinement.png",
+      "sha256": "3337af37c18b08f77518b3ba44ff2f57ba044736e9f7c1567353d09b907484e1"
+    },
+    {
+      "file": "data-analysis_model.png",
+      "source": "https://docs.easydiffraction.org/lib/latest/assets/images/user-guide/data-analysis_model.png",
+      "sha256": "e0d8761be9b0ec90b838ac7f8482096b04b814526b8cdbd59227d081b2aaa4c7"
+    }
+  ],
+  "presentation_inspiration": [
+    {
+      "path": "2026.09.21 - NOBUGS - GUI-EasyScience/index.html",
+      "sha": "5dd09be1f2774f86322947a5421e1e3582c706cc"
+    },
+    {
+      "path": "2026.09.21 - NOBUGS - GUI-ESS/index.html",
+      "sha": "39b65a00d3f2532a028251c472b980efb2bbb17a"
+    }
+  ]
+}

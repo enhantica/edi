@@ -12,6 +12,7 @@
 #include "edi/edit.hpp"
 #include "edi/selectors.hpp"
 #include "project_view_model.hpp"
+#include "run_log.hpp"
 #include "scan_session.hpp"
 
 namespace edi_app {
@@ -464,6 +465,7 @@ void FitViewModel::start() {
         job_->follow(true);
     }
     if (job_->start(scan ? owner_.scanTemplate() : nullptr)) {
+        qCInfo(lcApp, "fit started");
         if (scan_last_ != scan) {
             scan_last_ = scan;
             emit scanSummaryChanged();
@@ -992,6 +994,9 @@ void FitViewModel::ended(const edi::FitReport& report) {
 void FitViewModel::setRunning(bool running) {
     if (running != running_) {
         running_ = running;
+        if (!running) {
+            qCInfo(lcApp, "fit finished");
+        }
         // canUndo is settled before the change is announced, so a listener reading both sees one state:
         // when a fit ends, the start state it can undo is already back.
         sync();
@@ -1068,6 +1073,9 @@ void FitViewModel::setProgress(const QString& iterations, const QString& goodnes
     }
     if (outcome != outcome_) {
         outcome_ = outcome;
+        if (!outcome.isEmpty()) {
+            qCInfo(lcCrysta, "fit %s: %s", qPrintable(outcome), qPrintable(status));  // crysta's answer, in the run log
+        }
         emit outcomeChanged();
     }
 }

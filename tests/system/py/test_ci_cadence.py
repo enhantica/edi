@@ -504,6 +504,7 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
         'axis-absent-zero',
         'axis-zero-absent',
         *[f'catalogue-{index}' for index in range(21)],
+        'status-results-banner',
     ],
 )
 def test_inventory_migration_refuses_every_dropped_successor(retired):

@@ -115,6 +115,10 @@ Item {
         id: makeSingleCrystalTable
         SingleCrystalTable {}
     }
+    Component {
+        id: makeGeneratedGroup
+        GeneratedGroup {}
+    }
     TestCase {
         id: test
         name: "CurrentRowInput"
@@ -147,6 +151,7 @@ Item {
         }
         function factory(type) {
             const factories = ({
+                    GeneratedGroup: makeGeneratedGroup,
                     StructuresGroup: makeStructuresGroup,
                     AtomSitesGroup: makeAtomSitesGroup,
                     AtomSiteAdpGroup: makeAtomSiteAdpGroup,
@@ -215,6 +220,10 @@ Item {
                 props.height = 240;
                 props.columns = ["Name", "Value"];
                 props.rows = [["First", "1.25"], ["Second", "7.5"]];
+            }
+            if (data.type === "GeneratedGroup") {
+                props.source = structure.text;
+                props.categoryId = "atom_site";
             }
             group = factory(data.type).createObject(surface, props);
             verify(group !== null, "The inventory instantiates each actual production table owner");

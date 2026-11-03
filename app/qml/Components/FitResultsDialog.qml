@@ -28,6 +28,17 @@ AppDialog {
     objectName: "fit.results"
     title: qsTr("Least-squares fit results")
     standardButtons: Dialog.Ok
+    // Its OK, by name, for the tutorial step that closes it.
+    onAboutToShow: {
+        AppState.fitResultsOpen = true;
+        ++AppState.fitResultsShown;
+    }
+    onClosed: AppState.fitResultsOpen = false
+    onOpened: {
+        const ok = standardButton(Dialog.Ok);
+        if (ok)
+            ok.objectName = "fit.results.ok";
+    }
     contentWidth: Math.max(listArea.width, agreementArea.width)
     // From the content alone. The base also takes the title's and the buttons' widths, which follow the dialog's own
     // width, so a content width that changes as results arrive was a binding loop. Both are narrower than the tables.

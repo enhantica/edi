@@ -11,6 +11,7 @@ import re
 import gemmi
 import numpy as np
 
+from tests.fixtures.project_categories.historical_bytes import units
 from tests.fixtures.project_save.reference import six_digits
 
 
@@ -28,10 +29,27 @@ def rows(block, category):
     return [dict(zip(table.tags, row, strict=True)) for row in table]
 
 
+COMPUTED_STRUCTURE_CATEGORIES = {
+    b'_atom_sites_cartn_transform',
+    b'_space_group_symop',
+    b'_expanded_atom_site',
+    b'_geom_bond',
+}
+
+
 def input_bytes(body):
-    # Computed categories are an appended section; no other byte is masked.
-    head = body.split(b'\n_atom_sites_cartn_transform.', 1)[0].rstrip()
-    return re.sub(rb'(?m)^_edi.schema_version [34]$', b'_edi.schema_version <3-or-4>', head)
+    # Dictionary order can place output between inputs. Select only the declared
+    # derived categories; never discard the tail after the first computed item.
+    head, entries, _prefixes, _tail = units(body)
+    retained = []
+    for key, value in entries:
+        category = key.removeprefix(b'loop:').split(b'.', 1)[0]
+        if category not in COMPUTED_STRUCTURE_CATEGORIES:
+            retained.append((
+                key,
+                re.sub(rb'(?m)^_edi.schema_version [34]$', b'_edi.schema_version <3-or-4>', value),
+            ))
+    return head, sorted(retained)
 
 
 # Derived single-crystal units and reporting fields: ADR-0050.
