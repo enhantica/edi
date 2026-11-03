@@ -1428,10 +1428,14 @@ struct AssistantViewModel::State {
         if (own_edit_serial == UINT64_MAX) throw std::length_error("Native edit identity is exhausted");
         const auto id = ++own_edit_serial;
         own_edit = OwnEdit{id, generation, project, notification_only};
+        if (project) project->assistant_edit_ = id;  // the trial lock admits this edit
         return id;
     }
     void end_own_edit(std::uint64_t id) noexcept {
-        if (own_edit && own_edit->id == id) own_edit.reset();
+        if (own_edit && own_edit->id == id) {
+            if (own_edit->project && own_edit->project->assistant_edit_ == id) own_edit->project->assistant_edit_ = 0;
+            own_edit.reset();
+        }
     }
     bool applying_own_edit() const noexcept {
         return own_edit && own_edit->generation == generation && own_edit->project == project &&
@@ -15988,6 +15992,8 @@ struct AssistantViewModel::State {
         QObject::connect(&owner, &AssistantViewModel::cachedHistoryChanged, &owner, [this] { publish_related_properties(2); });
     }
     void notify() {
+        // The trial lock holds while the assistant works a turn (FitViewModel::trialOpen).
+        if(project)project->fit()->setAssistantBusy(generic_busy || generic_connecting);
         QElapsedTimer elapsed;
         const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
         if(observeElapsed)elapsed.start();
@@ -19112,6 +19118,12 @@ void AssistantViewModel::signOut() {
 }
 void AssistantViewModel::clearHistory() {
     const auto publication = state_->file_projection();
+    // Clear waits for an open assistant trial to end, as every other change does (edi ADR-0055).
+    if (state_->project && state_->project->fit()->trialOpen()) {
+        state_->error = tr("The assistant is trying a change. Let it finish or press Stop before clearing the conversation.");
+        state_->notify();
+        return;
+    }
 #ifndef __EMSCRIPTEN__
     if (!publication.input_current()) return;
 #endif

@@ -704,7 +704,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     // Keep the exact old sealed files alive until normal QObject deferred deletion.
     std::shared_ptr<ImmutableAssistantResult> retired_result_;
-    QString criticalEditRefusal(bool restoring = false) const;
+    // `trial`: the assistant's own trial asks (its fit start). While an assistant trial is open nothing else may edit
+    // the project (edi ADR-0055).
+    QString criticalEditRefusal(bool restoring = false, bool trial = false) const;
+    // The assistant edit in progress (its own-edit identity), which the trial lock admits.
+    std::uint64_t assistant_edit_ = 0;
     QString applyUndo(const edi::Edit& change, bool structural);
     void holdPublicationFailure(const QString& warning) noexcept;
     void setModified(bool modified);

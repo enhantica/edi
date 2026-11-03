@@ -2176,8 +2176,12 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
 
 QString ProjectViewModel::pendingRefusal() const { return editReadinessRefusal(false); }
 
-QString ProjectViewModel::criticalEditRefusal(bool restoring) const {
+QString ProjectViewModel::criticalEditRefusal(bool restoring, bool trial) const {
     if (retired_) return tr("This project owner has been replaced or closed");
+    // While an assistant trial is open only the trial itself edits: its own edits, its visible controls, its fit
+    // and the rollback. Manual edits, Undo and Clear wait until it ends (edi ADR-0055).
+    if (!trial && fit_ != nullptr && fit_->trialOpen() && !fit_->restoring() && !fit_->fitWriting() && assistant_edit_ == 0 && !widget_input_executing_)
+        return tr("The assistant is trying a change. Let it finish or press Stop before editing the project.");
     if (editing_) return tr("The current project edit is still being published");
     if (fit_undo_invoking_ && (!fit_undo_input_ || fit_undo_input_->started))
         return tr("The current ordinary fit Undo is still being completed");
@@ -4147,6 +4151,10 @@ void ProjectViewModel::workIn(const QString& folder) {
 }
 
 QString ProjectViewModel::saveRefusal() const {
+    // Nothing is saved while an assistant trial is open, by anyone: a save ends no trial halfway (edi ADR-0055).
+    if (fit_ != nullptr && fit_->trialOpen()) {
+        return tr("The project cannot be saved while the assistant is trying a change. Let it finish or press Stop.");
+    }
     // A running fit owns the project's output (a scan appends its results there): nothing is saved under it.
     if (fit_ != nullptr && fit_->running()) {
         return tr("The project cannot be saved while a fit is running");
@@ -4189,8 +4197,9 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         return message;
     }
     const QString adopted = adoptSave(directory, saved.metadata);
-    // What was saved is the new accepted baseline: no assistant rollback reaches behind a Save (edi ADR-0055).
-    if (adopted.isEmpty() && fit_ != nullptr && !retired_) fit_->saved();
+    // What was written is the new accepted baseline, even when the readback after it refused: no assistant rollback
+    // reaches behind files a Save wrote (edi ADR-0055).
+    if (fit_ != nullptr && !retired_) fit_->saved();
     return adopted;
 }
 
@@ -4268,6 +4277,8 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
     setModified(false);
     // The shown dataset was built again above; a read still in flight is dropped and read again.
     viewAfterSave(false);
+    // What was saved is the new accepted baseline, as after a folder Save (edi ADR-0055).
+    if (fit_ != nullptr && !retired_) fit_->saved();
 }
 
 void ProjectViewModel::viewAfterSave(bool shown) {

@@ -482,7 +482,15 @@ void FitViewModel::start() {
 }
 void FitViewModel::startImpl(std::uint64_t attempt) {
     const ProjectViewModel::PublicationScope publication(owner_);
-    if (const QString critical = owner_.criticalEditRefusal(); !critical.isEmpty()) { emit refused(critical); return; }
+    const QPointer<FitViewModel> writing(this);
+    if (native_completion_) ++fit_writing_;
+    const auto written = qScopeGuard([writing, counted = static_cast<bool>(native_completion_)] {
+        if (writing && counted) --writing->fit_writing_;
+    });
+    if (const QString critical = owner_.criticalEditRefusal(false, static_cast<bool>(native_completion_)); !critical.isEmpty()) {
+        emit refused(critical);
+        return;
+    }
     if (!attempt || attempt != latest_attempt_ || !job_ || job_->running() || !available_) {
         return;
     }
@@ -586,7 +594,15 @@ bool FitViewModel::undo() {
     // the trial's setup changed (exclusions, background points and terms included); otherwise the project as the
     // undone fit started, so a manual change is never overwritten.
     const bool whole = input && target.accepted && target.owned;
-    auto edit = whole ? edi::Edit::replace_project(project, edi::Project(*target.accepted))
+    std::optional<edi::Project> back;
+    if (whole) {
+        // A restore is scientific state: where the project is saved, and what its last Save recorded, stay.
+        back.emplace(*target.accepted);
+        back->path = project.path;
+        back->metadata = project.metadata;
+        back->scan_data_root = project.scan_data_root;
+    }
+    auto edit = whole ? edi::Edit::replace_project(project, std::move(*back))
                 : input ? edi::Edit::undo_fit_to(project, target.before, nullptr) : edi::Edit::undo_fit(project);
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
@@ -598,12 +614,13 @@ bool FitViewModel::undo() {
         accepted_history_depth_ = target.depth;
         dropTrialHistory();
     }
+    if (undone) accepted_history_depth_ = owner_.undo_history_.size();
     if (undone) {
         if (owner_.retired_) return true;
-        accepted_fit_ = target.attempt ? target.accepted : nullptr;
+        // What the Undo left is the accepted baseline now, with its own history depth and no disarm to carry over.
+        accepted_fit_ = target.attempt ? std::make_shared<const edi::Project>(project_) : nullptr;
         undo_target_ = {};
-        candidate_ = false;
-        if (whole) manual_since_accepted_ = false;
+        candidate_ = manual_since_accepted_ = false;
         setProgress(QString(), QString(), QString());
         setElapsed(QString());
         results_->setRecord(project_);
@@ -1104,12 +1121,14 @@ void FitViewModel::ended(const edi::FitReport& report) {
     std::exception_ptr failure;
     const bool visible = !owner_.retired_;
     pending_accept_.reset();
+    ++fit_writing_;
     try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
+    --fit_writing_;
     presenting_ = previous_presentation;
     // The adopted fit becomes the accepted state only once its presentation has completed; until then the trial it
     // ends is still open and a failed presentation settles like any other unaccepted ending.
     if (auto accepted = std::exchange(pending_accept_, nullptr); accepted && !failure && visible && !owner_.retired_) {
-        accepted_fit_ = std::move(accepted);
+        accepted_fit_ = std::make_shared<const edi::Project>(project_);
         accepted_history_depth_ = owner_.undo_history_.size();
         candidate_ = stop_rollback_ = manual_since_accepted_ = false;
     }

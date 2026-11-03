@@ -280,6 +280,20 @@ class FitViewModel : public QObject {
     // A Save ends the trial: what was saved is the new accepted baseline, and nothing before it is rolled back.
     void saved();
     void restoreAcceptedOnStop(quint64 owner);
+    // Whether an assistant trial is open: there is an accepted fit to go back to, and a candidate, an assistant fit,
+    // its pending acceptance or a stopped rollback is outstanding. The project refuses every other edit and every
+    // save meanwhile (ProjectViewModel::criticalEditRefusal, saveRefusal).
+    bool trialOpen() const noexcept {
+        return accepted_fit_ &&
+               ((candidate_ && assistant_busy_) || stop_rollback_ || pending_accept_ || static_cast<bool>(native_completion_));
+    }
+    // Whether the assistant is working a turn: the lock holds a candidate only then. Between turns the user may act,
+    // and a manual edit ends the trial for good (dropCandidate), a Save makes the saved state the baseline (saved).
+    void setAssistantBusy(bool busy) noexcept { assistant_busy_ = busy; }
+    // Whether this fit view is putting a state back (a rollback or a fit Undo), which the trial lock admits.
+    bool restoring() const noexcept { return restoring_; }
+    // Whether this fit view is writing its own fit (its start state, its adopted result), which the lock admits too.
+    bool fitWriting() const noexcept { return fit_writing_ > 0; }
 
    signals:
     void runningChanged();
@@ -350,6 +364,8 @@ class FitViewModel : public QObject {
     UndoTarget starting_, undo_target_;
     // Whether the assistant changed the project since the accepted fit (markCandidate), and which session did.
     bool candidate_ = false, stop_rollback_ = false, manual_since_accepted_ = false, restoring_ = false;
+    int fit_writing_ = 0;
+    bool assistant_busy_ = false;
     quint64 candidate_owner_ = 0;
     // The project's Undo depth when the accepted fit was taken: a whole-project restore drops the trial's own Undo
     // entries above it, so a later ordinary Undo cannot bring back a fragment of the trial.
