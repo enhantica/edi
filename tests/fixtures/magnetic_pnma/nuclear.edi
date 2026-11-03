@@ -1,0 +1,26 @@
+data_cosio
+_edi.schema_version 3
+_cell.length_a 10.308064
+_cell.length_b 6.002187
+_cell.length_c 4.787394
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+_space_group.name_h_m "P n m a"
+_space_group.coord_system_code abc
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.wyckoff_letter
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Co1_1 Co a 0.0 0.0 0.0 1 0.269 Biso
+Co2_1 Co c 0.2809 0.25 0.9836 1 0.269 Biso
+Si_1 Si c 0.0933 0.25 0.4278 1 0.466 Biso
+O1_1 O c 0.0896 0.25 0.773 1 0.778 Biso
+O2_1 O c 0.4478 0.25 0.2179 1 0.642 Biso
+O3_1 O d 0.1639 0.0321 0.2805 1 0.917 Biso
