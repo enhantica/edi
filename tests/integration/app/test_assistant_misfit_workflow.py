@@ -9,8 +9,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration.py.assistant_misfit_reference import (
-    native_windows,
-    peak,
+    native_peaks,
     population,
     weighted,
 )
@@ -177,7 +176,7 @@ def test_every_adopted_powder_pattern_summary_matches_original_arrays(evidence):
                 'Native quiet background RMS uses the original supplied sigmas',
             )
         expected = sorted(
-            (peak(data, *window) for window in native_windows(data)),
+            native_peaks(data),
             key=itemgetter('weighted_square_sum'),
             reverse=True,
         )[:5]
@@ -185,17 +184,30 @@ def test_every_adopted_powder_pattern_summary_matches_original_arrays(evidence):
             'The native receipt retains the five worst supported reflection windows'
         )
         for actual, reference in zip(summary['worst_peaks'], expected, strict=True):
-            assert actual['phase_id'] == reference['phase_id'], (
-                'Native worst-reflection ordering retains phase identity'
-            )
+            if 'members' in reference:
+                assert actual.get('combined') is True and 'phase_id' not in actual, (
+                    'Overlapping reflection windows publish one shared peak without a single owner'
+                )
+                assert (
+                    sorted(zip(actual['positions'], actual['phase_ids'], strict=True))
+                    == (reference['members'])
+                ), 'The combined peak identifies every contributing reflection and phase'
+            else:
+                assert actual['phase_id'] == reference['phase_id'], (
+                    'An isolated worst reflection retains its original phase identity'
+                )
             for key, expected_value in reference.items():
-                if key != 'phase_id':
+                if key not in {'phase_id', 'members'}:
                     near(
                         actual[key],
                         expected_value,
                         f'Native reflection {key} matches independent sums '
                         'over its original source rows',
                     )
+            for moment in ('centroid_shift', 'width_ratio'):
+                assert (actual.get(moment) is not None) == (moment in reference), (
+                    'A directional moment appears only when the independent support defines it'
+                )
 
 
 @pytest.fixture(scope='module')

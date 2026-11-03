@@ -69,27 +69,50 @@ def peak(data, indices, position, phase):
     return result
 
 
-def native_windows(data):
-    """Contiguous tenth-height support, calculated separately from the app helper."""
+def native_peaks(data):
+    """Measure connected reflection supports on the original sampled axis."""
     used = population(data)
-    net = [data['calculated'][i] - data['background'][i] for i in used]
-    supports = {}
+    if not used:
+        return []
+    x = data['x']
+    net = {i: data['calculated'][i] - data['background'][i] for i in used}
+    finite_axis = [i for i, value in enumerate(x) if finite(value)]
+    groups = []
     for phase in data['phases']:
         for position in phase['positions']:
-            if not finite(position) or not data['x'][used[0]] <= position <= data['x'][used[-1]]:
+            if not finite(position) or not x[used[0]] <= position <= x[used[-1]]:
                 continue
-            center = min(range(len(used)), key=lambda k: abs(data['x'][used[k]] - position))
-            if net[center] <= 0:
+            center = min(finite_axis, key=lambda i: abs(x[i] - position))
+            if center not in net or net[center] <= 0:
                 continue
-            separators = (
-                [-1]
-                + [k for k, value in enumerate(net) if value <= net[center] / 10]
-                + [len(used)]
-            )
-            lo = max(k for k in separators if k < center) + 1
-            hi = min(k for k in separators if k > center)
-            supports.setdefault(lo, (used[lo:hi], position, phase['phase_id']))
-    return list(supports.values())
+            threshold = fraction(net[center]) / 10
+            edges = [
+                -1,
+                *(i for i in range(len(x)) if i not in net or net[i] <= threshold),
+                len(x),
+            ]
+            lo = max(i for i in edges if i < center) + 1
+            hi = min(i for i in edges if i > center)
+            support = set(range(lo, hi))
+            members = [(position, phase['phase_id'])]
+            separate = []
+            for earlier, labels in groups:
+                if earlier & support:
+                    support.update(earlier)
+                    members.extend(labels)
+                else:
+                    separate.append((earlier, labels))
+            groups = [*separate, (support, members)]
+
+    result = []
+    for support, members in groups:
+        position, phase = members[0]
+        observed = peak(data, sorted(support), position, phase)
+        if len(members) > 1:
+            del observed['position'], observed['phase_id']
+            observed['members'] = sorted(members)
+        result.append(observed)
+    return result
 
 
 def synthetic():
