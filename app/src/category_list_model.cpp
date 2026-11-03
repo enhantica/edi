@@ -3,9 +3,7 @@
 
 #include <QHash>
 #include <algorithm>
-#include <iterator>
 #include <string>
-#include <string_view>
 #include <utility>
 
 #include "edi/display.hpp"
@@ -65,25 +63,10 @@ CategoryPresentation category_presentation(const QString& id) {
 }
 
 namespace {
-// Where a category sorts in the sidebar: the dictionary's place, except that Extra lists the magnetic operators and
-// the moments in the cell after the bonds, so the nuclear groups come first (the owner, 2026-11-03). The files keep
-// the dictionary's order.
-std::pair<int, std::size_t> sidebar_order(std::string_view id) {
-    static const char* const kMagneticExtras[] = {"space_group_symop_magn_operation",
-                                                  "space_group_symop_magn_centering", "expanded_atom_site_moment"};
-    const auto bonds = edi::category_order("geom_bond");
-    for (std::size_t i = 0; i < std::size(kMagneticExtras); ++i) {
-        if (id == kMagneticExtras[i]) {
-            return {bonds.first, bonds.second + 1 + i};
-        }
-    }
-    return edi::category_order(id);
-}
-
-// The sidebar's order is the dictionary's order number, the files' order, so the app keeps no order of its own beyond
-// sidebar_order; categories the dictionary does not order keep the core's order, last. A category shown elsewhere
-// has no sidebar group: the experiment type is edited in the Experiments explorer, and a structure's saved view
-// (`_structure_view`) in Extra's Appearance group.
+// The sidebar's order is the dictionary's order number, the files' order, so the app
+// keeps no order of its own; categories the dictionary does not order keep the core's order, last. A category
+// shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer, and a
+// structure's saved view (`_structure_view`) in Extra's Appearance group.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
     // The magnetic form factors are chosen per site in the Magnetic moments group, and the parent group shows in
     // the Magnetic space group group when it differs from the space group (edi ADR-0068).
@@ -96,7 +79,7 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
         }
     }
     std::stable_sort(ordered.begin(), ordered.end(), [](const edi::Category* a, const edi::Category* b) {
-        return sidebar_order(a->id) < sidebar_order(b->id);
+        return edi::category_order(a->id) < edi::category_order(b->id);
     });
     return ordered;
 }
@@ -181,7 +164,7 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
         }
     }
     std::stable_sort(target.begin(), target.end(), [](const Row& a, const Row& b) {
-        return sidebar_order(a.id.toStdString()) < sidebar_order(b.id.toStdString());
+        return edi::category_order(a.id.toStdString()) < edi::category_order(b.id.toStdString());
     });
     const std::size_t before = rows_.size();
     const auto find = [](const std::vector<Row>& rows, const QString& id, std::size_t from) {
