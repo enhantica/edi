@@ -154,7 +154,14 @@ inline QJsonObject misfit(const edi::PatternSource& source,const QString& datase
         std::vector<Support> supports;
         std::vector<std::size_t> place(total,used.size());
         for(std::size_t k=0;k<used.size();++k)place[used[k]]=k;
-        const auto joined=[&](std::size_t k){return used[k]+1==used[k+1];};  // no left-out point between k and k+1
+        // Rows k and k+1 are one run: adjacent native rows with no excluded region anywhere between them, so a
+        // region lying wholly between two samples ends a peak as well as one covering a sample.
+        const auto joined=[&](std::size_t k) {
+            if(used[k]+1!=used[k+1])return false;
+            const auto lo=std::min(x[used[k]],x[used[k+1]]),hi=std::max(x[used[k]],x[used[k+1]]);
+            return std::none_of(source.excluded.begin(),source.excluded.end(),
+                                [lo,hi](const auto& band){return band.x_max>=lo && band.x_min<=hi;});
+        };
         for(const auto& phase:source.phases) {
             if(!phase.position)continue;
             for(const double p:*phase.position) {
