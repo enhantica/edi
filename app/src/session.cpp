@@ -198,6 +198,7 @@ Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject
 #endif
 void Session::initializeSession() {
     connect(assistant_, &AssistantViewModel::conversationRetired, this, &Session::retireAssistantIntent);
+    connect(this, &Session::projectDirectoryUsed, assistant_, &AssistantViewModel::projectSaved);
     // crysta's warnings reach Messages, never only the terminal (the owner, 2026-10-23).
     edi::collect_engine_warnings();
     // What a crash left in the temporary directory (edi ADR-0052).

@@ -192,6 +192,8 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool completeManualControlInput(QQuickItem* control, const QEventPoint& point,
                                               QObject* actionOwner, const edi_app::AssistantManualControlToken& proof);
     Q_INVOKABLE void cancel();
+    // After a desktop Save: the saved conversation association follows the project folder.
+    void projectSaved();
     Q_INVOKABLE bool resumeConnection();
     Q_INVOKABLE void signIn();
     Q_INVOKABLE QString acceptConnectionOffer(const QString& identity);
