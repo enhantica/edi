@@ -60,6 +60,23 @@ Column {
             return "";
         return group.derivedText(parts[6], parts[7], crystal);
     }
+    // Value k of a form (0-2): "undetermined" where the moment does not fix it (index 9 marks them, bit k), else
+    // the value with its s.u.
+    function formText(parts, k, crystal) {
+        if (!parts || parts.length < 6)
+            return "";
+        if (parts.length > 9 && (parts[9] & (1 << k)) !== 0)
+            return qsTr("undetermined");
+        return group.derivedText(parts[k], parts[k + 3], crystal);
+    }
+    // A derived value's tooltip: its s.u. and how it was found, from the fit's covariance (index 8) or propagated
+    // from the components' own s.u. as if they were uncorrelated (relay decision 2026-11-03).
+    function suTip(parts, su) {
+        if (typeof su !== "number" || !isFinite(su))
+            return "";
+        const how = parts.length > 8 && parts[8] ? qsTr("from the fit's covariance") : qsTr("propagated as uncorrelated");
+        return qsTr("s.u. %1, %2").arg(Session.display("atom_site_moment.crystalaxis_x", su)).arg(how);
+    }
 
     spacing: AppSizes.groupContentSpacing
 
@@ -211,13 +228,14 @@ Column {
                 horizontalAlignment: columnAlignment
                 readOnly: true
                 // Read again whenever a component's value or s.u. changes.
-                value: {
+                readonly property var parts: {
                     const changes = [row.mx, row.my, row.mz].map(item => item ? [item.value, item.uncertainty] : null);
                     if (!row.magnetic || !group.moments || !changes || group.moments.revision < 0)
-                        return "";
-                    const parts = group.moments.components(row.index, "crystal_axes");
-                    return group.modulusText(parts, parts);
+                        return [];
+                    return group.moments.components(row.index, "crystal_axes");
                 }
+                value: group.modulusText(parts, parts)
+                ToolTip.text: parts.length > 7 ? group.suTip(parts, parts[7]) : ""
             }
             // Derived from the site and the magnetic group: read only. Aligned as the components are, so the table
             // treats it as a number column (DataTable.kindOf).
@@ -330,8 +348,8 @@ Column {
                 accepts: "number"
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
-                value: formRow.parts.length > 0 ? group.derivedText(formRow.parts[0], formRow.parts[3], formRow.crystal) : ""
-                ToolTip.text: formRow.parts.length > 3 && isFinite(formRow.parts[3]) ? qsTr("s.u. %1").arg(Session.display("atom_site_moment.crystalaxis_x", formRow.parts[3])) : ""
+                value: group.formText(formRow.parts, 0, formRow.crystal)
+                ToolTip.text: formRow.parts.length > 3 ? group.suTip(formRow.parts, formRow.parts[3]) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 0, Number(text))
             }
             TextCell {
@@ -344,8 +362,8 @@ Column {
                 accepts: "number"
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
-                value: formRow.parts.length > 1 ? group.derivedText(formRow.parts[1], formRow.parts[4], formRow.crystal) : ""
-                ToolTip.text: formRow.parts.length > 4 && isFinite(formRow.parts[4]) ? qsTr("s.u. %1").arg(Session.display("atom_site_moment.crystalaxis_x", formRow.parts[4])) : ""
+                value: group.formText(formRow.parts, 1, formRow.crystal)
+                ToolTip.text: formRow.parts.length > 4 ? group.suTip(formRow.parts, formRow.parts[4]) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 1, Number(text))
             }
             TextCell {
@@ -358,8 +376,8 @@ Column {
                 accepts: "number"
                 uid: "atom_site_moment.crystalaxis_x"
                 readOnly: !formRow.magnetic
-                value: formRow.parts.length > 2 ? group.derivedText(formRow.parts[2], formRow.parts[5], formRow.crystal) : ""
-                ToolTip.text: formRow.parts.length > 5 && isFinite(formRow.parts[5]) ? qsTr("s.u. %1").arg(Session.display("atom_site_moment.crystalaxis_x", formRow.parts[5])) : ""
+                value: group.formText(formRow.parts, 2, formRow.crystal)
+                ToolTip.text: formRow.parts.length > 5 ? group.suTip(formRow.parts, formRow.parts[5]) : ""
                 onCommitted: text => group.moments.setComponent(formRow.index, group.form, 2, Number(text))
             }
             TextCell {
@@ -372,6 +390,7 @@ Column {
                 visible: !converted.spherical
                 readOnly: true
                 value: group.modulusText(formRow.parts, formRow.crystal)
+                ToolTip.text: formRow.parts.length > 7 ? group.suTip(formRow.parts, formRow.parts[7]) : ""
             }
             TextCell {
                 property int columnAlignment: Text.AlignRight
