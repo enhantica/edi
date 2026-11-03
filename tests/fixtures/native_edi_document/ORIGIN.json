@@ -99,13 +99,31 @@
       },
       "exact_header_snapshot_match": true,
       "source_headers_byte_exact_to_original": true
+    },
+    {
+      "source": "baeb5984b282e727b2366cbddc0938f1ddb88cb9",
+      "original_reference_source": "c815d994d132fc31d10e26aaf4ac8385a965e518",
+      "src/core/edi.hpp": {
+        "sha256": "fee5a54128a7359ba7dd98e675ba5957958ec46f17ed8733257ec03d8aaba29a",
+        "bytes": 8058,
+        "git_blob": "ed31f0cb1b81589e22ffc6282351863846372d77"
+      },
+      "src/core/version.hpp": {
+        "sha256": "5cc5e1eef2d982c0e22435497b77e3386e3843a49089da6145a90a3c3abd4097",
+        "bytes": 732,
+        "git_blob": "28300d4a25c8caf51f34a452621c247c2c46635a"
+      },
+      "exact_header_snapshot_match": true,
+      "source_headers_byte_exact_to_original": true,
+      "sdk_manifest_sha256": "140b8794b59f9d5982a1f0447bf1757e1dfb62c79c484eba52b67746133ca6a1"
     }
   ],
   "known_compatible_linked_build_commits": [
     "79010b0c73ddec01abf80ce00037d138ec7c1b8d",
     "c815d994d132fc31d10e26aaf4ac8385a965e518",
     "97818d18ec74cb6ead16f607845b06b446d8eac1",
-    "8ba9537cc90857afeedf768693f70635f607ee36"
+    "8ba9537cc90857afeedf768693f70635f607ee36",
+    "baeb5984b282e727b2366cbddc0938f1ddb88cb9"
   ],
   "default405_disposition": "NOT allowed: edi.hpp is different8652B/d384...; matching version declarations alone do not prove document ABI. Unsupported linked revision fails/unreached before document API; never skip/pass.",
   "local_SDK_manifest": "Original locally built SDK2 has no installed share/crysta-sdk/manifest.json; generated Edi app info therefore cannot prove a manifest source. Actual linked native build_commit/version functions + root SDK2 artifact bond are separate honest inputs.",

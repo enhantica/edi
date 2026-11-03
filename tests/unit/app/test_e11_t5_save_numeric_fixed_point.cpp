@@ -291,7 +291,8 @@ public:
             nativeSource=="79010b0c73ddec01abf80ce00037d138ec7c1b8d" ||
             nativeSource=="c815d994d132fc31d10e26aaf4ac8385a965e518" ||
             nativeSource=="97818d18ec74cb6ead16f607845b06b446d8eac1" ||
-            nativeSource=="8ba9537cc90857afeedf768693f70635f607ee36";
+            nativeSource=="8ba9537cc90857afeedf768693f70635f607ee36" ||
+            nativeSource=="baeb5984b282e727b2366cbddc0938f1ddb88cb9";
         fact(QStringLiteral("native_parser_abi"),{{"linked_source",QString::fromStdString(nativeSource)},
             {"linked_version",QString::fromLatin1(crysta::version())},{"compatible",parserCompatible},
             {"interface_reference_source","c815d994d132fc31d10e26aaf4ac8385a965e518"},
