@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T12:03:51Z
+# measured_utc = 2026-11-03T12:08:33Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 166249 banked, 0 stale row(s) dropped)
-# Collected tests: 210345; with a reported duration: 70523
+# Recorded from: measured test run (2 node(s) measured once, 166249 banked, 0 stale row(s) dropped)
+# Collected tests: 210347; with a reported duration: 70523
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210345
+# inventory_python = 210347
 # inventory_cpp = 400
 # inventory_measured = 166249
-# inventory_unmeasured = 44496
+# inventory_unmeasured = 44498
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66943
+# inventory_pr_python = 66945
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -226,8 +226,10 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_ui_compare.py::t
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[pattern]
 0.000	tests/integration/app/test_legend_marks.py::test_each_legend_boundary_executes_in_the_actual_host[vesta]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[analysis_contains_only_independent_magnetic_components]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[analysis_filter_counts_match_every_rendered_row]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[catalogue_count_and_selector_operator_replacement]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[extra_groups_are_single_ordered_and_human_readable]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[fit_from_zero_moments_reaches_reference_and_logs_start]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[k_editor_refuses_without_changing_the_saved_model]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[magnetic_column_shows_none_and_aligns_each_choice]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_magnetic_preview.py::test_magnetic_preview_uses_rendered_production_controls[magnetic_selector_and_scale_use_one_editing_surface]

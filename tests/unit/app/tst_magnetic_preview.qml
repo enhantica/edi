@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import OnboardingAcceptance 1.0
 import ReportAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
@@ -15,6 +16,7 @@ TestCase {
     property var scratch
     Component { id: application; Main {} }
     Component { id: preferences; AppPreferencesDialog {} }
+    Component { id: analysisParameters; ParametersGroup { width: 760; y: 60; z: 1000; tableViewportHeight: 500 } }
     Component { id: pattern; PatternChart { width: 1200; height: 800 } }
     function init() {
         scratch = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/magnetic_pnma/app-project"));
@@ -283,6 +285,128 @@ TestCase {
         legend.toggled(magnetic.key);
         tryVerify(() => areas().every(area => area.outline.color.a > 0 && area.color.a > 0), 2000, "The magnetic legend control restores its curve and fill");
         chart.destroy();
+    }
+    function openMagneticFitExample() {
+        const project = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k/project"));
+        verify(Session.openProject(project), "The gate opens a disposable copy of the documented 2.3 K fit");
+        tryCompare(Session.project, "calculating", false, 15000, "The example's initial measured pattern finishes");
+    }
+    function test_analysis_filter_counts_match_every_rendered_row() {
+        openMagneticFitExample();
+        const controls = analysisParameters.createObject(appWindow.contentItem, {project: Session.project});
+        verify(controls && waitForPolish(controls), "The census uses the rendered production Analysis Parameters group");
+        const table = Review.find(controls, "parameters.list");
+        const block = Review.find(controls, "parameters.datablock");
+        const category = Review.find(controls, "parameters.category");
+        const variability = Review.find(controls, "parameters.variability");
+        verify(table && block && category && variability, "Analysis exposes the real table and all three selectors");
+        const model = table.sourceModel;
+        model.clearFilters();
+        function select(blockIndex, categoryIndex, parameterIndex) {
+            block.activated(blockIndex);
+            category.activated(categoryIndex);
+            variability.activated(parameterIndex);
+        }
+        function count(text) {
+            const match = /\((\d+)\)\s*$/.exec(text);
+            verify(match !== null, "The active selector publishes its concrete row count");
+            return Number(match[1]);
+        }
+        function checkRows() {
+            const scope = [block.displayText, category.displayText, variability.displayText].join(" / ");
+            const promised = count(variability.displayText);
+            compare(count(category.displayText), promised, "The selected category and parameter counts agree: " + scope);
+            if (model.categoryFilter === "")
+                compare(count(block.displayText), promised, "The datablock count agrees when all its categories are selected: " + scope);
+            tryCompare(table, "count", promised, 1000, "The visible table model lists the promised number of parameters: " + scope);
+            const paths = Probe.rows(model).map(row => String(row.path));
+            compare(paths.length, promised, "The filter model preserves every promised row: " + scope);
+            compare(new Set(paths).size, promised, "The active filters never repeat a parameter identity: " + scope);
+            for (let row = 0; row < promised; ++row) {
+                table.positionViewAtIndex(row, ListView.Contain);
+                table.forceLayout();
+                tryVerify(() => Ui.rendered(table.itemAtIndex(row)), 500, "Every promised parameter row becomes visible after scrolling: " + scope + " row " + (row + 1));
+                compare(String(table.itemAtIndex(row).path), paths[row], "The rendered row is the actual matching parameter: " + scope);
+            }
+        }
+        const moments = model.categories.indexOf("atom_site_moment");
+        verify(moments > 0, "The cobalt fit exposes its magnetic moment category");
+        const expected = ["Co1.crystalaxis_x", "Co1.crystalaxis_y", "Co1.crystalaxis_z", "Co2.crystalaxis_y"];
+        for (const categoryFirst of [true, false]) {
+            model.clearFilters();
+            if (categoryFirst) {
+                category.activated(moments);
+                variability.activated(ParameterFilterModel.Free);
+            } else {
+                variability.activated(ParameterFilterModel.Free);
+                category.activated(moments);
+            }
+            tryCompare(table, "count", 4, 1000, "Magnetic moments (4) with Free parameters (4) lists four rows in either selection order");
+            table.positionViewAtBeginning();
+            table.forceLayout();
+            verify(waitForPolish(table), "The four-row cobalt repro completes its Analysis layout");
+            for (let i = 0; i < 4; ++i)
+                verify(Ui.rendered(table.itemAtIndex(i)), "The four cobalt components are visible together without scrolling");
+            checkRows();
+            const components = Probe.rows(model).map(row => String(row.rowLabel) + "." + String(row.name)).sort();
+            compare(components, expected, "The four rows identify the independent cobalt components");
+        }
+        const blocks = Array.from(model.datablocks);
+        verify(blocks.length >= 3, "The census covers the all, structure and experiment datablock choices");
+        for (let b = 0; b < blocks.length; ++b) {
+            select(b, 0, ParameterFilterModel.All);
+            const categories = Array.from(model.categories);
+            for (let c = 0; c < categories.length; ++c) {
+                for (let v = 0; v < variability.count; ++v) {
+                    select(b, c, v);
+                    compare(model.datablockFilter, blocks[b], "The datablock selection survives the other filter changes");
+                    compare(model.categoryFilter, categories[c], "The category selection survives the parameter filter changes");
+                    checkRows();
+                }
+            }
+        }
+        controls.destroy();
+    }
+    function test_fit_from_zero_moments_reaches_reference_and_logs_start() {
+        const path = Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_2k");
+        Preferences.engineThreads = 1;
+        const reference = JSON.parse(SettingsProof.text(path, "expected.json")).quantities;
+        function fit(zero) {
+            openMagneticFitExample();
+            const moments = () => Probe.rows(Session.project.parameters).filter(row => row.category === "atom_site_moment" && row.free);
+            compare(moments().length, 4, "The 2.3 K fit uses the four free moment components");
+            if (zero)
+                for (const row of moments())
+                    row.parameter.value = 0;
+            verify(moments().every(row => (row.parameter.value === 0) === zero), "The fit receives the requested nonzero or all-zero start");
+            verify(OnboardingProbe.startHostLog().length > 0, "The test observes the actual fit log");
+            const model = Session.project.fit;
+            verify(model.available, "The real project admits a fit with the requested moment start");
+            model.start();
+            tryVerify(() => !model.running && model.outcome !== "", 55000, "The actual minimizer publishes its completed result");
+            const log = OnboardingProbe.finishHostLog();
+            const notice = log.split("\n").filter(line => /moment/i.test(line) && /start|seed|initial/i.test(line) && /\b1(?:\.0+)?\s*(?:[µμ]B|mu[_ ]?B|Bohr magneton)/i.test(line));
+            if (zero)
+                verify(notice.length > 0, "The fit log names the one-magneton start for all-zero free moments");
+            else
+                compare(notice.length, 0, "The fit does not replace the nonzero user start");
+            const rows = Probe.rows(model.results.agreement);
+            const result = rows.find(row => row.place >= 0);
+            verify(result !== undefined, "The completed 2.3 K fit publishes its measured dataset agreement");
+            const rwp = Number(result.values[1]) / 100;
+            const limit = reference.rwp.value * reference.rwp.tol_rel;
+            verify(Math.abs(rwp - reference.rwp.value) <= limit, "The fit reaches the independent fixed-model FullProf Rwp interval");
+            const components = moments();
+            for (const key of Object.keys(reference).filter(key => key.startsWith("param."))) {
+                const row = components.find(row => "param." + row.rowLabel + "." + row.name + ".value" === key);
+                verify(row !== undefined, "The completed fit exposes the independently referenced moment: " + key);
+                verify(Math.abs(Math.abs(row.parameter.value) - Math.abs(reference[key].value)) <= reference[key].tol_abs, "The fitted component magnitude meets the independent FullProf interval: " + key);
+            }
+            return rwp;
+        }
+        const baseline = fit(false);
+        const fromZero = fit(true);
+        verify(Math.abs(fromZero - baseline) <= reference.rwp.value * reference.rwp.tol_rel, "Zero and nonzero starts reach the same reference minimum within its stated Rwp tolerance");
     }
     function test_k_editor_refuses_without_changing_the_saved_model() {
         const propagation = group("parent_propagation_vector");
