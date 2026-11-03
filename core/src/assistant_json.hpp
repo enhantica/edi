@@ -121,7 +121,9 @@ inline void bounded(const J& value, std::uint64_t bytes, std::uint64_t count = U
 inline std::string string(const J& value, const char* name, bool empty = false) {
     const auto result = value.at(name).string(name);
     const std::string key(name);
-    if ((key.ends_with("_id") || key == "model" || key == "effort") && result.size() > Limits::id_bytes)
+    // An identifier is a key ending in an underscore and "id".
+    const bool identifier = key.size() > 2 && key.ends_with("id") && key[key.size() - 3] == '_';
+    if ((identifier || key == "model" || key == "effort") && result.size() > Limits::id_bytes)
         refuse("resource_exhausted", "Assistant identifier exceeds limit");
     if (!empty && result.empty()) refuse("invalid_argument", std::string(name) + " is empty");
     return result;

@@ -3477,12 +3477,12 @@ namespace detail {
 struct PreparedPeakRestore {
     PeakBase* target;
     PeakBase image;
-    struct Retirement {
+    struct PeakRetirement {
         OptionalParameter* slot;
         std::shared_ptr<Membership> detached;
         std::vector<std::shared_ptr<OptionalParameter::ParameterCell>> retired;
     };
-    std::vector<Retirement> retirements;
+    std::vector<PeakRetirement> retirements;
     PreparedPeakRestore(PeakBase& into,PeakBase before):target(&into),image(std::move(before)) {
         retirements.reserve(PeakBase::optional_parameter_members.size());
         for(auto member:PeakBase::optional_parameter_members) {
@@ -3607,12 +3607,12 @@ namespace detail {
 struct PreparedAbsorptionRestore {
     AbsorptionBase* target;
     AbsorptionBase image;
-    struct Retirement {
+    struct AbsorptionRetirement {
         OptionalParameter* slot;
         std::shared_ptr<Membership> detached;
         std::vector<std::shared_ptr<OptionalParameter::ParameterCell>> retired;
     };
-    std::vector<Retirement> retirements;
+    std::vector<AbsorptionRetirement> retirements;
     PreparedAbsorptionRestore(AbsorptionBase& into,AbsorptionBase before):target(&into),image(std::move(before)) {
         retirements.reserve(AbsorptionBase::optional_parameter_members.size());
         for(auto member:AbsorptionBase::optional_parameter_members) {
@@ -3667,7 +3667,7 @@ struct ExtinctionBase {
     OptionalParameter coefficient;  // Larson's (type larson-isotropic)
     // Larson's anisotropic tensor (type larson-anisotropic): x11, x22, x33, x12, x13, x23.
     OptionalParameter coefficient_11, coefficient_22, coefficient_33, coefficient_12, coefficient_13, coefficient_23;
-    inline static constexpr std::array optional_parameter_members{
+    static constexpr std::array optional_parameter_members{
         &ExtinctionBase::domain_radius,&ExtinctionBase::mosaic_spread,&ExtinctionBase::crystal_radius,&ExtinctionBase::coefficient,
         &ExtinctionBase::coefficient_11,&ExtinctionBase::coefficient_22,&ExtinctionBase::coefficient_33,
         &ExtinctionBase::coefficient_12,&ExtinctionBase::coefficient_13,&ExtinctionBase::coefficient_23};
@@ -3682,12 +3682,12 @@ namespace detail {
 struct PreparedExtinctionRestore {
     ExtinctionBase* target;
     ExtinctionBase image;
-    struct Retirement {
+    struct ExtinctionRetirement {
         OptionalParameter* slot;
         std::shared_ptr<Membership> detached;
         std::vector<std::shared_ptr<OptionalParameter::ParameterCell>> retired;
     };
-    std::vector<Retirement> retirements;
+    std::vector<ExtinctionRetirement> retirements;
     PreparedExtinctionRestore(ExtinctionBase& into,ExtinctionBase before):target(&into),image(std::move(before)) {
         retirements.reserve(ExtinctionBase::optional_parameter_members.size());
         for(auto member:ExtinctionBase::optional_parameter_members) {
