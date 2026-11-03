@@ -82,9 +82,8 @@ class StructureViewOptions : public QObject {
     OptionListModel* momentViewOptions() const { return moment_view_options_; }
     void setMomentForm(const QString& form);  // one of the three; anything else is ignored
 
-    // The atom subset's next state, as diffraction-lib's atoms button: all, asymmetric unit, none; with no
-    // atom outside the asymmetric unit, all and none.
-    Q_INVOKABLE void cycleAtoms(bool hasCopies);
+    // The Atoms selector's tokens, the magnetic ones only for a magnetic structure.
+    Q_INVOKABLE QStringList atomChoices(bool magnetic) const;
 
     const edi::SceneOptions& sceneOptions() const { return options_; }
     // The options as a structure saves them (`_structure_view`, by item name), and set from such a map, each item

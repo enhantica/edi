@@ -81,6 +81,10 @@ QString StructureViewOptions::atoms() const {
     switch (options_.atoms) {
         case edi::AtomSubset::AsymmetricUnit:
             return QStringLiteral("asymmetric");
+        case edi::AtomSubset::AsymmetricMagnetic:
+            return QStringLiteral("asymmetric_magnetic");
+        case edi::AtomSubset::MagneticAtoms:
+            return QStringLiteral("magnetic");
         case edi::AtomSubset::None:
             return QStringLiteral("none");
         case edi::AtomSubset::All:
@@ -89,11 +93,23 @@ QString StructureViewOptions::atoms() const {
     return QStringLiteral("all");
 }
 
+QStringList StructureViewOptions::atomChoices(bool magnetic) const {
+    if (magnetic) {
+        return {QStringLiteral("all"), QStringLiteral("asymmetric"), QStringLiteral("asymmetric_magnetic"),
+                QStringLiteral("magnetic"), QStringLiteral("none")};
+    }
+    return {QStringLiteral("all"), QStringLiteral("asymmetric"), QStringLiteral("none")};
+}
+
 void StructureViewOptions::setAtoms(const QString& atoms) {
     if (atoms == QLatin1String("all")) {
         assign(options_.atoms, edi::AtomSubset::All, &StructureViewOptions::atomsChanged);
     } else if (atoms == QLatin1String("asymmetric")) {
         assign(options_.atoms, edi::AtomSubset::AsymmetricUnit, &StructureViewOptions::atomsChanged);
+    } else if (atoms == QLatin1String("asymmetric_magnetic")) {
+        assign(options_.atoms, edi::AtomSubset::AsymmetricMagnetic, &StructureViewOptions::atomsChanged);
+    } else if (atoms == QLatin1String("magnetic")) {
+        assign(options_.atoms, edi::AtomSubset::MagneticAtoms, &StructureViewOptions::atomsChanged);
     } else if (atoms == QLatin1String("none")) {
         assign(options_.atoms, edi::AtomSubset::None, &StructureViewOptions::atomsChanged);
     }
@@ -143,20 +159,6 @@ void StructureViewOptions::setMomentView(const QString& view) {
     if (chosen.has_value()) {
         moments_declared_ = moments_declared_ || *chosen != options_.moment_view;
         assign(options_.moment_view, *chosen, &StructureViewOptions::momentViewChanged);
-    }
-}
-
-void StructureViewOptions::cycleAtoms(bool hasCopies) {
-    switch (options_.atoms) {
-        case edi::AtomSubset::All:
-            assign(options_.atoms, hasCopies ? edi::AtomSubset::AsymmetricUnit : edi::AtomSubset::None, &StructureViewOptions::atomsChanged);
-            break;
-        case edi::AtomSubset::AsymmetricUnit:
-            assign(options_.atoms, edi::AtomSubset::None, &StructureViewOptions::atomsChanged);
-            break;
-        case edi::AtomSubset::None:
-            assign(options_.atoms, edi::AtomSubset::All, &StructureViewOptions::atomsChanged);
-            break;
     }
 }
 

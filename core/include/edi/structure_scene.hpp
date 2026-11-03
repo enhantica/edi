@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -33,7 +34,9 @@ enum class ColorScheme : std::uint8_t { Jmol, Vesta };
 // anisotropic site, a sphere for an isotropic one; a ball of the covalent radius where a site has neither.
 enum class AtomView : std::uint8_t { Covalent, VanDerWaals, Ionic, Adp };
 enum class Projection : std::uint8_t { Orthographic, Perspective };
-enum class AtomSubset : std::uint8_t { All, AsymmetricUnit, None };
+// The Atoms selector: every atom, one per orbit of the crystal (a magnetic structure's parent) group, one per orbit
+// of the magnetic group, the atoms with a moment, or none.
+enum class AtomSubset : std::uint8_t { All, AsymmetricUnit, AsymmetricMagnetic, MagneticAtoms, None };
 // How the moment arrows are coloured (the owner, 2026-11-03): each in its atom's colour, in that colour
 // greyed so arrows stand apart from the atoms while the types stay distinct, or all in one grey.
 enum class MomentColours : std::uint8_t { Atom, GreyedAtom, Single };
@@ -95,6 +98,9 @@ struct SceneSource {
     // `_expanded_atom_site_moment`: each magnetic row's moment in Bohr magnetons along a, b and c.
     Column<std::string> moment_site_id, moment_symmetry;
     Column<double> moment_x, moment_y, moment_z;
+    // The sites that stand for the crystal's asymmetric unit (for a magnetic structure, its parent group's), and the
+    // sites that carry a moment.
+    std::set<std::string> crystal_sites, magnetic_sites;
 };
 // Owner thread. Reads the stored geometry only while `structure.geometry_current()` is true, and never
 // computes it; otherwise the source has `current` false and no column.
