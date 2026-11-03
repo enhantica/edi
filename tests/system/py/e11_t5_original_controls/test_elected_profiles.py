@@ -21,7 +21,10 @@ def _sample(case_id):
     assert hashlib.sha256(raw).hexdigest() == custody[case_id], 'Never sample current output'
     facts = json.loads(raw)
     assert facts['body_failed'] is False and facts['host_exit'] == 0, (
-        'Required:  sample.'
+
+        "This boundary requires facts['body_failed'] is False and facts['host_exit'] "
+        '== 0'
+
     )
     mapping = json.loads(Path(__file__).with_name('action_line_map.json').read_text())
     for scope in facts['scopes']:

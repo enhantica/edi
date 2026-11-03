@@ -71,7 +71,10 @@ def capture(case):
     assert (
         hashlib.sha256(original[raw_path]).hexdigest()
         == conditioning['raw_capture_sha256']
-    ), 'Required: capture.'
+    ), (
+        'This boundary requires hashlib.sha256(original[raw_path]).hexdigest() == '
+        "conditioning['raw_capture_sha256']"
+    )
     return fixture, conditioning, raw, original
 
 
@@ -79,17 +82,26 @@ def assert_domains(fixture, conditioning, blocks):
     mapping = bridge.conditioning_semantics(fixture['scientific'], conditioning, blocks)
     assert set(mapping) == {
         tuple(binding[:3]) for binding in conditioning['bindings']
-    }, 'Required: assert domains.'
+    }, (
+        'This boundary requires set(mapping) == {tuple(binding[:3]) for binding in '
+        "conditioning['bindings']}"
+    )
     domains = bridge.frozen_domains(fixture, blocks)
     raw_coordinates = {tuple(binding[:3]) for binding in fixture['native_precision_bindings']}
     assert {
         key
         for key, domain in domains.items()
         if domain == 'native-raw-parameter'
-    } == raw_coordinates, 'Required: assert domains.'
+    } == raw_coordinates, (
+        'This boundary requires {key for key, domain in domains.items() if domain == '
+        "'native-raw-parameter'} == raw_coordinates"
+    )
     assert any(
         domain == 'historical-written' for domain in domains.values()
-    ), 'Required: assert domains.'
+    ), (
+        "This boundary requires any((domain == 'historical-written' for domain in "
+        'domains.values()))'
+    )
 
 
 def assert_omitted(raw, banks, index):
@@ -99,23 +111,35 @@ def assert_omitted(raw, banks, index):
         for label in raw['labels']
         if label.rsplit('.', 1)[-1] == 'scale' or label.rsplit('.', 1)[-1].startswith('calib_')
     }
-    assert anchors.keys() == expected_labels, 'Required: assert omitted.'
-    assert anchors, 'Required: assert omitted.'
+    assert anchors.keys() == expected_labels, (
+        'This boundary requires anchors.keys() == expected_labels'
+    )
+    assert anchors, (
+        'This boundary requires anchors'
+    )
     assert all(anchor.key not in index.cells for anchor in anchors.values()), (
         'Old scientific whitelist omitted these raw-anchored roles; do not pretend it covered them'
     )
     for label, anchor in anchors.items():
         assert raw['labels'][anchor.column] == label, (
-            'Required: assert omitted.'
+
+            "This boundary requires raw['labels'][anchor.column] == label"
+
         )
         assert anchor.value == raw['values'][anchor.column], (
-            'Required: assert omitted.'
+
+            "This boundary requires anchor.value == raw['values'][anchor.column]"
+
         )
         assert anchor.uncertainty == math.sqrt(
             raw['covariance'][
                 anchor.column * len(raw['labels']) + anchor.column
             ]
-        ), 'Required: assert omitted.'
+        ), (
+            'This boundary requires anchor.uncertainty == '
+            "math.sqrt(raw['covariance'][anchor.column * len(raw['labels']) + "
+            'anchor.column])'
+        )
 
 
 @pytest.mark.parametrize('case', ['lbco', 'ncaf'])

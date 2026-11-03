@@ -180,8 +180,7 @@ class MainActor:
                     output.write(json.dumps({'sequence': sequence, 'op': op, 'pid': self.process.pid,
                         'request': arguments, 'reply_envelope': value}) + '\n')
             assert 'host_error' not in value, (
-                ('Required: MainActor.command.'),
-                value,
+                ("This boundary requires 'host_error' not in value", value)
             )
             self.last = value
             ui = value.get('ui', {})
@@ -4614,12 +4613,20 @@ class HistorySyncGate:
         assert (
             self.target.resolve().is_relative_to(storage)
             and not self.target.is_symlink()
-        ), 'Required: HistorySyncGate.arm.'
+        ), (
+            'This boundary requires self.target.resolve().is_relative_to(storage) and '
+            '(not self.target.is_symlink())'
+        )
         assert self.target.stat().st_mode & 0o777 == 0o600, (
-            'Required: HistorySyncGate.arm.'
+
+            'This boundary requires self.target.stat().st_mode & 511 == 384'
+
         )
         assert '\n' not in str(self.target) and '\n' not in str(self.release), (
-            'Required: HistorySyncGate.arm.'
+
+            "This boundary requires '\\n' not in str(self.target) and '\\n' not in "
+            'str(self.release)'
+
         )
         self.epoch += 1
         (self.folder / f'history-before-{self.epoch}.json').write_bytes(self.target.read_bytes())

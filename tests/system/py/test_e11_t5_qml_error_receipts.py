@@ -345,41 +345,68 @@ def _assert_capture_facts(actor, facts, defect):
 
 def _assert_persistence(facts, body_failed, defect, caught, capsys, primary):
     if defect in {'all_persistence_errors', 'all_evidence_sinks_error'}:
-        assert facts['receipt_path'] is None, 'Required:  assert persistence.'
+        assert facts['receipt_path'] is None, (
+            "This boundary requires facts['receipt_path'] is None"
+        )
         if defect == 'all_evidence_sinks_error':
             assert any(
                 row['stage'] == 'secondary_stderr'
                 for row in facts['secondary_errors']
-            ), 'Required:  assert persistence.'
+            ), (
+                "This boundary requires any((row['stage'] == 'secondary_stderr' for "
+                "row in facts['secondary_errors']))"
+            )
             notes = caught.value.__notes__
             assert any('raw_warning_log' in note for note in notes), (
-                'Required:  assert persistence.'
+
+                "This boundary requires any(('raw_warning_log' in note for note in "
+                'notes))'
+
             )
         else:
             assert (
                 'No file receipt could be persisted' in capsys.readouterr().err
-            ), 'Required:  assert persistence.'
+            ), (
+                "This boundary requires 'No file receipt could be persisted' in "
+                'capsys.readouterr().err'
+            )
         if body_failed:
             assert any(
                 'No file receipt could be persisted' in note
                 for note in primary.__notes__
-            ), 'Required:  assert persistence.'
+            ), (
+                "This boundary requires any(('No file receipt could be persisted' in "
+                'note for note in primary.__notes__))'
+            )
     else:
         saved = json.loads(Path(facts['receipt_path']).read_text(encoding='utf-8'))
         assert saved['secondary_errors'] == facts['secondary_errors'], (
-            'Required:  assert persistence.'
+
+            "This boundary requires saved['secondary_errors'] == "
+            "facts['secondary_errors']"
+
         )
         assert saved['raw_warning_log'] == facts['raw_warning_log'], (
-            'Required:  assert persistence.'
+
+            "This boundary requires saved['raw_warning_log'] == "
+            "facts['raw_warning_log']"
+
         )
         assert saved['raw_warning_log_hex'] == facts['raw_warning_log_hex'], (
-            'Required:  assert persistence.'
+
+            "This boundary requires saved['raw_warning_log_hex'] == "
+            "facts['raw_warning_log_hex']"
+
         )
         assert saved['stderr_hex'] == facts['stderr_hex'], (
-            'Required:  assert persistence.'
+
+            "This boundary requires saved['stderr_hex'] == facts['stderr_hex']"
+
         )
         assert saved['stderr'] == facts['stderr'], (
-            'Required:  assert persistence.'
+
+            "This boundary requires saved['stderr'] == facts['stderr']"
+
         )
 
 

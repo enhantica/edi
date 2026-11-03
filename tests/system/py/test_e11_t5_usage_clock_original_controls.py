@@ -56,11 +56,16 @@ def clock_actor(main_actor):
     # Pytest teardown is separate: it cannot replace a semantic body failure.
     assert actor.process.poll() is None and not getattr(
         actor, '_stream_unusable', None
-    ), 'Required: clock actor.'
+    ), (
+        'This boundary requires actor.process.poll() is None and (not getattr(actor, '
+        "'_stream_unusable', None))"
+    )
     cleanup = _command(actor, 'cleanup')
     if state['installed']:
         assert cleanup == {'found': 1, 'destroyed': True}, (
-            'Required: clock actor.'
+
+            "This boundary requires cleanup == {'found': 1, 'destroyed': True}"
+
         )
     else:
         assert cleanup['found'] in {0, 1}, (
@@ -72,20 +77,32 @@ def clock_actor(main_actor):
 def _snapshot(actor, action='snapshot'):
     value = _command(actor, action)
     assert isinstance(value['problem'], str) and not value['problem'], (
-        ('Required:  snapshot.'),
-        value,
+        'Command results must contain an empty problem string', value,
     )
     assert (
         value['owner'] and value['same_original'] and value['imported_info']
-    ), 'Required:  snapshot.'
+    ), (
+        "This boundary requires value['owner'] and value['same_original'] and "
+        "value['imported_info']"
+    )
     assert value['interval'] == INTERVAL_MS and value['repeat'] is True, (
-        'Required:  snapshot.'
+
+        "This boundary requires value['interval'] == INTERVAL_MS and value['repeat'] "
+        'is True'
+
     )
-    assert value['triggered_on_start'] is False, 'Required:  snapshot.'
+    assert value['triggered_on_start'] is False, (
+        "This boundary requires value['triggered_on_start'] is False"
+    )
     assert value['running'] == (value['visible'] and value['connected']), (
-        'Required:  snapshot.'
+
+        "This boundary requires value['running'] == (value['visible'] and "
+        "value['connected'])"
+
     )
-    assert value['count'] == len(value['events']), 'Required:  snapshot.'
+    assert value['count'] == len(value['events']), (
+        "This boundary requires value['count'] == len(value['events'])"
+    )
     assert all(
         actor.last['ui'][key]
         for key in (
@@ -93,7 +110,10 @@ def _snapshot(actor, action='snapshot'):
             'engine_parent',
             'cpp_ownership',
         )
-    ), 'Required:  snapshot.'
+    ), (
+        "This boundary requires all((actor.last['ui'][key] for key in "
+        "('singleton_identity', 'engine_parent', 'cpp_ownership')))"
+    )
     return value
 
 
@@ -106,10 +126,17 @@ def _begin(clock_actor):
         not value['visible']
         and not value['opened']
         and not value['connected']
-    ), 'Required:  begin.'
-    assert value['count'] == 0 and not value['running'], 'Required:  begin.'
+    ), (
+        "This boundary requires not value['visible'] and (not value['opened']) and "
+        "(not value['connected'])"
+    )
+    assert value['count'] == 0 and not value['running'], (
+        "This boundary requires value['count'] == 0 and (not value['running'])"
+    )
     assert started_ms <= value['clock'] <= value['wall_after'], (
-        'Required:  begin.'
+
+        "This boundary requires started_ms <= value['clock'] <= value['wall_after']"
+
     )
     base._session_configure(
         actor,
@@ -126,10 +153,16 @@ def _begin(clock_actor):
         connected['connected']
         and not connected['visible']
         and not connected['running']
-    ), 'Required:  begin.'
+    ), (
+        "This boundary requires connected['connected'] and (not connected['visible']) "
+        "and (not connected['running'])"
+    )
     assert (
         connected['clock'] == value['clock'] and connected['count'] == 0
-    ), 'Required:  begin.'
+    ), (
+        "This boundary requires connected['clock'] == value['clock'] and "
+        "connected['count'] == 0"
+    )
     return actor, phase, connected
 
 

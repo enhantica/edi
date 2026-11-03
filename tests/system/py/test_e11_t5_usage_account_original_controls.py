@@ -163,34 +163,45 @@ def _compiled_callers(bond, bond_hash, record, registry_path):
     assert set(expected) == CALLER_KEYS, 'Both actual Composer/Panel caller units are mandatory'
     for key, digest in expected.items():
         assert isinstance(digest, str) and len(digest) == 64, (
-            'Required:  compiled callers.'
+
+            'This boundary requires isinstance(digest, str) and len(digest) == 64'
+
         )
         observed = bond['generated_inputs'][key]
         assert observed['sha256'] == digest, (
-            ('Required:  compiled callers.'),
-            key,
+            ("This boundary requires observed['sha256'] == digest", key)
         )
         assert _sha(_absolute(observed['path'])) == digest, (
-            ('Required:  compiled callers.'),
-            key,
+            ("This boundary requires _sha(_absolute(observed['path'])) == digest", key)
         )
     reference = record['source_proof']
     path = _absolute(reference['path'])
     assert _sha(path) == reference['sha256'], 'Caller attribution is an immutable source proof'
     proof = json.loads(path.read_text())
-    assert proof['bond_sha256'] == bond_hash, 'Required:  compiled callers.'
+    assert proof['bond_sha256'] == bond_hash, (
+        "This boundary requires proof['bond_sha256'] == bond_hash"
+    )
     assert (
         proof['compiled_source'] == bond['source']
         and proof['compiled_tree'] == bond['tree']
-    ), 'Required:  compiled callers.'
+    ), (
+        "This boundary requires proof['compiled_source'] == bond['source'] and "
+        "proof['compiled_tree'] == bond['tree']"
+    )
     assert proof['family_phases'] == bond['family_phases'], (
-        'Required:  compiled callers.'
+
+        "This boundary requires proof['family_phases'] == bond['family_phases']"
+
     )
     assert proof['generated_inputs'] == expected, (
-        'Required:  compiled callers.'
+
+        "This boundary requires proof['generated_inputs'] == expected"
+
     )
     assert proof['case_registry_sha256'] == _sha(registry_path), (
-        'Required:  compiled callers.'
+
+        "This boundary requires proof['case_registry_sha256'] == _sha(registry_path)"
+
     )
     assert proof['cases'] == json.loads(registry_path.read_text()), (
         'Source attribution covers the complete exact six-case registry, not only generated hashes'
@@ -202,8 +213,13 @@ def _bound_receipt(variable):
     expected = os.environ[variable + '_SHA256']
     assert len(expected) == 64 and all(
         character in '0123456789abcdef' for character in expected
-    ), 'Required:  bound receipt.'
-    assert _sha(path) == expected, 'Required:  bound receipt.'
+    ), (
+        'This boundary requires len(expected) == 64 and all((character in '
+        "'0123456789abcdef' for character in expected))"
+    )
+    assert _sha(path) == expected, (
+        'This boundary requires _sha(path) == expected'
+    )
     return json.loads(path.read_text())
 
 
@@ -249,29 +265,49 @@ def _phase():
     assert phase['binding_status'] == 'BOUND', 'Root must bind the completed fresh comparison'
     assert phase['caller_binding_status'] == 'BOUND', 'Both fresh caller maps require source proof'
     assert phase['namespace'] == 'fresh-usage-original-native', (
-        'Required:  phase.'
+
+        "This boundary requires phase['namespace'] == 'fresh-usage-original-native'"
+
     )
-    assert phase['phase'] in {'original', 'native'}, 'Required:  phase.'
+    assert phase['phase'] in {'original', 'native'}, (
+        "This boundary requires phase['phase'] in {'original', 'native'}"
+    )
     assert os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == phase['phase'], (
-        'Required:  phase.'
+
+        "This boundary requires os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == "
+        "phase['phase']"
+
     )
     assert (
         Path(base.__file__).resolve()
         == ROOT / 'tests/system/py/test_e11_t5_dev_native_integration.py'
-    ), 'Required:  phase.'
+    ), (
+        'This boundary requires Path(base.__file__).resolve() == ROOT / '
+        "'tests/system/py/test_e11_t5_dev_native_integration.py'"
+    )
     files = phase['files']
     for path, expected in files.items():
-        assert _sha(ROOT / path) == expected, (('Required:  phase.'), path)
+        assert _sha(ROOT / path) == expected, (
+            ('This boundary requires _sha(ROOT / path) == expected', path)
+        )
     bond = _bound_receipt('EDI_E11_USAGE_ACCOUNT_BINARY_BOND')
     original = _bound_receipt('EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND')
     assert original['source'] == phase['original_source'], (
-        'Required:  phase.'
+
+        "This boundary requires original['source'] == phase['original_source']"
+
     )
-    assert bond['source'] == phase['compiled_source'], 'Required:  phase.'
+    assert bond['source'] == phase['compiled_source'], (
+        "This boundary requires bond['source'] == phase['compiled_source']"
+    )
     assert (
         os.environ['EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND_SHA256']
         == phase['original_bond_sha256']
-    ), 'Required:  phase.'
+    ), (
+        'This boundary requires '
+        "os.environ['EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND_SHA256'] == "
+        "phase['original_bond_sha256']"
+    )
     original_families = {
         'activity': 'native',
         'composer': 'native',
@@ -279,45 +315,72 @@ def _phase():
         'usage': 'original',
     }
     assert original['family_phases'] == original_families, (
-        'Required:  phase.'
+
+        "This boundary requires original['family_phases'] == original_families"
+
     )
     assert bond['family_phases'] == {
         **original_families,
         'usage': phase['phase'],
-    }, 'Required:  phase.'
+    }, (
+        "This boundary requires bond['family_phases'] == {**original_families, "
+        "'usage': phase['phase']}"
+    )
     for name, expected in phase['native'].items():
         assert original['native'][name] == expected, (
-            ('Required:  phase.'),
-            name,
+            ("This boundary requires original['native'][name] == expected", name)
         )
-        assert bond['native'][name] == expected, (('Required:  phase.'), name)
+        assert bond['native'][name] == expected, (
+            ("This boundary requires bond['native'][name] == expected", name)
+        )
     assert (
         original['bundled_runtime']['config_sha256']
         == phase['original_runtime_config_sha256']
-    ), 'Required:  phase.'
+    ), (
+        "This boundary requires original['bundled_runtime']['config_sha256'] == "
+        "phase['original_runtime_config_sha256']"
+    )
     assert (
         bond['bundled_runtime']['config_sha256']
         == phase['current_runtime_config_sha256']
-    ), 'Required:  phase.'
+    ), (
+        "This boundary requires bond['bundled_runtime']['config_sha256'] == "
+        "phase['current_runtime_config_sha256']"
+    )
     if phase['phase'] == 'original':
-        assert bond == original, 'Required:  phase.'
+        assert bond == original, (
+            'This boundary requires bond == original'
+        )
     else:
         expected = os.environ['EDI_E11_USAGE_ACCOUNT_COMPILED_SOURCE']
         assert len(expected) == 40 and all(
             character in '0123456789abcdef' for character in expected
-        ), 'Required:  phase.'
+        ), (
+            'This boundary requires len(expected) == 40 and all((character in '
+            "'0123456789abcdef' for character in expected))"
+        )
         assert bond['source'] == expected == phase['compiled_source'], (
-            'Required:  phase.'
+
+            "This boundary requires bond['source'] == expected == "
+            "phase['compiled_source']"
+
         )
     assert files[USAGE_HEADER] == USAGE_HEADER_HASHES[phase['phase']], (
-        'Required:  phase.'
+
+        'This boundary requires files[USAGE_HEADER] == '
+        "USAGE_HEADER_HASHES[phase['phase']]"
+
     )
     assert (
         files['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp']
         == ACTIVITY_INPUTS[
             'tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp'
         ]
-    ), 'Required:  phase.'
+    ), (
+        'This boundary requires '
+        "files['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp'] == "
+        "ACTIVITY_INPUTS['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp']"
+    )
     for observed, key in ((bond, 'current'), (original, 'original')):
         _compiled_phase_inputs(observed, observed['family_phases']['usage'])
         _compiled_callers(
@@ -339,8 +402,7 @@ def _phase():
         'tests/integration/py/assistant_ui_probe/probe.cpp',
     ):
         assert bond['compiled_sources'][path] == files[path], (
-            ('Required:  phase.'),
-            path,
+            ("This boundary requires bond['compiled_sources'][path] == files[path]", path)
         )
     for section, keys in {
         'compiler_kit': ['compiler_sha256', 'package_metadata'],
@@ -350,15 +412,19 @@ def _phase():
     }.items():
         for key in keys:
             assert bond[section][key] == original[section][key], (
-                ('Required:  phase.'),
-                (section, key),
+                'Recorded source and Original input identities agree', (section, key),
             )
     assert (
         _sha(Path(os.environ['EDI_ASSISTANT_UI_PROBE']))
         == (bond['binaries']['assistant_real_owner_probe']['sha256'])
-    ), 'Required:  phase.'
+    ), (
+        "This boundary requires _sha(Path(os.environ['EDI_ASSISTANT_UI_PROBE'])) == "
+        "bond['binaries']['assistant_real_owner_probe']['sha256']"
+    )
     assert os.environ['EDI_E11_T5_A2A_PHASE'] == 'native', (
-        'Required:  phase.'
+
+        "This boundary requires os.environ['EDI_E11_T5_A2A_PHASE'] == 'native'"
+
     )
     return phase
 
@@ -382,7 +448,9 @@ def _observe(actor, phase, stage):
     _retain(actor, stage + '-raw', {'observer': source, 'envelope': envelope})
     value = json.loads(envelope['reply']['value'])
     _retain(actor, stage, value)
-    assert value['problems'] == [], 'Required:  observe.'
+    assert value['problems'] == [], (
+        "This boundary requires value['problems'] == []"
+    )
     assert all(
         envelope['ui'][key]
         for key in (
@@ -390,8 +458,13 @@ def _observe(actor, phase, stage):
             'engine_parent',
             'cpp_ownership',
         )
-    ), 'Required:  observe.'
-    assert value['owner'] and value['imported_info'], 'Required:  observe.'
+    ), (
+        "This boundary requires all((envelope['ui'][key] for key in "
+        "('singleton_identity', 'engine_parent', 'cpp_ownership')))"
+    )
+    assert value['owner'] and value['imported_info'], (
+        "This boundary requires value['owner'] and value['imported_info']"
+    )
     return value
 
 
@@ -410,34 +483,58 @@ def _open_usage(actor):
 def _check_selection(value, expected):
     assert (
         value['usage'] == value['canonical'] and value['plain_projection']
-    ), 'Required:  check selection.'
+    ), (
+        "This boundary requires value['usage'] == value['canonical'] and "
+        "value['plain_projection']"
+    )
     assert value['usage']['available'] and not value['usage']['stale'], (
-        'Required:  check selection.'
+
+        "This boundary requires value['usage']['available'] and (not "
+        "value['usage']['stale'])"
+
     )
     assert (
         value['usage']['state'] == 'ready' and not value['usage']['loading']
-    ), 'Required:  check selection.'
+    ), (
+        "This boundary requires value['usage']['state'] == 'ready' and (not "
+        "value['usage']['loading'])"
+    )
     assert [row['id'] for row in value['usage']['buckets']] == expected[
         'bucket_ids'
-    ], 'Required:  check selection.'
+    ], (
+        "This boundary requires [row['id'] for row in value['usage']['buckets']] == "
+        "expected['bucket_ids']"
+    )
     for key in ('global', 'remaining', 'session_path', 'weekly_path', 'button', 'caption'):
         assert value[key] == expected[key], (
-            ('Required:  check selection.'),
-            key,
+            ('This boundary requires value[key] == expected[key]', key)
         )
     assert value['accessible'] == expected['caption'], (
-        'Required:  check selection.'
+
+        "This boundary requires value['accessible'] == expected['caption']"
+
     )
     assert value['independent_session'] and value['independent_weekly'], (
-        'Required:  check selection.'
+
+        "This boundary requires value['independent_session'] and "
+        "value['independent_weekly']"
+
     )
-    assert value['strict_string_duration'], 'Required:  check selection.'
+    assert value['strict_string_duration'], (
+        "This boundary requires value['strict_string_duration']"
+    )
     rows = value['rows']
     assert [row['key'] for row in rows] == expected['descriptors'], (
-        'Required:  check selection.'
+
+        "This boundary requires [row['key'] for row in rows] == "
+        "expected['descriptors']"
+
     )
     assert [row['percent'] for row in rows] == expected['percent'], (
-        'Required:  check selection.'
+
+        "This boundary requires [row['percent'] for row in rows] == "
+        "expected['percent']"
+
     )
     descriptors = {
         'session': {'title': 'Session limit', 'minutes': 300, 'key': 'session'},
@@ -445,9 +542,14 @@ def _check_selection(value, expected):
     }
     assert [row['descriptor'] for row in rows] == [
         descriptors[key] for key in expected['descriptors']
-    ], 'Required:  check selection.'
+    ], (
+        "This boundary requires [row['descriptor'] for row in rows] == "
+        "[descriptors[key] for key in expected['descriptors']]"
+    )
     assert all(row['selected_member'] for row in rows), (
-        'Required:  check selection.'
+
+        "This boundary requires all((row['selected_member'] for row in rows))"
+
     )
     assert all(
         row['current']
@@ -456,17 +558,29 @@ def _check_selection(value, expected):
         and row['reset_current']
         and row['reset'] == 'Reset unavailable'
         for row in rows
-    ), 'Required:  check selection.'
+    ), (
+        "This boundary requires all((row['current'] and row['visible'] and "
+        "row['percent_current'] and row['reset_current'] and (row['reset'] == 'Reset "
+        "unavailable') for row in rows))"
+    )
     assert [row['sceneY'] for row in rows] == sorted(
         row['sceneY'] for row in rows
-    ), 'Required:  check selection.'
+    ), (
+        "This boundary requires [row['sceneY'] for row in rows] == "
+        "sorted((row['sceneY'] for row in rows))"
+    )
     if rows:
-        assert not value['status']['visible'], 'Required:  check selection.'
+        assert not value['status']['visible'], (
+            "This boundary requires not value['status']['visible']"
+        )
     else:
         assert value['status'] == {
             'visible': True,
             'text': 'Session and weekly usage were not reported.',
-        }, 'Required:  check selection.'
+        }, (
+            "This boundary requires value['status'] == {'visible': True, 'text': "
+            "'Session and weekly usage were not reported.'}"
+        )
 
 
 def _check_account_projection(value, case, expected, *, phase):
@@ -527,12 +641,20 @@ def _account_display(actor, expected):
         'plan_plain': True,
         'plan_visible': expected['plan_visible'],
         'plan_current': True,
-    }, 'Required:  account display.'
+    }, (
+        "This boundary requires value == {'identity': expected['identity'], "
+        "'identity_plain': True, 'identity_visible': True, 'identity_current': True, "
+        "'plan': expected['plan_label'], 'plan_plain': True, 'plan_visible': "
+        "expected['plan_visible'], 'plan_current': True}"
+    )
     assert not any(
         'NEVER_ACCOUNT_DISPLAY_269' in row['display']
         for row in envelope['ui']['texts']
         if row['visible']
-    ), 'Required:  account display.'
+    ), (
+        "This boundary requires not any(('NEVER_ACCOUNT_DISPLAY_269' in "
+        "row['display'] for row in envelope['ui']['texts'] if row['visible']))"
+    )
 
     # The fixture owns opening Account and closes that modal through ordinary input.
     actor.command('manual_key', key='escape')
@@ -550,7 +672,9 @@ def _wire_proof(actor, case):
     _retain(actor, 'canonical-wire-proof', {'wire': wire, 'sent': sent})
     account_requests = [row for row in wire if row.get('method') == 'account/read']
     usage_requests = [row for row in wire if row.get('method') == 'account/rateLimits/read']
-    assert account_requests and usage_requests, 'Required:  wire proof.'
+    assert account_requests and usage_requests, (
+        'This boundary requires account_requests and usage_requests'
+    )
     account_results = [
         row['result']
         for row in sent
@@ -558,20 +682,33 @@ def _wire_proof(actor, case):
     ]
     assert account_results == [
         {'account': case['account'], 'requiresOpenaiAuth': False}
-    ], 'Required:  wire proof.'
+    ], (
+        "This boundary requires account_results == [{'account': case['account'], "
+        "'requiresOpenaiAuth': False}]"
+    )
     assert any(
         row.get('id') in {request['id'] for request in usage_requests}
         and row.get('result') == case['usage']
         for row in sent
-    ), 'Required:  wire proof.'
+    ), (
+        "This boundary requires any((row.get('id') in {request['id'] for request in "
+        "usage_requests} and row.get('result') == case['usage'] for row in sent))"
+    )
     if 'update' in case:
         assert any(
             row.get('id') in {request['id'] for request in usage_requests}
             and row.get('result') == case['update']
             for row in sent
-        ), 'Required:  wire proof.'
+        ), (
+            "This boundary requires any((row.get('id') in {request['id'] for request "
+            "in usage_requests} and row.get('result') == case['update'] for row in "
+            'sent))'
+        )
     assert not any(row.get('method') == 'turn/start' for row in wire), (
-        'Required:  wire proof.'
+
+        "This boundary requires not any((row.get('method') == 'turn/start' for row in "
+        'wire))'
+
     )
 
 

@@ -49,22 +49,30 @@ def theme_actor(main_actor):
     # Separate pytest teardown preserves a prior body exception and restores actual theme.
     assert actor.process.poll() is None and not getattr(
         actor, '_stream_unusable', None
-    ), 'Required: theme actor.'
+    ), (
+        'This boundary requires actor.process.poll() is None and (not getattr(actor, '
+        "'_stream_unusable', None))"
+    )
     value = _command(actor, 'cleanup')
     if state['installed']:
-        assert value == {'found': 1, 'restored': True}, 'Required: theme actor.'
+        assert value == {'found': 1, 'restored': True}, (
+            "This boundary requires value == {'found': 1, 'restored': True}"
+        )
     else:
-        assert value['found'] in {0, 1}, 'Required: theme actor.'
+        assert value['found'] in {0, 1}, (
+            "This boundary requires value['found'] in {0, 1}"
+        )
         if value['found'] == 1:
-            assert value['restored'], 'Required: theme actor.'
+            assert value['restored'], (
+                "This boundary requires value['restored']"
+            )
     actor.until(lambda _row: _command(actor, 'absent')['remaining'] == 0)
 
 
 def _snapshot(actor, action='snapshot'):
     value = _command(actor, action)
     assert isinstance(value['problem'], str) and not value['problem'], (
-        ('Required:  snapshot.'),
-        value,
+        'Command results must contain an empty problem string', value,
     )
     assert all(
         value[key]
@@ -78,14 +86,24 @@ def _snapshot(actor, action='snapshot'):
             'visible',
             'enabled',
         )
-    ), 'Required:  snapshot.'
+    ), (
+        "This boundary requires all((value[key] for key in ('owner', 'same_owner', "
+        "'same_button', 'same_label', 'same_colors', 'actual_window', 'visible', "
+        "'enabled')))"
+    )
     assert (
         not value['hovered']
         and not value['down']
         and not value['visual_focus']
-    ), 'Required:  snapshot.'
+    ), (
+        "This boundary requires not value['hovered'] and (not value['down']) and (not "
+        "value['visual_focus'])"
+    )
     assert value['remaining'] == 63 and value['text'] == '37% used', (
-        'Required:  snapshot.'
+
+        "This boundary requires value['remaining'] == 63 and value['text'] == '37% "
+        "used'"
+
     )
     assert all(
         actor.last['ui'][key]
@@ -94,7 +112,10 @@ def _snapshot(actor, action='snapshot'):
             'engine_parent',
             'cpp_ownership',
         )
-    ), 'Required:  snapshot.'
+    ), (
+        "This boundary requires all((actor.last['ui'][key] for key in "
+        "('singleton_identity', 'engine_parent', 'cpp_ownership')))"
+    )
     return value
 
 
@@ -106,9 +127,13 @@ def _settled(actor, dark):
     actor.until(current)
     value = _snapshot(actor)
     assert value['dark'] is dark and value['matches_foreground'], (
-        'Required:  settled.'
+
+        "This boundary requires value['dark'] is dark and value['matches_foreground']"
+
     )
-    assert value['actual'] == value['expected'], 'Required:  settled.'
+    assert value['actual'] == value['expected'], (
+        "This boundary requires value['actual'] == value['expected']"
+    )
     return value
 
 
