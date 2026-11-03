@@ -11573,7 +11573,7 @@ struct AssistantViewModel::State {
             }
             else if(structure_app_action(name)) {} // Final original structure control cue was appended above.
             else if(name=="load_structure")run->inputs.push_back({Kind::Navigate,"structures.load"});
-            else if(name=="load_data")run->inputs.push_back({Kind::Navigate,QString("experiments.loadData.%1").arg(individual_member_index(run))});
+            else if(name=="load_data")run->inputs.push_back({Kind::Navigate,QString("experiments.file.%1").arg(individual_member_index(run))});
             else if(name=="create_experiment")run->inputs.push_back({Kind::Navigate,"experiments.create"});
             else {
                 const auto axis=args.value("axis").toString(),token=args.value("token").toString();
@@ -11819,9 +11819,9 @@ struct AssistantViewModel::State {
         if (!originalCurrent || !run->ordinary || !run->project || !widget_input ||
             (!run->structure_source && !run->measurement_source))
             throw std::runtime_error("The admitted original file load is unavailable");
-        const bool measured=run->inputs.at(run->step).target.startsWith("experiments.loadData.");
+        const bool measured=run->inputs.at(run->step).target.startsWith("experiments.file.");
         const auto target_name=measured && !run->individual_tool.isEmpty()
-            ? QString("experiments.loadData.%1").arg(individual_member_index(run)) : measured?QString("experiments.loadData.0"):QString("structures.load");
+            ? QString("experiments.file.%1").arg(individual_member_index(run)) : measured?QString("experiments.file.0"):QString("structures.load");
         const QPointer<QQuickItem> load(create_widget_named(run,target_name));
         if(!receiver || receiver->state_.get()!=this)return;
         if (measured && !run->individual_tool.isEmpty() && (!individual_member_current(run) || run->project->currentExperiment()!=run->operation_view))
@@ -12235,7 +12235,7 @@ struct AssistantViewModel::State {
         if (step.target.startsWith("$value.") || step.target.startsWith("$background.") || step.target=="$background_names") { create_widget_child(run, step); return; }
         if((structure_app_action(run->individual_tool) || run->individual_tool=="edit_experiment") && step.kind==AssistantWidgetInput::Kind::FileLoadCue) {structure_cue(run,step);return;}
         if (step.target.startsWith("appBar.tab.")) run->page = step.target.mid(11);
-        if (step.target == "structures.load" || step.target.startsWith("experiments.loadData.")) { create_widget_load_structure(run); return; }
+        if (step.target == "structures.load" || step.target.startsWith("experiments.file.")) { create_widget_load_structure(run); return; }
         const QPointer<QQuickItem> target(create_widget_named(run, step.target));
         if (!run->individual_tool.isEmpty() && step.target.startsWith("experiments.row.")) {
             if(!target) { if(create_widget_missing_target(run,step))return;throw ActionRefusal("control_unavailable","experiment"); }
@@ -12519,7 +12519,7 @@ struct AssistantViewModel::State {
             }
             add(Kind::Navigate,"appBar.tab.experiment");add(Kind::Navigate,"sideBar.tab.basic");add(Kind::Navigate,"experiments.create");
             add(Kind::Choose,"experimentType.beamMode");add(Kind::Choose,"experimentType.radiationProbe");
-            add(Kind::Navigate,"experiments.loadData.0");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
+            add(Kind::Navigate,"experiments.file.0");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
             for(const auto tier:{CategoryListModel::Basic,CategoryListModel::Extras})for(const auto* category:experiment_order) {
                 if(category_presentation(QString::fromStdString(category->id)).tier!=tier)continue;
                 if(category->id=="background") {

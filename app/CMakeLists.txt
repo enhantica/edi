@@ -110,6 +110,8 @@ qt_add_qml_module(edi_app_module
         src/report_pdf.hpp src/report_pdf.cpp
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
+        src/online_sources.hpp src/online_sources.cpp
+        src/online_search.hpp src/online_search.cpp
         src/web_files.hpp src/web_files.cpp
         src/web_storage.hpp src/web_storage.cpp
     QML_FILES
@@ -117,6 +119,9 @@ qt_add_qml_module(edi_app_module
         feedback/Payload.js
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
+        qml/Components/LoadMenuHeader.qml
+        qml/Components/LoadMenuItem.qml
+        qml/Components/OnlineLoadDialog.qml
         qml/Components/AssistantPanel.qml
         qml/Components/AssistantWorking.qml
         qml/Components/AssistantMessage.qml
@@ -275,7 +280,7 @@ qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" FILES shaders/sca
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(edi_app_module PUBLIC QT_MESSAGELOGCONTEXT)  # file and line in the run log (ADR-0062)
 target_link_libraries(edi_app_module
-    PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
+    PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent Qt6::Network edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
 find_package(Qt6QmlPrivate REQUIRED)
 target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)

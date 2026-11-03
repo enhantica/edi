@@ -387,6 +387,102 @@ AppDialog {
             }
         }
 
+        // The online sources Load ▾ From web… searches (ADR-0068): COD and EasyDiffraction's collection are built
+        // in; a row can be disabled, and user rows added, edited or removed. A run started with --online-source or
+        // EDI_ONLINE_SOURCES shows that URL in place of the stored one.
+        Column {
+            width: parent.width
+            spacing: AppSizes.unit
+            EaElements.Label {
+                width: parent.width
+                text: qsTr("Online sources")
+                font.bold: true
+            }
+            DataTable {
+                id: onlineTable
+                objectName: "preferences.online.sources"
+                width: parent.width
+                maxRowCountShow: 6
+                sourceModel: Session.onlineSources
+                defaultInfoText: qsTr("No online sources")
+                columns: [numberColumnWidth, AppSizes.dataColumnWidth * 1.8, -1, AppSizes.dataColumnWidth * 1.6, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                header: EaComponents.ListViewHeader {
+                    EaComponents.ListViewLabel {}
+                    EaComponents.ListViewLabel {
+                        text: qsTr("Name")
+                        horizontalAlignment: Text.AlignLeft
+                    }
+                    EaComponents.ListViewLabel {
+                        text: qsTr("URL")
+                        horizontalAlignment: Text.AlignLeft
+                    }
+                    EaComponents.ListViewLabel {
+                        text: qsTr("Holds")
+                        horizontalAlignment: Text.AlignLeft
+                    }
+                    EaComponents.ListViewLabel {}
+                    EaComponents.ListViewLabel {}
+                }
+                delegate: TableRow {
+                    id: onlineRow
+                    required property string id
+                    required property string name
+                    required property string url
+                    required property var kinds
+                    required property bool builtin
+                    required property var model
+                    required property bool overridden
+                    EaComponents.ListViewLabel {
+                        text: onlineRow.index + 1
+                        horizontalAlignment: Text.AlignHCenter
+                        marksCurrentRow: true
+                    }
+                    TextCell {
+                        objectName: "preferences.online.source.name." + onlineRow.id
+                        horizontalAlignment: Text.AlignLeft
+                        value: onlineRow.name
+                        enabled: !onlineRow.builtin
+                        onCommitted: text => Session.onlineSources.setName(onlineRow.id, text)
+                    }
+                    TextCell {
+                        objectName: "preferences.online.source.url." + onlineRow.id
+                        horizontalAlignment: Text.AlignLeft
+                        value: onlineRow.url
+                        enabled: !onlineRow.builtin && !onlineRow.overridden
+                        ToolTip.text: onlineRow.overridden ? qsTr("Set for this run by --online-source or EDI_ONLINE_SOURCES") : onlineRow.url
+                        onCommitted: text => Session.onlineSources.setUrl(onlineRow.id, text)
+                    }
+                    EaComponents.ListViewLabel {
+                        objectName: "preferences.online.source.kinds." + onlineRow.id
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideRight
+                        text: onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : qsTr("data")).join(", ")
+                    }
+                    EaComponents.ListViewButton {
+                        objectName: "preferences.online.source.enabled." + onlineRow.id
+                        fontIcon: onlineRow.model.enabled ? "toggle-on" : "toggle-off"
+                        ToolTip.text: onlineRow.model.enabled ? qsTr("Leave this source out of the From web… popup") : qsTr("Offer this source in the From web… popup")
+                        onClicked: Session.onlineSources.setEnabled(onlineRow.id, !onlineRow.model.enabled)
+                    }
+                    EaComponents.ListViewButton {
+                        objectName: "preferences.online.source.remove." + onlineRow.id
+                        fontIcon: "minus-circle"
+                        enabled: !onlineRow.builtin
+                        ToolTip.text: onlineRow.builtin ? qsTr("A built-in source cannot be removed, only disabled") : qsTr("Remove this source")
+                        onClicked: Session.onlineSources.remove(onlineRow.id)
+                    }
+                }
+            }
+            EaElements.SideBarButton {
+                objectName: "preferences.online.sources.add"
+                width: dialog.controlWidth
+                text: qsTr("Add online source")
+                fontIcon: "plus-circle"
+                ToolTip.text: qsTr("Add a collection to search: a URL holding an index.json and the files it names")
+                onClicked: Session.onlineSources.add()
+            }
+        }
+
         ScrollView {
             id: aiPage
             implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height - bar.implicitHeight - AppSizes.unit * 8))

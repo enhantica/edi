@@ -416,7 +416,7 @@
         },
         {
           "title": "Load the CIF",
-          "text": "On the Structure page, load the structure from lbco.cif with Load structure.",
+          "text": "On the Structure page, load the structure from lbco.cif: Load ▾, then From file….",
           "page": "structure",
           "target": "structures.load",
           "expected": "The structure lbco is in the list.",
@@ -454,9 +454,9 @@
         },
         {
           "title": "Load the data",
-          "text": "Load the measured pattern from hrpt.xye with Load data… in the experiment's row.",
+          "text": "Load the measured pattern from hrpt.xye: Load ▾, then From file… under Measured data.",
           "page": "experiment",
-          "target": "experiments.loadData.0",
+          "target": "experiments.load",
           "expected": "The measured pattern is in the main area.",
           "check": "data"
         },

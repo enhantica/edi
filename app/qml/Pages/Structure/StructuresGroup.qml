@@ -98,45 +98,76 @@ SideBarGroup {
             }
         }
 
-        // Load and Create side by side, as easydiffractionbeta's Load and Define manually: Create adds
-        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). Under them Duplicate,
-        // and Load from COD, not available yet (the owner, 2026-10-11).
-        Grid {
-            columns: 2
+        // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-11-03): Create adds
+        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). The Load menu takes a
+        // structure from a file or from the web (COD or EasyDiffraction's collection).
+        Row {
+            id: buttons
+
+            readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
+                id: loadButton
                 objectName: "structures.load"
+                width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canLoadStructure
                 fontIcon: "upload"
-                text: qsTr("Load structure from file")
-                // In the browser the files come through the page (edi ADR-0023).
-                onClicked: ApplicationInfo.loadFormFiles(false)
+                text: qsTr("Load") + " ▾"
+                ToolTip.text: qsTr("Load a structure from a file or from the web")
+                onClicked: loadMenu.open()
+
+                EaElements.Menu {
+                    id: loadMenu
+                    objectName: "structures.load.menu"
+                    y: loadButton.height
+                    width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 20)
+
+                    LoadMenuHeader {
+                        text: qsTr("Structure")
+                    }
+                    LoadMenuItem {
+                        objectName: "structures.load.file"
+                        text: qsTr("From file…")
+                        hint: ".cif .edi"
+                        toolTip: qsTr("Load a structure from a CIF or .edi file")
+                        // In the browser the files come through the page (edi ADR-0023).
+                        onTriggered: ApplicationInfo.loadFormFiles(false)
+                    }
+                    LoadMenuItem {
+                        objectName: "structures.load.web"
+                        text: qsTr("From web…")
+                        hint: "COD · EasyDiffraction"
+                        toolTip: qsTr("Search the Crystallography Open Database or EasyDiffraction's collection for a structure")
+                        onTriggered: onlineLoad.openFor("structure", null)
+                    }
+                }
             }
             EaElements.SideBarButton {
                 objectName: "structures.create"
+                width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "plus-circle"
-                text: qsTr("Create structure")
+                text: qsTr("Create")
                 ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
                 onClicked: group.project.createStructure()
             }
             EaElements.SideBarButton {
                 objectName: "structures.duplicate"
+                width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.currentStructure !== null
                 fontIcon: "clone"
-                text: qsTr("Duplicate structure")
+                text: qsTr("Duplicate")
                 ToolTip.text: qsTr("Add a copy of the selected structure, linked to no experiment")
                 onClicked: group.project.duplicateStructure()
             }
-            EaElements.SideBarButton {
-                objectName: "structures.loadCod"
-                enabled: false
-                fontIcon: "cloud-download-alt"
-                text: qsTr("Load from COD")
-                ToolTip.text: qsTr("Loading from the Crystallography Open Database is not available yet")
-            }
         }
+    }
+
+    OnlineLoadDialog {
+        id: onlineLoad
+        project: group.project
     }
 
     property var pickerLife: ({

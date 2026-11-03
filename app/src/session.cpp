@@ -186,12 +186,16 @@ struct Session::PendingOpenSource {
 
 Session::Session(QObject* parent, AssistantWorkReportOptions options)
     : QObject(parent), work_report_options_(options), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
+    online_sources_ = new OnlineSourcesModel(this);
+    online_search_ = new OnlineSearch(online_sources_, this);
     assistant_ = new AssistantViewModel(this, options);
     initializeSession();
 }
 #ifndef __EMSCRIPTEN__
 Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject* parent,AssistantWorkReportOptions options)
     : QObject(parent),work_report_options_(options),examples_(new ExampleListModel(this)),warnings_(new WarningListModel(this)) {
+    online_sources_ = new OnlineSourcesModel(this);
+    online_search_ = new OnlineSearch(online_sources_, this);
     assistant_=new AssistantViewModel(std::move(dependencies),this,options);
     initializeSession();
 }

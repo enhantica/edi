@@ -1,0 +1,35 @@
+{
+  "schema": "edi-data-index/1",
+  "entries": [
+    {
+      "id": "lbco",
+      "kind": "structure",
+      "name": "La0.5Ba0.5CoO3",
+      "formula": "Ba0.5 Co La0.5 O3",
+      "space_group": "P m -3 m",
+      "cell": [3.89, 3.89, 3.89, 90, 90, 90],
+      "source": "EasyDiffraction",
+      "files": [{"path": "structures/lbco.cif", "format": "cif"}]
+    },
+    {
+      "id": "lbco-hrpt",
+      "kind": "experiment",
+      "name": "La0.5Ba0.5CoO3 at HRPT",
+      "radiation": "neutron",
+      "technique": "powder constant wavelength",
+      "instrument": "HRPT",
+      "source": "EasyDiffraction",
+      "files": [{"path": "experiments/lbco_hrpt.edi", "format": "edi"}]
+    },
+    {
+      "id": "lbco-hrpt-xye",
+      "kind": "data",
+      "name": "La0.5Ba0.5CoO3 pattern from HRPT",
+      "radiation": "neutron",
+      "technique": "powder constant wavelength",
+      "instrument": "HRPT",
+      "source": "EasyDiffraction",
+      "files": [{"path": "data/lbco_hrpt.xye", "format": "xye"}]
+    }
+  ]
+}

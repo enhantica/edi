@@ -6,7 +6,6 @@ import QtQuick.Controls
 import QtQuick.Dialogs
 
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -171,17 +170,23 @@ SideBarGroup {
                     property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
 
+                    // The data file's name, or that there is none yet: loading moved to the Load menu below (the
+                    // owner, 2026-11-03).
                     Row {
                         height: parent.height
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
-                        visible: !loadData.visible
 
                         EaComponents.ListViewLabel {
+                            readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
+
+                            objectName: `experiments.file.${row.index}`
                             width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideMiddle
-                            text: row.file
+                            color: empty ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.themeForeground
+                            text: empty ? qsTr("— no data yet") : row.file
+                            ToolTip.text: empty ? qsTr("Load measured data with Load ▾ below") : row.file
                         }
                         EaComponents.ListViewLabel {
                             id: templateTag
@@ -192,50 +197,6 @@ SideBarGroup {
                             elide: Text.ElideNone
                             color: EaStyle.Colors.themeAccent
                             text: Session.label("sequential_fit.template_file")
-                        }
-                    }
-                    // The file name as left-aligned text that loads another file in its place: the accent blue and a
-                    // pointing hand on hover, and "Load data…" in the accent blue before any data (the owner,
-                    // 2026-10-11). Every experiment but a scan's dataset can load data.
-                    EaComponents.ListViewLabel {
-                        id: loadData
-
-                        readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
-
-                        signal clicked
-
-                        objectName: `experiments.loadData.${row.index}`
-                        visible: !group.scan && row.experiment !== null && row.experiment.canLoadData
-                        width: Math.min(implicitWidth, fileCell.width)
-                        height: parent.height
-                        horizontalAlignment: Text.AlignLeft
-                        elide: Text.ElideMiddle
-                        color: empty || loadDataHover.hovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-                        text: empty ? qsTr("Load data…") : row.file
-                        onClicked: group.chooseData(row.experiment)
-
-                        HoverHandler {
-                            id: loadDataHover
-                            cursorShape: Qt.PointingHandCursor
-                        }
-                        TapHandler {
-                            readonly property var assistantGesture: ({
-                                    current: null
-                                })
-
-                            function sameGesture(point) {
-                                return ApplicationInfo.sameExperimentGesture(point);
-                            }
-                            function discardGesture(point) {
-                                ApplicationInfo.discardExperimentGesture(point);
-                            }
-                            onGrabChanged: (transition, eventPoint) => ApplicationInfo.experimentGrabChanged(transition, eventPoint)
-                            onCanceled: eventPoint => ApplicationInfo.experimentGestureCancelled(eventPoint)
-                            onTapped: eventPoint => ApplicationInfo.experimentGestureTapped(eventPoint)
-                        }
-                        EaElements.ToolTip {
-                            text: qsTr("Load another data file in place of this one")
-                            visible: loadDataHover.hovered && EaGlobals.Vars.showToolTips
                         }
                     }
                 }
@@ -282,7 +243,8 @@ SideBarGroup {
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
         }
 
-        // Load, Create and Duplicate side by side at equal widths (the owner, 2026-10-11).
+        // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-10-11, 2026-11-03). The Load menu
+        // holds a full experiment and measured data for the selected experiment, each from a file or from the web.
         Row {
             id: buttons
 
@@ -291,21 +253,68 @@ SideBarGroup {
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
+                id: loadButton
                 objectName: "experiments.load"
                 width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "upload"
-                text: qsTr("Load experiment")
-                ToolTip.text: qsTr("Load experiments from CIF or .edi files, each with its type, data and parameters")
-                // In the browser the files come through the page (edi ADR-0023).
-                onClicked: ApplicationInfo.loadFormFiles(true)
+                text: qsTr("Load") + " ▾"
+                ToolTip.text: qsTr("Load a full experiment, or measured data into the selected one, from a file or from the web")
+                onClicked: loadMenu.open()
+
+                EaElements.Menu {
+                    id: loadMenu
+                    objectName: "experiments.load.menu"
+                    y: loadButton.height
+                    width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 24)
+
+                    readonly property ExperimentViewModel selected: group.project ? group.project.currentExperiment : null
+
+                    LoadMenuHeader {
+                        text: qsTr("Full experiment")
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.experimentFile"
+                        text: qsTr("From file…")
+                        hint: ".edi .cif"
+                        toolTip: qsTr("Load experiments from .edi or CIF files, each with its type, data and parameters")
+                        // In the browser the files come through the page (edi ADR-0023).
+                        onTriggered: ApplicationInfo.loadFormFiles(true)
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.experimentWeb"
+                        text: qsTr("From web…")
+                        hint: "EasyDiffraction"
+                        toolTip: qsTr("Search EasyDiffraction's collection for a full experiment and open it")
+                        onTriggered: onlineLoad.openFor("experiment", null)
+                    }
+                    LoadMenuHeader {
+                        text: loadMenu.selected !== null ? qsTr("Measured data into %1").arg(loadMenu.selected.name) : qsTr("Measured data into a new experiment")
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.dataFile"
+                        enabled: !group.scan && (loadMenu.selected === null ? group.project !== null && group.project.canCreateExperiment : loadMenu.selected.canLoadData)
+                        text: qsTr("From file…")
+                        hint: ".xye .xy .dat .txt .csv · .int .hkl"
+                        toolTip: loadMenu.selected !== null ? qsTr("Load a measured pattern or reflection list into %1").arg(loadMenu.selected.name) : qsTr("Create an experiment from the type selectors and load its measured data")
+                        onTriggered: group.chooseDataForSelected()
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.dataWeb"
+                        enabled: !group.scan && (loadMenu.selected === null ? group.project !== null && group.project.canCreateExperiment : loadMenu.selected.canLoadData)
+                        text: qsTr("From web…")
+                        hint: "EasyDiffraction"
+                        toolTip: qsTr("Search EasyDiffraction's collection for measured data")
+                        onTriggered: onlineLoad.openFor("data", loadMenu.selected)
+                    }
+                }
             }
             EaElements.SideBarButton {
                 objectName: "experiments.create"
                 width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canCreateExperiment
                 fontIcon: "plus-circle"
-                text: qsTr("Create experiment")
+                text: qsTr("Create")
                 ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern or load data into") : qsTr("A scan project fits its one template experiment")
                 onClicked: group.project.createExperiment()
             }
@@ -316,11 +325,25 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canCreateExperiment && group.project.currentExperiment !== null
                 fontIcon: "clone"
-                text: qsTr("Duplicate experiment")
+                text: qsTr("Duplicate")
                 ToolTip.text: group.scan ? qsTr("A scan project fits its one template experiment") : qsTr("Add a copy of the selected experiment, with its data")
                 onClicked: group.project.duplicateExperiment()
             }
         }
+    }
+
+    OnlineLoadDialog {
+        id: onlineLoad
+        project: group.project
+    }
+
+    // Measured data from a file for the selected experiment, or for a new one when none is selected.
+    function chooseDataForSelected() {
+        if (project === null)
+            return;
+        if (project.currentExperiment === null && !project.createExperiment())
+            return;
+        chooseData(project.currentExperiment);
     }
 
     // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to

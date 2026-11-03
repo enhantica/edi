@@ -48,7 +48,7 @@
           select("experimentType.radiationProbe", capture.fixture.values.probe[0])),
         ["experimentType"]);
     shot("09-experiment-data", "experiment", "Load the measured angle, intensity and uncertainty columns",
-        ["import-data:" + capture.dataFile], ["experiments.loadData.0", "workflow.experiment.mainContent"]);
+        ["import-data:" + capture.dataFile], ["experiments.load", "workflow.experiment.mainContent"]);
     shot("09-wavelength", "experiment", "Set the wavelength used for this measurement",
         ["reveal:group.instrument", "expand:group.instrument"].concat(setValue("instrument.setup_wavelength", capture.wavelength)),
         ["instrument.setup_wavelength"]);
@@ -118,7 +118,7 @@
     panel("guide-structure-atoms", "structure", "basic", "group.atom_site", "Inspect atom sites, coordinates and occupancies", ["atomSites.list"]);
     panel("guide-structure-displacement", "structure", "basic", "group.atom_site_aniso", "Inspect anisotropic atomic displacement", ["group.atom_site_aniso"]);
     panel("guide-structure-create", "structure", "basic", "group.structures", "Load, create or duplicate a structure", ["structures.load", "structures.create", "structures.duplicate"]);
-    panel("guide-experiment-data", "experiment", "basic", "group.experiments", "Select an experiment or load measured data", ["experiments.list", "experiments.loadData.0"]);
+    panel("guide-experiment-data", "experiment", "basic", "group.experiments", "Select an experiment or load measured data", ["experiments.list", "experiments.file.0"]);
     panel("guide-experiment-create", "experiment", "basic", "group.experiments", "Load or create an experiment", ["experiments.load", "experiments.create"]);
     panel("guide-experiment-instrument", "experiment", "basic", "group.instrument", "Inspect instrument parameters", ["group.instrument"]);
     panel("guide-experiment-profile", "experiment", "basic", "group.peak", "Choose and inspect a peak profile", ["group.peak"]);

@@ -16,6 +16,8 @@
 
 #include "assistant_values.hpp"
 #include "example_list_model.hpp"
+#include "online_search.hpp"
+#include "online_sources.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
 #include "assistant_view_model.hpp"
@@ -93,6 +95,8 @@ class Session : public QObject {
     Q_PROPERTY(QString projectSetAsideName READ projectSetAsideName NOTIFY projectSetAsideNameChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(edi_app::ExampleListModel* examples READ examples CONSTANT)
+    Q_PROPERTY(edi_app::OnlineSourcesModel* onlineSources READ onlineSources CONSTANT)
+    Q_PROPERTY(edi_app::OnlineSearch* onlineSearch READ onlineSearch CONSTANT)
     Q_PROPERTY(edi_app::WarningListModel* loadWarnings READ loadWarnings CONSTANT)
     // The bundled example the open project came from, empty for a project opened from its directory
     // or created (its extracted location is a temporary directory, not the user's).
@@ -127,6 +131,8 @@ class Session : public QObject {
     bool hasProject() const { return project_ != nullptr; }
     QString lastError() const { return last_error_; }
     ExampleListModel* examples() const { return examples_; }
+    OnlineSourcesModel* onlineSources() const { return online_sources_; }
+    OnlineSearch* onlineSearch() const { return online_search_; }
     WarningListModel* loadWarnings() const { return warnings_; }
     QString openedExample() const { return opened_example_; }
     QString openedArchive() const { return opened_archive_; }
@@ -313,6 +319,8 @@ class Session : public QObject {
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
     ExampleListModel* examples_;
+    OnlineSourcesModel* online_sources_ = nullptr;
+    OnlineSearch* online_search_ = nullptr;
     WarningListModel* warnings_;
     int project_messages_ = 0;  // the keys of the project's messages
     QString opened_example_;
