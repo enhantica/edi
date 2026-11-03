@@ -43,9 +43,13 @@ QtObject {
                 "color": AppColors.block(item.blockKind, item.blockIndex)
             }
         ];
-        if (item.categoryIcon !== "")
+        // A moment component names its site as the site's own parameters do: the atom, its label in the element's
+        // colour, then the moment (the owner, 2026-11-03).
+        const moment = item.category === "atom_site_moment";
+        const siteIcon = moment ? Session.categoryIcon("atom_site") : item.categoryIcon;
+        if (siteIcon !== "")
             pieces.push({
-                "icon": item.categoryIcon,
+                "icon": siteIcon,
                 "color": categoryColor
             });
         // A loop row by its id, as the file names it (the owner, 2026-10-11).
@@ -53,6 +57,11 @@ QtObject {
             pieces.push({
                 "text": item.rowLabel,
                 "color": categoryColor
+            });
+        if (moment && item.categoryIcon !== "")
+            pieces.push({
+                "icon": item.categoryIcon,
+                "color": minor
             });
         const parameterIcon = names.parameterIcon(item.name);
         if (parameterIcon !== "")
