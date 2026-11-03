@@ -17,16 +17,23 @@ from tests.system.py import test_e11_t5_dev_native_integration as native
 MANUAL_VALUE = 17.125
 
 
-def manual_value_edit(actor):
-    return native.qml(
-        actor,
+def manual_value_expression(amount=MANUAL_VALUE):
+    return (
         '(function(){const t=Session.project.parameters;'
         'for(let i=0;i<t.count;i++){if(t.text(i,"path")!=='
         + json.dumps(TRIAL_PATH)
-        + ')continue;const row=t.item(i,"parameter");row.value='
-        + str(MANUAL_VALUE)
-        + ';return row.value;}return null;})()',
+        + ')continue;const row=t.item(i,"parameter");const before=row.value;row.value='
+        + str(amount)
+        + ';return {before:before,value:row.value,error:row.lastError};}return null;})()'
     )
+
+
+def manual_value_attempt(actor, amount=MANUAL_VALUE):
+    return native.qml(actor, manual_value_expression(amount))
+
+
+def manual_value_edit(actor):
+    return manual_value_attempt(actor)['value']
 
 
 def hold_after_setup(actor, turn, last_call):
@@ -115,6 +122,8 @@ def observe_trial_endpoint(folder, endpoint):
         accepted = fit_record(actor)
         witness = True
         manual = None
+        released_edit = None
+        after_later_stop = None
         after_undo = None
         if endpoint in {'shown-unavailable', 'widget-refusal'}:
             prepared, witness = terminal_fit(actor, endpoint, accepted)
@@ -127,10 +136,23 @@ def observe_trial_endpoint(folder, endpoint):
             hold_after_setup(actor, turn, last_call)
             prepared = fit_record(actor)
             if endpoint == 'manual-edit':
-                manual = manual_value_edit(actor)
+                manual = manual_value_attempt(actor)
             actor.command('sign_out' if endpoint == 'disconnect' else 'cancel')
             actor.until(lambda row: not row['ui']['can_cancel'])
         restored = fit_record(actor)
+        if endpoint in {'manual-edit', 'disconnect', 'shown-unavailable', 'widget-refusal'}:
+            released_edit = manual_value_attempt(actor)
+        if endpoint == 'manual-edit':
+            later = call(
+                'set_parameters',
+                'later-setup',
+                values=[{'path': 'experiments[bank].background[1].coef', 'value': 12.875}],
+            )
+            actor.until(lambda _row: native.qml(actor, 'Session.assistant.draftAdmissionReady'))
+            hold_after_setup(actor, [later], 'later-setup')
+            actor.command('cancel')
+            actor.until(lambda row: not row['ui']['can_cancel'])
+            after_later_stop = fit_record(actor)
         if endpoint == 'exclusion':
             actor.command('undo')
             after_undo = fit_record(actor)
@@ -145,6 +167,8 @@ def observe_trial_endpoint(folder, endpoint):
                 'after_undo': after_undo,
                 'witness': witness,
                 'manual': manual,
+                'released_edit': released_edit,
+                'after_later_stop': after_later_stop,
                 'wire': replies(actor),
                 'connected': actor.last['ui']['connected'],
             },
@@ -197,12 +221,33 @@ def test_fit_retirement_restores_accepted_state(trial_observations, endpoint):
 def test_manual_value_edit_survives_stopping_an_assistant_candidate(trial_observations):
     observed = trial_observations['manual-edit']
     assert_admitted_a(observed)
-    assert observed['manual'] == MANUAL_VALUE, (
-        'Required: the independent ordinary parameter edit reached the live owner before Stop.'
+    blocked = observed['manual']
+    assert blocked['before'] == blocked['value'] != MANUAL_VALUE, (
+        'Required: the real ordinary parameter owner refuses an edit during the trial.'
     )
-    current = {row['path']: row['value'] for row in observed['restored']['parameters']}
+    assert 'assistant is trying a change' in blocked['error'] and 'Stop' in blocked['error'], (
+        'Required: the parameter control names the trial and how to release it.'
+    )
+    assert observed['restored'] == observed['accepted'], (
+        'Required: Stop settles the held trial before admitting the manual edit.'
+    )
+    assert observed['released_edit']['value'] == MANUAL_VALUE, (
+        'Required: the same ordinary parameter edit applies after Stop.'
+    )
+    assert observed['wire']['later-setup']['success'], (
+        'Required: a later assistant turn makes a genuine setup edit before another Stop.'
+    )
+    current = {row['path']: row['value'] for row in observed['after_later_stop']['parameters']}
     assert current[TRIAL_PATH] == MANUAL_VALUE, (
-        'Required: stopping the assistant never rolls back an intervening ordinary edit.'
+        'Required: a later assistant rollback cannot erase an edit made after the lock released.'
+    )
+
+
+@pytest.mark.parametrize('endpoint', ['shown-unavailable', 'widget-refusal', 'disconnect'])
+def test_trial_lock_releases_after_refusal_or_sign_out(trial_observations, endpoint):
+    released = trial_observations[endpoint]['released_edit']
+    assert released['before'] != MANUAL_VALUE and released['value'] == MANUAL_VALUE, (
+        'Required: the same ordinary edit can write after the native refusal or sign-out settles.'
     )
 
 

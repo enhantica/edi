@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T10:26:26Z
+# measured_utc = 2026-11-03T12:59:21Z
 #
-# Recorded from: measured test run (14 node(s) measured once, 166268 banked, 0 stale row(s) dropped)
-# Collected tests: 211383; with a reported duration: 70528
-# Module-scoped fixture costs recorded: 109
+# Recorded from: measured test run (6 node(s) measured once, 166283 banked, 0 stale row(s) dropped)
+# Collected tests: 211405; with a reported duration: 70529
+# Module-scoped fixture costs recorded: 111
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 211383
+# inventory_python = 211405
 # inventory_cpp = 396
-# inventory_measured = 166268
-# inventory_unmeasured = 45511
+# inventory_measured = 166289
+# inventory_unmeasured = 45512
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 67958
+# inventory_pr_python = 67980
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -73,6 +73,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::te
 0.000	tests/integration/app/test_assistant_candidate_boundaries.py::test_native_fit_wire_retains_real_combined_peak
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_fit_settlement_faults.py::test_fit_callback_preserves_accepted_state_across_a_real_failure[disconnect]
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_fit_settlement_faults.py::test_fit_callback_preserves_accepted_state_across_a_real_failure[presentation]
+0.000	tests/integration/app/test_assistant_fit_settlement_faults.py::test_trial_lock_releases_after_transport_or_presentation_failure[disconnect]
+0.000	tests/integration/app/test_assistant_fit_settlement_faults.py::test_trial_lock_releases_after_transport_or_presentation_failure[presentation]
 0.070	tests/integration/app/test_assistant_misfit_math.py::test_between_sample_exclusion_rejects_the_reflection_center
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_coincident_phases_do_not_inherit_one_phases_peak_direction
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_misfit_math.py::test_exclusion_between_usable_rows_ends_peak_support[13-support0]
@@ -111,6 +113,23 @@ UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_startu
 0.002	tests/integration/app/test_assistant_startup_reopen.py::test_startup_reopens_the_associated_project_after_ordinary_save
 0.000	tests/integration/app/test_assistant_startup_reopen.py::test_unavailable_startup_project_reports_reopen_cause_and_connects_a_new_thread
 0.000	tests/integration/app/test_assistant_status_order.py::test_original_status_items_then_fit_then_ai_do_not_overlap
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_lock.py::test_fit_presentation_refuses_observer_edit_until_acceptance_settles
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_archive_save_refuses_before_writing_and_stop_restores_live_state[archive-replace]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_archive_save_refuses_before_writing_and_stop_restores_live_state[archive-save]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_other_edits_undo_and_clear_with_a_reason[assistant-undo]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_other_edits_undo_and_clear_with_a_reason[clear]
+0.005	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_other_edits_undo_and_clear_with_a_reason[edit]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_other_edits_undo_and_clear_with_a_reason[metadata]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_other_edits_undo_and_clear_with_a_reason[undo]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_saving_and_stop_leaves_only_accepted_files[archive-as]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_saving_and_stop_leaves_only_accepted_files[archive-copy]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_saving_and_stop_leaves_only_accepted_files[assistant-current]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_saving_and_stop_leaves_only_accepted_files[assistant-fresh]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_saving_and_stop_leaves_only_accepted_files[folder-as]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_saving_and_stop_leaves_only_accepted_files[folder-copy]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_held_trial_refuses_saving_and_stop_leaves_only_accepted_files[folder-save]
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_manual_correction_survives_later_fit_undo_and_stop
+0.000	tests/integration/app/test_assistant_trial_lock.py::test_trial_lock_releases_after_acceptance
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_trial_ownership.py::test_clear_cannot_rebind_an_older_fit_snapshot
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_trial_ownership.py::test_failed_publication_preserves_undo_when_stop_cannot_restore
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_assistant_trial_ownership.py::test_later_assistant_setup_preserves_an_intervening_manual_edit_and_undo[manual-refuse]
@@ -123,9 +142,12 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirem
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirement.py::test_fit_retirement_restores_accepted_state[disconnect]
 0.003	tests/integration/app/test_assistant_trial_retirement.py::test_fit_retirement_restores_accepted_state[shown-unavailable]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirement.py::test_fit_retirement_restores_accepted_state[widget-refusal]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirement.py::test_manual_value_edit_survives_stopping_an_assistant_candidate
+0.000	tests/integration/app/test_assistant_trial_retirement.py::test_manual_value_edit_survives_stopping_an_assistant_candidate
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirement.py::test_ordinary_undo_cannot_split_rejected_exclusion_trial
 UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirement.py::test_refused_fit_receipt_is_distinct_from_accepted_live_fit
+0.000	tests/integration/app/test_assistant_trial_retirement.py::test_trial_lock_releases_after_refusal_or_sign_out[disconnect]
+0.000	tests/integration/app/test_assistant_trial_retirement.py::test_trial_lock_releases_after_refusal_or_sign_out[shown-unavailable]
+0.000	tests/integration/app/test_assistant_trial_retirement.py::test_trial_lock_releases_after_refusal_or_sign_out[widget-refusal]
 0.053	tests/integration/app/test_background_estimate_action.py::test_app_estimate_equals_python_after_undo_and_exact_reload[hrpt]
 0.050	tests/integration/app/test_background_estimate_action.py::test_app_estimate_equals_python_after_undo_and_exact_reload[sim_si]
 0.000	tests/integration/app/test_background_estimate_settings_action.py::test_blank_app_defaults_and_derived_hint_survive_two_saves
@@ -211824,12 +211846,14 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # and the stale-module integrity refusal.
 # module-cost: 5.172	tests/integration/app/test_about_components.py
 # module-cost: 114.625	tests/integration/app/test_assistant_candidate_boundaries.py
+# module-cost: 53.063	tests/integration/app/test_assistant_fit_settlement_faults.py
 # module-cost: 30.584	tests/integration/app/test_assistant_misfit_workflow.py
 # module-cost: 70.695	tests/integration/app/test_assistant_review_receipts.py
 # module-cost: 16.504	tests/integration/app/test_assistant_shown_fit_details.py
 # module-cost: 65.778	tests/integration/app/test_assistant_startup_reopen.py
 # module-cost: 14.161	tests/integration/app/test_assistant_status_order.py
-# module-cost: 226.537	tests/integration/app/test_assistant_trial_retirement.py
+# module-cost: 119.960	tests/integration/app/test_assistant_trial_lock.py
+# module-cost: 216.944	tests/integration/app/test_assistant_trial_retirement.py
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
 # module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py

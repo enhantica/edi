@@ -8,6 +8,10 @@ from tests.integration.app.test_assistant_candidate_boundaries import call, reco
 from tests.integration.app.test_assistant_misfit_workflow import actor_in, replies, send
 from tests.integration.app.test_assistant_review_receipts import fit_record
 from tests.integration.app.test_assistant_trial_ownership import OTHER_PATH, parameter_edit
+from tests.integration.app.test_assistant_trial_retirement import (
+    MANUAL_VALUE,
+    manual_value_attempt,
+)
 from tests.system.py import test_e11_t5_dev_native_integration as native
 
 
@@ -35,13 +39,16 @@ def observe_fit_fault(folder, endpoint):
         sent = map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
         (identity,) = (row['id'] for row in sent if row.get('params', {}).get('callId') == 'fit-b')
         receipt_count = sum(response.get('id') == identity for response in actor.responses())
+        restored = fit_record(actor)
+        released_edit = manual_value_attempt(actor)
         return record_receipts(
             actor,
             'fit-settlement.json',
             {
                 'accepted': accepted,
                 'candidate': candidate,
-                'restored': fit_record(actor),
+                'restored': restored,
+                'released_edit': released_edit,
                 'fault': fault,
                 'receipt_count': receipt_count,
                 'wire': replies(actor),
@@ -85,4 +92,16 @@ def test_fit_callback_preserves_accepted_state_across_a_real_failure(faults, end
         )
     assert result['restored'] == result['accepted'], (
         'Required: the failed B leaves A as the complete accepted scientific state.'
+    )
+
+
+@pytest.mark.parametrize('endpoint', ['disconnect', 'presentation'])
+def test_trial_lock_releases_after_transport_or_presentation_failure(faults, endpoint):
+    result = faults[endpoint]
+    assert result['fault']['ended'] == 1, (
+        'Required: the actual assistant fit reaches its terminal transition.'
+    )
+    released = result['released_edit']
+    assert released['before'] != MANUAL_VALUE and released['value'] == MANUAL_VALUE, (
+        'Required: ordinary editing resumes after a transport or presentation failure settles.'
     )
