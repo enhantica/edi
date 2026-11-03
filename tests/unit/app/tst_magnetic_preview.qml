@@ -742,6 +742,7 @@ TestCase {
         const fromZero = fit(true);
         verify(Math.abs(fromZero - baseline) <= reference.rwp.value * reference.rwp.tol_rel, "Zero and nonzero starts reach the same reference minimum within its stated Rwp tolerance");
     }
+    function clickPropagationControl(name) { Ui.click(test, Probe, appWindow, name, true); }
     function propagationTable(group) {
         const table = findChild(group, "propagationVectors.list");
         verify(table !== null, "Propagation vectors are displayed in the real row table");
@@ -757,10 +758,14 @@ TestCase {
         return findChild(table.itemAtIndex(row), name);
     }
     function enterPropagation(table, row, value) {
-        const editor = propagationEditor(table, row);
-        Ui.scrollIntoView(editor);
-        click(editor.objectName);
-        tryVerify(() => editor.activeFocus, 2000, "The vector editor receives keyboard focus");
+        const target = propagationEditor(table, row);
+        Ui.scrollIntoView(target);
+        clickPropagationControl(target.objectName);
+        let editor;
+        tryVerify(() => {
+            editor = findChild(table.itemAtIndex(row), "propagationVector.vector." + row);
+            return editor && editor.activeFocus;
+        }, 5000, "The current vector delegate receives keyboard focus after the click");
         editor.selectAll();
         const punctuation = {"/": Qt.Key_Slash, ",": Qt.Key_Comma, ".": Qt.Key_Period};
         for (const character of value)
@@ -834,7 +839,7 @@ TestCase {
         compare(propagationRows(table), [["1", "0,0,0"]], "Primitive cobalt starts with its one zero propagation row");
         verify(Session.save(), "The primitive model saves before the refused addition");
         const before = SettingsProof.text(scratch, "structures/cosio.edi");
-        click("propagationVectors.append");
+        clickPropagationControl("propagationVectors.append");
         const addReason = propagationRefusal(vectors, "2", "1/2,0,0");
         verify(/axis is not a period/i.test(addReason), "The Add proposal is incompatible with the primitive cell translation");
         compare(propagationRows(table), [["1", "0,0,0"]], "A refused Add keeps the one original propagation vector");
@@ -868,7 +873,7 @@ TestCase {
         verify(add && add.width > vectors.width * .6 &&
                add.mapToItem(vectors, 0, 0).y >= table.mapToItem(vectors, 0, table.height).y,
                "A wide Add vector button sits below the propagation table");
-        click(add.objectName);
+        clickPropagationControl(add.objectName);
         const refusal = findChild(vectors, "propagationVectors.refusal");
         tryCompare(table, "count", 2, 3000, "The half-order proposal adds a distinct row in the period-22 supercell" +
                    (refusal && refusal.visible ? ". Inline refusal: " + refusal.text : ""));
@@ -882,7 +887,7 @@ TestCase {
         const held = [["1", "0,0,0"], ["2", data.first + ",0,0"]];
         verify(Session.save(), "The two accepted propagation rows save");
         const before = SettingsProof.text(scratch, file);
-        click(add.objectName);
+        clickPropagationControl(add.objectName);
         inlinePropagationDiagnostic(vectors, text => /'2' and '3' are the same vector/i.test(text), "duplicate rows 2 and 3");
         compare(propagationRows(table), held, "The duplicate Add preserves both accepted rows");
         for (const value of [data.duplicate + ",0,0", "1/3,0,0"]) {
@@ -899,7 +904,7 @@ TestCase {
             compare(SettingsProof.text(scratch, file), before, "Duplicate and incompatible edits preserve every saved propagation row");
         }
         verify(removes().length === 2 && removes().every(item => item.enabled), "Every row can be removed while another remains");
-        click("propagationVector.remove.1");
+        clickPropagationControl("propagationVector.remove.1");
         tryCompare(table, "count", 1, 3000, "Removing a propagation row leaves its peer intact");
         compare(propagationRows(table), [["1", "0,0,0"]], "Removal preserves the original zero vector");
         verify(removes().length === 1 && !removes()[0].enabled, "Removal disables again at the last remaining row");

@@ -132,18 +132,32 @@ function text(root) {
     return result;
 }
 
-function click(testCase, probe, window, name) {
-    testCase.tryVerify(() => !moving(window.contentItem), 2000,
-                       "I10/I19: viewports finish moving before locating the next real input");
-    testCase.verify(testCase.waitForPolish(window, 2000),
-                    "I10/I19: layout updates finish before locating real input");
-    window.update();
-    testCase.verify(testCase.waitForRendering(window.contentItem),
-                    "I10/I19: the settled layout renders before locating real input");
-    testCase.tryVerify(() => {
+function click(testCase, probe, window, name, localLayout = false) {
+    function available() {
         const found = control(probe, window, name);
-        return found !== null && found.enabled && exposed(target(found));
-    }, 2000, "I10/I19: real input target is enabled and inside the visible viewport: " + name);
+        return found && found.enabled && exposed(target(found)) ? target(found) : null;
+    }
+    if (localLayout) {
+        // A live chart or another page can keep the window polishing after the actual
+        // input target has settled. Check the target and its containing layouts and viewports.
+        testCase.tryVerify(() => {
+            const item = available();
+            if (!item) return false;
+            for (let ancestor = item; ancestor; ancestor = ancestor.parent)
+                if (ancestor.moving === true || testCase.isPolishScheduled(ancestor)) return false;
+            return true;
+        }, 5000, "The enabled, exposed input and its containing layouts settle: " + name);
+    } else {
+        testCase.tryVerify(() => !moving(window.contentItem), 2000,
+                           "I10/I19: viewports finish moving before locating the next real input");
+        testCase.verify(testCase.waitForPolish(window, 2000),
+                        "I10/I19: layout updates finish before locating real input");
+        window.update();
+        testCase.verify(testCase.waitForRendering(window.contentItem),
+                        "I10/I19: the settled layout renders before locating real input");
+        testCase.tryVerify(() => available() !== null, 2000,
+                           "I10/I19: real input target is enabled and inside the visible viewport: " + name);
+    }
     const item = target(control(probe, window, name));
     // A ListView can deliberately defer presses (the pinned base uses pressDelay).
     // Exercise that real event path with its declared delay, not a zero-duration click.
