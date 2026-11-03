@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import signal
+import sys
 from contextlib import suppress
 from pathlib import Path
 
@@ -197,7 +198,7 @@ def arm_reopen_retirement(actor, successor):
 
 
 def stage_reopen_disruption(actor, sources, thread, scenario):
-    if scenario == 'archived':
+    if scenario in {'archived', 'sessions-publication'}:
         settings = Path(actor.last['test_settings']['path'])
         old_row, index = read_associations(settings)
         index['threads'][thread]['archived'] = True
@@ -216,7 +217,21 @@ def stage_reopen_disruption(actor, sources, thread, scenario):
     return None
 
 
-def observe_failure(folder, sources, thread, scenario):
+def retire_during_sessions_publication(actor, successor):
+    return native.qml(
+        actor,
+        '(function(){const vm=Session.assistant;const w=Qt.createQmlObject('
+        '\'import QtQuick; Item {objectName:"startup.sessions-retirement";property int hits:0;'
+        'property bool adopted:false;property string settledCause:""}\',window.contentItem);'
+        'vm.sessionsChanged.connect(function(){'
+        'if(w.hits||!vm.sessionsError.toLowerCase().includes("archiv"))return;'
+        'w.hits++;w.adopted=Session.openProject('
+        + json.dumps(successor.as_uri())
+        + ');w.settledCause=vm.sessionsError;});return true;})()',
+    )
+
+
+def observe_failure(folder, sources, thread, scenario):  # noqa: PLR0912, PLR0915 - Keep the restart evidence together.
     replies = {}
 
     def prepare_peer(peer_folder, config):
@@ -245,6 +260,16 @@ def observe_failure(folder, sources, thread, scenario):
             )
             if scenario == 'retired':
                 arm_reopen_retirement(actor, folder / 'successor-project')
+            if scenario == 'sessions-publication':
+                retire_during_sessions_publication(actor, folder / 'publication-successor')
+            if scenario in {'stale-proof', 'reconnect-start'}:
+                location = folder / 'startup-local-skills'
+                if scenario == 'reconnect-start':
+                    location = (
+                        Path(actor.last['test_settings']['app_local_data'])
+                        / sources['workspace_parent']
+                    )
+                actor.command('arm_reopen_release_fault', mode=scenario, path=str(location))
             obstruction = stage_reopen_disruption(actor, sources, thread, scenario)
             if scenario == 'cancel':
                 native.qml(actor, 'Session.assistant.cancelSessionSelection()')
@@ -284,6 +309,17 @@ def observe_failure(folder, sources, thread, scenario):
                     successor_opened=native.qml(actor, marker + '.opened'),
                     expected_successor=str(folder / 'successor-project'),
                 )
+            if scenario == 'sessions-publication':
+                marker = '(' + native.control_expression('startup.sessions-retirement') + ')'
+                result.update(
+                    publication_hits=native.qml(actor, marker + '.hits'),
+                    successor_opened=native.qml(actor, marker + '.adopted'),
+                    successor_cause=native.qml(actor, marker + '.settledCause'),
+                    expected_successor=str(folder / 'publication-successor'),
+                )
+                return result
+            if scenario in {'stale-proof', 'reconnect-start'}:
+                result['release_fault'] = actor.command('reopen_release_fault')['reply']
             # Capture any premature connection before trying the genuine user offer.
             if (
                 len(result['preconsent_reads']) == (2 if scenario == 'continuation' else 1)
@@ -472,3 +508,193 @@ def test_intentional_startup_cancel_does_not_report_failed_open(startup_observat
         and not result['new_threads']
         and result['association'] == expected
     ), 'Required: intentional cancellation settles without a reopen failure or replacement thread.'
+
+
+@pytest.fixture(scope='module')
+def startup_publication_observation(tmp_path_factory):
+    folder = tmp_path_factory.mktemp('startup-publication')
+    project, thread, _, sources = capture_saved_conversation(folder)
+    shutil.copytree(project, folder / 'publication-successor')
+    return observe_failure(folder, sources, thread, 'sessions-publication')
+
+
+def test_startup_failure_publication_rechecks_ownership_after_sessions_changed(
+    startup_publication_observation,
+):
+    result = startup_publication_observation
+    assert result['publication_hits'] == 1 and result['successor_opened'], (
+        'Required: the original sessionsChanged failure delivery opens a real successor.'
+    )
+    assert result['project'] == result['expected_successor'], (
+        'Required: the successor still owns the current project after the reentrant notification.'
+    )
+    assert result['sessions_error'] == result['successor_cause'], (
+        'Required: the retired startup owner cannot publish a later terminal over its successor.'
+    )
+    assert not result['new_threads'] and not result['preconsent_turns'], (
+        'Required: failure publication cannot admit a new conversation or turn.'
+    )
+
+
+@pytest.fixture(scope='module')
+def startup_release_observations(tmp_path_factory):
+    folder = tmp_path_factory.mktemp('startup-release')
+    _, thread, expected, sources = capture_saved_conversation(folder)
+    skill = folder / 'startup-local-skills' / 'startup-independent'
+    skill.mkdir(parents=True)
+    (skill / 'SKILL.md').write_text(
+        '---\nname: startup-independent\ndescription: Fixture instruction.\n---\n'
+        'Keep the source project unchanged.\n',
+        encoding='utf-8',
+    )
+    result = {}
+    for mode in ('stale-proof', 'reconnect-start'):
+        result[mode] = observe_failure(folder, sources, thread, mode)
+        (folder / 'original-fixture-restart').rename(folder / mode)
+    return expected, result
+
+
+@pytest.mark.parametrize(
+    ('mode', 'words'),
+    [
+        ('stale-proof', ('scope changed', 'disclosure changed')),
+        ('reconnect-start', ('start', 'reconnect')),
+    ],
+)
+def test_startup_local_reconnect_failure_settles_original_recovery(
+    startup_release_observations,
+    mode,
+    words,
+):
+    expected, observations = startup_release_observations
+    result = observations[mode]
+    assert result['release_fault']['hits'] == 1 and result['release_fault'].get('changed'), (
+        'Required: the fixture changes the actual local premise after original transport release.'
+    )
+    assert result['association'] == expected and not result['browser']['startup_target'], (
+        'Required: terminal failure clears original recovery and keeps the saved association.'
+    )
+    cause = result['browser']['startup_transition'].get('reopen_failure', '').lower()
+    assert any(word in cause for word in words) and result['sessions_error'], (
+        'Required: the startup terminal reports the local reconnect cause.'
+    )
+    assert_connect_requires_new_consent(result)
+
+
+@pytest.fixture(scope='module')
+def deferred_startup_observation(tmp_path_factory):
+    folder = tmp_path_factory.mktemp('deferred-startup')
+    _, thread, expected, sources = capture_saved_conversation(folder)
+    with pytest.MonkeyPatch.context() as monkeypatch:
+
+        def prepare_peer(peer_folder, _config):
+            executable = peer_folder / 'retiring-peer'
+            executable.write_text(
+                '#!' + sys.executable + '\n'
+                'import signal\nfrom pathlib import Path\n'
+                'signal.signal(signal.SIGTERM, signal.SIG_IGN)\n'
+                'Path(__file__ + ".ready").touch()\n'
+                'signal.pause()\n',
+                encoding='utf-8',
+            )
+            executable.chmod(0o700)
+            monkeypatch.setenv('EDI_TEST_STARTUP_PREVIOUS_PEER', str(executable))
+
+        actor = native._start_exact_original_fixture_restart(
+            folder, monkeypatch, sources, [], prepare_peer=prepare_peer
+        )
+        try:
+            actor.until(lambda _row: browser_report(actor)['startup_target'] == thread)
+            assert not native._session_wire(actor, 'account/read'), (
+                'Required: the retiring transport defers the real startup account request.'
+            )
+            workspace = Path(actor.last['test_settings']['app_local_data']) / 'assistant'
+            held = workspace.with_name('assistant-before-release')
+            workspace.rename(held)
+            workspace.write_text(
+                'Fixture-owned obstacle to the account workspace.', encoding='utf-8'
+            )
+            try:
+                assert actor.command('release_previous_startup_peer')['reply']['killed'], (
+                    'Required: release the preceding transport while the obstacle is present.'
+                )
+                actor.until(
+                    lambda _row: (
+                        'workspace' in native.qml(actor, 'Session.assistant.sessionsError').lower()
+                    )
+                )
+                result = startup_receipt(actor, thread)
+            finally:
+                workspace.unlink()
+                held.rename(workspace)
+            result['preconsent_reads'] = native._session_wire(actor, 'account/read')
+            result['preconsent_turns'] = native._session_wire(actor, 'turn/start')
+            result['offer'] = connect_offer(actor, acknowledge_open_failure=False)
+            result['offer_reads'] = native._session_wire(actor, 'account/read')
+            result['offer_threads'] = native._session_wire(actor, 'thread/start')
+            result['offer_turns'] = native._session_wire(actor, 'turn/start')
+            return expected, result
+        finally:
+            actor.close()
+
+
+def test_deferred_startup_account_workspace_failure_settles_original_operation(
+    deferred_startup_observation,
+):
+    expected, result = deferred_startup_observation
+    assert result['association'] == expected and not result['browser']['startup_target'], (
+        'Required: deferred preflight failure retires recovery and preserves the association.'
+    )
+    assert (
+        'workspace' in result['browser']['startup_transition'].get('reopen_failure', '').lower()
+    ), 'Required: the original startup terminal carries the actual workspace failure.'
+    assert_connect_requires_new_consent(result, reads=0)
+
+
+@pytest.fixture(scope='module')
+def fallback_observation(tmp_path_factory):
+    folder = tmp_path_factory.mktemp('startup-fallback')
+    _, thread, expected, sources = capture_saved_conversation(folder)
+
+    def hold_preflight(peer_folder, config):
+        config['fixture_account_read_response'] = hold_account_reply(
+            peer_folder, 'fallback-preflight', sources['actual_account']
+        )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        actor = native._start_exact_original_fixture_restart(
+            folder, monkeypatch, sources, [], prepare_peer=hold_preflight
+        )
+        try:
+            ready = actor.folder / 'fallback-preflight.ready.json'
+            actor.until(lambda _row: ready.is_file())
+            before = browser_report(actor)
+            assert before['startup_target'] == thread and before['loading'], (
+                'Required: the real retained startup operation owns this exact selection.'
+            )
+            native.qml(
+                actor, 'Session.assistant.continueSessionRestore(' + json.dumps(thread) + ')'
+            )
+            result = startup_receipt(actor, thread)
+            result['preconsent_reads'] = native._session_wire(actor, 'account/read')
+            result['preconsent_turns'] = native._session_wire(actor, 'turn/start')
+            if not result['browser']['startup_target']:
+                result['offer'] = connect_offer(actor, acknowledge_open_failure=False)
+                result['offer_reads'] = native._session_wire(actor, 'account/read')
+                result['offer_threads'] = native._session_wire(actor, 'thread/start')
+                result['offer_turns'] = native._session_wire(actor, 'turn/start')
+            return expected, result
+        finally:
+            actor.close()
+
+
+def test_fallback_refusal_settles_the_original_startup_selection(fallback_observation):
+    expected, result = fallback_observation
+    assert result['association'] == expected and not result['browser']['startup_target'], (
+        'Required: a refused continuation retires its original startup recovery.'
+    )
+    cause = result['browser']['startup_transition'].get('reopen_failure')
+    assert cause and result['sessions_error'], (
+        'Required: the startup terminal carries the original continuation refusal.'
+    )
+    assert_connect_requires_new_consent(result)

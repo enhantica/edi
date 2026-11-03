@@ -283,3 +283,29 @@ def test_exclusion_between_usable_rows_ends_peak_support(position, support):
     expected = peak(data, support, position, 'alpha')
     for field in ('weighted_square_sum', 'intensity_ratio', 'centroid_shift', 'width_ratio'):
         close(reported[field], expected[field], f'{field} uses only the authored side of the gap')
+
+
+def test_reflection_seed_stays_on_the_centres_side_of_an_unsampled_mask():
+    data = authored_peak()
+    data['excluded'] = [[13.3, 13.4]]
+    data['phases'] = [{'phase_id': 'alpha', 'positions': [13.45]}]
+    assert population(data) == list(range(len(data['x']))), (
+        'Required: both adjacent samples are usable and only the interval between them is masked.'
+    )
+    # The connected component containing 13.45 starts at the authored sample 14.
+    expected = peak(data, [4, 5], 13.45, 'alpha')
+    reported = actual(data).get('worst_peaks', [])
+    if reported:
+        (one,) = reported
+        if one.get('weighted_square_sum') is not None:
+            for field in (
+                'weighted_square_sum',
+                'intensity_ratio',
+                'centroid_shift',
+                'width_ratio',
+            ):
+                close(one[field], expected[field], f'{field} uses the centre-side support')
+        else:
+            assert all(one.get(field) is None for field in ('centroid_shift', 'width_ratio')), (
+                'Required: an unavailable peak publishes no measured direction or width.'
+            )

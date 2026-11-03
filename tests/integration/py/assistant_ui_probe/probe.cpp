@@ -4,6 +4,7 @@
 #include "../../../unit/app/e11_t5_a2a_phase_adapter.hpp"
 #include "assistant_view_model.hpp"
 #include "assistant_history.hpp"
+#include "fit_view_model.hpp"
 #include <map>
 #include <QSet>
 #include <QAbstractItemModel>
@@ -82,6 +83,7 @@
 #include <QStandardPaths>
 #include <QTcpServer>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QTextDocument>
 #include <QUuid>
 #include <QtQml/qqmlextensionplugin.h>
@@ -636,6 +638,21 @@ Object pending_question_snapshot(const edi_app::AssistantPendingQuestion& questi
         {"allow_free_text",question.allow_free_text},{"draftText",question.draftText}};
 }
 
+class FixtureFitPresentationFailure final : public std::runtime_error {
+public:
+    FixtureFitPresentationFailure() : std::runtime_error("fixture fit presentation failure") {}
+};
+
+class FixtureApplication final : public QGuiApplication {
+public:
+    using QGuiApplication::QGuiApplication;
+
+    bool notify(QObject* receiver, QEvent* event) override {
+        try { return QGuiApplication::notify(receiver,event); }
+        catch(const FixtureFitPresentationFailure&) { return false; }
+    }
+};
+
 int main(int argc,char** argv) {
     const bool codex_mode=argc==2 && QByteArray(argv[1])=="--codex";
     QTemporaryDir storage;
@@ -652,7 +669,7 @@ int main(int argc,char** argv) {
     if(user_dirs.write(user_dirs_bytes)!=user_dirs_bytes.size())return 92;
     user_dirs.close();
 #endif
-    QGuiApplication app(argc,argv);
+    FixtureApplication app(argc,argv);
     std::unique_ptr<PassiveDispatchTrace> dispatch_trace;
     const auto dispatch_trace_path = qEnvironmentVariable("EDI_TEST_UI_DISPATCH_TRACE");
     if (!dispatch_trace_path.isEmpty()) {
@@ -786,6 +803,20 @@ int main(int argc,char** argv) {
     QPointer<edi_app::Session> observed=owned.get();
     edi_app::configure_engine(*engine,std::move(owned));
     auto* singleton=engine->singletonInstance<edi_app::Session*>("edi.app","Session");
+    QPointer<QProcess> previous_startup_peer;
+    const auto previous_executable=qEnvironmentVariable("EDI_TEST_STARTUP_PREVIOUS_PEER");
+    if(!previous_executable.isEmpty()) {
+        const QFileInfo previous(previous_executable), config(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT"));
+        const auto agents=observed->assistant()->findChildren<edi_app::CodexAgent*>(QString(),Qt::FindDirectChildrenOnly);
+        if(!codex_mode || previous.canonicalPath()!=config.canonicalPath() || agents.size()!=1 ||
+            !agents.front()->start(previous.canonicalFilePath(),storage.path()))return 63;
+        QElapsedTimer timer;timer.start();
+        while(!QFileInfo::exists(previous_executable+".ready") && timer.elapsed()<3000)drain(1);
+        const auto children=agents.front()->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly);
+        if(!QFileInfo::exists(previous_executable+".ready") || children.size()!=1)return 62;
+        previous_startup_peer=children.front();
+        agents.front()->retire();
+    }
     engine->loadFromModule("edi.app","Main");
     if(engine->rootObjects().isEmpty()) return 96;
     QPointer<QQuickWindow> window=qobject_cast<QQuickWindow*>(engine->rootObjects().front());
@@ -861,6 +892,10 @@ int main(int argc,char** argv) {
     std::vector<edi_app::AssistantHistoryArchive::ClearBarrier> public_archive_barriers;
  // Disconnect before the retained facts leave scope.
     QMetaObject::Connection publication_fault;
+    QMetaObject::Connection fit_running_fault, fit_finished_fault;
+    Object fit_fault, reopen_fault;
+    QMetaObject::Connection reopen_release_fault;
+
     int publication_fault_hits=0;
     bool publication_undo_seen=false;
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::showingActionsChanged,
@@ -1208,7 +1243,7 @@ int main(int argc,char** argv) {
                 {"project",project},{"texts",texts},{"controls",controls},
                 {"disclosures",disclosures},{"width",window->width()},{"height",window->height()}};
     };
-    auto close_owned_session_write=[&]() {
+    auto close_owned_session_write=[&](bool stop_process=false) {
         if(!observed || !window || qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT").isEmpty())
             throw std::runtime_error("controlled write fault requires the original scripted-fixture Main owner");
         QPointer<edi_app::AssistantViewModel> vm=observed->assistant();
@@ -1232,8 +1267,10 @@ int main(int argc,char** argv) {
         QFile status(QStringLiteral("/proc/")+QString::number(pid)+"/status");
         if(status.open(QIODevice::ReadOnly))for(const auto& line:status.readAll().split('\n'))
             if(line.startsWith("PPid:"))parent=line.mid(5).trimmed().toLongLong();
-#endif
         if(parent!=QCoreApplication::applicationPid())throw std::runtime_error("actual owned child OS parent was not proved on this platform");
+#else
+        if(!stop_process)throw std::runtime_error("actual owned child OS parent was not proved on this platform");
+#endif
         session_fault_facts["write_child_pid"]=QString::number(pid);
         session_fault_facts["write_child_parent"]=QString::number(parent);
         session_fault_facts["script_path"]=expected;
@@ -1243,7 +1280,14 @@ int main(int argc,char** argv) {
             session_fault_facts["actual_transport_error"]=error;
             session_fault_facts["actual_transport_failed_signal"]=true;
         },Qt::DirectConnection);
-        child->closeWriteChannel();session_fault_facts["public_close_write_channel_invoked"]=true;
+        if(stop_process) {
+            child->kill();
+            fit_fault["transport_stopped"] = child->waitForFinished(3000);
+            fit_fault["transport_failure"] = session_fault_facts.value("actual_transport_failed_signal");
+        } else {
+            child->closeWriteChannel();
+            session_fault_facts["public_close_write_channel_invoked"]=true;
+        }
     };
     const auto execute_command=[&](const QByteArray& line) {
         ++qml_warning_command;qml_warning_phase="command";qml_warning_operation="decode";
@@ -1687,6 +1731,71 @@ int main(int argc,char** argv) {
                 },Qt::DirectConnection);
             } else if(op=="publication_fault") {
                 result={{"hits",publication_fault_hits},{"undo_seen",publication_undo_seen}};
+            } else if(op=="arm_fit_boundary_fault") {
+                auto* fit=observed->project()?observed->project()->fit():nullptr;
+                if(!fit || fit->running())throw std::runtime_error("the actual idle Fit owner is required");
+                const auto mode=input["mode"].toString();
+                if(mode!="disconnect" && mode!="presentation")
+                    throw std::invalid_argument("declared fit boundary fault required");
+                QObject::disconnect(fit_running_fault);QObject::disconnect(fit_finished_fault);
+                fit_fault={{"started",0},{"ended",0},{"finished",0}};
+                fit_running_fault=QObject::connect(fit,&edi_app::FitViewModel::runningChanged,fit,[&,fit,mode] {
+                    const auto key=fit->running()?"started":"ended";
+                    const auto count=fit_fault.value(key).toInt();
+                    fit_fault[key]=count+1;
+                    if(fit->running() && !count && mode=="disconnect") {
+                        const QPointer<edi_app::FitViewModel> original(fit);
+                        QTimer::singleShot(0,fit,[&,original] {
+                            if(!original || !original->running())return;
+                            try {close_owned_session_write(true);}
+                            catch(const std::exception& failure) {fit_fault["witness_error"]=QString::fromUtf8(failure.what());}
+                            fit_fault["running_after_transport_fault"]=original && original->running();
+                        });
+                    }
+                },Qt::DirectConnection);
+                fit_finished_fault=QObject::connect(fit,&edi_app::FitViewModel::finished,fit,[&,mode] {
+                    const auto count=fit_fault.value("finished").toInt();
+                    fit_fault["finished"]=count+1;
+                    if(!count && mode=="presentation")throw FixtureFitPresentationFailure();
+                },Qt::DirectConnection);
+            } else if(op=="fit_boundary_fault") {
+                result=fit_fault;
+            } else if(op=="release_previous_startup_peer") {
+                if(!previous_startup_peer || previous_startup_peer->state()!=QProcess::Running)
+                    throw std::runtime_error("the original retiring startup fixture peer is absent");
+                previous_startup_peer->kill();
+                result={{"killed",true}};
+            } else if(op=="arm_reopen_release_fault") {
+                const auto mode=input["mode"].toString();
+                if(mode!="stale-proof" && mode!="reconnect-start")
+                    throw std::invalid_argument("declared saved reopen fault required");
+                QPointer<edi_app::AssistantViewModel> vm=observed->assistant();
+                const auto agents=vm->findChildren<edi_app::CodexAgent*>(QString(),Qt::FindDirectChildrenOnly);
+                if(agents.size()!=1 || agents.front()->outputOwnerState()!=edi_app::CodexAgent::OutputOwnerState::Live)
+                    throw std::runtime_error("the original active account preflight transport is required");
+                const auto location=input["path"].toString();
+                QObject::disconnect(reopen_release_fault);
+                reopen_fault={{"hits",0}};
+                reopen_release_fault=QObject::connect(agents.front(),&edi_app::CodexAgent::outputOwnersReleased,
+                    &session_fault_observer,[&,vm,mode,location] {
+                        if(!vm || !observed || observed->assistant()!=vm || !observed->project() ||
+                            reopen_fault.value("hits").toInt())return;
+                        reopen_fault["hits"]=1;
+                        if(mode=="stale-proof") {
+                            const auto token=vm->beginSkillSourceSelection();
+                            reopen_fault["changed"]=!token.isEmpty() && vm->addSkillSource(token,QUrl::fromLocalFile(location));
+                        } else {
+                            QDir root(location);
+                            const auto local=QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+                            if(!root.canonicalPath().startsWith(local.canonicalPath()+'/'))return;
+                            QStringList workspaces;
+                            for(const auto& child:root.entryList(QDir::Dirs|QDir::NoDotAndDotDot))
+                                if(QFileInfo(root.filePath(child+"/workspace")).isDir())workspaces.push_back(child+"/workspace");
+                            if(workspaces.size()==1)reopen_fault["changed"]=root.rename(workspaces.front(),workspaces.front()+".held");
+                        }
+                    },Qt::DirectConnection);
+            } else if(op=="reopen_release_fault") {
+                result=reopen_fault;
             } else if(op=="estimate_outcome") {
                 const auto receipt=observed->project()->estimateBackgroundOutcome();
                 result={{"applied",receipt.applied},{"published",receipt.published},{"message",receipt.message}};
