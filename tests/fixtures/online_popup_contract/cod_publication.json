@@ -1,0 +1,29 @@
+[
+  {
+    "file": "9100001",
+    "commonname": "alpha oxide",
+    "mineral": "not the preferred name",
+    "chemname": "another name",
+    "title": "a title",
+    "formula": "- La Co O3 -",
+    "sg": "P 1",
+    "a": "5.13",
+    "b": "7.26",
+    "c": "8.92",
+    "alpha": "81.2",
+    "beta": "109.3",
+    "gamma": "96.4",
+    "authors": "Smith; Jones",
+    "journal": "Phys. Rev. B",
+    "volume": "40",
+    "firstpage": "34",
+    "year": "2026",
+    "doi": "10.5555/edi.fixture.2026.34"
+  },
+  {
+    "file": "9100002",
+    "commonname": "beta oxide",
+    "formula": "- La Co O3 -",
+    "sg": "P 1"
+  }
+]
