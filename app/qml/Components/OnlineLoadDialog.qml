@@ -27,9 +27,13 @@ AppDialog {
     property var values: ({})
     // The source last used for each kind; a kind opens at its first source until one is chosen.
     property var lastSource: ({})
-    // The selected result, the table's own single selection, -1 for none; Load acts on it.
-    readonly property int selectedRow: results.selectedIndexes !== undefined && results.selectedIndexes.length === 1 ? results.selectedIndexes[0].row : -1
-    readonly property bool canLoad: selectedRow >= 0 && selectedRow < search.results.count && !search.busy && project !== null
+    // The selected result, the table's own single selection, -1 for none; Load acts on it. Measured data takes
+    // several at once (the owner, 2026-11-04): Ctrl or Shift adds rows, and Load downloads them all.
+    readonly property var selectedRows: results.selectedIndexes !== undefined ? results.selectedIndexes.map(i => i.row).sort((a, b) => a - b) : []
+    readonly property int selectedRow: selectedRows.length === 1 ? selectedRows[0] : -1
+    readonly property bool canLoad: (selectedRow >= 0 || (kind === "data" && selectedRows.length > 1)) && !search.busy && project !== null
+    // Several measured data files downloaded for the page to ask how to load (Load N datasets as).
+    signal datasetsReady(var files, var experiment)
 
     objectName: "onlineLoad"
     title: kind === "structure" ? qsTr("Load structure from web") : kind === "experiment" ? qsTr("Load experiment from web") : qsTr("Load measured data from web")
@@ -87,7 +91,11 @@ AppDialog {
     }
 
     function loadSelected() {
-        if (dialog.canLoad)
+        if (!dialog.canLoad)
+            return;
+        if (dialog.selectedRows.length > 1)
+            dialog.search.loadMany(dialog.selectedRows, dialog.project, dialog.targetExperiment);
+        else
             dialog.search.load(dialog.selectedRow, dialog.project, dialog.targetExperiment);
     }
 
@@ -159,6 +167,12 @@ AppDialog {
 
     Connections {
         target: dialog.search
+        function onFilesReady(files, project, target) {
+            if (!dialog.visible || dialog.project === null || project !== dialog.project)
+                return;
+            dialog.close();
+            dialog.datasetsReady(files, target);
+        }
         function onFileReady(kind, file, entry, project, target, newTarget) {
             if (!dialog.visible || dialog.project === null)
                 return;
@@ -343,6 +357,7 @@ AppDialog {
             objectName: "onlineLoad.results"
             width: column.width
             maxRowCountShow: 8
+            multiSelection: dialog.kind === "data"
             sourceModel: dialog.search.results
             defaultInfoText: dialog.search.searched ? qsTr("No entries") : qsTr("Search to list entries")
             readonly property bool structures: dialog.kind === "structure"

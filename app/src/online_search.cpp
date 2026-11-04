@@ -578,6 +578,59 @@ void OnlineSearch::load(int row, QObject* project, QObject* target) {
     });
 }
 
+void OnlineSearch::loadMany(const QList<int>& rows, QObject* project, QObject* target) {
+    if (!sources_ || rows.isEmpty()) return;
+    if (!eligible(source_id_)) {
+        fail(tr("Choose a source first"), false);
+        return;
+    }
+    struct Wanted {
+        QString path, name, digest;
+        long long bytes = -1;
+    };
+    auto wanted = std::make_shared<QList<Wanted>>();
+    for (const int row : rows) {
+        const edi::online::Entry* entry = results_->at(row);
+        if (entry == nullptr || entry->files.empty()) continue;
+        const edi::online::File& f = entry->files.front();
+        const QString path = QString::fromStdString(f.path);
+        wanted->append({path, QFileInfo(path).fileName(), QString::fromStdString(f.sha256), f.bytes});
+    }
+    if (wanted->isEmpty()) return;
+    const QPointer<QObject> requestProject(project), requestTarget(target);
+    const QStringList bases = sources_->urlsOf(source_id_);
+    const int generation = generation_;
+    auto files = std::make_shared<QList<QUrl>>();
+    auto step = std::make_shared<std::function<void()>>();
+    setBusy(true);
+    *step = [this, generation, bases, wanted, files, step, requestProject, requestTarget] {
+        if (generation != generation_) return;
+        if (wanted->isEmpty()) {
+            setBusy(false);
+            emit filesReady(*files, requestProject.data(), requestTarget.data());
+            return;
+        }
+        const Wanted next = wanted->takeFirst();
+        fetchFrom(bases, next.path, [this, generation, next, files, step](const QByteArray& bytes, const QString& error, bool unreachable) {
+            if (generation != generation_) return;
+            QString problem = error.isEmpty() ? content_problem(bytes, next.bytes, next.digest, next.name) : error;
+            QString written;
+            if (problem.isEmpty()) {
+                if (!downloads_) downloads_ = std::make_unique<QTemporaryDir>();
+                if (!downloads_->isValid()) problem = tr("No temporary folder for the download");
+                else written = write_download(*downloads_, next.name, bytes, problem);
+            }
+            if (!problem.isEmpty()) {
+                fail(problem, unreachable && error == problem);
+                return;
+            }
+            files->append(QUrl::fromLocalFile(written));
+            (*step)();
+        });
+    };
+    (*step)();
+}
+
 void OnlineSearch::reset() {
     ++generation_;
     pending_ids_.clear();

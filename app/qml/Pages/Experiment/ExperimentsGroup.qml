@@ -359,6 +359,10 @@ SideBarGroup {
     OnlineLoadDialog {
         id: onlineLoad
         project: group.project
+        onDatasetsReady: (files, experiment) => {
+            if (experiment !== null && group.project !== null)
+                group.askDatasets(experiment, files);
+        }
     }
 
     // Measured data goes into the selected experiment (the owner, 2026-11-04); the menu offers it only then.
@@ -417,11 +421,7 @@ SideBarGroup {
                 const experiment = dataDialog.experiment;
                 const files = selectedFiles;
                 dataDialog.intent = null;
-                datasetsLoader.active = true;
-                datasetsLoader.item.experiment = experiment;
-                datasetsLoader.item.files = files;
-                datasetsLoader.item.asScan = files.length > 5;
-                datasetsLoader.item.open();
+                group.askDatasets(experiment, files);
                 return;
             }
             ApplicationInfo.acceptExperimentDataFile();
@@ -432,6 +432,14 @@ SideBarGroup {
     // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup
     // named after its file, or one experiment with a scan, the selected experiment its template and the files its
     // datasets. Up to five files default to separate experiments, more to a scan.
+    function askDatasets(experiment, files) {
+        datasetsLoader.active = true;
+        datasetsLoader.item.experiment = experiment;
+        datasetsLoader.item.files = files;
+        datasetsLoader.item.asScan = files.length > 5;
+        datasetsLoader.item.open();
+    }
+
     // Made only while it is asked: kept in the window, it held the scene from settling.
     Loader {
         id: datasetsLoader

@@ -161,6 +161,8 @@ public:
     /// Download the first file of a result into a temporary file; `fileReady` then carries it to the loaders
     /// with the project and the measured-data target the request was made for (null target: a new one).
     Q_INVOKABLE void load(int row, QObject* project, QObject* target);
+    /// Several measured data entries at once (owner, 2026-11-04): each downloaded and checked, then filesReady.
+    Q_INVOKABLE void loadMany(const QList<int>& rows, QObject* project, QObject* target);
     /// Forget everything shown: results, message, the chosen source stays.
     Q_INVOKABLE void reset();
     /// The next chunk of a long answer (also the retry after a failed one); nothing while one is loading.
@@ -199,6 +201,8 @@ signals:
     /// with `newTarget` false when the target has gone since).
     void fileReady(const QString& kind, const QUrl& file, const edi_app::OnlineEntry& entry, QObject* project,
                    QObject* target, bool newTarget);
+    /// Several downloaded measured data files, in the order chosen, for the project and experiment they were asked for.
+    void filesReady(const QList<QUrl>& files, QObject* project, QObject* target);
 
 private:
     using Bytes = std::function<void(const QByteArray& bytes, const QString& error, bool unreachable)>;
