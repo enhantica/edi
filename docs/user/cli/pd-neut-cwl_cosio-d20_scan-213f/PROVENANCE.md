@@ -21,7 +21,7 @@
   freed in every file, Y trades against U, V and W, and the fits then depend on the order the files are fitted in
   (summed reduced χ² 1146.44 one after another, up to 1152.7 with two to five files at once). Held, both give 1146.28
   and 1146.29 and agree within 0.0032 per file (the owner, 2026-11-04). The Co²⁺ form factor is the 2.3 K example's,
-  ⟨j0⟩ + C₂⟨j2⟩, with C₂ held at 0.591, the value that example fits (C₂ = 2/g − 1 against J, g ≈ 1.26): freed in
+  ⟨j0⟩ + C₂⟨j2⟩, with C₂ held at 0.589, the value that example fits (C₂ = 2/g − 1 against J, g ≈ 1.26): freed in
   each file it agrees with that value below about 51 K and is not determined above, where the moments are near zero.
 - **Analysis:** the 162-file scan's sequential settings (data directory, file pattern, temperature from each file's
   `TEMP` line, Co1 and Co2 sharing one displacement parameter), the fast descent, and
