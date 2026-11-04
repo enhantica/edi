@@ -30,8 +30,13 @@ await new Promise(ok => server.listen(0, '127.0.0.1', ok));
 const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({executablePath:chrome, headless:true,
   args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+let page;
 try {
   const context = await browser.newContext({viewport:{width:1280,height:768}, serviceWorkers:'block'});
+  await context.addInitScript(() => {
+    for (const name of ['showDirectoryPicker','showOpenFilePicker'])
+      Object.defineProperty(window, name, {value:undefined, configurable:true});
+  });
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.origin === origin) return route.continue();
@@ -47,7 +52,9 @@ try {
     }
     return route.abort();
   });
-  const page = await context.newPage();
+  page = await context.newPage();
+  page.on('console', message => console.log('wasm:', message.text()));
+  page.on('pageerror', error => console.log('wasm page error:', error.message));
   await page.goto(origin + '/?build=' + mode);
   await page.waitForFunction(() => typeof window.ediControlGeometry === 'function', null, {timeout:90000});
   const evaluate = text => page.evaluate(text);
@@ -86,10 +93,21 @@ try {
   };
   await click('home.start');
   await click('appBar.tab.project');
-  await click('group.examples');
-  await click('examples.search');
-  await page.keyboard.type('HRPT');
-  await click('examples.open.pd-neut-cwl_lbco-hrpt');
+  const chooser = page.waitForEvent('filechooser', {timeout:10000});
+  await click('project.open');
+  await click('open.zip');
+  let previous, stable = 0;
+  const deadline = Date.now() + 10000;
+  while (stable < 2 && Date.now() < deadline) {
+    await frame();
+    const current = (await cdp.send('Page.captureScreenshot', {format:'png'})).data;
+    stable = current === previous ? stable + 1 : 0;
+    previous = current;
+  }
+  assert(stable >= 2, 'The real open-project dialog must finish its entry transition before default Enter');
+  await page.keyboard.press('Enter');
+  await (await chooser).setFiles(join(root,
+    'tests/fixtures/project_archive/sc-neut-cwl_tb2ti2o7-heidi_basic.zip'));
   await click('appBar.tab.structure');
   const structureControls = await evaluate(`(() => {try {
     return window.ediControlGeometry('structures.load').visible;
@@ -112,10 +130,28 @@ try {
   await click('onlineLoad.load.0');
   await page.waitForFunction(() => {
     try {return !window.ediControlGeometry('onlineLoad.load.0').visible;}
-    catch {return true;}
+    catch (error) {
+      if (/no visible item|no item is named/.test(error.message)) return true;
+      throw error;
+    }
   }, null, {timeout:10000});
   await waitControlGeometry(evaluate, frame, 'structures.load');
   assert(receipts.some(r => r.kind === 'file'), 'The WebAssembly loader must fetch the selected CIF over HTTP');
   await page.screenshot({path:join(output,'loaded.png')});
   await writeFile(join(output,'http-receipts.json'), JSON.stringify(receipts,null,2));
-} finally {await browser.close(); await new Promise(ok => server.close(ok));}
+} finally {
+  await writeFile(join(output,'http-receipts.json'), JSON.stringify(receipts,null,2));
+  if (page && !page.isClosed()) {
+    try {
+      await page.screenshot({path:join(output,'final.png')});
+      const state = await page.evaluate(() => Object.fromEntries(
+        ['onlineLoad.message','onlineLoad.load.0','onlineLoad.id.0','structures.load'].map(name => {
+          try {return [name, window.ediControlGeometry(name)];}
+          catch (error) {return [name, {error:error.message}];}
+        })));
+      await writeFile(join(output,'final-state.json'), JSON.stringify(state,null,2));
+    } catch (error) {console.warn('Browser diagnostic capture failed:', error.message);}
+  }
+  await browser.close();
+  await new Promise(ok => server.close(ok));
+}
