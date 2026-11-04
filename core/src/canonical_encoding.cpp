@@ -372,7 +372,7 @@ void put_structure(Output& out, const Structure& structure, Scope scope) {
         put_u64(out, structure.atom_site_moment.size());
         for (const auto& moment_item : structure.atom_site_moment) {
             AtomSiteMoment& moment = *moment_item;
-            put_text(out, moment.id);
+            put_text(out, moment.id.value());
             for (const Parameter* component : moment.parameters()) {
                 put_parameter(out, *component, scope);
             }
@@ -383,7 +383,7 @@ void put_structure(Output& out, const Structure& structure, Scope scope) {
         put_u64(out, structure.magnetic_form_factors.size());
         for (const auto& row_item : structure.magnetic_form_factors) {
             MagneticFormFactor& row = *row_item;
-            put_text(out, row.id);
+            put_text(out, row.id.value());
             put_text(out, row.ion.value());
             put_text(out, row.approximation.value());
             for (const Parameter* coefficient : row.parameters()) {
@@ -497,7 +497,7 @@ void geometry_inputs_write(Output& out, const Structure& structure) {
         put_u64(out, structure.atom_site_moment.generation());
         for (const auto& moment_item : structure.atom_site_moment) {
             AtomSiteMoment& moment = *moment_item;
-            put_text(out, moment.id);
+            put_text(out, moment.id.value());
             put_u64(out, moment.id.written());
             for (const Parameter* component : moment.parameters()) {
                 put_written(out, component->value);
@@ -510,7 +510,7 @@ void geometry_inputs_write(Output& out, const Structure& structure) {
         put_u64(out, structure.magnetic_form_factors.generation());
         for (const auto& row_item : structure.magnetic_form_factors) {
             MagneticFormFactor& row = *row_item;
-            put_text(out, row.id);
+            put_text(out, row.id.value());
             put_u64(out, row.id.written());
             put_text(out, row.ion.value());
             put_u64(out, row.ion.written());

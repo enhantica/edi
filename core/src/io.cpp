@@ -2690,20 +2690,20 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr, const
         // The magnetic sites' moments, after every tensor (crysta's fit_state.hpp order; edi ADR-0070).
         for (auto& moment_item : structure.atom_site_moment) {
             auto& moment = *moment_item;
-            const std::string prefix = base + moment.id.value() + ".";
-            const std::string unique = block + ".atom_site_moment." + moment.id.value() + ".";
-            add(prefix + "crystalaxis_x", unique + "crystalaxis_x", &moment.crystalaxis_x);
-            add(prefix + "crystalaxis_y", unique + "crystalaxis_y", &moment.crystalaxis_y);
-            add(prefix + "crystalaxis_z", unique + "crystalaxis_z", &moment.crystalaxis_z);
+            const auto prefix = [&] {return base() + source(moment.id.value()) + ".";};
+            const auto unique = [&] {return block() + ".atom_site_moment." + source(moment.id.value()) + ".";};
+            add(&moment.crystalaxis_x,[&] {return std::pair<std::string,std::string>{prefix() + "crystalaxis_x",unique() + "crystalaxis_x"};});
+            add(&moment.crystalaxis_y,[&] {return std::pair<std::string,std::string>{prefix() + "crystalaxis_y",unique() + "crystalaxis_y"};});
+            add(&moment.crystalaxis_z,[&] {return std::pair<std::string,std::string>{prefix() + "crystalaxis_z",unique() + "crystalaxis_z"};});
         }
         // The magnetic atom types' form-factor coefficients, after every moment (crysta's order).
         for (auto& row_item : structure.magnetic_form_factors) {
             auto& row = *row_item;
-            const std::string prefix = base + row.id.value() + ".";
-            const std::string unique = block + ".magnetic_form_factor." + row.id.value() + ".";
-            add(prefix + "j2_coefficient", unique + "j2_coefficient", &row.j2_coefficient);
-            add(prefix + "j4_coefficient", unique + "j4_coefficient", &row.j4_coefficient);
-            add(prefix + "j6_coefficient", unique + "j6_coefficient", &row.j6_coefficient);
+            const auto prefix = [&] {return base() + source(row.id.value()) + ".";};
+            const auto unique = [&] {return block() + ".magnetic_form_factor." + source(row.id.value()) + ".";};
+            add(&row.j2_coefficient,[&] {return std::pair<std::string,std::string>{prefix() + "j2_coefficient",unique() + "j2_coefficient"};});
+            add(&row.j4_coefficient,[&] {return std::pair<std::string,std::string>{prefix() + "j4_coefficient",unique() + "j4_coefficient"};});
+            add(&row.j6_coefficient,[&] {return std::pair<std::string,std::string>{prefix() + "j6_coefficient",unique() + "j6_coefficient"};});
         }
     }
     for (auto& experiment_item : project.experiments) {
