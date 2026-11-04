@@ -98,3 +98,12 @@ unpack the distribution ZIP, install offline, update from a local file repositor
 install and uninstall the online bootstrap. This gate qualifies installer transport only. The separate
 full application gate still installs the real bundle, calculates and renders with crysta, checks runtime
 dependencies, and removes the installation. No test reaches a public component server.
+
+## Preserve upstream runtime bytes through deployment
+
+Qt's application deployment finishes before the verified assistant files are installed. On macOS,
+sign owned Mach-O files and bundle containers explicitly, excluding the upstream assistant subtree;
+do not recursively re-sign that subtree. Verify the final bundle signature, then require every
+assistant member and hash to match the manifest produced from the already verified build input.
+Apply the same post-deployment membership and hash gate on all native platforms. A re-signed,
+removed, extra or linked helper fails packaging even if it still launches.

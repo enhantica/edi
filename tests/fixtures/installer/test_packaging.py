@@ -4,6 +4,7 @@
 import importlib.util
 import os
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 from unittest import mock
@@ -158,3 +159,34 @@ def test_installer_runtime_leaves_the_system_c_library_on_the_host(tmp_path):
             == {}
         )
     assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize('damage', ['replace', 'add', 'remove', 'link'])
+def test_deployment_gate_rejects_runtime_byte_or_membership_changes(tmp_path, damage):
+    spec = importlib.util.spec_from_file_location(
+        'installer_build', PACKAGE.ROOT / 'tools/installer/build.py'
+    )
+    build = importlib.util.module_from_spec(spec)
+    with mock.patch.dict(sys.modules, {'package': PACKAGE}):
+        spec.loader.exec_module(build)
+    root = tmp_path / (
+        'EasyDiffraction.app/Contents/libexec/edi/codex'
+        if PACKAGE.SYSTEM == 'macos'
+        else 'libexec/edi/codex'
+    )
+    root.mkdir(parents=True)
+    member = root / 'helper'
+    member.write_bytes(b'upstream bytes')
+    expected = tmp_path / 'expected.json'
+    expected.write_text('{"helper": "' + PACKAGE.sha256(member) + '"}')
+    build.verify_assistant_payload(tmp_path, expected)
+    if damage == 'replace':
+        member.write_bytes(b'resigned bytes')
+    elif damage == 'add':
+        (root / 'unverified-helper').write_bytes(b'extra')
+    elif damage == 'remove':
+        member.unlink()
+    else:
+        (root / 'alias').symlink_to('helper')
+    with pytest.raises(RuntimeError, match=r'runtime|empty'):
+        build.verify_assistant_payload(tmp_path, expected)

@@ -10,7 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from package import ROOT, SYSTEM, relocate_linux, run
+from package import ROOT, SYSTEM, payload_manifest, relocate_linux, run
 
 
 def collect_notices(stage: Path, qt: Path, crysta: Path) -> None:
@@ -32,6 +32,54 @@ def collect_notices(stage: Path, qt: Path, crysta: Path) -> None:
         for folder in qt.rglob('LICENSES'):
             if folder.is_dir():
                 shutil.copytree(folder, notices / folder.relative_to(qt), dirs_exist_ok=True)
+
+
+def sign_macos_app(bundle: Path) -> None:
+    """Sign owned application code without rewriting the verified upstream runtime."""
+    runtime = bundle / 'Contents/libexec/edi/codex'
+    signatures = {
+        b'\xfe\xed\xfa\xce',
+        b'\xfe\xed\xfa\xcf',
+        b'\xce\xfa\xed\xfe',
+        b'\xcf\xfa\xed\xfe',
+        b'\xca\xfe\xba\xbe',
+        b'\xbe\xba\xfe\xca',
+        b'\xca\xfe\xba\xbf',
+        b'\xbf\xba\xfe\xca',
+    }
+    paths = sorted(bundle.rglob('*'), key=lambda path: len(path.parts), reverse=True)
+    for path in paths:
+        if path.is_symlink() or path.is_relative_to(runtime) or not path.is_file():
+            continue
+        with path.open('rb') as stream:
+            if stream.read(4) not in signatures:
+                continue
+        run(['codesign', '--force', '--sign', '-', path])
+    for path in paths:
+        if (
+            path.is_dir()
+            and not path.is_symlink()
+            and not path.is_relative_to(runtime)
+            and path.suffix in {'.framework', '.app', '.bundle', '.xpc'}
+        ):
+            run(['codesign', '--force', '--sign', '-', path])
+    run(['codesign', '--force', '--sign', '-', bundle])
+    run(['codesign', '--verify', '--deep', '--strict', bundle])
+
+
+def verify_assistant_payload(stage: Path, expected: Path) -> None:
+    """Require the exact verified runtime membership and bytes after deployment/signing."""
+    root = stage / (
+        'EasyDiffraction.app/Contents/libexec/edi/codex'
+        if SYSTEM == 'macos'
+        else 'libexec/edi/codex'
+    )
+    actual = payload_manifest(root)
+    wanted = json.loads(expected.read_text(encoding='utf-8'))
+    if set(actual) != set(wanted) or any(
+        actual[name].get('sha256') != digest for name, digest in wanted.items()
+    ):
+        raise RuntimeError('Deployment or signing changed the verified assistant runtime')
 
 
 def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> None:
@@ -92,7 +140,8 @@ def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> N
         relocate_linux(stage, patchelf, qt)
     collect_notices(stage, qt, crysta)
     if SYSTEM == 'macos':
-        run(['codesign', '--force', '--deep', '--sign', '-', stage / 'EasyDiffraction.app'])
+        sign_macos_app(stage / 'EasyDiffraction.app')
+    verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
     commit = subprocess.check_output(
         ['git', '-C', str(crysta), 'rev-parse', 'HEAD'], text=True
     ).strip()
