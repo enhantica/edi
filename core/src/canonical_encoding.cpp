@@ -598,6 +598,7 @@ template class OneRow<ReportSettingsCategory>;
 template class OneRow<CorrelationChartCategory>;
 template class OneRow<RefineLsCategory>;
 template class OneRow<PatternChartCategory>;
+template class OneRow<EvolutionChartCategory>;
 template class OneRow<MinimizerCategory>;
 template class OneRow<SequentialFitCategory>;
 template class OneRow<FitResultCategory>;

@@ -2241,6 +2241,8 @@ void copy_report_settings(const Project& model, crysta::Project& cproject) {
     cproject.correlation_threshold = model.correlation_threshold;
     cproject.refine_ls_threshold_sigma = model.refine_ls_threshold_sigma;
     cproject.pattern_x_axis = model.pattern_x_axis;
+    cproject.evolution_error_bars = model.evolution_error_bars;
+    cproject.evolution_range = model.evolution_range;
 }
 #endif
 
@@ -2255,6 +2257,10 @@ void check_report_setting(const std::string& tag, const std::string& value) {
         (void)detail::read_correlation_threshold(value);
     } else if (name == "_pattern_chart.x_axis") {
         (void)detail::read_pattern_x_axis(value);
+    } else if (name == "_evolution_chart.error_bars") {
+        (void)detail::read_evolution_error_bars(value);
+    } else if (name == "_evolution_chart.range") {
+        (void)detail::read_evolution_range(value);
     } else {
         throw std::invalid_argument(tag + " is not a report setting");
     }
@@ -2776,6 +2782,8 @@ void read_report_item(std::string_view item, const std::string& value, Project& 
 }
 double read_correlation_threshold(const std::string& value) { return crysta::read_correlation_threshold(value); }
 std::string read_pattern_x_axis(const std::string& value) { return crysta::read_pattern_x_axis(value); }
+bool read_evolution_error_bars(const std::string& value) { return crysta::read_evolution_error_bars(value); }
+std::string read_evolution_range(const std::string& value) { return crysta::read_evolution_range(value); }
 std::string read_report_file_format(const std::string& value) { return crysta::read_report_file_format(value); }
 #else
 namespace {
@@ -2786,6 +2794,8 @@ namespace {
 void read_report_item(std::string_view, const std::string&, Project&) { needs_newer_crysta(); }
 double read_correlation_threshold(const std::string&) { needs_newer_crysta(); }
 std::string read_pattern_x_axis(const std::string&) { needs_newer_crysta(); }
+bool read_evolution_error_bars(const std::string&) { needs_newer_crysta(); }
+std::string read_evolution_range(const std::string&) { needs_newer_crysta(); }
 std::string read_report_file_format(const std::string&) { needs_newer_crysta(); }
 #endif
 

@@ -98,6 +98,8 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE int datasetAt(double x, double y, double x_tolerance, double y_tolerance) const;
     // The x of a dataset's drawn point, or NaN when it has none.
     Q_INVOKABLE double datasetX(int dataset) const;
+    // The project's Evolution chart settings changed: the range and the drawing follow them.
+    void viewSettingsChanged() { finish(); }
     bool picking() const { return picking_; }
     void setPicking(bool picking) {
         if (picking_ != picking) {
@@ -150,6 +152,9 @@ class EvolutionViewModel : public QObject {
     // The x of a dataset: its first extracted value, or its place in the scan from 1; nullopt when not finite.
     std::optional<double> xOf(int dataset, const std::vector<std::string>* extracted) const;
     void finish();
+    bool range_with_errors() const {
+        return project_ != nullptr && project_->evolution_range.value_or("values") == "values_su";
+    }
     int current_ = -1;
     int x_mode_ = 0;
     bool out_of_date_ = false;

@@ -1061,7 +1061,11 @@ refuses to write its bank rows into it.
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
   dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06), drawn as a 2 px line edged by
   1 px of half-transparent colour on each side (owner, 2026-10-22; the Stacked and Map tabs draw the same look as an
-  open rectangle, ADR-0041 §8). The pointer zooms as on the
+  open rectangle, ADR-0041 §8). Two buttons at the toolbar's right end, as on the pattern chart's toolbar, are the
+  project's `_evolution_chart` view settings, saved and undone with the other chart settings (owner, 2026-11-03): *Error
+  bars* (shown unless hidden) and *Range*, which fits the y range to the values with their error bars instead of the
+  values only, so that by default a much longer bar, such as a moment's above the ordering temperature, is clipped at
+  the plot's edge instead of flattening every point. The pointer zooms as on the
   pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
   resets. Above 5000
   points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab

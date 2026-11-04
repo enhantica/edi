@@ -295,8 +295,10 @@ void EvolutionViewModel::finish() {
         for (const Point& point : points_) {
             x_min = std::min(x_min, point.x);
             x_max = std::max(x_max, point.x);
-            y_min = std::min(y_min, point.y - point.error);
-            y_max = std::max(y_max, point.y + point.error);
+            // The range fits the values only unless the project asks for their error bars too (edi ADR-0017 §19).
+            const double error = range_with_errors() ? point.error : 0.0;
+            y_min = std::min(y_min, point.y - error);
+            y_max = std::max(y_max, point.y + error);
         }
         // The margins from halved values, so a range near the largest finite numbers does not overflow.
         const double x_pad = std::max((x_max / 2.0 - x_min / 2.0) * 0.06, 0.5);
@@ -330,10 +332,13 @@ void EvolutionViewModel::draw() {
     }
     QList<QPointF> points;
     QList<double> low, high;
+    const bool bars = project_ == nullptr || project_->evolution_error_bars.value_or(true);
     for (const Point& point : points_) {
         points.append(QPointF(point.x, point.y));
-        low.append(point.y - point.error);
-        high.append(point.y + point.error);
+        if (bars) {
+            low.append(point.y - point.error);
+            high.append(point.y + point.error);
+        }
     }
     layer_->setData(points, low, high);
 }

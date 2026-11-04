@@ -4984,6 +4984,10 @@ class Project : public detail::ProjectAnchor {
     // turns these and the settings above into a report's options.
     std::optional<double> correlation_threshold;
     std::optional<std::string> pattern_x_axis;
+    // The Evolution chart's view settings (`_evolution_chart`, ADR-0017 §19), each absent until stated: whether it draws
+    // the error bars (absent: drawn) and what its y range fits (`values` or `values_su`; absent: the values only).
+    std::optional<bool> evolution_error_bars;
+    std::optional<std::string> evolution_range;
     // A single-crystal fit's cutoff (`_refine_ls.threshold_sigma`, edi ADR-0050): only reflections with
     // F² > n su(F²) are fitted; absent, every one is.
     std::optional<double> refine_ls_threshold_sigma;
@@ -5579,6 +5583,14 @@ struct PatternChartCategory {
     static constexpr std::array items{"x_axis"};
 };
 static_assert(detail::one_entry_per_column(PatternChartCategory::columns, PatternChartCategory::items));
+
+struct EvolutionChartCategory {
+    using Owner = Project;
+    static constexpr const char* name = "_evolution_chart";
+    static constexpr auto columns = std::tuple{&Project::evolution_error_bars, &Project::evolution_range};
+    static constexpr std::array items{"error_bars", "range"};
+};
+static_assert(detail::one_entry_per_column(EvolutionChartCategory::columns, EvolutionChartCategory::items));
 
 struct FittingModeCategory {
     using Owner = Project;

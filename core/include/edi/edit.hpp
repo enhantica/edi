@@ -131,12 +131,15 @@ struct ReportSettingsState {
     std::optional<std::string> excluded;
     std::optional<double> correlation_threshold;
     std::optional<std::string> pattern_x_axis;
+    std::optional<bool> evolution_error_bars;
+    std::optional<std::string> evolution_range;
     bool operator==(const ReportSettingsState&) const = default;
 };
 
 inline ReportSettingsState report_settings_state(const Project& project) {
     return {project.report_html,    project.report_pdf,           project.report_cif,     project.report_html_offline,
-            project.report_excluded, project.correlation_threshold, project.pattern_x_axis};
+            project.report_excluded, project.correlation_threshold, project.pattern_x_axis,
+            project.evolution_error_bars, project.evolution_range};
 }
 
 class Edit {
@@ -193,6 +196,8 @@ class Edit {
             project.report_excluded = state.excluded;
             project.correlation_threshold = state.correlation_threshold;
             project.pattern_x_axis = state.pattern_x_axis;
+            project.evolution_error_bars = state.evolution_error_bars;
+            project.evolution_range = state.evolution_range;
         });
     }
     // The project's report settings (ADR-0036 §7), each absent until stated.

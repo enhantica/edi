@@ -530,6 +530,25 @@ void ProjectViewModel::setPatternDSpacing(bool on) {
 
 bool ProjectViewModel::patternDSpacing() const { return project_->pattern_x_axis.value_or("native") == "d_spacing"; }
 
+bool ProjectViewModel::evolutionErrorBars() const { return project_->evolution_error_bars.value_or(true); }
+
+void ProjectViewModel::setEvolutionErrorBars(bool on) {
+    if (on != evolutionErrorBars()) {
+        apply_report_setting(edi::Edit::assign(project_->evolution_error_bars, std::optional<bool>(on)));
+    }
+}
+
+bool ProjectViewModel::evolutionRangeWithSu() const {
+    return project_->evolution_range.value_or("values") == "values_su";
+}
+
+void ProjectViewModel::setEvolutionRangeWithSu(bool on) {
+    if (on != evolutionRangeWithSu()) {
+        apply_report_setting(edi::Edit::assign(project_->evolution_range,
+                                               std::optional<std::string>(on ? "values_su" : "values")));
+    }
+}
+
 void ProjectViewModel::setCurrentStructureIndex(int index) {
     if (index != current_structure_ && index >= -1 && index < structure_models_.size()) {
         current_structure_ = index;
@@ -678,6 +697,22 @@ void ProjectViewModel::publishMetadata() {
     if (patternDSpacing() != published_pattern_d_spacing_) {
         published_pattern_d_spacing_ = patternDSpacing();
         emit patternDSpacingChanged();
+    }
+    if (evolutionErrorBars() != published_evolution_error_bars_ ||
+        evolutionRangeWithSu() != published_evolution_range_with_su_) {
+        const bool bars = evolutionErrorBars() != published_evolution_error_bars_;
+        const bool range = evolutionRangeWithSu() != published_evolution_range_with_su_;
+        published_evolution_error_bars_ = evolutionErrorBars();
+        published_evolution_range_with_su_ = evolutionRangeWithSu();
+        if (evolution_ != nullptr) {
+            evolution_->viewSettingsChanged();
+        }
+        if (bars) {
+            emit evolutionErrorBarsChanged();
+        }
+        if (range) {
+            emit evolutionRangeWithSuChanged();
+        }
     }
 }
 
@@ -2505,6 +2540,8 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
             scan_template_->report_excluded = project_->report_excluded;
             scan_template_->correlation_threshold = project_->correlation_threshold;
             scan_template_->pattern_x_axis = project_->pattern_x_axis;
+            scan_template_->evolution_error_bars = project_->evolution_error_bars;
+            scan_template_->evolution_range = project_->evolution_range;
         } else if (scan_template_) {
             edi::Project promoted = *project_;
             promoted.experiment().data = scan_template_->experiment().data;

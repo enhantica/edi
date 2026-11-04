@@ -3571,6 +3571,12 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             if (const std::string* axis = block.find("_pattern_chart.x_axis")) {
                 project.pattern_x_axis = detail::read_pattern_x_axis(*axis);
             }
+            if (const std::string* bars = block.find("_evolution_chart.error_bars")) {
+                project.evolution_error_bars = detail::read_evolution_error_bars(*bars);
+            }
+            if (const std::string* range = block.find("_evolution_chart.range")) {
+                project.evolution_range = detail::read_evolution_range(*range);
+            }
             // A single-crystal fit's cutoff (edi ADR-0050).
             if (const std::string* cutoff = block.find("_refine_ls.threshold_sigma")) {
                 project.refine_ls_threshold_sigma = detail::read_threshold_sigma(*cutoff, "_refine_ls.threshold_sigma");

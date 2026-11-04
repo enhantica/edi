@@ -1749,6 +1749,27 @@
       "owner": "Project"
     },
     {
+      "name": "_evolution_chart",
+      "form": "one row",
+      "columns": [
+        {
+          "member": "Project::evolution_error_bars",
+          "type": "std::optional<bool>",
+          "items": [
+            "error_bars"
+          ]
+        },
+        {
+          "member": "Project::evolution_range",
+          "type": "std::optional<std::string>",
+          "items": [
+            "range"
+          ]
+        }
+      ],
+      "owner": "Project"
+    },
+    {
       "name": "_fitting_mode",
       "form": "one row",
       "columns": [
@@ -5450,6 +5471,16 @@
       "category": "_pattern_chart"
     },
     {
+      "member": "Project::evolution_error_bars",
+      "type": "std::optional<bool>",
+      "category": "_evolution_chart"
+    },
+    {
+      "member": "Project::evolution_range",
+      "type": "std::optional<std::string>",
+      "category": "_evolution_chart"
+    },
+    {
       "member": "Project::refine_ls_threshold_sigma",
       "type": "std::optional<double>",
       "category": "_refine_ls"
@@ -5620,6 +5651,9 @@
     ],
     "_edi": [
       "_edi"
+    ],
+    "_evolution_chart": [
+      "_evolution_chart"
     ],
     "_excluded_region": [
       "_excluded_region"
