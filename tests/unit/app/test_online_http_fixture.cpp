@@ -34,6 +34,7 @@ template struct TestAccess<NetworkSlot, &edi_app::OnlineSearch::network_>;
 struct Response {
     int status;
     QByteArray body;
+    int error = 0;
 };
 
 class ScriptedReply final : public QNetworkReply {
@@ -44,8 +45,10 @@ public:
         setUrl(request.url());
         setAttribute(QNetworkRequest::HttpStatusCodeAttribute, response.status);
         open(QIODevice::ReadOnly);
-        QTimer::singleShot(0, this, [this, status = response.status] {
-            if (status == 503)
+        QTimer::singleShot(0, this, [this, status = response.status, error = response.error] {
+            if (error)
+                setError(static_cast<NetworkError>(error), QStringLiteral("fixture transport unavailable"));
+            else if (status == 503)
                 setError(ServiceUnavailableError, QStringLiteral("fixture service unavailable"));
             else if (status == 404)
                 setError(ContentNotFoundError, QStringLiteral("fixture file absent"));
@@ -114,6 +117,10 @@ public:
 
     Q_INVOKABLE void enqueue(int status, const QString& body) {
         network_->responses.enqueue({status, body.toUtf8()});
+    }
+
+    Q_INVOKABLE void enqueueError(int status, int error) {
+        network_->responses.enqueue({status, {}, error});
     }
 
     Q_INVOKABLE QStringList requests() const { return network_->requests; }

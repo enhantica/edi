@@ -75,6 +75,7 @@ TestCase {
     }
 
     function cleanup() {
+        Session.onlineSources.remove("new-source");
         const page = pageItem();
         if (page) {
             for (const name of ["structures.load.menu", "experiments.load.menu", "onlineLoad"]) {
@@ -601,6 +602,125 @@ TestCase {
             compare(query.sg, undefined, "COD's response field spelling is absent from the request");
         }
         result("9001003", "Structure");
+    }
+
+    function check_outage_class_data() {
+        const rows = [];
+        for (const route of ["search", "download", "index"]) {
+            for (let status = 500; status <= 599; ++status)
+                rows.push({tag: route + "-" + status, route: route, status: status, error: 0});
+            for (const error of [401, 499, 102, 199])
+                rows.push({tag: route + "-error-" + error, route: route, status: 0, error: error});
+        }
+        return rows;
+    }
+
+    function check_outage_class(data) {
+        resetProject();
+        const search = Session.onlineSearch;
+        verify(OnlineHttpFixture.attach(search), "The outage gate replaces only the HTTP transport");
+        OnlineHttpFixture.clear();
+        const selector = openOnline({page: AppState.Page.Structure, group: "structures", action: "web"});
+        if (data.route === "index") {
+            addIndexSource();
+        }
+        if (data.route === "download") {
+            const body = SettingsProof.fileObservation(fixture({file: ""}), "cod_response.json");
+            const hit = JSON.parse(body.text).filter(row => String(row.file) === "9001003");
+            OnlineHttpFixture.enqueue(200, JSON.stringify(hit));
+            searchFor("9001003");
+        }
+        OnlineHttpFixture.enqueueError(data.status, data.error);
+        if (data.route === "download") click(onlineControl("load.0"));
+        else searchFor("");
+        tryCompare(search, "busy", false, 3000, "The outage reaches the shipped callback");
+        verify(search.unreachable, "Every server or proxy outage is classified as unavailable");
+        verify(search.alternativeId !== "", "Every server or proxy outage offers an alternate source");
+        verify(onlineControl("alternative").visible, "The alternate source is offered in the popup");
+        if (data.route !== "index") {
+            const field = onlineControl("field.id");
+            field.forceActiveFocus();
+            keyClick(Qt.Key_A, Qt.ControlModifier);
+            keyClick(Qt.Key_Backspace);
+            clickAlternative(onlineControl("alternative"));
+            tryCompare(selector, "currentText", "EasyDiffraction", 3000, "The alternate source remains usable");
+            result("lbco", "Structure");
+        }
+    }
+
+    function addIndexSource() {
+        Session.onlineSources.add();
+        Session.onlineSources.setKinds("new-source", ["structure"]);
+        Session.onlineSources.setUrl("new-source", "https://collection.invalid");
+        Session.onlineSearch.sourceId = "new-source";
+    }
+
+    function check_malformed_index_data() {
+        return ["bytes:1e30", "bytes:1e100", "bytes:9223372036854775808", "bytes:9007199254740994",
+                "bytes:-1", "bytes:12.5", "schema", "kind", "duplicate", "absolute", "parent", "cell-short", "cell-type", "no-files"]
+            .map(value => ({tag: value}));
+    }
+
+    function check_malformed_index(data) {
+        resetProject();
+        const search = Session.onlineSearch;
+        verify(OnlineHttpFixture.attach(search), "Malformed indexes enter the shipped HTTP callback");
+        OnlineHttpFixture.clear();
+        const selector = openOnline({page: AppState.Page.Structure, group: "structures", action: "web"});
+        addIndexSource();
+        const body = SettingsProof.fileObservation(fixture({file: "easydiffraction/"}), "index.json");
+        verify(body.exists, "Malformed documents start from the independent collection fixture");
+        const doc = JSON.parse(body.text);
+        const entry = doc.entries[0];
+        const tag = data.tag;
+        if (tag.startsWith("bytes:")) entry.files[0].bytes = Number(tag.substring(6));
+        else if (tag === "schema") doc.schema = "edi-data-index/999";
+        else if (tag === "kind") entry.kind = "unknown";
+        else if (tag === "duplicate") doc.entries.push(entry);
+        else if (tag === "absolute") entry.files[0].path = "/escaped.cif";
+        else if (tag === "parent") entry.files[0].path = "../escaped.cif";
+        else if (tag === "cell-short") entry.cell = [1, 2, 3];
+        else if (tag === "cell-type") entry.cell = [1, 2, 3, 90, 90, "bad"];
+        else if (tag === "no-files") entry.files = [];
+        OnlineHttpFixture.enqueue(200, JSON.stringify(doc));
+        searchFor("");
+        tryCompare(search, "busy", false, 3000, "Malformed remote indexes finish without crashing");
+        compare(search.results.count, 0, "A malformed index publishes no partial entries");
+        verify(search.message !== "" && !search.unreachable, "A malformed index reports a parse failure, distinct from an outage");
+    }
+
+    function check_collection_entry_data() {
+        return [{tag: "lbco", kind: "structure", name: "La0.5Ba0.5CoO3"},
+                {tag: "lbco-hrpt", kind: "experiment", name: "La0.5Ba0.5CoO3 at HRPT"},
+                {tag: "lbco-hrpt-xye", kind: "data", name: "La0.5Ba0.5CoO3 pattern from HRPT"}];
+    }
+
+    function check_collection_entry(data) {
+        resetProject();
+        const shape = {page: data.kind === "structure" ? AppState.Page.Structure : AppState.Page.Experiment,
+                       group: data.kind === "structure" ? "structures" : "experiments",
+                       action: data.kind === "structure" ? "web" : data.kind === "experiment" ? "experimentWeb" : "dataWeb"};
+        const selector = openOnline(shape);
+        if (data.kind === "structure") selectSource(selector, "EasyDiffraction", Qt.Key_Down);
+        searchFor(data.tag);
+        result(data.tag, data.kind === "structure" ? "Structure" : data.kind === "experiment" ? "Experiment" : "Data");
+    }
+
+    function check_collection_examples() {
+        const model = Session.examples;
+        model.filterProperty = "";
+        model.filterValue = "";
+        model.searchText = "";
+        let row = -1;
+        tryVerify(() => {
+            for (let i = 0; i < model.count; ++i)
+                if (model.text(i, "exampleId") === "collection/easydiffraction/lbco-hrpt-project") row = i;
+            return row >= 0;
+        }, 3000, "The Examples list includes the project from the collection fixture");
+        compare(model.text(row, "origin"), "HRPT @ PSI", "The collection example retains its declared origin");
+        verify(Session.openExample("collection/easydiffraction/lbco-hrpt-project"), "The collection example dispatches its ordinary archive loader");
+        tryCompare(Session, "openingExample", false, 3000, "The fixture archive finishes opening");
+        verify(Session.project !== null && Session.project.experiments.count > 0, "The collection archive opens a real populated project");
     }
 
     function check_unavailable_http_data() {
