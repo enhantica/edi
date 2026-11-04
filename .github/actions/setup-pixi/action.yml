@@ -26,7 +26,7 @@ runs:
         # requires-pixi then rejects. runner.temp is cleaned per job, so the pinned download
         # always succeeds, is prepended to PATH for the job, and never clobbers the machine's
         # shared ~/.pixi/bin (which the hub VM also uses).
-        pixi-bin-path: ${{ runner.temp }}/pinned-pixi/pixi
+        pixi-bin-path: ${{ runner.temp }}/pinned-pixi/pixi${{ runner.os == 'Windows' && '.exe' || '' }}
         manifest-path: ${{ inputs.manifest-path }}
         frozen: true
         post-cleanup: false

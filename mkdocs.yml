@@ -28,6 +28,7 @@ nav:
       - dev/index.md
       - dev/features.md
       - dev/local-crysta.md
+      - dev/installers.md
       - dev/assistant-protocol.md
       - Adrs:
           - dev/adrs/index.md
@@ -102,6 +103,8 @@ nav:
           - dev/adrs/0068-online-sources-and-collection-index.md
           - dev/adrs/0069-linked-data.md
           - dev/adrs/0070-magnetic-structures.md
+          - dev/adrs/0071-desktop-installers.md
+          - dev/adrs/0072-calendar-releases-and-application-updates.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
