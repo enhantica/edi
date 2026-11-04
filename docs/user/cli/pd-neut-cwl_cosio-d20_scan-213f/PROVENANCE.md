@@ -18,15 +18,19 @@
   and D/L are both held at 0.0619, the shared value the 2.3 K example fits: they describe the instrument, not the
   sample, so they stay the same at every temperature.
 - **Analysis:** the 162-file scan's sequential settings (data directory, file pattern, temperature from each file's
-  `TEMP` line, Co1 and Co2 sharing one displacement parameter) and the 2.3 K example's minimizer, with
+  `TEMP` line, Co1 and Co2 sharing one displacement parameter) and the default descent, with
   `_sequential_fit.reverse true`: the fit runs from 2.344 K upwards, each file starting from the previous result, so
-  the first file is the 2.3 K example's own fit with the displacement parameters free as well. The moments stay
-  free at every temperature; above the Néel temperature, about 50 K, they fit to values near zero within their s.u.
+  the first file is the 2.3 K pattern fitted with the displacement parameters free as well. The 2.3 K example's fast
+  descent is not used here: each file already starts near its minimum, and on this scan the fast descent took 31 %
+  longer for the same result. The moments stay free at every temperature; above the Néel temperature, about 50 K,
+  most fit to exactly zero, with an s.u. that bounds their size.
 
 ## Expected values
 
-`expected.json` pins the number of free parameters, counted from the model (an independent reference), and the terminal
-record of this project's own fit as **regression pins**, which gate drift, not correctness. The moments falling towards
+`expected.json` pins the number of free parameters, 45, counted from the model (an independent reference), and the
+terminal record of this project's own fit as **regression pins**, which gate drift, not correctness: the last file,
+`01_001` (497.379 K), reduced χ² 4.32385690 after 7 iterations, measured by `python -m edi fit --report machine` on
+edi `34386c95` with this project's analysis, linked against crysta `7e3ab03e`, `OMP_NUM_THREADS=1`. The moments falling towards
 zero as the temperature approaches 50 K (A. Sazonov et al., Acta Cryst. B65 (2009) 664–675) is a sanity check, not a
 reference.
 
