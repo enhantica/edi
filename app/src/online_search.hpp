@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "edi/online_index.hpp"
+#include "online_values.hpp"
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -29,7 +30,11 @@ class OnlineResultsModel : public QAbstractListModel {
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 
 public:
-    enum Role { IdRole = Qt::UserRole + 1, KindRole, NameRole, FormulaRole, SpaceGroupRole, CellRole, RadiationRole, TechniqueRole, InstrumentRole, SourceRole };
+    enum Role {
+        IdRole = Qt::UserRole + 1, KindRole, NameRole, FormulaRole, SpaceGroupRole, HasCellRole,
+        CellARole, CellBRole, CellCRole, CellAlphaRole, CellBetaRole, CellGammaRole,
+        RadiationRole, TechniqueRole, InstrumentRole, SourceRole
+    };
     Q_ENUM(Role)
 
     using QAbstractListModel::QAbstractListModel;
@@ -47,6 +52,37 @@ private:
     std::vector<edi::online::Entry> entries_;
 };
 
+/// A short list of choices for the popup: the sources offering a kind (key = id, name), or a source's search fields
+/// (key, hint). A model, as every list the pages bind (ADR-0015 §2).
+class OnlineChoiceModel : public QAbstractListModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the search")
+    Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+
+public:
+    enum Role { KeyRole = Qt::UserRole + 1, NameRole, HintRole };
+    Q_ENUM(Role)
+    struct Choice {
+        QString key, name, hint;
+    };
+
+    using QAbstractListModel::QAbstractListModel;
+    int rowCount(const QModelIndex& parent = {}) const override;
+    QVariant data(const QModelIndex& index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override;
+
+    Q_INVOKABLE int indexOfKey(const QString& key) const;
+    Q_INVOKABLE QString keyAt(int row) const;
+    void assign(QList<Choice> choices);
+
+signals:
+    void countChanged();
+
+private:
+    QList<Choice> choices_;
+};
+
 /// One From web… popup's state (ADR-0068): the source chosen among those offering the page's kind, that source's
 /// fields, the search and its results, and the download of a chosen entry's file. A collection source answers from
 /// its `index.json`; COD from its query service, unless its URL is a local folder, which is read as a collection
@@ -57,10 +93,10 @@ class OnlineSearch : public QObject {
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to the session")
     Q_PROPERTY(QString kind READ kind WRITE setKind NOTIFY kindChanged)
-    Q_PROPERTY(QVariantList sources READ sources NOTIFY sourcesChanged)
+    Q_PROPERTY(edi_app::OnlineChoiceModel* sources READ sources CONSTANT)
     Q_PROPERTY(QString sourceId READ sourceId WRITE setSourceId NOTIFY sourceIdChanged)
     Q_PROPERTY(QString sourceName READ sourceName NOTIFY sourceNameChanged)
-    Q_PROPERTY(QVariantList fields READ fields NOTIFY fieldsChanged)
+    Q_PROPERTY(edi_app::OnlineChoiceModel* fields READ fields CONSTANT)
     Q_PROPERTY(edi_app::OnlineResultsModel* results READ results CONSTANT)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(QString message READ message NOTIFY messageChanged)
@@ -76,12 +112,12 @@ public:
 
     QString kind() const { return kind_; }
     void setKind(const QString& kind);
-    QVariantList sources() const;
+    OnlineChoiceModel* sources() const { return sources_model_; }
     QString sourceId() const { return source_id_; }
     void setSourceId(const QString& id);
     QString sourceName() const;
-    /// The search fields of the current source, ID first: a list of {key, hint}; the popup names each key.
-    QVariantList fields() const;
+    /// The search fields of the current source, ID first; the popup names each key.
+    OnlineChoiceModel* fields() const { return fields_model_; }
     OnlineResultsModel* results() const { return results_; }
     bool busy() const { return busy_; }
     QString message() const { return message_; }
@@ -92,8 +128,11 @@ public:
     QString alternativeName() const;
     bool searched() const { return searched_; }
 
-    /// Search the current source with the field values (keys as in `fields`); the results follow asynchronously.
-    Q_INVOKABLE void search(const QVariantMap& values);
+    /// A field's value for the next search; the fields are cleared when the source changes.
+    Q_INVOKABLE void setField(const QString& key, const QString& value);
+    Q_INVOKABLE QString field(const QString& key) const { return field_values_.value(key); }
+    /// Search the current source with the field values; the results follow asynchronously.
+    Q_INVOKABLE void search();
     /// Switch to the alternative source offered after an unreachable one, keeping the results empty.
     Q_INVOKABLE void useAlternative();
     /// Download the first file of a result into a temporary file; `fileReady` then carries it to the loaders.
@@ -114,14 +153,16 @@ signals:
     void alternativeIdChanged();
     void alternativeNameChanged();
     void searchedChanged();
-    /// A downloaded entry: its kind, the local file and the entry's fields (id, name, radiation, technique, …).
-    void fileReady(const QString& kind, const QUrl& file, const QVariantMap& entry);
+    /// A downloaded entry: its kind, the local file and the entry.
+    void fileReady(const QString& kind, const QUrl& file, const edi_app::OnlineEntry& entry);
 
 private:
     using Bytes = std::function<void(const QByteArray& bytes, const QString& error, bool unreachable)>;
     void fetch(const QUrl& url, Bytes done);
     void withIndex(const QString& url, const std::function<void(const edi::online::Index*, const QString& error, bool unreachable)>& done);
     void finish(std::vector<edi::online::Entry> entries);
+    void refreshSources();
+    void refreshFields();
     void fail(const QString& message, bool unreachable);
     void setBusy(bool busy);
     QUrl fileUrl(const QString& base, const QString& path) const;
@@ -129,6 +170,9 @@ private:
 
     QPointer<OnlineSourcesModel> sources_;
     OnlineResultsModel* results_;
+    OnlineChoiceModel* sources_model_;
+    OnlineChoiceModel* fields_model_;
+    QHash<QString, QString> field_values_;
     QNetworkAccessManager* network_ = nullptr;
     QString kind_ = QStringLiteral("structure");
     QString source_id_, message_, detail_, alternative_id_;

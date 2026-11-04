@@ -19,14 +19,6 @@
 namespace edi_app {
 namespace {
 
-// The six cell values as numbers: the popup shows them through the display bridge, as every table does.
-QVariantList cell_values(const std::vector<double>& cell) {
-    QVariantList out;
-    if (cell.size() != 6) return out;
-    for (double v : cell) out.append(v);
-    return out;
-}
-
 QString field_hint(const QString& key) {
     static const QHash<QString, QString> hints{
         {QStringLiteral("formula"), QCoreApplication::translate("OnlineSearch", "Hill notation, for example B6 La")},
@@ -38,9 +30,9 @@ QString field_hint(const QString& key) {
     return hints.value(key);
 }
 
-edi::online::Query query_from(const QVariantMap& values) {
+edi::online::Query query_from(const QHash<QString, QString>& values) {
     edi::online::Query q;
-    const auto s = [&values](const char* key) { return values.value(QLatin1String(key)).toString().toStdString(); };
+    const auto s = [&values](const char* key) { return values.value(QLatin1String(key)).toStdString(); };
     q.id = s("id");
     q.name = s("name");
     q.formula = s("formula");
@@ -52,17 +44,19 @@ edi::online::Query query_from(const QVariantMap& values) {
     return q;
 }
 
-QVariantMap entry_map(const edi::online::Entry& e) {
-    return {{QStringLiteral("id"), QString::fromStdString(e.id)},
-            {QStringLiteral("kind"), QString::fromStdString(e.kind)},
-            {QStringLiteral("name"), QString::fromStdString(e.name)},
-            {QStringLiteral("formula"), QString::fromStdString(e.formula)},
-            {QStringLiteral("spaceGroup"), QString::fromStdString(e.space_group)},
-            {QStringLiteral("radiation"), QString::fromStdString(e.radiation)},
-            {QStringLiteral("technique"), QString::fromStdString(e.technique)},
-            {QStringLiteral("instrument"), QString::fromStdString(e.instrument)},
-            {QStringLiteral("source"), QString::fromStdString(e.source)},
-            {QStringLiteral("format"), e.files.empty() ? QString() : QString::fromStdString(e.files.front().format)}};
+OnlineEntry entry_value(const edi::online::Entry& e) {
+    OnlineEntry out;
+    out.id = QString::fromStdString(e.id);
+    out.kind = QString::fromStdString(e.kind);
+    out.name = QString::fromStdString(e.name);
+    out.formula = QString::fromStdString(e.formula);
+    out.spaceGroup = QString::fromStdString(e.space_group);
+    out.radiation = QString::fromStdString(e.radiation);
+    out.technique = QString::fromStdString(e.technique);
+    out.instrument = QString::fromStdString(e.instrument);
+    out.source = QString::fromStdString(e.source);
+    out.format = e.files.empty() ? QString() : QString::fromStdString(e.files.front().format);
+    return out;
 }
 
 bool unreachable_error(QNetworkReply::NetworkError error) {
@@ -99,7 +93,13 @@ QVariant OnlineResultsModel::data(const QModelIndex& index, int role) const {
         case NameRole: return QString::fromStdString(e.name);
         case FormulaRole: return QString::fromStdString(e.formula);
         case SpaceGroupRole: return QString::fromStdString(e.space_group);
-        case CellRole: return cell_values(e.cell);
+        case HasCellRole: return e.cell.size() == 6;
+        case CellARole: return e.cell.size() == 6 ? e.cell[0] : 0.0;
+        case CellBRole: return e.cell.size() == 6 ? e.cell[1] : 0.0;
+        case CellCRole: return e.cell.size() == 6 ? e.cell[2] : 0.0;
+        case CellAlphaRole: return e.cell.size() == 6 ? e.cell[3] : 0.0;
+        case CellBetaRole: return e.cell.size() == 6 ? e.cell[4] : 0.0;
+        case CellGammaRole: return e.cell.size() == 6 ? e.cell[5] : 0.0;
         case RadiationRole: return QString::fromStdString(e.radiation);
         case TechniqueRole: return QString::fromStdString(e.technique);
         case InstrumentRole: return QString::fromStdString(e.instrument);
@@ -109,9 +109,10 @@ QVariant OnlineResultsModel::data(const QModelIndex& index, int role) const {
 }
 
 QHash<int, QByteArray> OnlineResultsModel::roleNames() const {
-    return {{IdRole, "id"},           {KindRole, "kind"},           {NameRole, "name"},         {FormulaRole, "formula"},
-            {SpaceGroupRole, "spaceGroup"}, {CellRole, "cell"},       {RadiationRole, "radiation"}, {TechniqueRole, "technique"},
-            {InstrumentRole, "instrument"}, {SourceRole, "source"}};
+    return {{IdRole, "id"},           {KindRole, "kind"},           {NameRole, "name"},           {FormulaRole, "formula"},
+            {SpaceGroupRole, "spaceGroup"}, {HasCellRole, "hasCell"},   {CellARole, "cellA"},         {CellBRole, "cellB"},
+            {CellCRole, "cellC"},         {CellAlphaRole, "cellAlpha"}, {CellBetaRole, "cellBeta"},   {CellGammaRole, "cellGamma"},
+            {RadiationRole, "radiation"}, {TechniqueRole, "technique"}, {InstrumentRole, "instrument"}, {SourceRole, "source"}};
 }
 
 void OnlineResultsModel::assign(std::vector<edi::online::Entry> entries) {
@@ -125,13 +126,68 @@ const edi::online::Entry* OnlineResultsModel::at(int row) const {
     return row >= 0 && static_cast<std::size_t>(row) < entries_.size() ? &entries_[static_cast<std::size_t>(row)] : nullptr;
 }
 
+int OnlineChoiceModel::rowCount(const QModelIndex& parent) const { return parent.isValid() ? 0 : static_cast<int>(choices_.size()); }
+
+QVariant OnlineChoiceModel::data(const QModelIndex& index, int role) const {
+    if (!index.isValid() || index.row() < 0 || index.row() >= choices_.size()) return {};
+    const Choice& c = choices_[index.row()];
+    switch (role) {
+        case KeyRole: return c.key;
+        case NameRole: return c.name;
+        case HintRole: return c.hint;
+        default: return {};
+    }
+}
+
+QHash<int, QByteArray> OnlineChoiceModel::roleNames() const { return {{KeyRole, "key"}, {NameRole, "name"}, {HintRole, "hint"}}; }
+
+int OnlineChoiceModel::indexOfKey(const QString& key) const {
+    for (int i = 0; i < choices_.size(); ++i)
+        if (choices_[i].key == key) return i;
+    return -1;
+}
+
+QString OnlineChoiceModel::keyAt(int row) const { return row >= 0 && row < choices_.size() ? choices_[row].key : QString(); }
+
+void OnlineChoiceModel::assign(QList<Choice> choices) {
+    beginResetModel();
+    choices_ = std::move(choices);
+    endResetModel();
+    emit countChanged();
+}
+
 OnlineSearch::OnlineSearch(OnlineSourcesModel* sources, QObject* parent)
-    : QObject(parent), sources_(sources), results_(new OnlineResultsModel(this)) {
+    : QObject(parent), sources_(sources), results_(new OnlineResultsModel(this)), sources_model_(new OnlineChoiceModel(this)),
+      fields_model_(new OnlineChoiceModel(this)) {
     if (sources_) connect(sources_, &OnlineSourcesModel::sourcesChanged, this, [this] {
-        emit sourcesChanged();
+        refreshSources();
         if (!source_id_.isEmpty() && sources_->urlOf(source_id_).isEmpty()) setSourceId({});
     });
+    refreshSources();
+    refreshFields();
 }
+
+void OnlineSearch::refreshSources() {
+    QList<OnlineChoiceModel::Choice> choices;
+    if (sources_)
+        for (const OnlineSourcesModel::Source& s : sources_->sourcesFor(kind_)) choices.append({s.id, s.name, {}});
+    sources_model_->assign(std::move(choices));
+    emit sourcesChanged();
+}
+
+void OnlineSearch::refreshFields() {
+    QStringList keys;
+    if (sources_ && sources_->isCod(source_id_)) keys = {QStringLiteral("id"), QStringLiteral("formula"), QStringLiteral("elements"), QStringLiteral("space_group")};
+    else if (kind_ == QStringLiteral("structure")) keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("formula"), QStringLiteral("space_group")};
+    else keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("radiation"), QStringLiteral("technique"), QStringLiteral("instrument")};
+    QList<OnlineChoiceModel::Choice> choices;
+    for (const QString& key : keys) choices.append({key, {}, field_hint(key)});
+    fields_model_->assign(std::move(choices));
+    field_values_.clear();
+    emit fieldsChanged();
+}
+
+void OnlineSearch::setField(const QString& key, const QString& value) { field_values_.insert(key, value); }
 
 OnlineSearch::~OnlineSearch() = default;
 
@@ -139,36 +195,23 @@ void OnlineSearch::setKind(const QString& kind) {
     if (kind_ == kind) return;
     kind_ = kind;
     emit kindChanged();
-    emit fieldsChanged();
-    emit sourcesChanged();
+    refreshSources();
     reset();
-    const QVariantList offered = sources();
-    const bool keep = std::any_of(offered.begin(), offered.end(), [this](const QVariant& v) { return v.toMap().value(QStringLiteral("id")).toString() == source_id_; });
-    if (!keep) setSourceId(offered.isEmpty() ? QString() : offered.first().toMap().value(QStringLiteral("id")).toString());
+    if (sources_model_->indexOfKey(source_id_) < 0) setSourceId(sources_model_->keyAt(0));
+    else refreshFields();
 }
-
-QVariantList OnlineSearch::sources() const { return sources_ ? sources_->sourcesFor(kind_) : QVariantList(); }
 
 void OnlineSearch::setSourceId(const QString& id) {
     if (source_id_ == id) return;
     source_id_ = id;
     reset();
+    refreshFields();
     emit sourceIdChanged();
     emit sourceNameChanged();
-    emit fieldsChanged();
 }
 
 QString OnlineSearch::sourceName() const { return sources_ ? sources_->nameOf(source_id_) : QString(); }
 
-QVariantList OnlineSearch::fields() const {
-    QStringList keys;
-    if (sources_ && sources_->isCod(source_id_)) keys = {QStringLiteral("id"), QStringLiteral("formula"), QStringLiteral("elements"), QStringLiteral("space_group")};
-    else if (kind_ == QStringLiteral("structure")) keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("formula"), QStringLiteral("space_group")};
-    else keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("radiation"), QStringLiteral("technique"), QStringLiteral("instrument")};
-    QVariantList out;
-    for (const QString& key : keys) out.append(QVariantMap{{QStringLiteral("key"), key}, {QStringLiteral("hint"), field_hint(key)}});
-    return out;
-}
 
 QString OnlineSearch::alternativeName() const { return sources_ ? sources_->nameOf(alternative_id_) : QString(); }
 
@@ -176,7 +219,8 @@ bool OnlineSearch::codService(const QString& url) const {
     return sources_ && sources_->isCod(source_id_) && !QUrl(url).isLocalFile() && QUrl(url).scheme() != QStringLiteral("file");
 }
 
-void OnlineSearch::search(const QVariantMap& values) {
+void OnlineSearch::search() {
+    const QHash<QString, QString> values = field_values_;
     if (!sources_) return;
     const QString base = sources_->urlOf(source_id_);
     if (base.isEmpty()) {
@@ -244,7 +288,7 @@ void OnlineSearch::load(int row) {
     if (entry == nullptr || entry->files.empty() || !sources_) return;
     const QString base = sources_->urlOf(source_id_);
     const QUrl url = fileUrl(base, QString::fromStdString(entry->files.front().path));
-    const QVariantMap fields = entry_map(*entry);
+    const OnlineEntry fields = entry_value(*entry);
     const QString kind = QString::fromStdString(entry->kind);
     const QString name = QFileInfo(url.path()).fileName();
     const int generation = generation_;
@@ -309,10 +353,9 @@ void OnlineSearch::fail(const QString& message, bool unreachable) {
     alternative_id_.clear();
     if (unreachable && sources_) {
         // Another enabled source for this kind, the first that is not the one that failed.
-        for (const QVariant& v : sources_->sourcesFor(kind_)) {
-            const QString id = v.toMap().value(QStringLiteral("id")).toString();
-            if (id != source_id_) {
-                alternative_id_ = id;
+        for (const OnlineSourcesModel::Source& s : sources_->sourcesFor(kind_)) {
+            if (s.id != source_id_) {
+                alternative_id_ = s.id;
                 break;
             }
         }

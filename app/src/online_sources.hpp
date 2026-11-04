@@ -39,8 +39,8 @@ public:
     QVariant data(const QModelIndex& index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    /// The enabled sources offering `kind` (structure, experiment or data): a list of {id, name}.
-    Q_INVOKABLE QVariantList sourcesFor(const QString& kind) const;
+    /// The enabled sources offering `kind` (structure, experiment or data), in table order.
+    QList<Source> sourcesFor(const QString& kind) const;
     /// The URL in force for a source, its override first; empty for an unknown id.
     Q_INVOKABLE QString urlOf(const QString& id) const;
     Q_INVOKABLE QString nameOf(const QString& id) const;

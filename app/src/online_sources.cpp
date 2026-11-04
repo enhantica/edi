@@ -82,10 +82,10 @@ QHash<int, QByteArray> OnlineSourcesModel::roleNames() const {
             {BuiltinRole, "builtin"}, {EnabledRole, "enabled"}, {OverriddenRole, "overridden"}};
 }
 
-QVariantList OnlineSourcesModel::sourcesFor(const QString& kind) const {
-    QVariantList out;
+QList<OnlineSourcesModel::Source> OnlineSourcesModel::sourcesFor(const QString& kind) const {
+    QList<Source> out;
     for (const Source& s : sources_)
-        if (s.enabled && s.kinds.contains(kind)) out.append(QVariantMap{{QStringLiteral("id"), s.id}, {QStringLiteral("name"), s.name}});
+        if (s.enabled && s.kinds.contains(kind)) out.append(s);
     return out;
 }
 

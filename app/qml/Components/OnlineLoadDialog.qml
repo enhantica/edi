@@ -36,16 +36,19 @@ AppDialog {
         dialog.targetExperiment = experiment ?? null;
         dialog.values = {};
         search.kind = kind;
-        const offered = search.sources.map(s => s.id);
         const remembered = dialog.lastSource[kind];
-        if (offered.length > 0)
-            search.sourceId = offered.indexOf(remembered) >= 0 ? remembered : offered[0];
+        if (search.sources.count > 0)
+            search.sourceId = search.sources.indexOfKey(remembered) >= 0 ? remembered : search.sources.keyAt(0);
         search.reset();
         dialog.visible = true;
     }
 
     function runSearch() {
-        search.search(dialog.values);
+        for (let row = 0; row < search.fields.count; ++row) {
+            const key = search.fields.keyAt(row);
+            search.setField(key, dialog.values[key] ?? "");
+        }
+        search.search();
     }
 
     // A field's name: the dictionary's for an item it holds, the popup's own for the rest.
@@ -72,11 +75,10 @@ AppDialog {
     }
 
     // The cell as the bridge displays each length and angle.
-    function cellText(values) {
-        if (!values || values.length !== 6)
+    function cellText(row) {
+        if (!row.hasCell)
             return "";
-        const uids = ["cell.length_a", "cell.length_b", "cell.length_c", "cell.angle_alpha", "cell.angle_beta", "cell.angle_gamma"];
-        return uids.map((uid, i) => Session.display(uid, values[i])).join(" ");
+        return [Session.display("cell.length_a", row.cellA), Session.display("cell.length_b", row.cellB), Session.display("cell.length_c", row.cellC), Session.display("cell.angle_alpha", row.cellAlpha), Session.display("cell.angle_beta", row.cellBeta), Session.display("cell.angle_gamma", row.cellGamma)].join(" ");
     }
 
     // The entry's radiation and technique choose a new experiment's probe and beam mode when none is selected.
@@ -130,12 +132,12 @@ AppDialog {
                 objectName: "onlineLoad.source"
                 width: EaStyle.Sizes.fontPixelSize * 18
                 textRole: "name"
-                valueRole: "id"
+                valueRole: "key"
                 model: dialog.search.sources
-                currentIndex: Math.max(0, dialog.search.sources.findIndex(s => s.id === dialog.search.sourceId))
+                currentIndex: Math.max(0, dialog.search.sources.indexOfKey(dialog.search.sourceId))
                 onActivated: index => {
                     dialog.values = {};
-                    dialog.search.sourceId = dialog.search.sources[index].id;
+                    dialog.search.sourceId = dialog.search.sources.keyAt(index);
                     const remembered = Object.assign({}, dialog.lastSource);
                     remembered[dialog.kind] = dialog.search.sourceId;
                     dialog.lastSource = remembered;
@@ -153,23 +155,24 @@ AppDialog {
                 model: dialog.search.fields
                 delegate: Row {
                     id: fieldRow
-                    required property var modelData
+                    required property string key
+                    required property string hint
                     spacing: EaStyle.Sizes.fontPixelSize
                     EaElements.Label {
                         width: fieldColumn.labelWidth
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignRight
-                        text: dialog.fieldLabel(fieldRow.modelData.key) + ":"
+                        text: dialog.fieldLabel(fieldRow.key) + ":"
                     }
                     EaElements.TextField {
-                        objectName: "onlineLoad.field." + fieldRow.modelData.key
+                        objectName: "onlineLoad.field." + fieldRow.key
                         width: EaStyle.Sizes.fontPixelSize * 24
                         horizontalAlignment: TextInput.AlignLeft
-                        placeholderText: fieldRow.modelData.hint
-                        text: dialog.values[fieldRow.modelData.key] ?? ""
+                        placeholderText: fieldRow.hint
+                        text: dialog.values[fieldRow.key] ?? ""
                         onTextEdited: {
                             const next = Object.assign({}, dialog.values);
-                            next[fieldRow.modelData.key] = text;
+                            next[fieldRow.key] = text;
                             dialog.values = next;
                         }
                         onAccepted: dialog.runSearch()
@@ -253,7 +256,13 @@ AppDialog {
                 required property string name
                 required property string formula
                 required property string spaceGroup
-                required property var cell
+                required property bool hasCell
+                required property double cellA
+                required property double cellB
+                required property double cellC
+                required property double cellAlpha
+                required property double cellBeta
+                required property double cellGamma
                 required property string radiation
                 required property string technique
                 required property string instrument
@@ -279,7 +288,7 @@ AppDialog {
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
                     text: row.name
-                    ToolTip.text: dialog.cellText(row.cell) !== "" ? Session.categoryTitle("cell") + ": " + dialog.cellText(row.cell) : ""
+                    ToolTip.text: row.hasCell ? Session.categoryTitle("cell") + ": " + dialog.cellText(row) : ""
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
