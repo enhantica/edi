@@ -19,25 +19,12 @@
 namespace edi_app {
 namespace {
 
-QString cell_text(const std::vector<double>& cell) {
-    if (cell.size() != 6) return {};
-    QStringList parts;
-    for (double v : cell) parts.append(QString::number(v, 'g', 6));
-    return parts.join(u' ');
-}
-
-QString field_label(const QString& key) {
-    static const QHash<QString, QString> labels{
-        {QStringLiteral("id"), QCoreApplication::translate("OnlineSearch", "ID")},
-        {QStringLiteral("name"), QCoreApplication::translate("OnlineSearch", "Name")},
-        {QStringLiteral("formula"), QCoreApplication::translate("OnlineSearch", "Formula")},
-        {QStringLiteral("elements"), QCoreApplication::translate("OnlineSearch", "Elements")},
-        {QStringLiteral("space_group"), QCoreApplication::translate("OnlineSearch", "Space group")},
-        {QStringLiteral("radiation"), QCoreApplication::translate("OnlineSearch", "Radiation")},
-        {QStringLiteral("technique"), QCoreApplication::translate("OnlineSearch", "Technique")},
-        {QStringLiteral("instrument"), QCoreApplication::translate("OnlineSearch", "Instrument")},
-    };
-    return labels.value(key, key);
+// The six cell values as numbers: the popup shows them through the display bridge, as every table does.
+QVariantList cell_values(const std::vector<double>& cell) {
+    QVariantList out;
+    if (cell.size() != 6) return out;
+    for (double v : cell) out.append(v);
+    return out;
 }
 
 QString field_hint(const QString& key) {
@@ -112,7 +99,7 @@ QVariant OnlineResultsModel::data(const QModelIndex& index, int role) const {
         case NameRole: return QString::fromStdString(e.name);
         case FormulaRole: return QString::fromStdString(e.formula);
         case SpaceGroupRole: return QString::fromStdString(e.space_group);
-        case CellRole: return cell_text(e.cell);
+        case CellRole: return cell_values(e.cell);
         case RadiationRole: return QString::fromStdString(e.radiation);
         case TechniqueRole: return QString::fromStdString(e.technique);
         case InstrumentRole: return QString::fromStdString(e.instrument);
@@ -179,8 +166,7 @@ QVariantList OnlineSearch::fields() const {
     else if (kind_ == QStringLiteral("structure")) keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("formula"), QStringLiteral("space_group")};
     else keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("radiation"), QStringLiteral("technique"), QStringLiteral("instrument")};
     QVariantList out;
-    for (const QString& key : keys)
-        out.append(QVariantMap{{QStringLiteral("key"), key}, {QStringLiteral("label"), field_label(key)}, {QStringLiteral("hint"), field_hint(key)}});
+    for (const QString& key : keys) out.append(QVariantMap{{QStringLiteral("key"), key}, {QStringLiteral("hint"), field_hint(key)}});
     return out;
 }
 

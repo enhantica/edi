@@ -80,7 +80,7 @@ public:
     QString sourceId() const { return source_id_; }
     void setSourceId(const QString& id);
     QString sourceName() const;
-    /// The search fields of the current source, ID first: a list of {key, label}.
+    /// The search fields of the current source, ID first: a list of {key, hint}; the popup names each key.
     QVariantList fields() const;
     OnlineResultsModel* results() const { return results_; }
     bool busy() const { return busy_; }

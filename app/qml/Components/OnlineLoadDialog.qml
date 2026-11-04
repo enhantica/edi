@@ -48,6 +48,37 @@ AppDialog {
         search.search(dialog.values);
     }
 
+    // A field's name: the dictionary's for an item it holds, the popup's own for the rest.
+    function fieldLabel(key) {
+        switch (key) {
+        case "id":
+            return qsTr("ID");
+        case "name":
+            return qsTr("Name");
+        case "formula":
+            return qsTr("Formula");
+        case "elements":
+            return qsTr("Elements");
+        case "space_group":
+            return Session.categoryTitle("space_group");
+        case "radiation":
+            return qsTr("Radiation");
+        case "technique":
+            return qsTr("Technique");
+        case "instrument":
+            return Session.categoryTitle("instrument");
+        }
+        return key;
+    }
+
+    // The cell as the bridge displays each length and angle.
+    function cellText(values) {
+        if (!values || values.length !== 6)
+            return "";
+        const uids = ["cell.length_a", "cell.length_b", "cell.length_c", "cell.angle_alpha", "cell.angle_beta", "cell.angle_gamma"];
+        return uids.map((uid, i) => Session.display(uid, values[i])).join(" ");
+    }
+
     // The entry's radiation and technique choose a new experiment's probe and beam mode when none is selected.
     function experimentFor(entry) {
         if (dialog.targetExperiment !== null)
@@ -128,7 +159,7 @@ AppDialog {
                         width: fieldColumn.labelWidth
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignRight
-                        text: fieldRow.modelData.label + ":"
+                        text: dialog.fieldLabel(fieldRow.modelData.key) + ":"
                     }
                     EaElements.TextField {
                         objectName: "onlineLoad.field." + fieldRow.modelData.key
@@ -206,11 +237,11 @@ AppDialog {
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
-                    text: dialog.kind === "structure" ? qsTr("Formula") : qsTr("Instrument")
+                    text: dialog.kind === "structure" ? qsTr("Formula") : Session.categoryTitle("instrument")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
-                    text: dialog.kind === "structure" ? qsTr("Space group") : qsTr("Technique")
+                    text: dialog.kind === "structure" ? Session.categoryTitle("space_group") : qsTr("Technique")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {}
@@ -222,7 +253,7 @@ AppDialog {
                 required property string name
                 required property string formula
                 required property string spaceGroup
-                required property string cell
+                required property var cell
                 required property string radiation
                 required property string technique
                 required property string instrument
@@ -248,7 +279,7 @@ AppDialog {
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
                     text: row.name
-                    ToolTip.text: row.cell !== "" ? qsTr("Cell") + ": " + row.cell : ""
+                    ToolTip.text: dialog.cellText(row.cell) !== "" ? Session.categoryTitle("cell") + ": " + dialog.cellText(row.cell) : ""
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
