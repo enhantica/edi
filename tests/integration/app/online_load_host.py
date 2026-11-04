@@ -1,0 +1,111 @@
+"""Dispatch online-load cases to one production Qt host per test module."""
+
+import json
+import os
+import subprocess
+from contextlib import contextmanager
+from pathlib import Path
+from queue import Empty, Queue
+from threading import Thread
+from time import monotonic
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[3]
+
+
+class OnlineHost:
+    def __init__(self, process, mailbox):
+        self.process = process
+        self.mailbox = mailbox
+        self.lines = Queue()
+        self.sequence = 0
+        self.failed = False
+        self.reader = Thread(target=self._read_output, daemon=True)
+        self.reader.start()
+
+    def _read_output(self):
+        for line in self.process.stdout:
+            self.lines.put(line.rstrip())
+        self.lines.put(None)
+
+    def receive(self, marker):
+        output = []
+        deadline = monotonic() + 30
+        while (remaining := deadline - monotonic()) > 0:
+            try:
+                line = self.lines.get(timeout=remaining)
+            except Empty:
+                pytest.fail(f'The Qt host timed out waiting for {marker}: {output}')
+            if line is None:
+                pytest.fail(f'The Qt host exited before emitting {marker}: {output}')
+            if f'qml: {marker}' in line:
+                return line.split(f'qml: {marker}', 1)[1], '\n'.join(output)
+            output.append(line)
+        pytest.fail(f'The Qt host timed out waiting for {marker}: {output}')
+
+    def send(self, case, tag=''):
+        self.sequence += 1
+        pending = self.mailbox / 'pending'
+        pending.write_text(json.dumps({'id': self.sequence, 'case': case, 'tag': tag}))
+        pending.replace(self.mailbox / 'request')
+
+    def check(self, case, tag=''):
+        self.send(case, tag)
+        receipt, output = self.receive('ONLINE_RESULT ')
+        passed = json.loads(receipt) == {'id': self.sequence, 'passed': True}
+        self.failed |= not passed
+        assert passed, (
+            f'The production Qt case {case}/{tag} must pass with its own receipt:\n{output}'
+        )
+
+
+@contextmanager
+def run_online_host(mailbox, *, load_groups_only=False):
+    runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
+    assert runner.is_file(), 'Online loading requires the built production Qt host'
+    test_file = mailbox / 'tst_online_session.qml'
+    test_types = (ROOT / 'tests/unit/app').as_uri()
+    test_file.write_text(
+        f'import "{test_types}" as Online\n'
+        'Online.OnlineLoadSession {\n'
+        '    mailbox: Qt.resolvedUrl(".")\n'
+        f'    loadGroupsOnly: {json.dumps(load_groups_only)}\n'
+        '}\n'
+    )
+    collection = ROOT / 'tests/fixtures/online_sources/easydiffraction'
+    sources = ';'.join((
+        f'cod={(mailbox / "unreachable").as_uri()}',
+        f'easydiffraction={collection.as_uri()}',
+        f'easydiffraction-mirror={(mailbox / "unused-mirror").as_uri()}',
+    ))
+    with subprocess.Popen(
+        [str(runner), '-input', str(test_file), '-o', '-,txt'],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            'QT_QPA_PLATFORM': 'offscreen',
+            'QT_QUICK_BACKEND': 'software',
+            'EDI_ONLINE_SOURCES': sources,
+            # The small fixture patterns need one worker, without a team per plot update.
+            'OMP_NUM_THREADS': '1',
+        },
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ) as process:
+        host = OnlineHost(process, mailbox)
+        try:
+            host.receive('ONLINE_READY')
+            yield host
+            if process.poll() is None:
+                host.send('stop')
+                process.wait(timeout=5)
+            assert host.failed or process.returncode == 0, (
+                'A passing shared Qt host must exit cleanly after its final case'
+            )
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
+            host.reader.join(timeout=5)
