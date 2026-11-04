@@ -243,12 +243,6 @@ SideBarGroup {
             experiment: group.project ? group.project.currentExperiment : null
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
         }
-        // With no experiment selected the selectors show the type a new one takes with its measured data.
-        NewExperimentTypeGroup {
-            visible: group.project !== null && group.project.currentExperiment === null && !group.scan && group.project.canCreateExperiment
-            project: group.project
-        }
-
         // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-10-11, 2026-11-03). The Load menu
         // holds a full experiment and measured data for the selected experiment, each from a file or from the web.
         Row {
@@ -310,25 +304,31 @@ SideBarGroup {
                         toolTip: qsTr("Search EasyDiffraction's collection for a full experiment and open it")
                         onTriggered: onlineLoad.openFor("experiment", null)
                     }
+                    // Measured data goes into the selected experiment, or replaces what it holds (the owner, 2026-11-04):
+                    // a new experiment always starts from Create experiment. With none selected the line says so and
+                    // the two items are greyed.
+                    readonly property bool dataIntoSelected: loadMenu.selected !== null && !group.scan && loadMenu.selected.canLoadData
+                    readonly property bool replacing: loadMenu.selected !== null && !loadMenu.selected.calculationOnly
                     LoadMenuHeader {
-                        text: loadMenu.selected !== null ? qsTr("Measured data into %1").arg(loadMenu.selected.name) : qsTr("Measured data into a new experiment")
+                        objectName: "experiments.load.dataHeader"
+                        text: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace measured data of %1").arg(loadMenu.selected.name) : qsTr("Load measured data into %1").arg(loadMenu.selected.name)
                     }
                     LoadMenuItem {
                         objectName: "experiments.load.dataFile"
-                        enabled: !group.scan && (loadMenu.selected === null ? group.project !== null && group.project.canCreateExperiment : loadMenu.selected.canLoadData)
+                        enabled: loadMenu.dataIntoSelected
                         fontIcon: "file"
                         text: qsTr("From file…")
                         hint: ".xye .xy .dat .txt .csv · .int .hkl"
-                        toolTip: loadMenu.selected !== null ? qsTr("Load a measured pattern or reflection list into %1").arg(loadMenu.selected.name) : qsTr("Create an experiment from the type selectors and load its measured data")
+                        toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace the measured data of %1 with a file's; its type and parameters stay, Undo brings the data back").arg(loadMenu.selected.name) : qsTr("Load a measured pattern or reflection list into %1").arg(loadMenu.selected.name)
                         onTriggered: group.chooseDataForSelected()
                     }
                     LoadMenuItem {
                         objectName: "experiments.load.dataWeb"
-                        enabled: !group.scan && (loadMenu.selected === null ? group.project !== null && group.project.canCreateExperiment : loadMenu.selected.canLoadData)
+                        enabled: loadMenu.dataIntoSelected
                         fontIcon: "globe"
                         text: qsTr("From web…")
                         hint: "EasyDiffraction"
-                        toolTip: qsTr("Search EasyDiffraction's collection for measured data")
+                        toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : qsTr("Search EasyDiffraction's collection for measured data for %1").arg(loadMenu.selected.name)
                         onTriggered: onlineLoad.openFor("data", loadMenu.selected)
                     }
                 }
@@ -361,64 +361,10 @@ SideBarGroup {
         project: group.project
     }
 
-    // Measured data from a file for the selected experiment, or for a new one when none is selected: the new
-    // experiment is made only once a file is chosen and read, so a cancelled picker or a refused file leaves the
-    // project as it was.
+    // Measured data goes into the selected experiment (the owner, 2026-11-04); the menu offers it only then.
     function chooseDataForSelected() {
-        if (project === null)
-            return;
-        if (project.currentExperiment !== null) {
+        if (project !== null && project.currentExperiment !== null)
             chooseData(project.currentExperiment);
-            return;
-        }
-        if (WebFiles.available) {
-            newDataRequest = WebFiles.openFiles(dataFilter, false);
-            newDataProject = project;
-        } else {
-            newDataDialog.project = project;
-            newDataDialog.open();
-        }
-    }
-
-    // The browser's answer for a new experiment's data: only this request's, and only for the project it was
-    // made for while that project is still the open one.
-    property int newDataRequest: 0
-    property var newDataProject: null
-    Connections {
-        target: WebFiles
-        function onFilesOpened(request, files) {
-            if (request !== group.newDataRequest || request === 0)
-                return;
-            group.newDataRequest = 0;
-            if (group.project !== null && group.project === group.newDataProject && files.length > 0)
-                group.project.loadDataIntoNewExperiment(files[0]);
-            group.newDataProject = null;
-        }
-        function onCancelled(request) {
-            if (request === group.newDataRequest) {
-                group.newDataRequest = 0;
-                group.newDataProject = null;
-            }
-        }
-        // A failed request is over: files arriving under its number afterwards are not this request's.
-        function onFailed(request, message) {
-            if (request === group.newDataRequest) {
-                group.newDataRequest = 0;
-                group.newDataProject = null;
-            }
-        }
-    }
-    FileDialog {
-        id: newDataDialog
-        property var project: null
-        title: group.project !== null && group.project.newExperimentSampleFormToken === "single crystal" ? qsTr("Load measured reflections for a new experiment") : qsTr("Load measured data for a new experiment")
-        nameFilters: group.project !== null && group.project.newExperimentSampleFormToken === "single crystal" ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)")] : [qsTr("Pattern files (*.xye *.xy *.dat *.txt *.csv)")]
-        onAccepted: {
-            if (group.project !== null && group.project === newDataDialog.project)
-                group.project.loadDataIntoNewExperiment(selectedFile);
-            newDataDialog.project = null;
-        }
-        onRejected: newDataDialog.project = null
     }
 
     // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to

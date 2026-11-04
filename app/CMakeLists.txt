@@ -257,7 +257,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ExperimentPage.qml
         qml/Pages/Experiment/ExperimentTypeGroup.qml
         qml/Pages/Experiment/ExperimentsGroup.qml
-        qml/Pages/Experiment/NewExperimentTypeGroup.qml
         qml/Pages/Experiment/InstrumentGroup.qml
         qml/Pages/Experiment/LinkedStructureGroup.qml
         qml/Pages/Experiment/MeasuredRangeGroup.qml

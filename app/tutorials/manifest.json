@@ -454,7 +454,7 @@
         },
         {
           "title": "Load the data",
-          "text": "Load the measured pattern from hrpt.xye: press Load, then From file… under Measured data.",
+          "text": "Load the measured pattern from hrpt.xye: press Load, then From file… under Load measured data.",
           "page": "experiment",
           "target": "experiments.load",
           "expected": "The measured pattern is in the main area.",

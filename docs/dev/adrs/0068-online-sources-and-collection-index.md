@@ -72,6 +72,10 @@ no database server.
   digest its index entry records before a loader sees it; a mismatch is refused with the file named. A file path in
   an index follows one portable grammar (segments of letters, digits, `.`, `_`, `~` and `-`, each starting with a
   letter or digit, joined by single slashes), so no drive, scheme, backslash or parent segment reaches a join.
+- Measured data, from a file or from the web, goes into the selected experiment or replaces what it holds (its type
+  and parameters stay, Undo brings the data back); a new experiment always starts from Create experiment, so with no
+  experiment selected the Load menu's measured-data line reads "Create an experiment first to load data into it" and
+  its two items are greyed (the owner, 2026-11-04). The former "New experiment type" group is gone.
 - When no source holding projects can be read, the Examples list says so above the rows and opening an example
   fails with the sources' errors; nothing is cached, and the next Open reads the sources again before giving up.
 - An example open is asynchronous: the request keeps a tutorial's aside intent and the project it was made against,
