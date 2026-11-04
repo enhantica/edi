@@ -162,6 +162,8 @@ AppDialog {
                 valueRole: "key"
                 model: dialog.search.sources
                 currentIndex: Math.max(0, dialog.search.sources.indexOfKey(dialog.search.sourceId))
+                // The shown name follows the chosen source, also after the kind's source list was rebuilt.
+                displayText: Session.onlineSources.nameOf(dialog.search.sourceId)
                 onActivated: index => {
                     dialog.values = {};
                     dialog.deliveryMessage = "";
