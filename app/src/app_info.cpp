@@ -6000,6 +6000,13 @@ QJSValue tableMeasure(const PanelUsageFrame& f, const QJSValue& cell, bool fresh
         return tablePadded(f, cell, width);
     }
     if (tableHas(f, cell, "elide")) return panelUsageRead(f, cell, "implicitWidth");
+    if (tableHas(f, cell, "cursorPosition") && tableHas(f, cell, "text")) {
+        // A text input is measured in the bold it takes while edited, with room for the caret after its last
+        // character: fitted to its regular content alone, a name scrolled its first character out when edited.
+        const auto bold = panelUsageContextRead(f, "boldMetrics");
+        const auto width = panelUsageMemberCall(f, bold, "advanceWidth", {panelUsageRead(f, cell, "text")});
+        return tablePadded(f, cell, panelUsageAdd(f, width, panelUsageRead(f, bold, "averageCharacterWidth")));
+    }
     if (tableHas(f, cell, "contentWidth")) return tablePadded(f, cell, panelUsageRead(f, cell, "contentWidth"));
     const auto array = panelUsageContextRead(f, "Array");
     const auto children = panelUsageMemberCall(f, array, "from", {panelUsageRead(f, cell, "children")});
@@ -6095,6 +6102,7 @@ struct TableFreshInputs {
     int fillerIndex = -1;
     double fillerWidth = 0, spacing = 0, fontPixelSize = 0;
     QObject* metrics = nullptr;
+    QObject* boldMetrics = nullptr;
 };
 bool tableFreshHas(const QObject* object, const char* name) {
     return object != nullptr && object->metaObject()->indexOfProperty(name) >= 0;
@@ -6148,6 +6156,14 @@ double tableFreshMeasure(QJSEngine* engine, QQuickItem* cell, const QString& kin
         return tableFreshPadded(cell, width);
     }
     if (tableFreshHas(cell, "elide")) return cell->implicitWidth();
+    if (tableFreshHas(cell, "cursorPosition") && tableFreshHas(cell, "text")) {
+        // As the live rule: the bold the input takes while edited, plus room for the caret.
+        QObject* bold = in.boldMetrics != nullptr ? in.boldMetrics : in.metrics;
+        qreal width = 0;
+        if (bold != nullptr) QMetaObject::invokeMethod(bold, "advanceWidth", Q_RETURN_ARG(qreal, width), Q_ARG(QString, cell->property("text").toString()));
+        const qreal room = bold != nullptr ? bold->property("averageCharacterWidth").toReal() : 0;
+        return tableFreshPadded(cell, width + room);
+    }
     if (tableFreshHas(cell, "contentWidth")) return tableFreshPadded(cell, tableFreshNumber(cell, "contentWidth"));
     // A cell holding a control (a combo box in a ComboCell) is as wide as the control, with the cell's paddings.
     double widest = cell->implicitWidth();
@@ -6552,6 +6568,7 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
         freshInputs.spacing = panelUsageRead(f, sizes, "tableColumnSpacing").toNumber();
         freshInputs.fontPixelSize = panelUsageRead(f, sizes, "fontPixelSize").toNumber();
         freshInputs.metrics = panelUsageContextRead(f, "metrics").toQObject();
+        freshInputs.boldMetrics = panelUsageContextRead(f, "boldMetrics").toQObject();
         freshWidths = tableNumbers(widths);
     }
     QObject* const headerObject = fresh ? nullptr : panelUsageContextRead(f, "headerItem").toQObject();
