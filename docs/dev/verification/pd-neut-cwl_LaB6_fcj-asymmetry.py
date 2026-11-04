@@ -5,14 +5,17 @@
 # asymmetry** enabled (`cwl-tch-pseudo-voigt-fcj`, `S_L` = `D_L` = 0.08 — the FullProf
 # reference's own values, fixed, as nothing fits them).
 #
-# **Continuous FCJ.** Crysta integrates in the axial offset with positive weights on both
-# sides of 90°. The FullProf reference uses its own quadrature, including the cutoff near
-# the centre. Crysta ADR-0110 measures the resulting difference at these fixed parameters.
+# **The kernel follows FullProf's own library.** The TCH pseudo-Voigt core is convolved with
+# the FCJ aberration by Gauss-Legendre quadrature exactly as crysfml's `Prof_Val` does it,
+# including its node count on the signed integration span (6 nodes above 90°) — measured
+# closer to FullProf than a finer integral. Upstream's page records a known discrepancy
+# instead: cryspy has no FCJ term.
 #
 # **Scattering table.** Sears (1992), declared as on the basic page (`sears1992`).
 #
-# **Parity envelope.** ADR-0110 records 2.43% relative L2 and 2.03% of the reference
-# peak maximum. Allow one unit of the displayed precision in each bound.
+# **The bounds are labelled regression pins** — this page's own measured closeness with stated
+# headroom (profile difference 0.43 %, max deviation 0.37 %, area ratio 0.99960, correlation
+# 0.9999903).
 
 # %%
 from edi import ExperimentFactory
@@ -159,10 +162,10 @@ verify.assert_patterns_agree(
         ),
     ],
     tolerances=verify.AgreementTolerances(
-        max_profile_difference_percent=2.44,
-        max_deviation_percent=2.04,
+        max_profile_difference_percent=0.50,
+        max_deviation_percent=0.45,
         min_intensity_ratio=0.9993,
         max_intensity_ratio=1.0007,
-        min_correlation=0.999,
+        min_correlation=0.99998,
     ),
 )

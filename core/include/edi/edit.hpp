@@ -262,15 +262,12 @@ struct ReportSettingsState {
     std::optional<std::string> excluded;
     std::optional<double> correlation_threshold;
     std::optional<std::string> pattern_x_axis;
-    std::optional<bool> evolution_error_bars;
-    std::optional<std::string> evolution_range;
     bool operator==(const ReportSettingsState&) const = default;
 };
 
 inline ReportSettingsState report_settings_state(const Project& project) {
     return {project.report_html,    project.report_pdf,           project.report_cif,     project.report_html_offline,
-            project.report_excluded, project.correlation_threshold, project.pattern_x_axis,
-            project.evolution_error_bars, project.evolution_range};
+            project.report_excluded, project.correlation_threshold, project.pattern_x_axis};
 }
 
 // Same-owner completion is deliberately not a general merge/replacement. These
@@ -565,8 +562,6 @@ class Edit {
             project.report_excluded = state.excluded;
             project.correlation_threshold = state.correlation_threshold;
             project.pattern_x_axis = state.pattern_x_axis;
-            project.evolution_error_bars = state.evolution_error_bars;
-            project.evolution_range = state.evolution_range;
         });
     }
     // The project's report settings (ADR-0036 §7), each absent until stated.
@@ -588,15 +583,6 @@ class Edit {
     // A parameter's value, under its admissible range (assign_value).
     static Edit value(Parameter& parameter, double value) {
         return Edit([&parameter, value] { assign_value(parameter, value); });
-    }
-    // Several parameters' values in one edit, each under its admissible range: a moment edited in another form (edi
-    // ADR-0070), whose free components change together.
-    static Edit values(std::vector<std::pair<Parameter*, double>> writes) {
-        return Edit([writes = std::move(writes)] {
-            for (const auto& [parameter, value] : writes) {
-                assign_value(*parameter, value);
-            }
-        });
     }
     /// Assign a whole validated assistant batch, resolving and checking every path before the first write.
     static Edit parameter_values(Project& project, std::vector<std::pair<std::string, double>> values) {
@@ -742,15 +728,6 @@ class Edit {
     static Edit chi_square_tolerance(Project& project, double tolerance) {
         return Edit([&project, tolerance] { set_minimizer_chi_square_tolerance(project, tolerance); });
     }
-    static Edit stop_rule(Project& project, std::string rule) {
-        return Edit([&project, rule = std::move(rule)] { set_minimizer_stop_rule(project, rule); });
-    }
-    static Edit shift_tolerance(Project& project, double tolerance) {
-        return Edit([&project, tolerance] { set_minimizer_shift_tolerance(project, tolerance); });
-    }
-    static Edit moments_near_zero(Project& project, std::string option) {
-        return Edit([&project, option = std::move(option)] { set_minimizer_moments_near_zero(project, option); });
-    }
     // The facility and instrument that measured an experiment (ADR-0054), both at once, as a change of facility
     // may also clear the instrument. "?" states an unknown one.
     static Edit instrument_description(ExperimentBase& experiment, std::string facility, std::string instrument) {
@@ -862,81 +839,6 @@ class Edit {
     // copy, so a refusal writes nothing.
     static Edit adp_type(Structure& structure, AtomSite& site, std::string type) {
         return Edit([&structure, &site, type = std::move(type)] { change_adp_type(structure, site, type); });
-    }
-    // The propagation vectors, checked as a whole (set_propagation_vectors).
-    static Edit propagation_vectors(Structure& structure, std::vector<std::pair<std::string, std::string>> rows) {
-        return Edit([&structure, rows = std::move(rows)] { set_propagation_vectors(structure, rows); });
-    }
-    // Whether a site carries a magnetic moment (edi ADR-0070): marking it adds its moment row, all three
-    // components zero; unmarking removes the row.
-    static Edit moment_site(Structure& structure, const AtomSite& site, bool magnetic) {
-        return Edit([&structure, &site, magnetic] {
-            std::optional<std::size_t> found;
-            for (std::size_t row = 0; row < structure.atom_site_moment.size(); ++row) {
-                if (structure.atom_site_moment[row]->id.value() == site.id.value()) {
-                    found = row;
-                }
-            }
-            if (magnetic && !found) {
-                AtomSiteMoment moment;
-                moment.id = site.id.value();
-                structure.atom_site_moment.push_back(std::move(moment));
-            } else if (!magnetic && found) {
-                structure.atom_site_moment.erase_at(*found);
-            }
-        });
-    }
-    // The magnetic ion of an atom type, whose form factor its moments take; empty: the type's default ion. The
-    // type's form-factor row is added for an ion, and removed with its ion when nothing else in it is set.
-    static Edit magnetic_ion(Structure& structure, std::string type_symbol, std::string ion) {
-        return Edit([&structure, type_symbol = std::move(type_symbol), ion = std::move(ion)] {
-            MagneticFormFactor& row = form_factor_row(structure, type_symbol);
-            row.ion = ion;
-            drop_default_form_factor(structure, type_symbol);
-        });
-    }
-    // The form-factor approximation of an atom type: `j0`, `dipole` or `beyond_dipole`.
-    static Edit magnetic_approximation(Structure& structure, std::string type_symbol, std::string approximation) {
-        return Edit([&structure, type_symbol = std::move(type_symbol), approximation = std::move(approximation)] {
-            if (approximation != "j0" && approximation != "dipole" && approximation != "beyond_dipole") {
-                throw std::invalid_argument("magnetic form-factor approximation '" + approximation +
-                                            "' is none of j0, dipole and beyond_dipole");
-            }
-            form_factor_row(structure, type_symbol).approximation = approximation;
-            drop_default_form_factor(structure, type_symbol);
-        });
-    }
-    // The form-factor row of an atom type, added with the defaults when the structure has none.
-    static MagneticFormFactor& form_factor_row(Structure& structure, const std::string& type_symbol) {
-        for (const auto& row : structure.magnetic_form_factors) {
-            if (row->id.value() == type_symbol) {
-                return *row;
-            }
-        }
-        MagneticFormFactor added;
-        added.id = type_symbol;
-        structure.magnetic_form_factors.push_back(std::move(added));
-        return *structure.magnetic_form_factors.back();
-    }
-    // Removes an atom type's form-factor row when it holds only defaults: no ion, `j0`, every coefficient 0 and
-    // fixed. Such a row means what no row means.
-    static void drop_default_form_factor(Structure& structure, const std::string& type_symbol) {
-        for (std::size_t at = 0; at < structure.magnetic_form_factors.size(); ++at) {
-            MagneticFormFactor& row = *structure.magnetic_form_factors[at];
-            if (row.id.value() != type_symbol) {
-                continue;
-            }
-            const std::vector<Parameter*> coefficients = row.parameters();
-            const bool plain = std::all_of(coefficients.begin(), coefficients.end(), [](const Parameter* c) {
-                const double value = c->value;
-                const bool free = c->free;
-                return value == 0.0 && !free;
-            });
-            if (row.ion.value().empty() && row.approximation.value() == "j0" && plain) {
-                structure.magnetic_form_factors.erase_at(at);
-            }
-            return;
-        }
     }
     static Edit texture_axis_component(PrefOrient& row, detail::Written<int> PrefOrient::*component, int value) {
         return Edit([&row, component, value] { set_texture_axis_component(row, component, value); });
@@ -1053,18 +955,9 @@ class Edit {
                     tensor = row;
                 }
             }
-            std::optional<std::size_t> moment;
-            for (std::size_t row = 0; row < structure.atom_site_moment.size(); ++row) {
-                if (structure.atom_site_moment[row]->id.value() == id) {
-                    moment = row;
-                }
-            }
             structure.atom_sites.erase_at(index);
             if (tensor) {
                 structure.atom_site_aniso.erase_at(*tensor);
-            }
-            if (moment) {
-                structure.atom_site_moment.erase_at(*moment);
             }
         });
     }

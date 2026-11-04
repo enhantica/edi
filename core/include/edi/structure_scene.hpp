@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -36,15 +35,7 @@ enum class ColorScheme : std::uint8_t { Jmol, Vesta };
 // anisotropic site, a sphere for an isotropic one; a ball of the covalent radius where a site has neither.
 enum class AtomView : std::uint8_t { Covalent, VanDerWaals, Ionic, Adp };
 enum class Projection : std::uint8_t { Orthographic, Perspective };
-// The Atoms selector: every atom, one per orbit of the crystal (a magnetic structure's parent) group, one per orbit
-// of the magnetic group, the atoms with a moment, or none.
-enum class AtomSubset : std::uint8_t { All, AsymmetricUnit, AsymmetricMagnetic, MagneticAtoms, None };
-// How the moment arrows are coloured (the owner, 2026-11-03): each in its atom's colour, in that colour
-// greyed so arrows stand apart from the atoms while the types stay distinct, or all in one grey.
-enum class MomentColours : std::uint8_t { Atom, GreyedAtom, Single };
-// Where a moment's arrow sits on its atom (`_structure_view.moment_view`; the owner, 2026-11-03): centred on it, starting
-// at its centre, or starting at its surface, so the visible length is proportional to the moment.
-enum class MomentView : std::uint8_t { ThroughAtom, FromCentre, FromSurface };
+enum class AtomSubset : std::uint8_t { All, AsymmetricUnit, None };
 
 // The element tables: data/elements/element-styles.tsv, embedded in the core at build time. 118 rows,
 // H to Og. Parsed once; a malformed row throws std::runtime_error naming it.
@@ -97,12 +88,6 @@ struct SceneSource {
     // The space group's rotations in fractional coordinates (row-major), by symmetry operation id - 1: an
     // expanded row's `site_symmetry` code `n_klm` names its operation n, which turns the site's tensor onto it.
     std::vector<std::array<int, 9>> operation_rotations;
-    // `_expanded_atom_site_moment`: each magnetic row's moment in Bohr magnetons along a, b and c.
-    Column<std::string> moment_site_id, moment_symmetry;
-    Column<double> moment_x, moment_y, moment_z;
-    // The sites that stand for the crystal's asymmetric unit (for a magnetic structure, its parent group's), and the
-    // sites that carry a moment.
-    std::set<std::string> crystal_sites, magnetic_sites;
 };
 // Owner thread. Reads the stored geometry only while `structure.geometry_current()` is true, and never
 // computes it; otherwise the source has `current` false and no column.
@@ -115,10 +100,6 @@ struct SceneOptions {
     double adp_probability = 0.99;  // diffraction-lib's `_structure_style.adp_probability`, in (0, 1)
     AtomSubset atoms = AtomSubset::All;
     bool bonds = true, cell = true, axes = true, labels = false;
-    bool moments = true;        // `_structure_view.show_moments`
-    double moment_scale = 0.75;  // Angstrom of arrow per Bohr magneton (`_structure_view.moment_scale`)
-    MomentColours moment_colours = MomentColours::GreyedAtom;  // the app's preference
-    MomentView moment_view = MomentView::ThroughAtom;          // `_structure_view.moment_view`
 };
 
 struct ScenePart {  // one site at a position
@@ -163,10 +144,6 @@ struct SceneLabel {
     Vec3 anchor;
     std::string text;
 };
-struct SceneMoment {  // one magnetic atom's moment, centred on it
-    std::size_t atom = 0;
-    Vec3 centre, vector;  // Angstrom; the vector is the moment times the scale
-};
 struct SceneLegendEntry {
     std::string element;
     Rgb color;
@@ -186,9 +163,6 @@ struct StructureScene {
     std::vector<SceneEdge> cell_edges;
     std::vector<SceneAxis> axes;
     std::vector<SceneLabel> labels;
-    std::vector<SceneMoment> moments;
-    MomentColours moment_colours = MomentColours::GreyedAtom;  // as the options asked
-    MomentView moment_view = MomentView::ThroughAtom;          // as the options asked
     std::vector<SceneLegendEntry> legend;
     std::vector<std::string> substituted_elements;  // sorted, once each; "" for parts with no element
     SceneFrame frame;
@@ -242,7 +216,6 @@ struct SceneDrawing {  // everything a renderer places, in scene units
     std::vector<SceneInstance> spheres, cylinders;  // cylinders: half-bonds, then cell edges
     std::vector<std::size_t> shared;  // the drawn shared sites: shared[k] is the atom whose mesh ordinal is k
     std::vector<SceneArrow> triad;
-    std::vector<SceneArrow> moments;  // one per drawn magnetic atom, placed in the scene
 };
 // The unit sphere has radius 1; the unit cylinder has radius 1 and length 1 along +y, centred.
 SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport);

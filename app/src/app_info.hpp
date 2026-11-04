@@ -155,12 +155,10 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString developerYearsTo READ developerYearsTo CONSTANT)
     // The element symbols of the core's element table, H to Og: what an atom-type picker lists.
     Q_PROPERTY(QStringList elementSymbols READ elementSymbols CONSTANT)
-    // The Performance preferences' thread counts: whether this build can run fills on several threads
-    // (a browser without WebAssembly threads cannot), and the largest count it offers.
+    // The Develop preference's engine thread counts: whether this build can run fills on several threads
+    // (the single-thread web build cannot), and the largest count it offers.
     Q_PROPERTY(bool engineThreadsSelectable READ engineThreadsSelectable CONSTANT)
     Q_PROPERTY(int engineThreadsMaximum READ engineThreadsMaximum CONSTANT)
-    // The most scan files fitted at once: the cores the platform reports.
-    Q_PROPERTY(int scanWorkersMaximum READ scanWorkersMaximum CONSTANT)
     Q_PROPERTY(bool assistantAvailable READ assistantAvailable CONSTANT)
     /// Whether this build carries the AI assistant at all (EDI_APP_ASSISTANT, off for the web, ADR-0023 §6).
     Q_PROPERTY(bool assistantBuilt READ assistantBuilt CONSTANT)
@@ -913,9 +911,6 @@ class ApplicationInfo : public QObject {
     int engineThreadsMaximum() const;
     // Sets the engine's thread count for every fill: 0 for Auto, else that many threads.
     Q_INVOKABLE void setEngineThreads(int count) const;
-    int scanWorkersMaximum() const;
-    // Sets how many files of a scan are fitted at once (edi/threading.hpp set_scan_workers).
-    Q_INVOKABLE void setScanWorkers(int count) const;
     // Writes the settings file to the browser's storage at once (engine_setup.hpp store_settings_now).
     Q_INVOKABLE void storeSettings() const;
     // Where a link inside the bundled licence text at `from` leads, resolved against that text's own location

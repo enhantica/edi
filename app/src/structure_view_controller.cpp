@@ -490,7 +490,6 @@ void StructureViewController::present() {
     emit hasSitesChanged();
     emit hasCopiesChanged();
     emit hasBondsChanged();
-    emit hasMomentsChanged();
     emit substitutedElementsChanged();
     setCurrent(scene_.current && (report_ ? true : latestCurrent()));
     draw();
@@ -518,16 +517,6 @@ void StructureViewController::draw() {
             const QColor& color = axis_colors_[axis];
             themed.color = {static_cast<std::uint8_t>(color.red()), static_cast<std::uint8_t>(color.green()),
                             static_cast<std::uint8_t>(color.blue())};
-        }
-        shafts.push_back(arrow_part(themed, 0.0, themed.shaft_length, themed.shaft_radius));
-        heads.push_back(arrow_part(themed, themed.shaft_length, themed.head_length, themed.head_radius));
-    }
-    // The magnetic moments share the arrow meshes; their arrows are placed in the scene (edi ADR-0070).
-    for (const edi::SceneArrow& arrow : drawing_.moments) {
-        edi::SceneArrow themed = arrow;
-        // One grey: darker on the light theme, lighter on the dark one.
-        if (scene_.moment_colours == edi::MomentColours::Single && dark_) {
-            themed.color = {0xBD, 0xBD, 0xBD};
         }
         shafts.push_back(arrow_part(themed, 0.0, themed.shaft_length, themed.shaft_radius));
         heads.push_back(arrow_part(themed, themed.shaft_length, themed.head_length, themed.head_radius));

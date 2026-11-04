@@ -43,8 +43,3 @@ FullProf's fit of the same project prints Rwp 4.08 % and χ² 9.88.
 Most fitted values lie within FullProf's standard uncertainty of FullProf's own. The four asymmetry coefficients are
 not comparable: FullProf's convention differs from the paper's (diffraction-lib issue 166), and the map above is
 inexact.
-
-**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
-change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
-machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 23 → 10; reduced_chi_square 9.731184512 →
-9.731198019.

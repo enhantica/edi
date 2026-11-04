@@ -1,5 +1,0 @@
-{
-  "program": "FullProf",
-  "model_compatible": false,
-  "reason": "No FullProf run of the scan: FullProf fits the 2.3 K pattern in pd-neut-cwl_cosio-d20_2k."
-}

@@ -37,7 +37,3 @@ project fits everything at once with edi's own minimizer.
 `python -m edi fit <copy> --dry --report machine`: converged in 10 iterations, `n_free=23`, `n_points_fitted=5600`,
 reduced χ² 3.6111, Rwp 6.941 %, under a second. That is the minimum `pd-neut-tof_si-sepd_start-2` and `start-5`
 reach (reduced χ² 3.6111, Rwp 6.941 %).
-
-**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
-change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
-machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 10 → 9.

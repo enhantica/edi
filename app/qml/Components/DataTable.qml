@@ -187,26 +187,11 @@ EaComponents.ListView {
     onColumnsChanged: ApplicationInfo.tableColumnLayoutChanged()
     // The spare width follows the columns: the last data column's cells take it as padding after their content.
     onColumnWidthsChanged: ApplicationInfo.tableColumnsChanged(true)
-    onModelRevisionChanged: {
-        ApplicationInfo.tableColumnsChanged(false);
-        Qt.callLater(repairRows);
-    }
-    onCountChanged: {
-        ApplicationInfo.tableColumnsChanged(false);
-        Qt.callLater(repairRows);
-    }
+    onModelRevisionChanged: ApplicationInfo.tableColumnsChanged(false)
+    onCountChanged: ApplicationInfo.tableColumnsChanged(false)
     Component.onCompleted: {
         ApplicationInfo.tableApplyRuledWidths(true);
         refit();
-    }
-    onHeightChanged: Qt.callLater(repairRows)
-    // A view whose rows were all replaced before it laid out again could stop filling and show one stale row of what
-    // its count promised (the owner, 2026-11-03): once it has laid out, such a view is rebuilt (ViewRows).
-    function repairRows() {
-        if (!columnFitLife.alive || !visible || count === 0)
-            return;
-        forceLayout();
-        ViewRows.refill(table);
     }
     Connections {
         property var ownerLife: null

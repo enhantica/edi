@@ -125,27 +125,18 @@ class BackgroundTermListModel : public RowTableModel {
 };
 
 // The reflections the loaded file carried (`_refln`), read-only: `hkl` ("h k l"),
-// `dSpacing`, `position` (2θ or TOF), `fSquaredCalc` and, for a magnetic structure seen by neutrons,
-// `fMPerpSquaredCalc` (|M⊥|², edi ADR-0070) and `fSquaredTotalCalc` (F² + |M⊥|², as crysta computes it), numbers as
-// read; NaN where a cell is not one.
+// `dSpacing`, `position` (2θ or TOF) and `fSquaredCalc`, numbers as read; NaN where a cell is not one.
 class ReflectionListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to an experiment")
-    // Whether the reflections carry |M⊥|²: the table then shows it beside F²calc.
-    Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
 
    public:
     ReflectionListModel(const edi::ExperimentBase& experiment, QObject* parent);
     void sync();
-    bool magnetic() const { return magnetic_; }
-
-   signals:
-    void magneticChanged();
 
    private:
     const edi::ExperimentBase& experiment_;
-    bool magnetic_ = false;
 };
 
 // A single crystal's reflections: `h`, `k`, `l`, the measured F² and its su, the calculated F² and the

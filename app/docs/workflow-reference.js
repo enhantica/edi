@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 (function () {
-    const EXAMPLE_ID = "pd-neut-cwl_cosio-d20_scan-213f";
+    const EXAMPLE_ID = "pd-neut-cwl_cosio-d20_scan";
     return {schema: 2, workflow: "reference", example: EXAMPLE_ID, build: function (capture) {
         const scan = capture.fixture.values.fittingMode.some(function (mode) { return mode === "sequential" || mode === "independent"; });
         const prefix = scan ? "scan" : "joint";

@@ -32,7 +32,6 @@
 // as headers in the SDK. No engine type crosses here: the engine model stays behind the adapter.
 #include "crysta/anchors.hpp"
 #include "crysta/column.hpp"
-#include "crysta/magnetic_types.hpp"
 #include "crysta/schema.hpp"
 #include "crysta/stamped.hpp"
 
@@ -50,8 +49,6 @@ struct BraggPdExperiment;
 struct Structure;
 struct AtomSite;
 struct AtomSiteAniso;
-struct AtomSiteMoment;
-struct MagneticFormFactor;
 class Project;
 class ItemKey;
 struct Parameter;
@@ -2256,7 +2253,7 @@ class ItemVec final : public detail::KeyedBase {
             if (Project* project = host()) detail::follow_background_aliases(*project, key, next);
         } else if constexpr (std::is_same_v<T, AtomSite>) {
             detail::follow_site_references(host(), holder(), key.value(), next);
-        } else if constexpr (std::is_same_v<T, AtomSiteAniso> || std::is_same_v<T, AtomSiteMoment>) {
+        } else if constexpr (std::is_same_v<T, AtomSiteAniso>) {
             detail::follow_tensor_rename(holder(), key.value(), next);
         } else {
             (void)key;
@@ -2763,93 +2760,6 @@ struct RowTraits<AtomSiteAniso> {
     static const detail::RowLink* primary(const AtomSiteAniso& row) noexcept { return &row.row; }
 };
 
-// A magnetic site's moment, keyed by the site id: three components in Bohr magnetons along the cell
-// axes, and the symmetry form crysta derives for the site.
-struct AtomSiteMoment : std::enable_shared_from_this<AtomSiteMoment> {
-    ItemKey id;  // the site id;: owned by atom_site_moment
-    Parameter crystalaxis_x;
-    Parameter crystalaxis_y;
-    Parameter crystalaxis_z;
-    detail::WrittenText symmform;
-
-    AtomSiteMoment();
-
-    std::vector<Parameter*> parameters() { return {&crystalaxis_x, &crystalaxis_y, &crystalaxis_z}; }
-    std::vector<Parameter*> free_parameters();
-    detail::RowLink row;
-    detail::Epoch epoch;
-};
-
-template <>
-struct KeyTraits<AtomSiteMoment> {
-    static ItemKey& key(AtomSiteMoment& row) { return row.id; }
-    static const ItemKey& key(const AtomSiteMoment& row) { return row.id; }
-    static std::string canonical(const std::string& id) { return id; }
-    static const char* category() { return "magnetic atom site"; }
-};
-
-template <>
-struct RowTraits<AtomSiteMoment> {
-    static void link(AtomSiteMoment& row, const std::shared_ptr<detail::Membership>& record) noexcept {
-        row.row.link(record);
-    }
-    static void unlink(AtomSiteMoment& row) noexcept { row.row.unlink(); }
-    static const detail::RowLink* primary(const AtomSiteMoment& row) noexcept { return &row.row; }
-};
-
-// An atom type's magnetic form factor, keyed by the type symbol: the ion (empty: the type's own), the
-// approximation (`j0`, `dipole` or `beyond_dipole`) and the weights C2, C4, C6 of the <j2>, <j4> and
-// <j6> terms, which a fit can free. crysta checks and calculates it.
-struct MagneticFormFactor : std::enable_shared_from_this<MagneticFormFactor> {
-    ItemKey id;  // the type symbol;: owned by magnetic_form_factors
-    detail::WrittenText ion = "";
-    detail::WrittenText approximation = "j0";
-    Parameter j2_coefficient;
-    Parameter j4_coefficient;
-    Parameter j6_coefficient;
-
-    MagneticFormFactor();
-
-    std::vector<Parameter*> parameters() { return {&j2_coefficient, &j4_coefficient, &j6_coefficient}; }
-    std::vector<Parameter*> free_parameters();
-    detail::RowLink row;
-    detail::Epoch epoch;
-};
-
-template <>
-struct KeyTraits<MagneticFormFactor> {
-    static ItemKey& key(MagneticFormFactor& row) { return row.id; }
-    static const ItemKey& key(const MagneticFormFactor& row) { return row.id; }
-    static std::string canonical(const std::string& id) { return id; }
-    static const char* category() { return "magnetic form factor"; }
-};
-
-template <>
-struct RowTraits<MagneticFormFactor> {
-    static void link(MagneticFormFactor& row, const std::shared_ptr<detail::Membership>& record) noexcept {
-        row.row.link(record);
-    }
-    static void unlink(MagneticFormFactor& row) noexcept { row.row.unlink(); }
-    static const detail::RowLink* primary(const MagneticFormFactor& row) noexcept { return &row.row; }
-};
-
-// A structure's magnetic description besides its moments, each category as written: crysta reads,
-// checks and writes it.
-struct MagneticDescription {
-    crysta::MagneticGroupName group;
-    std::vector<std::pair<std::string, crysta::MagneticTransform>> transforms;
-    std::vector<std::pair<std::string, std::string>> operations;
-    std::vector<std::pair<std::string, std::string>> centerings;
-    crysta::ParentSpaceGroup parent;
-    std::vector<std::pair<std::string, std::string>> propagation_vectors;
-
-    bool empty() const noexcept {
-        return group.empty() && transforms.empty() && operations.empty() && centerings.empty() &&
-               parent.empty() && propagation_vectors.empty();
-    }
-    friend bool operator==(const MagneticDescription&, const MagneticDescription&) = default;
-};
-
 }  // namespace edi
 
 // ADR-0018: the columns of the `_atom_site` table.
@@ -2867,30 +2777,6 @@ struct RowSchema<edi::AtomSiteAniso> {
     static constexpr const char* name = "_atom_site_aniso";
     static constexpr auto fields = std::tuple{&edi::AtomSiteAniso::id, &edi::AtomSiteAniso::adp_11, &edi::AtomSiteAniso::adp_22, &edi::AtomSiteAniso::adp_33, &edi::AtomSiteAniso::adp_12, &edi::AtomSiteAniso::adp_13, &edi::AtomSiteAniso::adp_23};
     static constexpr std::array items{"id", "adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"};
-};
-
-// The columns of the `_atom_site_moment` table (ADR-0070).
-template <>
-struct RowSchema<edi::AtomSiteMoment> {
-    static constexpr const char* name = "_atom_site_moment";
-    static constexpr auto fields = std::tuple{&edi::AtomSiteMoment::id, &edi::AtomSiteMoment::crystalaxis_x,
-                                              &edi::AtomSiteMoment::crystalaxis_y, &edi::AtomSiteMoment::crystalaxis_z,
-                                              &edi::AtomSiteMoment::symmform};
-    static constexpr std::array items{"id", "crystalaxis_x", "crystalaxis_y", "crystalaxis_z", "symmform"};
-};
-
-// The columns of the `_magnetic_form_factor` table.
-template <>
-struct RowSchema<edi::MagneticFormFactor> {
-    static constexpr const char* name = "_magnetic_form_factor";
-    static constexpr auto fields =
-        std::tuple{&edi::MagneticFormFactor::id, &edi::MagneticFormFactor::ion, &edi::MagneticFormFactor::approximation,
-                   &edi::MagneticFormFactor::j2_coefficient, &edi::MagneticFormFactor::j4_coefficient,
-                   &edi::MagneticFormFactor::j6_coefficient};
-    static constexpr std::array items{"type_symbol", "ion", "approximation", "j2_coefficient", "j4_coefficient",
-                                      "j6_coefficient"};
-    // The CIF spelling: magCIF has no form-factor items, so CIF takes local names.
-    static constexpr std::array legacy{"_edi_magnetic_form_factor"};
 };
 }  // namespace crysta
 
@@ -2977,14 +2863,6 @@ struct ExpandedAtomSites {  // `_expanded_atom_site`
     ComputedColumn<std::int32_t> cluster_id;
     std::size_t size() const noexcept { return atom_site_id.size(); }
 };
-struct ExpandedAtomSiteMoments {  // `_expanded_atom_site_moment`
-    ComputedColumn<std::string> atom_site_id;
-    ComputedColumn<std::string> site_symmetry;
-    ComputedColumn<double> crystalaxis_x;
-    ComputedColumn<double> crystalaxis_y;
-    ComputedColumn<double> crystalaxis_z;
-    std::size_t size() const noexcept { return atom_site_id.size(); }
-};
 struct GeomBonds {  // `_geom_bond`
     ComputedColumn<std::int32_t> expanded_atom_site_id_1;
     ComputedColumn<std::int32_t> expanded_atom_site_id_2;
@@ -3002,7 +2880,6 @@ struct CartnTransform {  // `_atom_sites_cartn_transform`: r = M x, row-major
 struct StructureGeometry {
     SpaceGroupSymop space_group_symop;
     ExpandedAtomSites expanded_atom_sites;
-    ExpandedAtomSiteMoments expanded_atom_site_moments;
     GeomBonds geom_bond;
     CartnTransform atom_sites_cartn_transform;
     ViewWindow window;
@@ -3028,12 +2905,6 @@ struct Structure : std::enable_shared_from_this<Structure> {
     ItemVec<AtomSite> atom_sites;  // Shared items, deep-copied with the structure
     // The anisotropic sites' tensors, one row per such site (ADR-0027).
     ItemVec<AtomSiteAniso> atom_site_aniso;
-    // The magnetic sites' moments, one row per magnetic site, and the rest of the magnetic
-    // description; both empty for a structure without magnetic order.
-    ItemVec<AtomSiteMoment> atom_site_moment;
-    detail::Written<MagneticDescription> magnetic;
-    // The magnetic atom types' form factors, one row per type a file or an edit declares.
-    ItemVec<MagneticFormFactor> magnetic_form_factors;
     // Element -> coherent bound neutron scattering length b_c (fm). Empty => the adapter uses crysta's
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).
     // A loop category held in one cell; written whole or with `modify`.
@@ -3070,8 +2941,6 @@ struct Structure : std::enable_shared_from_this<Structure> {
     void hold_rows() noexcept {
         atom_sites.holder_ = this;
         atom_site_aniso.holder_ = this;
-        atom_site_moment.holder_ = this;
-        magnetic_form_factors.holder_ = this;
     }
 };
 
@@ -3082,9 +2951,6 @@ inline Structure::Structure(const Structure& other)
       cell(other.cell),
       atom_sites(other.atom_sites),
       atom_site_aniso(other.atom_site_aniso),
-      atom_site_moment(other.atom_site_moment),
-      magnetic(other.magnetic),
-      magnetic_form_factors(other.magnetic_form_factors),
       scattering_lengths_fm(other.scattering_lengths_fm),
       view(other.view),
       epoch(other.epoch),
@@ -3103,39 +2969,19 @@ inline void follow_site_rename(Structure* structure, const std::string& from, co
     if (structure == nullptr || from == to) {
         return;
     }
-    // The site's tensor and moment rows take the new id, or neither does.
-    ItemKey* tensor = nullptr;
-    ItemKey* moment = nullptr;
     for (const auto& row : structure->atom_site_aniso) {
         if (row->id.value() == from) {
-            tensor = &row->id;
-        }
-    }
-    for (const auto& row : structure->atom_site_moment) {
-        if (row->id.value() == from) {
-            moment = &row->id;
-        }
-    }
-    following_site = true;
-    try {
-        if (tensor != nullptr) {
-            *tensor = to;
-        }
-        try {
-            if (moment != nullptr) {
-                *moment = to;
+            following_site = true;
+            try {
+                row->id = to;
+            } catch (...) {
+                following_site = false;
+                throw;
             }
-        } catch (...) {
-            if (tensor != nullptr) {
-                *tensor = from;
-            }
-            throw;
+            following_site = false;
+            return;
         }
-    } catch (...) {
-        following_site = false;
-        throw;
     }
-    following_site = false;
 }
 
 inline void follow_tensor_rename(Structure* structure, const std::string& from, const std::string& to) {
@@ -3144,7 +2990,7 @@ inline void follow_tensor_rename(Structure* structure, const std::string& from, 
     }
     for (const auto& site : structure->atom_sites) {
         if (site->id.value() == from) {
-            throw std::invalid_argument("the row of site '" + detail::printable_id(from) +
+            throw std::invalid_argument("the anisotropic row of site '" + detail::printable_id(from) +
                                         "' cannot be renamed to '" + detail::printable_id(to) +
                                         "' on its own: it follows its site; rename the site");
         }
@@ -3520,11 +3366,6 @@ struct PdDataBase {
     // row-major, one value per point and structure in `component_order` (the structures' ids). Empty until a
     // calculation ran, and when no structure is linked.
     ComputedColumn<double> component_intensities_net;
-    // A magnetic structure's curve in its magnetic part (the profile from |M⊥|² alone) and its
-    // nuclear part (the net curve less it), in the layout of component_intensities_net. Empty unless a linked structure
-    // is magnetic and seen by neutrons.
-    ComputedColumn<double> component_intensities_magnetic;
-    ComputedColumn<double> component_intensities_nuclear;
     ComputedColumn<std::string> component_order;
     // ADR-0021 §2: crysta's residual — measured minus calculated on the included rows, NaN on
     // the excluded ones, empty for a calculation-only experiment. Published with the columns
@@ -3563,8 +3404,6 @@ struct PdDataBase {
         intensity_bkg.clear();
         calc_status.clear();
         component_intensities_net.clear();
-        component_intensities_magnetic.clear();
-        component_intensities_nuclear.clear();
         component_order.clear();
         residual.clear();
     }
@@ -4031,10 +3870,6 @@ struct PowderReflnDataBase {
     ComputedColumn<std::int32_t> index_l;
     ComputedColumn<double> f_calc;
     ComputedColumn<double> f_squared_calc;
-    // |M⊥|² per reflection for a magnetic structure seen by neutrons (edi ADR-0070); empty otherwise.
-    ComputedColumn<double> f_m_perp_squared_calc;
-    // F² + |M⊥|² per reflection, as crysta computes it, on the same condition.
-    ComputedColumn<double> f_squared_total_calc;
     ComputedColumn<double> position;
     // For an object the Python `refln` getter handed out, the experiment it came from;
     // unlinked on a copy (detail::DataSource).
@@ -4056,8 +3891,6 @@ struct PowderReflnDataBase {
         index_l.clear();
         f_calc.clear();
         f_squared_calc.clear();
-        f_m_perp_squared_calc.clear();
-        f_squared_total_calc.clear();
         position.clear();
     }
 };
@@ -4482,9 +4315,6 @@ struct FitPreamble {
     std::size_t n_points_fitted = 0;
     std::size_t n_free = 0;
     IterationRecord pre_fit;
-    // What crysta's fit starts away from 0 because the model has no gradient there (FCJ asymmetry, magnetic moments),
-    // one message each, as crysta::zero_starts reports them.
-    std::vector<std::string> zero_starts;
 };
 
 // Optional one-shot preamble subscriber, fired exactly once before the LM loop. Like
@@ -4742,8 +4572,6 @@ std::uint64_t engine_structure_factor_evaluations() noexcept;
 // LINKED crysta's default, forwarded like default_descent() (the app shows the value the minimizer
 // actually uses).
 double default_chi_square_tolerance();
-// The Shift/s.u. value a fit uses under that stop rule when `_minimizer.shift_tolerance` is not declared.
-double default_shift_tolerance();
 // The iteration bound a fit uses when `_minimizer.max_iterations` is not declared (the fit policy's cap),
 // for the app to show the value the minimizer actually uses, as the tolerance above.
 int default_max_iterations();
@@ -5192,10 +5020,6 @@ class Project : public detail::ProjectAnchor {
     // turns these and the settings above into a report's options.
     std::optional<double> correlation_threshold;
     std::optional<std::string> pattern_x_axis;
-    // The Evolution chart's view settings (`_evolution_chart`, ADR-0017 §19), each absent until stated: whether it draws
-    // the error bars (absent: drawn) and what its y range fits (`values` or `values_su`; absent: the values only).
-    std::optional<bool> evolution_error_bars;
-    std::optional<std::string> evolution_range;
     // A single-crystal fit's cutoff (`_refine_ls.threshold_sigma`, edi ADR-0050): only reflections with
     // F² > n su(F²) are fitted; absent, every one is.
     std::optional<double> refine_ls_threshold_sigma;
@@ -5219,13 +5043,6 @@ class Project : public detail::ProjectAnchor {
     // The declared `_minimizer.chi_square_tolerance` (the LM relative chi-square stop).
     // 0 = not declared -> crysta's default. Honored by every fit path, like the bound above.
     double minimizer_chi_square_tolerance = 0.0;
-    // The declared stop rule, `chi_square_change` or `shift_su` (empty = not declared -> the χ² change), and the
-    // Shift/s.u. value (0 = not declared -> crysta's default, 0.1).
-    std::string minimizer_stop_rule;
-    double minimizer_shift_tolerance = 0.0;
-    // Whether a fit tries free magnetic moments at exactly zero: `try_exact_zero` or `keep_free` (empty = not
-    // declared -> try_exact_zero).
-    std::string minimizer_moments_near_zero;
     // The declared `_minimizer.type`, kept as written so a save round-trips it — an empty value
     // included (absent = not declared; a save does not add it). Only `crysta` is supported: any
     // other value warns at load and the fit runs with crysta.
@@ -5364,8 +5181,6 @@ inline void ProjectTail::relink() const noexcept {
 inline void link_nested(Structure& structure, const std::shared_ptr<const ProjectLink>& link) noexcept {
     static_cast<KeyedBase&>(structure.atom_sites).host_link_ = link;
     static_cast<KeyedBase&>(structure.atom_site_aniso).host_link_ = link;
-    static_cast<KeyedBase&>(structure.atom_site_moment).host_link_ = link;
-    static_cast<KeyedBase&>(structure.magnetic_form_factors).host_link_ = link;
 }
 
 inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept {
@@ -5483,8 +5298,6 @@ inline void follow_site_references(Project* project, Structure* structure, const
             for (const char* field : {"fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"}) follow("atom_site", field);
             for (const char* field : {"adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"})
                 follow("atom_site_aniso", field);
-            for (const char* field : {"crystalaxis_x", "crystalaxis_y", "crystalaxis_z"})
-                follow("atom_site_moment", field);
         };
         for (const auto& alias : project->aliases) note(alias->parameter_unique_name);
         for (const auto& pair : project->fit_result.correlations) {
@@ -5498,7 +5311,7 @@ inline void follow_site_references(Project* project, Structure* structure, const
     if (project != nullptr && structure != nullptr) {
         const auto block = datablock_key(structure->name.value(), "structure") + ".";
         rename_scan_results(project->fit_result, [&](const std::string& name) -> std::optional<std::string> {
-            for (const char* category : {"atom_site.", "atom_site_aniso.", "atom_site_moment."}) {
+            for (const char* category : {"atom_site.", "atom_site_aniso."}) {
                 const auto root = block + category + from + ".";
                 if (name.starts_with(root)) {
                     const std::string field = name.substr(root.size());
@@ -5544,8 +5357,7 @@ inline std::optional<std::string> ParameterRenames::operator()(const std::string
         return std::nullopt;
     }
     const std::string category = rest.substr(0, end);
-    static const std::set<std::string> structure_categories{"cell", "atom_site", "atom_site_aniso",
-                                                            "atom_site_moment", "magnetic_form_factor"};
+    static const std::set<std::string> structure_categories{"cell", "atom_site", "atom_site_aniso"};
     static const std::set<std::string> experiment_categories{
         "peak", "instrument", "absorption", "background", "linked_structure", "preferred_orientation"};
     if (block == from && (structure ? structure_categories : experiment_categories).contains(category)) {
@@ -5806,14 +5618,6 @@ struct PatternChartCategory {
 };
 static_assert(detail::one_entry_per_column(PatternChartCategory::columns, PatternChartCategory::items));
 
-struct EvolutionChartCategory {
-    using Owner = Project;
-    static constexpr const char* name = "_evolution_chart";
-    static constexpr auto columns = std::tuple{&Project::evolution_error_bars, &Project::evolution_range};
-    static constexpr std::array items{"error_bars", "range"};
-};
-static_assert(detail::one_entry_per_column(EvolutionChartCategory::columns, EvolutionChartCategory::items));
-
 struct FittingModeCategory {
     using Owner = Project;
     static constexpr const char* name = "_fitting_mode";
@@ -5825,15 +5629,8 @@ static_assert(detail::one_entry_per_column(FittingModeCategory::columns, Fitting
 struct MinimizerCategory {
     using Owner = Project;
     static constexpr const char* name = "_minimizer";
-    static constexpr auto columns = std::tuple{&Project::minimizer_type,
-                                               &Project::minimizer_max_iterations,
-                                               &Project::descent,
-                                               &Project::minimizer_chi_square_tolerance,
-                                               &Project::minimizer_stop_rule,
-                                               &Project::minimizer_shift_tolerance,
-                                               &Project::minimizer_moments_near_zero};
-    static constexpr std::array items{"type",      "max_iterations",  "descent",          "chi_square_tolerance",
-                                      "stop_rule", "shift_tolerance", "moments_near_zero"};
+    static constexpr auto columns = std::tuple{&Project::minimizer_type, &Project::minimizer_max_iterations, &Project::descent, &Project::minimizer_chi_square_tolerance};
+    static constexpr std::array items{"type", "max_iterations", "descent", "chi_square_tolerance"};
 };
 static_assert(detail::one_entry_per_column(MinimizerCategory::columns, MinimizerCategory::items));
 
@@ -5948,11 +5745,8 @@ static_assert(detail::one_entry_per_column(DataCategory::columns, DataCategory::
 // crysta's computed buffers, shared like the other computed columns.
 struct PdCalcCategory {
     static constexpr const char* name = "_pd_calc";
-    static constexpr auto columns = std::tuple{&PdDataBase::component_intensities_net,
-                                               &PdDataBase::component_intensities_magnetic,
-                                               &PdDataBase::component_intensities_nuclear};
-    static constexpr std::array items{"component_intensities_net", "component_intensities_magnetic",
-                                      "component_intensities_nuclear"};
+    static constexpr auto columns = std::tuple{&PdDataBase::component_intensities_net};
+    static constexpr std::array items{"component_intensities_net"};
 };
 static_assert(detail::one_entry_per_column(PdCalcCategory::columns, PdCalcCategory::items));
 struct PdCalcOverallCategory {
@@ -5985,32 +5779,6 @@ struct RenderingPlotCategory {
     static constexpr const char* derived =
         "the plot renderer a file declares: each host draws with its own, so the loader checks it and keeps nothing";
 };
-// A structure's magnetic description besides its moments, held as written in Structure::magnetic: crysta reads,
-// checks and writes it (ADR-0070).
-struct SpaceGroupMagnCategory {
-    static constexpr const char* name = "_space_group_magn";
-    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
-};
-struct ParentSpaceGroupCategory {
-    static constexpr const char* name = "_parent_space_group";
-    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
-};
-struct SpaceGroupSymopMagnOperationCategory {
-    static constexpr const char* name = "_space_group_symop_magn_operation";
-    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
-};
-struct SpaceGroupSymopMagnCenteringCategory {
-    static constexpr const char* name = "_space_group_symop_magn_centering";
-    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
-};
-struct ParentPropagationVectorCategory {
-    static constexpr const char* name = "_parent_propagation_vector";
-    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
-};
-struct SpaceGroupMagnTransformsCategory {
-    static constexpr const char* name = "_space_group_magn_transforms";
-    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
-};
 
 // The computed categories: columns crysta published, shared and read-only here, with ordinal ids.
 struct SpaceGroupSymopCategory {
@@ -6026,16 +5794,6 @@ struct ExpandedAtomSiteCategory {
     static constexpr std::array items{"atom_site_id", "site_symmetry", "fract_x", "fract_y", "fract_z", "cartn_x", "cartn_y", "cartn_z", "occupancy", "u_iso", "cluster_id"};
 };
 static_assert(detail::one_entry_per_column(ExpandedAtomSiteCategory::columns, ExpandedAtomSiteCategory::items));
-
-struct ExpandedAtomSiteMomentCategory {
-    static constexpr const char* name = "_expanded_atom_site_moment";
-    static constexpr auto columns = std::tuple{&ExpandedAtomSiteMoments::atom_site_id, &ExpandedAtomSiteMoments::site_symmetry,
-                                               &ExpandedAtomSiteMoments::crystalaxis_x, &ExpandedAtomSiteMoments::crystalaxis_y,
-                                               &ExpandedAtomSiteMoments::crystalaxis_z};
-    static constexpr std::array items{"atom_site_id", "site_symmetry", "crystalaxis_x", "crystalaxis_y", "crystalaxis_z"};
-};
-static_assert(detail::one_entry_per_column(ExpandedAtomSiteMomentCategory::columns,
-                                           ExpandedAtomSiteMomentCategory::items));
 
 struct GeomBondCategory {
     static constexpr const char* name = "_geom_bond";
@@ -6054,10 +5812,10 @@ static_assert(detail::one_entry_per_column(CartnTransformCategory::columns, Cart
 
 struct ReflnCategory {
     static constexpr const char* name = "_refln";
-    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::f_m_perp_squared_calc, &PowderReflnDataBase::f_squared_total_calc, &PowderReflnDataBase::position, &ReflnDataBase::index_h, &ReflnDataBase::index_k, &ReflnDataBase::index_l, &ReflnDataBase::intensity_meas, &ReflnDataBase::intensity_meas_su, &ReflnDataBase::wavelength, &ReflnDataBase::d_spacing, &ReflnDataBase::sin_theta_over_lambda, &ReflnDataBase::intensity_calc};
+    static constexpr auto columns = std::tuple{&PowderReflnDataBase::structure_id, &PowderReflnDataBase::d_spacing, &PowderReflnDataBase::sin_theta_over_lambda, &PowderReflnDataBase::index_h, &PowderReflnDataBase::index_k, &PowderReflnDataBase::index_l, &PowderReflnDataBase::f_calc, &PowderReflnDataBase::f_squared_calc, &PowderReflnDataBase::position, &ReflnDataBase::index_h, &ReflnDataBase::index_k, &ReflnDataBase::index_l, &ReflnDataBase::intensity_meas, &ReflnDataBase::intensity_meas_su, &ReflnDataBase::wavelength, &ReflnDataBase::d_spacing, &ReflnDataBase::sin_theta_over_lambda, &ReflnDataBase::intensity_calc};
     // A powder's computed reflections and a single crystal's measured ones with their calculated
     // columns: one category on file, as in diffraction-lib, held by two classes.
-    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "f_m_perp_squared_calc", "f_squared_total_calc", "two_theta time_of_flight", "index_h", "index_k", "index_l", "intensity_meas", "intensity_meas_su", "wavelength", "d_spacing", "sin_theta_over_lambda", "intensity_calc"};
+    static constexpr std::array items{"structure_id", "d_spacing", "sin_theta_over_lambda", "index_h", "index_k", "index_l", "f_calc", "f_squared_calc", "two_theta time_of_flight", "index_h", "index_k", "index_l", "intensity_meas", "intensity_meas_su", "wavelength", "d_spacing", "sin_theta_over_lambda", "intensity_calc"};
 };
 static_assert(detail::one_entry_per_column(ReflnCategory::columns, ReflnCategory::items));
 
@@ -6078,18 +5836,6 @@ inline AtomSite::AtomSite() {
     fract_z.spec = &spec::atom_site_fract_z;
     occupancy.spec = &spec::atom_site_occupancy;
     adp_iso.spec = &spec::atom_site_adp_iso;
-}
-
-inline AtomSiteMoment::AtomSiteMoment() {
-    crystalaxis_x.spec = &spec::atom_site_moment_crystalaxis_x;
-    crystalaxis_y.spec = &spec::atom_site_moment_crystalaxis_y;
-    crystalaxis_z.spec = &spec::atom_site_moment_crystalaxis_z;
-}
-
-inline MagneticFormFactor::MagneticFormFactor() {
-    j2_coefficient.spec = &spec::magnetic_form_factor_j2_coefficient;
-    j4_coefficient.spec = &spec::magnetic_form_factor_j4_coefficient;
-    j6_coefficient.spec = &spec::magnetic_form_factor_j6_coefficient;
 }
 
 inline AtomSiteAniso::AtomSiteAniso() {
@@ -6149,12 +5895,6 @@ inline std::vector<Parameter*> AtomSite::free_parameters() { return detail::free
 inline std::vector<Parameter*> AtomSiteAniso::free_parameters() {
     return detail::free_of(parameters());
 }
-inline std::vector<Parameter*> AtomSiteMoment::free_parameters() {
-    return detail::free_of(parameters());
-}
-inline std::vector<Parameter*> MagneticFormFactor::free_parameters() {
-    return detail::free_of(parameters());
-}
 inline std::vector<Parameter*> LineSegment::free_parameters() {
     return detail::free_of(parameters());
 }
@@ -6170,16 +5910,6 @@ inline std::vector<Parameter*> Structure::parameters() {
     }
     for (const std::shared_ptr<AtomSiteAniso>& tensor : atom_site_aniso) {
         for (Parameter* parameter : tensor->parameters()) {
-            out.push_back(parameter);
-        }
-    }
-    for (const std::shared_ptr<AtomSiteMoment>& moment : atom_site_moment) {
-        for (Parameter* parameter : moment->parameters()) {
-            out.push_back(parameter);
-        }
-    }
-    for (const std::shared_ptr<MagneticFormFactor>& row : magnetic_form_factors) {
-        for (Parameter* parameter : row->parameters()) {
             out.push_back(parameter);
         }
     }
@@ -6467,8 +6197,6 @@ inline void point_parameters(AtomSite& site) {
     }
 }
 inline void point_parameters(AtomSiteAniso& tensor) { point_at_row(tensor); }
-inline void point_parameters(AtomSiteMoment& moment) { point_at_row(moment); }
-inline void point_parameters(MagneticFormFactor& row) { point_at_row(row); }
 inline void point_parameters(LineSegment& point) { point_at_row(point); }
 inline void point_parameters(PolynomialTerm& term) { point_at_row(term); }
 inline void point_parameters(PrefOrient& row) { point_at_row(row); }
@@ -6483,12 +6211,6 @@ inline void point_parameters(Structure& structure) {
     }
     for (const std::shared_ptr<AtomSiteAniso>& tensor : structure.atom_site_aniso) {
         point_parameters(*tensor);
-    }
-    for (const std::shared_ptr<AtomSiteMoment>& moment : structure.atom_site_moment) {
-        point_parameters(*moment);
-    }
-    for (const std::shared_ptr<MagneticFormFactor>& row : structure.magnetic_form_factors) {
-        point_parameters(*row);
     }
 }
 inline void point_parameters(ExperimentBase& experiment) {

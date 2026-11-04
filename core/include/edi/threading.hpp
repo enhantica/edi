@@ -31,13 +31,6 @@ EngineThreading engine_threading() noexcept;
 void set_engine_threads(int count) noexcept;
 int engine_threads_setting() noexcept;
 
-// How many files of a sequential or independent scan the engine fits at once, the "Parallel fits in a scan"
-// preference: 1, the default, fits them one after another, each from the previous result; with more, each file of a
-// group starts from where the previous group ended and runs on one thread. Below 1 is taken as 1. Unlike the thread
-// count it can change a scan's results, so it is one value for the whole process, read when a scan starts.
-void set_scan_workers(int count) noexcept;
-int scan_workers_setting() noexcept;
-
 }  // namespace edi
 
 #endif  // EDI_THREADING_HPP

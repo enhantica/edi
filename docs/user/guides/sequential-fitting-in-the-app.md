@@ -53,13 +53,6 @@ updates during a scan**, and kept on this computer:
   are drawn after the run ends.
 - **Only at the end**: no pattern while the run fits; the last file is shown when it ends.
 
-Several files can be fitted at once: set **Parallel fits in a scan** in Preferences, Performance
-(1 by default, kept on this computer, not in the project). The files then go in groups of that
-size, and every file of a group starts from where the previous group ended, each on one thread. A
-scan finishes sooner, but its results can differ a little from fitting the files one after
-another. The Analysis page's Settings tab shows the count under **Performance**, with a link to
-Preferences.
-
 The fitting button reads **Start fitting** while no file is fitted and **Continue fitting** while
 some are not, for example after **Stop fitting**, which keeps the files fitted so far. Continuing
 fits from the first unfitted file. Once every file is fitted the button is disabled. **Reset

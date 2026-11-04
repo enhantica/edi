@@ -622,27 +622,6 @@ void ProjectViewModel::setPatternDSpacing(bool on) {
 
 bool ProjectViewModel::patternDSpacing() const { return project_->pattern_x_axis.value_or("native") == "d_spacing"; }
 
-bool ProjectViewModel::evolutionErrorBars() const { return project_->evolution_error_bars.value_or(true); }
-
-void ProjectViewModel::setEvolutionErrorBars(bool on) {
-    if (on != evolutionErrorBars()) {
-        // The chart redraws at once, during a fit too (the owner, 2026-11-04).
-        apply_report_setting(edi::Edit::assign(project_->evolution_error_bars, std::optional<bool>(on)), true);
-    }
-}
-
-bool ProjectViewModel::evolutionRangeWithSu() const {
-    return project_->evolution_range.value_or("values") == "values_su";
-}
-
-void ProjectViewModel::setEvolutionRangeWithSu(bool on) {
-    if (on != evolutionRangeWithSu()) {
-        apply_report_setting(edi::Edit::assign(project_->evolution_range,
-                                               std::optional<std::string>(on ? "values_su" : "values")),
-                             true);
-    }
-}
-
 void ProjectViewModel::setCurrentStructureIndex(int index) {
     if (index != current_structure_ && index >= -1 && index < structure_models_.size()) {
         current_structure_ = index;
@@ -807,22 +786,6 @@ void ProjectViewModel::publishMetadata() {
         published_pattern_d_spacing_ = patternDSpacing();
         emit patternDSpacingChanged();
         if (retired_) return;
-    }
-    if (evolutionErrorBars() != published_evolution_error_bars_ ||
-        evolutionRangeWithSu() != published_evolution_range_with_su_) {
-        const bool bars = evolutionErrorBars() != published_evolution_error_bars_;
-        const bool range = evolutionRangeWithSu() != published_evolution_range_with_su_;
-        published_evolution_error_bars_ = evolutionErrorBars();
-        published_evolution_range_with_su_ = evolutionRangeWithSu();
-        if (evolution_ != nullptr) {
-            evolution_->viewSettingsChanged();
-        }
-        if (bars) {
-            emit evolutionErrorBarsChanged();
-        }
-        if (range) {
-            emit evolutionRangeWithSuChanged();
-        }
     }
 }
 
@@ -2238,9 +2201,6 @@ void ProjectViewModel::makeScanSession() {
         for (int index = first; index <= last; ++index) {
             syncDataset(index);
         }
-        // The template's own point waits for its dataset's extracted value.
-        evolution_->setTemplate(&scanTemplateOrModel());
-        evolution_->syncParameters();
     });
 }
 
@@ -2266,7 +2226,6 @@ void ProjectViewModel::followScanDeclaration() {
     if (!project_->sequential_fit.declared()) {
         forgetProjection();
         if (scan_session_ != nullptr) {
-            evolution_->setTemplate(nullptr);
             evolution_->setScan(nullptr, project_.get(), {});
             scan_views_->setScan(nullptr, project_.get(), {});
             scan_session_->deleteLater();
@@ -3020,7 +2979,6 @@ void ProjectViewModel::reloadScanResults() {
 
 void ProjectViewModel::showScanResults() {
     syncDatasets();
-    evolution_->setTemplate(&scanTemplateOrModel());
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     scan_views_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     const ScanSession::Run& provenance = scan_session_->run();
@@ -3709,9 +3667,6 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
                 scan_template_->descent = project_->descent;
                 scan_template_->minimizer_max_iterations = project_->minimizer_max_iterations;
                 scan_template_->minimizer_chi_square_tolerance = project_->minimizer_chi_square_tolerance;
-                scan_template_->minimizer_stop_rule = project_->minimizer_stop_rule;
-                scan_template_->minimizer_shift_tolerance = project_->minimizer_shift_tolerance;
-                scan_template_->minimizer_moments_near_zero = project_->minimizer_moments_near_zero;
                 scan_template_->su_rule = project_->su_rule;
                 scan_template_->report_html = project_->report_html;
                 scan_template_->report_pdf = project_->report_pdf;
@@ -3720,8 +3675,6 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
                 scan_template_->report_excluded = project_->report_excluded;
                 scan_template_->correlation_threshold = project_->correlation_threshold;
                 scan_template_->pattern_x_axis = project_->pattern_x_axis;
-                scan_template_->evolution_error_bars = project_->evolution_error_bars;
-                scan_template_->evolution_range = project_->evolution_range;
             } else if (scan_template_) {
                 edi::Project promoted = *project_;
                 promoted.experiment().data = scan_template_->experiment().data;
@@ -3842,7 +3795,7 @@ QString ProjectViewModel::apply_background_edit(const edi::ExperimentBase& exper
     return apply(change, structural);
 }
 
-QString ProjectViewModel::apply_report_setting(const edi::Edit& change, bool during_fit) {
+QString ProjectViewModel::apply_report_setting(const edi::Edit& change) {
     const PublicationScope publication(*this);
     if (const QString critical = criticalEditRefusal(); !critical.isEmpty()) return critical;
     const QString warning = tr("The report setting was applied and Undo retained, but its presentation failed");
@@ -3850,7 +3803,7 @@ QString ProjectViewModel::apply_report_setting(const edi::Edit& change, bool dur
     undo_history_.reserve(undo_history_.size() + 1);
     undo_history_.emplace_back(std::move(before)); // own normal Undo before the report setting writes
     QString refusal;
-    try { refusal = write_report_settings(change, false, during_fit); }
+    try { refusal = write_report_settings(change); }
     catch (...) { undo_history_.pop_back(); throw; } // Only pre-write setup can escape.
     if (retired_) return refusal;
     if (!refusal.isEmpty()) { undo_history_.pop_back(); return refusal; }
@@ -3859,11 +3812,10 @@ QString ProjectViewModel::apply_report_setting(const edi::Edit& change, bool dur
     return refusal;
 }
 
-QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool restoring, bool during_fit) {
+QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool restoring) {
     const PublicationScope publication(*this);
     if (const QString critical = criticalEditRefusal(restoring); !critical.isEmpty()) return critical;
-    // A view toggle may change while a fit runs (edi ADR-0017 §19): no calculation reads it.
-    if (!during_fit && fit_ != nullptr && fit_->running()) return tr("The project cannot be edited while a fit is running");
+    if (fit_ != nullptr && fit_->running()) return tr("The project cannot be edited while a fit is running");
     const QString warning = tr("The report setting was applied, but its presentation failed. Undo or reopen before further changes.");
     bool applied = false;
     editing_ = true;
@@ -4895,7 +4847,6 @@ void ProjectViewModel::publish(bool structural) {
     }
     analysis_->sync();
     if (retired_) return;
-    evolution_->setTemplate(&scanTemplateOrModel());
     evolution_->syncParameters();
     if (retired_) return;
     syncCorrelations();

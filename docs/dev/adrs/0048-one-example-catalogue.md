@@ -63,9 +63,7 @@ matched neither. A user could not tell which example showed a technique, and a f
     fit is (`"template": true`). The two programs' Bérar-Baldinozzi asymmetry differs in form and no mapping of the
     coefficients removes the difference, so a case using it is compared on R<sub>wp</sub> and the number of free
     parameters only, and every shared value on a second FullProf fit with the four coefficients fixed at 0 against
-    edi's fit of the same (the record's `asymmetry-off` variant). FullProf's magnetic form factors are ⟨j0⟩ alone, so a
-    case whose form factor adds ⟨j2⟩ compares FullProf with edi's fit of a copy using ⟨j0⟩ (the `form-factor-j0`
-    variant), and pins its own fit. FullProf runs once, when a reference is written,
+    edi's fit of the same (the record's `asymmetry-off` variant). FullProf runs once, when a reference is written,
     never in a check. A value whose two minima differ in a flat direction, where edi's is the lower by both programs'
     own evaluation, is a labelled regression pin of edi's result, with the reason in the case's PROVENANCE; LATP's
     AlPO₄ cells and the P1 Biso that moves with them are the one such case. A unit may name the status its fit ends with (`"status": "max_iter"`) when

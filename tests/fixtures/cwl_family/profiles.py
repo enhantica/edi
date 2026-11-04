@@ -121,7 +121,7 @@ def migration_hits(paths, root):
             '8fb45669c3061015a089fd17a85137a49b3a7cdda7fafa11d2ce4ea4824c8685'
         ),
         'tests/fixtures/fittability/saved-main.json': (
-            '5497635b565cd0c881e9f3361344bd1b5c079e52447799cf902f90d6a23b961c'
+            '358c2a5b254e6bdec09ad87d1e003af215e8650e14afd13fb3c36634b552dc5f'
         ),
     }
     allowed = {historical: hashes['fcj/experiments/bank.edi']}

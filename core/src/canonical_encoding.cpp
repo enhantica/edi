@@ -309,25 +309,6 @@ void put_written(Output& out, const detail::WrittenText& field) {
     put_u64(out, field.written());
 }
 
-// The magnetic description's text (edi ADR-0070): every category crysta reads.
-template<class Output>
-void put_magnetic(Output& out, const MagneticDescription& magnetic) {
-    const auto pairs = [&out](const std::vector<std::pair<std::string, std::string>>& rows) {
-        put_u64(out, rows.size());
-        for (const auto& [id, text] : rows) {
-            put_text(out, id);
-            put_text(out, text);
-        }
-    };
-    pairs(magnetic.operations);
-    pairs(magnetic.centerings);
-    pairs(magnetic.propagation_vectors);
-    put_text(out, magnetic.parent.name_h_m_alt);
-    put_text(out, magnetic.parent.it_number);
-    put_text(out, magnetic.parent.transform_pp_abc);
-    put_text(out, magnetic.parent.child_transform_pp_abc);
-}
-
 template<class Output>
 void put_structure(Output& out, const Structure& structure, Scope scope) {
     put_text(out, structure.name.value());
@@ -363,32 +344,6 @@ void put_structure(Output& out, const Structure& structure, Scope scope) {
         put_text(out, tensor.id.value());
         for (const Parameter* component : {&tensor.adp_11, &tensor.adp_22, &tensor.adp_33, &tensor.adp_12, &tensor.adp_13, &tensor.adp_23}) {
             put_parameter(out, *component, scope);
-        }
-    }
-    // The magnetic description and moments: inputs of the magnetic intensity (edi ADR-0070). A
-    // structure without them adds nothing, so its identity is unchanged.
-    if (!structure.atom_site_moment.empty() || !static_cast<const MagneticDescription&>(structure.magnetic).empty()) {
-        put_magnetic(out, structure.magnetic);
-        put_u64(out, structure.atom_site_moment.size());
-        for (const auto& moment_item : structure.atom_site_moment) {
-            AtomSiteMoment& moment = *moment_item;
-            put_text(out, moment.id);
-            for (const Parameter* component : moment.parameters()) {
-                put_parameter(out, *component, scope);
-            }
-        }
-    }
-    // The magnetic form factors, an input of the magnetic intensity; none adds nothing.
-    if (!structure.magnetic_form_factors.empty()) {
-        put_u64(out, structure.magnetic_form_factors.size());
-        for (const auto& row_item : structure.magnetic_form_factors) {
-            MagneticFormFactor& row = *row_item;
-            put_text(out, row.id);
-            put_text(out, row.ion.value());
-            put_text(out, row.approximation.value());
-            for (const Parameter* coefficient : row.parameters()) {
-                put_parameter(out, *coefficient, scope);
-            }
         }
     }
     put_u64(out, structure.scattering_lengths_fm.size());
@@ -487,38 +442,6 @@ void geometry_inputs_write(Output& out, const Structure& structure) {
         put_u64(out, tensor.id.written());
         for (const Parameter* component : {&tensor.adp_11, &tensor.adp_22, &tensor.adp_33, &tensor.adp_12, &tensor.adp_13, &tensor.adp_23}) {
             put_written(out, component->value);
-        }
-    }
-    // The moments are geometry inputs: the app draws the moments in the cell (edi ADR-0070).
-    if (!structure.atom_site_moment.empty() || !static_cast<const MagneticDescription&>(structure.magnetic).empty()) {
-        put_magnetic(out, structure.magnetic);
-        put_u64(out, structure.magnetic.written());
-        put_u64(out, structure.atom_site_moment.size());
-        put_u64(out, structure.atom_site_moment.generation());
-        for (const auto& moment_item : structure.atom_site_moment) {
-            AtomSiteMoment& moment = *moment_item;
-            put_text(out, moment.id);
-            put_u64(out, moment.id.written());
-            for (const Parameter* component : moment.parameters()) {
-                put_written(out, component->value);
-            }
-        }
-    }
-    // A form factor's ion is checked with the structure, so it is a geometry input as crysta records.
-    if (!structure.magnetic_form_factors.empty()) {
-        put_u64(out, structure.magnetic_form_factors.size());
-        put_u64(out, structure.magnetic_form_factors.generation());
-        for (const auto& row_item : structure.magnetic_form_factors) {
-            MagneticFormFactor& row = *row_item;
-            put_text(out, row.id);
-            put_u64(out, row.id.written());
-            put_text(out, row.ion.value());
-            put_u64(out, row.ion.written());
-            put_text(out, row.approximation.value());
-            put_u64(out, row.approximation.written());
-            for (const Parameter* coefficient : row.parameters()) {
-                put_written(out, coefficient->value);
-            }
         }
     }
     put_geom(out, structure.geom);
@@ -716,7 +639,6 @@ template class OneRow<ReportSettingsCategory>;
 template class OneRow<CorrelationChartCategory>;
 template class OneRow<RefineLsCategory>;
 template class OneRow<PatternChartCategory>;
-template class OneRow<EvolutionChartCategory>;
 template class OneRow<MinimizerCategory>;
 template class OneRow<SequentialFitCategory>;
 template class OneRow<FitResultCategory>;

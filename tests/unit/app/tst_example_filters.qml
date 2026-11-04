@@ -42,10 +42,7 @@ Item {
             Session.closeProject();
             resetFilters();
             sourceIds = ids();
-            const magneticIds = ["pd-neut-cwl_cosio-d20_2k", "pd-neut-cwl_cosio-d20_scan-213f"];
-            compare(sourceIds.filter(id => !magneticIds.includes(id)).length, 20,
-                    "The original independently selected catalogue remains complete");
-            verify(sourceIds.includes(magneticIds[0]), "The low-temperature magnetic example is bundled");
+            compare(sourceIds.length, 20, "The independently selected catalogue contains twenty examples");
         }
         function cleanup() {
             resetFilters();
@@ -135,7 +132,7 @@ Item {
                 verify(!sourceIds.includes(id), "A FullProf verification project is not relabelled as an app fitting or simulation example: " + id);
         }
         function test_properties_and_known_fitting_modes() {
-            sameIds(properties().map(p => p.value).filter(value => value !== "structure"), ["purpose", "fittingMode", "facilities", "instruments", "sampleForm", "beamMode", "probe", "scatteringType", "dimensionality", "polarisation"]);
+            sameIds(properties().map(p => p.value), ["purpose", "fittingMode", "facilities", "instruments", "sampleForm", "beamMode", "probe", "scatteringType", "dimensionality", "polarisation"]);
             for (const property of properties()) {
                 verify(property.title.length > 0);
                 verify(!/\(\d+\)/.test(property.title), "Property picker does not display counts");
@@ -182,12 +179,8 @@ Item {
                 seenPurposes.add(purposes[0]);
                 compare(row.tagLabels[1], labels[mode]);
                 verify(row.tagIcons[1].length > 0, "Workflow symbol is populated: " + row.exampleId);
-                for (let j = 2; j < row.tagLabels.length; ++j) {
-                    if (["Crystal structure", "Magnetic structure"].includes(row.tagLabels[j]))
-                        verify(row.tagIcons[j].length > 0, "Structure tags have their own icons: " + row.exampleId);
-                    else
-                        compare(row.tagIcons[j], "", "Technique tags have no symbols: " + row.exampleId);
-                }
+                for (let j = 2; j < row.tagLabels.length; ++j)
+                    compare(row.tagIcons[j], "", "Technique tags have no symbols: " + row.exampleId);
                 if (symbols[mode] !== undefined)
                     compare(row.tagIcons[1], symbols[mode], "One workflow always uses the same symbol");
                 symbols[mode] = row.tagIcons[1];
@@ -228,28 +221,6 @@ Item {
             Session.examples.filterValue = "joint";
             verify(ids().includes("pd-neut-tof_ncaf-wish"));
             verify(!ids().includes("pd-xray-cwl_nacl_simulation"));
-        }
-        function test_structure_chips_and_filter_counts() {
-            const magneticIds = ["pd-neut-cwl_cosio-d20_2k", "pd-neut-cwl_cosio-d20_scan-213f"];
-            const expectedMagnetic = sourceIds.filter(id => magneticIds.includes(id));
-            verify(properties().some(row => row.value === "structure"), "Structure is an Examples filter property");
-            const tags = tagsComponent.createObject(this);
-            verify(tags !== null, "The real Examples chip roles are readable");
-            for (let i = 0; i < tags.count; ++i) {
-                const row = tags.objectAt(i);
-                verify(row.tagLabels.includes("Crystal structure"), "Every example renders a crystal chip");
-                compare(row.tagLabels.includes("Magnetic structure"), magneticIds.includes(row.exampleId),
-                        "Only magnetic examples render the magnetic chip");
-                compare(row.tagLabels.length, row.tagIcons.length, "Every rendered chip has its matching icon");
-            }
-            tags.destroy();
-            Session.examples.filterProperty = "structure";
-            compare(option("crystal").count, sourceIds.length, "Crystal structure count includes every example");
-            compare(option("magnetic").count, expectedMagnetic.length, "Magnetic count includes only magnetic examples");
-            Session.examples.filterValue = "crystal";
-            sameIds(ids(), sourceIds);
-            Session.examples.filterValue = "magnetic";
-            sameIds(ids(), expectedMagnetic);
         }
         function test_facet_counts_match_unique_source_membership() {
             for (const property of properties()) {
@@ -407,40 +378,6 @@ Item {
             mouseClick(row, point.x, point.y, Qt.LeftButton, Qt.NoModifier, delay);
             tryCompare(Session, "openedExample", expected);
             verify(Session.hasProject, Session.lastError);
-        }
-    }
-
-    TestCase {
-        name: "SequentialMagneticExample"
-        when: windowShown
-
-        function cleanup() {
-            Session.examples.searchText = "";
-            Session.examples.filterProperty = "purpose";
-            Session.examples.filterValue = "";
-        }
-        function test_catalogue_row_and_tags() {
-            const id = "pd-neut-cwl_cosio-d20_scan-213f";
-            const catalogue = Session.examples;
-            const countMatches = () => Array.from({length: catalogue.count},
-                (_, i) => catalogue.text(i, "exampleId")).filter(value => value === id).length;
-            compare(countMatches(), 1, "The extended magnetic scan has one bundled Examples entry");
-            const group = createTemporaryObject(examplesComponent, parent);
-            verify(group !== null, "The sequential entry uses the production Examples group");
-            catalogue.searchText = id;
-            catalogue.filterProperty = "structure";
-            catalogue.filterValue = "magnetic";
-            compare(countMatches(), 1, "The magnetic filter keeps the sequential magnetic entry");
-            let row = null;
-            tryVerify(() => {
-                row = Ui.find(group, "examples.open." + id);
-                return row !== null && Ui.exposed(row);
-            }, 5000, "The magnetic filter exposes the sequential example's real row");
-            for (const tag of ["Fitting", "Sequential", "pd", "neut", "cwl", "Bragg", "Crystal", "Magnetic"])
-                verify(row.tagLabels.includes(tag), "The sequential magnetic row carries the " + tag + " chip");
-            catalogue.filterProperty = "fittingMode";
-            catalogue.filterValue = "sequential";
-            compare(countMatches(), 1, "The sequential filter keeps the sequential magnetic entry");
         }
     }
 }

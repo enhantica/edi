@@ -21,12 +21,6 @@ unchanged at its 1e-6 bound). `n_free` stays the independent reference it was. U
 defaults (`ladder`, 1e-6) the same project reproduces the pins it carried before the extension:
 4.783623, 4.381669 and 3.887557, at 5, 8 and 16 iterations.
 
-**Re-pinned 2026-11-04.** The fast descent now sets its damping from how well each step's predicted
-χ² drop matched the real one, instead of trying three smaller dampings after each accepted step. The
-three per-file reduced chi-squares were re-pinned from `python -m edi fit --report machine` of this
-project with `OMP_NUM_THREADS=1`, linked against crysta `ca4b68bd`: 4.82405862, 4.42856768 and
-3.88870096 (the last 0.00047 above the previous pin); the iteration counts are unchanged at 4, 6 and 12.
-
 The expected values keep the `kind` their source gave them: crysta-produced fit outputs are
 **regression pins** — they gate drift, not correctness — and only values marked `reference` come
 from outside every engine under test. The source case's own `PROVENANCE.md` in crysta says which

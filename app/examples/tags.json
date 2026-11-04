@@ -20,14 +20,6 @@
     "mode": {
       "light": "#96601d",
       "dark": "#e3b06d"
-    },
-    "structure": {
-      "light": "#00796b",
-      "dark": "#4db6ac"
-    },
-    "magnetic": {
-      "light": "#c2185b",
-      "dark": "#f06292"
     }
   },
   "tags": {
@@ -153,24 +145,6 @@
         "anchor": "bragg-diffraction",
         "icon": "",
         "glyph": ""
-      }
-    },
-    "structure": {
-      "crystal": {
-        "label": "Crystal",
-        "meaning": "Crystal structure",
-        "tone": "structure",
-        "anchor": "crystal-structure",
-        "icon": "layer-group",
-        "glyph": ""
-      },
-      "magnetic": {
-        "label": "Magnetic",
-        "meaning": "Magnetic structure",
-        "tone": "magnetic",
-        "anchor": "magnetic-structure",
-        "icon": "magnet",
-        "glyph": ""
       }
     }
   }

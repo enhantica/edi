@@ -18,7 +18,7 @@ _peak.broad_gauss_u 0.2()
 _peak.broad_gauss_v -0.5()
 _peak.broad_gauss_w 0.4()
 _peak.broad_lorentz_x 0
-_peak.broad_lorentz_y 0.0114
+_peak.broad_lorentz_y 0.01()
 _peak.cutoff_fwhm 8
 
 _instrument.setup_wavelength 1.87

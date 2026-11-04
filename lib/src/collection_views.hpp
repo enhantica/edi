@@ -83,8 +83,6 @@ using StructuresView = KeyedView<Project, Structure, Structure>;
 using ExperimentsView = KeyedView<Project, BraggPdExperiment, ExperimentBase>;
 using AtomSitesView = KeyedView<Structure, AtomSite, AtomSite>;
 using AtomSiteAnisoView = KeyedView<Structure, AtomSiteAniso, AtomSiteAniso>;
-using AtomSiteMomentView = KeyedView<Structure, AtomSiteMoment, AtomSiteMoment>;
-using MagneticFormFactorView = KeyedView<Structure, MagneticFormFactor, MagneticFormFactor>;
 using PrefOrientsView = KeyedView<ExperimentBase, PrefOrient, PrefOrient>;
 using LinkedStructuresView = KeyedView<ExperimentBase, LinkedStructure, LinkedStructure>;
 using AliasesView = KeyedView<Project, ParameterAlias, ParameterAlias>;
@@ -93,18 +91,6 @@ void after_change(const AliasesView& view);
 void after_change(const AtomSitesView& view);
 void after_change(const AtomSiteAnisoView& view);
 void after_change(const ConstraintsView& view);
-
-// A moment row is admitted only when its key names one of the structure's atom sites (the
-// loader's rule).
-inline void validate_insert(const AtomSiteMomentView& view, const AtomSiteMoment& row) {
-    const ItemVec<AtomSite>& sites = view.owner->atom_sites;
-    const bool named = std::any_of(sites.begin(), sites.end(),
-                                   [&](const auto& site) { return site->id.value() == row.id.value(); });
-    if (!named) {
-        fail_domain("structure '" + view.owner->name.value() + "'", "moment-site",
-                    "_atom_site_moment.label '" + row.id.value() + "' names no atom site");
-    }
-}
 
 // A texture row is admitted only when its key names one of the experiment's linked structures
 // (the loader's rule), before it is installed; one link without an id admits any key.
@@ -146,8 +132,6 @@ using StructuresIter = KeyedIter<Project, Structure, Structure>;
 using ExperimentsIter = KeyedIter<Project, BraggPdExperiment, ExperimentBase>;
 using AtomSitesIter = KeyedIter<Structure, AtomSite, AtomSite>;
 using AtomSiteAnisoIter = KeyedIter<Structure, AtomSiteAniso, AtomSiteAniso>;
-using AtomSiteMomentIter = KeyedIter<Structure, AtomSiteMoment, AtomSiteMoment>;
-using MagneticFormFactorIter = KeyedIter<Structure, MagneticFormFactor, MagneticFormFactor>;
 using PrefOrientsIter = KeyedIter<ExperimentBase, PrefOrient, PrefOrient>;
 using LinkedStructuresIter = KeyedIter<ExperimentBase, LinkedStructure, LinkedStructure>;
 using AliasesIter = KeyedIter<Project, ParameterAlias, ParameterAlias>;

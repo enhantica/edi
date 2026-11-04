@@ -158,10 +158,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`: d-spacing, or the experiment's own.
     // The report's charts follow it. An undoable edit.
     Q_PROPERTY(bool patternDSpacing READ patternDSpacing WRITE setPatternDSpacing NOTIFY patternDSpacingChanged)
-    // The Evolution chart's view settings, the project's `_evolution_chart` (edi ADR-0017 §19): the error bars drawn
-    // (absent: yes), and the y range fitted to the values with their error bars (absent: the values only).
-    Q_PROPERTY(bool evolutionErrorBars READ evolutionErrorBars WRITE setEvolutionErrorBars NOTIFY evolutionErrorBarsChanged)
-    Q_PROPERTY(bool evolutionRangeWithSu READ evolutionRangeWithSu WRITE setEvolutionRangeWithSu NOTIFY evolutionRangeWithSuChanged)
     Q_PROPERTY(QString path READ path NOTIFY pathChanged)
     // True after any edit since the project was opened or last saved (edi ADR-0017 §13).
     Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
@@ -278,10 +274,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;
     void setPatternDSpacing(bool on);
-    bool evolutionErrorBars() const;
-    void setEvolutionErrorBars(bool on);
-    bool evolutionRangeWithSu() const;
-    void setEvolutionRangeWithSu(bool on);
     // A value and its standard uncertainty as the project's rule writes them; empty texts for a non-finite value or a
     // zero or non-finite s.u.
     Q_INVOKABLE edi_app::UncertaintyText suText(double value, double su) const;
@@ -372,7 +364,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const QList<StructureViewModel*>& structureModels() const { return structure_models_; }
     const QList<ExperimentViewModel*>& experimentModels() const { return experiment_models_; }
     const edi::Project& project() const { return *project_; }
-    const edi::Project* currentProject() const override { return project_.get(); }
     /// Native assistant access to the same model and worker used by manual controls.
     edi::Project* assistantProject() { return project_.get(); }
     // Optional native file spelling on exact current canonical inspection rows.
@@ -572,11 +563,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
                                   bool structural) override;
     // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
-    // `during_fit`: a setting only a chart reads (the Evolution chart's error bars and range), which may change while
-    // a fit runs; every other setting waits for the fit to end.
-    QString apply_report_setting(const edi::Edit& change, bool during_fit = false);
+    QString apply_report_setting(const edi::Edit& change);
     // Writes report settings through the preview's settings door and publishes what they change.
-    QString write_report_settings(const edi::Edit& change, bool restoring = false, bool during_fit = false);
+    QString write_report_settings(const edi::Edit& change, bool restoring = false);
     // The scan's results (null outside a scan project).
     const ScanSession* scanSession() const { return scan_session_; }
 
@@ -588,8 +577,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void authorsChanged();
     void suRuleChanged();
     void patternDSpacingChanged();
-    void evolutionErrorBarsChanged();
-    void evolutionRangeWithSuChanged();
     void lastModifiedChanged();
     void currentStructureIndexChanged();
     void currentStructureChanged();
@@ -1044,8 +1031,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;
     bool published_pattern_d_spacing_ = false;
-    bool published_evolution_error_bars_ = true;
-    bool published_evolution_range_with_su_ = false;
     StructureViewModel* published_structure_ = nullptr;
     ExperimentViewModel* published_experiment_ = nullptr;
     int published_structure_index_ = -1;

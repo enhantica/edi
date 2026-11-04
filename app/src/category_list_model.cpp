@@ -24,10 +24,6 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("metadata"), {T::Basic}},         {QStringLiteral("space_group"), {T::Basic}},
         {QStringLiteral("cell"), {T::Basic}},             {QStringLiteral("atom_site"), {T::Basic}},
         {QStringLiteral("atom_site_aniso"), {T::Basic}},  {QStringLiteral("experiment_type"), {T::Basic}},
-        // The magnetic structure's Main groups (edi ADR-0070); its operators, parent group and form factors are Extra.
-        {QStringLiteral("space_group_magn"), {T::Basic}},
-        {QStringLiteral("parent_propagation_vector"), {T::Basic}},
-        {QStringLiteral("atom_site_moment"), {T::Basic}},
         {QStringLiteral("data_range"), {T::Basic}},       {QStringLiteral("instrument"), {T::Basic}},
         {QStringLiteral("peak"), {T::Basic, true}},
         {QStringLiteral("background"), {T::Basic}},
@@ -65,12 +61,9 @@ CategoryPresentation category_presentation(const QString& id) {
 namespace {
 // The sidebar's order is the dictionary's order number, the files' order, so the app
 // keeps no order of its own; categories the dictionary does not order keep the core's order, last. A category
-// shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer, and a
-// structure's saved view (`_structure_view`) in Extra's Appearance group.
+// shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
-    // The parent group shows in the Magnetic space group group when it differs from the space group (edi
-    // ADR-0070).
-    static const char* const kShownElsewhere[] = {"experiment_type", "structure_view", "parent_space_group"};
+    static const char* const kShownElsewhere[] = {"experiment_type"};
     std::vector<const edi::Category*> ordered;
     for (const edi::Category& category : categories) {
         if (std::find(std::begin(kShownElsewhere), std::end(kShownElsewhere), category.id) == std::end(kShownElsewhere)) {
@@ -97,19 +90,11 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     categories_ = categories;
     text_ = text;
     calculated_ = calculated;
-    // The Atomic displacement and Magnetic moments groups list every atom site, so their headers count the sites.
-    int sites = 0;
-    for (const edi::Category& category : categories) {
-        if (category.id == "atom_site") {
-            sites = static_cast<int>(category.rows);
-        }
-    }
     std::vector<Row> target;
     for (const edi::Category* shown : presentation_order(categories)) {
         const edi::Category& category = *shown;
-        const bool per_site = category.id == "atom_site_aniso" || category.id == "atom_site_moment";
-        target.push_back({QString::fromStdString(category.id), per_site ? sites : static_cast<int>(category.rows),
-                          category.is_loop, category.admitted});
+        target.push_back({QString::fromStdString(category.id), static_cast<int>(category.rows), category.is_loop,
+                          category.admitted});
         // An experiment's background carries its estimate settings (`_background_estimate`), a category of its own
         // with its own group; the core lists them with the background.
         if (category.id == "background") {
@@ -121,13 +106,9 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     // transform, the calculator (there is one), the curves' presentation order, the block list or the correlations,
     // which the Correlations tab shows. The bond settings get a designed group of their own later, and the type is
     // shown elsewhere.
-    // Nor what another group shows: a structure's saved view (Appearance) and its parent group (Magnetic space
-    // group, when it differs from the space group). The magnetic form factors have their own group, which the core
-    // lists for a magnetic structure.
     static const char* const kNotGenerated[] = {"geom",     "experiment_type",           "edi",
                                                 "calculator", "atom_sites_cartn_transform", "pd_calc_overall",
-                                                "pd_block", "fit_parameter_correlation", "structure_view",
-                                                "magnetic_form_factor", "parent_space_group"};
+                                                "pd_block", "fit_parameter_correlation"};
     const auto generates = [](const std::string& id) {
         return std::find(std::begin(kNotGenerated), std::end(kNotGenerated), id) == std::end(kNotGenerated) &&
                !edi::category_label(id).empty();

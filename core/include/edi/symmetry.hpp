@@ -14,7 +14,6 @@
 #include <functional>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "edi/model.hpp"
@@ -66,10 +65,6 @@ AtomSite new_atom_site(const Structure& structure, const std::function<double()>
 // gets a tensor row holding the tensor of its current values, and a row it no longer needs is
 // removed. Throws std::invalid_argument for a type that is not Biso, Uiso, Bani, Uani or beta.
 void change_adp_type(Structure& structure, AtomSite& site, const std::string& adp_type);
-// The structure's propagation vectors replaced by `rows` (id, `kx,ky,kz`), each id given and
-// unique, once crysta's rule admits them all (I7: a vector the cell and the signed group can carry,
-// no two alike); a refusal throws its reason and leaves the vectors as they were (edi ADR-0070).
-void set_propagation_vectors(Structure& structure, std::vector<std::pair<std::string, std::string>> rows);
 
 // One tensor row for each anisotropic site and none for any other (diffraction-lib's
 // _sync_atom_site_aniso): a missing row holds the tensor of the site's isotropic value, through

@@ -133,7 +133,6 @@ static std::shared_ptr<const edi::StructureGeometry> stored_geometry(edi::Struct
 }
 struct SymopView : GeometryHandle {};
 struct ExpandedAtomSitesView : GeometryHandle {};
-struct ExpandedAtomSiteMomentsView : GeometryHandle {};
 struct GeomBondView : GeometryHandle {};
 struct CartnTransformView : GeometryHandle {};
 // One result of `Structure.geometry(view_range)`, kept with the structure it was computed from.
@@ -1587,20 +1586,6 @@ static void def_collection_views(nb::module_& m) {
     nb::class_<AtomSiteAnisoIter> atom_site_aniso_iter(m, "_AtomSiteAnisoIterator");
     def_keyed_collection<AtomSiteAnisoView, AtomSiteAnisoIter, edi::AtomSiteAniso>(
         atom_site_aniso_view, atom_site_aniso_iter);
-    // The magnetic sites' moments, keyed by the site id (edi ADR-0070).
-    nb::class_<AtomSiteMomentView> atom_site_moment_view(
-        m, "AtomSiteMomentCollection",
-        "Live keyed collection of a structure's magnetic moments (key: the site id).");
-    nb::class_<AtomSiteMomentIter> atom_site_moment_iter(m, "_AtomSiteMomentIterator");
-    def_keyed_collection<AtomSiteMomentView, AtomSiteMomentIter, edi::AtomSiteMoment>(
-        atom_site_moment_view, atom_site_moment_iter);
-    // The magnetic atom types' form factors, keyed by the type symbol.
-    nb::class_<MagneticFormFactorView> magnetic_form_factor_view(
-        m, "MagneticFormFactorCollection",
-        "Live keyed collection of a structure's magnetic form factors (key: the type symbol).");
-    nb::class_<MagneticFormFactorIter> magnetic_form_factor_iter(m, "_MagneticFormFactorIterator");
-    def_keyed_collection<MagneticFormFactorView, MagneticFormFactorIter, edi::MagneticFormFactor>(
-        magnetic_form_factor_view, magnetic_form_factor_iter);
 
     nb::class_<PrefOrientsView> pref_orients_view(
         m, "PrefOrients",
@@ -2409,49 +2394,6 @@ NB_MODULE(_edi, m) {
     def_parameter_field(atom_site_aniso, "adp_13", &edi::AtomSiteAniso::adp_13);
     def_parameter_field(atom_site_aniso, "adp_23", &edi::AtomSiteAniso::adp_23);
 
-    // A magnetic site's moment (edi ADR-0070), keyed by the site id: three components in Bohr
-    // magnetons along the cell axes, and the symmetry form crysta derives for them.
-    nb::class_<edi::AtomSiteMoment> atom_site_moment(m, "AtomSiteMoment");
-    atom_site_moment.def("__setattr__", renewing_setattr<edi::AtomSiteMoment>({}, renew_epoch),
-                         nb::arg("name"), nb::arg("value").none());
-    atom_site_moment.def(nb::new_([]() { return std::make_shared<edi::AtomSiteMoment>(); }))
-        .def_prop_rw(
-            "id", [](const edi::AtomSiteMoment& self) { return self.id.value(); },
-            [](edi::AtomSiteMoment& self, std::string value) { self.id = std::move(value); })
-        .def_prop_ro("symmform", [](const edi::AtomSiteMoment& self) { return self.symmform; });
-    def_parameter_walks(atom_site_moment);
-    def_parameter_field(atom_site_moment, "crystalaxis_x", &edi::AtomSiteMoment::crystalaxis_x);
-    def_parameter_field(atom_site_moment, "crystalaxis_y", &edi::AtomSiteMoment::crystalaxis_y);
-    def_parameter_field(atom_site_moment, "crystalaxis_z", &edi::AtomSiteMoment::crystalaxis_z);
-
-    // An atom type's magnetic form factor, keyed by the type symbol: the ion (empty: the type's own),
-    // the approximation (j0, dipole or beyond_dipole) and the coefficients C2, C4, C6 of the <j2>,
-    // <j4> and <j6> terms.
-    nb::class_<edi::MagneticFormFactor> magnetic_form_factor(m, "MagneticFormFactor");
-    magnetic_form_factor.def("__setattr__", renewing_setattr<edi::MagneticFormFactor>({}, renew_epoch),
-                             nb::arg("name"), nb::arg("value").none());
-    magnetic_form_factor.def(nb::new_([]() { return std::make_shared<edi::MagneticFormFactor>(); }))
-        .def_prop_rw(
-            "id", [](const edi::MagneticFormFactor& self) { return self.id.value(); },
-            [](edi::MagneticFormFactor& self, std::string value) { self.id = std::move(value); })
-        .def_prop_rw(
-            "ion", [](const edi::MagneticFormFactor& self) { return self.ion.value(); },
-            [](edi::MagneticFormFactor& self, std::string value) { self.ion = std::move(value); })
-        .def_prop_rw(
-            "approximation", [](const edi::MagneticFormFactor& self) { return self.approximation.value(); },
-            [](edi::MagneticFormFactor& self, std::string value) {
-                if (value != "j0" && value != "dipole" && value != "beyond_dipole") {
-                    throw nb::value_error(("magnetic form-factor approximation '" + value +
-                                           "' is none of j0, dipole and beyond_dipole")
-                                              .c_str());
-                }
-                self.approximation = std::move(value);
-            });
-    def_parameter_walks(magnetic_form_factor);
-    def_parameter_field(magnetic_form_factor, "j2_coefficient", &edi::MagneticFormFactor::j2_coefficient);
-    def_parameter_field(magnetic_form_factor, "j4_coefficient", &edi::MagneticFormFactor::j4_coefficient);
-    def_parameter_field(magnetic_form_factor, "j6_coefficient", &edi::MagneticFormFactor::j6_coefficient);
-
     // One upstream PrefOrient row — the March-Dollase coefficient and random fraction (fit
     // parameters), the fixed integer texture axis, the structure it corrects.
     nb::class_<edi::PrefOrient> pref_orient(m, "PrefOrient");
@@ -2561,13 +2503,6 @@ NB_MODULE(_edi, m) {
                                                      &edi::AtomSiteAniso::id};
             },
             nb::keep_alive<0, 1>())
-        .def_prop_ro(
-            "atom_site_moment",
-            [](edi::Structure& self) {
-                return edi::views::AtomSiteMomentView{&self, &edi::Structure::atom_site_moment,
-                                                      &edi::AtomSiteMoment::id};
-            },
-            nb::keep_alive<0, 1>())
         .def_prop_rw(
             "scattering_lengths_fm",
             [](const edi::Structure& self) { return self.scattering_lengths_fm.get(); },
@@ -2594,52 +2529,6 @@ NB_MODULE(_edi, m) {
         .def_prop_ro(
             "geom_bond",
             [](edi::Structure& self) { return GeomBondView{{&self, stored_geometry(self)}}; },
-            nb::keep_alive<0, 1>())
-        .def_prop_ro(
-            "expanded_atom_site_moment",
-            [](edi::Structure& self) {
-                return ExpandedAtomSiteMomentsView{{&self, stored_geometry(self)}};
-            },
-            nb::keep_alive<0, 1>())
-        // The magnetic description besides the moments (edi ADR-0070), read as written: the
-        // group's names, the signed operations and centring vectors, the parent group, the
-        // propagation vectors and the form factors per atom type.
-        .def_prop_ro("space_group_magn",
-                     [](const edi::Structure& self) {
-                         const crysta::MagneticGroupName& g = self.magnetic->group;
-                         nb::dict out;
-                         out["number_bns"] = g.number_bns;
-                         out["name_bns"] = g.name_bns;
-                         out["name_uni"] = g.name_uni;
-                         out["number_og"] = g.number_og;
-                         out["name_og"] = g.name_og;
-                         out["point_group_name_uni"] = g.point_group_name_uni;
-                         out["point_group_number_litvin"] = g.point_group_number_litvin;
-                         return out;
-                     })
-        .def_prop_ro("space_group_symop_magn_operation",
-                     [](const edi::Structure& self) { return self.magnetic->operations; })
-        .def_prop_ro("space_group_symop_magn_centering",
-                     [](const edi::Structure& self) { return self.magnetic->centerings; })
-        .def_prop_ro("parent_space_group",
-                     [](const edi::Structure& self) {
-                         const crysta::ParentSpaceGroup& p = self.magnetic->parent;
-                         nb::dict out;
-                         out["name_h_m_alt"] = p.name_h_m_alt;
-                         out["it_number"] = p.it_number;
-                         out["transform_pp_abc"] = p.transform_pp_abc;
-                         out["child_transform_pp_abc"] = p.child_transform_pp_abc;
-                         out["reference_setting"] = p.reference_setting;
-                         return out;
-                     })
-        .def_prop_ro("parent_propagation_vector",
-                     [](const edi::Structure& self) { return self.magnetic->propagation_vectors; })
-        .def_prop_ro(
-            "magnetic_form_factor",
-            [](edi::Structure& self) {
-                return edi::views::MagneticFormFactorView{&self, &edi::Structure::magnetic_form_factors,
-                                                          &edi::MagneticFormFactor::id};
-            },
             nb::keep_alive<0, 1>())
         .def_prop_ro(
             "atom_sites_cartn_transform",
@@ -2721,31 +2610,6 @@ NB_MODULE(_edi, m) {
           {"u_iso", &edi::ExpandedAtomSites::u_iso}}) {
         expanded.def_prop_ro(name, [member](const ExpandedAtomSitesView& self) {
             return readonly_array(self.get().expanded_atom_sites.*member);
-        });
-    }
-
-    // The moments of every magnetic atom in the cell after symmetry (edi ADR-0070), as crysta
-    // computes them.
-    nb::class_<ExpandedAtomSiteMomentsView> expanded_moments(m, "ExpandedAtomSiteMoments");
-    expanded_moments
-        .def_prop_ro("id",
-                     [](const ExpandedAtomSiteMomentsView& self) {
-                         return ordinal_array(self.get().expanded_atom_site_moments.size());
-                     })
-        .def_prop_ro("atom_site_id",
-                     [](const ExpandedAtomSiteMomentsView& self) {
-                         return text_tuple(self.get().expanded_atom_site_moments.atom_site_id);
-                     })
-        .def_prop_ro("site_symmetry", [](const ExpandedAtomSiteMomentsView& self) {
-            return text_tuple(self.get().expanded_atom_site_moments.site_symmetry);
-        });
-    for (const auto& [name, member] :
-         {std::pair<const char*, edi::ComputedColumn<double> edi::ExpandedAtomSiteMoments::*>{
-              "crystalaxis_x", &edi::ExpandedAtomSiteMoments::crystalaxis_x},
-          {"crystalaxis_y", &edi::ExpandedAtomSiteMoments::crystalaxis_y},
-          {"crystalaxis_z", &edi::ExpandedAtomSiteMoments::crystalaxis_z}}) {
-        expanded_moments.def_prop_ro(name, [member](const ExpandedAtomSiteMomentsView& self) {
-            return readonly_array(self.get().expanded_atom_site_moments.*member);
         });
     }
 
@@ -3878,14 +3742,8 @@ NB_MODULE(_edi, m) {
                      [live_refln](const edi::PowderReflnDataBase& r) { return readonly_array(live_refln(r).index_l); })
         .def_prop_ro("f_calc",
                      [live_refln](const edi::PowderReflnDataBase& r) { return readonly_array(live_refln(r).f_calc); })
-        .def_prop_ro("f_m_perp_squared_calc", [live_refln](const edi::PowderReflnDataBase& r) {
-            return readonly_array(live_refln(r).f_m_perp_squared_calc);
-        })
         .def_prop_ro("f_squared_calc", [live_refln](const edi::PowderReflnDataBase& r) {
             return readonly_array(live_refln(r).f_squared_calc);
-        })
-        .def_prop_ro("f_squared_total_calc", [live_refln](const edi::PowderReflnDataBase& r) {
-            return readonly_array(live_refln(r).f_squared_total_calc);
         });
     nb::class_<edi::PowderCwlReflnData, edi::PowderReflnDataBase>(m, "PowderCwlReflnData")
         .def_prop_ro("two_theta",

@@ -13,16 +13,16 @@
 namespace edi_app {
 namespace {
 const QString unknown = QStringLiteral("__unknown__");
-const QStringList keys{"purpose",        "fittingMode",  "facilities", "instruments",
-                       "sampleForm",     "beamMode",     "probe",      "scatteringType",
-                       "dimensionality", "polarisation", "structure"};
+const QStringList keys{"purpose",        "fittingMode", "facilities", "instruments",
+                       "sampleForm",     "beamMode",    "probe",      "scatteringType",
+                       "dimensionality", "polarisation"};
 const QStringList titles{"Purpose",        "Fitting mode", "Facilities", "Instruments",
                          "Sample form",    "Beam mode",    "Probe",      "Scattering type",
-                         "Dimensionality", "Polarisation", "Structure"};
+                         "Dimensionality", "Polarisation"};
 const QStringList allTitles{"All purposes",     "All fitting modes",    "All facilities",
                             "All instruments",  "All sample forms",     "All beam modes",
                             "All probes",       "All scattering types", "All dimensionalities",
-                            "All polarisations", "All structures"};
+                            "All polarisations"};
 const QJsonObject& tagRegistry() {
     static const auto registry = [] {
         QFile file(QStringLiteral(":/edi/examples/tags.json"));
@@ -47,8 +47,6 @@ QString label(const QString& value) {
         return QString::fromStdString(edi::option_label("experiment_type.polarisation", "."));
     if (value == QLatin1String("refinement")) return ExampleListModel::tr("Fitting");
     if (value == QLatin1String("simulation")) return ExampleListModel::tr("Simulation");
-    if (value == QLatin1String("crystal")) return ExampleListModel::tr("Crystal structure");
-    if (value == QLatin1String("magnetic")) return ExampleListModel::tr("Magnetic structure");
     if (value == QLatin1String("1d"))
         return QString::fromStdString(edi::option_label("experiment_type.dimensionality", "1d"));
     QString result = value;
@@ -173,8 +171,7 @@ ExampleListModel::ExampleListModel(QObject* parent)
         }
         for (const QString& key : {QStringLiteral("purpose"), QStringLiteral("fittingMode"),
                                    QStringLiteral("sampleForm"), QStringLiteral("probe"),
-                                   QStringLiteral("beamMode"), QStringLiteral("scatteringType"),
-                                   QStringLiteral("structure")})
+                                   QStringLiteral("beamMode"), QStringLiteral("scatteringType")})
             for (const auto& value : entry.values.value(key))
                 if (value != unknown) addTag(entry, key, value, label(value));
         entry.search = normalize(entry.search + " " + entry.tags.join(' '));

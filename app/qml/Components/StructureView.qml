@@ -20,26 +20,12 @@ Rectangle {
 
     property StructureViewModel structure: null
     property StructureViewOptions options: null
-    // The legend's width when it was last shown: the band the drawing keeps clear for it.
-    property real legendWidth: 0
-    function keepLegendWidth() {
-        if (legend.visible && legend.width > 0)
-            legendWidth = legend.width;
-    }
     // The report's input (edi ADR-0036): set, the view draws the report model's scene of `reportStructure` with no
     // toolbar. A drag still turns it, and the wheel scrolls what holds it.
     property ReportViewModel report: null
     // The theme colours the view draws with; a PDF's figure takes the light ones.
     property FigureColors colors: FigureColors {}
     property string reportStructure: ""
-
-    // The moment arrows' colours follow the app's preference (edi ADR-0070).
-    Binding {
-        target: view.options
-        property: "momentColours"
-        value: Preferences.momentColours
-        when: view.options !== null
-    }
     // The view is on the page and the tab the window shows: its page binds it, as the pattern chart's (a loaded
     // page that is not shown stays visible, clipped out of the window). A view not shown prepares nothing and
     // presents once, with the latest source, when it is shown again; a view no page hides is shown.
@@ -94,9 +80,8 @@ Rectangle {
         viewportHeight: view.height
         // The band kept clear at the top for the toolbar: its height with its margins.
         topBand: view.report ? 0 : toolbar.height + 2 * view.margin
-        // And at either side for the legend: its width with its margin, and a gap before the drawing. Kept while the
-        // atoms are hidden, which hides the legend, so a show or hide keeps the camera (the owner, 2026-11-03).
-        sideBand: view.legendWidth > 0 && controller.hasSites ? view.sideMargin + view.legendWidth + view.margin : 0
+        // And at either side for the legend: its width with its margin, and a gap before the drawing.
+        sideBand: legend.visible ? view.sideMargin + legend.width + view.margin : 0
         spheres: structureScene.spheres
         cylinders: structureScene.cylinders
         triadShafts: structureScene.triadShafts
@@ -166,8 +151,6 @@ Rectangle {
             entries: controller.legend
             labelInColor: false
             visible: controller.legend.count > 0
-            onWidthChanged: view.keepLegendWidth()
-            onVisibleChanged: view.keepLegendWidth()
         }
         EaElements.Label {
             objectName: "structure.view.unavailable"

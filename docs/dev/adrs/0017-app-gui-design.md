@@ -227,13 +227,6 @@ disabled** rather than left out, so the layout is final:
 - **Minimizer's max iterations shows the bound the fit uses**: the declared `_minimizer.max_iterations`, or,
   when none is declared, the fit's own cap (`edi::default_max_iterations()`, 50) — as the tolerance beside it
   shows crysta's default. A project that declares none showed an empty field before.
-- **Minimizer's stop rule** (the owner, 2026-11-04): a selector, χ² change or Shift/s.u., on the left of one row, and on
-  its right one value field holding the chosen rule's value (`_minimizer.chi_square_tolerance` or
-  `_minimizer.shift_tolerance`, declared or crysta's default). A new project declares Shift/s.u. 0.1 (the owner,
-  2026-11-04), which also ends on the χ² change when that passes first; a project that declares no rule shows the χ²
-  change, which is what it fits with. Below them, the iteration bound, and beside it, for a project with a magnetic
-  structure only, "Magnetic moments near zero": Try exact zero (also when none is declared) or Keep free
-  (`_minimizer.moments_near_zero`).
 - **Fields share the full row** unless a rule above says otherwise: a row of fields takes the sidebar content
   width, split evenly (the base's `GroupRow` fields, and `ParameterGrid` with `fillRows`, as Instrument).
   Absorption now does so too: μR alone takes the row, ABSCOR1 and ABSCOR2 half each (the owner, 2026-09-29; it
@@ -441,8 +434,8 @@ one selected row, and the row's number in the first column, bold in the accent c
 ### 12. Preferences, and the sidebar's side
 
 - **edi shows its own Preferences dialog** (`Components/AppPreferencesDialog.qml`), rebuilt from the base's
-  pieces as the About dialog is, with the base's tabs and layout and two of edi's own: Prompts, Updates,
-  Appearance, Projects, Performance, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
+  pieces as the About dialog is, with the base's tabs and layout and one of edi's own: Prompts, Updates,
+  Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
 - **Appearance**: Theme; **Palette — Earth (the default), Classic, Soft, Natural or Colour-blind safe** (the
@@ -455,23 +448,12 @@ one selected row, and the row's number in the first column, bold in the accent c
   always 2 digits; a project's own rule is on its Project page's Extra tab) and new reports' libraries (online, the
   default, or embedded; a project's own is the Report page's Embed box).
 - **Updates and Experimental**: shown disabled (§4).
-- **Performance** (the owner, 2026-11-04): how the app runs on this machine, never saved in a project.
-  - **Threads per calculation** (the owner, 2026-10-10, then named Engine threads under Develop): "Auto", the
-    engine's own thread policy, or a count from 1 to twice the cores the platform reports (at least 16, at most 64;
-    a browser can report fewer cores than the machine has), for a single calculation, a single fit and the
-    Experiment page. It replaces `OMP_NUM_THREADS` and never changes a result. Saved under `develop/engineThreads`
-    (0 is Auto), the key it had under Develop, and applied when the window is complete and on every change; the
-    diagnostics show the preference and the resulting engine workers. How the engine applies it: ADR-0020 §10.
-  - **Parallel fits in a scan**: how many files of a sequential or independent scan are fitted at once, default 1.
-    The box lists 1 to 5 and also takes a typed whole number, taken at 1 and at the cores the platform reports when
-    past them (`RowNumberBox`, the dialog's box with typing). Each file of a group starts from where the previous
-    group ended, so the count can change a scan's results; 1 fits the files one after another. Saved under
-    `develop/scanWorkers` and handed to the engine with `edi::set_scan_workers`.
-  - While parallel fits is above 1 each scan fit runs on one thread, and the threads box says so after its value
-    ("Auto · 1 per scan fit").
-  - Where the app runs single-threaded (a browser without WebAssembly threads), both show 1, disabled, with a tooltip
-    saying why, and a scan fits one file at a time.
-  - The pages' Settings tabs show the count that applies there, read-only, linking here (ADR-0031 §2).
+- **Develop — Engine threads** (the owner, 2026-10-10): "Auto", the engine's own thread policy,
+  or a count from 1 to twice the cores the platform reports (at least 16, at most 64; a browser can report fewer
+  cores than the machine has), for every fit and calculation. It replaces `OMP_NUM_THREADS` and never changes a
+  result. It is saved per machine under `develop/engineThreads` (0 is Auto) and applied when the window is
+  complete and on every change; the diagnostics show the preference and the resulting engine workers. The
+  single-thread web build shows "1 (single-thread build)", disabled. How the engine applies it: ADR-0020 §10.
 - **Persistence**: tool tips, auto collapse and the sidebar's side persist in the app's settings file (the
   base's `Settings` mechanism and file, `EaGlobals.Vars.settingsFile`) under edi's own category
   `Edi.Preferences` (`Globals/Preferences.qml`); the theme and the logging level keep the base's own
@@ -1155,21 +1137,14 @@ are required; source repair is not final browser or scientific acceptance.
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
   uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
   datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, lists every free
-  parameter, then any other one `analysis/results.csv` records, already before a dataset is fitted. Until one is, a
-  fitted template experiment is plotted as one point, its current value and s.u. at its dataset's x, so a parameter
-  can be chosen before the scan starts, its range padded to show its error bar; the scan's first fitted dataset
-  replaces it (owner, 2026-11-04). With neither, the chart has no axes and shows "No fitted results yet" as the other
-  empty views show theirs; the points appear as the datasets are fitted. x is the first extract rule's
+  parameter, then any other one `analysis/results.csv` records, already before a dataset is fitted. Until one is, the
+  chart has no axes and shows "No fitted results yet" as the other empty views show theirs; the points appear as the
+  datasets are fitted. x is the first extract rule's
   value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
   dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06), drawn as a 2 px line edged by
   1 px of half-transparent colour on each side (owner, 2026-10-22; the Stacked and Map tabs draw the same look as an
-  open rectangle, ADR-0041 §8). Two buttons at the toolbar's right end, as on the pattern chart's toolbar, are the
-  project's `_evolution_chart` view settings, saved and undone with the other chart settings (owner, 2026-11-03), and
-  the only project settings that change while a fit runs, so the chart answers them during a scan (owner,
-  2026-11-04): *Error bars* (shown unless hidden) and *Range*, which fits the y range to the values with their error bars instead of the
-  values only, so that by default a much longer bar, such as a moment's above the ordering temperature, is clipped at
-  the plot's edge instead of flattening every point. The pointer zooms as on the
+  open rectangle, ADR-0041 §8). The pointer zooms as on the
   pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
   resets. Above 5000
   points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab

@@ -31,23 +31,10 @@ EaElements.ComboBox {
     // texts, are measured here. advanceWidth() is a call the binding cannot follow, so the binding reads the font too,
     // and measures again once the style's font has loaded; before that it measured a wider fallback font.
     readonly property real widestEntry: ApplicationInfo.toolbarWidestEntry()
-    // With `closedOnly`, the closed box is as wide as its closed texts and the open list as wide as its entries, so long
-    // entries do not widen the toolbar.
-    property bool closedOnly: false
-    readonly property real widestClosed: widestOf(box.closedTexts)
-    function widestOf(entries) {
-        if (!metrics.font.family)
-            return 0;
-        let widest = 0;
-        for (let i = 0; i < entries.length; ++i)
-            widest = Math.max(widest, metrics.advanceWidth(String(entries[i])));
-        return Math.ceil(widest);
-    }
-    popup.width: Math.max(box.width, (closedOnly ? widestOf(box.model || []) : widestEntry) + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding)
 
     displayText: box.closedTexts.length > box.currentIndex && box.currentIndex >= 0 ? box.closedTexts[box.currentIndex] : box.currentText
 
-    width: (closedOnly ? widestClosed : widestEntry) + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
+    width: widestEntry + contentItemLabel.leftPadding + contentItemLabel.rightPadding + leftPadding + rightPadding
     height: AppSizes.toolbarControlSize
     backgroundColor: Qt.tint(EaStyle.Colors.contentBackground, !box.hovered ? EaStyle.Colors.appBarComboBoxBackground : box.pressed ? EaStyle.Colors.appBarComboBoxBackgroundPressed : EaStyle.Colors.appBarComboBoxBackgroundHovered)
 

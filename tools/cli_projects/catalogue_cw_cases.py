@@ -75,11 +75,7 @@ def neutron_type() -> list[str]:
 
 
 def analysis(*blocks: list[str], descent: str | None = None) -> str:
-    minimizer = [
-        '_minimizer.type crysta',
-        '_minimizer.max_iterations 1000',
-        '_minimizer.stop_rule shift_su',
-    ]
+    minimizer = ['_minimizer.type crysta', '_minimizer.max_iterations 1000']
     if descent is not None:
         minimizer.append(f'_minimizer.descent {descent}')
     return text(['_edi.schema_version 3'], ['_fitting_mode.type single'], minimizer, *blocks)

@@ -20,8 +20,6 @@ QtObject {
     id: preferences
 
     property bool dialogShown: false
-    // The tab the dialog shows when it next opens, by name ("performance"); empty keeps the last one.
-    property string dialogTab: ""
     property bool assistantShown: false
     property bool assistantCopyTechnicalDetails: false
     property real assistantWidth: AppSizes.assistantDefaultWidth
@@ -31,14 +29,8 @@ QtObject {
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
     property string sideBarSide: "Right"
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
-    // Threads per calculation (Performance): the engine's thread count for every fill, 0 is Auto, the engine's own
-    // policy. A machine's setting, never saved in a project.
+    // The engine's thread count for every fill (Develop): 0 is Auto, the engine's own policy.
     property int engineThreads: 0
-    // Parallel fits in a scan (Performance): how many files of a scan are fitted at once, 1 one after another. A
-    // machine's setting, never saved in a project (the owner, 2026-11-04).
-    property int scanWorkers: 1
-    // What the engine runs with: one file at a time where the app runs single-threaded.
-    readonly property int scanWorkersApplied: ApplicationInfo.engineThreadsSelectable ? Math.max(1, Math.min(scanWorkers, ApplicationInfo.scanWorkersMaximum)) : 1
     // The lowest level the run log writes (Develop; edi ADR-0062): "Debug", "Info", "Error" or "Disabled".
     property string loggingLevel: "Info"
     onLoggingLevelChanged: RunLog.level = loggingLevel
@@ -76,8 +68,6 @@ QtObject {
     // (ApplicationInfo.colourSchemeOrDefault). Every chart, legend, icon and report the app draws follows it, a report
     // in its light colours. The Stacked and Map colours are scanStackedPalette and scanMapColours.
     property string colourScheme: "earth"
-    // How the structure view colours the magnetic moment arrows: "atom", "greyed" (the default) or "single" (edi ADR-0070).
-    property string momentColours: "greyed"
     // The patterns' palette stored before the one palette (the owner, 2026-10-22, until 2026-10-26): read once into
     // colourScheme, then cleared, so a choice made there carries over.
     property string patternColourScheme: ""
@@ -119,7 +109,6 @@ QtObject {
         property alias colourScheme: preferences.colourScheme
         // After colourScheme: the settings load in this order, so the earlier patterns' choice wins once.
         property alias patternColourScheme: preferences.patternColourScheme
-        property alias momentColours: preferences.momentColours
     }
 
     property Settings assistantSettings: Settings {
@@ -136,13 +125,10 @@ QtObject {
         property alias newReportLibraries: preferences.newReportLibraries
     }
 
-    // Also the Performance tab's two counts: the thread count was a Develop preference, and its key stays here so a
-    // saved count carries over.
     property Settings developSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "develop"
         property alias engineThreads: preferences.engineThreads
-        property alias scanWorkers: preferences.scanWorkers
         property alias loggingLevel: preferences.loggingLevel
         // Stored under a key no earlier build wrote: those saved an empty address, which would outrank the default.
         property alias feedbackAddress: preferences.feedbackEndpoint
@@ -283,14 +269,6 @@ QtObject {
     onEngineThreadsChanged: ApplicationInfo.persistPreference(0)
     // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
     // for the settings' own schedule when the window closes.
-    onScanWorkersAppliedChanged: ApplicationInfo.setScanWorkers(scanWorkersApplied)
-    // Saved at once, as the thread count is.
-    onScanWorkersChanged: ApplicationInfo.persistPreference(4)
-    // Opens the dialog on its Performance tab: what the pages' read-only Performance lines do.
-    function openPerformance() {
-        preferences.dialogTab = "performance";
-        preferences.dialogShown = true;
-    }
     onChartIncludedOnlyChanged: ApplicationInfo.persistPreference(1)
 
     // Saved at once too: the renderer choice is read by the next start, which may follow at once.

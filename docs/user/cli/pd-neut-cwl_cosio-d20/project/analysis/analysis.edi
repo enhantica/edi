@@ -5,7 +5,6 @@ _fitting_mode.type single
 _minimizer.type crysta
 _minimizer.max_iterations 1000
 _minimizer.descent fast_descent
-_minimizer.stop_rule shift_su
 
 loop_
 _alias.id

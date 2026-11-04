@@ -45,7 +45,3 @@ So `expected.json` compares the full model with FullProf's on R<sub>wp</sub>, wi
 of free parameters only. Every other fitted value is compared on a second fit of both programs with the four
 coefficients fixed at 0: the record's `asymmetry-off` variant against FullProf's fit in
 `knowledge/fitting/fullprof/pd-neut-cwl_hs-hrpt/asymmetry-off/`.
-
-**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
-change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
-machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 9 → 8; asymmetry-off iterations 7 → 6.

@@ -377,9 +377,7 @@ def assert_scene_evolution(qml):
     with tempfile.TemporaryDirectory() as scratch:
         actual = cpp_probe(
             r"""#include <cstdio>
-#include <optional>
 #include <vector>
-struct Project { std::optional<bool> evolution_error_bars; };
 struct QPointF{double x,y;QPointF(double a,double b):x(a),y(b){}};
 template<class T>struct QList:std::vector<T>{void append(T x){this->push_back(x);}};
 struct Layer{void setData(QList<QPointF> p,QList<double> low,QList<double> high){for(unsigned i=0;
@@ -393,8 +391,6 @@ int dataset;
 std::vector<Point> points_{{3,17,.4,8},{7,23,.7,17}};
 Layer layer;
 Layer* layer_=&layer;
-Project project;
-Project* project_=&project;
 void draw();
 };
 

@@ -187,9 +187,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                       ? QStringList{"theme:light"}
                                       : QStringList{};
         const QString group = crystal ? QStringLiteral("group.extinction") : QStringLiteral("group.peak");
-        // A scan's Experiments group lists its datasets, which can push the group below the sidebar's fold.
-        steps_.push_back({QStringLiteral("ex-") + id,
-                          theme + start + open_example(id) + QStringList{experiment, basic, "uncover:" + group, group}});
+        steps_.push_back({QStringLiteral("ex-") + id, theme + start + open_example(id) + QStringList{experiment, basic, group}});
     }
     // ... and the anisotropic ADP draft on the Structure page: the Atomic displacement group, a site shown as Uani,
     // the ADP atom view with its probability, and the space-group name picker with its search field.
@@ -280,28 +278,6 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                    + QStringList{structure, basic}});
     steps_.push_back({"t16-32-lbco-experiment", {experiment, basic}});
     steps_.push_back({"t16-33-lbco-analysis", {analysis, basic}});
-    // The magnetic Co2SiO4 example at 2.3 K: the structure with its moment arrows.
-    steps_.push_back({"magnetic-01-cosio-2k-moments", start + open_example("pd-neut-cwl_cosio-d20_2k")
-                                                     + QStringList{"wait-fit", structure, basic}});
-    // The magnetic groups of the 2.3 K example: Main, then Extra.
-    steps_.push_back({"magnetic-03-main-groups",
-                      start + open_example("pd-neut-cwl_cosio-d20_2k")
-                          + QStringList{"wait-fit", structure, basic, "expand:group.space_group_magn",
-                                        "expand:group.parent_propagation_vector", "expand:group.atom_site_moment"}});
-    steps_.push_back({"magnetic-04-extra-groups",
-                      start + open_example("pd-neut-cwl_cosio-d20_2k") + QStringList{"wait-fit", structure, extras}});
-    // Its pattern: the nuclear and the magnetic Bragg tick rows.
-    steps_.push_back({"magnetic-05-pattern-ticks",
-                      start + open_example("pd-neut-cwl_cosio-d20_2k") + QStringList{"wait-fit", experiment, basic}});
-    // The propagation vectors, and a vector the cell cannot carry refused with its reason.
-    steps_.push_back({"magnetic-06-propagation-vectors",
-                      start + open_example("pd-neut-cwl_cosio-d20_2k")
-                          + QStringList{"wait-fit", structure, basic, "expand:group.parent_propagation_vector",
-                                        "propagationVectors.append"}});
-    // The Examples list filtered by the structure tag: only the magnetic examples.
-    steps_.push_back({"magnetic-02-examples-filter",
-                      start + QStringList{"appBar.tab.project", "sideBar.tab.basic", "examples.property",
-                                          "choose:Structure", "examples.value", "choose:Magnetic structure (2)"}});
     // A scan's datasets as experiments: the bundled 162-file example, before any scan has been fitted.
     steps_.push_back({"t16-50-scan-experiment", start + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
                                                     + QStringList{experiment, basic, "expand:group.experiments"}});
@@ -615,9 +591,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "2-updates", {"preferences.tab.updates"}});
             steps_.push_back({name + "3-appearance", {"preferences.tab.appearance"}});
             steps_.push_back({name + "4-projects", {"preferences.tab.projects"}});
-            steps_.push_back({name + "5-performance", {"preferences.tab.performance"}});
-            steps_.push_back({name + "6-experimental", {"preferences.tab.experimental"}});
-            steps_.push_back({name + "7-develop", {"preferences.tab.develop"}});
+            steps_.push_back({name + "5-experimental", {"preferences.tab.experimental"}});
+            steps_.push_back({name + "6-develop", {"preferences.tab.develop"}});
         }
     }
     // An example from an online collection (ADR-0068), opened from the Examples list, the list searched down to the
@@ -777,7 +752,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         shot("fit-results", start + open_example("pd-neut-cwl_lbco-hrpt") +
                                 QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"});
         // A scan's window keeps changing while its datasets load, so its step is captured unsettled.
-        shot("sequential-extract", start + open_cli_project("pd-neut-cwl_cosio-d20_scan") +
+        shot("sequential-extract", start + open_example("pd-neut-cwl_cosio-d20_scan") +
                                        QStringList{analysis, extras, "expand:group.sequential_fit_extract", "capture-now"});
     }
     // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
@@ -887,7 +862,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // captured while the scan runs and after it. Run only when asked (`--demo-only seqfit-`).
     if (only.startsWith(QLatin1String("seqfit-"))) {
         steps_.push_back({"seqfit-1-running", QStringList{"resize:1280x960", "theme:light"} + start
-                                                  + open_cli_project("pd-neut-cwl_cosio-d20_scan")
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "statusBar.fit.button",
                                                                 "wait-files:10", "drag:chart.pointer:0.55,0.05,0.65,0.95",
                                                                 "wait-files:30", "capture-now"}});
@@ -945,7 +920,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     }
     if (only.startsWith(QLatin1String("scanviews-"))) {
         steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                            + open_cli_project("pd-neut-cwl_cosio-d20_scan")
+                                                            + open_example("pd-neut-cwl_cosio-d20_scan")
                                                             + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"scanviews-02-map-light", {"mainArea.analysis.tab.map"}});
         steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
@@ -1006,7 +981,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("colours-"))) {
         steps_.push_back({"colours-1-experiment-stacked-light",
                           QStringList{"resize:1280x960", "theme:light"} + start
-                              + open_cli_project("pd-neut-cwl_cosio-d20_scan")
+                              + open_example("pd-neut-cwl_cosio-d20_scan")
                               + QStringList{QStringLiteral("appBar.tab.experiment"), basic,
                                             "mainArea.experiment.tab.stacked"}});
         steps_.push_back({"colours-2-experiment-map-light", {"mainArea.experiment.tab.map"}});
@@ -1030,7 +1005,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // with every label (the owner, 2026-10-22). Run only when asked (`--demo-only rowlabels-`).
     if (only.startsWith(QLatin1String("rowlabels-"))) {
         steps_.push_back({"rowlabels-01-stacked-value-light", QStringList{"resize:1280x960", "theme:light"} + start
-                                                                  + open_cli_project("pd-neut-cwl_cosio-d20_scan")
+                                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
                                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"rowlabels-01b-stacked-height-4x-light", {"scanView.stacked.toolbar.height", "choose:4×"}});
         steps_.push_back({"rowlabels-01c-stacked-height-2x-light", {"scanView.stacked.toolbar.height", "choose:2×"}});
@@ -1067,7 +1042,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("mapcands-"))) {
         const QStringList titles = {"Blue-Red", "Viridis", "Batlow", "Inferno", "Lapaz", "Greys"};
         steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
-                                                  + open_cli_project("pd-neut-cwl_cosio-d20_scan")
+                                                  + open_example("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.map",
                                                                 "scanView.map.toolbar.yscale", "choose:Log"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
@@ -1444,14 +1419,6 @@ void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int fi
 bool DemoDriver::perform(const QString& action) {
     if (documentation_) {
         if (auto handled = documentationAction(action)) return *handled;
-    }
-    // `uncover:` reveals a control only when none of it can be seen, so a page where it shows is captured as it is.
-    if (action.startsWith(QLatin1String("uncover:"))) {
-        QQuickItem* item = find(action.mid(8), false);
-        if (item != nullptr && on_screen(item)) {
-            return true;
-        }
-        return perform(QStringLiteral("reveal:") + action.mid(8));
     }
     // Scrolls the view a control is in until the control shows (a sidebar column longer than the window).
     if (action.startsWith(QLatin1String("reveal:"))) {

@@ -10,8 +10,8 @@ import edi.app
 
 // The structure view's toolbar (edi ADR-0017 §16): diffraction-lib's modebar (`templates/structure.html.j2`),
 // its buttons and behaviour, drawn as ChartToolButton with the chart toolbar's spacing and spacer. The features
-// first, one control per feature the structure has, in diffraction-lib's order: the atoms shown (a drop-down),
-// labels, bonds, cell, magnetic moments (when the structure has them), axes. Then the camera group, ending in Home: projection, view along a, b and c, reset view
+// first, one button per feature the structure has, in diffraction-lib's order: atoms (all, asymmetric unit, none),
+// labels, bonds, cell, axes. Then the camera group, ending in Home: projection, view along a, b and c, reset view
 // (owner, 2026-10-05). The colour scheme drop-down precedes it in the view's centred toolbar line (StructureView).
 Row {
     id: toolbar
@@ -22,27 +22,13 @@ Row {
 
     spacing: AppSizes.toolbarSpacing
 
-    // Which atoms are drawn (the owner, 2026-11-03): the magnetic choices appear for a magnetic structure. The camera
-    // stays where it is.
-    ToolbarComboBox {
-        readonly property var tokens: toolbar.options ? toolbar.options.atomChoices(toolbar.controller !== null && toolbar.controller.hasMoments) : []
-
+    ChartToolButton {
         objectName: "structure.toolbar.atoms"
         visible: toolbar.controller !== null && toolbar.controller.hasSites
-        // The closed box names the choice briefly; the list and the tooltip name it in full.
-        readonly property var shortNames: ({
-                "all": qsTr("All"),
-                "asymmetric": qsTr("Crystal AU"),
-                "asymmetric_magnetic": qsTr("Magnetic AU"),
-                "magnetic": qsTr("Magnetic"),
-                "none": qsTr("None")
-            })
-        toolTip: qsTr("Atoms: %1").arg(currentText)
-        model: tokens.map(token => Session.optionLabel("structure_view.atoms", token))
-        closedOnly: true
-        closedTexts: tokens.map(token => shortNames[token] ?? token)
-        shownIndex: Math.max(0, tokens.indexOf(toolbar.options ? toolbar.options.atoms : "all"))
-        onActivated: index => toolbar.options.atoms = tokens[index]
+        fontIcon: "atom"
+        toolTip: toolbar.controller && toolbar.controller.hasCopies ? qsTr("Atoms: all / asymmetric unit / none") : qsTr("Atoms: show / hide")
+        checked: toolbar.options !== null && toolbar.options.atoms !== "none"
+        onClicked: toolbar.options.cycleAtoms(toolbar.controller.hasCopies)
     }
     ChartToolButton {
         objectName: "structure.toolbar.labels"
@@ -66,14 +52,6 @@ Row {
         toolTip: qsTr("Cell")
         checked: toolbar.options !== null && toolbar.options.cell
         onClicked: toolbar.options.cell = !toolbar.options.cell
-    }
-    ChartToolButton {
-        objectName: "structure.toolbar.moments"
-        visible: toolbar.controller !== null && toolbar.controller.hasMoments
-        fontIcon: "long-arrow-alt-up"
-        toolTip: qsTr("Magnetic moments")
-        checked: toolbar.options !== null && toolbar.options.showMoments
-        onClicked: toolbar.options.showMoments = !toolbar.options.showMoments
     }
     ChartToolButton {
         objectName: "structure.toolbar.axes"

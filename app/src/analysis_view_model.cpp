@@ -274,8 +274,6 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       editor_(editor),
       fitting_mode_options_(new OptionListModel(this)),
       descent_options_(new OptionListModel(this)),
-      stop_rule_options_(new OptionListModel(this)),
-      moments_near_zero_options_(new OptionListModel(this)),
       minimizer_type_options_(new OptionListModel(this)),
       joint_weights_(new JointWeightListModel(project, this)),
       sequential_fit_(new SequentialFitViewModel(project, this)),
@@ -288,9 +286,6 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
                           [] { return std::string("analysis/analysis.edi"); }, {},
                           [saved] { return saved.discovered("analysis/analysis.edi"); })) {
     descent_options_->setItemOptions("minimizer.descent", edi::supported_descents(), edi::default_descent());
-    stop_rule_options_->setItemOptions("minimizer.stop_rule", {"chi_square_change", "shift_su"}, "chi_square_change");
-    moments_near_zero_options_->setItemOptions("minimizer.moments_near_zero", {"try_exact_zero", "keep_free"},
-                                               "try_exact_zero");
     minimizer_type_options_->setItemOptions("minimizer.type", edi::supported_minimizer_types());
     sync();
 }
@@ -325,27 +320,6 @@ void AnalysisViewModel::setMaxIterations(int bound) {
 void AnalysisViewModel::setChiSquareTolerance(double tolerance) {
     edi::Project& project = project_;
     setLastError(editor_.apply_setting(edi::Edit::chi_square_tolerance(project, tolerance)));
-}
-
-void AnalysisViewModel::setStopRule(const QString& rule) {
-    if (rule == stop_rule_) {
-        return;
-    }
-    edi::Project& project = project_;
-    setLastError(editor_.apply_setting(edi::Edit::stop_rule(project, rule.toStdString())));
-}
-
-void AnalysisViewModel::setShiftTolerance(double tolerance) {
-    edi::Project& project = project_;
-    setLastError(editor_.apply_setting(edi::Edit::shift_tolerance(project, tolerance)));
-}
-
-void AnalysisViewModel::setMomentsNearZero(const QString& option) {
-    if (option == moments_near_zero_) {
-        return;
-    }
-    edi::Project& project = project_;
-    setLastError(editor_.apply_setting(edi::Edit::moments_near_zero(project, option.toStdString())));
 }
 
 void AnalysisViewModel::setRefineLsThresholdSigma(double sigma) {
@@ -412,28 +386,6 @@ void AnalysisViewModel::sync() {
         if (had != hasChiSquareTolerance()) {
             emit hasChiSquareToleranceChanged();
         }
-    }
-    const QString rule = QString::fromStdString(project_.minimizer_stop_rule.empty() ? std::string("chi_square_change")
-                                                                                      : project_.minimizer_stop_rule);
-    if (rule != stop_rule_) {
-        stop_rule_ = rule;
-        emit stopRuleChanged();
-    }
-    if (project_.minimizer_shift_tolerance != shift_tolerance_) {
-        shift_tolerance_ = project_.minimizer_shift_tolerance;
-        emit shiftToleranceChanged();
-    }
-    const QString zero = QString::fromStdString(
-        project_.minimizer_moments_near_zero.empty() ? std::string("try_exact_zero") : project_.minimizer_moments_near_zero);
-    if (zero != moments_near_zero_) {
-        moments_near_zero_ = zero;
-        emit momentsNearZeroChanged();
-    }
-    const bool magnetic = std::any_of(project_.structures.begin(), project_.structures.end(),
-                                      [](const auto& structure) { return !structure->atom_site_moment.empty(); });
-    if (magnetic != magnetic_) {
-        magnetic_ = magnetic;
-        emit magneticChanged();
     }
     const double cutoff = project_.refine_ls_threshold_sigma.value_or(qQNaN());
     if (qIsNaN(cutoff) != qIsNaN(refine_ls_threshold_sigma_) ||

@@ -1,10 +1,5 @@
 #include <QtQml/qqml.h>
 
-#include <algorithm>
-#include <tuple>
-
-#include "crysta/dictionary_items.hpp"
-
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDir>
@@ -41,17 +36,6 @@ class ProjectTextProof : public QObject {
                               source + "/data/dictionary/parameters.yaml"});
         if (!process.waitForFinished(5000) || process.exitCode() != 0) return {};
         return QJsonDocument::fromJson(process.readAllStandardOutput()).toVariant().toMap();
-    }
-    Q_INVOKABLE QVariantMap categoryRanks() const {
-        auto categories = crysta::dictionary_categories();
-        std::ranges::sort(categories, [](const auto& a, const auto& b) {
-            return std::tie(a.order, a.declared) < std::tie(b.order, b.declared);
-        });
-        QVariantMap ranks;
-        for (std::size_t i = 0; i < categories.size(); ++i) {
-            ranks.insert(QString::fromStdString(categories[i].id), static_cast<int>(i));
-        }
-        return ranks;
     }
     Q_INVOKABLE QUrl project() {
         const QDir source(QDir(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath())

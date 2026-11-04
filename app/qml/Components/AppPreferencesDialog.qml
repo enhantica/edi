@@ -20,10 +20,8 @@ import edi.app
 AppDialog {
     id: dialog
 
-    // A disabled control takes no hover, so its tooltip hangs on the item around it (§4): why it is disabled.
+    // A disabled control takes no hover, so its tooltip hangs on the item around it (§4).
     component NotAvailable: Item {
-        property string reason: qsTr("Not available yet")
-
         implicitWidth: childrenRect.width
         implicitHeight: childrenRect.height
 
@@ -31,8 +29,8 @@ AppDialog {
             id: hover
         }
         EaElements.ToolTip {
-            text: parent.reason
-            visible: hover.hovered && text !== "" && EaGlobals.Vars.showToolTips
+            text: qsTr("Not available yet")
+            visible: hover.hovered && EaGlobals.Vars.showToolTips
         }
     }
 
@@ -56,40 +54,6 @@ AppDialog {
         readonly property bool rowBox: true
 
         width: dialog.controlWidth
-    }
-    // A box that also takes a typed whole number from 1 to `maximum`: the list offers the usual counts, and Enter or
-    // leaving the box takes what was typed. `chosen` carries the count; a number past the bounds is taken at them.
-    component RowNumberBox: RowBox {
-        id: numberBox
-
-        property int maximum: 1
-        signal chosen(int count)
-
-        function take() {
-            const typed = parseInt(editText, 10);
-            if (!isNaN(typed))
-                chosen(Math.max(1, Math.min(typed, maximum)));
-        }
-
-        editable: true
-        validator: IntValidator {
-            bottom: 1
-        }
-        contentItem: TextInput {
-            leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
-            rightPadding: EaStyle.Sizes.fontPixelSize
-            text: numberBox.editText
-            font: numberBox.font
-            color: numberBox.foregroundColor
-            selectionColor: EaStyle.Colors.themeAccent
-            selectedTextColor: EaStyle.Colors.themeBackground
-            verticalAlignment: Text.AlignVCenter
-            validator: numberBox.validator
-            inputMethodHints: Qt.ImhDigitsOnly
-            selectByMouse: true
-            onEditingFinished: numberBox.take()
-        }
-        onActivated: index => chosen(parseInt(textAt(index), 10))
     }
     component RowButton: EaElements.SideBarButton {
         readonly property bool rowButton: true
@@ -129,15 +93,6 @@ AppDialog {
     onClosed: ApplicationInfo.preferencesClosed()
     onOpened: if (ApplicationInfo.assistantBuilt)
         Session.assistant.refreshSkillSources()
-    // A page's Performance line opens the dialog on that tab.
-    onAboutToShow: {
-        for (let index = 0; index < bar.count; ++index) {
-            if (Preferences.dialogTab !== "" && bar.itemAt(index).objectName === "preferences.tab." + Preferences.dialogTab)
-                bar.currentIndex = index;
-        }
-        Preferences.dialogTab = "";
-        scanWorkersBox.show();
-    }
 
     title: qsTr("Preferences")
     standardButtons: Dialog.Ok
@@ -179,11 +134,6 @@ AppDialog {
             objectName: "preferences.tab.projects"
             fontIcon: "archive"
             text: qsTr("Projects")
-        }
-        EaElements.AppBarTabButton {
-            objectName: "preferences.tab.performance"
-            fontIcon: "tachometer-alt"
-            text: qsTr("Performance")
         }
         EaElements.AppBarTabButton {
             objectName: "preferences.tab.aiAssistance"
@@ -362,20 +312,6 @@ AppDialog {
                 ToolTip.text: qsTr("What the pattern chart's y range does when a click on its legend hides or shows a curve")
             }
 
-            // The magnetic moment arrows' colours (the owner, 2026-11-03).
-            RowLabel {
-                text: qsTr("Moment colours") + ":"
-            }
-            RowBox {
-                readonly property var schemes: ["atom", "greyed", "single"]
-
-                objectName: "preferences.momentColours"
-                model: [qsTr("Atom"), qsTr("Greyed atom"), qsTr("Single")]
-                currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
-                onActivated: index => Preferences.momentColours = schemes[index]
-                ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows: in the atom's colour, in that colour greyed, or in one grey")
-            }
-
             RowLabel {
                 text: qsTr("Workflow sidebar side") + ":"
             }
@@ -546,80 +482,6 @@ AppDialog {
                     fontIcon: "plus-circle"
                     ToolTip.text: qsTr("Add a collection to search: a URL holding an index.json and the files it names")
                     onClicked: Session.onlineSources.add()
-                }
-            }
-        }
-
-        // Performance: how many threads a calculation runs on and how many files of a scan are fitted at once, both
-        // this machine's, never saved in a project (the owner, 2026-11-04). Where the app runs single-threaded (a
-        // browser without WebAssembly threads) both are one and disabled.
-        RowGrid {
-            RowLabel {
-                text: qsTr("Threads per calculation") + ":"
-            }
-            NotAvailable {
-                reason: ApplicationInfo.engineThreadsSelectable ? "" : qsTr("This browser runs the app on one thread")
-                RowBox {
-                    id: threadsBox
-
-                    objectName: "preferences.engineThreads"
-                    enabled: ApplicationInfo.engineThreadsSelectable
-                    model: {
-                        if (!ApplicationInfo.engineThreadsSelectable)
-                            return ["1"];
-                        const counts = [qsTr("Auto")];
-                        for (let count = 1; count <= ApplicationInfo.engineThreadsMaximum; ++count)
-                            counts.push(String(count));
-                        return counts;
-                    }
-                    currentIndex: ApplicationInfo.engineThreadsSelectable ? Math.min(Preferences.engineThreads, ApplicationInfo.engineThreadsMaximum) : 0
-                    // While several scan files are fitted at once, each of those fits runs on one thread.
-                    displayText: Preferences.scanWorkersApplied > 1 ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${qsTr("1 per scan fit")}</font>` : currentText
-                    onActivated: index => {
-                        if (ApplicationInfo.engineThreadsSelectable)
-                            Preferences.engineThreads = index;
-                    }
-                    ToolTip.text: Preferences.scanWorkersApplied > 1 ? qsTr("Threads one calculation or one fit runs on. While several scan files are fitted at once, each of those fits runs on one thread") : qsTr("Threads one calculation or one fit runs on; Auto leaves a core or two free")
-                }
-            }
-
-            RowLabel {
-                text: qsTr("Parallel fits in a scan") + ":"
-            }
-            NotAvailable {
-                reason: ApplicationInfo.engineThreadsSelectable ? "" : qsTr("This browser runs the app on one thread")
-                RowNumberBox {
-                    id: scanWorkersBox
-
-                    // The count the engine runs with, set rather than bound: the box rewrites its own text as its
-                    // list loads and as it is edited.
-                    function show() {
-                        currentIndex = find(String(Preferences.scanWorkersApplied));
-                        editText = String(Preferences.scanWorkersApplied);
-                    }
-
-                    objectName: "preferences.scanWorkers"
-                    enabled: ApplicationInfo.engineThreadsSelectable
-                    maximum: ApplicationInfo.scanWorkersMaximum
-                    model: {
-                        const counts = [];
-                        for (let count = 1; count <= Math.min(5, maximum); ++count)
-                            counts.push(String(count));
-                        return counts;
-                    }
-                    Component.onCompleted: show()
-                    onModelChanged: show()
-                    onChosen: count => {
-                        Preferences.scanWorkers = count;
-                        show();
-                    }
-                    Connections {
-                        target: Preferences
-                        function onScanWorkersAppliedChanged() {
-                            scanWorkersBox.show();
-                        }
-                    }
-                    ToolTip.text: qsTr("How many data files of a sequential or independent scan are fitted at once, up to the %1 cores of this machine. Each file of a group starts from where the previous group ended; 1 fits them one after another, each from the previous result").arg(maximum)
                 }
             }
         }
@@ -918,6 +780,18 @@ AppDialog {
                 placeholderText: qsTr("Not set up")
                 text: Preferences.feedbackEndpoint
                 onEditingFinished: Preferences.feedbackEndpoint = text.trim()
+            }
+
+            // The engine's threads for every fill: Auto (the engine's policy) or a count, saved per machine.
+            RowLabel {
+                text: qsTr("Engine threads") + ":"
+            }
+            RowBox {
+                objectName: "preferences.engineThreads"
+                enabled: ApplicationInfo.engineThreadsSelectable
+                model: ApplicationInfo.preferenceEngineThreads()
+                currentIndex: ApplicationInfo.engineThreadsSelectable ? Math.min(Preferences.engineThreads, ApplicationInfo.engineThreadsMaximum) : 0
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 9)
             }
 
             // What Qt draws with (edi ADR-0041): its graphics API and renderer, read in the first frame, and whether that

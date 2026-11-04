@@ -1,2 +1,0 @@
-# Preserve the supplied regression CSV bytes, including their standard CSV CRLF endings.
-*.csv -text whitespace=cr-at-eol

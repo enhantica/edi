@@ -112,30 +112,6 @@ inline void set_minimizer_chi_square_tolerance(Project& project, double toleranc
     project.minimizer_chi_square_tolerance = tolerance;
 }
 
-// The declared stop rule, `chi_square_change` or `shift_su`, as the loader reads `_minimizer.stop_rule`.
-inline void set_minimizer_stop_rule(Project& project, const std::string& rule) {
-    if (rule != "chi_square_change" && rule != "shift_su") {
-        throw std::invalid_argument("_minimizer.stop_rule must be chi_square_change or shift_su");
-    }
-    project.minimizer_stop_rule = rule;
-}
-
-// The declared Shift/s.u. value (a positive number, as the loader reads `_minimizer.shift_tolerance`).
-inline void set_minimizer_shift_tolerance(Project& project, double tolerance) {
-    if (!(tolerance > 0.0)) {
-        throw std::invalid_argument("_minimizer.shift_tolerance must be a positive number");
-    }
-    project.minimizer_shift_tolerance = tolerance;
-}
-
-// Whether a fit tries free magnetic moments at exactly zero, `try_exact_zero` or `keep_free`.
-inline void set_minimizer_moments_near_zero(Project& project, const std::string& option) {
-    if (option != "try_exact_zero" && option != "keep_free") {
-        throw std::invalid_argument("_minimizer.moments_near_zero must be try_exact_zero or keep_free");
-    }
-    project.minimizer_moments_near_zero = option;
-}
-
 }  // namespace edi
 
 #endif  // EDI_EDITS_HPP

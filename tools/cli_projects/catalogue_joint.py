@@ -140,11 +140,7 @@ def pd_neut_xray_cwl_pbso4_d1a_lab() -> dict[str, str]:
         'analysis/analysis.edi': text(
             ['_edi.schema_version 3'],
             ['_fitting_mode.type joint'],
-            [
-                '_minimizer.type crysta',
-                '_minimizer.max_iterations 1000',
-                '_minimizer.stop_rule shift_su',
-            ],
+            ['_minimizer.type crysta', '_minimizer.max_iterations 1000'],
             loop(['_joint_fit.experiment_id', '_joint_fit.weight'], [['d1a', 0.5], ['lab', 0.5]]),
         ),
         'structures/pbso4.edi': pbso4_structure(),

@@ -41,7 +41,6 @@ CASES = (
         'test_map_interpolates_between_neighboring_patterns',
         'test_selected_map_label_is_always_drawn',
         'test_antialiased_ink_observer',
-        'test_evolution_error_bars_and_range_survive_reload',
         'test_private_copy_required',
         'test_map_interpolation_default',
         *[

@@ -145,18 +145,12 @@ def test_fitting_script_contains_each_required_instruction(requirement):
 
 def test_fitting_recipe_orders_data_background_stages_and_constraint():
     steps = script()['steps']
-    actions = {
-        'experiment-values': 'instrument.setup_wavelength',
-        'constraint': 'constraints.append',
-        'save-project': 'appBar.button.save',
-    }
     positions = {}
     for requirement, pattern in RECIPE.items():
         hits = [
             index
             for index, step in enumerate(steps)
             if re.search(pattern, step['text'], re.IGNORECASE)
-            and step['target'] == actions.get(requirement, step['target'])
         ]
         assert hits, (
             'The ordered fitting recipe includes every required instruction: ' + requirement
@@ -190,7 +184,7 @@ def test_fitting_recipe_orders_data_background_stages_and_constraint():
     stages = [
         step
         for step in steps[: positions['constraint']]
-        if step['target'] in {'parameters.category', 'parameters.freeHeader'}
+        if re.search(r'free|vary|select', step['text'], re.IGNORECASE)
     ]
     for group in ('scale', 'background', 'cell', 'peak', 'Biso|B_iso|displacement'):
         assert any(re.search(group, step['text'], re.IGNORECASE) for step in stages), (
@@ -292,48 +286,41 @@ def test_experiment_type_is_taught_before_data_locks_it():
 def test_every_staged_free_set_teaches_category_header_and_clear():
     steps = script()['steps']
     previous_fit = -1
-    stages = (('scale', 'background'), ('cell',), ('peak profile',), ('atomic displacement',))
-    for categories in stages:
-        start = previous_fit + 1
-        fit = next(
-            (i for i in range(start, len(steps)) if steps[i]['target'] == 'statusBar.fit.button'),
+    for category in ('background', 'scale', 'cell', 'peak', 'atomic displacements'):
+        choices = [
+            i
+            for i, step in enumerate(steps)
+            if i > previous_fit
+            and step['target'] == 'parameters.category'
+            and category in step['text'].lower()
+        ]
+        assert choices, 'Each staged free set targets the category chooser: ' + category
+        choose = choices[0]
+        if previous_fit >= 0:
+            assert any(
+                step['target'] == 'parameters.clearFilters'
+                for step in steps[previous_fit + 1 : choose]
+            ), 'A clear-filter action separates consecutive fitting categories'
+        free = next(
+            (
+                i
+                for i in range(choose + 1, len(steps))
+                if steps[i]['target'] == 'parameters.freeHeader'
+            ),
             -1,
         )
-        assert fit >= start, 'Each staged release is followed by an actual fit instruction'
-        if previous_fit >= 0:
-            clear = next(
-                (i for i in range(start, fit) if steps[i]['target'] == 'parameters.clearFilters'),
-                -1,
-            )
-            assert clear >= start, 'A clear-filter action separates consecutive fits'
-            start = clear + 1
-        for category in categories:
-            choose = next(
-                (
-                    i
-                    for i in range(start, fit)
-                    if steps[i]['target'] == 'parameters.category'
-                    and category in steps[i]['text'].lower()
-                ),
-                -1,
-            )
-            assert choose >= start, (
-                'Each staged free set targets the category chooser: ' + category
-            )
-            free = next(
-                (
-                    i
-                    for i in range(choose + 1, fit)
-                    if steps[i]['target'] in {'parameters.freeHeader', 'parameters.category'}
-                ),
-                -1,
-            )
-            assert (
-                free > choose
-                and steps[free]['target'] == 'parameters.freeHeader'
-                and re.search(r'filter|shown', steps[free]['text'], re.IGNORECASE)
-            ), 'Each choice has its own free-column action before another choice or the fit'
-            start = free + 1
+        assert free > choose and re.search(r'filter|shown', steps[free]['text'], re.IGNORECASE), (
+            'Each category is followed by its real free-column menu explaining filtered rows'
+        )
+        fit = next(
+            (
+                i
+                for i in range(free + 1, len(steps))
+                if steps[i]['target'] == 'statusBar.fit.button'
+            ),
+            -1,
+        )
+        assert fit > free, 'Each staged release is followed by an actual fit instruction'
         previous_fit = fit
 
 

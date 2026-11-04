@@ -421,11 +421,6 @@ QString run_log_directory() {
 #endif
 }
 
-namespace {
-
-
-}  // namespace
-
 RunLog::Header run_log_header() {
     const ApplicationInfo info;
     const QSettings settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
@@ -437,8 +432,7 @@ RunLog::Header run_log_header() {
     const int threads = settings.value(QStringLiteral("develop/engineThreads"), 0).toInt();
     const QStringList preferences{
         QStringLiteral("logging level ") + value("develop/loggingLevel", QStringLiteral("Info")),
-        QStringLiteral("threads per calculation ") + (threads > 0 ? QString::number(threads) : QStringLiteral("Auto")),
-        QStringLiteral("parallel fits ") + value("develop/scanWorkers", 1),
+        QStringLiteral("engine threads ") + (threads > 0 ? QString::number(threads) : QStringLiteral("Auto")),
         QStringLiteral("colour scheme ") + value("Appearance/colourScheme", QStringLiteral("earth")),
         QStringLiteral("sidebar ") + value("Edi.Preferences/sideBarSide", QStringLiteral("Right")),
         QStringLiteral("tooltips ") + value("Edi.Preferences/toolTips", true)};

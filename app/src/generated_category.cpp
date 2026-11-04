@@ -128,10 +128,7 @@ void GeneratedCategory::read() {
     publication = ++notification_publication_;
     if (publication == 0) publication = ++notification_publication_;
     loop_ = category.loop;
-    // The magnetic operators and centrings follow the magnetic space group, so they are shown read-only, as the
-    // symmetry operators are (edi ADR-0070; the owner, 2026-11-03).
-    output_ = edi::category_is_output(id) || id == "space_group_symop_magn_operation" ||
-              id == "space_group_symop_magn_centering";
+    output_ = edi::category_is_output(id);
     names_.clear();
     labels_.clear();
     units_.clear();

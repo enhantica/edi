@@ -27,7 +27,3 @@ twice FullProf's to carry the factor 2.
 
 FullProf's own fixed model, with its TCH profile, gives reduced χ² 6.27 and Rwp 17.0 % on these data (its `.sum`).
 The pins gate drift only.
-
-**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
-change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
-machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 7 → 6; rwp 0.08931857465 → 0.08931857672.

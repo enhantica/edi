@@ -5,7 +5,6 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 #include <cstdint>
@@ -182,109 +181,6 @@ class AtomSiteAdpListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
-// The Magnetic moments group (edi ADR-0070; the owner, 2026-11-03): one row per atom site, in the sites' order, as the
-// Atomic displacement group — its id, the magnetic ion its moment takes ("none" when the site carries no moment), the three
-// components along the cell axes and the symmetry form crysta derives, read only. The ion belongs to the site's atom
-// type, so two sites of one type share it.
-class AtomSiteMomentListModel : public RowTableModel {
-    Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("Belongs to a structure")
-    // Counts the structure's syncs: what components() reads (the cell as well as the moments) may have changed.
-    Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
-
-   public:
-    AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
-                            QObject* parent);
-    void sync();
-    // The ions a row can choose: "none", then the form-factor table's ions for the site's element.
-    Q_INVOKABLE QStringList ions(int row) const;
-    // "none" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
-    Q_INVOKABLE void setIon(int row, const QString& ion);
-    // The row's moment in `form` ("crystal_axes", "cartesian" or "spherical"; edi ADR-0070): its three components,
-    // their s.u. (NaN where the components have none) and the modulus |M| with its s.u.; empty for a site without
-    // a moment.
-    Q_INVOKABLE QVariantList components(int row, const QString& form) const;
-    // Sets component `k` of the row's moment in `form`, the other two kept: the moment is converted to crystal axes
-    // and only the components the site symmetry leaves free are written, in one edit. Returns why it was refused,
-    // or an empty text.
-    Q_INVOKABLE QString setComponent(int row, const QString& form, int k, double value);
-    int revision() const { return revision_; }
-
-   signals:
-    void revisionChanged();
-
-   private:
-    edi::Structure& structure_;
-    ProjectEditor& editor_;
-    ParameterRegistry& registry_;
-    int revision_ = 0;
-};
-
-// The Magnetic form factors group (the owner, 2026-11-03): one row per magnetic atom type, keyed by the first site
-// of the type that carries a moment. The type and its ion, read only (the ion is chosen in the moments table); the
-// approximation; and the coefficients C2, C4, C6 it uses, editable and fittable. A type takes the defaults (its own
-// ion, <j0>) until an edit gives it a form-factor row.
-class MagneticFormFactorListModel : public RowTableModel {
-    Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("Belongs to a structure")
-    Q_PROPERTY(QStringList approximations READ approximations CONSTANT)
-
-   public:
-    MagneticFormFactorListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
-                                QObject* parent);
-    void sync();
-    // The approximation tokens, in the dictionary's order.
-    QStringList approximations() const;
-    // Whether the row's ion's table carries the term of coefficient `n` (0: <j2>, 1: <j4>, 2: <j6>).
-    Q_INVOKABLE bool hasTerm(int row, int n) const;
-    // Sets the row's approximation; the type gets a form-factor row when it has none.
-    Q_INVOKABLE void setApproximation(int row, const QString& approximation);
-
-   private:
-    edi::Structure& structure_;
-    ProjectEditor& editor_;
-    ParameterRegistry& registry_;
-};
-
-// The Propagation vectors group (edi ADR-0070; the owner, 2026-11-03): the structure's commensurate k vectors, each
-// added, edited and removed through crysta's rule, so a vector the cell and the signed group cannot carry, or a
-// second spelling of one already there, is refused with its reason and the rows stay as they were. The last row
-// cannot be removed.
-class PropagationVectorListModel : public RowTableModel {
-    Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("Belongs to a structure")
-    // Why the last change was refused; empty after one that was made.
-    Q_PROPERTY(QString refusal READ refusal NOTIFY refusalChanged)
-
-   public:
-    PropagationVectorListModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent);
-    void sync();
-    Q_INVOKABLE bool setId(int row, const QString& id);
-    Q_INVOKABLE bool setVector(int row, const QString& vector);
-    Q_INVOKABLE void append();
-    Q_INVOKABLE void remove(int row);
-    QString refusal() const { return refusal_; }
-
-   signals:
-    void refusalChanged();
-
-   protected:
-    bool setRole(int row, const QString& role, const QVariant& value) override {
-        return role == QLatin1String("id")       ? setId(row, value.toString())
-               : role == QLatin1String("vector") ? setVector(row, value.toString())
-                                                 : false;
-    }
-
-   private:
-    bool replace(std::vector<std::pair<std::string, std::string>> rows);
-    edi::Structure& structure_;
-    ProjectEditor& editor_;
-    QString refusal_;
-};
-
 // The structure's custom neutron scattering lengths.
 class ScatteringLengthListModel : public RowTableModel {
     Q_OBJECT
@@ -322,19 +218,9 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::CellViewModel* cell READ cell CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteListModel* atomSites READ atomSites CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteAdpListModel* atomSiteAdps READ atomSiteAdps CONSTANT)
-    Q_PROPERTY(edi_app::AtomSiteMomentListModel* atomSiteMoments READ atomSiteMoments CONSTANT)
-    Q_PROPERTY(edi_app::MagneticFormFactorListModel* magneticFormFactors READ magneticFormFactors CONSTANT)
-    Q_PROPERTY(edi_app::PropagationVectorListModel* propagationVectors READ propagationVectors CONSTANT)
     Q_PROPERTY(edi_app::ScatteringLengthListModel* scatteringLengths READ scatteringLengths CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
-    // The magnetic space group as the file names it (`_space_group_magn`, by item name), read only until it can be
-    // chosen from crysta's table; and the parent group (`_parent_space_group`: name, number, transform), with
-    // `differs` when it is not the space group itself (edi ADR-0070).
-    Q_PROPERTY(QVariantMap magneticGroup READ magneticGroup NOTIFY magneticGroupChanged)
-    Q_PROPERTY(QVariantMap parentGroup READ parentGroup NOTIFY parentGroupChanged)
-    // Whether any site carries a moment.
-    Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
 
    public:
     StructureViewModel(SavedFile saved, edi::Structure& structure, ProjectEditor& editor,
@@ -345,15 +231,9 @@ class StructureViewModel : public QObject {
     CellViewModel* cell() const { return cell_; }
     AtomSiteListModel* atomSites() const { return atom_sites_; }
     AtomSiteAdpListModel* atomSiteAdps() const { return atom_site_adps_; }
-    AtomSiteMomentListModel* atomSiteMoments() const { return atom_site_moments_; }
-    MagneticFormFactorListModel* magneticFormFactors() const { return magnetic_form_factors_; }
-    PropagationVectorListModel* propagationVectors() const { return propagation_vectors_; }
     ScatteringLengthListModel* scatteringLengths() const { return scattering_lengths_; }
     CategoryListModel* categories() const { return categories_; }
     BlockText* text() const { return text_; }
-    QVariantMap magneticGroup() const;
-    QVariantMap parentGroup() const;
-    bool magnetic() const { return !structure_.atom_site_moment.empty(); }
     const edi::Structure* structure() const { return &structure_; }
     void sync();
     // ADR-0022: the structure's immutable scene source, captured on this (the owner) thread when the
@@ -365,9 +245,6 @@ class StructureViewModel : public QObject {
 
    signals:
     void nameChanged();
-    void magneticChanged();
-    void magneticGroupChanged();
-    void parentGroupChanged();
     void sceneSourceChanged();
     void sceneWentStale();
 
@@ -380,9 +257,6 @@ class StructureViewModel : public QObject {
     CellViewModel* cell_;
     AtomSiteListModel* atom_sites_;
     AtomSiteAdpListModel* atom_site_adps_;
-    AtomSiteMomentListModel* atom_site_moments_;
-    MagneticFormFactorListModel* magnetic_form_factors_;
-    PropagationVectorListModel* propagation_vectors_;
     ScatteringLengthListModel* scattering_lengths_;
     CategoryListModel* categories_;
     BlockText* text_;

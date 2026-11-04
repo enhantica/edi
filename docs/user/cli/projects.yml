@@ -110,9 +110,6 @@ projects:
   - id: pd-neut-cwl_cosio-d20
     executing: true
     user-facing: true
-  - id: pd-neut-cwl_cosio-d20_2k
-    executing: true
-    user-facing: true
   - id: pd-neut-cwl_lmo-echidna
     executing: true
     user-facing: true
@@ -151,9 +148,6 @@ projects:
     user-facing: true
   - id: pd-neut-cwl_cosio-d20_scan
     executing: true
-  - id: pd-neut-cwl_cosio-d20_scan-213f
-    executing: true
-    offline: true
     user-facing: true
   - id: pd-xray-cwl_latp-bm01_scan
     executing: true

@@ -18,8 +18,3 @@ Built by `tools/cli_projects/build_sc_projects.py`: Bani on every site but Od, e
 ## Result from this start (local diagnostic)
 
 From this start edi converges in 11 iterations to reduced χ² 9.75 over the 198 reflections, with the scale 4.022(28). FullProf 8.40 from the same start, with β tensors, converges in 14 cycles to χ² 9.69 and the scale 4.022(28) on this occupancy scale; all 23 values agree within 0.01 of edi's s.u.
-
-**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
-change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
-machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 11 → 7; reduced_chi_square 9.749205939 →
-9.749542021.

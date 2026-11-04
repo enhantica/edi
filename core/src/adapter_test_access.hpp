@@ -21,8 +21,6 @@ namespace edi::detail {
 crysta::Cell to_crysta_cell(const Cell& cell);
 std::vector<crysta::AtomSite> to_crysta_atom_sites(const ItemVec<AtomSite>& atoms);
 std::vector<crysta::AtomSiteAniso> to_crysta_atom_site_aniso(const Structure& s);
-// The magnetic description and moments of `s`, onto the crysta structure being built.
-void to_crysta_magnetic(const Structure& s, crysta::Structure& built);
 crysta::BraggPdExperiment to_crysta_experiment(const ExperimentBase& experiment);
 
 }  // namespace edi::detail

@@ -21,7 +21,3 @@ Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_cw_cases.p
   cell 10.61 Å; scale 0.1; a flat background at the level read off the pattern.
 - **Free (43):** the cell, the four free coordinates, the 12 independent β components, U, V, W, the zero shift, the
   scale and the 21 background points. The source project frees the scale only.
-
-**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
-change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
-machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 5 → 4.

@@ -92,10 +92,6 @@ double read_correlation_threshold(const std::string& value);
 double read_threshold_sigma(const std::string& value, const char* tag);
 std::string read_threshold_basis(const std::string& value);
 std::string read_pattern_x_axis(const std::string& value);
-// The Evolution chart's `_evolution_chart.error_bars` (`true`/`false`) and `_evolution_chart.range` (`values` or
-// `values_su`), checked.
-bool read_evolution_error_bars(const std::string& value);
-std::string read_evolution_range(const std::string& value);
 std::string read_report_file_format(const std::string& value);
 
 }  // namespace edi::detail

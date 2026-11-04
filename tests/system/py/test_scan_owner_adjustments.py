@@ -96,18 +96,8 @@ def test_fit_and_reset_buttons_follow_effective_fit_state():
 
 def progress_edge(text):
     area = item(text, 'statusBar.fit')
-    right = property_value(area, 'anchors.right')
-    observed = evaluate(
-        '[false, true].map(visible => { const tutorialStrip = {visible, left: 70}; '
-        'return (' + right + '); })',
-        'const parent = {left: 0, right: 100};',
-    )
-    assert observed == [100, 70], (
-        'Fit uses the bar right edge normally and sits just left of the active tutorial strip'
-    )
-    strip = item(text, 'statusBar.tutorial')
-    assert property_value(strip, 'anchors.right') == 'parent.right', (
-        'The tutorial strip keeps the rightmost position while its Fit neighbour changes'
+    assert property_value(area, 'anchors.right') == 'parent.right', (
+        'The fit group remains anchored at the status bar right edge'
     )
     children = [(a, b) for a, b in spans(area) if a > 0]
     direct = [(a, b) for a, b in children if not any(c < a < b < d for c, d in children)]
@@ -331,8 +321,8 @@ def test_owner_observers_reject_live_disconnected_or_constant_consumers(channel)
         'progress': (
             'qml/Components/StatusBar.qml',
             progress_edge,
-            'tutorialStrip.left : parent.right',
-            'tutorialStrip.left : parent.left',
+            'anchors.right: parent.right',
+            'anchors.right: parent.left',
         ),
         'marker': (
             'qml/Components/EvolutionChart.qml',

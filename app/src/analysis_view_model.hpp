@@ -172,18 +172,6 @@ class AnalysisViewModel : public QObject {
     Q_PROPERTY(bool hasMaxIterations READ hasMaxIterations NOTIFY hasMaxIterationsChanged)
     Q_PROPERTY(double chiSquareTolerance READ chiSquareTolerance WRITE setChiSquareTolerance NOTIFY chiSquareToleranceChanged)
     Q_PROPERTY(bool hasChiSquareTolerance READ hasChiSquareTolerance NOTIFY hasChiSquareToleranceChanged)
-    // What ends a fit as converged, `chi_square_change` (also when none is declared) or `shift_su`, and the
-    // Shift/s.u. value, declared or crysta's default.
-    Q_PROPERTY(QString stopRule READ stopRule WRITE setStopRule NOTIFY stopRuleChanged)
-    Q_PROPERTY(edi_app::OptionListModel* stopRuleOptions READ stopRuleOptions CONSTANT)
-    Q_PROPERTY(double shiftTolerance READ shiftTolerance WRITE setShiftTolerance NOTIFY shiftToleranceChanged)
-    Q_PROPERTY(bool hasShiftTolerance READ hasShiftTolerance NOTIFY shiftToleranceChanged)
-    Q_PROPERTY(double defaultShiftTolerance READ defaultShiftTolerance CONSTANT)
-    // Whether a fit tries free magnetic moments at exactly zero (`try_exact_zero`, also when none is declared, or
-    // `keep_free`), and whether the project has a magnetic structure, the only one it applies to.
-    Q_PROPERTY(QString momentsNearZero READ momentsNearZero WRITE setMomentsNearZero NOTIFY momentsNearZeroChanged)
-    Q_PROPERTY(edi_app::OptionListModel* momentsNearZeroOptions READ momentsNearZeroOptions CONSTANT)
-    Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
     // A single-crystal fit's reflection cutoff n (`_refine_ls.threshold_sigma`, edi ADR-0050): NaN fits every reflection.
     Q_PROPERTY(double refineLsThresholdSigma READ refineLsThresholdSigma WRITE setRefineLsThresholdSigma NOTIFY
                    refineLsThresholdSigmaChanged)
@@ -220,17 +208,6 @@ class AnalysisViewModel : public QObject {
     double refineLsThresholdSigma() const { return refine_ls_threshold_sigma_; }
     void setRefineLsThresholdSigma(double sigma);
     bool hasChiSquareTolerance() const { return chi_square_tolerance_ > 0.0; }
-    QString stopRule() const { return stop_rule_; }
-    void setStopRule(const QString& rule);
-    OptionListModel* stopRuleOptions() const { return stop_rule_options_; }
-    double shiftTolerance() const { return shift_tolerance_; }
-    void setShiftTolerance(double tolerance);
-    bool hasShiftTolerance() const { return shift_tolerance_ > 0.0; }
-    double defaultShiftTolerance() const { return edi::default_shift_tolerance(); }
-    QString momentsNearZero() const { return moments_near_zero_; }
-    void setMomentsNearZero(const QString& option);
-    OptionListModel* momentsNearZeroOptions() const { return moments_near_zero_options_; }
-    bool magnetic() const { return magnetic_; }
     double defaultChiSquareTolerance() const { return edi::default_chi_square_tolerance(); }
     int defaultMaxIterations() const { return edi::default_max_iterations(); }
     JointWeightListModel* jointWeights() const { return joint_weights_; }
@@ -251,10 +228,6 @@ class AnalysisViewModel : public QObject {
     void hasMaxIterationsChanged();
     void chiSquareToleranceChanged();
     void hasChiSquareToleranceChanged();
-    void stopRuleChanged();
-    void shiftToleranceChanged();
-    void momentsNearZeroChanged();
-    void magneticChanged();
     void refineLsThresholdSigmaChanged();
     void lastErrorChanged();
 
@@ -264,16 +237,12 @@ class AnalysisViewModel : public QObject {
 
     edi::Project& project_;
     ProjectEditor& editor_;
-    QString fitting_mode_, descent_, stop_rule_, moments_near_zero_, last_error_;
+    QString fitting_mode_, descent_, last_error_;
     int max_iterations_ = 0;
     double chi_square_tolerance_ = 0.0;
-    double shift_tolerance_ = 0.0;
-    bool magnetic_ = false;
     double refine_ls_threshold_sigma_ = qQNaN();
     OptionListModel* fitting_mode_options_;
     OptionListModel* descent_options_;
-    OptionListModel* stop_rule_options_;
-    OptionListModel* moments_near_zero_options_;
     OptionListModel* minimizer_type_options_;
     JointWeightListModel* joint_weights_;
     SequentialFitViewModel* sequential_fit_;

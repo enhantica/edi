@@ -7,21 +7,20 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// The Examples list's filters (ADR-0031): the property to filter by and its value with how many items have it, a
-// search, and a button clearing them all. The Tutorials list uses the same filters on its own list (ADR-0064).
+// The Examples list's filters (ADR-0031): a search, the property to filter by and its value with how many items have
+// it. The Tutorials list uses the same filters on its own list (ADR-0064).
 EaElements.GroupRow {
     id: filters
 
     // The list filtered.
     required property ExampleListModel catalogue
-    // The start of the controls' names: `<prefix>.property`, `<prefix>.value`, `<prefix>.search` and
-    // `<prefix>.clearFilters`.
+    // The start of the three controls' names: `<prefix>.search`, `<prefix>.property` and `<prefix>.value`.
     property string namePrefix: "examples"
     property string searchHint: qsTr("Search examples")
-    // The width of the whole row; each of the three fields takes a third of what the square clear button leaves.
+    // The width of the whole row; each control takes a third.
     property real rowWidth: EaStyle.Sizes.sideBarContentWidth
 
-    readonly property real fieldWidth: (rowWidth - 3 * spacing - searchField.height) / 3
+    readonly property real fieldWidth: (rowWidth - 2 * spacing) / 3
 
     function choiceIndex(model, value) {
         for (let i = 0; i < model.count; ++i)
@@ -32,6 +31,14 @@ EaElements.GroupRow {
 
     spacing: AppSizes.inputSpacing
 
+    EaElements.TextField {
+        objectName: `${filters.namePrefix}.search`
+        width: filters.fieldWidth
+        placeholderText: filters.searchHint
+        horizontalAlignment: TextInput.AlignLeft
+        text: filters.catalogue.searchText
+        onTextEdited: filters.catalogue.searchText = text
+    }
     SearchableComboBox {
         objectName: `${filters.namePrefix}.property`
         width: filters.fieldWidth
@@ -51,29 +58,5 @@ EaElements.GroupRow {
         popup.width: Math.max(width, optionWidth)
         currentIndex: filters.choiceIndex(filters.catalogue.filterOptions, filters.catalogue.filterValue)
         onActivated: index => filters.catalogue.filterValue = filters.catalogue.filterOptions.text(index, "value")
-    }
-    EaElements.TextField {
-        id: searchField
-        objectName: `${filters.namePrefix}.search`
-        width: filters.fieldWidth
-        placeholderText: filters.searchHint
-        horizontalAlignment: TextInput.AlignLeft
-        text: filters.catalogue.searchText
-        onTextEdited: filters.catalogue.searchText = text
-    }
-    // Clears every filter: the search, and the property back to Purpose with all its values (the owner, 2026-11-04);
-    // the Analysis parameter filter's button.
-    EaElements.SideBarButton {
-        objectName: `${filters.namePrefix}.clearFilters`
-        width: height
-        height: searchField.height
-        fontIcon: "eraser"
-        text: ""
-        ToolTip.text: qsTr("Clear all filters")
-        onClicked: {
-            filters.catalogue.searchText = "";
-            filters.catalogue.filterProperty = "purpose";
-            filters.catalogue.filterValue = "";
-        }
     }
 }

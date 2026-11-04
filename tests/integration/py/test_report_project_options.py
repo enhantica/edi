@@ -80,10 +80,7 @@ def test_declared_report_options_survive_reload_and_canonical_resave(tmp_path, o
         '_report.x_axis d_spacing',
         '_report.excluded "reflections data"',
     ]
-    directory = source(tmp_path, lines)
-    with (directory / 'analysis/analysis.edi').open('a') as stream:
-        stream.write('\n_evolution_chart.error_bars false\n_evolution_chart.range values_su\n')
-    loaded = engine.Project.load(directory)
+    loaded = engine.Project.load(source(tmp_path, lines))
     first = tmp_path / 'first'
     loaded.save_as(first)
     expected = {
@@ -108,16 +105,6 @@ def test_declared_report_options_survive_reload_and_canonical_resave(tmp_path, o
     )
     second = tmp_path / 'second'
     restored.save_as(second)
-    for directory in (first, second):
-        evolution = dict(
-            shlex.split(line)
-            for line in (directory / 'analysis/analysis.edi').read_text().splitlines()
-            if line.startswith('_evolution_chart.')
-        )
-        assert evolution == {
-            '_evolution_chart.error_bars': 'false',
-            '_evolution_chart.range': 'values_su',
-        }, 'Both non-default Evolution settings survive loading and canonical saving'
     first_bytes = [
         line
         for line in (first / 'reports/report.edi').read_bytes().splitlines()

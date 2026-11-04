@@ -66,56 +66,17 @@ void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project*
 }
 
 void EvolutionViewModel::syncParameters() {
-    // A publish after a fit of the template (or an edit of it) can bring or move its point.
-    const bool names = syncNames();
-    const std::optional<Point> point = templatePoint();
-    if (names || point != template_point_) {
-        syncFitted();
+    if (syncNames()) {
         rebuild();
     }
 }
 
-bool EvolutionViewModel::scanRows() const {
-    if (session_ == nullptr || !session_->index().error.empty()) {
-        return false;
-    }
-    const auto& rows = session_->index().rows;
-    return std::any_of(rows.begin(), rows.end(), [](const auto& row) { return row.offset >= 0; });
-}
-
-std::optional<EvolutionViewModel::Point> EvolutionViewModel::templatePoint() const {
-    if (session_ == nullptr || project_ == nullptr || current_ < 0 || scanRows()) {
-        return std::nullopt;
-    }
-    const edi::Project& model = template_ != nullptr ? *template_ : *project_;
-    const edi::FitResultRecord& result = model.fit_result;
-    if (!result.held() || !result.success) {
-        return std::nullopt;
-    }
-    const auto place = session_->places().find(model.sequential_fit.template_file);
-    if (place == session_->places().end()) {
-        return std::nullopt;
-    }
-    const int dataset = static_cast<int>(place->second);
-    const std::optional<double> x = xOf(dataset, session_->extracted(dataset));
-    const std::string name = names_[current_].toStdString();
-    for (const edi::NamedParameter& parameter : edi::named_parameters(model)) {
-        if (parameter.unique_name != name) {
-            continue;
-        }
-        const double y = parameter.parameter->value;
-        const std::optional<double> su = parameter.parameter->uncertainty;
-        const double error = su.value_or(0.0);
-        if (!x || !drawable(*x, y, error)) {
-            return std::nullopt;
-        }
-        return Point{*x, y, error, dataset};
-    }
-    return std::nullopt;
-}
-
 void EvolutionViewModel::syncFitted() {
-    const bool fitted = scanRows() || templatePoint().has_value();
+    bool fitted = false;
+    if (session_ != nullptr && session_->index().error.empty()) {
+        const auto& rows = session_->index().rows;
+        fitted = std::any_of(rows.begin(), rows.end(), [](const auto& row) { return row.offset >= 0; });
+    }
     if (fitted != fitted_) {
         fitted_ = fitted;
         emit fittedChanged();
@@ -166,8 +127,7 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
     }
     // A fresh run's first row brings the header, and with it the axes and any recorded parameter not listed yet: the
     // points are read once then; every later row adds its own point.
-    // The template's own point, shown before the scan had rows, gives way to the scan's points.
-    if (!fitted_ || current_ < 0 || template_point_) {
+    if (!fitted_ || current_ < 0) {
         syncNames();
         syncFitted();
         rebuild();
@@ -250,11 +210,6 @@ void EvolutionViewModel::rebuild() {
 }
 
 void EvolutionViewModel::readPoints() {
-    template_point_ = templatePoint();
-    if (template_point_) {
-        points_.push_back(*template_point_);
-        return;
-    }
     if (session_ != nullptr && project_ != nullptr && current_ >= 0) {
         // The core's points (edi::evolution_series), the report's too, read twice. The first read finds their x range
         // and count; above the drawing limit the second keeps per bucket of that range only the lowest and the
@@ -340,18 +295,12 @@ void EvolutionViewModel::finish() {
         for (const Point& point : points_) {
             x_min = std::min(x_min, point.x);
             x_max = std::max(x_max, point.x);
-            // The range fits the values only unless the project asks for their error bars too (edi ADR-0017 §19).
-            const double error = range_with_errors() ? point.error : 0.0;
-            y_min = std::min(y_min, point.y - error);
-            y_max = std::max(y_max, point.y + error);
+            y_min = std::min(y_min, point.y - point.error);
+            y_max = std::max(y_max, point.y + point.error);
         }
         // The margins from halved values, so a range near the largest finite numbers does not overflow.
         const double x_pad = std::max((x_max / 2.0 - x_min / 2.0) * 0.06, 0.5);
-        double y_pad = std::max((y_max / 2.0 - y_min / 2.0) * 0.16, std::abs(y_max) * 1e-6 + 1e-12);
-        if (points_.size() == 1) {
-            // One point (the fitted template before a scan): its error bar and a little more stay in view.
-            y_pad = std::max({y_pad, 1.5 * points_.front().error, std::abs(points_.front().y) * 1e-4});
-        }
+        const double y_pad = std::max((y_max / 2.0 - y_min / 2.0) * 0.16, std::abs(y_max) * 1e-6 + 1e-12);
         x_min = padded(x_min, -x_pad);
         x_max = padded(x_max, x_pad);
         y_min = padded(y_min, -y_pad);
@@ -381,13 +330,10 @@ void EvolutionViewModel::draw() {
     }
     QList<QPointF> points;
     QList<double> low, high;
-    const bool bars = project_ == nullptr || project_->evolution_error_bars.value_or(true);
     for (const Point& point : points_) {
         points.append(QPointF(point.x, point.y));
-        if (bars) {
-            low.append(point.y - point.error);
-            high.append(point.y + point.error);
-        }
+        low.append(point.y - point.error);
+        high.append(point.y + point.error);
     }
     layer_->setData(points, low, high);
 }

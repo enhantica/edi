@@ -6,7 +6,6 @@ import edi.app
 import EdiAcceptance 1.0
 import "UiInteraction.js" as Ui
 import "E04Review.js" as Review
-import "AtomsSelector.js" as Atoms
 
 //  I17-I20. Hand-run while app-test is owner-disabled.
 // Buttons and tooltips are transcribed from diffraction-lib structure.html.j2,
@@ -185,21 +184,6 @@ TestCase {
         tryCompare(combo, "currentIndex", data.entries.length - 1, 2000, " I18/D11 visible last entry accepts real pointer input");
         tryCompare(combo.popup, "opened", false, 2000, " I18/D11 selecting a visible entry closes the popup");
     }
-    function test_nuclear_atom_choices() {
-        open("docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project");
-        tryVerify(() => Ui.control(Probe, appWindow, "structure.toolbar.atoms") !== null, 5000,
-                  "The nuclear Atoms selector is exposed after the toolbar settles");
-        const atoms = object("structure.toolbar.atoms");
-        Atoms.checkEntries(test, atoms, ["All", "Asymmetric unit (crystal)", "None"]);
-        const all = view.controller.spheres.count;
-        Atoms.select(test, Probe, appWindow, atoms, "Asymmetric unit (crystal)");
-        tryVerify(() => view.controller.spheres.count > 0 && view.controller.spheres.count < all, 2000,
-                  "The nuclear asymmetric-unit choice draws a proper subset");
-        Atoms.select(test, Probe, appWindow, atoms, "None");
-        tryCompare(view.controller.spheres, "count", 0, 2000, "None removes all nuclear atoms");
-        Atoms.select(test, Probe, appWindow, atoms, "All");
-        tryCompare(view.controller.spheres, "count", all, 2000, "All restores the nuclear spheres");
-    }
     function test_projection_reset_and_feature_behaviour() {
         open("docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project");
         const projection = object("structure.toolbar.projection");
@@ -210,6 +194,12 @@ TestCase {
         compare(projection.toolTip, "Perspective view", " I18 reset preserves the selected projection");
         click("projection");
         compare(projection.toolTip, "Parallel (orthographic) view", " I18 opposite toggle restores orthographic projection");
+        click("atoms");
+        verify(object("structure.toolbar.atoms").checked, " I18 first atom toggle keeps the asymmetric unit visible");
+        click("atoms");
+        verify(!object("structure.toolbar.atoms").checked, " I18 second atom toggle hides all atoms");
+        click("atoms");
+        verify(object("structure.toolbar.atoms").checked, " I18 third atom toggle restores all atoms");
         ["labels", "bonds", "cell", "axes"].forEach(name => {
             const button = object("structure.toolbar." + name);
             const before = button.checked;

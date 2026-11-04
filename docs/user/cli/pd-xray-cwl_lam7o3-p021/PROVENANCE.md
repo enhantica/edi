@@ -43,8 +43,7 @@ the owner's own fitted intensities; the fast descent (and the multistart one) re
 
 ## Result from this start (local diagnostic)
 
-From this start edi converges in 40 iterations (18 before the fast descent took its damping from
-the predicted χ² drop, 2026-11-04) to R<sub>wp</sub> 1.64 % and reduced χ² 0.187, with
+From this start edi converges in 18 iterations to R<sub>wp</sub> 1.64 % and reduced χ² 0.187, with
 a 5.46218, b 7.73302, c 5.49022 Å, O1 x 0.5078 and scale 3.686 × 10⁻⁶. diffraction-lib's own tutorial
 record reports R<sub>wp</sub> 1.51 %, reduced χ² 0.16, a 5.46225, b 7.73307, c 5.49024 Å, O1 x 0.50828
 and scale 3.653 × 10⁻⁶.

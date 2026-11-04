@@ -33,8 +33,3 @@ byte-identical to its crysta source, whose content ids are above.
 in the same change, because edi supports only crysta and warns on any other value. The copy stays byte-identical to its source, whose
 new content ids are `tests/fitting/cosio-d20-s4` (tree) `6f1cec02b860ea573f055c0e2deea6d5be87d15a` and `tests/fitting/cosio-d20-s4/project` (tree)
 `9a4a504394d525c0fd78eff1548eddc7cda3a876`; `expected.json` did not change.
-
-**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
-change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
-machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: ladder iterations 7 → 6; fast-descent iterations 7 → 6;
-fast-descent-linear-snap iterations 7 → 6; fast-descent-guarded-linear-snap iterations 7 → 6.

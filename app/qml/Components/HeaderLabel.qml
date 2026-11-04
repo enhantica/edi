@@ -18,8 +18,6 @@ EaComponents.ListViewLabel {
     property string variant: ""
     // Whether the units follow the label in brackets: `2θ (deg)`.
     property bool withUnits: false
-    // A tooltip of the header's own, before the item's label and `.edi` name; empty: those alone.
-    property string toolTipText: ""
 
     readonly property string units: uid !== "" ? Session.units(uid, variant) : ""
 
@@ -27,7 +25,7 @@ EaComponents.ListViewLabel {
     text: uid === "" ? "" : withUnits && units !== "" ? `${Session.label(uid, variant)} (${units})` : Session.label(uid, variant)
 
     EaElements.ToolTip {
-        text: header.uid === "" ? header.toolTipText : header.toolTipText !== "" ? `${header.toolTipText} (${Session.tooltip(header.uid, header.variant)})` : Session.tooltip(header.uid, header.variant)
-        visible: text !== "" && header.hovered && EaGlobals.Vars.showToolTips
+        text: header.uid !== "" ? Session.tooltip(header.uid, header.variant) : ""
+        visible: header.uid !== "" && header.hovered && EaGlobals.Vars.showToolTips
     }
 }

@@ -49,8 +49,6 @@ FitInputs inputs_of(Project& project) {
     settings.imbue(std::locale::classic());
     settings << std::setprecision(17) << project.fitting_mode << '\x1f' << project.descent << '\x1f'
              << project.minimizer_max_iterations << '\x1f' << project.minimizer_chi_square_tolerance << '\x1f'
-             << project.minimizer_stop_rule << '\x1f' << project.minimizer_shift_tolerance << '\x1f'
-             << project.minimizer_moments_near_zero << '\x1f'
              << (project.minimizer_type.has_value() ? "T" + *project.minimizer_type : std::string("-"));
     for (const auto& experiment : project.experiments) {
         settings << '\x1f' << experiment->dataset_weight;

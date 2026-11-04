@@ -27,7 +27,7 @@ a test. The browser keeps no file.
 **Header.** The file starts with `# EasyDiffraction run log` and `# key: value` lines, in this order: `date` (the date
 and UTC offset, the only place the date appears), `app` (version and commit), `crysta` (version and SDK commit), `Qt`,
 `OS` (product, kernel and CPU architecture), `graphics` (the Qt Quick graphics API) and `preferences` (logging level,
-threads per calculation, parallel fits, colour scheme, sidebar side, tooltips).
+engine threads, colour scheme, sidebar side, tooltips).
 
 **Lines.** After the header every line is one record, fields separated by two spaces:
 
