@@ -1058,11 +1058,15 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
         arrow.letter_anchor = mul(arrow.direction, length + overhang + style_value("axis.letter.offset") * h);
         drawing.triad.push_back(arrow);
     }
-    // A moment arrow sits on its atom as moment_view says; its thickness is fixed in Angstrom, so it reads at every zoom
-    // like the bonds.
+    // A moment arrow sits on its atom as moment_view says. Its shaft is fixed in Angstrom, so it reads at every zoom
+    // like the bonds. The head is the standard one, shortened to at most kMomentHeadShare of the arrow and narrowed with
+    // it, never below kMomentHeadMinRadius: a short arrow keeps a visible shaft, a long one the standard head (edi
+    // ADR-0068).
     constexpr double kMomentShaftRadius = 0.12;
+    constexpr double kMomentHeadLength = 0.6;
     constexpr double kMomentHeadRadius = 0.3;
-    constexpr double kMomentHeadShare = 0.3;
+    constexpr double kMomentHeadMinRadius = 1.6 * kMomentShaftRadius;
+    constexpr double kMomentHeadShare = 0.35;
     for (const SceneMoment& moment : scene.moments) {
         const double length = norm(moment.vector);
         if (length <= 0.0) {
@@ -1085,10 +1089,11 @@ SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport
                        : scene.moment_view == MomentView::FromSurface
                            ? add(moment.centre, mul(arrow.direction, atom.radius))
                            : sub(moment.centre, mul(moment.vector, 0.5));
-        arrow.head_length = std::min(kMomentHeadShare * length, 0.6);
+        arrow.head_length = std::min(kMomentHeadShare * length, kMomentHeadLength);
         arrow.shaft_length = length - arrow.head_length;
         arrow.shaft_radius = kMomentShaftRadius;
-        arrow.head_radius = kMomentHeadRadius;
+        arrow.head_radius =
+            std::max(kMomentHeadRadius * arrow.head_length / kMomentHeadLength, kMomentHeadMinRadius);
         drawing.moments.push_back(arrow);
     }
     return drawing;

@@ -26,9 +26,12 @@ without computing any of them itself.
 - **Viewer.** The structure view draws each magnetic atom's moment as an arrow, from the moments in the cell crysta
   computed. The toolbar shows or hides them (`_structure_view.show_moments`, saved with the structure only when
   stated). Appearance sets the arrow length per Bohr magneton and where the arrow sits (`_structure_view.moment_view`:
-  through the atom, from its centre or from its surface). The toolbar's Atoms choice draws every atom, the crystal's
-  asymmetric unit (for a magnetic structure, its parent group's, as crysta decides), the magnetic one, the magnetic
-  atoms or none; moments follow the drawn atoms, and with none stay at every magnetic site.
+  through the atom, from its centre or from its surface). The shaft has one thickness at every length; the head is
+  the standard one (0.6 Å long, 0.3 Å wide) shortened to at most 35 % of the arrow and narrowed with it, never below
+  1.6 times the shaft, so a 1 μB arrow at the default scale keeps a visible shaft and a long arrow the standard head
+  (the owner, 2026-11-03; the fraction read from captures of 1, 3 and 10 μB arrows). The toolbar's Atoms choice draws
+  every atom, the crystal's asymmetric unit (for a magnetic structure, its parent group's, as crysta decides), the
+  magnetic one, the magnetic atoms or none; moments follow the drawn atoms, and with none stay at every magnetic site.
 - **Moment forms.** The moments table shows a moment in crystal-axis, Cartesian or spherical form, with |M|, each
   derived value with its s.u. After a fit the s.u. come from the fit's covariance (correlations, and the cell where it
   was fitted, included); before one they are propagated as if the components were uncorrelated, and the tooltip says
