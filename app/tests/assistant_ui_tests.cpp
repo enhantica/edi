@@ -10,6 +10,7 @@
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
 #include "session.hpp"
+#include "assistant_test_settings.hpp"
 #include "assistant_widget_input.hpp"
 #include "project_view_model.hpp"
 #include "online_search.hpp"
@@ -118,6 +119,23 @@ private slots:
         for (auto* original : popups)
             structurePopup |= original->property("visible").toBool() && original->property("kind") == "structure";
         QVERIFY(structurePopup);
+    }
+    void testModelDefaultsAndExplicitChoice() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QSettings settings(edi_app::settings_file_path(), QSettings::IniFormat);
+        const QString key = "Assistant/Providers/chatgpt/selection";
+        settings.remove(key);
+        settings.sync();
+        edi_app::test::assistant_defaults();
+        settings.sync();
+        QCOMPARE(settings.value(key).toStringList(), (QStringList{"gpt-6-luna", "medium"}));
+        const QStringList explicitChoice{"gpt-6.1-sol", "high"};
+        settings.setValue(key, explicitChoice);
+        settings.sync();
+        edi_app::test::assistant_defaults();
+        settings.sync();
+        QCOMPARE(settings.value(key).toStringList(), explicitChoice);
     }
     void downloadLinkMatchesOrdinaryStyle_data() {
         QTest::addColumn<bool>("dark");

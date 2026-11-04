@@ -33,3 +33,15 @@ and the generated adjacent lock. This dependency-only workspace reuses the same 
 it does not add Windows to the current application/toolchain platforms. Recipe commands use
 native Windows environment-variable syntax there and POSIX syntax on the existing platforms.
 Backend channels are declared under package.build.backend, not the deprecated top-level field.
+
+## Assistant test model
+
+The Qt recorded-transport test runner defaults to GPT-6-Luna with medium effort
+in its fresh test settings. Tests can select another available model or effort;
+an explicit selection is preserved. Existing recorded observations keep the model
+and effort that produced them. No test contacts the model service.
+
+For manual assistant testing, select GPT-6-Luna and medium in the app. Production
+preferences remain selectable. Build local development against the matching crysta
+checkout with `pixi run -e app app-with-crysta ../crysta`; use the pinned SDK for
+release and CI qualification.

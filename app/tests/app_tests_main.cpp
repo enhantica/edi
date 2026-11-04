@@ -9,6 +9,7 @@
 
 #include "edi/version.hpp"
 #include "engine_setup.hpp"
+#include "assistant_test_settings.hpp"
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
@@ -21,7 +22,10 @@ class Setup : public QObject {
         edi_app::use_design_font();
         edi_app::use_fresh_settings();  // never the machine's saved settings
     }
-    void qmlEngineAvailable(QQmlEngine* engine) { edi_app::configure_engine(*engine); }
+    void qmlEngineAvailable(QQmlEngine* engine) {
+        edi_app::configure_engine(*engine);
+        edi_app::test::assistant_defaults();
+    }
 };
 
 // QUICK_TEST_MAIN_WITH_SETUP, with the platform settled first. The tier checks behaviour, not pixels, so
