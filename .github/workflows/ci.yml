@@ -794,6 +794,24 @@ jobs:
         run: pixi run -e app --skip-deps app-build-recovery
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      # The app compiled for WebAssembly when the assistant's sources changed (the changes job's `wasm_build`):
+      # parts of the assistant are native-only, and the full WebAssembly job runs on main only, so a pull request
+      # would not notice a broken web build without this. One kit, no site checks; the toolchain comes from the
+      # same cache as the WebAssembly job's.
+      - name: Restore the WebAssembly toolchain
+        if: ${{ matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/edi-wasm
+          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
+      - name: Compile the app for WebAssembly
+        if: ${{ matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
+        run: |
+          pixi run crysta-sdk
+          pixi run -e app wasm-toolchain
+          pixi run -e app --skip-deps wasm-build multithread
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
   # The app as a WebAssembly site (ADR-0023): both Qt wasm kits, the start page and the service-worker shim,
   # packed as one site folder and uploaded as the `edi-webapp` artifact. The toolchain (Emscripten, Qt's wasm
@@ -801,9 +819,8 @@ jobs:
   # wasm from the pinned SDK's source, per kit.
   app-wasm:
     name: app · WebAssembly
-    # About 40 minutes, so pull requests skip it unless they touch the assistant's sources; main pushes, the nightly
-    # and manual runs keep it.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && (github.event_name != 'pull_request' || needs.changes.outputs.wasm_build == 'true') && inputs.core_only != true }}
+    # About 40 minutes, so pull requests skip it; main pushes, the nightly and manual runs keep it.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && github.event_name != 'pull_request' && inputs.core_only != true }}
     environment: crysta-sdk
     # After the core tests, which take the runners first. It runs even when core fails, so one round lists
     # every failure.
