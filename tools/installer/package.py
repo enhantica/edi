@@ -10,6 +10,7 @@ import platform
 import re
 import shutil
 import subprocess
+import tarfile
 import urllib.request
 import xml.etree.ElementTree as ET  # noqa: S405 - generated XML only, never external XML
 import zipfile
@@ -65,10 +66,12 @@ def fetch_tools(destination: Path) -> Path:
         for name in package.getnames():
             if Path(name).is_absolute() or '..' in Path(name).parts:
                 raise RuntimeError('Installer Framework archive escapes its tool directory')
-        package.extractall(tools)
+        package.extractall(tools)  # noqa: S202 - verified archive with checked member paths
     creator = tools / ('bin/binarycreator' + SUFFIX)
     if not creator.is_file():
         raise RuntimeError('Installer Framework has no binarycreator')
+    if SYSTEM == 'linux':
+        acquire_installer_licenses(tools, destination)
     return tools
 
 
@@ -168,7 +171,75 @@ def write_metadata(
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
 
 
-def installer_runtime_notices(copied: dict, prefix: Path | None, notices: Path) -> None:
+def acquire_installer_licenses(tools: Path, destination: Path) -> None:
+    """Acquire pinned licence files before the network-free installer checks."""
+    value = os.environ.get('PIXI_ENVIRONMENT_PREFIX') or os.environ.get('CONDA_PREFIX')
+    if not value:
+        raise RuntimeError('Acquire installer tools inside the packaging workspace')
+    prefix = Path(value).resolve()
+    probe = destination / 'license-probe'
+    probe.mkdir()
+    env = clean_environment(destination / 'tool-home')
+    env['LD_LIBRARY_PATH'] = str(probe)
+    copied = collect_linux_installer_libraries(
+        tools / 'bin/installerbase', probe, prefix, shutil.which('patchelf'), env
+    )
+    for record in (prefix / 'conda-meta').glob('*.json'):
+        metadata = json.loads(record.read_text())
+        files = set(metadata.get('files', []))
+        if not any(
+            Path(source).is_relative_to(prefix)
+            and Path(source).relative_to(prefix).as_posix() in files
+            for source in copied.values()
+        ):
+            continue
+        cached = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
+        target = tools / 'licenses' / metadata['name']
+        if cached.is_dir():
+            shutil.copytree(cached, target)
+        else:
+            acquire_package_licenses(metadata, destination, target)
+    shutil.rmtree(probe)
+
+
+def acquire_package_licenses(metadata: dict, destination: Path, target: Path) -> None:
+    """Recover pinned licence files when CI restores the environment without its cache."""
+    url = metadata['url']
+    if not url.startswith('https://conda.anaconda.org/conda-forge/'):
+        raise RuntimeError('Dependency licences must use the pinned conda-forge archive')
+    archive = destination / (metadata['name'] + '.conda')
+    with urllib.request.urlopen(url, timeout=30) as response, archive.open('wb') as stream:  # noqa: S310
+        shutil.copyfileobj(response, stream)
+    if sha256(archive) != metadata['sha256']:
+        raise RuntimeError('Dependency licence archive checksum differs')
+    target.mkdir(parents=True)
+    with zipfile.ZipFile(archive) as zipped:
+        infos = [
+            name
+            for name in zipped.namelist()
+            if name.startswith('info-') and name.endswith('.tar.zst')
+        ]
+        if len(infos) != 1:
+            raise RuntimeError('Dependency archive has no unique info member')
+        with zipped.open(infos[0]) as stream, tarfile.open(fileobj=stream, mode='r|zst') as info:
+            for member in info:
+                relative = Path(member.name)
+                if relative.parts[:2] != ('info', 'licenses'):
+                    continue
+                if '..' in relative.parts or not (member.isdir() or member.isfile()):
+                    raise RuntimeError('Dependency licence archive contains an unsafe member')
+                if member.isfile():
+                    path = target / Path(*relative.parts[2:])
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    with info.extractfile(member) as source, path.open('wb') as sink:
+                        shutil.copyfileobj(source, sink)
+    if not any(target.rglob('*')):
+        raise RuntimeError('Dependency archive contains no licence files')
+
+
+def installer_runtime_notices(
+    copied: dict, prefix: Path | None, notices: Path, acquired: Path
+) -> None:
     """Collect the licence files for every bundled installer library."""
     for name, source_path in copied.items():
         source = Path(source_path)
@@ -178,6 +249,8 @@ def installer_runtime_notices(copied: dict, prefix: Path | None, notices: Path) 
                 metadata = json.loads(record.read_text())
                 if source.relative_to(prefix.resolve()).as_posix() in metadata.get('files', []):
                     licenses = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
+                    if not licenses.is_dir():
+                        licenses = acquired / metadata['name']
                     if licenses.is_dir():
                         shutil.copytree(licenses, notices / metadata['name'], dirs_exist_ok=True)
                         found = True
@@ -268,7 +341,7 @@ def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict
     prefix_value = os.environ.get('PIXI_ENVIRONMENT_PREFIX') or os.environ.get('CONDA_PREFIX')
     prefix = Path(prefix_value) if prefix_value else None
     copied = collect_linux_installer_libraries(template, libraries, prefix, patchelf, env)
-    installer_runtime_notices(copied, prefix, notices)
+    installer_runtime_notices(copied, prefix, notices, tools / 'licenses')
     run([patchelf, '--set-rpath', '$ORIGIN/installer-runtime/lib', template])
     (output / 'installer-runtime/dependencies.json').write_text(
         json.dumps({name: sha256(libraries / name) for name in copied}, indent=2) + '\n'
@@ -457,7 +530,7 @@ def unpack_installer(archive: Path, output: Path) -> Path:
         if SYSTEM == 'macos':
             run(['ditto', '-x', '-k', archive, output])
         else:
-            zipped.extractall(output)
+            zipped.extractall(output)  # noqa: S202 - validated paths; zip extraction creates no links
             for member in zipped.infolist():
                 path = output / member.filename
                 if path.is_file():

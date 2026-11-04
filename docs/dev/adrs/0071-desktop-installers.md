@@ -107,3 +107,17 @@ do not recursively re-sign that subtree. Verify the final bundle signature, then
 assistant member and hash to match the manifest produced from the already verified build input.
 Apply the same post-deployment membership and hash gate on all native platforms. A re-signed,
 removed, extra or linked helper fails packaging even if it still launches.
+
+Restored CI environments may retain package records without the extracted package-cache licence files.
+During build-input acquisition, recover missing licences from the exact conda-forge archive identified
+by the installed package's SHA-256. Extract only regular files below `info/licenses`, reject traversal
+and linked members, and retain the recovered files beside the acquired installer tools. Packaging and
+lifecycle tests then consume these local files without network access. Missing licences still fail.
+
+## Bundle inventory
+
+Write a native bundle inventory after deployment, with regular-file bytes, assistant-runtime bytes,
+Qt modules and the largest files. Count link aliases once. Reject deployed native WebEngine, Charts,
+Multimedia and test-library families, which this application does not use. Keep Qt Widgets: the native
+mathematical text renderer depends on it. Keep the complete verified assistant runtime unchanged;
+its size is measured separately so it cannot be mistaken for unnecessary Qt deployment.

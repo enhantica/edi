@@ -2,10 +2,13 @@
 """Offline boundary checks for the native installer tool."""
 
 import importlib.util
+import io
 import os
 import subprocess
 import sys
+import tarfile
 import tomllib
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -17,6 +20,12 @@ SPEC = importlib.util.spec_from_file_location(
 )
 PACKAGE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PACKAGE)
+
+AUDIT_SPEC = importlib.util.spec_from_file_location(
+    'installer_audit', PACKAGE.ROOT / 'tools/installer/audit.py'
+)
+AUDIT = importlib.util.module_from_spec(AUDIT_SPEC)
+AUDIT_SPEC.loader.exec_module(AUDIT)
 
 
 def test_manifest_preserves_relative_links(tmp_path):
@@ -167,7 +176,7 @@ def test_deployment_gate_rejects_runtime_byte_or_membership_changes(tmp_path, da
         'installer_build', PACKAGE.ROOT / 'tools/installer/build.py'
     )
     build = importlib.util.module_from_spec(spec)
-    with mock.patch.dict(sys.modules, {'package': PACKAGE}):
+    with mock.patch.dict(sys.modules, {'package': PACKAGE, 'audit': AUDIT}):
         spec.loader.exec_module(build)
     root = tmp_path / (
         'EasyDiffraction.app/Contents/libexec/edi/codex'
@@ -190,3 +199,75 @@ def test_deployment_gate_rejects_runtime_byte_or_membership_changes(tmp_path, da
         (root / 'alias').symlink_to('helper')
     with pytest.raises(RuntimeError, match=r'runtime|empty'):
         build.verify_assistant_payload(tmp_path, expected)
+
+
+@pytest.mark.parametrize('fault', ['none', 'checksum', 'escape'])
+def test_pinned_license_acquisition_is_independent_of_the_package_cache(tmp_path, fault):
+    archive = tmp_path / 'recorded.conda'
+    info = io.BytesIO()
+    with tarfile.open(fileobj=info, mode='w:zst') as tar:
+        member = tarfile.TarInfo(
+            'info/licenses/../../escape' if fault == 'escape' else 'info/licenses/LICENSE'
+        )
+        member.size = len(b'licence text')
+        tar.addfile(member, io.BytesIO(b'licence text'))
+    with zipfile.ZipFile(archive, 'w') as zipped:
+        zipped.writestr('info-example.tar.zst', info.getvalue())
+    metadata = {
+        'name': 'example',
+        'url': 'https://conda.anaconda.org/conda-forge/linux-64/example.conda',
+        'sha256': '0' * 64 if fault == 'checksum' else PACKAGE.sha256(archive),
+    }
+    target = tmp_path / 'licenses'
+    with mock.patch.object(
+        PACKAGE.urllib.request, 'urlopen', side_effect=lambda *_args, **_kwargs: archive.open('rb')
+    ):
+        if fault == 'none':
+            PACKAGE.acquire_package_licenses(metadata, tmp_path, target)
+            assert (target / 'LICENSE').read_bytes() == b'licence text'
+        else:
+            with pytest.raises(RuntimeError, match=r'checksum|unsafe'):
+                PACKAGE.acquire_package_licenses(metadata, tmp_path, target)
+    assert not (tmp_path / 'escape').exists()
+
+
+@pytest.mark.parametrize('recovered', [False, True])
+def test_packaging_uses_acquired_licenses_when_the_original_cache_is_absent(tmp_path, recovered):
+    prefix = tmp_path / 'prefix'
+    (prefix / 'conda-meta').mkdir(parents=True)
+    source = prefix / 'lib/portable.so'
+    source.parent.mkdir()
+    source.write_bytes(b'portable library')
+    (prefix / 'conda-meta/portable.json').write_text(
+        '{"name":"portable","files":["lib/portable.so"],"link":{"source":"missing-cache"}}'
+    )
+    acquired, notices = tmp_path / 'acquired', tmp_path / 'notices'
+    notices.mkdir()
+    if recovered:
+        (acquired / 'portable').mkdir(parents=True)
+        (acquired / 'portable/LICENSE').write_text('portable licence')
+        PACKAGE.installer_runtime_notices({'portable.so': str(source)}, prefix, notices, acquired)
+        assert (notices / 'portable/LICENSE').read_text() == 'portable licence'
+    else:
+        with pytest.raises(RuntimeError, match='No dependency licence'):
+            PACKAGE.installer_runtime_notices(
+                {'portable.so': str(source)}, prefix, notices, acquired
+            )
+
+
+@pytest.mark.parametrize(
+    'name', ['libQt6WebEngineCore.so.6', 'Qt6Multimedia.dll', 'QtWebEngineCore']
+)
+def test_bundle_audit_rejects_unrelated_native_qt_components(tmp_path, name):
+    (tmp_path / name).write_bytes(b'\x7fELFunneeded module')
+    with pytest.raises(RuntimeError, match='Unused Qt component'):
+        AUDIT.audit_bundle(tmp_path)
+
+
+def test_bundle_audit_counts_one_library_and_keeps_required_widgets(tmp_path):
+    library = tmp_path / 'libQt6Widgets.so.6'
+    library.write_bytes(b'\x7fELFmath text dependency')
+    (tmp_path / 'alias').symlink_to(library.name)
+    result = AUDIT.audit_bundle(tmp_path)
+    assert result['regular_file_bytes'] == library.stat().st_size
+    assert result['qt_modules'] == [library.name]

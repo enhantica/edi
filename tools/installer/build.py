@@ -10,10 +10,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-from package import ROOT, SYSTEM, payload_manifest, relocate_linux, run
+from audit import audit_bundle
+from package import ROOT, SYSTEM, acquire_package_licenses, payload_manifest, relocate_linux, run
 
 
-def collect_notices(stage: Path, qt: Path, crysta: Path) -> None:
+def collect_notices(stage: Path, qt: Path, crysta: Path, inputs: Path) -> None:
+    """Retain licences for the deployed runtime rather than the entire build toolchain."""
     notices = stage / (
         'EasyDiffraction.app/Contents/Resources/licenses/dependencies'
         if SYSTEM == 'macos'
@@ -22,16 +24,39 @@ def collect_notices(stage: Path, qt: Path, crysta: Path) -> None:
     notices.mkdir(parents=True, exist_ok=True)
     shutil.copy2(crysta / 'LICENSE', notices / 'crysta-LICENSE')
     records = (qt.parent if SYSTEM == 'windows' else qt) / 'conda-meta'
-    if records.is_dir():
-        for record in records.glob('*.json'):
-            metadata = json.loads(record.read_text())
-            cached = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
-            if cached.is_dir():
-                shutil.copytree(cached, notices / metadata['name'], dirs_exist_ok=True)
-    else:
-        for folder in qt.rglob('LICENSES'):
-            if folder.is_dir():
-                shutil.copytree(folder, notices / folder.relative_to(qt), dirs_exist_ok=True)
+    if not records.is_dir():
+        raise RuntimeError(
+            'Packaging requires the locked dependency records for its licence inventory'
+        )
+    deployed_names = set()
+    for path in stage.rglob('*'):
+        if path.is_file() and not path.is_symlink():
+            with path.open('rb') as stream:
+                if stream.read(4)[:2] not in {
+                    b'\x7fE',
+                    b'MZ',
+                    b'\xfe\xed',
+                    b'\xce\xfa',
+                    b'\xcf\xfa',
+                    b'\xca\xfe',
+                    b'\xbe\xba',
+                    b'\xbf\xba',
+                }:
+                    continue
+            deployed_names.add(path.name)
+    inputs.mkdir(parents=True, exist_ok=True)
+    for record in records.glob('*.json'):
+        metadata = json.loads(record.read_text(encoding='utf-8'))
+        if not any(Path(name).name in deployed_names for name in metadata.get('files', [])):
+            continue
+        licenses = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
+        if not licenses.is_dir():
+            licenses = inputs / metadata['name']
+            if not licenses.is_dir():
+                acquire_package_licenses(metadata, inputs, licenses)
+        if not any(path.is_file() for path in licenses.rglob('*')):
+            raise RuntimeError(f'Missing deployed dependency licences: {metadata["name"]}')
+        shutil.copytree(licenses, notices / metadata['name'])
 
 
 def sign_macos_app(bundle: Path) -> None:
@@ -138,10 +163,13 @@ def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> N
                 raise RuntimeError('Linux deployment requires the patchelf build tool')
             patchelf = Path(found)
         relocate_linux(stage, patchelf, qt)
-    collect_notices(stage, qt, crysta)
+    collect_notices(stage, qt, crysta, work / 'licence-inputs')
     if SYSTEM == 'macos':
         sign_macos_app(stage / 'EasyDiffraction.app')
     verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
+    (stage / 'bundle-audit.json').write_text(
+        json.dumps(audit_bundle(stage), indent=2) + '\n', encoding='utf-8'
+    )
     commit = subprocess.check_output(
         ['git', '-C', str(crysta), 'rev-parse', 'HEAD'], text=True
     ).strip()
