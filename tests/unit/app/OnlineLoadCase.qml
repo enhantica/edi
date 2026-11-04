@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import EdiOnlineHttpFixture 1.0
 import ReportAcceptance 1.0
 import OnboardingAcceptance 1.0
 import EasyApplication.Gui.Style as Style
@@ -26,13 +27,13 @@ TestCase {
             readonly property Item activeGroup: showStructures ? structures : experiments
             StructuresGroup {
                 id: structures
-                width: 460
+                width: Style.Sizes.sideBarContentWidth + leftPadding + rightPadding
                 visible: showStructures
                 project: Session.project
             }
             ExperimentsGroup {
                 id: experiments
-                width: 460
+                width: Style.Sizes.sideBarContentWidth + leftPadding + rightPadding
                 visible: !showStructures
                 project: Session.project
             }
@@ -45,6 +46,7 @@ TestCase {
         const factory = loadGroupsOnly ? loadGroupsWindow : application;
         app = factory.createObject(null, {width: 1300, height: 1000});
         verify(app !== null, "Online loading is exercised in the production window");
+        app.requestActivate();
         resetProject();
         if (!loadGroupsOnly) {
             tryVerify(() => {
@@ -52,6 +54,7 @@ TestCase {
                 return app.pagesBuilt > 0 && app.pagesBuilt === app.pagesWanted;
             }, 5000, "The production workflow pages are ready in the shared window");
         }
+        app.update();
         verify(waitForRendering(app.contentItem), "The production window renders before input");
     }
 
@@ -85,6 +88,10 @@ TestCase {
         const preferences = findChild(app, "preferences");
         if (preferences && preferences.visible)
             preferences.close();
+        if (loadGroupsOnly)
+            for (const chooser of Probe.objectsWithProperty(app, "selectedFile"))
+                if (chooser.visible)
+                    chooser.reject();
         onlineDialog = null;
         settle();
     }
@@ -152,7 +159,7 @@ TestCase {
         return find();
     }
 
-    function openOnline(data) {
+    function menuAction(data) {
         click(openPage(data));
         const page = pageItem();
         const menu = findChild(page, data.group + ".load.menu");
@@ -161,9 +168,14 @@ TestCase {
         const name = data.group + ".load." + data.action;
         const action = Array.from({length: menu.count}, (_, index) => menu.itemAt(index))
             .find(item => item.objectName === name);
-        verify(action !== undefined, "The chosen Load group offers its From web action");
-        click(action);
-        onlineDialog = findChild(page, "onlineLoad");
+        verify(action !== undefined, "The chosen Load group offers its requested action");
+        return action;
+    }
+
+    function openOnline(data) {
+        app.requestActivate();
+        click(menuAction(data));
+        onlineDialog = findChild(pageItem(), "onlineLoad");
         verify(onlineDialog !== null, "The workflow page owns the online dialog");
         tryVerify(() => {
             settle();
@@ -191,6 +203,7 @@ TestCase {
     }
 
     function check_actions_and_formats(data) {
+        resetProject();
         const load = openPage(data);
         const create = pageControl(data.group + ".create");
         const duplicate = pageControl(data.group + ".duplicate");
@@ -200,7 +213,11 @@ TestCase {
             return first.x < second.x && second.x < third.x &&
                    Math.abs(second.y - first.y) < 1 && Math.abs(third.y - first.y) < 1;
         }, 3000, "Load, Create and Duplicate share one rendered row in that order");
-        verify(/^Load(?:\s*[▾▼])?$/.test(load.text), "The first button is the Load menu");
+        verify(/^Load(?:\s*[▾▼])?$/.test(load.text), "The first button reads Load with its menu caret");
+        if (load.text.trim() === "Load")
+            verify(Render.texts(load).some(item => Ui.rendered(item) &&
+                       item.font.family === Style.Fonts.iconsFamily && item.text === "caret-down"),
+                   "The rendered Load button includes its downward menu caret");
         if (data.group === "experiments") {
             compare(Ui.find(pageItem(), "experiments.loadData.0"), null,
                     "The experiment's Data file cell has no row-level Load data action");
@@ -230,8 +247,9 @@ TestCase {
                         "The format or source hint uses the secondary text colour");
             }
         }
-        compare(create.text, "Create", "The second action is labelled Create");
-        compare(duplicate.text, "Duplicate", "The third action is labelled Duplicate");
+        const entity = data.group === "experiments" ? "experiment" : "structure";
+        compare(create.text, "Create " + entity, "The second action names the entity it creates");
+        compare(duplicate.text, "Duplicate " + entity, "The third action names the entity it duplicates");
     }
 
     function check_from_web_opens_source_selector_data() {
@@ -395,6 +413,250 @@ TestCase {
         }
     }
 
+    function check_new_target_import_data() {
+        return [
+            {tag: "local-cancel", local: true, cancel: true},
+            {tag: "local-corrupt", local: true, cancel: false},
+            {tag: "local-valid", local: true, success: true},
+            {tag: "web-valid", id: "valid-data", success: true},
+            {tag: "web-corrupt", id: "corrupt-data"},
+            {tag: "web-refused-probe", id: "unsupported-probe"}
+        ];
+    }
+
+    function check_new_target_import(data) {
+        resetProject(false);
+        const project = Session.project;
+        compare(project.experiments.count, 0, "The import begins with no selected experiment");
+        verify(!project.canUndo, "The import begins with an empty Undo stack");
+        const route = {page: AppState.Page.Experiment, group: "experiments",
+                       action: data.local ? "dataFile" : "dataWeb"};
+        if (data.local) {
+            click(menuAction(route));
+            let chooser;
+            tryVerify(() => {
+                chooser = Probe.objectsWithProperty(app, "selectedFile").find(
+                    item => item.visible && /measured data/i.test(item.title));
+                return chooser !== undefined;
+            }, 3000, "From file opens the real measured-data chooser");
+            if (data.cancel)
+                chooser.reject();
+            else {
+                const file = fixture({file: data.success ? "three_points.xye" : "corrupt.xye"});
+                chooser.reject();
+                tryCompare(chooser, "visible", false, 3000, "The initial chooser closes before its starting file is set");
+                chooser.currentFolder = fixture({file: ""});
+                chooser.selectedFile = file;
+                app.requestActivate();
+                click(menuAction(route));
+                tryCompare(chooser, "visible", true, 3000, "The real menu reopens the chooser with its initial selection");
+                settle();
+                compare(String(chooser.selectedFile), String(file), "The actual local chooser holds the requested fixture file");
+                let acceptedFile;
+                const observed = () => { acceptedFile = String(chooser.selectedFile); };
+                chooser.accepted.connect(observed);
+                chooser.accept();
+                chooser.accepted.disconnect(observed);
+                compare(acceptedFile, String(file), "The actual accepted signal carries the chosen local fixture");
+
+            }
+            tryCompare(chooser, "visible", false, 3000, "The local chooser settles after its answer");
+        } else {
+            openOnline(route);
+            searchFor(data.id);
+            result(data.id, "Data");
+            click(onlineControl("load.0"));
+            tryCompare(onlineDialog.search, "busy", false, 3000, "The downloaded file reaches the import boundary");
+            tryCompare(onlineDialog, "visible", !data.success, 3000,
+                       "The online popup closes on success and stays available on refusal");
+        }
+        if (data.success) {
+            compare(project.experiments.count, 1, "A successful import commits one new experiment");
+            const rows = Probe.rows(project.currentExperiment.pattern).map(
+                row => [row.x, row.intensityMeas, row.intensityMeasSu]);
+            compare(rows, [[21.5, 17.25, 0.75], [22.75, 31.75, 1.25], [25.125, 23.5, 1.5]],
+                    "The new experiment contains every coordinate, count and uncertainty from the fixture");
+            verify(project.canUndo, "The completed import can be undone");
+            project.undo();
+        }
+        compare(project.experiments.count, 0, "Refusal or Undo of an import leaves no experiment");
+        compare(project.currentExperiment, null, "Refusal or Undo leaves no selected experiment");
+        verify(!project.canUndo, "Refusal or Undo leaves the original empty Undo stack");
+        if (data.local && data.cancel) {
+            verify(typeof project.setNewExperimentType === "function",
+                   "A new-target type selection has a validation boundary before creation");
+            verify(project.setNewExperimentType("sampleForm", "single crystal"),
+                   "Single-crystal neutron data is a supported new-target selection");
+            verify(!project.setNewExperimentType("radiationProbe", "xray"),
+                   "The unsupported single-crystal X-ray probe change is refused");
+            compare(project.newExperimentRadiationProbeToken, "neutron",
+                    "A refused probe change retains the supported pending type");
+            compare(project.experiments.count, 0, "A refused pending type change creates no experiment");
+            verify(!project.canUndo, "A refused pending type change creates no Undo entry");
+        }
+    }
+
+    function check_late_delivery_data() {
+        return check_disk_parity_data().map(row => Object.assign({}, row, {remove: false}))
+            .concat([Object.assign({}, check_disk_parity_data()[2], {tag: "removed-target", remove: true})]);
+    }
+
+    function check_late_delivery(data) {
+        prepare(data);
+        const selector = openOnline(data);
+        if (data.kind === "Structure")
+            selectSource(selector, "EasyDiffraction", Qt.Key_Down);
+        searchFor(data.id);
+        result(data.id, data.kind);
+        const project = Session.project;
+        const load = onlineControl("load.0");
+        verify(load.enabled && Ui.exposed(load), "The real result action can start the download");
+        // Invoke the shipped click signal in this frame. The fixture file reply
+        // is queued for the next event-loop turn, after the owner change below.
+        load.clicked();
+        verify(onlineDialog.search.busy, "The selected file has an outstanding delivery");
+        if (data.remove) {
+            const target = project.currentExperiment;
+            project.removeExperiment(project.currentExperimentIndex);
+            verify(OnlineHttpFixture.finishRemoval(target),
+                   "The removed target is actually destroyed before the queued file is delivered");
+            compare(project.experiments.count, 1, "Only the other experiment survives the removal");
+        } else {
+            Session.closeProject();
+            verify(Session.createProject("successor", "", String(SettingsProof.emptyDirectory())),
+                   "A distinct project replaces the originating project before delivery");
+            if (data.kind === "Experiment")
+                verify(Session.project.loadStructure(fixture({file: "easydiffraction/structures/lbco.cif"})),
+                       "The replacement project could accept the full experiment if delivery escaped");
+        }
+        const active = Session.project;
+        const before = snapshot(data);
+        tryCompare(onlineDialog.search, "busy", false, 3000, "The outstanding download settles");
+        app.update();
+        verify(waitForRendering(app.contentItem), "The replacement or surviving page processes the deferred file reply");
+        compare(Session.project, active, "Late delivery cannot change the active project");
+        compare(snapshot(data), before, "Late delivery changes neither the new project nor the surviving target");
+    }
+
+    function check_disabled_source_data() {
+        return [{tag: "button", dispatch: false}, {tag: "stale-dispatch", dispatch: true}];
+    }
+
+    function check_disabled_source(data) {
+        const route = {page: AppState.Page.Experiment, group: "experiments", action: "experimentWeb"};
+        openOnline(route);
+        const search = onlineDialog.search;
+        const sources = Session.onlineSources;
+        const disabled = Array.from({length: search.sources.count}, (_, index) => search.sources.keyAt(index));
+        verify(disabled.includes("easydiffraction"), "The previously selected fixture source is initially enabled");
+        onlineDialog.close();
+        settle();
+        try {
+            for (const id of disabled)
+                sources.setEnabled(id, false);
+            const selector = openOnline(route);
+            compare(selector.count, 0, "No source remains for the same kind after disabling them");
+            if (data.dispatch) {
+                search.sourceId = "easydiffraction";
+                search.setField("id", "lbco-hrpt");
+                search.search();
+                verify(!search.busy, "Dispatch refuses a stale disabled id before starting work");
+                compare(search.results.count, 0, "A disabled source cannot return its known matching entry");
+            } else {
+                verify(!onlineControl("search").enabled, "An empty source selector leaves Search disabled");
+            }
+        } finally {
+            for (const id of disabled)
+                sources.setEnabled(id, true);
+        }
+    }
+
+    function check_cod_http_data() {
+        return [
+            {tag: "spacegroup", elements: "Ag Al Ba C Co H La O Zn", checkUrl: true},
+            {tag: "extra-elements", elements: "Ag Al Ba C Co H La O Zn", checkUrl: false},
+            {tag: "comma", elements: "Ag,Al,Ba,C,Co,H,La,O,Zn", checkUrl: false},
+            {tag: "semicolon", elements: "Ag;Al;Ba;C;Co;H;La;O;Zn", checkUrl: false}
+        ];
+    }
+
+    function check_cod_http(data) {
+        resetProject();
+        const search = Session.onlineSearch;
+        verify(OnlineHttpFixture.attach(search), "The real search receives a socket-free COD transport");
+        OnlineHttpFixture.clear();
+        const body = SettingsProof.fileObservation(fixture({file: ""}), "cod_response.json");
+        verify(body.exists, "The independent COD-shaped response is present");
+        OnlineHttpFixture.enqueue(200, body.text);
+        openOnline({page: AppState.Page.Structure, group: "structures", action: "web"});
+        search.setField("space_group", "P 21/c");
+        search.setField("elements", data.elements);
+        search.search();
+        tryCompare(search, "busy", false, 3000, "The injected COD answer settles in the production search");
+        const requests = OnlineHttpFixture.requests();
+        compare(requests.length, 1, "The entered element list reaches the COD request once");
+        if (data.checkUrl) {
+            const query = OnlineHttpFixture.query(requests[0]);
+            compare(query.spacegroup, "P 21/c", "COD requests its documented spacegroup parameter");
+            compare(query.sg, undefined, "COD's response field spelling is absent from the request");
+        }
+        result("9001003", "Structure");
+    }
+
+    function check_unavailable_http_data() {
+        return [
+            {tag: "service-503", status: 503},
+            {tag: "download-503", status: 503, download: true},
+            {tag: "absent-file", status: 404, download: true},
+            {tag: "missing-entry", status: 200}
+        ];
+    }
+
+    function check_unavailable_http(data) {
+        resetProject();
+        const search = Session.onlineSearch;
+        verify(OnlineHttpFixture.attach(search), "HTTP status comes from the socket-free fixture transport");
+        OnlineHttpFixture.clear();
+        const selector = openOnline({page: AppState.Page.Structure, group: "structures", action: "web"});
+        if (data.download) {
+            const body = SettingsProof.fileObservation(fixture({file: ""}), "cod_response.json");
+            verify(body.exists, "The downloaded-file case starts from a known COD entry");
+            const hit = JSON.parse(body.text).filter(row => String(row.file) === "9001003");
+            OnlineHttpFixture.enqueue(200, JSON.stringify(hit));
+            searchFor("9001003");
+            compare(onlineControl("id.0").text, "9001003", "The known entry can be selected before its file fails");
+            OnlineHttpFixture.enqueue(data.status, "");
+            click(onlineControl("load.0"));
+        } else {
+            OnlineHttpFixture.enqueue(data.status, data.status === 200 ? "[]" : "");
+            searchFor(data.status === 200 ? "9999999" : "");
+        }
+        tryCompare(search, "busy", false, 3000, "The controlled reply reaches the rendered result state");
+        const message = onlineControl("message");
+        if (data.status === 503) {
+            verify(/COD.*cannot be reached/i.test(message.text), "A 503 identifies COD as unavailable");
+            verify(search.detail.includes("503"), "The error detail retains the actual status code");
+            if (data.download) {
+                const field = onlineControl("field.id");
+                field.forceActiveFocus();
+                keyClick(Qt.Key_A, Qt.ControlModifier);
+                keyClick(Qt.Key_Backspace);
+                compare(field.text, "", "The alternate database search starts without the COD-specific id");
+            }
+            const alternative = onlineControl("alternative");
+            clickAlternative(alternative);
+            tryCompare(selector, "currentText", "EasyDiffraction", 3000, "The alternative selects EasyDiffraction");
+            result("lbco", "Structure");
+        } else {
+            verify(!search.unreachable && search.alternativeId === "",
+                   "An absent file or entry does not report a COD service outage");
+            if (data.status === 404)
+                verify(message.text.includes("404"), "An absent file reports its response code");
+            else
+                compare(message.text, "Nothing found", "A missing entry reports an empty search result");
+        }
+    }
+
     function selectSource(selector, name, direction) {
         if (selector.currentText !== name) {
             click(selector);
@@ -405,6 +667,13 @@ TestCase {
         tryCompare(selector, "currentText", name, 2000, "The real search uses the requested database");
     }
 
+    function clickAlternative(alternative) {
+        verify(waitForPolish(onlineDialog.contentItem), "The newly offered fallback action completes layout");
+        app.update();
+        verify(waitForRendering(onlineDialog.contentItem), "The fallback action is rendered before clicking it");
+        click(alternative);
+    }
+
     function check_cod_fallback() {
         const selector = openOnline({page: AppState.Page.Structure, group: "structures", action: "web"});
         selectSource(selector, "COD", Qt.Key_Up);
@@ -413,10 +682,7 @@ TestCase {
                "The unreachable fixture reports the COD failure in the popup: " + onlineControl("message").text);
         const alternative = onlineControl("alternative");
         compare(alternative.text, "Search EasyDiffraction instead", "The popup offers the other collection");
-        verify(waitForPolish(onlineDialog.contentItem), "The newly offered fallback action completes layout");
-        app.update();
-        verify(waitForRendering(onlineDialog.contentItem), "The fallback action is rendered before clicking it");
-        click(alternative);
+        clickAlternative(alternative);
         tryCompare(selector, "currentText", "EasyDiffraction", 2000, "The search uses the selected fallback source");
         result("lbco", "Structure");
         onlineControl("field.name");

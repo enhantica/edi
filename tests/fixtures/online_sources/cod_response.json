@@ -1,0 +1,5 @@
+[
+  {"file":"9001001","commonname":"Right group, no zinc","formula":"- Ag Al Ba C Co H La O -","sg":"P 21/c","a":"5.13","b":"7.26","c":"8.92","alpha":"90","beta":"109.3","gamma":"90"},
+  {"file":9001002,"commonname":"Wrong group, all elements","formula":"- Ag Al Ba C Co H La O Zn -","sg":"P 1","a":5.13,"b":7.26,"c":8.92,"alpha":90,"beta":109.3,"gamma":90},
+  {"file":"9001003","commonname":"Right group, all elements","formula":"- Ag Al Ba C Co H La O Zn -","sg":"P 21/c","a":"5.13","b":"7.26","c":"8.92","alpha":"90","beta":"109.3","gamma":"90"}
+]

@@ -24,3 +24,14 @@ or `--online-source cod=file://…` and `--online-source easydiffraction=file://
 that should be unreachable can point at a folder that does not exist. The full collection, the bundled examples
 and the tutorial files, is generated into `build/collection` by `python tools/data/build_collection.py populate
 build/collection` followed by `index`.
+
+The offline request tests add `failure_entries.json` to a private copy of the
+EasyDiffraction index. The malformed XYE and the three-point XYE are authored
+inputs. The unsupported probe entry advertises X-ray single-crystal data and
+uses the existing FullProf `tbti.int` bytes. Its metadata, rather than malformed
+reflections, is what makes the import invalid.
+
+`cod_response.json` is a hand-authored COD REST response. The three candidates
+separate a matching space group with the ninth element missing, a wrong group
+with all elements present, and an exact match. The Qt test transport records
+requests and returns this response or scripted HTTP statuses in-process.

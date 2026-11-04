@@ -115,3 +115,15 @@ MIGRATIONS[
     f'test_status_fit_contract[test_outdated_results_banner:{mode}]'
     for mode in ('sequential', 'independent')
 ]
+
+
+# The combined native forwarding witness exceeded the integration bound.
+MIGRATIONS[
+    'tests/integration/py/test_scan_app_contract.py::'
+    'test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility'
+] = [
+    (
+        'tests/system/py/test_scan_forwarding_controls.py::'
+        'test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility'
+    )
+]

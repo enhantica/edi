@@ -33,6 +33,11 @@ def by_id(text, name):
 def require_picker(text, browser, scenario='accepted', *, sample_form='powder'):
     selected = block(text, 'function chooseDataForSelected(')
     dialog = by_id(text, 'dataDialog')
+    new_target = scenario in {'create-target', 'empty-cancelled', 'empty-failed'}
+    new_picker = 'property int newDataRequest:' in text
+    new_scope, _, existing_scope = text.partition('    readonly property string dataFilter:')
+    new_scope = new_scope.partition('property int newDataRequest:')[2]
+    new_dialog = by_id(text, 'newDataDialog') if new_picker else None
     program = """
 let calls=[];
 const ExperimentViewModel={SingleCrystal:'single crystal'};
@@ -45,25 +50,36 @@ const original={currentExperimentIndex:4,currentExperiment:initiator,
         return true;
     },
     loadDataInto:(experiment,file)=>calls.push(['loaded','original',experiment.id,file]),
+    loadDataIntoNewExperiment:file=>calls.push(['loaded-new','original',file]),
     loadExperiments:files=>calls.push(['wrong-action',files])};
 const foreign={currentExperimentIndex:7,
-    loadDataInto:(experiment,file)=>calls.push(['loaded','foreign',experiment.id,file])};
+    loadDataInto:(experiment,file)=>calls.push(['loaded','foreign',experiment.id,file]),
+    loadDataIntoNewExperiment:file=>calls.push(['loaded-new','foreign',file])};
 const group={project:original,webRequest:0,webRequestProject:null,webDataExperiment:null,
-    pickerLife:{alive:true}};
+    newDataRequest:0,newDataProject:null,pickerLife:{alive:true}};
 const Session={get project(){return group.project}};
 const qsTr=text=>text;
 const WebFiles={available:BROWSER,
     openFiles:(filter,multiple)=>{calls.push(['web',filter,multiple]);return 41;}};
 const dataDialog={intent:null,experiment:null,project:null,visible:false,selectedFile:'chosen.dat',
     open:()=>calls.push(['desktop',dataDialog.experiment.id])};
+const newDataDialog={project:null, selectedFile:'chosen.dat',
+    open:()=>calls.push(['desktop-new'])};
 group.dataFilter=DATA_FILTER;
 group.chooseData=CHOOSE;
 group.chooseDataForSelected=function() { with(group) SELECTED }
 function click() { ACTION }
 function accept() { ACCEPTED }
+function acceptNew(selectedFile) { ACCEPTED_NEW }
+RECEIVED_NEW
+FAILED_NEW
+CANCELLED_NEW
 RECEIVED
 FAILED
 CANCELLED
+function deliver(request,files) { onFilesOpened(request,files); onNewFilesOpened(request,files); }
+function fail(request) { onFailed(request); onNewFailed(request); }
+function cancel(request) { onCancelled(request); onNewCancelled(request); }
 BEFORE
 click();
 let desktopFilters=FILTERS;
@@ -71,44 +87,61 @@ SCENARIO
 console.log(JSON.stringify({calls,desktopFilters}));
 """
     route = (
-        'onFilesOpened(41,["chosen.dat"]); onFilesOpened(41,["duplicate.dat"]);'
+        'deliver(41,["chosen.dat"]); deliver(41,["duplicate.dat"]);'
         if browser
+        else 'acceptNew("chosen.dat"); acceptNew("duplicate.dat");'
+        if new_target and new_picker
         else 'accept.call(dataDialog); accept.call(dataDialog);'
     )
     prefix = {
         'accepted': '',
-        'foreign-request': 'onFilesOpened(42,["foreign.dat"]);',
+        'foreign-request': 'deliver(42,["foreign.dat"]);',
         'foreign-project': 'group.project=foreign;',
         'closed-project': 'group.project=null;',
-        'cancelled': 'onCancelled(41);',
-        'failed': 'onFailed(41);',
-        'foreign-cancel': 'onCancelled(42);',
-        'foreign-failure': 'onFailed(42);',
+        'cancelled': 'cancel(41);',
+        'failed': 'fail(41);',
+        'foreign-cancel': 'cancel(42);',
+        'foreign-failure': 'fail(42);',
         'reindexed': 'original.currentExperimentIndex=9;',
         'retargeted-row': 'original.currentExperiment=other;',
         'create-target': '',
+        'empty-cancelled': 'cancel(41);',
+        'empty-failed': 'fail(41);',
     }[scenario]
+
+    def new_handler(name, alias):
+        if 'function ' + name + '(' not in new_scope:
+            return 'function ' + alias + '() {}'
+        return block(new_scope, 'function ' + name + '(').replace(name, alias, 1)
+
     substitutions = {
         'BROWSER': json.dumps(browser),
         'SAMPLE_FORM': json.dumps(sample_form),
         'DATA_FILTER': property_value(text, 'dataFilter'),
         'CHOOSE': block(text, 'function chooseData('),
         'SELECTED': selected[selected.index('{') :],
-        'BEFORE': 'original.currentExperiment=null;' if scenario == 'create-target' else '',
+        'BEFORE': 'original.currentExperiment=null;' if new_target else '',
         'ACTION': property_value(item(text, 'experiments.load.dataFile'), 'onTriggered'),
+        'ACCEPTED_NEW': property_value(new_dialog, 'onAccepted') if new_dialog else '',
         'ACCEPTED': property_value(dialog, 'onAccepted'),
-        'RECEIVED': block(text, 'function onFilesOpened('),
-        'FAILED': block(text, 'function onFailed('),
-        'CANCELLED': block(text, 'function onCancelled('),
+        'RECEIVED_NEW': new_handler('onFilesOpened', 'onNewFilesOpened'),
+        'FAILED_NEW': new_handler('onFailed', 'onNewFailed'),
+        'CANCELLED_NEW': new_handler('onCancelled', 'onNewCancelled'),
+        'RECEIVED': block(existing_scope, 'function onFilesOpened('),
+        'FAILED': block(existing_scope, 'function onFailed('),
+        'CANCELLED': block(existing_scope, 'function onCancelled('),
         'FILTERS': property_value(dialog, 'nameFilters'),
         'SCENARIO': prefix + 'try {' + route + '} catch(error) {calls.push(["error"]);}',
     }
     for token, value in substitutions.items():
         program = program.replace(token, value)
     observed = javascript(program)
-    created = [['created']] if scenario == 'create-target' else []
+    if new_target:
+        assert ['created'] not in observed['calls'], (
+            'Opening the empty-target chooser must not create the experiment before its answer'
+        )
     if browser:
-        calls = observed['calls'][len(created) :]
+        calls = observed['calls']
         assert calls and calls[0][0] == 'web', (
             'The real browser click must open its file chooser before routing a result'
         )
@@ -118,11 +151,22 @@ console.log(JSON.stringify({calls,desktopFilters}));
         ).issubset(set(calls[0][1].split(','))), (
             'The browser picker must admit every supported reflection extension, including hkl'
         )
-        expected = [*created, ['web', calls[0][1], False]]
+        expected = [['web', calls[0][1], False]]
     else:
-        expected = [*created, ['desktop', 'initiator']]
-    if scenario not in {'foreign-project', 'closed-project', 'cancelled', 'failed'}:
-        expected.append(['loaded', 'original', 'initiator', 'chosen.dat'])
+        expected = [['desktop-new']] if new_target else [['desktop', 'initiator']]
+    if scenario not in {
+        'foreign-project',
+        'closed-project',
+        'cancelled',
+        'failed',
+        'empty-cancelled',
+        'empty-failed',
+    }:
+        expected.append(
+            ['loaded-new', 'original', 'chosen.dat']
+            if new_target
+            else ['loaded', 'original', 'initiator', 'chosen.dat']
+        )
     assert observed['calls'] == expected, (
         'Load data routing: the real click opens its chooser, targets its initiating row '
         'and project through the retained experiment object after row changes; '
@@ -164,6 +208,8 @@ def test_load_data_availability_uses_ownership_after_first_load():
         for case in [
             'accepted',
             'create-target',
+            'empty-cancelled',
+            'empty-failed',
             'foreign-request',
             'foreign-project',
             'closed-project',
@@ -275,7 +321,8 @@ def test_picker_observer_rejects_disconnected_and_wrong_target_handlers(
     if old == 'project-identity':
         # A caller that bypasses the native guard must still red the same
         # foreign-project vector. Do not replace ApplicationInfo with a stub.
-        callback = block(text, 'function onFilesOpened(')
+        scope = text.partition('    readonly property string dataFilter:')[2]
+        callback = block(scope, 'function onFilesOpened(')
         changed_callback = callback.replace(
             'ApplicationInfo.formFilesOpened(request, files, true);',
             'if(request===group.webRequest){group.webRequest=0;'

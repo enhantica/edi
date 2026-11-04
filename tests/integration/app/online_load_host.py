@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 from contextlib import contextmanager
 from pathlib import Path
@@ -61,7 +62,7 @@ class OnlineHost:
 
 
 @contextmanager
-def run_online_host(mailbox, *, load_groups_only=False):
+def run_online_host(mailbox, *, load_groups_only=False, offline_http=False):
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert runner.is_file(), 'Online loading requires the built production Qt host'
     test_file = mailbox / 'tst_online_session.qml'
@@ -73,23 +74,39 @@ def run_online_host(mailbox, *, load_groups_only=False):
         f'    loadGroupsOnly: {json.dumps(load_groups_only)}\n'
         '}\n'
     )
-    collection = ROOT / 'tests/fixtures/online_sources/easydiffraction'
+    fixtures = ROOT / 'tests/fixtures/online_sources'
+    collection = fixtures / 'easydiffraction'
+    if load_groups_only:
+        collection = mailbox / 'collection'
+        shutil.copytree(fixtures / 'easydiffraction', collection)
+        index = collection / 'index.json'
+        values = json.loads(index.read_text())
+        values['entries'].extend(json.loads((fixtures / 'failure_entries.json').read_text()))
+        index.write_text(json.dumps(values))
+        for name in ('corrupt.xye', 'three_points.xye'):
+            shutil.copyfile(fixtures / name, collection / 'data' / name)
+        shutil.copyfile(
+            ROOT / 'tests/fixtures/single_crystal/fullprof/sc-neut-cwl_tbti_basic/tbti.int',
+            collection / 'data/unsupported-probe.int',
+        )
+    cod = 'https://cod.invalid/cod' if offline_http else (mailbox / 'unreachable').as_uri()
     sources = ';'.join((
-        f'cod={(mailbox / "unreachable").as_uri()}',
+        f'cod={cod}',
         f'easydiffraction={collection.as_uri()}',
         f'easydiffraction-mirror={(mailbox / "unused-mirror").as_uri()}',
     ))
+    environment = {
+        **os.environ,
+        'QT_QPA_PLATFORM': 'offscreen',
+        'QT_QUICK_BACKEND': 'software',
+        'EDI_ONLINE_SOURCES': sources,
+        'OMP_NUM_THREADS': '1',
+    }
+    command = [str(runner), '-input', str(test_file), '-o', '-,txt']
     with subprocess.Popen(
-        [str(runner), '-input', str(test_file), '-o', '-,txt'],
+        command,
         cwd=ROOT,
-        env={
-            **os.environ,
-            'QT_QPA_PLATFORM': 'offscreen',
-            'QT_QUICK_BACKEND': 'software',
-            'EDI_ONLINE_SOURCES': sources,
-            # The small fixture patterns need one worker, without a team per plot update.
-            'OMP_NUM_THREADS': '1',
-        },
+        env=environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

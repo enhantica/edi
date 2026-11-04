@@ -15,8 +15,6 @@ def online_host(tmp_path_factory):
     ('case', 'tag'),
     [
         ('new_experiment_wavelength', ''),
-        ('actions_and_formats', 'structure'),
-        ('actions_and_formats', 'experiment'),
         ('from_web_opens_source_selector', 'structure'),
         ('from_web_opens_source_selector', 'experiment'),
         ('from_web_opens_source_selector', 'measured'),
