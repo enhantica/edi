@@ -1474,8 +1474,10 @@ std::string effective_scan_template_file(const Project& scan) {
 ScanDatasets scan_datasets(const Project& project) {
     crysta::SequentialFitConfig config;
     fill_crysta_sequential(project.sequential_fit, config);
-    crysta::SequentialScanFiles files =
-        crysta::sequential_scan_files(config, project.path, project.scan_data_root);
+    // A project opened from a .zip has no directory of its own yet, only the folder it was unpacked into; its scan is
+    // listed from there, as its save carries it (crysta refuses a scan of a project without a directory).
+    crysta::SequentialScanFiles files = crysta::sequential_scan_files(
+        config, project.path.empty() ? project.scan_data_root : project.path, project.scan_data_root);
     return {std::move(files.directory), std::move(files.names)};
 }
 
