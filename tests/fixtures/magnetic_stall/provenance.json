@@ -1,7 +1,7 @@
 {
   "source": "Conductor seq43 supplied stall packet, 2026-11-04; ADR-0111 point 2",
-  "frame_source": "~/runs/c18-t1/impl/stall/p172 (input, not a fitted output)",
-  "scan_source": "~/runs/c18-t1/impl/firstfast/s213-rev/analysis (header and first seed row only), as replayed by stall/matrix.sh seeded",
+  "frame_source": "STALL_PACKET/p172 (authoring packet input, not a fitted output; copied as frame/)",
+  "scan_source": "STALL_PACKET/firstfast/s213-rev/analysis (header and first seed row only; copied as scan/), as replayed by STALL_PACKET/stall/matrix.sh seeded",
   "purpose": "Regression inputs only. Correctness is each measured file reaching chi_converged, not any stored objective or parameter value.",
   "sha256": {
     "frame/project.edi": "31a2fef1db78d2aefaadc8da4cabec19f2d3ed134a7a1b50beaa0e2ef29027e6",
