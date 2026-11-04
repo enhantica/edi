@@ -137,9 +137,12 @@ SideBarGroup {
                     id: loadMenu
                     objectName: "structures.load.menu"
                     y: loadButton.height
+                    // Nothing below the last item (the owner, 2026-11-04).
+                    bottomPadding: 0
                     width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 20)
 
                     LoadMenuHeader {
+                        first: true
                         text: qsTr("Structure")
                     }
                     LoadMenuItem {

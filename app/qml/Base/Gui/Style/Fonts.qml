@@ -18,6 +18,10 @@ QtObject {
     property FontLoader ptSansBold: FontLoader {
         source: fonts.fontPath("PT_Sans", "PTSans-Bold.ttf")
     }
+    // The italic face, for italic text such as a reference's authors: a platform without it (macOS) draws upright.
+    property FontLoader ptSansItalic: FontLoader {
+        source: fonts.fontPath("PT_Sans", "PTSans-Italic.ttf")
+    }
     property FontLoader ptMono: FontLoader {
         source: fonts.fontPath("PT_Mono", "PTMono-Regular.ttf")
     }

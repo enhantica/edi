@@ -37,8 +37,16 @@ AppDialog {
 
     objectName: "onlineLoad"
     title: kind === "structure" ? qsTr("Load structure from web") : kind === "experiment" ? qsTr("Load experiment from web") : qsTr("Load measured data from web")
-    // Wide enough for the results' columns, up to about nine tenths of the window.
-    contentWidth: Math.min(parent ? Math.floor(parent.width * 0.9) - 2 * EaStyle.Sizes.fontPixelSize : 0, EaStyle.Sizes.fontPixelSize * 96)
+    // Three field columns, each as wide as its longest placeholder needs (the owner, 2026-11-04), the same for every kind;
+    // the results table fills that width. Never wider than the window.
+    TextMetrics {
+        id: widestPlaceholder
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        text: qsTr("Space group, Hermann-Mauguin: P m -3 m")
+    }
+    readonly property real fieldColumnWidth: Math.ceil(widestPlaceholder.advanceWidth) + 2 * EaStyle.Sizes.fontPixelSize
+    contentWidth: Math.min(parent ? Math.floor(parent.width * 0.95) - 2 * EaStyle.Sizes.fontPixelSize : 0, 3 * fieldColumnWidth + 2 * EaStyle.Sizes.fontPixelSize)
     contentHeight: column.implicitHeight
 
     // Moves whenever the fields are rebuilt (a source change, the collection's values arriving), so each field reads
@@ -295,12 +303,17 @@ AppDialog {
                 key: "elements"
             }
             FieldSlot {
-                key: dialog.kind === "structure" ? "space_group" : "radiation"
+                visible: dialog.kind === "structure"
+                key: "space_group"
             }
         }
+        // Experiments and measured data: Radiation, Technique and Instrument on one row (the owner, 2026-11-04).
         Row {
             visible: dialog.kind !== "structure"
             spacing: EaStyle.Sizes.fontPixelSize
+            FieldSlot {
+                key: "radiation"
+            }
             FieldSlot {
                 key: "technique"
             }

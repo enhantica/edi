@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cmath>
 #include <map>
+#include <set>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -69,20 +70,46 @@ bool relative_path(const std::string& path) {
     return !start;
 }
 
-// A formula's elements with their counts, summed when an element repeats.
+// The element symbols, with deuterium and tritium as crystallography writes them.
+bool known_symbol(const std::string& symbol) {
+    static const std::set<std::string> symbols{
+        "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na", "Mg", "Al", "Si", "P",  "S",  "Cl", "Ar",
+        "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr",
+        "Rb", "Sr", "Y",  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I",  "Xe",
+        "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf",
+        "Ta", "W",  "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th",
+        "Pa", "U",  "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs",
+        "Mt", "Ds", "Rg", "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og", "D",  "T"};
+    return symbols.count(symbol) != 0U;
+}
+
+// A formula's elements with their counts, summed when an element repeats. Read without regard to case (the owner,
+// 2026-11-04): a capital letter always starts a symbol, and letters take the longest element symbol they spell, so
+// "laCoO3", "la co o3" and "LaCoO3" are one formula, "CO" is carbon and oxygen and "Co" cobalt.
 std::map<std::string, double> counted_elements(const std::string& formula) {
     std::map<std::string, double> counts;
     std::size_t i = 0;
     const std::string text = formula;
+    const auto lower = [&](std::size_t at) { return at < text.size() && std::islower(static_cast<unsigned char>(text[at])) != 0; };
     while (i < text.size()) {
         const unsigned char c = static_cast<unsigned char>(text[i]);
         if (std::isspace(c) || c == '-' || c == '(' || c == ')') {
             ++i;
             continue;
         }
-        if (!std::isupper(c)) throw std::invalid_argument("not a chemical formula: " + formula);
-        std::string symbol(1, text[i++]);
-        if (i < text.size() && std::islower(static_cast<unsigned char>(text[i]))) symbol += text[i++];
+        if (!std::isalpha(c)) throw std::invalid_argument("not a chemical formula: " + formula);
+        std::string symbol(1, static_cast<char>(std::toupper(c)));
+        const std::string pair = lower(i + 1) ? symbol + text[i + 1] : std::string();
+        if (std::isupper(c)) {
+            // A capital and a small letter: the two-letter symbol when it is one, else the capital alone when that is
+            // one (the small letter starts the next symbol), else the two letters as written.
+            if (!pair.empty() && (known_symbol(pair) || !known_symbol(symbol))) symbol = pair;
+        } else if (!pair.empty() && known_symbol(pair)) {
+            symbol = pair;
+        } else if (!known_symbol(symbol)) {
+            throw std::invalid_argument("not a chemical formula: " + formula);
+        }
+        i += symbol.size();
         std::string number;
         while (i < text.size() && (std::isdigit(static_cast<unsigned char>(text[i])) || text[i] == '.')) number += text[i++];
         double count = 1.0;

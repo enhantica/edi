@@ -309,11 +309,14 @@ SideBarGroup {
                     id: loadMenu
                     objectName: "experiments.load.menu"
                     y: loadButton.height
+                    // Nothing below the last item (the owner, 2026-11-04).
+                    bottomPadding: 0
                     width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 24)
 
                     readonly property ExperimentViewModel selected: group.project ? group.project.currentExperiment : null
 
                     LoadMenuHeader {
+                        first: true
                         text: qsTr("Full experiment")
                     }
                     LoadMenuItem {
@@ -340,6 +343,8 @@ SideBarGroup {
                     readonly property bool replacing: loadMenu.selected !== null && !loadMenu.selected.calculationOnly
                     LoadMenuHeader {
                         objectName: "experiments.load.dataHeader"
+                        // Guidance in the warning orange, as the Messages count (the owner, 2026-11-04).
+                        color: loadMenu.selected === null ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
                         text: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace measured data of %1").arg(loadMenu.selected.name) : qsTr("Load measured data into %1").arg(loadMenu.selected.name)
                     }
                     LoadMenuItem {
@@ -510,14 +515,12 @@ SideBarGroup {
                     checked: datasetsChoice.asScan
                     onClicked: datasetsChoice.asScan = true
                 }
-                EaElements.Label {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: EaStyle.Colors.themeForegroundMinor
-                    text: !datasetsChoice.asScan ? qsTr("Each experiment keeps its data in the project.") : datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")
-                }
                 EaElements.CheckBox {
+                    id: copyBox
                     objectName: "datasets.copy"
+                    // What the choice means is its tool tip, shown when tool tips are on (the owner, 2026-11-04).
+                    ToolTip.text: datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")
+                    ToolTip.visible: copyBox.hovered && EaGlobals.Vars.showToolTips
                     visible: datasetsChoice.asScan
                     text: qsTr("Copy data into the project")
                     checked: datasetsChoice.copy
