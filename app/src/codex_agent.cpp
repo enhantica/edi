@@ -406,7 +406,17 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         // Birth/barrier publish with the original process_, before any original
         // start/error/started callback, including failed-to-start.
         if(release_owner_){process_birth_=scope;process_owner_alive_=true;}
-        process->setProgram(executable);
+        const auto guardName =
+#ifdef Q_OS_WIN
+            QStringLiteral("edi_assistant_guard.exe");
+#else
+            QStringLiteral("edi_assistant_guard");
+#endif
+        auto guard = QDir(QCoreApplication::applicationDirPath()).filePath(guardName);
+        if (!QFileInfo(guard).isExecutable() && qEnvironmentVariableIsSet("EDI_CODEX_DEVELOPMENT_EXECUTABLE"))
+            guard = QDir(QString::fromUtf8(EDI_CODEX_BUILD_APP_DIR)).filePath(guardName);
+        if (!QFileInfo(guard).isExecutable()) throw std::runtime_error("The assistant lifetime guard is unavailable");
+        process->setProgram(guard);
         QStringList arguments{QStringLiteral("--listen"), QStringLiteral("stdio://"),
             QStringLiteral("-c"), QStringLiteral("sandbox_mode=\"read-only\""),
             QStringLiteral("-c"), QStringLiteral("approval_policy=\"never\""),
@@ -422,6 +432,8 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         if(policyPatch().isEmpty())arguments <<
             QStringLiteral("-c") << QStringLiteral("features.default_mode_request_user_input=true") <<
             QStringLiteral("-c") << QStringLiteral("tools.experimental_request_user_input.enabled=true");
+        arguments.prepend(executable);
+        arguments.prepend(QString::number(QCoreApplication::applicationPid()));
         process->setArguments(arguments);
         process->setWorkingDirectory(workspace);
         process->setProcessChannelMode(QProcess::SeparateChannels);

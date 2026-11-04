@@ -5093,3 +5093,20 @@ The loader follows working/presentation state directly; reading its child’s
 effective visibility would keep both hidden after an idle turn. The same
 assistant state ends both the text and animation. Normal chat mode keeps
 its existing panel-dependent presentation.
+
+## Runtime process lifetime
+
+CodexAgent starts the official runtime through a bundled native guard, installed
+beside the app. The guard forwards the existing stdio protocol and watches the
+owning app process independently of stdin EOF. On POSIX it owns a separate session
+and stops its process group on parent death or termination. On Windows it assigns
+the suspended runtime to a kill-on-close job before resuming it; its parent watch
+holds a process handle. The job handle is not inherited.
+
+Input forwarding is bounded and output remains the runtime's original bytes.
+The helper has no account, model or scientific authority. Missing guard binaries
+refuse startup. Explicit development-runtime compositions may locate the guard in
+the configured app build directory, so standalone observers use the same helper.
+Tests use a recorded initialize response and a runtime with child
+and grandchild processes that ignore EOF, then kill the native host or retire the
+agent. Platform execution is still required on each supported build kit.

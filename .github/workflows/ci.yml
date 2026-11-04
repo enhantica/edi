@@ -366,12 +366,13 @@ jobs:
           path: |
             build/app/app/edi_app
             build/app/app/edi_app_tests
+            build/app/app/edi_assistant_guard
             build/tutorial-transactions
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
           fail-on-cache-miss: true
       - name: Make them executable
         if: needs.app.result != 'skipped'
-        run: chmod +x build/app/app/edi_app build/app/app/edi_app_tests
+        run: chmod +x build/app/app/edi_app build/app/app/edi_app_tests build/app/app/edi_assistant_guard
       # The app loads Qt and its other libraries from the app environment, which this job does not
       # otherwise install.
       - name: Install the app's environment
@@ -736,8 +737,15 @@ jobs:
           path: |
             build/app/app/edi_app
             build/app/app/edi_app_tests
+            build/app/app/edi_assistant_guard
             build/tutorial-transactions
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
+      - name: Check assistant edits, controls and runtime lifetime
+        run: |
+          pixi run -e app --skip-deps app-test-trial-lock
+          pixi run -e app --skip-deps app-test-assistant-ui
+          pixi run -e app --skip-deps app-test-skill-targets
+          pixi run -e app --skip-deps app-test-assistant-lifetime
       - name: qmllint over edi's QML (zero warnings)
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing
