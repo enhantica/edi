@@ -1169,7 +1169,59 @@ bool ProjectViewModel::loadExperimentWithStructures(const QUrl& file, const QLis
     return true;
 }
 
-bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan) {
+qint64 ProjectViewModel::filesBytes(const QList<QUrl>& files) const {
+    qint64 total = 0;
+    for (const QUrl& file : files) total += QFileInfo(file.toLocalFile()).size();
+    return total;
+}
+
+namespace {
+// A folder as a project at `projectPath` declares it: relative when the project has a folder and the path stays on
+// its drive, absolute otherwise (ADR-0069).
+QString declared_folder(const std::string& projectPath, const QString& folder) {
+    const QString absolute = QDir::cleanPath(QFileInfo(folder).absoluteFilePath());
+    if (projectPath.empty()) return absolute;
+    const QString relative = QDir(QString::fromStdString(projectPath)).relativeFilePath(absolute);
+    return QFileInfo(relative).isAbsolute() || relative.isEmpty() ? absolute : relative;
+}
+}  // namespace
+
+QString ProjectViewModel::missingDataFolder() const {
+    const edi::Project& project = *project_;
+    if (!project.sequential_fit.declared()) return {};
+    const QString declared = QString::fromStdString(project.sequential_fit.data_dir);
+    const std::string& base = project.scan_data_root.empty() ? project.path : project.scan_data_root;
+    const QString folder = QFileInfo(declared).isAbsolute() || base.empty()
+                               ? declared
+                               : QDir(QString::fromStdString(base)).filePath(declared);
+    return QFileInfo(folder).isDir() ? QString() : QDir::cleanPath(folder);
+}
+
+bool ProjectViewModel::locateDataFolder(const QUrl& folder) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    if (retired_ || !folder.isLocalFile() || !project_->sequential_fit.declared()) return false;
+    if (!QFileInfo(folder.toLocalFile()).isDir()) {
+        emit refused(tr("%1 is not a folder").arg(folder.toLocalFile()));
+        return false;
+    }
+    edi::Project next(*project_);
+    next.sequential_fit.data_dir = declared_folder(project_->path, folder.toLocalFile()).toStdString();
+    auto before = std::make_shared<const edi::Project>(*project_);
+    const QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
+    if (!self || retired_) return false;
+    if (!error.isEmpty()) {
+        setLastError(error);
+        emit refused(error);
+        return false;
+    }
+    undo_history_.emplace_back(AppliedText{std::move(before)});
+    syncUndo();
+    emit missingDataFolderChanged();
+    return true;
+}
+
+bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan, bool copy) {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
     if (retired_) return false;
@@ -1222,13 +1274,51 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         qCInfo(lcApp, "%d datasets loaded as experiments", static_cast<int>(files.size()));
         return true;
     }
-    // One experiment with a scan: the files go into the project's own folder, as crysta reads a scan's data from a
-    // folder inside the project.
-    if (project.path.empty() || !QFileInfo(QString::fromStdString(project.path)).isDir())
-        return refuse(tr("Save the project first: a scan's files are copied into the project's folder"));
+    // One experiment with a scan. Copied: the files go into scans/<name> in the project's folder. Linked (ADR-0069):
+    // the scan reads the files' own folder, which must hold them alone or all of them under one extension.
     if (project.experiments.size() != 1)
         return refuse(tr("A scan fits one experiment; this project holds %1. Load the files as separate experiments, or "
                          "keep only the template experiment").arg(project.experiments.size()));
+    if (!copy) {
+        const QString parent = QFileInfo(files.front().toLocalFile()).absolutePath();
+        QStringList names;
+        for (const QUrl& file : files) {
+            const QFileInfo info(file.toLocalFile());
+            if (info.absolutePath() != parent) return refuse(tr("Linked files must sit in one folder; copy them into the project instead"));
+            names.append(info.fileName());
+        }
+        names.sort();
+        const QString suffix = QFileInfo(names.front()).suffix();
+        const bool oneSuffix = !suffix.isEmpty() && std::all_of(names.begin(), names.end(), [&](const QString& n) { return QFileInfo(n).suffix() == suffix; });
+        const QString pattern = oneSuffix ? QStringLiteral("*.") + suffix : QStringLiteral("*");
+        QStringList held = QDir(parent).entryList(QStringList{pattern}, QDir::Files, QDir::Name);
+        if (held != names)
+            return refuse(tr("%1 holds other %2 files too; copy the chosen ones into the project instead").arg(parent, oneSuffix ? QStringLiteral(".") + suffix : QString()));
+        edi::Project next(project);
+        try {
+            auto read = edi::experiment_with_plain_data(source, QDir(parent).filePath(names.front()).toStdString(), false);
+            std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> kept{std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment))};
+            next.experiments.assign(std::move(kept));
+            next.adopt_experiments();
+            next.sequential_fit.data_dir = declared_folder(project.path, parent).toStdString();
+            next.sequential_fit.file_pattern = pattern.toStdString();
+            next.sequential_fit.reverse = false;
+            next.sequential_fit.template_file = names.front().toStdString();
+        } catch (const std::exception& problem) {
+            return refuse(tr("%1 could not be loaded: %2").arg(names.front(), QString::fromUtf8(problem.what())));
+        }
+        auto before = std::make_shared<const edi::Project>(project);
+        const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
+        if (!self || retired_) return false;
+        if (!error.isEmpty()) return refuse(error);
+        undo_history_.emplace_back(AppliedText{std::move(before)});
+        syncUndo();
+        emit missingDataFolderChanged();
+        qCInfo(lcApp, "%d datasets linked as a scan in %s", static_cast<int>(files.size()), qPrintable(parent));
+        return true;
+    }
+    if (project.path.empty() || !QFileInfo(QString::fromStdString(project.path)).isDir())
+        return refuse(tr("Save the project first, or keep the data linked: copied files go into the project's folder"));
     const QDir root(QString::fromStdString(project.path));
     QString folder = QStringLiteral("scans/") + QString::fromStdString(source.name.value());
     for (int n = 2; root.exists(folder); ++n) folder = QStringLiteral("scans/%1_%2").arg(QString::fromStdString(source.name.value())).arg(n);
@@ -2147,6 +2237,7 @@ void ProjectViewModel::followScanDeclaration() {
         makeScanSession();
     }
     scan_refusal_ = scan_session_->load(*project_);
+    emit missingDataFolderChanged();
     // Other files at the same rows (another folder or pattern, the order reversed): the shown dataset is read from its
     // new file. Rules that only extract other values keep the files, and the shown dataset only takes its new row.
     if (scan_session_->datasets().files != listed.files || scan_session_->datasets().directory != listed.directory) {

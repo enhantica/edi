@@ -243,6 +243,35 @@ SideBarGroup {
             experiment: group.project ? group.project.currentExperiment : null
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
         }
+        // A scan whose data folder cannot be found (ADR-0069): the project still opens; this line says which folder
+        // and Locate folder… points the scan at its new place.
+        Row {
+            objectName: "experiments.dataNotFound"
+            visible: group.project !== null && group.project.missingDataFolder !== ""
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                width: EaStyle.Sizes.sideBarContentWidth - locateButton.width - parent.spacing
+                wrapMode: Text.Wrap
+                color: EaStyle.Colors.red
+                text: group.project !== null ? qsTr("Data not found: %1").arg(group.project.missingDataFolder) : ""
+            }
+            EaElements.Button {
+                id: locateButton
+                objectName: "experiments.locateFolder"
+                text: qsTr("Locate folder…")
+                onClicked: locateDialog.open()
+            }
+        }
+        FolderDialog {
+            id: locateDialog
+            title: qsTr("Locate the scan's data folder")
+            onAccepted: {
+                if (group.project !== null)
+                    group.project.locateDataFolder(selectedFolder);
+            }
+        }
+
         // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-10-11, 2026-11-03). The Load menu
         // holds a full experiment and measured data for the selected experiment, each from a file or from the web.
         Row {
@@ -437,6 +466,8 @@ SideBarGroup {
         datasetsLoader.item.experiment = experiment;
         datasetsLoader.item.files = files;
         datasetsLoader.item.asScan = files.length > 5;
+        // Copied by default for a small set, linked above 20 files or 50 MB (the owner, 2026-11-04).
+        datasetsLoader.item.copy = files.length <= 20 && group.project.filesBytes(files) <= 50 * 1024 * 1024;
         datasetsLoader.item.open();
     }
 
@@ -454,6 +485,7 @@ SideBarGroup {
             property var files: []
             property ExperimentViewModel experiment: null
             property bool asScan: false
+            property bool copy: true
             parent: Overlay.overlay
             title: qsTr("Load %1 datasets as").arg(files.length)
             standardButtons: Dialog.Ok | Dialog.Cancel
@@ -462,7 +494,7 @@ SideBarGroup {
             onClosed: Qt.callLater(() => datasetsLoader.active = false)
             onAccepted: {
                 if (group.project !== null && datasetsChoice.experiment !== null)
-                    group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan);
+                    group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan, datasetsChoice.copy);
             }
 
             Column {
@@ -486,7 +518,14 @@ SideBarGroup {
                     width: parent.width
                     wrapMode: Text.Wrap
                     color: EaStyle.Colors.themeForegroundMinor
-                    text: datasetsChoice.asScan ? qsTr("The files are copied into the project's folder, where a scan reads them; the project must be saved and hold this one experiment.") : qsTr("Each experiment keeps its data in the project.")
+                    text: !datasetsChoice.asScan ? qsTr("Each experiment keeps its data in the project.") : datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")
+                }
+                EaElements.CheckBox {
+                    objectName: "datasets.copy"
+                    visible: datasetsChoice.asScan
+                    text: qsTr("Copy data into the project")
+                    checked: datasetsChoice.copy
+                    onToggled: datasetsChoice.copy = checked
                 }
             }
         }

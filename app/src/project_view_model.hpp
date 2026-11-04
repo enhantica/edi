@@ -198,6 +198,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
     // rule, with its unit ("temperature (K)").
     Q_PROPERTY(bool scan READ scan NOTIFY scanChanged)
+    Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
     Q_PROPERTY(QStringList scanColumns READ scanColumns CONSTANT)
     // The template dataset's place among the datasets (`_sequential_fit.template_file`), or -1.
     Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
@@ -453,7 +454,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     /// experiment per file, each a copy of `experiment`'s setup named after its file. `asScan` true: `experiment` becomes
     /// a scan's template and the files its datasets, copied into `scans/<name>` in the saved project's folder (a scan's
     /// data folder lies inside the project); the project must be saved and hold that one experiment.
-    Q_INVOKABLE bool loadDatasets(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan);
+    Q_INVOKABLE bool loadDatasets(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan,
+                                  bool copy = true);
+    /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
+    Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
+    /// The scan's data folder when it cannot be found (ADR-0069), else empty: the Experiment page marks the experiment
+    /// "data not found" and offers Locate folder…; the project still opens.
+    QString missingDataFolder() const;
+    /// Points the scan at `folder` instead, relative to the project when it can be (one undoable change).
+    Q_INVOKABLE bool locateDataFolder(const QUrl& folder);
     /// Measured data into a new experiment, made only once the file has been read: the type is the pending one
     /// above unless a token is given; an impossible type or an unreadable file leaves the project untouched. One
     /// Undo entry.
@@ -601,6 +610,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void missingDataFolderChanged();
     void colourSchemeChanged();
     void experimentColourPositionsChanged();
     void structureColourPositionsChanged();
