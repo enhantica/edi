@@ -202,3 +202,21 @@ Deployment waits for successful assembly. The site therefore retains its documen
 contributor pages and web app together, without separate full-site deployments racing
 to replace one another. Manual dispatch retains the optional exact crysta commit for
 unreleased web-app previews and the existing unexecuted-notebook behavior in that case.
+
+## Independent documentation and web-app publication
+
+Parallel builds followed by one combined deployment still delayed documentation
+until WebAssembly finished. Each component now publishes as soon as its own build
+succeeds. Only the short publication jobs share a concurrency group. After taking
+that slot, each downloads the latest site artifact whose matching deployment step
+succeeded, replaces its own component and deploys the complete site. Documentation
+retains `/webapp/`; WebAssembly retains the documentation. Build jobs and separate
+manual docs/wasm requests therefore do not wait for one another's compilation.
+
+A successful deployment step, including one in a workflow whose other build still
+runs, establishes the base. A merely uploaded artifact does not. Artifact names
+identify component and attempt; current Pages artifacts bootstrap the first update.
+Site artifacts are retained for 90 days. If no deployed artifact remains, publication
+refuses rather than erase the counterpart; a complete-site bootstrap is then needed.
+Extraction uses the safe tar filter. Assembly remains disposable until deployment.
+This supersedes the earlier combined-deployment design.

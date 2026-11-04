@@ -531,6 +531,7 @@ docs-build = "mkdocs build --strict"
 # The public site (website/, Zensical) into website/_build, its generated pages and links checked; Pages passes
 # `--base-url https://enhantica.github.io/edi/`.
 site-build = "python website/build.py"
+pages-check = "python -m pytest tests/fixtures/assistant_fixes/test_pages_publication.py --noconftest -o addopts= -q"
 docs-clean = "rm -rf site"
 docs-serve = "mkdocs serve"
 # --- the full local gate --------------------------------------------------------------:

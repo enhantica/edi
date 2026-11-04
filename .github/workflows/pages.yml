@@ -11,6 +11,11 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      component:
+        description: Site component to build and publish
+        type: choice
+        options: [docs, wasm, all]
+        default: docs
       crysta_commit:
         description: Build the web app from this crysta commit (a full sha) instead of the pinned SDK
         required: false
@@ -22,19 +27,17 @@ permissions:
 env:
   CMAKE_BUILD_PARALLEL_LEVEL: 4
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   docs:
     name: build documentation
-    if: github.repository == 'enhantica/edi'
+    if: github.repository == 'enhantica/edi' && (github.event_name != 'workflow_dispatch' || inputs.component != 'wasm')
     environment: crysta-sdk
     runs-on: &linux ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      - name: Check independent publication
+        run: pixi run pages-check
       - name: Prepare notebooks
         run: pixi run notebook-prepare
       - name: Mint a crysta installation token
@@ -83,7 +86,7 @@ jobs:
 
   wasm:
     name: build WebAssembly
-    if: github.repository == 'enhantica/edi'
+    if: github.repository == 'enhantica/edi' && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
     environment: crysta-sdk
     runs-on: *linux
     steps:
@@ -132,35 +135,16 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
-  assemble:
-    name: assemble the site
-    needs: [docs, wasm]
-    runs-on: *linux
-    steps:
-      - uses: actions/checkout@v5
-      - name: Download documentation
-        uses: actions/download-artifact@v4
-        with:
-          name: pages-docs
-          path: site
-      - name: Download WebAssembly
-        uses: actions/download-artifact@v4
-        with:
-          name: pages-webapp
-          path: webapp
-      - name: Place the web app at /webapp/
-        run: bash tools/ci/docs-webapp.sh webapp site
-      - name: Upload the site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-  deploy:
-    name: deploy the site
-    needs: assemble
-    # A Pages site is publicly visible, so it deploys only while the repository is public.
+  publish-docs:
+    name: publish documentation
+    needs: docs
     if: github.event.repository.private == false
+    concurrency:
+      group: pages-publication
+      cancel-in-progress: false
     permissions:
+      contents: read
+      actions: read
       pages: write
       id-token: write
     environment:
@@ -168,6 +152,63 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: *linux
     steps:
-      - name: Deploy to GitHub Pages
+      - uses: actions/checkout@v5
+      - name: Download new documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: pages-docs
+          path: documentation
+      - name: Preserve the deployed counterpart and assemble the site
+        run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component docs --incoming documentation --site site
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload the documentation site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-site-docs-${{ github.run_attempt }}
+          path: site
+          retention-days: 90
+      - name: Deploy documentation to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-site-docs-${{ github.run_attempt }}
+
+  publish-wasm:
+    name: publish WebAssembly
+    needs: wasm
+    if: github.event.repository.private == false
+    concurrency:
+      group: pages-publication
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: *linux
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download new WebAssembly
+        uses: actions/download-artifact@v4
+        with:
+          name: pages-webapp
+          path: webapp
+      - name: Preserve the deployed counterpart and assemble the site
+        run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component wasm --incoming webapp --site site
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload the WebAssembly site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-site-wasm-${{ github.run_attempt }}
+          path: site
+          retention-days: 90
+      - name: Deploy WebAssembly to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-site-wasm-${{ github.run_attempt }}
