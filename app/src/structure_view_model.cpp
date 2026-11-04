@@ -660,7 +660,8 @@ QVariantList AtomSiteMomentListModel::components(int row, const QString& form) c
         out.append(has_su && (undetermined & (1 << k)) == 0 ? values_su[k] : nan);
     }
     out.append(spherical[0]);
-    out.append(has_su && !zero ? spherical_su[0] : nan);
+    // A fitted zero moment keeps the bound on |M| in every form; without a fit's covariance it is NaN there.
+    out.append(has_su ? spherical_su[0] : nan);
     // How the s.u. were found, and which values the moment does not determine (bit k: value k).
     out.append(covariance.has_value() && has_su);
     out.append(undetermined);
