@@ -64,6 +64,7 @@ class OnlineSearch : public QObject {
     Q_PROPERTY(edi_app::OnlineResultsModel* results READ results CONSTANT)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(QString message READ message NOTIFY messageChanged)
+    Q_PROPERTY(QString detail READ detail NOTIFY detailChanged)
     Q_PROPERTY(bool unreachable READ unreachable NOTIFY unreachableChanged)
     Q_PROPERTY(QString alternativeId READ alternativeId NOTIFY alternativeIdChanged)
     Q_PROPERTY(QString alternativeName READ alternativeName NOTIFY alternativeNameChanged)
@@ -84,6 +85,8 @@ public:
     OnlineResultsModel* results() const { return results_; }
     bool busy() const { return busy_; }
     QString message() const { return message_; }
+    /// What exactly failed behind `message`: a path or the server's answer.
+    QString detail() const { return detail_; }
     bool unreachable() const { return unreachable_; }
     QString alternativeId() const { return alternative_id_; }
     QString alternativeName() const;
@@ -106,6 +109,7 @@ signals:
     void fieldsChanged();
     void busyChanged();
     void messageChanged();
+    void detailChanged();
     void unreachableChanged();
     void alternativeIdChanged();
     void alternativeNameChanged();
@@ -127,7 +131,7 @@ private:
     OnlineResultsModel* results_;
     QNetworkAccessManager* network_ = nullptr;
     QString kind_ = QStringLiteral("structure");
-    QString source_id_, message_, alternative_id_;
+    QString source_id_, message_, detail_, alternative_id_;
     bool busy_ = false, unreachable_ = false, searched_ = false;
     int generation_ = 0;
     QHash<QString, std::shared_ptr<edi::online::Index>> indexes_;

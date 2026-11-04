@@ -11,10 +11,20 @@ EaElements.MenuItem {
 
     property string hint: ""
     property string toolTip: ""
+    property string fontIcon: ""
 
     textFormat: Text.PlainText
     contentItem: Row {
         spacing: EaStyle.Sizes.fontPixelSize * 0.75
+        EaElements.Label {
+            anchors.verticalCenter: parent.verticalCenter
+            width: EaStyle.Sizes.fontPixelSize * 1.5
+            horizontalAlignment: Text.AlignHCenter
+            font.family: EaStyle.Fonts.iconsFamily
+            font.pixelSize: item.font.pixelSize
+            color: item.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+            text: item.fontIcon
+        }
         EaElements.Label {
             anchors.verticalCenter: parent.verticalCenter
             font: item.font

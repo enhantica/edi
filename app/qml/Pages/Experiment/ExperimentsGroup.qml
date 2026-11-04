@@ -275,6 +275,7 @@ SideBarGroup {
                     }
                     LoadMenuItem {
                         objectName: "experiments.load.experimentFile"
+                        fontIcon: "file"
                         text: qsTr("From file…")
                         hint: ".edi .cif"
                         toolTip: qsTr("Load experiments from .edi or CIF files, each with its type, data and parameters")
@@ -283,6 +284,7 @@ SideBarGroup {
                     }
                     LoadMenuItem {
                         objectName: "experiments.load.experimentWeb"
+                        fontIcon: "globe"
                         text: qsTr("From web…")
                         hint: "EasyDiffraction"
                         toolTip: qsTr("Search EasyDiffraction's collection for a full experiment and open it")
@@ -294,6 +296,7 @@ SideBarGroup {
                     LoadMenuItem {
                         objectName: "experiments.load.dataFile"
                         enabled: !group.scan && (loadMenu.selected === null ? group.project !== null && group.project.canCreateExperiment : loadMenu.selected.canLoadData)
+                        fontIcon: "file"
                         text: qsTr("From file…")
                         hint: ".xye .xy .dat .txt .csv · .int .hkl"
                         toolTip: loadMenu.selected !== null ? qsTr("Load a measured pattern or reflection list into %1").arg(loadMenu.selected.name) : qsTr("Create an experiment from the type selectors and load its measured data")
@@ -302,6 +305,7 @@ SideBarGroup {
                     LoadMenuItem {
                         objectName: "experiments.load.dataWeb"
                         enabled: !group.scan && (loadMenu.selected === null ? group.project !== null && group.project.canCreateExperiment : loadMenu.selected.canLoadData)
+                        fontIcon: "globe"
                         text: qsTr("From web…")
                         hint: "EasyDiffraction"
                         toolTip: qsTr("Search EasyDiffraction's collection for measured data")
@@ -314,7 +318,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canCreateExperiment
                 fontIcon: "plus-circle"
-                text: qsTr("Create")
+                text: qsTr("Create experiment")
                 ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern or load data into") : qsTr("A scan project fits its one template experiment")
                 onClicked: group.project.createExperiment()
             }
@@ -325,7 +329,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canCreateExperiment && group.project.currentExperiment !== null
                 fontIcon: "clone"
-                text: qsTr("Duplicate")
+                text: qsTr("Duplicate experiment")
                 ToolTip.text: group.scan ? qsTr("A scan project fits its one template experiment") : qsTr("Add a copy of the selected experiment, with its data")
                 onClicked: group.project.duplicateExperiment()
             }

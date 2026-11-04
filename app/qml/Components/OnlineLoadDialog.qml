@@ -166,6 +166,7 @@ AppDialog {
                 wrapMode: Text.Wrap
                 color: dialog.search.message !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForegroundMinor
                 text: dialog.search.message !== "" ? dialog.search.message : dialog.search.searched && dialog.search.results.count === 0 ? qsTr("Nothing found") : ""
+                ToolTip.text: dialog.search.detail
             }
             // An unreachable source offers the next one that holds this kind.
             EaElements.SideBarButton {

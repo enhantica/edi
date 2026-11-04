@@ -11,6 +11,7 @@ EaElements.MenuItem {
     enabled: false
     textFormat: Text.PlainText
     contentItem: EaElements.Label {
+        leftPadding: EaStyle.Sizes.fontPixelSize * 2.25
         font.family: header.font.family
         font.pixelSize: header.font.pixelSize
         font.bold: true

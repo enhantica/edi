@@ -129,6 +129,7 @@ SideBarGroup {
                     }
                     LoadMenuItem {
                         objectName: "structures.load.file"
+                        fontIcon: "file"
                         text: qsTr("From file…")
                         hint: ".cif .edi"
                         toolTip: qsTr("Load a structure from a CIF or .edi file")
@@ -137,6 +138,7 @@ SideBarGroup {
                     }
                     LoadMenuItem {
                         objectName: "structures.load.web"
+                        fontIcon: "globe"
                         text: qsTr("From web…")
                         hint: "COD · EasyDiffraction"
                         toolTip: qsTr("Search the Crystallography Open Database or EasyDiffraction's collection for a structure")
@@ -149,7 +151,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "plus-circle"
-                text: qsTr("Create")
+                text: qsTr("Create structure")
                 ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
                 onClicked: group.project.createStructure()
             }
@@ -158,7 +160,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.currentStructure !== null
                 fontIcon: "clone"
-                text: qsTr("Duplicate")
+                text: qsTr("Duplicate structure")
                 ToolTip.text: qsTr("Add a copy of the selected structure, linked to no experiment")
                 onClicked: group.project.duplicateStructure()
             }

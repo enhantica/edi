@@ -199,9 +199,11 @@ void OnlineSearch::search(const QVariantMap& values) {
     }
     const int generation = ++generation_;
     message_.clear();
+    detail_.clear();
     unreachable_ = false;
     alternative_id_.clear();
     emit messageChanged();
+    emit detailChanged();
     emit unreachableChanged();
     emit alternativeIdChanged();
     emit alternativeNameChanged();
@@ -299,6 +301,7 @@ void OnlineSearch::reset() {
     searched_ = false;
     setBusy(false);
     emit messageChanged();
+    emit detailChanged();
     emit unreachableChanged();
     emit alternativeIdChanged();
     emit alternativeNameChanged();
@@ -313,7 +316,9 @@ void OnlineSearch::finish(std::vector<edi::online::Entry> entries) {
 }
 
 void OnlineSearch::fail(const QString& message, bool unreachable) {
-    message_ = unreachable ? tr("%1 cannot be reached: %2").arg(sourceName(), message) : message;
+    // A plain sentence in the popup; what exactly failed stays in `detail`, a tool tip.
+    message_ = unreachable ? tr("%1 cannot be reached").arg(sourceName()) : message;
+    detail_ = unreachable ? message : QString();
     unreachable_ = unreachable;
     alternative_id_.clear();
     if (unreachable && sources_) {
@@ -328,6 +333,7 @@ void OnlineSearch::fail(const QString& message, bool unreachable) {
     }
     setBusy(false);
     emit messageChanged();
+    emit detailChanged();
     emit unreachableChanged();
     emit alternativeIdChanged();
     emit alternativeNameChanged();
@@ -373,8 +379,9 @@ void OnlineSearch::fetch(const QUrl& url, Bytes done) {
         const QString path = url.isLocalFile() ? url.toLocalFile() : url.toString();
         QTimer::singleShot(0, this, [path, done] {
             QFile file(path);
+            // A folder that is not there is the offline stand-in for a host that does not answer.
             if (!file.exists()) {
-                done({}, tr("%1 does not exist").arg(path), false);
+                done({}, tr("%1 does not exist").arg(path), true);
                 return;
             }
             if (!file.open(QIODevice::ReadOnly)) {
