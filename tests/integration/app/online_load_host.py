@@ -16,23 +16,33 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class OnlineHost:
-    def __init__(self, process, mailbox):
+    def __init__(self, process, mailbox, request_timeout=30, output_log=None):
         self.process = process
         self.mailbox = mailbox
         self.lines = Queue()
         self.sequence = 0
         self.failed = False
+        self.communication_failed = False
+        self.request_timeout = request_timeout
+        self.output_log = open(output_log, 'a', encoding='utf-8') if output_log else None
         self.reader = Thread(target=self._read_output, daemon=True)
         self.reader.start()
 
     def _read_output(self):
-        for line in self.process.stdout:
-            self.lines.put(line.rstrip())
-        self.lines.put(None)
+        try:
+            for line in self.process.stdout:
+                if self.output_log is not None:
+                    self.output_log.write(line)
+                    self.output_log.flush()
+                self.lines.put(line.rstrip())
+        finally:
+            if self.output_log is not None:
+                self.output_log.close()
+            self.lines.put(None)
 
-    def receive(self, marker):
+    def receive(self, marker, timeout=30):
         output = []
-        deadline = monotonic() + 30
+        deadline = monotonic() + timeout
         while (remaining := deadline - monotonic()) > 0:
             try:
                 line = self.lines.get(timeout=remaining)
@@ -53,7 +63,12 @@ class OnlineHost:
 
     def check(self, case, tag=''):
         self.send(case, tag)
-        receipt, output = self.receive('ONLINE_RESULT ')
+        try:
+            receipt, output = self.receive('ONLINE_RESULT ', self.request_timeout)
+        except BaseException:
+            self.failed = True
+            self.communication_failed = True
+            raise
         passed = json.loads(receipt) == {'id': self.sequence, 'passed': True}
         self.failed |= not passed
         assert passed, (
@@ -71,6 +86,8 @@ def run_online_host(
     collection_root=None,
     session_type='OnlineLoadSession',
     hover_enabled=None,
+    request_timeout=30,
+    output_log=None,
 ):
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert runner.is_file(), 'Online loading requires the built production Qt host'
@@ -128,12 +145,15 @@ def run_online_host(
         stderr=subprocess.STDOUT,
         text=True,
     ) as process:
-        host = OnlineHost(process, mailbox)
+        host = OnlineHost(process, mailbox, request_timeout, output_log)
         try:
             host.receive('ONLINE_READY')
             yield host
             if process.poll() is None:
-                host.send('stop')
+                if host.communication_failed:
+                    process.terminate()
+                else:
+                    host.send('stop')
                 process.wait(timeout=5)
             assert host.failed or process.returncode == 0, (
                 'A passing shared Qt host must exit cleanly after its final case'

@@ -217,7 +217,7 @@ TestCase {
              groups: [["Structure", ".cif .edi", "COD · EasyDiffraction"]]},
             {tag: "experiment", page: AppState.Page.Experiment, group: "experiments",
              groups: [["Full experiment", ".edi .cif", "EasyDiffraction"],
-                      ["Measured data into", ".xye .xy .dat .txt .csv · .int .hkl", "EasyDiffraction"]]}
+                      ["Load measured data into", ".xye .xy .dat .txt .csv · .int .hkl", "EasyDiffraction"]]}
         ];
     }
 
@@ -446,8 +446,11 @@ TestCase {
     function check_new_target_import(data) {
         resetProject(false);
         const project = Session.project;
-        compare(project.experiments.count, 0, "The import begins with no selected experiment");
-        verify(!project.canUndo, "The import begins with an empty Undo stack");
+        compare(project.experiments.count, 0, "The selected-target fixture begins before explicit creation");
+        openPage({page:AppState.Page.Experiment, group:"experiments"});
+        click(pageControl("experiments.create"));
+        compare(project.experiments.count, 1, "The learner explicitly creates the experiment before importing data");
+        verify(project.currentExperiment.calculationOnly && project.canUndo, "The created empty experiment has its own Undo entry");
         const route = {page: AppState.Page.Experiment, group: "experiments",
                        action: data.local ? "dataFile" : "dataWeb"};
         if (data.local) {
@@ -490,7 +493,7 @@ TestCase {
                        "The online popup closes on success and stays available on refusal");
         }
         if (data.success) {
-            compare(project.experiments.count, 1, "A successful import commits one new experiment");
+            compare(project.experiments.count, 1, "Import fills the explicitly created experiment without adding another");
             const rows = Probe.rows(project.currentExperiment.pattern).map(
                 row => [row.x, row.intensityMeas, row.intensityMeasSu]);
             compare(rows, [[21.5, 17.25, 0.75], [22.75, 31.75, 1.25], [25.125, 23.5, 1.5]],
@@ -498,9 +501,14 @@ TestCase {
             verify(project.canUndo, "The completed import can be undone");
             project.undo();
         }
-        compare(project.experiments.count, 0, "Refusal or Undo of an import leaves no experiment");
-        compare(project.currentExperiment, null, "Refusal or Undo leaves no selected experiment");
-        verify(!project.canUndo, "Refusal or Undo leaves the original empty Undo stack");
+        compare(project.experiments.count, 1, "Refusal or Undo preserves the explicitly created experiment");
+        verify(project.currentExperiment !== null && project.currentExperiment.calculationOnly,
+               "Refusal or Undo leaves the selected experiment empty");
+        verify(project.canUndo, "The learner can still undo the preceding explicit creation");
+        project.undo();
+        compare(project.experiments.count, 0, "The next Undo removes creation rather than a hidden failed-import edit");
+        compare(project.currentExperiment, null, "Undo creation restores the original empty selection");
+        verify(!project.canUndo, "Refusal and completed import Undo add no hidden history entries");
         if (data.local && data.cancel) {
             verify(typeof project.setNewExperimentType === "function",
                    "A new-target type selection has a validation boundary before creation");
