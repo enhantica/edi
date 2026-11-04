@@ -24,6 +24,10 @@
     "structure": {
       "light": "#00796b",
       "dark": "#4db6ac"
+    },
+    "magnetic": {
+      "light": "#c2185b",
+      "dark": "#f06292"
     }
   },
   "tags": {
@@ -163,7 +167,7 @@
       "magnetic": {
         "label": "Magnetic",
         "meaning": "Magnetic structure",
-        "tone": "structure",
+        "tone": "magnetic",
         "anchor": "magnetic-structure",
         "icon": "magnet",
         "glyph": ""
