@@ -14,6 +14,9 @@ python = "3.14.*"
 cmake = ">=3.26"
 ninja = "*"
 nanobind = "==3.1.0"
+doctest = "2.*"
+pytest = "*"
+defusedxml = "*"
 qt6-main = "6.11.2.*"
 qt6-graphs = "6.11.2.*"
 qt6-quick3d = "6.11.2.*"
@@ -22,6 +25,7 @@ edi-assistant-runtime = { path = "../deps/assistant-runtime" }
 
 [pypi-dependencies]
 py7zr = "==1.1.3"
+playwright = "==1.58.0"
 
 [target.linux-64.dependencies]
 cxx-compiler = "1.11.*"

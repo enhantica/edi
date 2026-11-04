@@ -168,6 +168,130 @@ def write_metadata(
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
 
 
+def installer_runtime_notices(copied: dict, prefix: Path | None, notices: Path) -> None:
+    """Collect the licence files for every bundled installer library."""
+    for name, source_path in copied.items():
+        source = Path(source_path)
+        if prefix and source.is_relative_to(prefix.resolve()):
+            found = False
+            for record in (prefix / 'conda-meta').glob('*.json'):
+                metadata = json.loads(record.read_text())
+                if source.relative_to(prefix.resolve()).as_posix() in metadata.get('files', []):
+                    licenses = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
+                    if licenses.is_dir():
+                        shutil.copytree(licenses, notices / metadata['name'], dirs_exist_ok=True)
+                        found = True
+            if not found:
+                raise RuntimeError(f'No dependency licence files found for {name}')
+        else:
+            result = subprocess.run(
+                ['dpkg-query', '-S', str(source)], capture_output=True, text=True, check=False
+            )
+            if result.returncode and str(source).startswith('/usr/lib/'):
+                result = subprocess.run(
+                    ['dpkg-query', '-S', str(source).removeprefix('/usr')],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+            packages = [
+                line.split(': ', 1)[0].split(':', 1)[0] for line in result.stdout.splitlines()
+            ]
+            licenses = [Path('/usr/share/doc') / package / 'copyright' for package in packages]
+            if not licenses or not any(path.is_file() for path in licenses):
+                raise RuntimeError(f'No operating-system dependency licence found for {name}')
+            for path in licenses:
+                if path.is_file():
+                    shutil.copy2(path, notices / (path.parent.name + '-copyright'))
+
+
+def collect_linux_installer_libraries(
+    template: Path, libraries: Path, prefix: Path | None, patchelf: str, env: dict
+) -> dict:
+    """Resolve and relocate the non-glibc dependency closure of the IFW template."""
+    core = re.compile(r'lib(?:c|m|dl|pthread|rt|resolv|util|anl)\.so\.')
+    copied = {}
+    for _ in range(32):
+        result = subprocess.run(
+            ['/usr/bin/ldd', str(template)], env=env, capture_output=True, text=True, check=False
+        )
+        missing = []
+        progress = False
+        for line in result.stdout.splitlines():
+            match = re.fullmatch(r'\s*(\S+) => (not found|/\S+)(?: \(.*\))?\s*', line)
+            if not match:
+                continue
+            name, resolved = match.groups()
+            if core.match(name):
+                continue
+            destination = libraries / name
+            if destination.exists():
+                if resolved == 'not found':
+                    raise RuntimeError(f'Installer cannot load its bundled library: {name}')
+                continue
+            if resolved == 'not found':
+                candidate = prefix / 'lib' / name if prefix else None
+                if not candidate or not candidate.is_file():
+                    missing.append(name)
+                    continue
+                source = candidate.resolve()
+            else:
+                source = Path(resolved).resolve()
+            shutil.copy2(source, destination)
+            run([patchelf, '--set-rpath', '$ORIGIN', destination])
+            copied[name] = str(source)
+            progress = True
+        if not progress:
+            if result.returncode or missing or 'not found' in result.stdout + result.stderr:
+                raise RuntimeError(
+                    f'Unresolved installer dependency: {result.stdout}{result.stderr}'
+                )
+            break
+    else:
+        raise RuntimeError('Installer dependency closure did not converge')
+    return copied
+
+
+def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict]:
+    """Relocate the IFW template before payload append; leave glibc to the OS."""
+    template = output / 'installerbase'
+    shutil.copy2(tools / 'bin/installerbase', template)
+    libraries = output / 'installer-runtime/lib'
+    notices = output / 'installer-runtime/licenses'
+    libraries.mkdir(parents=True)
+    notices.mkdir()
+    patchelf = shutil.which('patchelf')
+    if not patchelf:
+        raise RuntimeError('Linux installer packaging requires patchelf')
+    env = clean_environment(output / 'tool-home')
+    env['LD_LIBRARY_PATH'] = str(libraries)
+    prefix_value = os.environ.get('PIXI_ENVIRONMENT_PREFIX') or os.environ.get('CONDA_PREFIX')
+    prefix = Path(prefix_value) if prefix_value else None
+    copied = collect_linux_installer_libraries(template, libraries, prefix, patchelf, env)
+    installer_runtime_notices(copied, prefix, notices)
+    run([patchelf, '--set-rpath', '$ORIGIN/installer-runtime/lib', template])
+    (output / 'installer-runtime/dependencies.json').write_text(
+        json.dumps({name: sha256(libraries / name) for name in copied}, indent=2) + '\n'
+    )
+    return template, libraries.parent, env
+
+
+def archive_installer(installer: Path, runtime: Path | None) -> Path:
+    """Archive the complete bootstrap including its portable runtime libraries."""
+    archive = installer.with_suffix('.zip')
+    if SYSTEM == 'macos':
+        run(['codesign', '--force', '--deep', '--sign', '-', installer])
+        run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, archive])
+    else:
+        with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
+            zipped.write(installer, installer.name)
+            if runtime:
+                for path in sorted(runtime.rglob('*')):
+                    if path.is_file():
+                        zipped.write(path, path.relative_to(installer.parent))
+    return archive
+
+
 def package_app(
     stage: Path,
     tools: Path,
@@ -179,16 +303,18 @@ def package_app(
     if not re.fullmatch(r'[0-9]+(?:[.-][0-9]+)*', version):
         raise RuntimeError('Installer version must contain only numeric components')
     stage, tools, output = stage.resolve(), tools.resolve(), output.resolve()
-    executable = stage / (
-        'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
-        if SYSTEM == 'macos'
-        else 'bin/edi_app' + SUFFIX
-    )
-    if not executable.is_file():
+    if not (
+        stage
+        / (
+            'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
+            if SYSTEM == 'macos'
+            else 'bin/edi_app' + SUFFIX
+        )
+    ).is_file():
         raise RuntimeError('Stage does not contain the native application')
     if output.is_relative_to(stage):
         raise RuntimeError('Installer output must be outside the application stage')
-    manifest = payload_manifest(stage)
+    payload_manifest(stage)
     output.mkdir(parents=True, exist_ok=True)
     source = output / 'source'
     if source.exists():
@@ -199,43 +325,52 @@ def package_app(
     config.mkdir(parents=True)
     meta.mkdir(parents=True)
     shutil.copytree(stage, data, symlinks=True)
-    (data / 'payload-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    template_args, tool_environment = [], None
+    runtime = None
+    if SYSTEM == 'linux':
+        template, runtime, tool_environment = linux_installer_runtime(tools, output)
+        template_args = ['-t', template]
+        shutil.copytree(runtime, data / runtime.name)
+    (data / 'payload-manifest.json').write_text(
+        json.dumps(payload_manifest(data), indent=2) + '\n'
+    )
     write_metadata(config, meta, version, repository_url, mirrors)
     if repository_url:
-        run([
-            tools / ('bin/repogen' + SUFFIX),
-            '--verbose',
-            '--component-metadata',
-            '--compression',
-            '1',
-            '-p',
-            source / 'packages',
-            output / 'repository',
-        ])
+        run(
+            [
+                tools / ('bin/repogen' + SUFFIX),
+                '--verbose',
+                '--component-metadata',
+                '--compression',
+                '1',
+                '-p',
+                source / 'packages',
+                output / 'repository',
+            ],
+            env=tool_environment,
+        )
     kind = 'online' if repository_url else 'offline'
     name = f'EasyDiffraction-{version}-{PLATFORM_ID}-{kind}'
     installer = output / (
         name + ('.app' if SYSTEM == 'macos' else '.exe' if SYSTEM == 'windows' else '.run')
     )
-    run([
-        tools / ('bin/binarycreator' + SUFFIX),
-        '--verbose',
-        '--compression',
-        '1',
-        '--online-only' if repository_url else '--offline-only',
-        '-c',
-        config / 'config.xml',
-        '-p',
-        source / 'packages',
-        installer,
-    ])
-    archive = output / (name + '.zip')
-    if SYSTEM == 'macos':
-        run(['codesign', '--force', '--deep', '--sign', '-', installer])
-        run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, archive])
-    else:
-        with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
-            zipped.write(installer, installer.name)
+    run(
+        [
+            tools / ('bin/binarycreator' + SUFFIX),
+            '--verbose',
+            *template_args,
+            '--compression',
+            '1',
+            '--online-only' if repository_url else '--offline-only',
+            '-c',
+            config / 'config.xml',
+            '-p',
+            source / 'packages',
+            installer,
+        ],
+        env=tool_environment,
+    )
+    archive = archive_installer(installer, runtime)
     (output / 'installer.json').write_text(
         json.dumps(
             {
@@ -312,9 +447,33 @@ def check_linux_dependencies(root: Path, env: dict) -> dict:
     return receipts
 
 
+def unpack_installer(archive: Path, output: Path) -> Path:
+    """Unpack our distribution archive and restore executable permissions."""
+    output.mkdir(parents=True)
+    with zipfile.ZipFile(archive) as zipped:
+        for member in zipped.infolist():
+            if Path(member.filename).is_absolute() or '..' in Path(member.filename).parts:
+                raise RuntimeError('Installer archive escapes its extraction directory')
+        if SYSTEM == 'macos':
+            run(['ditto', '-x', '-k', archive, output])
+        else:
+            zipped.extractall(output)
+            for member in zipped.infolist():
+                path = output / member.filename
+                if path.is_file():
+                    path.chmod((member.external_attr >> 16) & 0o777)
+    suffix = '.app' if SYSTEM == 'macos' else '.exe' if SYSTEM == 'windows' else '.run'
+    candidates = list(output.glob('*' + suffix))
+    if len(candidates) != 1:
+        raise RuntimeError('Installer archive must contain one platform bootstrap')
+    return candidates[0]
+
+
 def exercise_installer(installer: Path, output: Path, repository: str | None = None) -> None:
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
+    if installer.suffix == '.zip':
+        installer = unpack_installer(installer, output / 'downloaded installer')
     home, target = output / 'isolated home', output / 'installed app'
     home.mkdir(exist_ok=True)
     if target.exists():

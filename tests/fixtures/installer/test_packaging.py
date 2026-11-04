@@ -117,3 +117,44 @@ def test_future_mirror_is_configured_without_enabling_an_empty_repository(tmp_pa
     assert repositories[0].findtext('Enabled') == '1'
     assert repositories[1].findtext('Url').startswith('https://download.easydiffraction.org/')
     assert repositories[1].findtext('Enabled') == '0'
+
+
+def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):
+    if PACKAGE.SYSTEM != 'linux':
+        pytest.skip('Linux bootstrap layout')
+    installer = tmp_path / 'EasyDiffraction.run'
+    installer.write_bytes(b'installer')
+    installer.chmod(0o755)
+    runtime = tmp_path / 'installer-runtime'
+    (runtime / 'lib').mkdir(parents=True)
+    (runtime / 'lib/library.so').write_bytes(b'portable dependency')
+    archive = PACKAGE.archive_installer(installer, runtime)
+    unpacked = PACKAGE.unpack_installer(archive, tmp_path / 'download')
+    assert unpacked.read_bytes() == b'installer'
+    assert unpacked.stat().st_mode & 0o111 == 0o111
+    assert (
+        unpacked.parent / 'installer-runtime/lib/library.so'
+    ).read_bytes() == b'portable dependency'
+
+
+def test_installer_runtime_refuses_an_unavailable_dependency(tmp_path):
+    result = subprocess.CompletedProcess([], 0, 'libmissing.so.1 => not found\n', '')
+    with (
+        mock.patch.object(PACKAGE.subprocess, 'run', return_value=result),
+        pytest.raises(RuntimeError, match='Unresolved installer dependency'),
+    ):
+        PACKAGE.collect_linux_installer_libraries(
+            tmp_path / 'base', tmp_path, None, 'patchelf', {}
+        )
+
+
+def test_installer_runtime_leaves_the_system_c_library_on_the_host(tmp_path):
+    result = subprocess.CompletedProcess([], 0, 'libc.so.6 => /lib/libc.so.6 (0x123)\n', '')
+    with mock.patch.object(PACKAGE.subprocess, 'run', return_value=result):
+        assert (
+            PACKAGE.collect_linux_installer_libraries(
+                tmp_path / 'base', tmp_path, None, 'patchelf', {}
+            )
+            == {}
+        )
+    assert not list(tmp_path.iterdir())

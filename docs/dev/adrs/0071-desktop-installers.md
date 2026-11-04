@@ -84,3 +84,17 @@ those libraries and do not acquire a network dependency merely because a mirror 
 
 The initial supported Linux target is Ubuntu 24.04 or newer. Preserve the official helper rather than
 building a custom helper or packaging a replacement system C library for older systems.
+
+## Bootstrap dependency qualification
+
+The Linux IFW bootstrap itself links portable X11 and utility libraries, even when its CLI uses the
+offscreen platform. Relocate a copy of `installerbase` before the framework appends its payload. Ship
+its non-glibc library closure and licence files beside the bootstrap in the download ZIP and inside
+the component for the installed maintenance tool. Do not patch an already appended installer or
+rely on Pixi paths in the user's environment. The operating system still supplies glibc.
+
+Before compiling the application, CI exercises the real framework with tiny marker components:
+unpack the distribution ZIP, install offline, update from a local file repository, uninstall, then
+install and uninstall the online bootstrap. This gate qualifies installer transport only. The separate
+full application gate still installs the real bundle, calculates and renders with crysta, checks runtime
+dependencies, and removes the installation. No test reaches a public component server.

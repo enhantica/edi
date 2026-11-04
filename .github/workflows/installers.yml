@@ -70,6 +70,10 @@ jobs:
         uses: ./.github/actions/setup-pixi
         with:
           manifest-path: tools/installer/pixi.toml
+      - name: Acquire the pinned Qt Installer Framework
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
+      - name: Check installer transport before building the application
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/protocol_check.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/protocol"
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -92,14 +96,12 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build crysta, edi and its runtime bundle
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
-      - name: Acquire the pinned Qt Installer Framework
-        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
       - name: Create the offline qualification installer
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package"
       - name: Install, launch, calculate, render and uninstall
         shell: bash
         run: |
-          installer=$(cat build/installer/package/installer.json | sed -n 's/.*"installer": "\([^"]*\)".*/\1/p')
+          installer=$(cat build/installer/package/installer.json | sed -n 's/.*"zip": "\([^"]*\)".*/\1/p')
           pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
       - name: Upload installer
         uses: actions/upload-artifact@v4
@@ -115,5 +117,7 @@ jobs:
           name: installer-check-${{ matrix.platform }}
           path: |
             build/installer/test/**
+            build/installer/protocol/*.log
+            build/installer/protocol/passed.json
             build/installer/package/installer.json
           if-no-files-found: ignore
