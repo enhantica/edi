@@ -1398,6 +1398,9 @@ Popup {
     background: Item {
         Shape {
             anchors.fill: parent
+            // Drawn only while the callout shows: the curve renderer re-tessellates the outline on every change it
+            // sees, which cost a closed tutorial a large share of every slider step.
+            visible: panel.opened
             preferredRendererType: Shape.CurveRenderer
 
             ShapePath {
@@ -1406,7 +1409,7 @@ Popup {
                 strokeWidth: 1
 
                 PathSvg {
-                    path: panel.outline(pointer.parent.width, pointer.parent.height)
+                    path: panel.opened ? panel.outline(pointer.parent.width, pointer.parent.height) : ""
                 }
             }
         }

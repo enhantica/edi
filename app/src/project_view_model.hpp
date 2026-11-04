@@ -1024,6 +1024,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString editReadinessRefusal(bool restoring) const;
     bool calculating_ = false;
     bool adjusting_ = false;
+    bool adjusted_ = false;  // a drag step left the full publish for the release
     bool modified_ = false;
     quint64 revision_ = 0;
     QString last_error_;

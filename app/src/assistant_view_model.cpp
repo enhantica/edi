@@ -16231,6 +16231,8 @@ struct AssistantViewModel::State {
             const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
                 if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=poll_sync elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
             });
+            // While a slider is held the context waits for the release (the owner, 2026-11-04).
+            if (project && project->adjusting()) return;
             auto projection = file_projection();
             try {
                 if (controller) controller->poll();

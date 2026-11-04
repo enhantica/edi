@@ -14,6 +14,7 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QScopeGuard>
 #include <QThread>
 #include <QUrl>
 #include <atomic>
@@ -2198,6 +2199,9 @@ bool DemoDriver::timed_slider(int count) {
     const double from = slider->property("from").toDouble(), to = slider->property("to").toDouble();
     const double centre = slider->property("value").toDouble();
     std::vector<double> shown, calculated;
+    // Held, as a drag holds the slider, and released after the last step.
+    project->setAdjusting(true);
+    const auto release = qScopeGuard([project] { project->setAdjusting(false); });
     for (int i = 0; i < count; ++i) {
         // Small steps either side of where the slider was, as a drag makes them.
         const double value = std::clamp(centre + (to - from) * 0.01 * static_cast<double>(i % 2 == 0 ? 1 : -1) *
