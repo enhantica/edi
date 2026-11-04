@@ -2862,7 +2862,8 @@ QString ProjectViewModel::prepareScan(bool fresh) {
     if (const QString critical = criticalEditRefusal(); !critical.isEmpty()) return critical;
     if (fit_ != nullptr && fit_->running()) return tr("A fit is running");
     if (const QString refusal = scanRefusal(); !refusal.isEmpty()) return refusal;
-    if (project_->path.empty()) return tr("The project has no directory yet: save it first");
+    if (project_->path.empty() && project_->scan_data_root.empty())
+        return tr("The project has no working directory: load a project or save it first");
     const QString warning = tr("The scan preparation changed the project, but its presentation failed. Undo or reopen before further changes.");
     editing_ = true;
     const auto release = qScopeGuard([this] { editing_ = false; });
@@ -3359,10 +3360,7 @@ void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
         return;
     }
     showScanResults();
-    // The shown dataset as the rows on disk now give it, once a display catching up has drawn every pattern.
-    if (!fit_->catchingUp()) {
-        viewDataset(std::max(0, current_dataset_), true);
-    }
+    // The final dataset is refreshed after FitViewModel releases its publication fence.
 }
 
 void ProjectViewModel::setAdjusting(bool adjusting) {

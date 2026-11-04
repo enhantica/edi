@@ -1114,6 +1114,7 @@ void FitViewModel::ended(const edi::FitReport& report) {
     const auto attempt = submitted_attempt_;
     submitted_attempt_ = 0;
     const bool previous_presentation = presenting_;
+    const bool scan_completion = scanning_;
     presenting_ = true;
     // Latch actual adoption before the first Qt notification. A later failed attempt
     // cannot borrow an older fit start; an edit during presentation retires both facts.
@@ -1132,6 +1133,10 @@ void FitViewModel::ended(const edi::FitReport& report) {
     try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
     --fit_writing_;
     presenting_ = previous_presentation;
+    if (scan_completion && !presenting_ && visible && !owner_.retired_ && !failure && !catchingUp()) {
+        try { owner_.viewDataset(std::max(0, owner_.current_dataset_), true); }
+        catch (...) { failure = std::current_exception(); }
+    }
     // The adopted fit becomes the accepted state only once its presentation has completed; until then the trial it
     // ends is still open and a failed presentation settles like any other unaccepted ending.
     if (auto accepted = std::exchange(pending_accept_, nullptr); accepted && !failure && !stop_rollback_ && visible && !owner_.retired_) {

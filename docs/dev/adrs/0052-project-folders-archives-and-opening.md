@@ -332,3 +332,20 @@ the original offered choice. Closing/dismissing the guard is not a Discard
 receipt, and Reset never bypasses unsaved work merely because the browser lacks
 an accessibility node. No missing browser accessibility subtree is claimed fixed
 by naming: its Qt/WASM role/lifecycle propagation is a separate platform issue.
+
+## Scans before the first Save
+
+An archive opened without a writable save destination still owns its extracted
+temporary tree. Sequential and independent fits read and write their scan state
+there until Save chooses a destination. A saved project's path takes precedence;
+otherwise scan execution, result indexing and the app's scan state use the archive's
+retained root. With neither root, the operation refuses instead of using the current
+working directory. This follows the existing archive source-root rule used by Save.
+The project's save path stays empty: fitting is not an implicit Save and does not
+rewrite the source archive. Desktop Examples and browser-memory projects use the
+same core rule without requiring persistent browser storage or a filesystem picker.
+
+The scan's final dataset refresh runs after FitViewModel releases its presentation
+fence. It uses the ordinary projection/edit path at that point, so a legitimate
+internal refresh cannot trigger the same refusal used to block reentrant external
+writers while results are being published. The publication fences remain unchanged.

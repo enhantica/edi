@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iterator>
 #include <string_view>
+#include <stdexcept>
 
 #include "background.hpp"
 #include "crysta/project_output.hpp"
@@ -28,13 +29,19 @@ namespace {
 
 namespace fs = std::filesystem;
 
-fs::path analysis_dir(const edi::Project& project) { return fs::path(project.path) / "analysis"; }
+fs::path working_root(const edi::Project& project) {
+    const auto& root = project.path.empty() ? project.scan_data_root : project.path;
+    if (root.empty()) throw std::invalid_argument("the scan has no working directory");
+    return fs::path(root);
+}
+
+fs::path analysis_dir(const edi::Project& project) { return working_root(project) / "analysis"; }
 
 // The scan's files are written into the project's own analysis/ folder: a link standing at it, or at its set-aside
 // folder, is first replaced by a folder of the project's own, so nothing behind the link is written.
 void own_analysis_dir(const edi::Project& project) {
-    crysta::output::own_folder(analysis_dir(project), fs::path(project.path));
-    crysta::output::own_folder(analysis_dir(project) / ".edi-set-aside", fs::path(project.path));
+    crysta::output::own_folder(analysis_dir(project), working_root(project));
+    crysta::output::own_folder(analysis_dir(project) / ".edi-set-aside", working_root(project));
 }
 
 const char* const kResultFiles[] = {"results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"};
@@ -449,7 +456,7 @@ void set_aside(const edi::Project& project, const ScanSession::Files& present, c
                std::vector<int>& moved) {
     moved.reserve(kResultFileCount); // Every successful rename can be recorded without a later allocation.
     const fs::path directory = analysis_dir(project);
-    crysta::output::own_folder(aside, fs::path(project.path));
+    crysta::output::own_folder(aside, working_root(project));
     for (int which = 0; which < kResultFileCount; ++which) {
         if (*slot(present, which)) {
             move_file(directory / kResultFiles[which], aside / kResultFiles[which]);
@@ -630,7 +637,7 @@ QString ScanSession::swapRunFile(const edi::Project& project, const std::optiona
     const bool present = fs::exists(record, error);
     try {
         own_analysis_dir(project);
-        crysta::output::own_folder(aside, fs::path(project.path));
+        crysta::output::own_folder(aside, working_root(project));
         if (present) {
             move_file(record, aside / kResultFiles[2]);
         }

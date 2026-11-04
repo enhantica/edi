@@ -1656,7 +1656,9 @@ std::vector<std::string> split_scan_row(std::string_view line) {
 }
 
 std::filesystem::path scan_results_path(const Project& project) {
-    return std::filesystem::path(project.path) / "analysis" / "results.csv";
+    const auto& root = project.path.empty() ? project.scan_data_root : project.path;
+    if (root.empty()) throw std::invalid_argument("the scan has no working directory");
+    return std::filesystem::path(root) / "analysis" / "results.csv";
 }
 
 // Why each file's fit stopped, from crysta's ledger (`termination`, its fifth column), read in step with
@@ -5746,9 +5748,10 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             " experiments (a sequential fit iterates scan data files against exactly one "
             "template experiment)");
     }
-    // The --dry lesson: the resolver must work on a project LOADED from disk — the scan
-    // data_dir and analysis/results.csv resolve against the project directory.
-    if (path.empty()) {
+    // An unsaved archive still owns its extracted working tree (ADR-0052).
+    // A dry run keeps its separate output path and data root.
+    const std::string& working_root = path.empty() ? scan_data_root : path;
+    if (working_root.empty()) {
         throw std::invalid_argument(
             "edi fit_sequential: this project has no directory (never loaded or saved) - the "
             "scan data_dir and analysis/results.csv resolve against it; load or save_as first");
@@ -5793,7 +5796,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         cproject.minimizer_moments_near_zero = minimizer_moments_near_zero;
         cproject.minimizer_type = minimizer_type;
         fill_crysta_sequential(sequential_fit, cproject.sequential_fit);
-        cproject.path = path;
+        cproject.path = working_root;
 
         // The scan's own preamble and per-file completion events. The walk mirrors
         // crysta's (the helpers above) and the resume rows come from results.csv, read ONCE, for
@@ -5804,10 +5807,10 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // parsing mid-scan (the retired watcher re-read the whole file per file: quadratic). The
         // two populations split by construction: the preamble carries the rows already
         // committed, and crysta fires only the rows this call appends.
-        const std::filesystem::path project_root(path);
+        const std::filesystem::path project_root(working_root);
         // A dry run reads the scan data in place (scan_data_root) while results.csv lives
         // under `path`, the scratch directory that receives what the fit writes.
-        const std::filesystem::path data_root(scan_data_root.empty() ? path : scan_data_root);
+        const std::filesystem::path data_root(scan_data_root.empty() ? working_root : scan_data_root);
         cproject.scan_data_root = scan_data_root;
         const std::filesystem::path csv_path = project_root / "analysis" / "results.csv";
         // The retained state is proven before anything is published: every state file the run reads, here and (for

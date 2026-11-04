@@ -7,6 +7,10 @@
 #include <QQuickWindow>
 #include <QScopeGuard>
 #include <QStandardItemModel>
+#include <QDir>
+#include <QFile>
+#include "edi/io.hpp"
+#include "fit_view_model.hpp"
 #include <QtQml/qqmlextensionplugin.h>
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
@@ -184,6 +188,57 @@ private slots:
         QTest::mouseMove(&window, link->mapToScene(QPointF(link->width() / 2, link->height() / 2)).toPoint());
         QTRY_VERIFY2(root->property("linkHovered").toBool(), qPrintable(QString("size=%1x%2 visible=%3 enabled=%4 hover=%5 active=%6").arg(link->width()).arg(link->height()).arg(link->isVisible()).arg(link->isEnabled()).arg(link->property("hoverEnabled").toBool()).arg(window.isActive())));
         QTRY_VERIFY(root->property("linkColor") != normal);
+    }
+    void archiveScanRunsWithoutSave_data() {
+        QTest::addColumn<bool>("unsaved");
+        QTest::addColumn<QString>("mode");
+        QTest::newRow("unsaved-sequential") << true << QString("sequential");
+        QTest::newRow("folder-sequential") << false << QString("sequential");
+        QTest::newRow("unsaved-independent") << true << QString("independent");
+        QTest::newRow("folder-independent") << false << QString("independent");
+    }
+    void archiveScanRunsWithoutSave() {
+        QFETCH(bool, unsaved);
+        QFETCH(QString, mode);
+        const QString archive = QString::fromUtf8(EDI_SOURCE_DIR)
+            + "/tests/fixtures/project_archive/pd-neut-cwl_cosio-d20_scan-3f.zip";
+        QFile original(archive);
+        QVERIFY(original.open(QIODevice::ReadOnly));
+        const QByteArray originalBytes = original.readAll();
+        original.close();
+        edi::Project project = edi::load_project(archive.toStdString());
+        QVERIFY(project.path.empty());
+        const QString working = QString::fromStdString(project.scan_data_root);
+        QVERIFY(!working.isEmpty());
+        if (!unsaved) {
+            project.path = project.scan_data_root;
+            project.metadata.path = project.path;
+        }
+        project.fitting_mode = mode.toStdString();
+        project.minimizer_max_iterations = 1;
+        {
+            edi_app::ProjectViewModel model(std::move(project), nullptr);
+            QVERIFY(model.scan());
+            QSignalSpy refused(&model, &edi_app::ProjectViewModel::refused);
+            model.setCurrentExperimentIndex(0);
+            QTRY_VERIFY_WITH_TIMEOUT(!model.calculating() && model.viewSettled(), 10000);
+            QVERIFY(model.fit()->available());
+            model.fit()->start();
+            QTRY_VERIFY_WITH_TIMEOUT(!model.fit()->running(), 10000);
+            QTRY_COMPARE_WITH_TIMEOUT(model.fit()->scanFitted(), 3, 10000);
+            QTRY_VERIFY_WITH_TIMEOUT(!model.calculating() && model.viewSettled(), 10000);
+            QCOMPARE(refused.count(), 0);
+            QCOMPARE(model.lastError(), QString());
+            QCOMPARE(model.path().isEmpty(), unsaved);
+            QVERIFY(QFile::exists(working + "/analysis/results.csv"));
+            QVERIFY(QFile::exists(working + "/analysis/scan-run.json"));
+            model.setTitle("Edited after scan completion");
+            QCOMPARE(model.title(), QString("Edited after scan completion"));
+            QCOMPARE(refused.count(), 0);
+        }
+        QVERIFY(original.open(QIODevice::ReadOnly));
+        QCOMPARE(original.readAll(), originalBytes);
+        QVERIFY(QDir(working).removeRecursively());
     }
     void sessionTitlesUseAvailableColumnWidth() {
         QQmlApplicationEngine engine;
