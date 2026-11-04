@@ -3,6 +3,7 @@
 """Publish one site component while preserving the last deployed counterpart."""
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -19,13 +20,14 @@ def deployed_base(artifacts, read_jobs) -> dict:
         if artifact.get('expired'):
             continue
         name = artifact['name']
-        match = re.fullmatch(r'pages-site-(docs|wasm)-(\d+)', name)
+        match = re.fullmatch(r'pages-site-(docs|wasm|installers)-(\d+)', name)
         if name != 'github-pages' and not match:
             continue
         component = match[1] if match else None
         attempt = int(match[2]) if match else None
+        labels = {'docs': 'documentation', 'wasm': 'WebAssembly', 'installers': 'installers'}
         step_name = (
-            f'Deploy {"documentation" if component == "docs" else "WebAssembly"} to GitHub Pages'
+            f'Deploy {labels[component]} to GitHub Pages'
             if component
             else 'Deploy to GitHub Pages'
         )
@@ -48,10 +50,14 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
     if not (site / 'index.html').is_file() or not (site / 'webapp/index.html').is_file():
         raise RuntimeError('The deployed base must contain documentation and the web app')
     if component == 'docs':
-        if not (incoming / 'index.html').is_file() or (incoming / 'webapp').exists():
-            raise RuntimeError('Documentation must have an index and must not own /webapp/')
+        if not (incoming / 'index.html').is_file() or any(
+            (incoming / name).exists() for name in ['webapp', 'installers']
+        ):
+            raise RuntimeError(
+                'Documentation must have an index and must not own /webapp/ or /installers/'
+            )
         for child in site.iterdir():
-            if child.name == 'webapp':
+            if child.name in {'webapp', 'installers'}:
                 continue
             if child.is_dir() and not child.is_symlink():
                 shutil.rmtree(child)
@@ -64,14 +70,62 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
             ['bash', str(Path(__file__).with_name('docs-webapp.sh')), str(incoming), str(site)],
             check=True,
         )
+    elif component == 'installers':
+        overlay_installers(site, incoming)
     else:
         raise ValueError('Unknown site component')
+
+
+def overlay_installers(site: Path, incoming: Path) -> None:
+    """Replace complete platform repositories while retaining the other published platforms."""
+    parts = list(incoming.iterdir())
+    allowed = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
+    if not parts or any(
+        part.name not in allowed or not part.is_dir() or part.is_symlink() for part in parts
+    ):
+        raise RuntimeError('Installer input must contain known platform directories')
+    for part in parts:
+        if not (part / 'repository/Updates.xml').is_file():
+            raise RuntimeError(f'Installer repository is incomplete: {part.name}')
+    destination = site / 'installers/testing'
+    destination.mkdir(parents=True, exist_ok=True)
+    for part in parts:
+        target = destination / part.name
+        for source in part.rglob('*'):
+            if source.is_symlink():
+                raise RuntimeError('Installer repository must not contain symbolic links')
+            relative = source.relative_to(part)
+            previous = target / relative
+            mutable = relative.as_posix() in {
+                'repository/Updates.xml',
+                'repository/Updates.xml.sha1',
+                'repository/Updates.xml.sha256',
+                'installer.json',
+                'index.html',
+            }
+            if source.is_file() and previous.exists() and not mutable:
+                with source.open('rb') as new, previous.open('rb') as old:
+                    if (
+                        hashlib.file_digest(new, 'sha256').digest()
+                        != hashlib.file_digest(old, 'sha256').digest()
+                    ):
+                        raise RuntimeError(f'Installer archive identity was reused: {relative}')
+        shutil.copytree(part, target, dirs_exist_ok=True)
+
+
+def check_site_size(site: Path, limit: int = 1_000_000_000) -> int:
+    """Refuse a site larger than GitHub Pages' documented one-GB limit."""
+    size = sum(path.stat().st_size for path in site.rglob('*') if path.is_file())
+    if size > limit:
+        raise RuntimeError(f'Assembled Pages site is too large: {size} bytes (limit {limit})')
+    print(f'Assembled Pages site: {size} bytes')
+    return size
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', required=True)
-    parser.add_argument('--component', choices=('docs', 'wasm'), required=True)
+    parser.add_argument('--component', choices=('docs', 'wasm', 'installers'), required=True)
     parser.add_argument('--incoming', type=Path, required=True)
     parser.add_argument('--site', type=Path, required=True)
     args = parser.parse_args()
@@ -128,6 +182,7 @@ def main() -> None:
         with tarfile.open(Path(folder) / 'artifact.tar') as archive:
             archive.extractall(args.site, filter='data')
     overlay_component(args.site, args.incoming, args.component)
+    check_site_size(args.site)
 
 
 if __name__ == '__main__':

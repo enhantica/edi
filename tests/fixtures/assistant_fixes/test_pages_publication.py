@@ -109,15 +109,97 @@ def test_wasm_update_preserves_current_docs(tmp_path):
     assert (site / 'webapp/kit/edi_app.wasm').read_bytes() == b'new compiled app'
 
 
-def test_docs_must_not_replace_web_app(tmp_path):
+@pytest.mark.parametrize('reserved', ['webapp', 'installers'])
+def test_docs_must_not_replace_reserved_component(tmp_path, reserved):
     site = tmp_path / 'site'
     (site / 'webapp').mkdir(parents=True)
     (site / 'index.html').write_text('old docs')
     (site / 'webapp/index.html').write_text('old app')
     docs = tmp_path / 'docs'
-    (docs / 'webapp').mkdir(parents=True)
+    (docs / reserved).mkdir(parents=True)
     (docs / 'index.html').write_text('new docs')
     with pytest.raises(RuntimeError, match='must not own'):
         MODULE.overlay_component(site, docs, 'docs')
     assert (site / 'index.html').read_text() == 'old docs'
     assert (site / 'webapp/index.html').read_text() == 'old app'
+
+
+def test_docs_update_preserves_installer_components(tmp_path):
+    site, docs = tmp_path / 'site', tmp_path / 'docs'
+    (site / 'webapp').mkdir(parents=True)
+    (site / 'webapp/index.html').write_text('app')
+    (site / 'index.html').write_text('old docs')
+    repository = site / 'installers/testing/linux-x86_64/repository'
+    repository.mkdir(parents=True)
+    (repository / 'Updates.xml').write_text('original components')
+    docs.mkdir()
+    (docs / 'index.html').write_text('new docs')
+    MODULE.overlay_component(site, docs, 'docs')
+    assert (repository / 'Updates.xml').read_text() == 'original components'
+
+
+def test_installers_update_preserves_other_platforms_docs_and_app(tmp_path):
+    site, incoming = tmp_path / 'site', tmp_path / 'incoming'
+    (site / 'webapp').mkdir(parents=True)
+    (site / 'webapp/index.html').write_text('app')
+    (site / 'index.html').write_text('docs')
+    previous = site / 'installers/testing/windows-x86_64/repository'
+    previous.mkdir(parents=True)
+    (previous / 'Updates.xml').write_text('previous Windows')
+    part = incoming / 'linux-x86_64/repository'
+    part.mkdir(parents=True)
+    (part / 'Updates.xml').write_text('new Linux')
+    MODULE.overlay_component(site, incoming, 'installers')
+    assert (previous / 'Updates.xml').read_text() == 'previous Windows'
+    assert (
+        site / 'installers/testing/linux-x86_64/repository/Updates.xml'
+    ).read_text() == 'new Linux'
+    assert (site / 'index.html').read_text() == 'docs'
+    assert (site / 'webapp/index.html').read_text() == 'app'
+
+
+def test_incomplete_installer_update_keeps_previous_components(tmp_path):
+    site, incoming = tmp_path / 'site', tmp_path / 'incoming'
+    (site / 'webapp').mkdir(parents=True)
+    (site / 'webapp/index.html').write_text('app')
+    (site / 'index.html').write_text('docs')
+    (incoming / 'linux-x86_64').mkdir(parents=True)
+    with pytest.raises(RuntimeError, match='incomplete'):
+        MODULE.overlay_component(site, incoming, 'installers')
+    assert (site / 'index.html').read_text() == 'docs'
+
+
+def test_installer_deployment_is_a_valid_base():
+    item = artifact(3, 'pages-site-installers-1', '2026-11-04T21:00:00Z')
+    assert (
+        MODULE.deployed_base([item], lambda *_: deployed('Deploy installers to GitHub Pages'))
+        == item
+    )
+
+
+def test_pages_size_limit_fails_before_publication(tmp_path):
+    (tmp_path / 'payload').write_bytes(b'12345')
+    assert MODULE.check_site_size(tmp_path, limit=5) == 5
+    with pytest.raises(RuntimeError, match='too large'):
+        MODULE.check_site_size(tmp_path, limit=4)
+
+
+def test_new_metadata_retains_previous_downloads_and_rejects_reused_identity(tmp_path):
+    site, incoming = tmp_path / 'site', tmp_path / 'incoming'
+    (site / 'webapp').mkdir(parents=True)
+    (site / 'webapp/index.html').write_text('app')
+    (site / 'index.html').write_text('docs')
+    old = site / 'installers/testing/linux-x86_64/repository'
+    old.mkdir(parents=True)
+    (old / 'Updates.xml').write_text('old metadata')
+    (old / '1.0.0content.7z').write_bytes(b'old download in flight')
+    new = incoming / 'linux-x86_64/repository'
+    new.mkdir(parents=True)
+    (new / 'Updates.xml').write_text('new metadata')
+    (new / '2.0.0content.7z').write_bytes(b'new download')
+    MODULE.overlay_component(site, incoming, 'installers')
+    assert (old / '1.0.0content.7z').read_bytes() == b'old download in flight'
+    assert (old / 'Updates.xml').read_text() == 'new metadata'
+    (new / '2.0.0content.7z').write_bytes(b'changed under an existing version')
+    with pytest.raises(RuntimeError, match='identity was reused'):
+        MODULE.overlay_component(site, incoming, 'installers')
