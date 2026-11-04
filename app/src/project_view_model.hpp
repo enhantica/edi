@@ -17,6 +17,7 @@
 #include <QUrl>
 #include <QtQml/qqmllist.h>
 #include <QtQml/qqmlregistration.h>
+#include "edi/io.hpp"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -53,6 +54,7 @@
 #include "structure_view_options.hpp"
 
 namespace edi_app {
+class OptionListModel;
 
 struct ImmutableAssistantResult;
 
@@ -184,6 +186,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Create experiment adds an experiment without data, beside experiments with data too: a fit skips it, a
     // calculation covers it. A scan project keeps its one template experiment.
     Q_PROPERTY(bool canCreateExperiment READ canCreateExperiment NOTIFY canCreateExperimentChanged)
+    // The type a new experiment takes when measured data is loaded for one (no experiment selected): chosen on
+    // the Experiment page's selectors before the import, as the data fixes the type afterwards (ADR-0068).
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentSampleFormOptions READ newExperimentSampleFormOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentBeamModeOptions READ newExperimentBeamModeOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentRadiationProbeOptions READ newExperimentRadiationProbeOptions CONSTANT)
+    Q_PROPERTY(QString newExperimentSampleFormToken READ newExperimentSampleFormToken NOTIFY newExperimentSampleFormTokenChanged)
+    Q_PROPERTY(QString newExperimentBeamModeToken READ newExperimentBeamModeToken NOTIFY newExperimentBeamModeTokenChanged)
+    Q_PROPERTY(QString newExperimentRadiationProbeToken READ newExperimentRadiationProbeToken NOTIFY newExperimentRadiationProbeTokenChanged)
     // A scan project (sequential or independent mode over a declared scan): its experiment list is the scan's
     // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
     // rule, with its unit ("temperature (K)").
@@ -435,6 +445,20 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Load data for the experiment a chooser was opened for, wherever its row is now: refused when that experiment
     // is no longer in the project (removed, or replaced by an Undo or a type change since).
     Q_INVOKABLE bool loadDataInto(edi_app::ExperimentViewModel* experiment, const QUrl& file);
+    /// Measured data into a new experiment, made only once the file has been read: the type is the pending one
+    /// above unless a token is given; an impossible type or an unreadable file leaves the project untouched. One
+    /// Undo entry.
+    Q_INVOKABLE bool loadDataIntoNewExperiment(const QUrl& file, const QString& sampleForm = QString(),
+                                               const QString& beamMode = QString(), const QString& radiationProbe = QString());
+    /// One axis of the pending new-experiment type (sampleForm, beamMode, radiationProbe); a single crystal is
+    /// neutron and constant wavelength, as setExperimentType keeps it.
+    Q_INVOKABLE bool setNewExperimentType(const QString& axis, const QString& token);
+    OptionListModel* newExperimentSampleFormOptions() { ensureNewExperimentOptions(); return new_experiment_sample_form_options_; }
+    OptionListModel* newExperimentBeamModeOptions() { ensureNewExperimentOptions(); return new_experiment_beam_mode_options_; }
+    OptionListModel* newExperimentRadiationProbeOptions() { ensureNewExperimentOptions(); return new_experiment_radiation_probe_options_; }
+    QString newExperimentSampleFormToken() const;
+    QString newExperimentBeamModeToken() const;
+    QString newExperimentRadiationProbeToken() const;
     // One type axis ("sampleForm", "beamMode", "radiationProbe", "scatteringType") of an experiment without
     // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
     // within one beam mode, its range.
@@ -542,6 +566,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentExperimentChanged();
     void canLoadStructureChanged();
     void canCreateExperimentChanged();
+    void newExperimentSampleFormTokenChanged();
+    void newExperimentBeamModeTokenChanged();
+    void newExperimentRadiationProbeTokenChanged();
     void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
@@ -809,6 +836,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::optional<TemplateState> fit_template_before_, fit_template_undo_;
     std::vector<UndoRecord> undo_history_;
     void noteAddedExperiments(std::size_t before);
+    /// The first free name of the form experiment1, experiment2, …
+    std::string freeExperimentName() const;
+    void ensureNewExperimentOptions();
+    OptionListModel* new_experiment_sample_form_options_ = nullptr;
+    OptionListModel* new_experiment_beam_mode_options_ = nullptr;
+    OptionListModel* new_experiment_radiation_probe_options_ = nullptr;
+    edi::ExperimentTypeTokens new_experiment_type_;
     bool can_undo_ = false;
     void syncUndo();
     BlockText* metadata_text_;

@@ -236,8 +236,9 @@ SideBarGroup {
             }
         }
 
+        // With no experiment selected the selectors show the type a new one takes with its measured data.
         ExperimentTypeGroup {
-            visible: group.project !== null && group.project.currentExperiment !== null
+            visible: group.project !== null && (group.project.currentExperiment !== null || (!group.scan && group.project.canCreateExperiment))
             project: group.project
             experiment: group.project ? group.project.currentExperiment : null
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
@@ -352,13 +353,57 @@ SideBarGroup {
         project: group.project
     }
 
-    // Measured data from a file for the selected experiment, or for a new one when none is selected.
+    // Measured data from a file for the selected experiment, or for a new one when none is selected: the new
+    // experiment is made only once a file is chosen and read, so a cancelled picker or a refused file leaves the
+    // project as it was.
     function chooseDataForSelected() {
         if (project === null)
             return;
-        if (project.currentExperiment === null && !project.createExperiment())
+        if (project.currentExperiment !== null) {
+            chooseData(project.currentExperiment);
             return;
-        chooseData(project.currentExperiment);
+        }
+        if (WebFiles.available) {
+            newDataRequest = WebFiles.openFiles(dataFilter, false);
+            newDataProject = project;
+        } else {
+            newDataDialog.project = project;
+            newDataDialog.open();
+        }
+    }
+
+    // The browser's answer for a new experiment's data: only this request's, and only for the project it was
+    // made for while that project is still the open one.
+    property int newDataRequest: 0
+    property var newDataProject: null
+    Connections {
+        target: WebFiles
+        function onFilesOpened(request, files) {
+            if (request !== group.newDataRequest || request === 0)
+                return;
+            group.newDataRequest = 0;
+            if (group.project !== null && group.project === group.newDataProject && files.length > 0)
+                group.project.loadDataIntoNewExperiment(files[0]);
+            group.newDataProject = null;
+        }
+        function onCancelled(request) {
+            if (request === group.newDataRequest) {
+                group.newDataRequest = 0;
+                group.newDataProject = null;
+            }
+        }
+    }
+    FileDialog {
+        id: newDataDialog
+        property var project: null
+        title: group.project !== null && group.project.newExperimentSampleFormToken === "single crystal" ? qsTr("Load measured reflections for a new experiment") : qsTr("Load measured data for a new experiment")
+        nameFilters: group.project !== null && group.project.newExperimentSampleFormToken === "single crystal" ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)")] : [qsTr("Pattern files (*.xye *.xy *.dat *.txt *.csv)")]
+        onAccepted: {
+            if (group.project !== null && group.project === newDataDialog.project)
+                group.project.loadDataIntoNewExperiment(selectedFile);
+            newDataDialog.project = null;
+        }
+        onRejected: newDataDialog.project = null
     }
 
     // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to

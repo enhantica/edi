@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <utility>
 #include "project_view_model.hpp"
+#include "option_list_model.hpp"
 
 #include "run_log.hpp"
 
@@ -1098,12 +1099,8 @@ bool ProjectViewModel::canCreateExperiment() const {
     return !(project_->sequential_fit.declared() && !project_->experiments.empty());
 }
 
-bool ProjectViewModel::createExperiment() {
-    const PublicationScope publication(*this);
-    const QPointer<ProjectViewModel> self(this);
-    const auto input = widget_creation_input_;
-    edi::Project& project = *project_;
-    // The first free name of the form experiment1, experiment2, …
+std::string ProjectViewModel::freeExperimentName() const {
+    const edi::Project& project = *project_;
     std::string name;
     for (int n = 1; name.empty(); ++n) {
         const std::string candidate = "experiment" + std::to_string(n);
@@ -1112,6 +1109,116 @@ bool ProjectViewModel::createExperiment() {
         });
         name = held ? std::string() : candidate;
     }
+    return name;
+}
+
+void ProjectViewModel::ensureNewExperimentOptions() {
+    if (new_experiment_sample_form_options_ != nullptr) return;
+    new_experiment_sample_form_options_ = new OptionListModel(this);
+    new_experiment_beam_mode_options_ = new OptionListModel(this);
+    new_experiment_radiation_probe_options_ = new OptionListModel(this);
+    for (const auto& [options, uid] : {std::pair{new_experiment_sample_form_options_, "experiment_type.sample_form"},
+                                       std::pair{new_experiment_beam_mode_options_, "experiment_type.beam_mode"},
+                                       std::pair{new_experiment_radiation_probe_options_, "experiment_type.radiation_probe"}}) {
+        std::vector<std::string> tokens;
+        for (const edi::DisplayOption& option : edi::options(uid)) tokens.push_back(option.token);
+        options->setItemOptions(uid, tokens);
+    }
+}
+
+QString ProjectViewModel::newExperimentSampleFormToken() const { return QString::fromStdString(new_experiment_type_.sample_form); }
+QString ProjectViewModel::newExperimentBeamModeToken() const { return QString::fromStdString(new_experiment_type_.beam_mode); }
+QString ProjectViewModel::newExperimentRadiationProbeToken() const { return QString::fromStdString(new_experiment_type_.radiation_probe); }
+
+bool ProjectViewModel::setNewExperimentType(const QString& axis, const QString& token) {
+    edi::ExperimentTypeTokens type = new_experiment_type_;
+    const std::string value = token.toStdString();
+    if (axis == QLatin1String("sampleForm")) {
+        type.sample_form = value;
+        if (value == "single crystal") {
+            type.beam_mode = "constant wavelength";
+            type.radiation_probe = "neutron";
+        }
+    } else if (axis == QLatin1String("beamMode")) {
+        type.beam_mode = value;
+    } else if (axis == QLatin1String("radiationProbe")) {
+        type.radiation_probe = value;
+    } else {
+        return false;
+    }
+    // The template refuses a pair the model cannot compute (a single crystal with X-rays) before anything changes.
+    try {
+        (void)edi::simulation_experiment("experiment", type, std::vector<std::string>{});
+    } catch (const std::exception& refusal) {
+        const QString message = QString::fromUtf8(refusal.what());
+        setLastError(message);
+        emit refused(message);
+        emit newExperimentSampleFormTokenChanged();
+        emit newExperimentBeamModeTokenChanged();
+        emit newExperimentRadiationProbeTokenChanged();  // the selector returns to the stored value
+        return false;
+    }
+    new_experiment_type_ = type;
+    emit newExperimentSampleFormTokenChanged();
+        emit newExperimentBeamModeTokenChanged();
+        emit newExperimentRadiationProbeTokenChanged();
+    return true;
+}
+
+bool ProjectViewModel::loadDataIntoNewExperiment(const QUrl& file, const QString& sampleForm, const QString& beamMode,
+                                                 const QString& radiationProbe) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto refuse = [this, self](const QString& refusal) {
+        if (!self || retired_) return false;
+        setLastError(refusal);
+        emit refused(refusal);
+        return false;
+    };
+    if (retired_) return false;
+    if (scan_ || !canCreateExperiment()) return refuse(tr("A scan project fits its one template experiment"));
+    if (!file.isLocalFile()) return refuse(QStringLiteral("not a local file: %1").arg(file.toString()));
+    edi::ExperimentTypeTokens type = new_experiment_type_;
+    if (!sampleForm.isEmpty()) type.sample_form = sampleForm.toStdString();
+    if (!beamMode.isEmpty()) type.beam_mode = beamMode.toStdString();
+    if (!radiationProbe.isEmpty()) type.radiation_probe = radiationProbe.toStdString();
+    edi::Project& project = *project_;
+    std::vector<std::string> structures;
+    for (const auto& structure : project.structures) structures.emplace_back(structure->name.value());
+    // Everything that can refuse happens before the project changes: the type, then the file.
+    std::optional<edi::PlainDataLoad> read;
+    try {
+        const edi::BraggPdExperiment fresh = edi::simulation_experiment(freeExperimentName(), type, structures);
+        read.emplace(edi::experiment_with_plain_data(fresh, file.toLocalFile().toStdString(), true));
+    } catch (const std::exception& refusal) {
+        return refuse(QString::fromUtf8(refusal.what()));
+    }
+    // A file name another experiment already has keeps the generated name, as loadData does.
+    const std::string wanted = folded_name(read->experiment.name);
+    for (const auto& held : project.experiments)
+        if (folded_name(held->name) == wanted) read->experiment.name = freeExperimentName();
+    std::vector<edi::BraggPdExperiment> batch;
+    batch.push_back(std::move(read->experiment));
+    const auto before = project.experiments.size();
+    QString error;
+    try {
+        error = apply(edi::Edit::add_experiments(project, std::move(batch)), true);
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+    }
+    if (!self || retired_) return false;
+    if (!error.isEmpty()) return refuse(error);
+    noteAddedExperiments(before);
+    setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+    return true;
+}
+
+bool ProjectViewModel::createExperiment() {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_creation_input_;
+    edi::Project& project = *project_;
+    const std::string name = freeExperimentName();
     std::vector<std::string> structures;
     for (const auto& structure : project.structures) {
         structures.emplace_back(structure->name.value());

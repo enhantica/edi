@@ -35,6 +35,7 @@ AppDialog {
         dialog.kind = kind;
         dialog.targetExperiment = experiment ?? null;
         dialog.values = {};
+        dialog.deliveryMessage = "";
         search.kind = kind;
         const remembered = dialog.lastSource[kind];
         if (search.sources.count > 0)
@@ -81,40 +82,49 @@ AppDialog {
         return [Session.display("cell.length_a", row.cellA), Session.display("cell.length_b", row.cellB), Session.display("cell.length_c", row.cellC), Session.display("cell.angle_alpha", row.cellAlpha), Session.display("cell.angle_beta", row.cellBeta), Session.display("cell.angle_gamma", row.cellGamma)].join(" ");
     }
 
-    // The entry's radiation and technique choose a new experiment's probe and beam mode when none is selected.
-    function experimentFor(entry) {
-        if (dialog.targetExperiment !== null)
-            return dialog.targetExperiment;
-        if (dialog.project === null || !dialog.project.createExperiment())
-            return null;
-        const index = dialog.project.currentExperimentIndex;
+    // A new experiment's type from the entry: its technique and radiation when it states them, else the page's
+    // pending selectors (ProjectViewModel.newExperiment…); the project refuses an impossible pair before anything
+    // is created.
+    function typeTokens(entry) {
         const technique = String(entry.technique || "").toLowerCase();
         const radiation = String(entry.radiation || "").toLowerCase();
-        if (technique.indexOf("single") >= 0)
-            dialog.project.setExperimentType(index, "sampleForm", "single crystal");
-        if (technique.indexOf("time") >= 0 || technique.indexOf("tof") >= 0)
-            dialog.project.setExperimentType(index, "beamMode", "time-of-flight");
-        if (radiation.indexOf("x") === 0)
-            dialog.project.setExperimentType(index, "radiationProbe", "xray");
-        return dialog.project.currentExperiment;
+        return {
+            sampleForm: technique === "" ? "" : technique.indexOf("single") >= 0 ? "single crystal" : "powder",
+            beamMode: technique === "" ? "" : (technique.indexOf("time") >= 0 || technique.indexOf("tof") >= 0) ? "time-of-flight" : "constant wavelength",
+            radiationProbe: radiation === "" ? "" : radiation.indexOf("x") === 0 ? "xray" : "neutron"
+        };
     }
+
+    // A late answer is refused when its project is no longer the open one, or its measured-data target has gone.
+    property string deliveryMessage: ""
 
     Connections {
         target: dialog.search
-        function onFileReady(kind, file, entry) {
+        function onFileReady(kind, file, entry, project, target, newTarget) {
             if (!dialog.visible || dialog.project === null)
                 return;
+            if (project !== dialog.project) {
+                dialog.deliveryMessage = qsTr("The project changed while the download was running; nothing was loaded");
+                return;
+            }
             let done = false;
             if (kind === "structure")
                 done = dialog.project.loadStructure(file);
             else if (kind === "experiment")
                 done = dialog.project.loadExperiments([file]);
+            else if (!newTarget && target === null) {
+                dialog.deliveryMessage = qsTr("The experiment the data was for is no longer in the project; nothing was loaded");
+                return;
+            } else if (!newTarget)
+                done = dialog.project.loadDataInto(target, file);
             else {
-                const experiment = dialog.experimentFor(entry);
-                done = experiment !== null && dialog.project.loadDataInto(experiment, file);
+                const type = dialog.typeTokens(entry);
+                done = dialog.project.loadDataIntoNewExperiment(file, type.sampleForm, type.beamMode, type.radiationProbe);
             }
             if (done)
                 dialog.close();
+            else
+                dialog.deliveryMessage = dialog.project.lastError;
         }
     }
 
@@ -137,6 +147,7 @@ AppDialog {
                 currentIndex: Math.max(0, dialog.search.sources.indexOfKey(dialog.search.sourceId))
                 onActivated: index => {
                     dialog.values = {};
+                    dialog.deliveryMessage = "";
                     dialog.search.sourceId = dialog.search.sources.keyAt(index);
                     const remembered = Object.assign({}, dialog.lastSource);
                     remembered[dialog.kind] = dialog.search.sourceId;
@@ -198,8 +209,8 @@ AppDialog {
                 width: dialog.width - EaStyle.Sizes.fontPixelSize * 14 - (alternative.visible ? alternative.width + parent.spacing : 0)
                 visible: text !== ""
                 wrapMode: Text.Wrap
-                color: dialog.search.message !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForegroundMinor
-                text: dialog.search.message !== "" ? dialog.search.message : dialog.search.searched && dialog.search.results.count === 0 ? qsTr("Nothing found") : ""
+                color: dialog.search.message !== "" || dialog.deliveryMessage !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForegroundMinor
+                text: dialog.search.message !== "" ? dialog.search.message : dialog.deliveryMessage !== "" ? dialog.deliveryMessage : dialog.search.searched && dialog.search.results.count === 0 ? qsTr("Nothing found") : ""
                 ToolTip.text: dialog.search.detail
             }
             // An unreachable source offers the next one that holds this kind.
@@ -306,7 +317,7 @@ AppDialog {
                     fontIcon: "download"
                     enabled: !dialog.search.busy && dialog.project !== null
                     ToolTip.text: row.kind === "structure" ? qsTr("Load this structure into the project") : row.kind === "experiment" ? qsTr("Open this experiment in the project") : dialog.targetExperiment !== null ? qsTr("Load this data into %1").arg(dialog.targetExperiment.name) : qsTr("Load this data into a new experiment")
-                    onClicked: dialog.search.load(row.index)
+                    onClicked: dialog.search.load(row.index, dialog.project, dialog.targetExperiment)
                 }
             }
         }
