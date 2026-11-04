@@ -122,14 +122,15 @@ try {
   await page.keyboard.type('lbco');
   const before = receipts.filter(r => r.kind === 'index').length;
   await click('onlineLoad.search');
-  await waitControlGeometry(evaluate, frame, 'onlineLoad.load.0');
+  await waitControlGeometry(evaluate, frame, 'onlineLoad.id.0');
   assert(receipts.filter(r => r.kind === 'index').length > before,
     'The actual WebAssembly search must fetch the shared index over HTTP');
   const id = await evaluate("window.ediControlGeometry('onlineLoad.id.0')");
   assert.equal(id.text, 'lbco', 'The WebAssembly result must identify the independent fixture entry');
-  await click('onlineLoad.load.0');
+  await click('onlineLoad.id.0');
+  await click('onlineLoad.load');
   await page.waitForFunction(() => {
-    try {return !window.ediControlGeometry('onlineLoad.load.0').visible;}
+    try {return !window.ediControlGeometry('onlineLoad.load').visible;}
     catch (error) {
       if (/no visible item|no item is named/.test(error.message)) return true;
       throw error;
@@ -145,7 +146,7 @@ try {
     try {
       await page.screenshot({path:join(output,'final.png')});
       const state = await page.evaluate(() => Object.fromEntries(
-        ['onlineLoad.message','onlineLoad.load.0','onlineLoad.id.0','structures.load'].map(name => {
+        ['onlineLoad.message','onlineLoad.load','onlineLoad.id.0','structures.load'].map(name => {
           try {return [name, window.ediControlGeometry(name)];}
           catch (error) {return [name, {error:error.message}];}
         })));

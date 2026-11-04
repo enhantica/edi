@@ -15,6 +15,7 @@ TestCase {
     when: windowShown
     property var app
     property var onlineDialog
+    property var renderedLoadMenu
     property bool loadGroupsOnly: false
 
     Component { id: application; Main {} }
@@ -162,11 +163,26 @@ TestCase {
         return find();
     }
 
+    function bottomLoad() {
+        const candidates = Probe.objectsWithProperty(onlineDialog, "text").concat(Render.descendants(onlineDialog));
+        const button = candidates.find(item => item.text === "Load" && typeof item.clicked === "function");
+        verify(button !== undefined, "The popup exposes its bottom Load action beside Close");
+        return button;
+    }
+    function selectedLoad(row) {
+        click(onlineControl("id." + row));
+        const button = bottomLoad();
+        verify(button.enabled, "Selecting an entry enables the bottom Load action");
+        return button;
+    }
+    function loadResult(row) { click(selectedLoad(row)); }
+
     function menuAction(data) {
         click(openPage(data));
         const page = pageItem();
         const menu = findChild(page, data.group + ".load.menu");
         verify(menu !== null, "The workflow page owns the Load menu");
+        renderedLoadMenu = menu;
         tryCompare(menu, "opened", true, 3000, "The actual Load menu opens");
         const name = data.group + ".load." + data.action;
         const action = Array.from({length: menu.count}, (_, index) => menu.itemAt(index))
@@ -258,11 +274,11 @@ TestCase {
     function check_from_web_opens_source_selector_data() {
         return [
             {tag: "structure", page: AppState.Page.Structure, group: "structures", action: "web",
-             sources: ["COD", "EasyDiffraction"], fields: ["ID", "Formula", "Elements", "Space group"]},
+             sources: ["COD", "EasyDiffraction"], fields: ["ID", "Name", "Formula", "Elements", "Space group"]},
             {tag: "experiment", page: AppState.Page.Experiment, group: "experiments", action: "experimentWeb",
-             sources: ["EasyDiffraction"], fields: ["ID", "Name", "Radiation", "Technique", "Instrument"]},
+             sources: ["EasyDiffraction"], fields: ["ID", "Name", "Formula", "Elements", "Radiation", "Technique", "Instrument"]},
             {tag: "measured", page: AppState.Page.Experiment, group: "experiments", action: "dataWeb",
-             sources: ["EasyDiffraction"], fields: ["ID", "Name", "Radiation", "Technique", "Instrument"]}
+             sources: ["EasyDiffraction"], fields: ["ID", "Name", "Formula", "Elements", "Radiation", "Technique", "Instrument"]}
         ];
     }
 
@@ -298,7 +314,7 @@ TestCase {
         Ui.scrollIntoView(table);
         for (const [id, name, kinds] of [
             ["cod", "COD", "structures"],
-            ["easydiffraction", "EasyDiffraction", "structures, experiments, data"]
+            ["easydiffraction", "EasyDiffraction", "structures, experiments, data, projects"]
         ]) {
             const row = "preferences.online.source.";
             const cell = () => Render.descendants(table).find(item => item.objectName === row + "name." + id);
@@ -348,7 +364,8 @@ TestCase {
 
     function result(id, kind) {
         compare(onlineControl("id.0").text, id, "The result displays the independent fixture ID");
-        compare(onlineControl("kind.0").text, kind, "The Kind column identifies what will load");
+        compare(Probe.rows(Session.onlineSearch.results).map(row => row.kind), [kind.toLowerCase()],
+                "Each popup returns only its own entry kind without a Kind column");
         compare(Ui.find(onlineDialog.contentItem, "onlineLoad.row.1"), null,
                 "The selected route returns only its requested fixture entry");
     }
@@ -395,7 +412,7 @@ TestCase {
             selectSource(selector, "EasyDiffraction", Qt.Key_Down);
         searchFor(data.id);
         result(data.id, data.kind);
-        click(onlineControl("load.0"));
+        loadResult(0);
         tryVerify(() => {
             settle();
             return !onlineDialog.visible;
@@ -467,7 +484,7 @@ TestCase {
             openOnline(route);
             searchFor(data.id);
             result(data.id, "Data");
-            click(onlineControl("load.0"));
+            loadResult(0);
             tryCompare(onlineDialog.search, "busy", false, 3000, "The downloaded file reaches the import boundary");
             tryCompare(onlineDialog, "visible", !data.success, 3000,
                        "The online popup closes on success and stays available on refusal");
@@ -511,7 +528,7 @@ TestCase {
         searchFor(data.id);
         result(data.id, data.kind);
         const project = Session.project;
-        const load = onlineControl("load.0");
+        const load = selectedLoad(0);
         verify(load.enabled && Ui.exposed(load), "The real result action can start the download");
         // Invoke the shipped click signal in this frame. The fixture file reply
         // is queued for the next event-loop turn, after the owner change below.
@@ -632,7 +649,7 @@ TestCase {
             searchFor("9001003");
         }
         OnlineHttpFixture.enqueueError(data.status, data.error);
-        if (data.route === "download") click(onlineControl("load.0"));
+        if (data.route === "download") loadResult(0);
         else searchFor("");
         tryCompare(search, "busy", false, 3000, "The outage reaches the shipped callback");
         verify(search.unreachable, "Every server or proxy outage is classified as unavailable");
@@ -747,7 +764,7 @@ TestCase {
             searchFor("9001003");
             compare(onlineControl("id.0").text, "9001003", "The known entry can be selected before its file fails");
             OnlineHttpFixture.enqueue(data.status, "");
-            click(onlineControl("load.0"));
+            loadResult(0);
         } else {
             OnlineHttpFixture.enqueue(data.status, data.status === 200 ? "[]" : "");
             searchFor(data.status === 200 ? "9999999" : "");

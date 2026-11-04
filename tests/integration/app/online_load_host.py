@@ -70,6 +70,7 @@ def run_online_host(
     failure_entries=True,
     collection_root=None,
     session_type='OnlineLoadSession',
+    hover_enabled=None,
 ):
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert runner.is_file(), 'Online loading requires the built production Qt host'
@@ -116,6 +117,8 @@ def run_online_host(
         'EDI_ONLINE_SOURCES': sources,
         'OMP_NUM_THREADS': '1',
     }
+    if hover_enabled is not None:
+        environment['QT_QUICK_CONTROLS_HOVER_ENABLED'] = '1' if hover_enabled else '0'
     command = [str(runner), '-input', str(test_file), '-o', '-,txt', '-maxwarnings', '0']
     with subprocess.Popen(
         command,

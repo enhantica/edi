@@ -25,5 +25,11 @@
     "commonname": "beta oxide",
     "formula": "- La Co O3 -",
     "sg": "P 1"
+  },
+  {
+    "file": "9100003",
+    "commonname": "alpha substituted oxide",
+    "formula": "- La0.5 Ba0.5 Co O3 -",
+    "sg": "P 1"
   }
 ]

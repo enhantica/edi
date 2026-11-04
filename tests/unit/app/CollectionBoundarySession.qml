@@ -140,7 +140,7 @@ OnlineLoadSession {
         compare(search.results.count, 1, "The injected index exposes its requested kind: " + search.message + " kind=" + search.kind + " source=" + search.sourceId + " requests=" + OnlineHttpFixture.requests());
         readySpy.clear();
         verify(OnlineHttpFixture.enqueueFile(200, fixture({file:"easydiffraction/" + entry.files[0].path})), "The popup receives the independently saved file bytes");
-        click(onlineControl("load.0"));
+        loadResult(0);
         tryCompare(search, "busy", false, 3000, "The content check finishes before publishing the loader input");
         if (data.claim === "absent") compare(readySpy.count, 1, "Absent optional claims preserve an ordinary download");
         else {
@@ -277,7 +277,7 @@ OnlineLoadSession {
                     verify(OnlineHttpFixture.enqueueFile(200, fixture({file:"easydiffraction/structures/lbco.cif"})),
                            "The responding location holds the independent CIF bytes");
                 if (data.outcome === "both-fail") OnlineHttpFixture.enqueue(status, "");
-                click(onlineControl("load.0"));
+                loadResult(0);
                 tryCompare(search, "busy", false, 3000, "The popup finishes the ordered file attempt");
                 compare(readySpy.count, ["primary", "fallback"].includes(data.outcome) ? 1 : 0,
                         "The popup publishes file bytes only after an ordered location succeeds");
