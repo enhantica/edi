@@ -170,8 +170,8 @@ EaElements.StatusBar {
             onLoaded: {
                 const area = assistantGroup.area;
                 area.objectName = "statusBar.assistant.working";
-                area.presented = Qt.binding(() => ApplicationInfo.assistantAvailable && !bar.assistantChatShown);
-                assistantAreaLoader.visible = Qt.binding(() => area.visible);
+                area.presented = Qt.binding(() => ApplicationInfo.assistantAvailable && ((bar.assistant && bar.assistant.showActions) || !bar.assistantChatShown));
+                assistantAreaLoader.visible = Qt.binding(() => area.presented && area.working);
             }
             width: visible ? Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) - (visibleStop.visible ? visibleStop.width : 0) - (visibleMode.visible ? visibleMode.width : 0) - assistantGroup.contentSpacing) : 0
             height: assistantGroup.area ? Math.max(assistantGroup.area.implicitHeight, assistantGroup.area.iconExtent) : 0

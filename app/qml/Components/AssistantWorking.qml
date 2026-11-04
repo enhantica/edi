@@ -113,6 +113,7 @@ EaElements.Label {
 
     RotationAnimator {
         id: rotationAnimator
+        objectName: "assistant.working.rotation"
         target: workGlyph
         onStarted: ApplicationInfo.workingAnimation(true)
         running: workStatus.animating

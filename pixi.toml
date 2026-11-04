@@ -244,6 +244,7 @@ CMAKE_C_COMPILER_LAUNCHER = "ccache"
 # and runs each step on that build: app-verify (and the verify chains that include it) through pixi's shared
 # dependency, each CI app job through `pixi run --skip-deps` (as the owner corrected it on 2026-09-29).
 app-build = { cmd = ["bash", "tools/ci/app-build.sh"]  }
+app-test-assistant-ui = { cmd = "cmake --build build/app --target edi_assistant_ui_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_assistant_ui_tests", depends-on = ["app-build"] }
 app-test-trial-lock = { cmd = "cmake --build build/app --target edi_trial_lock_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_trial_lock_tests", depends-on = ["app-build"] }
 # Build, then start the app: `pixi run -e app app` (arguments pass through: `pixi run -e app app --demo out/`).
 app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh"  }

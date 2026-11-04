@@ -5084,3 +5084,12 @@ The panel reads the pending question and plan, the account, a draft's admission 
 ## Repeated reads show as one step
 
 Consecutive successful reads with the same tool (`inspect_data`, `inspect_project`, `list_parameters`, `diagnostics`) show as one step in the conversation: the first read's row, its caption counting the reads ("Inspect diffraction data (4 times)") and its details listing what each read, such as the rows and dataset of a data read. Only the display folds; history, copies of the step and work reports keep every call. A failed, refused or still-running read stands alone, and so does any step that changes the project.
+
+## Working status while actions are shown
+
+The status bar keeps its existing working label and rotating icon visible during
+a turn when Show actions is selected, including when the chat panel is visible.
+The loader follows working/presentation state directly; reading its child’s
+effective visibility would keep both hidden after an idle turn. The same
+assistant state ends both the text and animation. Normal chat mode keeps
+its existing panel-dependent presentation.
