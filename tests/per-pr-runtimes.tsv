@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-04T00:54:48Z
+# measured_utc = 2026-11-04T01:27:56Z
 #
-# Recorded from: measured test run (34 node(s) measured once, 166267 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 166300 banked, 0 stale row(s) dropped)
 # Collected tests: 211419; with a reported duration: 70541
 # Module-scoped fixture costs recorded: 115
 #
@@ -145407,7 +145407,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[structure-Structure/StructuresGroup.qml-duplicateStructure]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[chebyshev]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[polynomial]
-0.300	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_link_are_declared
+0.720	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_link_are_declared
 0.140	tests/integration/py/test_correlation_app_contract.py::test_save_asks_once_then_uses_the_existing_location
 0.000	tests/integration/py/test_correlation_app_contract.py::test_supported_only_selectors_are_disabled_and_explain_the_reason
 0.580	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[analysisPageEnabled-True]
