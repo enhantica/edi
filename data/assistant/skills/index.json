@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.10.2",
+      "version": "1.10.3",
       "title": "Work with the displayed Edi project",
       "summary": "Work with the current native project, genuine CIF/data inputs, Estimate, ordinary saves and public scientific research.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "ceee094b2d11baa22dec3ae0acd0808787da0ea9167e6b8d0e9e06844adaf8f5",
+      "sha256": "08a7ece30e787ec84d8148dbd7bae4cbf169a3458dbb44d7311f1a63751c0acf",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.10",
+      "version": "1.0.11",
       "title": "Inspect a FullProf project",
       "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "b34b2851173d2297872e93813674d05f1774ecf1c5d57d2042aeadf546a50e28",
+      "sha256": "895a99d857c817c4eac1dc6c318f4797827c69109cc73d9b3c515c8172ef7005",
       "requires": [
         "selected_files"
       ],
@@ -50,11 +50,11 @@
     },
     {
       "id": "gsas-intake",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "title": "Inspect GSAS/GSAS-II material",
       "summary": "Inspect readable selected exports through offered actions; binary GPX is never executed and unsupported mappings remain explicit.",
       "path": "gsas-intake/SKILL.md",
-      "sha256": "d0b00ba2f0fe1f1afd9e5625d10646a37946b863e4e4c3dbe0a1263e71b242b0",
+      "sha256": "e02a8a8a729178bc3b71e3e7fe7b9039e5ead0ae95e5c87a1f3169a8d80186d1",
       "requires": [
         "selected_files"
       ],

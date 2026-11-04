@@ -8,7 +8,7 @@ template: gui.html
 
 On **Structure → Main**, expand **Structures** and select a row to make it current.
 
-- **Load structure from file** imports a CIF or `.edi` structure file.
+- **Load ▾ → From file…** imports a CIF or `.edi` structure file.
 - **Create structure** adds a starting model. Replace its initial symmetry, cell and atom sites with those of your sample.
 - **Duplicate structure** copies the selected model. Link the copy to an experiment when you want it to contribute.
 

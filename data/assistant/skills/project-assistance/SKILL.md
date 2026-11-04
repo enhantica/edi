@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.10.2. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe. Use already offered schemas/exact IDs for control syntax; public research is for genuinely unresolved scientific or capability questions, not rediscovering an offered argument.
+Version: 1.10.3. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe. Use already offered schemas/exact IDs for control syntax; public research is for genuinely unresolved scientific or capability questions, not rediscovering an offered argument.
 
 ## Inputs and setup
 
@@ -27,7 +27,7 @@ Preserve requested free flags. Current native refinable/fittable/fit_reason, dep
 
 ## Scientific reasoning and discovery
 
-Choose steps from the actual residuals, model, uncertainty and user's goal. Use public web search/read to discover ideas when guidance is insufficient, including Edi documentation/source and other relevant scientific primary sources. The public Edi source is https://github.com/enhantica/edi, with bundled skills under data/assistant/skills. Prefer the actual current build commit supplied by the app before default-branch documentation; branch versions can differ in control names and capabilities. Search public concepts only; never transmit credentials, private paths, raw measurements or unpublished sample details as queries. Retain actual source URLs/citations and distinguish research suggestions, assumptions and observed results.
+Choose steps from the actual residuals, model, uncertainty and user's goal. Consult bundled skills first. If they do not answer a usage or scientific question, search https://enhantica.github.io/edi/ first, especially https://enhantica.github.io/edi/physics/ for physics. Read and cite the relevant page before using other primary scientific sources for unresolved questions. The public Edi source is https://github.com/enhantica/edi, with bundled skills under data/assistant/skills. Prefer the actual current build commit supplied by the app before default-branch documentation; branch versions can differ in control names and capabilities. Search public concepts only; never transmit credentials, private paths, raw measurements or unpublished sample details as queries. Retain actual source URLs/citations and distinguish research suggestions, assumptions and observed results.
 
 If a native operation refuses, inspect its factual cause, current state and completed prefix. Investigate actual UI/native diagnostics and current public Edi source/docs/skills for stale route guidance, then continue supported normal actions autonomously. Current Fit is the ordinary status-bar control, not a legacy Analysis-only button. Do not tell the user that only they can make a control accessible without establishing an actual missing capability. Research does not fabricate an executable API. A missing control or unsupported operation is a capability limit, not a scientific conclusion. Research supported alternatives and continue authorized work that remains possible. Ask for genuinely missing scientific information or an indispensable user action; do not repeat consent for already delegated work. Never invent results, replay uncertain mutations, switch action modes or bypass controls to force success.
 
@@ -50,3 +50,21 @@ When asked to show the scientific report, use show_report to navigate this curre
 Useful project-local work reports are automatic after settled operations/research and at final completion. They reuse actual history, native facts and source attribution; /work-report is optional. A busy writer catches up to the latest snapshot and each admitted write retains its original root while later captures follow the current saved project location. Report-writing failure never vetoes science or creates a separate permission requirement.
 
 The final scientific assessment explains results, assumptions, rejected alternatives and remaining limits, with citations where research informed a decision. Submit app/tool/skill improvement suggestions only through optional diagnostics.developer_feedback for the hidden diagnostic work report; omit them from purpose, chat and the scientific Report. Scientific limitations and user-needed errors remain in chat. The original call evidence retains feedback as unverified agent assessment, not an app finding or scientific result. If that offered diagnostic channel is unavailable, do not invent another command or claim the suggestion was recorded.
+
+## Current GUI routes
+
+Create an experiment before loading measured data into it (`ui:experiments.create`).
+On Experiment, open Load ▾ (`ui:experiments.load`), then choose From file… under
+Measured data (`ui:experiments.load.dataFile`). The table filename is a display
+cell. For a complete experiment file use `ui:experiments.load.experimentFile`.
+On Structure use Load ▾ (`ui:structures.load`) → From file…
+(`ui:structures.load.file`). Create structure remains `ui:structures.create`.
+
+From web… is in the same menus (`ui:experiments.load.experimentWeb`,
+`ui:experiments.load.dataWeb`, `ui:structures.load.web`). It opens the app's
+source/search popup (`ui:onlineLoad`, `ui:onlineLoad.source`,
+`ui:onlineLoad.search`, `ui:onlineLoad.results`). Use the actual offered sources,
+fields and results, and the exact selected experiment. Do not invent source IDs,
+replace a file-label click with a guessed operation, or claim a search imported
+anything. A native tool must actually offer the operation before you call it;
+unsupported online routes require a supported input instead.

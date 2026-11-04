@@ -11575,8 +11575,8 @@ struct AssistantViewModel::State {
                 run->inputs.push_back({Kind::FileLoadCue,target});
             }
             else if(structure_app_action(name)) {} // Final original structure control cue was appended above.
-            else if(name=="load_structure")run->inputs.push_back({Kind::Navigate,"structures.load"});
-            else if(name=="load_data")run->inputs.push_back({Kind::Navigate,QString("experiments.file.%1").arg(individual_member_index(run))});
+            else if(name=="load_structure") { run->inputs.push_back({Kind::Navigate,"structures.load"}); run->inputs.push_back({Kind::Navigate,"structures.load.file"}); }
+            else if(name=="load_data") { run->inputs.push_back({Kind::Navigate,"experiments.load"}); run->inputs.push_back({Kind::Navigate,"experiments.load.dataFile"}); }
             else if(name=="create_experiment")run->inputs.push_back({Kind::Navigate,"experiments.create"});
             else {
                 const auto axis=args.value("axis").toString(),token=args.value("token").toString();
@@ -11822,9 +11822,8 @@ struct AssistantViewModel::State {
         if (!originalCurrent || !run->ordinary || !run->project || !widget_input ||
             (!run->structure_source && !run->measurement_source))
             throw std::runtime_error("The admitted original file load is unavailable");
-        const bool measured=run->inputs.at(run->step).target.startsWith("experiments.file.");
-        const auto target_name=measured && !run->individual_tool.isEmpty()
-            ? QString("experiments.file.%1").arg(individual_member_index(run)) : measured?QString("experiments.file.0"):QString("structures.load");
+        const bool measured=run->inputs.at(run->step).target=="experiments.load.dataFile";
+        const auto target_name=measured?QStringLiteral("experiments.load.dataFile"):QStringLiteral("structures.load.file");
         const QPointer<QQuickItem> load(create_widget_named(run,target_name));
         if(!receiver || receiver->state_.get()!=this)return;
         if (measured && !run->individual_tool.isEmpty() && (!individual_member_current(run) || run->project->currentExperiment()!=run->operation_view))
@@ -11840,14 +11839,17 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this)return;
         const QPointer<ExperimentViewModel> targetExperiment=measured && row?qobject_cast<ExperimentViewModel*>(row->property("experiment").value<QObject*>()):nullptr;
         if(!receiver || receiver->state_.get()!=this)return;
-        const auto targetCurrent=[this,run,load,row,targetExperiment,target_name,measured] {
+        const QPointer<QObject> menu(group->findChild<QObject*>(measured?QStringLiteral("experiments.load.menu"):QStringLiteral("structures.load.menu")));
+        const auto targetCurrent=[this,run,load,row,targetExperiment,target_name,measured,menu] {
             const auto receiver=run->receiver;
             if(!receiver || receiver->state_.get()!=this || !load)return false;
             const bool original=create_widget_current(run);
             if(!receiver || receiver->state_.get()!=this || !original || !load || load->objectName()!=target_name ||
                 !widget_workflow_page_current(widget_workflow_tab("appBar.tab."+run->page),run->project))return false;
+            const auto content=menu?menu->property("contentItem").value<QQuickItem*>():nullptr;
+            if(!menu || !menu->property("visible").toBool() || !content || !content->isAncestorOf(load))return false;
             if(!measured)return true;
-            if(!row || !targetExperiment || !row->isAncestorOf(load))return false;
+            if(!row || !targetExperiment || menu->property("selected").value<QObject*>()!=targetExperiment)return false;
             const auto member=row->property("experiment").value<QObject*>();
             if(!receiver || receiver->state_.get()!=this || !row || !targetExperiment || member!=targetExperiment)return false;
             const bool current=create_widget_current(run);
@@ -11858,7 +11860,16 @@ struct AssistantViewModel::State {
                 (targetExperiment==run->operation_view && run->project->currentExperiment()==targetExperiment);
         };
         if(!targetCurrent())throw ActionRefusal("target_unavailable","experiment");
-        if ((!widget_input->usableTarget(*load) || !widget_full_row_visible(load)) && !create_widget_reveal(run,load))return;
+        if (!widget_input->usableTarget(*load)) {
+            if (++run->reveal_steps > 64) throw ActionRefusal("control_unavailable", "file");
+            QTimer::singleShot(50, &owner, [this, run, receiver] {
+                if (!receiver || receiver->state_.get()!=this || !create_widget_owned(run)) return;
+                try { create_widget_load_structure(run); }
+                catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error); }
+            });
+            return;
+        }
+        if (!widget_full_row_visible(load) && !create_widget_reveal(run,load))return;
         const auto origin=measured?run->measurement_origin:run->structure_origin;
         if (!origin || !origin->current()) { run->origin_unavailable=true;throw ActionRefusal("input_unavailable","file_id"); }
         AssistantWidgetInput::Request cue;
@@ -11874,7 +11885,7 @@ struct AssistantViewModel::State {
         };
         cue.prepareCommit=[] { return true; };cue.finishCommit=[] {};
         const auto cue_step=run->step;
-        auto cueCompleted=[this,run,measured,origin,targetCurrent,targetExperiment,cue_step](bool delivered,const QString& message, ControlCause cause) {
+        auto cueCompleted=[this,run,measured,origin,targetCurrent,targetExperiment,cue_step,menu](bool delivered,const QString& message, ControlCause cause) {
             const auto receiver=run->receiver;
             if (!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
             if(run->receiver && run->receiver->state_.get()==this && run->step==cue_step)control_failure(run, delivered ? ControlCause::None : cause);
@@ -11922,6 +11933,7 @@ struct AssistantViewModel::State {
                 applied=measured?run->project->loadDataInto(targetExperiment,run->measurement_path):run->project->loadStructure(run->structure_path);
                 }
                 if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+                if(menu)QMetaObject::invokeMethod(menu,"close",Qt::DirectConnection);
                 create_widget_after_structure(run,applied,run->file_input->outcome.message);
             } catch(...) { if(receiver && receiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error, false, "file-cue-catch"); }
         };
@@ -11945,6 +11957,17 @@ struct AssistantViewModel::State {
              (run->inputs.at(run->step).target=="sideBar.tab.extras" ||
               (extrasOperation && run->inputs.at(run->step).kind==AssistantWidgetInput::Kind::FileLoadCue))));
         const QString sidebar = QStringLiteral("workflow.") + run->page + ".manualSidebar";
+        QPointer<QQuickItem> menuContent;
+        const auto loadButton=name.startsWith("experiments.load.")?QStringLiteral("experiments.load"):
+            name.startsWith("structures.load.")?QStringLiteral("structures.load"):QString();
+        if(!loadButton.isEmpty())for(auto* button:widget_items()) {
+            if(button->objectName()!=loadButton || button->window()!=run->window)continue;
+            bool original=false;
+            for(auto* parent=button;parent;parent=parent->parentItem())if(parent->objectName()==sidebar)original=true;
+            if(!original)continue;
+            const auto menu=button->findChild<QObject*>(loadButton+".menu");
+            if(menu && menu->property("visible").toBool())menuContent=menu->property("contentItem").value<QQuickItem*>();
+        }
         for (auto* item : widget_items()) {
             if (item->objectName() != name || item->window() != run->window) continue;
             bool otherTier = false;
@@ -11953,7 +11976,7 @@ struct AssistantViewModel::State {
                 if(tier.isValid() && tier.toString()!=(extra?QStringLiteral("Extras"):QStringLiteral("Basic")))otherTier=true;
             }
             if (otherTier) continue;
-            bool inside = name.startsWith("appBar.tab.");
+            bool inside = name.startsWith("appBar.tab.") || (menuContent && menuContent->isAncestorOf(item));
             for (auto* ancestor = item; ancestor && !inside; ancestor = ancestor->parentItem())
                 inside = ancestor->objectName() == sidebar || (run->form && (ancestor == run->form->property("contentItem").value<QQuickItem*>() ||
                     ancestor == run->form->property("footer").value<QQuickItem*>()));
@@ -12238,7 +12261,7 @@ struct AssistantViewModel::State {
         if (step.target.startsWith("$value.") || step.target.startsWith("$background.") || step.target=="$background_names") { create_widget_child(run, step); return; }
         if((structure_app_action(run->individual_tool) || run->individual_tool=="edit_experiment") && step.kind==AssistantWidgetInput::Kind::FileLoadCue) {structure_cue(run,step);return;}
         if (step.target.startsWith("appBar.tab.")) run->page = step.target.mid(11);
-        if (step.target == "structures.load" || step.target.startsWith("experiments.file.")) { create_widget_load_structure(run); return; }
+        if (step.target == "structures.load.file" || step.target == "experiments.load.dataFile") { create_widget_load_structure(run); return; }
         const QPointer<QQuickItem> target(create_widget_named(run, step.target));
         if (!run->individual_tool.isEmpty() && step.target.startsWith("experiments.row.")) {
             if(!target) { if(create_widget_missing_target(run,step))return;throw ActionRefusal("control_unavailable","experiment"); }
@@ -12522,7 +12545,7 @@ struct AssistantViewModel::State {
             }
             add(Kind::Navigate,"appBar.tab.experiment");add(Kind::Navigate,"sideBar.tab.basic");add(Kind::Navigate,"experiments.create");
             add(Kind::Choose,"experimentType.beamMode");add(Kind::Choose,"experimentType.radiationProbe");
-            add(Kind::Navigate,"experiments.file.0");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
+            add(Kind::Navigate,"experiments.load");add(Kind::Navigate,"experiments.load.dataFile");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
             for(const auto tier:{CategoryListModel::Basic,CategoryListModel::Extras})for(const auto* category:experiment_order) {
                 if(category_presentation(QString::fromStdString(category->id)).tier!=tier)continue;
                 if(category->id=="background") {
@@ -13656,7 +13679,7 @@ struct AssistantViewModel::State {
             "In everything written to the user, project titles and descriptions included, say fit, fitting and fitted, never refine, refining or refinement: these are Edi's words. Act autonomously within delegated routine scope; ask only for genuinely missing/conflicting scientific information, changed objective/chemical assumptions or an indispensable real user/runtime action. When a needed answer is one of a few distinct choices, ask with the request_user_input tool, never request_user_input_async, giving those choices as options: Edi shows it as a question card and waits for the answer. Plain text is for an open question only, as the FINAL response of that turn. Optional purpose is intent metadata, never fabricated success; when omitted, Edi records its native label and fallback provenance. Omission does not remove the genuine scientific operands/objective requirement. Correct only a named prewrite argument field without replaying an entered/uncertain operation. Use concise human progress, results, actual pending/partial/failure reasons and material decisions/assumptions, with useful citations; technical tool IDs belong in diagnostics. Put app/tool/skill improvement suggestions only in diagnostics.developer_feedback for the hidden diagnostic work report, never purpose, chat or the scientific report. Keep scientific limitations and user-needed errors in chat. Report done/max_iterations/no_step/cancelled/error literally. Ordinary equations are unboxed by default with readable spacing; preserve explicit requested/quoted notation and history. Do not disclose hidden reasoning or pretend unavailable checks were performed.\n\n");
         // The common research contract is above; retain actual source/build provenance.
         params["developerInstructions"]=params.value("developerInstructions").toString()+
-            QStringLiteral("\nPublic Edi source and bundled skills: https://github.com/enhantica/edi . Prefer this actual app build commit when researching current controls/capabilities: ")+
+            QStringLiteral("\nConsult bundled skills first. For uncovered usage or scientific questions, search the official documentation at https://enhantica.github.io/edi/ first, including https://enhantica.github.io/edi/physics/ for physics. Cite the relevant page. Then consult other primary sources if needed. Public Edi source and bundled skills: https://github.com/enhantica/edi . Prefer this actual app build commit when researching current controls/capabilities: ")+
             QString::fromUtf8(edi::build_commit())+QStringLiteral(". Preserve public-source attribution; experiment data and private paths are not search queries.\n");
         params["config"] = Object{{"model_reasoning_effort",generic_settings_effort},{"web_search","live"},
             {"features.shell_tool",false},{"features.view_image",false},{"features.stable_environment_tools",false},{"features.apps",false},{"features.plugins",false},{"features.remote_plugin",false},

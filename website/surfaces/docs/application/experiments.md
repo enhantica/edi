@@ -35,14 +35,14 @@ Use [experiment types and labels](../user-guide/experiment-types.md) to distingu
 
 ## Load a powder pattern
 
-Choose **Load data…** in the experiment's **File** cell. Text files may contain `x y` or `x y sigma` columns separated by spaces, tabs or commas.
+Create or select an experiment first. Open **Load ▾** and choose **From file…** under **Measured data**. Text files may contain `x y` or `x y sigma` columns separated by spaces, tabs or commas.
 
 | Measurement | x axis |
 | --- | --- |
 | Constant wavelength | 2θ in degrees |
 | Time of flight | Time in microseconds |
 
-Check the import message for skipped or adjusted rows. After loading, the measured points define the range and the experiment type is fixed. Instrument, profile, background and exclusions are retained. Select the filename to replace the data; **Undo** restores the preceding state.
+Check the import message for skipped or adjusted rows. After loading, the measured points define the range and the experiment type is fixed. Instrument, profile, background and exclusions are retained. Use the same **Load ▾ → Measured data → From file…** route to replace the data; **Undo** restores the preceding state.
 
 <!-- gui-guide:load-a-powder-pattern -->
 <div class="gui-viewer" markdown="1">

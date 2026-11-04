@@ -10,6 +10,9 @@
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
 #include "session.hpp"
+#include "assistant_widget_input.hpp"
+#include "project_view_model.hpp"
+#include "online_search.hpp"
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 class WorkingAssistant : public edi_app::AssistantViewModel {
@@ -29,7 +32,91 @@ class AssistantUiTests : public QObject {
 private slots:
     void initTestCase() {
         edi_app::use_fresh_settings();
-
+        const auto root = QString::fromUtf8(EDI_SOURCE_DIR);
+        const auto cod = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/cod/").toString();
+        const auto edb = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/easydiffraction/").toString();
+        qputenv("EDI_ONLINE_SOURCES", ("cod=" + cod + ";easydiffraction=" + edb).toUtf8());
+    }
+    void skillsReplayCurrentLoadMenus() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        edi::Project empty;
+        empty.structures.clear();
+        empty.experiments.clear();
+        edi_app::ProjectViewModel project(std::move(empty), nullptr);
+        engine.rootContext()->setContextProperty("testProject", &project);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 800; height: 1000; visible: true
+                ExperimentsGroup { project: testProject; width: 700 }
+                StructuresGroup { project: testProject; width: 700; y: 450 }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        window->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        edi_app::AssistantWidgetInput input(*window);
+        QString diagnostic;
+        const auto click = [&](const char* name) {
+            auto* target = root->findChild<QQuickItem*>(name);
+            if (!target) { diagnostic = QString("Missing %1").arg(name); return false; }
+            bool done = false, delivered = false;
+            edi_app::AssistantWidgetInput::Request request;
+            request.kind = edi_app::AssistantWidgetInput::Kind::Navigate;
+            request.target = target;
+            request.current = [target, window] { return target->window() == window; };
+            request.restoreCurrent = request.current;
+            request.prepareCommit = [] { return true; };
+            request.finishCommit = [] {};
+            request.completed = [&](bool ok, const QString& message, edi_app::ControlCause) {
+                delivered = ok; diagnostic = message; done = true;
+            };
+            if (!QTest::qWaitFor([&] { return input.usableTarget(*target); }, 3000)) {
+                diagnostic = QString("Unavailable %1 (visible=%2 enabled=%3 sameWindow=%4)")
+                    .arg(name).arg(target->isVisible()).arg(target->isEnabled()).arg(target->window() == window);
+                return false;
+            }
+            try { input.start(std::move(request)); }
+            catch (const std::exception& error) { diagnostic = QString::fromUtf8(error.what()); return false; }
+            const bool completed = QTest::qWaitFor([&] { return done; }, 5000);
+            if (!completed) input.cancel();
+            return completed && delivered;
+        };
+        auto* dataFile = root->findChild<QQuickItem*>("experiments.load.dataFile");
+        QVERIFY(dataFile);
+        QVERIFY(!dataFile->isEnabled());
+        QVERIFY2(click("experiments.create"), qPrintable(diagnostic));
+        QTRY_VERIFY(project.currentExperiment());
+        QVERIFY2(click("experiments.load"), qPrintable(diagnostic));
+        auto* menu = root->findChild<QObject*>("experiments.load.menu");
+        QVERIFY(menu);
+        QTRY_VERIFY(menu->property("visible").toBool());
+        QVERIFY(dataFile->isEnabled());
+        QVERIFY2(click("experiments.load.dataWeb"), qPrintable(diagnostic));
+        auto* popup = root->findChild<QObject*>("onlineLoad");
+        QVERIFY(popup);
+        QTRY_VERIFY(popup->property("visible").toBool());
+        QCOMPARE(popup->property("kind").toString(), QString("data"));
+        QVERIFY(root->findChild<QObject*>("onlineLoad.source"));
+        QVERIFY(root->findChild<QObject*>("onlineLoad.search"));
+        QVERIFY(QMetaObject::invokeMethod(popup, "close"));
+        QVERIFY2(click("structures.load"), qPrintable(diagnostic));
+        auto* structureFile = root->findChild<QQuickItem*>("structures.load.file");
+        QVERIFY(structureFile);
+        QVERIFY(structureFile->isVisible());
+        QVERIFY2(click("structures.load.web"), qPrintable(diagnostic));
+        const auto popups = root->findChildren<QObject*>("onlineLoad");
+        bool structurePopup = false;
+        for (auto* original : popups)
+            structurePopup |= original->property("visible").toBool() && original->property("kind") == "structure";
+        QVERIFY(structurePopup);
     }
     void shownActionsKeepWorkingIndicator() {
         QQmlApplicationEngine engine;

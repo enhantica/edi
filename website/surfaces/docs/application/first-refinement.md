@@ -124,7 +124,7 @@ The Project page now shows your project name and details.
 
 ## Load the structure
 
-Open **Structure → Main**, expand **Structures**, choose **Load structure from file** and select **y2o3.cif**.
+Open **Structure → Main**, expand **Structures**, choose **Load ▾ → From file…** and select **y2o3.cif**.
 
 <div class="gui-viewer" markdown="1">
 
@@ -193,7 +193,7 @@ Before loading data, choose **Powder**, **Constant wavelength**, **Neutron** for
 
 ## Load measured data
 
-Choose **Load data…** in the experiment row and select **spodi.xye**. Check the measured range and intensities.
+Select the experiment, open **Load ▾**, choose **From file…** under **Measured data**, and select **spodi.xye**. Check the measured range and intensities.
 
 <div class="gui-viewer" markdown="1">
 

@@ -795,3 +795,16 @@ including the older existing-folder route. The ordinary save fence rejects them;
 only the private already-admitted staging call continues inside its own save.
 Only the report writer can continue an admitted report index update inside that
 fence, and staged adoption holds the same publication fence as a direct Save.
+
+## Current GUI targets and documentation lookup
+
+Shown file loads open the original Load menu and cue its From file item. A
+measured-data load belongs to the currently selected experiment, not its table
+filename. Menu ownership, current project, selected member and original input
+checks remain in place. Skills describe Create first, file loads and From web
+popups using declared UI targets. Their target check rejects missing controls.
+
+Uncovered questions search the published edi documentation first, with physics
+questions starting in its physics section. Bundled skills remain first, current
+build facts remain authoritative for controls, and other primary references remain
+available. Search queries still exclude private inputs and paths.

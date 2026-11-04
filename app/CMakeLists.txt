@@ -544,6 +544,7 @@ endif()
 
 qt_add_executable(edi_assistant_ui_tests tests/assistant_ui_tests.cpp)
 target_link_libraries(edi_assistant_ui_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::QuickTest)
+target_compile_definitions(edi_assistant_ui_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 target_sources(edi_assistant_ui_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_assistant_ui_tests edi_app_build_commit)
 set_target_properties(edi_assistant_ui_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
