@@ -5117,3 +5117,12 @@ agent. Platform execution is still required on each supported build kit.
 The connected account button uses the existing person glyph instead of an initial
 derived from email. Its accessible label is ChatGPT account. The original account
 popup still presents the verified email and plan; no full name is inferred.
+
+## Session-browser title width
+
+The Session column uses the table's existing spread-column rule so its text can
+use the remaining row width. The default filler rule reserves that spare width
+as padding after the fitted text, which caused premature title elision in this
+browser. Row numbers, modification dates and archive buttons retain their columns.
+Titles elide only when their available space is exhausted. The browser layout
+regression covers a readable ordinary title, resizing and an overlong title.

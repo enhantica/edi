@@ -6,6 +6,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QScopeGuard>
+#include <QStandardItemModel>
 #include <QtQml/qqmlextensionplugin.h>
 #include "assistant_view_model.hpp"
 #include "engine_setup.hpp"
@@ -183,6 +184,76 @@ private slots:
         QTest::mouseMove(&window, link->mapToScene(QPointF(link->width() / 2, link->height() / 2)).toPoint());
         QTRY_VERIFY2(root->property("linkHovered").toBool(), qPrintable(QString("size=%1x%2 visible=%3 enabled=%4 hover=%5 active=%6").arg(link->width()).arg(link->height()).arg(link->isVisible()).arg(link->isEnabled()).arg(link->property("hoverEnabled").toBool()).arg(window.isActive())));
         QTRY_VERIFY(root->property("linkColor") != normal);
+    }
+    void sessionTitlesUseAvailableColumnWidth() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        WorkingAssistant assistant;
+        engine.rootContext()->setContextProperty("testAssistant", &assistant);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 1400; height: 900; visible: true
+                Item { id: toggle }
+                AssistantPanel { assistant: testAssistant; toggleControl: toggle; shown: true }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        auto* dialog = root->findChild<QObject*>("assistant.sessionsDialog");
+        auto* table = root->findChild<QQuickItem*>("assistant.sessions.list");
+        QVERIFY(dialog);
+        QVERIFY(table);
+        QStandardItemModel model;
+        model.setItemRoleNames({{Qt::UserRole + 1, "id"}, {Qt::UserRole + 2, "name"},
+                               {Qt::UserRole + 3, "modified"}, {Qt::UserRole + 4, "canArchive"}});
+        const QString title = "Neutron powder fit with a shared La/Ba displacement";
+        auto* item = new QStandardItem;
+        item->setData("session-1", Qt::UserRole + 1);
+        item->setData(title, Qt::UserRole + 2);
+        item->setData("04 Nov 2026 at 21:01", Qt::UserRole + 3);
+        item->setData(false, Qt::UserRole + 4);
+        model.appendRow(item);
+        QVERIFY(table->setProperty("sourceModel", QVariant::fromValue<QObject*>(&model)));
+        QVERIFY(QMetaObject::invokeMethod(dialog, "open"));
+        QTRY_COMPARE(table->property("count").toInt(), 1);
+        QTRY_VERIFY(dialog->property("visible").toBool());
+        QTRY_VERIFY(table->isVisible());
+        QQuickItem* titleCell = nullptr;
+        const auto findTitle = [&](QQuickItem* start, auto&& self) -> QQuickItem* {
+            if (start->isVisible() && start->property("text").toString() == title) return start;
+            for (auto* child : start->childItems())
+                if (auto* found = self(child, self)) return found;
+            return nullptr;
+        };
+        QTRY_VERIFY((titleCell = findTitle(table, findTitle)));
+        QTRY_VERIFY(table->property("onScreen").toBool());
+        QTRY_VERIFY(!table->property("refitting").toBool());
+        QTRY_VERIFY(titleCell->width() > 0);
+        const auto textRoom = [&] {
+            return titleCell->width() - titleCell->property("leftPadding").toDouble()
+                - titleCell->property("rightPadding").toDouble();
+        };
+        QTRY_VERIFY(textRoom() > table->width() / 2);
+        QVERIFY(!titleCell->property("truncated").toBool());
+        if (const auto capture = qEnvironmentVariable("EDI_SESSION_LAYOUT_CAPTURE"); !capture.isEmpty())
+            QVERIFY(window->grabWindow().save(capture));
+        const double wide = titleCell->width();
+        QVERIFY(window->setProperty("width", 850));
+        QTRY_VERIFY(titleCell->width() < wide);
+        QVERIFY(titleCell->width() > 0);
+        const QString longTitle = title.repeated(8);
+        item->setData(longTitle, Qt::UserRole + 2);
+        QTRY_COMPARE(titleCell->property("text").toString(), longTitle);
+        QTRY_VERIFY(titleCell->property("truncated").toBool());
+        QVERIFY(QMetaObject::invokeMethod(dialog, "close"));
+        QVERIFY(table->setProperty("sourceModel", QVariant{}));
     }
     void shownActionsKeepWorkingIndicator() {
         QQmlApplicationEngine engine;
