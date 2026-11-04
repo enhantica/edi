@@ -24,6 +24,7 @@ import numpy as np
 CLI = Path(__file__).resolve().parents[3] / 'docs/user/cli'
 MAGNETIC = 'pd-neut-cwl_cosio-d20_scan-213f'
 NUCLEAR = 'pd-neut-cwl_cosio-d20_scan'
+STALL = Path(__file__).resolve().parents[2] / 'fixtures/magnetic_stall'
 PARAMAGNETIC_FILE = '01_124_082p1890.dat'
 MOMENTS = {
     f'structure.atom_site_moment[{site}].crystalaxis_{axis}'
@@ -221,6 +222,68 @@ def check_scan():
     )
 
 
+def check_stall(frame_only):
+    """Replay supplied pre-fix regression inputs; require convergence, not fitted pins."""
+    manifest = json.loads((STALL / 'provenance.json').read_text())
+    for name, digest in manifest['sha256'].items():
+        assert hashlib.sha256((STALL / name).read_bytes()).hexdigest() == digest, (
+            'The stalled-path regression starts retain the supplied input bytes'
+        )
+    with tempfile.TemporaryDirectory(prefix='magnetic-stall-') as scratch:
+        directory = stage(MAGNETIC, scratch)
+        if frame_only:
+            shutil.copytree(STALL / 'frame', directory, dirs_exist_ok=True)
+            observations = directory / 'experiments/d20_scan'
+            for data in observations.glob('*.dat'):
+                if data.name not in manifest['frame_observations_sha256']:
+                    data.unlink()
+            for name, digest in manifest['frame_observations_sha256'].items():
+                assert hashlib.sha256((observations / name).read_bytes()).hexdigest() == digest, (
+                    'The isolated stalled frame uses the original measured observations'
+                )
+        else:
+            analysis = directory / 'analysis/analysis.edi'
+            analysis.write_text(
+                analysis.read_text().replace('_minimizer.descent fast_descent\n', '')
+            )
+            shutil.copytree(STALL / 'scan', directory / 'analysis', dirs_exist_ok=True)
+        with (directory / 'analysis/results.csv').open(newline='') as stream:
+            seeded = list(csv.DictReader(stream))
+        project = edi.Project.load(directory)
+        assert '_minimizer.descent' not in (directory / 'analysis/analysis.edi').read_text(), (
+            'The stalled path exercises the default ladder, not the fast-descent example recipe'
+        )
+        result = project.analysis.fit()
+        with (directory / 'analysis/results.csv').open(newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        expected = 42 if frame_only else 213
+        assert len(rows) == expected, 'The replay visits every measured file after the saved seed'
+        if frame_only:
+            assert len(seeded) == 41 and len(rows) - len(seeded) == 1, (
+                'The isolated replay fits only the 41.085 K frame after its supplied stalled start'
+            )
+            assert Path(rows[-1]['file_path']).name == '01_172_041p0850.dat', (
+                'The isolated convergence witness is the reported 41.085 K frame'
+            )
+        else:
+            source = {p.name for p in (directory / 'experiments/d20_scan').glob('*.dat')}
+            assert {Path(row['file_path']).name for row in rows} == source, (
+                'The seeded default-ladder scan covers every measured file exactly once'
+            )
+        with (directory / 'analysis/results-provenance.csv').open(newline='') as stream:
+            provenance = list(csv.DictReader(stream))
+        assert all(row['descent'] == 'ladder' for row in provenance[len(seeded) :]), (
+            'Every newly fitted stalled-path file uses the default ladder'
+        )
+        check_file_convergence(directory, rows)
+        assert result.success, 'The stalled-path replay reaches a successful terminal state'
+        print(
+            f'Stalled-path {"frame" if frame_only else "scan"}: '
+            f'{len(rows) - len(seeded)} new files, {len(rows)}/{expected} chi_converged; '
+            f'last fit {result.iterations} iterations, chi2 {result.reduced_chi_square:.12g}'
+        )
+
+
 def nuclear_snapshot():
     with tempfile.TemporaryDirectory(prefix='nuclear-control-') as scratch:
         directory = stage(NUCLEAR, scratch)
@@ -262,13 +325,18 @@ def check_nuclear(before_extension):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('case', choices=('frame', 'scan', 'nuclear', 'nuclear-snapshot'))
+    parser.add_argument(
+        'case',
+        choices=('frame', 'scan', 'stall-frame', 'stall-scan', 'nuclear', 'nuclear-snapshot'),
+    )
     parser.add_argument('--before-extension', type=Path)
     args = parser.parse_args()
     if args.case == 'frame':
         check_frame()
     elif args.case == 'scan':
         check_scan()
+    elif args.case in {'stall-frame', 'stall-scan'}:
+        check_stall(frame_only=args.case == 'stall-frame')
     elif args.case == 'nuclear-snapshot':
         print(json.dumps(nuclear_snapshot()))
     elif args.before_extension is None:
