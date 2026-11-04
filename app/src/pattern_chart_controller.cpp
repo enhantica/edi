@@ -743,6 +743,7 @@ void PatternChartController::refresh() {
                        bragg, width, texts, colours});
         legend.back().key = QString::fromStdString(series.id);
         legend.back().hidden = hidden_.contains(legend.back().key);
+        legend.back().magnetic = bragg && series.id.ends_with("/magnetic");
     };
     int rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
@@ -1000,7 +1001,7 @@ void PatternChartController::refresh() {
             return series.kind == edi::SeriesKind::BraggTicks && series.style == label.style;
         });
         labels.append({QString::fromStdString(label.text), colour_of(label.style), label.centre,
-                       ticks != shown_.series.end() && hiddenId(ticks->id)});
+                       ticks != shown_.series.end() && hiddenId(ticks->id), label.magnetic});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     const bool subtractable = !report_ && experiment_ != nullptr && edi::has_background(*experiment_->experiment());

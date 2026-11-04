@@ -185,3 +185,8 @@ driver stays with its own references (the 3-file and 324-file projects' provenan
 `project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
 title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
 `.facility` and `.polarisation` were added. Every other file is unchanged.
+
+**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
+change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
+machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: reduced_chi_square 14.65981576 → 14.65981734; iterations
+4 → 3.

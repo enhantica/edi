@@ -207,7 +207,8 @@ inline bool writes_calculation(const ExperimentBase& experiment) {
     const PdDataBase& data = *experiment.data;
     const PowderReflnDataBase& refln = experiment.refln;
     return !infinite(data.d_spacing) && !infinite(data.intensity_calc) && !infinite(data.intensity_bkg) &&
-           !infinite(data.component_intensities_net) && !infinite(data.residual) && !infinite(refln.d_spacing) &&
+           !infinite(data.component_intensities_net) &&
+           !infinite(data.component_intensities_magnetic) && !infinite(data.component_intensities_nuclear) && !infinite(data.residual) && !infinite(refln.d_spacing) &&
            !infinite(refln.sin_theta_over_lambda) && !infinite(refln.f_calc) && !infinite(refln.f_squared_calc) &&
            !infinite(refln.position);
 }
@@ -342,6 +343,36 @@ inline std::vector<Category> structure_categories(Structure& structure) {
     }
     categories.push_back(aniso);
     categories.push_back({"scattering_length", true, structure.scattering_lengths_fm.size()});
+    // The magnetic description (edi ADR-0070), for a structure that has one: crysta reads and
+    // writes it, so each category shows its rows as the file holds them.
+    const MagneticDescription& magnetic = structure.magnetic;
+    if (!magnetic.empty() || !structure.atom_site_moment.empty()) {
+        categories.push_back({"space_group_magn"});
+        categories.push_back({"parent_space_group"});
+        categories.push_back({"parent_propagation_vector", true, magnetic.propagation_vectors.size()});
+        categories.push_back({"space_group_symop_magn_operation", true, magnetic.operations.size()});
+        if (!magnetic.centerings.empty()) {
+            categories.push_back({"space_group_symop_magn_centering", true, magnetic.centerings.size()});
+        }
+        Category moments{"atom_site_moment", true, structure.atom_site_moment.size()};
+        for (const auto& moment : structure.atom_site_moment) {
+            const char* names[] = {"crystalaxis_x", "crystalaxis_y", "crystalaxis_z"};
+            const std::vector<Parameter*> parameters = moment->parameters();
+            for (std::size_t i = 0; i < parameters.size(); ++i) {
+                moments.fields.push_back({names[i], parameters[i], true, refinable(parameters[i])});
+            }
+        }
+        categories.push_back(moments);
+        Category form_factors{"magnetic_form_factor", true, structure.magnetic_form_factors.size()};
+        for (const auto& row : structure.magnetic_form_factors) {
+            const char* names[] = {"j2_coefficient", "j4_coefficient", "j6_coefficient"};
+            const std::vector<Parameter*> parameters = row->parameters();
+            for (std::size_t i = 0; i < parameters.size(); ++i) {
+                form_factors.fields.push_back({names[i], parameters[i], true, refinable(parameters[i])});
+            }
+        }
+        categories.push_back(form_factors);
+    }
     detail::mark_dependents(categories);
     return categories;
 }
@@ -426,6 +457,9 @@ inline std::vector<Category> calculated_categories(const Structure& structure) {
                                      {"expanded_atom_site", true, geometry.expanded_atom_sites.size()}};
     if (geometry.geom_bond.size() > 0) {
         categories.push_back({"geom_bond", true, geometry.geom_bond.size()});
+    }
+    if (geometry.expanded_atom_site_moments.size() > 0) {
+        categories.push_back({"expanded_atom_site_moment", true, geometry.expanded_atom_site_moments.size()});
     }
     return categories;
 }

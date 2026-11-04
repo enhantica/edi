@@ -80,8 +80,8 @@ Item {
             Preferences.dialogShown = true;
             tryCompare(dialog, "opened", true, 2000, "The real Preferences dialog opens before measuring its tabs");
             verify(SettingsProof.beginAnimationClock(), "The public Qt animation clock settles each actual Preferences slide before geometric measurements");
-            const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Experimental", "Develop"];
-            const labels = [["Enable tool tips:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Structures:", "Patterns:", "Stacked:", "Map:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
+            const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Performance", "Experimental", "Develop"];
+            const labels = [["Enable tool tips:", "Show fit results after fitting:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Palette:", "Stacked:", "Map:", "When a curve is hidden:", "Moment colours:", "Sidebar:", "One sidebar group open at a time:", "Text tab shows:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Threads per calculation:", "Parallel fits in a scan:"], ["Zoom:", "Language:"], ["Logging level:", "Feedback address:", "Graphics:", "Scan views:", "Diagnostics:", "Settings:"]];
             const failures = [], labelWidths = [], boxWidths = [], boxXs = [], labelXs = [];
             function inkTop(item) {
                 const at = item.mapToItem(dialog.contentItem, 0, 0);

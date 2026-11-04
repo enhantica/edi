@@ -385,7 +385,8 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
                 continue;
             }
             // A chart item takes the blank lines before it along, so a project hashes as it did without one.
-            if (line.starts_with("_correlation_chart.") || line.starts_with("_pattern_chart.")) {
+            if (line.starts_with("_correlation_chart.") || line.starts_with("_pattern_chart.") ||
+                line.starts_with("_evolution_chart.")) {
                 pending.clear();
                 continue;
             }

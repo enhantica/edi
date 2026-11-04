@@ -6,6 +6,7 @@ _fitting_mode.type single
 # `unsupported _minimizer.type "bumps (lm)" - using crysta`, so the app's message list always has an
 # example to show. The fit runs with crysta.
 _minimizer.type "bumps (lm)"
+_minimizer.stop_rule shift_su
 
 loop_
 _joint_fit.experiment_id

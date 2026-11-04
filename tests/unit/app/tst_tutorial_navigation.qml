@@ -2392,7 +2392,8 @@ TestCase {
         for (const name of ["tutorial.next", "statusBar.tutorial.next"]) {
             const button = one(app, name);
             verify(Ui.rendered(button), "Next stays visibly in its navigation row on every tutorial's last step: " + name);
-            compare(button.enabled, false, "The last-step Next control is disabled rather than removed: " + name);
+            const actionable = button.enabled && (button.clickable === undefined || button.clickable);
+            compare(actionable, false, "The last-step Next control stays visible and cannot be activated: " + name);
         }
     }
     function test_rightmost_strip_does_not_move_when_fit_status_appears() {
@@ -2466,8 +2467,8 @@ TestCase {
         start(data.lesson);
         const entry = scripts().find(item => item.id === data.lesson), steps = entry.steps;
         verify(steps[0].text.toLowerCase().includes(entry.title.toLowerCase()), "The first step names the tutorial in its text");
-        const strip = one(app, "statusBar.tutorial");
-        verify(String(strip.toolTip || strip.ToolTip.text || "").includes(entry.title), "The tutorial's name appears in the status-strip tooltip");
+        const progress = one(app, "statusBar.tutorial.progress");
+        verify(String(progress.ToolTip.text || "").includes(entry.title), "The tutorial's name appears on the status-strip progress tooltip");
         for (let index = 0; index < steps.length; ++index) {
             const heading = String(steps[index].title || "").trim(), words = heading.split(/\s+/).filter(Boolean);
             verify(words.length >= 1 && words.length <= 3, "Every step declares its own one-to-three-word heading");
@@ -2475,8 +2476,12 @@ TestCase {
             panel.show();
             settleTour();
             const progressLabel = one(panel, "tutorial.progress");
-            const labels = Render.texts(panel.contentItem).filter(item => item.text === heading);
-            verify(labels.some(item => Math.abs(Geometry.center(Geometry.rect(item, app.contentItem)).y - Geometry.center(Geometry.rect(progressLabel, app.contentItem)).y) <= 1), "The step's own short heading, rather than the tutorial name, is shown on the progress title row");
+            const title = one(panel, "tutorial.title");
+            compare(title.text, heading, "The visible callout title uses the current step's short heading");
+            verify(Ui.rendered(title) && Ui.rendered(progressLabel), "Both parts of the callout title row are rendered");
+            const titleBox = Geometry.rect(title, app.contentItem), progressBox = Geometry.rect(progressLabel, app.contentItem);
+            const overlap = Math.min(titleBox.y + titleBox.height, progressBox.y + progressBox.height) - Math.max(titleBox.y, progressBox.y);
+            verify(overlap >= Math.min(titleBox.height, progressBox.height) / 2 && titleBox.x + titleBox.width <= progressBox.x + 1, "The heading and progress share a row without covering each other");
         }
     }
     function test_simulation_next_teaches_four_parameter_changes_in_order() {

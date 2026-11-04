@@ -56,6 +56,7 @@ QVariant ChartLegendModel::data(const QModelIndex& index, int role) const {
         case SelectedRole: return entry.selected;
         case KeyRole: return entry.key;
         case HiddenRole: return entry.hidden;
+        case MagneticRole: return entry.magnetic;
         default: return {};
     }
 }
@@ -70,7 +71,8 @@ QHash<int, QByteArray> ChartLegendModel::roleNames() const {
             {LabelColorsRole, "labelColors"},
             {SelectedRole, "selected"},
             {KeyRole, "key"},
-            {HiddenRole, "hidden"}};
+            {HiddenRole, "hidden"},
+            {MagneticRole, "magnetic"}};
 }
 
 ChartBandModel::ChartBandModel(QObject* parent) : QAbstractListModel(parent) {}

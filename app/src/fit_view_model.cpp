@@ -718,6 +718,9 @@ void FitViewModel::sync() {
 }
 
 void FitViewModel::started(const edi::FitPreamble& preamble) {
+    for (const std::string& message : preamble.zero_starts) {
+        qCInfo(lcCrysta, "%s", message.c_str());  // a free parameter the fit starts away from 0, in the run log
+    }
     chi_before_ = preamble.pre_fit.reduced_chi_square;
     setProgress(QStringLiteral("0"), chi(chi_before_), tr("Running"));
 }

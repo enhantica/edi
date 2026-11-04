@@ -73,6 +73,9 @@ class EvolutionViewModel : public QObject {
     void addRow(int dataset, const std::vector<std::string>& cells);
     // After an edit: a parameter freed or fixed joins or leaves the selector.
     void syncParameters();
+    // The scan's template project, which holds the template's fit result and values (the shown model may be another
+    // dataset's); null: the project given to setScan.
+    void setTemplate(const edi::Project* project) { template_ = project; }
 
     EvolutionParameterListModel* parameters() const { return parameters_; }
     int currentParameter() const { return current_; }
@@ -98,6 +101,8 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE int datasetAt(double x, double y, double x_tolerance, double y_tolerance) const;
     // The x of a dataset's drawn point, or NaN when it has none.
     Q_INVOKABLE double datasetX(int dataset) const;
+    // The project's Evolution chart settings changed: the range and the drawing follow them.
+    void viewSettingsChanged() { finish(); }
     bool picking() const { return picking_; }
     void setPicking(bool picking) {
         if (picking_ != picking) {
@@ -134,7 +139,14 @@ class EvolutionViewModel : public QObject {
     struct Point {
         double x = 0.0, y = 0.0, error = 0.0;
         int dataset = -1;
+        friend bool operator==(const Point&, const Point&) = default;
     };
+    // Before the scan has a fitted row: the fitted template's own point, its current value and s.u. at its dataset's
+    // x, so a parameter can be chosen before the scan starts (the owner, 2026-11-04); none when the template has no
+    // fit result or the scan has rows.
+    std::optional<Point> templatePoint() const;
+    bool scanRows() const;
+    std::optional<Point> template_point_;
     void rebuild();
     // The points of the current parameter's column, read from the results (throws when the read refuses).
     void readPoints();
@@ -146,10 +158,14 @@ class EvolutionViewModel : public QObject {
     QString extracted_title_;
     const ScanSession* session_ = nullptr;
     const edi::Project* project_ = nullptr;
+    const edi::Project* template_ = nullptr;
     std::vector<Point> points_;
     // The x of a dataset: its first extracted value, or its place in the scan from 1; nullopt when not finite.
     std::optional<double> xOf(int dataset, const std::vector<std::string>* extracted) const;
     void finish();
+    bool range_with_errors() const {
+        return project_ != nullptr && project_->evolution_range.value_or("values") == "values_su";
+    }
     int current_ = -1;
     int x_mode_ = 0;
     bool out_of_date_ = false;

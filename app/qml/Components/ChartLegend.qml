@@ -76,6 +76,7 @@ Rectangle {
                 required property color color
                 required property string mark
                 required property bool bragg
+                required property bool magnetic
                 required property real markWidth
                 required property list<string> labelTexts
                 required property list<string> labelColors
