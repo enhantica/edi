@@ -236,12 +236,16 @@ SideBarGroup {
             }
         }
 
-        // With no experiment selected the selectors show the type a new one takes with its measured data.
         ExperimentTypeGroup {
-            visible: group.project !== null && (group.project.currentExperiment !== null || (!group.scan && group.project.canCreateExperiment))
+            visible: group.project !== null && group.project.currentExperiment !== null
             project: group.project
             experiment: group.project ? group.project.currentExperiment : null
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
+        }
+        // With no experiment selected the selectors show the type a new one takes with its measured data.
+        NewExperimentTypeGroup {
+            visible: group.project !== null && group.project.currentExperiment === null && !group.scan && group.project.canCreateExperiment
+            project: group.project
         }
 
         // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-10-11, 2026-11-03). The Load menu
@@ -387,6 +391,13 @@ SideBarGroup {
             group.newDataProject = null;
         }
         function onCancelled(request) {
+            if (request === group.newDataRequest) {
+                group.newDataRequest = 0;
+                group.newDataProject = null;
+            }
+        }
+        // A failed request is over: files arriving under its number afterwards are not this request's.
+        function onFailed(request, message) {
             if (request === group.newDataRequest) {
                 group.newDataRequest = 0;
                 group.newDataProject = null;

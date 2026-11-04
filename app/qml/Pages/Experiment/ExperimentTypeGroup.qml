@@ -19,22 +19,15 @@ Grid {
     property ProjectViewModel project: null
     property ExperimentViewModel experiment: null
     property int experimentIndex: -1
-    // With no experiment selected the selectors hold the type a new experiment takes when measured data is
-    // loaded for one (ProjectViewModel.newExperiment…), so the type is chosen before the import, as the data
-    // fixes it afterwards.
-    readonly property bool pending: experiment === null && project !== null
     // The type axes may change while nothing measured is held: a calculation grid, or a single crystal with no
     // reflections loaded yet.
-    readonly property bool editable: pending || (experiment !== null && experiment.calculationOnly)
-    readonly property bool singleCrystal: pending ? project.newExperimentSampleFormToken === "single crystal" : experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
+    readonly property bool editable: experiment !== null && experiment.calculationOnly
+    readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
     readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
 
     // A choice on one axis makes the experiment anew; the selector returns to the stored value otherwise.
     function choose(axis, token) {
-        if (row.pending)
-            row.project.setNewExperimentType(axis, token);
-        else
-            ApplicationInfo.chooseExperimentType(axis, token);
+        ApplicationInfo.chooseExperimentType(axis, token);
     }
 
     objectName: "experimentType"
@@ -47,8 +40,8 @@ Grid {
         objectName: "experimentType.sampleForm"
         width: row.cellWidth
         uid: "experiment_type.sample_form"
-        options: row.experiment ? row.experiment.sampleFormOptions : row.pending ? row.project.newExperimentSampleFormOptions : null
-        token: row.experiment ? row.experiment.sampleFormToken : row.pending ? row.project.newExperimentSampleFormToken : ""
+        options: row.experiment ? row.experiment.sampleFormOptions : null
+        token: row.experiment ? row.experiment.sampleFormToken : ""
         enabled: row.editable
         onSelected: token => row.choose("sampleForm", token)
     }
@@ -57,8 +50,8 @@ Grid {
         objectName: "experimentType.beamMode"
         width: row.cellWidth
         uid: "experiment_type.beam_mode"
-        options: row.experiment ? row.experiment.beamModeOptions : row.pending ? row.project.newExperimentBeamModeOptions : null
-        token: row.experiment ? row.experiment.beamModeToken : row.pending ? row.project.newExperimentBeamModeToken : ""
+        options: row.experiment ? row.experiment.beamModeOptions : null
+        token: row.experiment ? row.experiment.beamModeToken : ""
         enabled: row.editable
         onSelected: token => row.choose("beamMode", token)
     }
@@ -73,8 +66,8 @@ Grid {
             objectName: "experimentType.radiationProbe"
             width: row.cellWidth
             uid: "experiment_type.radiation_probe"
-            options: row.experiment ? row.experiment.radiationProbeOptions : row.pending ? row.project.newExperimentRadiationProbeOptions : null
-            token: row.experiment ? row.experiment.radiationProbeToken : row.pending ? row.project.newExperimentRadiationProbeToken : ""
+            options: row.experiment ? row.experiment.radiationProbeOptions : null
+            token: row.experiment ? row.experiment.radiationProbeToken : ""
             enabled: row.editable && !row.singleCrystal
             onSelected: token => row.choose("radiationProbe", token)
         }
@@ -89,8 +82,6 @@ Grid {
     // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
     // the tool tip is the cell's, since a disabled box takes no hover.
     Item {
-        // The axes a new experiment takes from its data have no pending value: hidden until one is selected.
-        visible: !row.pending
         width: row.cellWidth
         height: scatteringType.height
 
@@ -115,7 +106,6 @@ Grid {
     // One admitted value each, so the boxes show it and take no choice: the dimensionality, and the polarisation of
     // the probe (ADR-0054).
     SelectorField {
-        visible: !row.pending
         id: dimensionality
         objectName: "experimentType.dimensionality"
         width: row.cellWidth
@@ -125,7 +115,6 @@ Grid {
         enabled: false
     }
     SelectorField {
-        visible: !row.pending
         id: polarisation
         objectName: "experimentType.polarisation"
         width: row.cellWidth
