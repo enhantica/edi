@@ -62,20 +62,33 @@ class OnlineHost:
 
 
 @contextmanager
-def run_online_host(mailbox, *, load_groups_only=False, offline_http=False, failure_entries=True):
+def run_online_host(
+    mailbox,
+    *,
+    load_groups_only=False,
+    offline_http=False,
+    failure_entries=True,
+    collection_root=None,
+    session_type='OnlineLoadSession',
+):
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert runner.is_file(), 'Online loading requires the built production Qt host'
     test_file = mailbox / 'tst_online_session.qml'
+    mailbox.mkdir(parents=True, exist_ok=True)
+    scratch = mailbox / 'tmp'
+    scratch.mkdir(exist_ok=True)
     test_types = (ROOT / 'tests/unit/app').as_uri()
     test_file.write_text(
         f'import "{test_types}" as Online\n'
-        'Online.OnlineLoadSession {\n'
+        f'Online.{session_type} {{\n'
         '    mailbox: Qt.resolvedUrl(".")\n'
         f'    loadGroupsOnly: {json.dumps(load_groups_only)}\n'
         '}\n'
     )
     fixtures = ROOT / 'tests/fixtures/online_sources'
-    collection = fixtures / 'easydiffraction'
+    collection = (
+        Path(collection_root) if collection_root is not None else fixtures / 'easydiffraction'
+    )
     if load_groups_only and failure_entries:
         collection = mailbox / 'collection'
         shutil.copytree(fixtures / 'easydiffraction', collection)
@@ -97,6 +110,7 @@ def run_online_host(mailbox, *, load_groups_only=False, offline_http=False, fail
     ))
     environment = {
         **os.environ,
+        'TMPDIR': str(scratch),
         'QT_QPA_PLATFORM': 'offscreen',
         'QT_QUICK_BACKEND': 'software',
         'EDI_ONLINE_SOURCES': sources,

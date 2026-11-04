@@ -74,7 +74,9 @@ TestCase {
         }
     }
 
-    function cleanup() {
+    function cleanup() { cleanupOnlineControls(); }
+
+    function cleanupOnlineControls() {
         Session.onlineSources.remove("new-source");
         const page = pageItem();
         if (page) {
@@ -256,11 +258,11 @@ TestCase {
     function check_from_web_opens_source_selector_data() {
         return [
             {tag: "structure", page: AppState.Page.Structure, group: "structures", action: "web",
-             sources: ["COD", "EasyDiffraction", "EasyDiffraction mirror"], fields: ["ID", "Formula", "Elements", "Space group"]},
+             sources: ["COD", "EasyDiffraction"], fields: ["ID", "Formula", "Elements", "Space group"]},
             {tag: "experiment", page: AppState.Page.Experiment, group: "experiments", action: "experimentWeb",
-             sources: ["EasyDiffraction", "EasyDiffraction mirror"], fields: ["ID", "Name", "Radiation", "Technique", "Instrument"]},
+             sources: ["EasyDiffraction"], fields: ["ID", "Name", "Radiation", "Technique", "Instrument"]},
             {tag: "measured", page: AppState.Page.Experiment, group: "experiments", action: "dataWeb",
-             sources: ["EasyDiffraction", "EasyDiffraction mirror"], fields: ["ID", "Name", "Radiation", "Technique", "Instrument"]}
+             sources: ["EasyDiffraction"], fields: ["ID", "Name", "Radiation", "Technique", "Instrument"]}
         ];
     }
 
@@ -296,8 +298,7 @@ TestCase {
         Ui.scrollIntoView(table);
         for (const [id, name, kinds] of [
             ["cod", "COD", "structures"],
-            ["easydiffraction", "EasyDiffraction", "structures, experiments, data"],
-            ["easydiffraction-mirror", "EasyDiffraction mirror", "structures, experiments, data"]
+            ["easydiffraction", "EasyDiffraction", "structures, experiments, data"]
         ]) {
             const row = "preferences.online.source.";
             const cell = () => Render.descendants(table).find(item => item.objectName === row + "name." + id);
@@ -714,11 +715,11 @@ TestCase {
         let row = -1;
         tryVerify(() => {
             for (let i = 0; i < model.count; ++i)
-                if (model.text(i, "exampleId") === "collection/easydiffraction/lbco-hrpt-project") row = i;
+                if (model.text(i, "exampleId") === "lbco-hrpt-project") row = i;
             return row >= 0;
         }, 3000, "The Examples list includes the project from the collection fixture");
         compare(model.text(row, "origin"), "HRPT @ PSI", "The collection example retains its declared origin");
-        verify(Session.openExample("collection/easydiffraction/lbco-hrpt-project"), "The collection example dispatches its ordinary archive loader");
+        verify(Session.openExample("lbco-hrpt-project"), "The collection example dispatches its ordinary archive loader");
         tryCompare(Session, "openingExample", false, 3000, "The fixture archive finishes opening");
         verify(Session.project !== null && Session.project.experiments.count > 0, "The collection archive opens a real populated project");
     }

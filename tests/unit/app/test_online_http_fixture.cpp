@@ -2,9 +2,11 @@
 // Replace only the per-search transport in the Qt test binary. All requests,
 // callbacks and model updates still use the shipped OnlineSearch implementation.
 #include "online_search.hpp"
+#include "online_sources.hpp"
 #include "session.hpp"
 #include "collection_examples.hpp"
 #include <QFile>
+#include <QFileInfo>
 #include <QDirIterator>
 #include "project_view_model.hpp"
 
@@ -144,6 +146,15 @@ public:
         transport = example_network_;
         return true;
     }
+    // Startup stays on local files until both transports are injected. Restoring
+    // the configured default locations then exercises real discovery without sockets.
+    Q_INVOKABLE void useDefaultLocations(edi_app::Session* session) {
+        auto* model = session->onlineSources();
+        auto& sources = const_cast<QList<edi_app::OnlineSourcesModel::Source>&>(model->sources());
+        for (auto& source : sources)
+            if (source.id != QStringLiteral("cod")) source.override.clear();
+        emit model->sourcesChanged();
+    }
     Q_INVOKABLE bool exampleKnown(edi_app::Session* session, const QString& id) const {
         return (session->*sessionExamples(SessionSlot{}))->knows(id);
     }
@@ -167,16 +178,19 @@ public:
         return true;
     }
     Q_INVOKABLE QStringList exampleRequests() const { return example_network_->requests; }
-    Q_INVOKABLE bool enqueueFile(int status, const QUrl& url) {
+    Q_INVOKABLE bool enqueueFile(int status, const QUrl& url, bool deferred = false) {
         QFile file(url.toLocalFile());
         if (!file.open(QIODevice::ReadOnly)) return false;
-        network_->responses.enqueue({status, file.readAll()});
+        network_->responses.enqueue({status, file.readAll(), 0, deferred});
         return true;
     }
 
+    Q_INVOKABLE qint64 fileBytes(const QUrl& url) const {
+        return QFileInfo(url.toLocalFile()).size();
+    }
     Q_INVOKABLE bool writableWorkingFiles(edi_app::Session* session) const {
         if (!session || !session->project()) return false;
-        const QString root = QString::fromStdString(session->project()->project().scan_data_root);
+        const QString root = session->project()->path();
         if (!QFileInfo(root).isDir()) return false;
         bool observed = false;
         QDirIterator files(root, QDir::Files, QDirIterator::Subdirectories);
@@ -199,12 +213,18 @@ public:
     Q_INVOKABLE void clear() {
         network_->requests.clear();
         network_->responses.clear();
+        network_->held.clear();
     }
 
-    Q_INVOKABLE void enqueue(int status, const QString& body) {
-        network_->responses.enqueue({status, body.toUtf8()});
+    Q_INVOKABLE void enqueue(int status, const QString& body, bool deferred = false) {
+        network_->responses.enqueue({status, body.toUtf8(), 0, deferred});
     }
 
+    Q_INVOKABLE bool release(int index) {
+        if (index < 0 || index >= network_->held.size() || !network_->held[index]) return false;
+        network_->held[index]->finish();
+        return true;
+    }
     Q_INVOKABLE void enqueueError(int status, int error) {
         network_->responses.enqueue({status, {}, error});
     }
