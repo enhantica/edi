@@ -129,3 +129,9 @@ large offline bootstrap. Publish testing components only on an explicit manual w
 after all platform checks succeed. Publication shares the docs/web app lock and preserves their content.
 Testing component identities use `0.0.RUN.ATTEMPT` to avoid overwriting earlier downloads on a retry;
 they are development candidates, not entries in the calendar release history.
+
+Some split conda runtime outputs omit upstream licence texts entirely, rather than merely losing the
+cache. Keep checksum-pinned upstream GCC runtime and FreeType notices for the exact installed package
+versions and declared licences in `tools/installer/licenses`. An unknown version must acquire its own
+notices or fail; it cannot borrow a nearby version's texts. Keep the FreeType acknowledgement alongside
+its unchanged upstream notices. Windows environment keys are read without assuming their letter case.

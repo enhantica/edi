@@ -271,3 +271,29 @@ def test_bundle_audit_counts_one_library_and_keeps_required_widgets(tmp_path):
     result = AUDIT.audit_bundle(tmp_path)
     assert result['regular_file_bytes'] == library.stat().st_size
     assert result['qt_modules'] == [library.name]
+
+
+def test_windows_clean_environment_accepts_uppercase_systemroot(tmp_path):
+    with (
+        mock.patch.object(PACKAGE, 'SYSTEM', 'windows'),
+        mock.patch.dict(os.environ, {'SYSTEMROOT': str(tmp_path)}, clear=True),
+    ):
+        env = PACKAGE.clean_environment(tmp_path / 'home')
+    assert env['PATH'] == str(tmp_path / 'System32') + os.pathsep + str(tmp_path)
+
+
+@pytest.mark.parametrize('name', ['libgcc', 'libstdcxx', 'libgomp', 'libfreetype6'])
+def test_split_runtime_packages_retain_the_exact_upstream_licenses(tmp_path, name):
+    policy = PACKAGE.json.loads(
+        (PACKAGE.ROOT / 'tools/installer/licenses/manifest.json').read_text()
+    )
+    package = policy['packages'][name]
+    metadata = {'name': name, 'version': package['version'], 'license': package['license']}
+    assert PACKAGE.bundled_runtime_licenses(metadata, tmp_path / 'notices')
+    for filename in package['files']:
+        assert (
+            PACKAGE.sha256(tmp_path / 'notices' / filename) == policy['files'][filename]['sha256']
+        )
+    metadata['version'] = '999.0.0'
+    assert not PACKAGE.bundled_runtime_licenses(metadata, tmp_path / 'wrong-version')
+    assert not (tmp_path / 'wrong-version').exists()

@@ -202,8 +202,32 @@ def acquire_installer_licenses(tools: Path, destination: Path) -> None:
     shutil.rmtree(probe)
 
 
+def bundled_runtime_licenses(metadata: dict, target: Path) -> bool:
+    """Supply verified upstream notices omitted by known split runtime packages."""
+    root = ROOT / 'tools/installer/licenses'
+    policy = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+    package = policy['packages'].get(metadata['name'])
+    if (
+        not package
+        or metadata['version'] != package['version']
+        or metadata['license'] != package['license']
+    ):
+        return False
+    target.mkdir(parents=True)
+    for name in package['files']:
+        source = root / name
+        if source.is_symlink() or sha256(source) != policy['files'][name]['sha256']:
+            raise RuntimeError('Pinned upstream dependency licence differs')
+        shutil.copy2(source, target / name)
+    shutil.copy2(root / 'NOTICE', target / 'NOTICE')
+    return True
+
+
 def acquire_package_licenses(metadata: dict, destination: Path, target: Path) -> None:
     """Recover pinned licence files when CI restores the environment without its cache."""
+    if bundled_runtime_licenses(metadata, target):
+        return
+    print('Acquire dependency licences:', metadata['name'], flush=True)
     url = metadata['url']
     if not url.startswith('https://conda.anaconda.org/conda-forge/'):
         raise RuntimeError('Dependency licences must use the pinned conda-forge archive')
@@ -234,7 +258,7 @@ def acquire_package_licenses(metadata: dict, destination: Path, target: Path) ->
                     with info.extractfile(member) as source, path.open('wb') as sink:
                         shutil.copyfileobj(source, sink)
     if not any(target.rglob('*')):
-        raise RuntimeError('Dependency archive contains no licence files')
+        raise RuntimeError(f'Dependency archive contains no licence files: {metadata["name"]}')
 
 
 def installer_runtime_notices(
@@ -470,7 +494,12 @@ def clean_environment(home: Path) -> dict:
         if not key.startswith(('CONDA', 'PIXI', 'QT_', 'QML', 'EDI_', 'LD_', 'DYLD_', 'PYTHON'))
     }
     if SYSTEM == 'windows':
-        system = Path(env['SystemRoot'])
+        system_root = next(
+            (value for key, value in env.items() if key.casefold() == 'systemroot'), None
+        )
+        if not system_root:
+            raise RuntimeError('Windows installer check requires the operating-system directory')
+        system = Path(system_root)
         env['PATH'] = str(system / 'System32') + os.pathsep + str(system)
     else:
         env['PATH'] = '/usr/bin:/bin:/usr/sbin:/sbin'
