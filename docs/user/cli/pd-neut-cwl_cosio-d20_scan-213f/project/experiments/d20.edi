@@ -16,7 +16,7 @@ _peak.broad_gauss_u 0.273527()
 _peak.broad_gauss_v -0.589718()
 _peak.broad_gauss_w 0.413007()
 _peak.broad_lorentz_x 0
-_peak.broad_lorentz_y 0.017548()
+_peak.broad_lorentz_y 0.0114
 _peak.asym_fcj_1 0.0619
 _peak.asym_fcj_2 0.0619
 _peak.cutoff_fwhm 8

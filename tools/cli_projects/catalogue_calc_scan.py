@@ -270,7 +270,9 @@ def pd_neut_cwl_cosio_d20_scan() -> dict[str, str]:
                 f'_peak.broad_gauss_v {free(-0.5)}',
                 f'_peak.broad_gauss_w {free(0.4)}',
                 '_peak.broad_lorentz_x 0',
-                f'_peak.broad_lorentz_y {free(0.01)}',
+                # Held at the 2.3 K example's fitted value: freed per file, it trades against U, V and W, and the
+                # fits then depend on the order the files are fitted in.
+                '_peak.broad_lorentz_y 0.0114',
                 '_peak.cutoff_fwhm 8',
             ],
             ['_instrument.setup_wavelength 1.87', f'_instrument.calib_twotheta_offset {free(0)}'],

@@ -25,12 +25,18 @@ over files 91 to 150), and the nuclear model cannot fit them. At 52.3 K they are
 
 ## The start
 
-The project starts the way a user's own measurement would: zero shift 0, the profile only roughly right (U, V, W, Y to
-one significant figure: 0.2, −0.5, 0.4, 0.01), Biso 0.5 on every site, the coordinates of the fitted structure rounded
+The project starts the way a user's own measurement would: zero shift 0, the profile only roughly right (U, V, W to
+one significant figure: 0.2, −0.5, 0.4), Biso 0.5 on every site, the coordinates of the fitted structure rounded
 to two decimals, scale 1 and a flat background of 360 counts (the tenth percentile of the first file). The template
 dataset, from which the run starts, is the first file (497.4 K).
 
 `project/` is built by `tools/cli_projects/build_catalogue_projects.py`.
+
+The Lorentzian width Y is held at 0.0114, the value the 2.3 K example
+([`pd-neut-cwl_cosio-d20_2k`](../pd-neut-cwl_cosio-d20_2k/PROVENANCE.md)) fits with Y free (0.0114(48)). Freed in
+every file, Y trades against U, V and W, and the fits then depend on the order the files are fitted in: one after
+another the summed reduced χ² was 1012.33, with two to five files at once 1018.43. Held, both give 1013.85 and agree
+within 0.0002 per file (the owner, 2026-11-04).
 
 ## The check against FullProf
 
