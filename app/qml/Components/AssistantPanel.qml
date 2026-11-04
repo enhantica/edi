@@ -19,7 +19,6 @@ Popup {
     readonly property real remainingPercent: usageWindow ? Math.max(0, Math.min(100, 100 - usageWindow.usedPercent)) : -1
     readonly property var accountData: panel.assistant.account
     readonly property string accountPlan: ApplicationInfo.assistantAccountPlan(panel)
-    readonly property string accountInitial: ApplicationInfo.assistantAccountInitial(panel)
     function usageResetLabel(value, now) {
         return ApplicationInfo.assistantUsageResetLabel(value, now);
     }
@@ -351,7 +350,7 @@ Popup {
                         objectName: "assistant.connection"
                         readonly property bool pendingConnection: panel.assistant.state === "connecting"
                         readonly property bool accountView: !pendingConnection && panel.assistant.connected
-                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? panel.accountInitial : qsTr("Connect ChatGPT")
+                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? qsTr("ChatGPT account") : qsTr("Connect ChatGPT")
                         enabled: !pendingConnection || panel.assistant.canCancel
                         leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
                         rightPadding: leftPadding
@@ -362,8 +361,8 @@ Popup {
                                 id: avatarText
                                 anchors.fill: parent
                                 visible: connectionButton.accountView
-                                text: panel.accountInitial.length ? panel.accountInitial : "user"
-                                font.family: panel.accountInitial.length ? EaStyle.Fonts.fontFamily : EaStyle.Fonts.iconsFamily
+                                text: "user"
+                                font.family: EaStyle.Fonts.iconsFamily
                                 font.pixelSize: EaStyle.Sizes.fontPixelSize
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter

@@ -5110,3 +5110,10 @@ the configured app build directory, so standalone observers use the same helper.
 Tests use a recorded initialize response and a runtime with child
 and grandchild processes that ignore EOF, then kill the native host or retire the
 agent. Platform execution is still required on each supported build kit.
+
+
+## Account button icon
+
+The connected account button uses the existing person glyph instead of an initial
+derived from email. Its accessible label is ChatGPT account. The original account
+popup still presents the verified email and plan; no full name is inferred.
