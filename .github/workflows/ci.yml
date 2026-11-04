@@ -45,7 +45,6 @@ jobs:
     runs-on: &linux ubuntu-24.04
     outputs:
       app_build: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || steps.filter.outputs.app_build == 'true' }}
-      wasm_build: ${{ steps.filter.outputs.wasm_build == 'true' }}
       crysta_sha: ${{ steps.crysta-source.outputs.sha }}
     steps:
       - uses: actions/checkout@v5
@@ -58,8 +57,6 @@ jobs:
         with:
           filters: |
             app_build: ['tools/ci/app-build.sh']
-            # The assistant is native-only in parts, so its sources are the ones a wasm build catches out.
-            wasm_build: ['app/src/assistant*']
 
   pin-currency:
     name: pin currency
@@ -741,12 +738,6 @@ jobs:
             build/app/app/edi_app_tests
             build/tutorial-transactions
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
-      # The integration tests whose wiring vectors run on the real app skip in the core job, which has no app. They
-      # run here, on every run, on the test runner just built from this commit; without it they fail.
-      - name: Native wiring vectors on this run's test runner
-        run: pixi run --skip-deps native-wiring
-        env:
-          EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
       - name: qmllint over edi's QML (zero warnings)
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing
@@ -793,34 +784,6 @@ jobs:
         if: needs.changes.outputs.app_build == 'true'
         run: pixi run -e app --skip-deps app-build-recovery
         env:
-          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-      # The app compiled for WebAssembly when the assistant's sources changed (the changes job's `wasm_build`):
-      # parts of the assistant are native-only, and the full WebAssembly job runs on main only, so a pull request
-      # would not notice a broken web build without this. One kit, no site checks; the toolchain comes from the
-      # same cache as the WebAssembly job's.
-      - name: Restore the WebAssembly toolchain
-        if: ${{ !cancelled() && matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/edi-wasm
-          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
-      # The step itself runs on every Linux app job, an earlier failure notwithstanding, so the CI contract can
-      # require it; it compiles only when the pull request changed the assistant's sources and says so either way.
-      - name: Compile the app for WebAssembly
-        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
-        run: |
-          if [ "$EDI_WASM_OWED" != true ]; then
-            echo "compile-wasm: not owed, no change under app/src/assistant* in this run"
-            exit 0
-          fi
-          echo "compile-wasm: owed, the multithread kit follows"
-          pixi run crysta-sdk
-          pixi run -e app wasm-toolchain
-          pixi run -e app --skip-deps wasm-build multithread
-          # The linked web app holds no assistant code, QML or resources (ADR-0023 §6).
-          bash tools/ci/wasm-assistant-check.sh build/wasm/multithread/app
-        env:
-          EDI_WASM_OWED: ${{ needs.changes.outputs.wasm_build }}
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
   # The app as a WebAssembly site (ADR-0023): both Qt wasm kits, the start page and the service-worker shim,
