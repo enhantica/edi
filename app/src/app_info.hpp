@@ -874,13 +874,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QList<Tutorial> tutorials() const;
     // The same tutorials as a list the Examples filters filter: by text and by the values of their tags.
     edi_app::ExampleListModel* tutorialCatalogue();
-    // Writes the tutorials' files (app/tutorials/files: lbco.cif, hrpt.xye) into `folder`; in the browser each goes to
-    // the browser to download instead. False if one could not be written.
-    Q_INVOKABLE bool saveTutorialFiles(const QUrl& folder) const;
-    // The same files in a temporary folder of their own, for Next on a step that loads one: a folder on the disk, or in
-    // the browser's memory, where its file chooser puts the files it opens. The folder as a local-file URL, as that
-    // chooser hands its files on; empty if one could not be written.
-    Q_INVOKABLE QUrl stageTutorialFiles() const;
     // What's new, newest first: the dated sections of the bundled changelog (website/surfaces/docs/changelog.md).
     Q_INVOKABLE QList<ChangeDay> changes() const;
     bool engineThreadsSelectable() const;

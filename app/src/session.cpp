@@ -13,9 +13,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QPair>
 #include <QPointer>
 #include <QUuid>
 #include <algorithm>
+#include <memory>
 #include <cmath>
 #include <exception>
 #include <string>
@@ -364,7 +366,7 @@ bool Session::openExample(const QString& exampleId) {
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
     if (openExampleNamed(exampleId)) {
-        qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
+        qCInfo(lcApp, "example requested: %s", qPrintable(exampleId));
         return true;
     }
     // A stale outer Open neither reports its successor's error as its own nor
@@ -890,36 +892,158 @@ bool Session::saveCopy(const QString& target, bool zip) {
 QString Session::examplesNotice() const { return collection_examples_->notice(); }
 
 bool Session::openExampleNamed(const QString& exampleId) {
-    // An example's project comes from the collections (ADR-0068): its zip is downloaded, then opened as any
-    // archive; the open follows the download, so a failure is reported through loadFailed rather than a return
-    // value. A catalogue example no answering source holds fails at once, with the reason the sources gave.
-    if (!collection_examples_->knows(exampleId)) {
-        if (!ExampleListModel::bundledIds().contains(exampleId)) {
-            setLastError(QStringLiteral("no example named '%1'").arg(exampleId));
-            return false;
-        }
-        const QString notice = collection_examples_->notice();
-        setLastError(!notice.isEmpty()                 ? notice
-                     : collection_examples_->loading() ? tr("The online sources are still being read; try again in a moment")
-                                                       : tr("No online source that answered holds the example '%1'").arg(exampleId));
+    // An example's project comes from the collections (ADR-0068): once the sources are read (again, after an
+    // outage), its zip is downloaded, checked and opened as any archive. The request keeps what it was made
+    // with: a tutorial's aside intent, and the project it was made against, so a later request, Close, Create
+    // or Open makes an older reply inert. The outcome arrives through loadFailed and exampleOpenFinished.
+    if (!collection_examples_->knows(exampleId) && !ExampleListModel::bundledIds().contains(exampleId) &&
+        !collection_examples_->loading()) {
+        setLastError(QStringLiteral("no example named '%1'").arg(exampleId));
         return false;
     }
     const QPointer<Session> receiver(this);
+    const bool aside = aside_next_;
+    const quint64 request = ++example_request_;
+    const auto binding = replacement_generation_;
+    const QPointer<ProjectViewModel> before(project_);
     opening_example_ = true;
     emit openingExampleChanged();
-    collection_examples_->fetchProject(exampleId, [receiver, exampleId](const QUrl& archive, const QString& error) {
-        if (!receiver) return;
+    const auto finish = [receiver, exampleId](bool opened, const QString& message) {
         receiver->opening_example_ = false;
         emit receiver->openingExampleChanged();
-        if (!error.isEmpty()) {
-            receiver->setLastError(error);
-            emit receiver->loadFailed(error);
+        if (!opened && !message.isEmpty()) {
+            receiver->setLastError(message);
+            emit receiver->loadFailed(message);
+        }
+        emit receiver->exampleOpenFinished(exampleId, opened);
+    };
+    // Still this request, against the project it was made for: a newer example request owns the outcome, and a
+    // project replaced in between is not replaced again.
+    const auto current = [receiver, request, binding, before] {
+        return receiver && receiver->example_request_ == request && receiver->replacement_generation_ == binding &&
+               receiver->project_ == before;
+    };
+    collection_examples_->whenRead(exampleId, [receiver, exampleId, aside, request, binding, before, finish, current] {
+        if (!receiver || receiver->example_request_ != request) return;
+        if (!current()) {
+            qCInfo(lcApp, "example %s not opened: the project changed meanwhile", qPrintable(exampleId));
+            finish(false, {});
             return;
         }
-        if (receiver->openProjectAt(archive)) qCInfo(lcApp, "collection example opened: %s", qPrintable(exampleId));
-        else emit receiver->loadFailed(receiver->last_error_.isEmpty() ? tr("The project could not be opened") : receiver->last_error_);
+        if (!receiver->collection_examples_->knows(exampleId)) {
+            const QString notice = receiver->collection_examples_->notice();
+            finish(false, !notice.isEmpty() ? notice : tr("No online source that answered holds the example '%1'").arg(exampleId));
+            return;
+        }
+        receiver->collection_examples_->fetchProject(exampleId, [receiver, exampleId, aside, request, finish, current](const QUrl& archive, const QString& error) {
+            if (!receiver || receiver->example_request_ != request) return;
+            if (!current()) {
+                qCInfo(lcApp, "example %s not opened: the project changed meanwhile", qPrintable(exampleId));
+                finish(false, {});
+                return;
+            }
+            if (!error.isEmpty()) {
+                finish(false, error);
+                return;
+            }
+            if (aside && receiver->aside_) {
+                finish(false, QStringLiteral("a tutorial already holds a project aside"));
+                return;
+            }
+            receiver->aside_next_ = aside;
+            const bool opened = receiver->openProjectAt(archive);
+            receiver->aside_next_ = false;
+            if (opened) qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
+            finish(opened, opened ? QString() : receiver->last_error_.isEmpty() ? tr("The project could not be opened") : receiver->last_error_);
+        });
     });
     return true;
+}
+
+namespace {
+// The tutorials' two inputs, by their ids in the collection and the names the tutorial text gives them.
+const QList<QPair<QString, QString>> kTutorialFiles{{QStringLiteral("tutorial-lbco"), QStringLiteral("lbco.cif")},
+                                                    {QStringLiteral("tutorial-hrpt"), QStringLiteral("hrpt.xye")}};
+}  // namespace
+
+// Downloads the tutorials' files one after the other; `done` gets every (name, bytes) pair or the first error.
+void Session::fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done) {
+    const QPointer<Session> receiver(this);
+    auto fetched = std::make_shared<QList<QPair<QString, QByteArray>>>();
+    auto step = std::make_shared<std::function<void(int)>>();
+    *step = [receiver, fetched, step, done](int index) {
+        if (!receiver) return;
+        if (index == kTutorialFiles.size()) {
+            done(*fetched, {});
+            return;
+        }
+        const QString id = kTutorialFiles[index].first, name = kTutorialFiles[index].second;
+        receiver->collection_examples_->whenRead(id, [receiver, fetched, step, done, index, id, name] {
+            if (!receiver) return;
+            receiver->collection_examples_->fetchBytes(id, [receiver, fetched, step, done, index, name](const QByteArray& bytes, const QString& error) {
+                if (!receiver) return;
+                if (!error.isEmpty()) {
+                    done({}, tr("%1 could not be fetched: %2").arg(name, error));
+                    return;
+                }
+                fetched->append({name, bytes});
+                (*step)(index + 1);
+            });
+        });
+    };
+    (*step)(0);
+}
+
+void Session::stageTutorialFiles() {
+    const QString folder = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).filePath(QStringLiteral("easydiffraction-tutorial"));
+    fetchTutorialFiles([this, folder](const QList<QPair<QString, QByteArray>>& files, const QString& error) {
+        if (!error.isEmpty()) {
+            emit tutorialFilesFailed(error);
+            return;
+        }
+        if (!QDir().mkpath(folder)) {
+            emit tutorialFilesFailed(tr("The folder %1 could not be made").arg(folder));
+            return;
+        }
+        for (const auto& [name, bytes] : files) {
+            QFile written(QDir(folder).filePath(name));
+            if (!written.open(QIODevice::WriteOnly | QIODevice::Truncate) || written.write(bytes) != bytes.size()) {
+                emit tutorialFilesFailed(tr("%1 could not be written").arg(written.fileName()));
+                return;
+            }
+        }
+        emit tutorialFilesStaged(QUrl::fromLocalFile(folder));
+    });
+}
+
+void Session::saveTutorialFiles(const QUrl& folder) {
+    const bool download = edi_app::WebFiles::available();
+    const QString target = folder.toLocalFile();
+    fetchTutorialFiles([this, download, target](const QList<QPair<QString, QByteArray>>& files, const QString& error) {
+        if (!error.isEmpty()) {
+            emit tutorialFilesFailed(error);
+            return;
+        }
+        if (!download && !QDir().mkpath(target)) {
+            emit tutorialFilesFailed(tr("The folder %1 could not be made").arg(target));
+            return;
+        }
+        for (const auto& [name, bytes] : files) {
+            if (download) {
+                if (!edi_app::WebFiles::download(bytes, name)) {
+                    emit tutorialFilesFailed(tr("%1 could not be downloaded").arg(name));
+                    return;
+                }
+                continue;
+            }
+            QFile written(QDir(target).filePath(name));
+            if (!written.open(QIODevice::WriteOnly | QIODevice::Truncate) || written.write(bytes) != bytes.size()) {
+                emit tutorialFilesFailed(tr("%1 could not be written").arg(written.fileName()));
+                return;
+            }
+        }
+        emit tutorialFilesSaved();
+    });
 }
 
 struct Session::ProjectCreationOutcome {
@@ -1040,10 +1164,12 @@ bool Session::openExampleAside(const QString& exampleId) {
         setLastError(QStringLiteral("a tutorial already holds a project aside"));
         return false;  // never a second one: the first would be lost
     }
+    // Started, not done: the download lands later, and the project is set aside as the example's opens
+    // (exampleOpenFinished tells, hasProjectSetAside then holds).
     aside_next_ = true;
-    const bool opened = openExample(exampleId);
+    const bool started = openExample(exampleId);
     aside_next_ = false;
-    return opened && aside_.has_value();
+    return started;
 }
 
 bool Session::createProjectAside(const QString& name, const QString& description) {

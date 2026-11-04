@@ -8,6 +8,7 @@
 #include <QLoggingCategory>
 
 #include <stdexcept>
+#include <utility>
 
 #include "edi/online_index.hpp"
 #include "online_fetch.hpp"
@@ -35,12 +36,19 @@ void CollectionExamples::refresh() {
     items_.clear();
     known_.clear();
     failed_.clear();
-    answered_ = false;
+    projects_ = 0;
     emit itemsChanged();
-    const QList<OnlineSourcesModel::Source> sources =
-        sources_ ? sources_->sourcesFor(QStringLiteral("project")) : QList<OnlineSourcesModel::Source>{};
+    // Every enabled source, once, whatever kinds it holds: the tutorials take a structure and a pattern, the
+    // Examples list the projects.
+    QList<OnlineSourcesModel::Source> sources;
+    if (sources_)
+        for (const char* kind : {"project", "structure", "experiment", "data"})
+            for (const OnlineSourcesModel::Source& source : sources_->sourcesFor(QString::fromLatin1(kind)))
+                if (std::none_of(sources.cbegin(), sources.cend(), [&source](const OnlineSourcesModel::Source& s) { return s.id == source.id; }))
+                    sources.append(source);
     pending_ = static_cast<int>(sources.size());
     updateNotice();
+    if (pending_ == 0) settle();
     for (const OnlineSourcesModel::Source& source : sources) {
         const QString base = sources_->urlOf(source.id);
         const QString sourceName = source.name;
@@ -53,17 +61,23 @@ void CollectionExamples::refresh() {
                           if (!error.isEmpty()) throw std::runtime_error(error.toStdString());
                           index = edi::online::parse_index(bytes.toStdString());
                       } catch (const std::exception& problem) {
-                          qCInfo(lcCollection, "examples from %s not read: %s", qPrintable(sourceName), problem.what());
+                          qCInfo(lcCollection, "collection %s not read: %s", qPrintable(sourceName), problem.what());
                           failed_.append(sourceName + QStringLiteral(": ") + QString::fromUtf8(problem.what()));
                           updateNotice();
+                          if (pending_ == 0) settle();
                           return;
                       }
-                      answered_ = true;
                       const QStringList bundled = ExampleListModel::bundledIds();
                       for (const edi::online::Entry& entry : index.entries) {
-                          if (entry.kind != "project" || entry.files.empty()) continue;
+                          if (entry.files.empty()) continue;
                           const QString id = QString::fromStdString(entry.id);
                           if (known_.contains(id)) continue;  // the first source holding an id serves it
+                          const edi::online::File& file = entry.files.front();
+                          known_.insert(id, {base, QString::fromStdString(file.path), QString::fromStdString(entry.kind), file.bytes,
+                                             QString::fromStdString(file.sha256)});
+                          if (entry.kind != "project") continue;
+                          ++projects_;
+                          if (bundled.contains(id)) continue;  // a catalogue row already stands for it
                           ExampleListModel::Item item;
                           item.id = id;
                           item.title = QString::fromStdString(entry.name.empty() ? entry.id : entry.name);
@@ -83,18 +97,18 @@ void CollectionExamples::refresh() {
                                                   tag("facilities", entry.facility), tag("instruments", entry.instrument)})
                               if (!t.isEmpty()) item.tags.append(t);
                           item.tags.append(QStringLiteral("source:") + sourceName);
-                          known_.insert(id, {base, QString::fromStdString(entry.files.front().path), item.title});
-                          if (!bundled.contains(id)) items_.append(item);  // a catalogue row already stands for it
+                          items_.append(item);
                       }
                       updateNotice();
                       emit itemsChanged();
+                      if (pending_ == 0) settle();
                   });
     }
 }
 
 void CollectionExamples::updateNotice() {
     QString notice;
-    if (!answered_ && pending_ == 0)
+    if (pending_ == 0 && projects_ == 0)
         notice = failed_.isEmpty()
                      ? tr("No online source holds example projects; enable or add one in Preferences")
                      : tr("The example projects can't be downloaded. %1").arg(failed_.join(QStringLiteral("; ")));
@@ -103,14 +117,52 @@ void CollectionExamples::updateNotice() {
     emit noticeChanged();
 }
 
-void CollectionExamples::fetchProject(const QString& id, ProjectDone done) {
+// Every request that waited for the sources to be read gets its answer, in order; a request made while they run
+// joins the next round.
+void CollectionExamples::settle() {
+    const QList<std::function<void()>> waiting = std::exchange(waiting_, {});
+    for (const std::function<void()>& then : waiting) then();
+}
+
+void CollectionExamples::whenRead(const QString& id, std::function<void()> then) {
+    if (known_.contains(id)) {
+        then();
+        return;
+    }
+    waiting_.append(std::move(then));
+    if (pending_ == 0) refresh();
+}
+
+QString CollectionExamples::fileName(const QString& id) const {
+    const auto it = known_.constFind(id);
+    return it == known_.constEnd() ? QString() : QFileInfo(it->path).fileName();
+}
+
+void CollectionExamples::fetchBytes(const QString& id, BytesDone done) {
     const auto it = known_.constFind(id);
     if (it == known_.constEnd()) {
-        done({}, tr("No collection example named '%1'").arg(id));
+        done({}, tr("No online source that answered holds '%1'").arg(id));
         return;
     }
     const Known known = *it;
-    fetch_url(this, network_, joined_url(known.source, known.path), [this, known, done](const QByteArray& bytes, const QString& error, bool) {
+    fetch_url(this, network_, joined_url(known.source, known.path), [known, done](const QByteArray& bytes, const QString& error, bool) {
+        if (!error.isEmpty()) {
+            done({}, error);
+            return;
+        }
+        // The index's size and digest, when it states them, before the file is used.
+        const QString problem = content_problem(bytes, known.bytes, known.sha256, QFileInfo(known.path).fileName());
+        if (!problem.isEmpty()) {
+            done({}, problem);
+            return;
+        }
+        done(bytes, {});
+    });
+}
+
+void CollectionExamples::fetchProject(const QString& id, ProjectDone done) {
+    const QString name = fileName(id);
+    fetchBytes(id, [this, name, done](const QByteArray& bytes, const QString& error) {
         if (!error.isEmpty()) {
             done({}, error);
             return;
@@ -125,7 +177,7 @@ void CollectionExamples::fetchProject(const QString& id, ProjectDone done) {
         int n = 0;
         while (folder.exists(sub)) sub += QString::number(++n);
         folder.mkdir(sub);
-        const QString path = folder.filePath(sub + u'/' + QFileInfo(known.path).fileName());
+        const QString path = folder.filePath(sub + u'/' + name);
         QFile out(path);
         if (!out.open(QIODevice::WriteOnly) || out.write(bytes) != bytes.size()) {
             done({}, tr("The download could not be written to %1").arg(path));

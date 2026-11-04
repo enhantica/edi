@@ -348,8 +348,9 @@ endforeach()
 # The example projects themselves are not bundled: the app downloads them from the data collections (ADR-0068);
 # only the catalogue (metadata, tags, the id list) is.
 qt_add_resources(edi_app_module "edi_tutorials" PREFIX "/edi/tutorials"
-                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/tutorials FILES tutorials/manifest.json tutorials/tour.json
-                 tutorials/files/lbco.cif tutorials/files/hrpt.xye)
+                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/tutorials FILES tutorials/manifest.json tutorials/tour.json)
+# The tutorials' two input files (tutorials/files) are not bundled either: the session fetches them from the
+# collection, which `build_collection.py populate` writes them into.
 qt_add_resources(edi_app_module "edi_documentation_script" PREFIX "/edi/docs"
                  BASE ${CMAKE_CURRENT_SOURCE_DIR}/docs FILES docs/y2o3-spodi.js)
 qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"

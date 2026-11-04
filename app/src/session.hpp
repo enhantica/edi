@@ -2,6 +2,8 @@
 #ifndef EDI_APP_SESSION_HPP
 #define EDI_APP_SESSION_HPP
 
+#include <QPair>
+#include <QByteArray>
 #include <QObject>
 #include <QPointer>
 #include <optional>
@@ -136,6 +138,12 @@ class Session : public QObject {
     bool hasProject() const { return project_ != nullptr; }
     bool openingExample() const { return opening_example_; }
     QString examplesNotice() const;
+    /// The tutorials' files (lbco.cif, hrpt.xye) from the collection into a temporary folder of their own, for Next on
+    /// a step that loads one; tutorialFilesStaged brings the folder, tutorialFilesFailed the reason.
+    Q_INVOKABLE void stageTutorialFiles();
+    /// The same files written where the user chose, or handed to the browser to download; tutorialFilesSaved or
+    /// tutorialFilesFailed follows.
+    Q_INVOKABLE void saveTutorialFiles(const QUrl& folder);
     QString lastError() const { return last_error_; }
     ExampleListModel* examples() const { return examples_; }
     OnlineSourcesModel* onlineSources() const { return online_sources_; }
@@ -256,6 +264,11 @@ class Session : public QObject {
     void hasProjectChanged();
     void openingExampleChanged();
     void examplesNoticeChanged();
+    /// An example requested through openExample or openExampleAside has opened, or not; loadFailed names why.
+    void exampleOpenFinished(const QString& exampleId, bool opened);
+    void tutorialFilesStaged(const QUrl& folder);
+    void tutorialFilesSaved();
+    void tutorialFilesFailed(const QString& message);
     void projectSetAsideChanged();
     void projectSetAsideNameChanged();
     void projectSetAsideModifiedChanged();
@@ -332,6 +345,8 @@ class Session : public QObject {
     OnlineSearch* online_search_ = nullptr;
     CollectionExamples* collection_examples_ = nullptr;
     bool opening_example_ = false;
+    quint64 example_request_ = 0;
+    void fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done);
     WarningListModel* warnings_;
     int project_messages_ = 0;  // the keys of the project's messages
     QString opened_example_;

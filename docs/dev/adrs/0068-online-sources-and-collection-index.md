@@ -3,9 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-11-04
 - **Implementation:** 🟡 Partially implemented — the app's Load ▾ From web… popup, the sources table, the index
-  reader, the index generator, the CLI and Python readers, the Examples list from the collections and the example
-  projects downloaded instead of bundled; the mirror `data.easydiffraction.org` and the tutorials' two input files,
-  still bundled, remain
+  reader, the index generator, the CLI and Python readers, the Examples list from the collections, the example
+  projects and the tutorials' inputs downloaded instead of bundled; the mirror `data.easydiffraction.org` remains
 - **Priority:** High
 
 ## Context
@@ -66,7 +65,15 @@ no database server.
   downloading its zip from the first enabled source whose index holds the id, so the desktop and the web app ship
   the same binary and the same data repository serves both. A source's other `project` entries join the list as
   rows of their own; `edi.load_collection` and `edi collection list|find|fetch` read the same index.
+- Every download, in the popup, the Examples list, the tutorials, Python and the CLI, is compared with the size and
+  digest its index entry records before a loader sees it; a mismatch is refused with the file named. A file path in
+  an index follows one portable grammar (segments of letters, digits, `.`, `_`, `~` and `-`, each starting with a
+  letter or digit, joined by single slashes), so no drive, scheme, backslash or parent segment reaches a join.
 - When no source holding projects can be read, the Examples list says so above the rows and opening an example
-  fails with the sources' errors; nothing is cached, so the next read tries again.
+  fails with the sources' errors; nothing is cached, and the next Open reads the sources again before giving up.
+- An example open is asynchronous: the request keeps a tutorial's aside intent and the project it was made against,
+  so a later request, Close, Create or Open leaves an older reply inert; `exampleOpenFinished` reports the outcome
+  and the Interface tour begins once its example has opened aside. The tutorials' two inputs are staged or saved
+  from the collection when a step needs them.
 - The collection is `enhantica/edi-data` (GitHub raw as the built-in source, `data.easydiffraction.org` as the
   mirror); `tools/data/build_collection.py populate` writes its content from the examples and the tutorial files.

@@ -331,45 +331,6 @@ QList<ChangeDay> injected_changes(const QByteArray& given) {
 
 }  // namespace
 
-namespace {
-
-// Writes the tutorials' files into `folder`, made if missing, or hands each to the browser to download.
-bool write_tutorial_files(const QString& folder, bool download) {
-    const QDir source(QStringLiteral(":/edi/tutorials/files"));
-    if (!download && !QDir().mkpath(folder)) {
-        return false;
-    }
-    bool saved = true;
-    for (const QString& name : source.entryList(QDir::Files)) {
-        QFile file(source.filePath(name));
-        if (!file.open(QIODevice::ReadOnly)) {
-            saved = false;
-            continue;
-        }
-        const QByteArray data = file.readAll();
-        if (download) {
-            saved = edi_app::WebFiles::download(data, name) && saved;
-            continue;
-        }
-        QFile written(QDir(folder).filePath(name));
-        saved = written.open(QIODevice::WriteOnly | QIODevice::Truncate) && written.write(data) == data.size() && saved;
-    }
-    return saved;
-}
-
-}  // namespace
-
-bool ApplicationInfo::saveTutorialFiles(const QUrl& folder) const {
-    const bool download = edi_app::WebFiles::available();
-    return write_tutorial_files(download ? QString() : folder.toLocalFile(), download);
-}
-
-QUrl ApplicationInfo::stageTutorialFiles() const {
-    const QString folder = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
-                               .filePath(QStringLiteral("easydiffraction-tutorial"));
-    return write_tutorial_files(folder, false) ? QUrl::fromLocalFile(folder) : QUrl();
-}
-
 QList<ChangeDay> ApplicationInfo::changes() const {
     QList<ChangeDay> days;
     const QByteArray given = qgetenv("EDI_CHANGELOG_JSON");
