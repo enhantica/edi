@@ -749,3 +749,11 @@ InstrumentBase.facility	other-public
 InstrumentBase.name	other-public
 TofPdInstrument.facility	other-public
 TofPdInstrument.name	other-public
+
+Collection	other-public
+Collection.entries	other-public
+Collection.fetch	other-public
+Collection.find	other-public
+Collection.search	other-public
+Collection.source	other-public
+load_collection	other-public

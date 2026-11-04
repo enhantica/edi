@@ -62,7 +62,7 @@ class OnlineHost:
 
 
 @contextmanager
-def run_online_host(mailbox, *, load_groups_only=False, offline_http=False):
+def run_online_host(mailbox, *, load_groups_only=False, offline_http=False, failure_entries=True):
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert runner.is_file(), 'Online loading requires the built production Qt host'
     test_file = mailbox / 'tst_online_session.qml'
@@ -76,7 +76,7 @@ def run_online_host(mailbox, *, load_groups_only=False, offline_http=False):
     )
     fixtures = ROOT / 'tests/fixtures/online_sources'
     collection = fixtures / 'easydiffraction'
-    if load_groups_only:
+    if load_groups_only and failure_entries:
         collection = mailbox / 'collection'
         shutil.copytree(fixtures / 'easydiffraction', collection)
         index = collection / 'index.json'
@@ -102,7 +102,7 @@ def run_online_host(mailbox, *, load_groups_only=False, offline_http=False):
         'EDI_ONLINE_SOURCES': sources,
         'OMP_NUM_THREADS': '1',
     }
-    command = [str(runner), '-input', str(test_file), '-o', '-,txt']
+    command = [str(runner), '-input', str(test_file), '-o', '-,txt', '-maxwarnings', '0']
     with subprocess.Popen(
         command,
         cwd=ROOT,
