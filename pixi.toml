@@ -239,6 +239,7 @@ CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
 CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
 [feature.app.tasks]
+release-check = "python -m pytest tests/fixtures/releases/test_calendar.py --noconftest -o addopts= -q"
 installer-check = "python -m pytest tests/fixtures/installer/test_packaging.py --noconftest -o addopts= -q"
 # Build the app host into build/app (crysta first, through the same build-crysta.sh the core uses). Each app
 # step below builds first when run on its own (an incremental build, every time); a full sequence builds once
