@@ -65,9 +65,13 @@ Item {
             verify(description && copyright && bsd && gpl && dependencies, "The one About page shows its description, licence identifiers, third-party link and contributors together");
             const at = item => item.mapToItem(surface, 0, 0).y;
             verify(at(description) < at(bsd) && at(bsd) < at(dependencies) && at(dependencies) < at(copyright), "About puts the licence pair between the description and the contributors");
-            const before = at(bsd) - at(description) - description.height;
-            const after = at(copyright) - at(dependencies) - dependencies.height;
-            verify(Math.abs(before - after) < 1, "The pair of licence links has equal space above and below");
+            const feedback = findChild(dialog.contentItem, "about.tellUs");
+            const links = findChild(dialog.contentItem, "about.links");
+            verify(feedback && links, "About shows the feedback link before the licence group");
+            verify(at(description) < at(feedback) && at(feedback) < at(links), "Feedback sits between the description and the licence group");
+            const before = at(links) - at(feedback) - feedback.height;
+            const after = at(copyright) - at(links) - links.height;
+            verify(Math.abs(before - after) < 1, "The licence group has equal space between its current neighbours");
             for (const entry of [
                 {
                     label: bsd,

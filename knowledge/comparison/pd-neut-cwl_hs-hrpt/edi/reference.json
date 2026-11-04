@@ -1,32 +1,32 @@
 {
   "program": "edi",
-  "crysta_sdk": "build-e25adc97e4151b76b8e5f5b08b4fa7470b010977",
+  "crysta_sdk": "crysta 609586d9, built locally before its SDK build",
   "banks": [
     "hrpt"
   ],
   "n_free": 32,
   "status": "done",
   "converged": true,
-  "iterations": 9,
-  "rwp": 0.0530073931534382,
-  "reduced_chi_square": 2.151896014650302,
+  "iterations": 8,
+  "rwp": 0.0530074014684371,
+  "reduced_chi_square": 2.1518966897642184,
   "cells": {
     "hs": {
       "a": [
-        6.863988464089777,
-        0.00047040556920426154
+        6.863973377163915,
+        0.00047049425445940343
       ],
       "b": [
-        6.863988464089777,
-        0.00047040556920426154
+        6.863973377163915,
+        0.00047049425445940343
       ],
       "c": [
-        14.141697911274248,
-        0.0010627039588067416
+        14.141664701850852,
+        0.0010630078791545382
       ]
     }
   },
   "artifacts_sha256": {
-    "hrpt.csv": "d02278e69bf2eb78df5936ddf195d2a071f6f503ab117698988bd636aa880993"
+    "hrpt.csv": "b492d3fa256170f6c9c3b17f2289b62e6af209444e2cc0736f7f1a38ec64fe9b"
   }
 }

@@ -32,6 +32,23 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-pixi
+      # Without these two caches every run downloads the toolchain and compiles both kits from scratch (about 50 min).
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 1500M
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-wasm-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-wasm-${{ steps.ccache.outputs.key-prefix }}
+            ccache-wasm-${{ runner.os }}-${{ runner.arch }}-
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/edi-wasm
+          # The same key as ci.yml's app-wasm job, so the two share one copy.
+          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
       - name: Prepare notebooks
         run: pixi run notebook-prepare
       - name: Mint a crysta installation token

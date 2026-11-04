@@ -373,7 +373,7 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     )
     assert all(name in about for name in ('about.licencePopup', 'about.thirdPartyPopup')) and (
         'ApplicationInfo.licenceText(ApplicationInfo.appLicenceUrls[licenceEntry.index])' in about
-        and 'onActivated: thirdPartyPopup.open()' in about
+        and 'onClicked: thirdPartyPopup.open()' in about
     ), 'The identifier and third-party links open their actual local licence and component popups'
     notice = (ROOT / 'app/DISTRIBUTION-LICENSE.md').read_text()
     assert 'GPL-3.0' in notice and 'BSD 3-Clause' in notice, (

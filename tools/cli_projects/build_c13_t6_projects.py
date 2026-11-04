@@ -511,7 +511,7 @@ def write_project(case: str) -> Path:
     )
     (project / 'analysis' / 'analysis.edi').write_text(
         '_edi.schema_version 3\n\n_fitting_mode.type single\n\n'
-        '_minimizer.type crysta\n_minimizer.max_iterations 1000\n'
+        '_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.stop_rule shift_su\n'
         '_minimizer.chi_square_tolerance 1e-4\n',
         encoding='utf-8',
     )

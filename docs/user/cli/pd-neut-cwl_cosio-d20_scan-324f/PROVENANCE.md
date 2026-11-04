@@ -53,3 +53,7 @@ Biso follows it, and the stale fit-start row of Co2's Biso is gone. The terminal
 `project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
 title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
 `.facility` and `.polarisation` were added. Every other file is unchanged.
+
+**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
+change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
+machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 4 → 3.

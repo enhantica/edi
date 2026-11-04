@@ -176,7 +176,12 @@ def analysis(mode: str = 'single', *, weights=(), aliases=(), constraints=(), ex
     blocks = [
         ['_edi.schema_version 3'],
         [f'_fitting_mode.type {mode}'],
-        ['_minimizer.type crysta', '_minimizer.max_iterations 1000', *extra],
+        [
+            '_minimizer.type crysta',
+            '_minimizer.max_iterations 1000',
+            '_minimizer.stop_rule shift_su',
+            *extra,
+        ],
     ]
     if weights:
         blocks.append(

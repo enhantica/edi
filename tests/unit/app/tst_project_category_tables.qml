@@ -8,6 +8,8 @@ import ProjectTextAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import "RenderedTable.js" as Render
 import "UiInteraction.js" as Ui
+import "CaptionCapitalisation.js" as Captions
+import "NumericCellInk.js" as Ink
 
 TestCase {
     id: test
@@ -26,6 +28,8 @@ TestCase {
         id: application
         Main {}
     }
+    Component { id: dictionaryColumn; HeaderLabel {} }
+    Component { id: dictionaryField; ValueField {} }
     function init() {
         oldTheme = Style.Colors.theme;
         oldTextShow = Preferences.textShow;
@@ -61,6 +65,29 @@ TestCase {
         verify(waitForPolish(result), "The actual category completes layout before geometry is observed");
         return result;
     }
+    function test_dictionary_field_and_header_capitalisation_census() {
+        const items = proof.dictionary().items;
+        verify(items && items.length > 0, "The independently captured SDK dictionary enumerates the display captions");
+        const parent = appWindow.contentItem;
+        const header = dictionaryColumn.createObject(parent);
+        const field = dictionaryField.createObject(parent);
+        verify(header && field, "Both production dictionary consumers are instantiated");
+        const offenders = [];
+        for (const item of items) {
+            if (!item.display_name)
+                continue;
+            header.uid = item.uid;
+            field.uid = item.uid;
+            for (const [surface, text] of [["table", header.text], ["field", field.label]]) {
+                const expected = Captions.significant(item.display_name) ? item.display_name : Captions.expected(text);
+                if (!text || text !== expected)
+                    offenders.push(item.uid + " " + surface + ": " + text);
+            }
+        }
+        header.destroy();
+        field.destroy();
+        compare(offenders.length, 0, "Dictionary fields and headers start with a capital or a case-significant symbol: " + offenders.join(", "));
+    }
     function test_generated_single_row_and_loop_groups() {
         const supplied = SettingsProof.copyProject(proof.project());
         verify(SettingsProof.write(supplied, "analysis/analysis.edi", SettingsProof.text(supplied, "analysis/analysis.edi") + "\n_pattern_chart.x_axis d_spacing\n"), "The independent generated-enum witness declares a nondefault chart axis in Analysis");
@@ -77,7 +104,7 @@ TestCase {
         for (const field of fields) {
             const expected = reference.items.find(row => row.uid === field.objectName.slice("generated.".length));
             verify(expected !== undefined, "Every generated field belongs to the captured dictionary: " + field.objectName);
-            compare(field.label, expected.display_name, "Generated fields use the dictionary label");
+            compare(field.label, Captions.expected(expected.display_name), "Generated fields capitalise the dictionary label while preserving symbols");
             if (field.unit !== undefined)
                 compare(field.unit, expected.display_units ?? "", "Generated numeric fields show the dictionary units");
         }
@@ -159,6 +186,16 @@ TestCase {
             }
         }
     }
+    function numericProblems(table, category) {
+        const issues = [];
+        for (const cell of Render.descendants(table).filter(item =>
+                Ui.rendered(item) && !item.activeFocus && typeof item.positionToRectangle === "function")) {
+            const full = cell.valueText ?? cell.written ?? cell.text;
+            if (Ink.number(full))
+                issues.push(...Ink.problems(cell, full, category + " numeric cell " + cell.objectName));
+        }
+        return issues;
+    }
     function test_tables_use_one_layout_rule_in_both_themes() {
         let reached = 0;
         for (const theme of [Style.Colors.LightTheme, Style.Colors.DarkTheme]) {
@@ -182,6 +219,32 @@ TestCase {
             }
         }
         verify(reached > 0, "Both-theme geometry checks reach populated production table groups");
+    }
+    function test_numeric_table_census_draws_full_cells_at_default_width() {
+        let reached = 0;
+        const issues = [];
+        for (const theme of [Style.Colors.LightTheme, Style.Colors.DarkTheme]) {
+            Style.Colors.theme = theme;
+            for (const page of ["structure", "experiment", "analysis"]) {
+                click("appBar.tab." + page);
+                for (const tier of ["basic", "extras"]) {
+                    click("sideBar.tab." + tier);
+                    const groups = Render.descendants(Ui.page(appWindow)).filter(item => item.objectName.startsWith("group.") && Ui.inPane(Ui.target(item)));
+                    for (const current of groups) {
+                        if ("collapsed" in current)
+                            current.collapsed = false;
+                        Ui.scrollIntoView(current);
+                        verify(waitForPolish(current), "The real category is laid out in the selected theme");
+                        for (const table of Render.descendants(current).filter(item => item.sourceModel !== undefined && typeof item.itemAtIndex === "function")) {
+                            issues.push(...numericProblems(table, current.categoryId ?? current.objectName.slice(6)));
+                            ++reached;
+                        }
+                    }
+                }
+            }
+        }
+        verify(reached > 0, "The numeric census reaches production tables across both themes");
+        compare(issues.length, 0, "Rendered numeric cells keep the complete token within their column: " + issues.join("; "));
     }
     function test_file_categories_and_sidebar_order_follow_sdk_dictionary() {
         const reference = proof.dictionary();
