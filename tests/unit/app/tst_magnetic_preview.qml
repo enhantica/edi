@@ -258,7 +258,7 @@ TestCase {
         verify(project.length > 0 && SettingsProof.write(scratch, "project.edi", project + "\n_su_format.rule iucr_99\n"),
                "The witness explicitly uses upward rounding to two uncertainty digits");
         let structure = Probe.readFile("tests/fixtures/magnetic_pnma/moment-forms-monoclinic.edi");
-        if (kind === "fitted") {
+        if (kind === "fitted" || kind === "fitted-zero") {
             structure = structure.replace("_cell.angle_beta 120", "_cell.angle_beta 120.0(20)");
             const fit = Probe.readFile("tests/fixtures/magnetic_pnma/moment-known-covariance.edi");
             verify(fit.length > 0 && SettingsProof.write(scratch, "analysis/analysis.edi", fit),
@@ -268,6 +268,10 @@ TestCase {
             structure = structure.replace("_cell.angle_beta 120", "_cell.angle_beta 90")
                 .replace(/^CoWitness 9\.92820323.*$/m, "CoWitness 0.0(1) 0.0(2) " +
                          (kind === "pole" ? "2.0(3)" : "0.0(3)"));
+        }
+        if (kind === "fitted-zero") {
+            structure = structure.replace(/^CoWitness 9\.92820323.*$/m,
+                                          "CoWitness 0.0(1) 0.0(2) 0.0(3)");
         }
         verify(structure.length > 0 && SettingsProof.write(scratch, "structures/cosio.edi", structure),
                "The scratch project carries the intended magnetic uncertainty witness");
@@ -358,7 +362,25 @@ TestCase {
     function test_undetermined_moment_angles_have_no_uncertainty(data) {
         covarianceMomentWitness(data.kind);
         const {editors} = momentFormView("Spherical", false);
-        const angles = data.kind === "zero" ? [1, 2] : [2];
+        const angles = data.kind === "pole" ? [2] : [1, 2];
+        verifyUndeterminedAngles(editors, angles);
+    }
+    function test_zero_moment_modulus_uses_the_fitted_bound() {
+        covarianceMomentWitness("fitted-zero");
+        const spherical = momentFormView("Spherical", false);
+        // The fixture's component bounds are 0.1, 0.2 and 0.3 μB.
+        // Square them to get sigma(u), then sum the variance of ux + uy + uz.
+        const variance = .01 ** 2 + .04 ** 2 + .09 ** 2 +
+            2 * (-.25 * .01 * .04 + .55 * .01 * .09 + .15 * .04 * .09);
+        const bound = variance ** .25;
+        verify(matchesRoundedMomentUncertainty(spherical.editors[0].text, bound),
+               "The zero spherical magnitude shows its covariance bound: " + spherical.editors[0].text);
+        verifyUndeterminedAngles(spherical.editors, [1, 2]);
+        const crystal = momentFormView("Crystal axes", false);
+        verify(matchesRoundedMomentUncertainty(crystal.modulus.text, bound),
+               "The zero crystal-axis modulus shows the same covariance bound: " + crystal.modulus.text);
+    }
+    function verifyUndeterminedAngles(editors, angles) {
         const errors = [];
         for (const angle of angles) {
             const cell = editors[angle];
