@@ -140,7 +140,60 @@ EaComponents.ApplicationWindow {
         }
     ]
 
+    function updateApplication() {
+        AppState.afterChanges(() => {
+            if (DesktopUpdates.startUpdate()) {
+                window.quitting = true;
+                window.close();
+            } else {
+                updateLaunchFailed.open();
+            }
+        });
+    }
+    AppDialog {
+        id: updateLaunchFailed
+        objectName: "update.launchFailed"
+        title: qsTr("The updater did not open")
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: updateFailureText.implicitHeight
+        standardButtons: Dialog.Ok
+        EaElements.Label {
+            id: updateFailureText
+            text: DesktopUpdates.status
+            wrapMode: Text.Wrap
+            width: AppSizes.messagesDialogContentWidth
+        }
+    }
+
+    property string updateNotifiedVersion: ""
+    Connections {
+        target: DesktopUpdates
+        function onChanged() {
+            if (DesktopUpdates.available && Preferences.updateNotifications && window.updateNotifiedVersion !== DesktopUpdates.availableVersion) {
+                window.updateNotifiedVersion = DesktopUpdates.availableVersion;
+                updateAvailableNotice.open();
+            }
+        }
+    }
+    AppDialog {
+        id: updateAvailableNotice
+        objectName: "update.availableNotice"
+        title: qsTr("An update is available")
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: updateNoticeText.implicitHeight
+        standardButtons: Dialog.Close
+        EaElements.Label {
+            id: updateNoticeText
+            text: qsTr("EasyDiffraction %1 is available. Use Update when you are ready.").arg(DesktopUpdates.availableVersion)
+            wrapMode: Text.Wrap
+            width: AppSizes.messagesDialogContentWidth
+        }
+    }
+
     appBarRightButtons: [
+        UpdateButton {
+            onClicked: window.updateApplication()
+        },
         EaElements.ToolButton {
             id: assistantToggle
             KeyNavigation.tab: window.assistantPanelVisible && window.assistantPanelShown ? window.assistantPanel.firstFocusItem : null

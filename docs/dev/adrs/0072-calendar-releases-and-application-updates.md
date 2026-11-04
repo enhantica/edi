@@ -79,3 +79,24 @@ builds keep their git-derived identity. The installer source-build driver accept
 Validate the calendar syntax before generating C++ and fail configuration on invalid input. Release
 preparation must pass its single selected identity to both the app build and component packaging;
 a GitHub tag alone does not override a reused build directory's explicit version selection.
+
+## Desktop update interaction and history transition
+
+A managed numbered native release discovers its installed maintenance tool relative to the application.
+It checks the small release-history feed after startup and every six hours, independently of notification
+preferences. Requests have a timeout and a one-MiB limit; malformed metadata tries the configured mirror.
+The feed cannot supply an executable path or command. Developer and browser builds do not launch a
+native updater. Test mode suppresses automatic checks.
+
+Preferences controls optional notifications and offers Check now with a visible result. The red toolbar
+button remains available with notifications disabled and has explicit light/dark palettes. Updating
+first runs the existing project/text/tutorial save-or-discard guard. Cancellation leaves the app open;
+a maintenance-tool launch failure also leaves it open with an explanation. Only a successful launch
+allows the existing application shutdown and assistant lifetime guard to finish.
+
+Release preparation supplies the bundled version history through `EDI_RELEASE_HISTORY`. The existing
+What's new viewer uses a numeric release cursor for that history, retains its dated cursor for legacy
+builds, and includes skipped releases through the running version. The first numbered upgrade from a
+legacy dated installation shows numbered history; a fresh install records its current release without
+an automatic popup. Manual access and Show all changes remain available. Release titles are escaped
+before Markdown display.

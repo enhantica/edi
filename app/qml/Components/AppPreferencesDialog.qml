@@ -14,7 +14,7 @@ import edi.app
 // The application preferences (the base's Components/PreferencesDialog.qml, rebuilt from its pieces as the
 // About dialog is; edi ADR-0017 §12): the base's tabs and layout and a Projects tab, with edi's changes — no 1D
 // plotting row, a colour scheme and a Sidebar side selector in Appearance, the settings file in Develop, and what is
-// not available yet (update checks, zoom, language) shown disabled with a "Not available yet" tooltip. Every tab has
+// not available yet (zoom, language) shown disabled with a "Not available yet" tooltip. Every tab has
 // the same two columns, labels and controls. The base's
 // own dialog stays hidden: the app bar opens this one.
 AppDialog {
@@ -257,31 +257,37 @@ AppDialog {
             }
         }
 
-        // Updates: no update check exists yet, so both are disabled and the start check is off.
+        // Availability always updates in the background; this setting controls optional prompts.
         RowGrid {
             RowLabel {
-                enabled: false
-                text: qsTr("Check on application start") + ":"
+                text: qsTr("Notify about updates") + ":"
             }
-            NotAvailable {
-                RowCheckBox {
-                    objectName: "preferences.checkUpdateOnStart"
-                    enabled: false
-                    checked: false
-                }
+            RowCheckBox {
+                objectName: "preferences.checkUpdateOnStart"
+                enabled: DesktopUpdates.managed
+                checked: Preferences.updateNotifications
+                onToggled: Preferences.updateNotifications = checked
             }
-
             Item {
                 width: dialog.labelWidth
                 height: 1
             }
-            NotAvailable {
-                RowButton {
-                    objectName: "preferences.checkUpdateNow"
-                    enabled: false
-                    highlighted: true
-                    text: qsTr("Check now")
-                }
+            RowButton {
+                objectName: "preferences.checkUpdateNow"
+                enabled: DesktopUpdates.managed && !DesktopUpdates.checking
+                highlighted: true
+                text: DesktopUpdates.checking ? qsTr("Checking…") : qsTr("Check now")
+                onClicked: DesktopUpdates.checkNow()
+            }
+            Item {
+                width: dialog.labelWidth
+                height: 1
+            }
+            EaElements.Label {
+                objectName: "preferences.updateStatus"
+                width: dialog.controlWidth
+                wrapMode: Text.Wrap
+                text: DesktopUpdates.status
             }
         }
 

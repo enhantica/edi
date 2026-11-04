@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "app_info.hpp"
+#include "desktop_updates.hpp"
 #include "assistant_message_presentation.hpp"
 #include "assistant_panel_presentation.hpp"
 #if EDI_APP_ASSISTANT
@@ -339,6 +340,19 @@ QList<ChangeDay> ApplicationInfo::changes() const {
     const QByteArray given = qgetenv("EDI_CHANGELOG_JSON");
     if (!given.isEmpty()) {
         days = injected_changes(given);
+    }
+    if (given.isEmpty()) {
+        QFile history(QStringLiteral(":/edi/releases.json"));
+        if (history.open(QIODevice::ReadOnly)) {
+            const auto releases = edi_app::release_changes(history.readAll(), QString::fromUtf8(edi_app::app_version()));
+            for (const auto& release : releases) {
+                const auto item = release.toMap();
+                days.append(ChangeDay{item.value(QStringLiteral("date")).toString(),
+                                      item.value(QStringLiteral("text")).toString(),
+                                      item.value(QStringLiteral("version")).toString()});
+            }
+            if (!days.isEmpty()) return days;
+        }
     }
     // A `## YYYY-MM-DD` heading starts a day; its lines up to the next heading are its entries.
     static const QRegularExpression heading(QStringLiteral("^## (\\d{4}-\\d{2}-\\d{2})\\s*$"));

@@ -22,15 +22,22 @@ AppDialog {
     // The last date the user saw when the dialog opened; the days after it are new.
     property string seen: ""
     property bool showAll: false
+    readonly property bool releaseHistory: days.length > 0 && !!days[0].version
     // The new days, or the newest one when nothing is new, so the dialog never opens empty.
     readonly property var newDays: {
-        const unseen = days.filter(day => day.date > seen);
+        const unseen = days.filter(day => releaseHistory ? (seen === "" || DesktopUpdates.newerVersion(day.version, seen)) : day.date > seen);
         return unseen.length > 0 ? unseen : days.slice(0, 1);
     }
     readonly property var shownDays: showAll ? days : newDays
 
     // Keeps the newest date as seen, written to the settings file at once.
     function markSeen(date) {
+        if (releaseHistory) {
+            Preferences.whatsNewReleaseSeen = date;
+            Preferences.whatsNewSettings.setValue("releaseSeen", date);
+            Preferences.whatsNewSettings.sync();
+            return;
+        }
         Preferences.whatsNewSeen = date;
         // The settings store a changed property on a timer; the value goes to the file now.
         Preferences.whatsNewSettings.setValue("seen", date);
@@ -42,9 +49,15 @@ AppDialog {
         const all = ApplicationInfo.changes();
         if (all.length === 0)
             return;
-        if (Preferences.whatsNewSeen === "")
-            dialog.markSeen(all[0].date);
-        else if (all[0].date > Preferences.whatsNewSeen)
+        days = all;
+        const latest = releaseHistory ? all[0].version : all[0].date;
+        const previous = releaseHistory ? Preferences.whatsNewReleaseSeen : Preferences.whatsNewSeen;
+        if (previous === "") {
+            if (releaseHistory && Preferences.whatsNewSeen !== "")
+                dialog.open();
+            else
+                dialog.markSeen(latest);
+        } else if (releaseHistory ? DesktopUpdates.newerVersion(latest, previous) : latest > previous)
             dialog.open();
     }
 
@@ -66,13 +79,13 @@ AppDialog {
 
     onAboutToShow: {
         days = ApplicationInfo.changes();
-        seen = Preferences.whatsNewSeen;
+        seen = releaseHistory ? Preferences.whatsNewReleaseSeen : Preferences.whatsNewSeen;
         showAll = false;
     }
     // As soon as closing starts, which a close before the opening has finished also does.
     onAboutToHide: {
         if (days.length > 0)
-            dialog.markSeen(days[0].date);
+            dialog.markSeen(releaseHistory ? days[0].version : days[0].date);
     }
 
     Flickable {
@@ -112,7 +125,7 @@ AppDialog {
 
                     EaElements.Label {
                         font.bold: true
-                        text: day.modelData.date
+                        text: day.modelData.version ? `EasyDiffraction ${day.modelData.version} · ${day.modelData.date}` : day.modelData.date
                     }
                     // A plain Text, so a link opens only when it is a web address.
                     Text {

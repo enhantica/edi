@@ -14,8 +14,8 @@ import edi.app
 // values persist in the app's settings file (the base's Settings mechanism, `EaGlobals.Vars.settingsFile`;
 // a demo or test run has its own fresh file) under edi's own category, and `apply` hands them to the base
 // once the window is complete — after the base's hidden dialog has loaded its own, older keys, so edi's win.
-// What is not available yet is forced off whatever a settings file says: no update check at start, the
-// default zoom, English.
+// Unavailable zoom and language controls keep their defaults. Update availability is independent
+// of the optional notification setting (ADR-0072).
 QtObject {
     id: preferences
 
@@ -51,6 +51,8 @@ QtObject {
     property string feedbackAffiliation: ""
     // The newest changelog date the user has seen in What's new (edi ADR-0067), empty before the first start.
     property string whatsNewSeen: ""
+    property string whatsNewReleaseSeen: ""
+    property bool updateNotifications: true
     Component.onCompleted: RunLog.level = loggingLevel
     // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
@@ -110,9 +112,16 @@ QtObject {
         location: EaGlobals.Vars.settingsFile
         category: "WhatsNew"
         property alias seen: preferences.whatsNewSeen
+        property alias releaseSeen: preferences.whatsNewReleaseSeen
     }
 
     // ADR-0031: the Appearance tab's colour scheme, and the Projects tab's defaults for new projects.
+    property Settings updateSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Updates"
+        property alias notifications: preferences.updateNotifications
+    }
+
     property Settings appearanceSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "Appearance"

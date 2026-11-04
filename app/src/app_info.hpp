@@ -36,17 +36,19 @@ struct Citation {
     QString doi_url;
 };
 
-// One day's changes in What's new (ADR-0067): its date (YYYY-MM-DD) and its entries as Markdown, from the bundled
-// changelog, the docs site's What's new page.
+// One changes group (ADR-0072): Markdown entries, date and calendar identity when present.
+// Legacy developer builds retain the dated changelog (ADR-0067).
 struct ChangeDay {
     Q_GADGET
     QML_VALUE_TYPE(changeDay)
     Q_PROPERTY(QString date MEMBER date CONSTANT)
     Q_PROPERTY(QString text MEMBER text CONSTANT)
+    Q_PROPERTY(QString version MEMBER version CONSTANT)
 
    public:
     QString date;
     QString text;
+    QString version{};
 };
 
 // One written step of a tutorial (ADR-0064): what to do, on which page, the control it names and what should follow,
@@ -905,7 +907,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QList<Tutorial> tutorials() const;
     // The same tutorials as a list the Examples filters filter: by text and by the values of their tags.
     edi_app::ExampleListModel* tutorialCatalogue();
-    // What's new, newest first: the dated sections of the bundled changelog (website/surfaces/docs/changelog.md).
+    // What's new, newest first: numbered releases, or the dated changelog for legacy builds.
     Q_INVOKABLE QList<ChangeDay> changes() const;
     bool engineThreadsSelectable() const;
     // Twice the cores the platform reports, at least 16 and at most 64: a browser may report fewer cores

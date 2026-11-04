@@ -106,6 +106,7 @@ qt_add_qml_module(edi_app_module
         src/view_rows.hpp src/view_rows.cpp
         src/user_action_log.hpp src/user_action_log.cpp
         src/build_version.hpp
+        src/desktop_updates.hpp src/desktop_updates.cpp
         src/test_observer.hpp src/test_observer.cpp
         src/web_page_hooks.hpp src/web_page_hooks.cpp
         src/project_editor.hpp
@@ -220,6 +221,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/TutorialPanel.qml
         qml/Components/TutorialControls.qml
         qml/Components/WhatsNewDialog.qml
+        qml/Components/UpdateButton.qml
         qml/Components/ToolbarComboBox.qml
         qml/Components/ToolbarLines.qml
         qml/Components/ValueField.qml
@@ -609,4 +611,19 @@ if(EDI_DEPLOY_APP)
     qt_generate_deploy_qml_app_script(TARGET edi_app OUTPUT_SCRIPT edi_deploy_script ${edi_deploy_filters})
     install(SCRIPT ${edi_deploy_script} COMPONENT desktop)
     edi_install_assistant_runtime("${EDI_ASSISTANT_RUNTIME_INSTALL_CHECK}" "${EDI_ASSISTANT_RUNTIME_INSTALL_ROOT}")
+endif()
+
+set(EDI_RELEASE_HISTORY "${PROJECT_SOURCE_DIR}/data/releases.json" CACHE FILEPATH "Release history selected by release preparation")
+set_source_files_properties("${EDI_RELEASE_HISTORY}" PROPERTIES QT_RESOURCE_ALIAS releases.json)
+qt_add_resources(edi_app_module edi_release_history PREFIX "/edi"
+    BASE "${PROJECT_SOURCE_DIR}/data"
+    FILES "${PROJECT_SOURCE_DIR}/data/distribution.json" "${EDI_RELEASE_HISTORY}")
+
+qt_add_executable(edi_desktop_update_tests EXCLUDE_FROM_ALL tests/desktop_update_tests.cpp)
+target_link_libraries(edi_desktop_update_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::QuickTest)
+target_sources(edi_desktop_update_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+add_dependencies(edi_desktop_update_tests edi_app_build_commit)
+set_target_properties(edi_desktop_update_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_desktop_update_tests PRIVATE edi_assistant_native)
 endif()
