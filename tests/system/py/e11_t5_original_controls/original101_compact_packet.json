@@ -1,0 +1,30 @@
+{
+  "provenance": "Actual101 pre-action profile via full343 classification; data-only negative input, never a fresh Main response",
+  "original_profile_sha256": "7e49047f3a98ed66387ecc7dcfbf299fd0a4e785bb9d422683fbebe787b69d68",
+  "ui": {
+    "alive": true,
+    "can_cancel": false,
+    "connected": true,
+    "state": "idle"
+  },
+  "reply": {
+    "count": 1,
+    "model": "sessions",
+    "read": {
+      "api": "get",
+      "elapsed_ns": 1388,
+      "repetitions": 1,
+      "role": "canArchive",
+      "scalar": true,
+      "type": "bool"
+    },
+    "role_names": [
+      "current",
+      "name",
+      "modified",
+      "id",
+      "canArchive"
+    ],
+    "state": "idle"
+  }
+}

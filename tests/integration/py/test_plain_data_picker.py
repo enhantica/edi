@@ -50,12 +50,14 @@ const original={currentExperimentIndex:4,
     loadExperiments:files=>calls.push(['wrong-action',files])};
 const foreign={currentExperimentIndex:7,
     loadDataInto:(experiment,file)=>calls.push(['loaded','foreign',experiment.id,file])};
-const group={project:original,webRequest:0,webRequestProject:null,webDataExperiment:null};
+const group={project:original,webRequest:0,webRequestProject:null,webDataExperiment:null,
+    pickerLife:{alive:true}};
 const row={index:2,experiment:initiator};
+const Session={get project(){return group.project}};
 const qsTr=text=>text;
 const WebFiles={available:BROWSER,
     openFiles:(filter,multiple)=>{calls.push(['web',filter,multiple]);return 41;}};
-const dataDialog={experiment:null,project:null,selectedFile:'chosen.dat',
+const dataDialog={intent:null,experiment:null,project:null,selectedFile:'chosen.dat',
     open:()=>calls.push(['desktop',dataDialog.experiment.id])};
 group.dataFilter=DATA_FILTER;
 group.chooseData=function(experiment) CHOOSE;
@@ -73,7 +75,7 @@ console.log(JSON.stringify({calls,desktopFilters}));
     route = (
         'onFilesOpened(41,["chosen.dat"]); onFilesOpened(41,["duplicate.dat"]);'
         if browser
-        else 'accept(); accept();'
+        else 'accept.call(dataDialog); accept.call(dataDialog);'
     )
     prefix = {
         'accepted': '',
@@ -198,34 +200,47 @@ def test_availability_observer_rejects_retired_or_overbroad_rules(damage):
     [
         ('onClicked: group.chooseData(row.experiment)', 'onClicked: {}', True, 'accepted'),
         ('group.chooseData(row.experiment)', 'group.chooseData(other)', False, 'accepted'),
-        ('dataDialog.open();', 'return;', False, 'accepted'),
+        ('ApplicationInfo.chooseExperimentData(experiment);', 'return;', False, 'accepted'),
         (
-            'group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile)',
+            'ApplicationInfo.acceptExperimentDataFile()',
             '{ return; }',
             False,
             'accepted',
         ),
         (
-            'group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile)',
+            'ApplicationInfo.acceptExperimentDataFile()',
             'group.project.loadDataInto(other, dataDialog.selectedFile)',
             False,
             'accepted',
         ),
         (
-            'group.project.loadDataInto(experiment, files[0]);',
-            'return; group.project.loadDataInto(experiment, files[0]);',
+            'ApplicationInfo.formFilesOpened(request, files, true);',
+            'return;',
             True,
             'accepted',
         ),
         (
-            'group.project.loadDataInto(experiment, files[0]);',
+            'ApplicationInfo.formFilesOpened(request, files, true);',
             'group.project.loadDataInto(other, files[0]);',
             True,
             'accepted',
         ),
-        ('request !== group.webRequest', 'false', True, 'foreign-request'),
+        (
+            'ApplicationInfo.formFilesOpened(request, files, true);',
+            'group.project.loadDataInto(group.webDataExperiment, files[0]);',
+            True,
+            'foreign-request',
+        ),
         ('project-identity', '', True, 'foreign-project'),
-        ('group.dataFilter, false', 'group.dataFilter, true', True, 'accepted'),
+        (
+            'ApplicationInfo.chooseExperimentData(experiment);',
+            (
+                'group.webRequestProject=group.project;group.webDataExperiment=experiment;'
+                'group.webRequest=WebFiles.openFiles(group.dataFilter,true);'
+            ),
+            True,
+            'accepted',
+        ),
     ],
     ids=[
         'disconnected-click',
@@ -246,10 +261,14 @@ def test_picker_observer_rejects_disconnected_and_wrong_target_handlers(
     text = source(PATH)
     require_picker(text, browser, 'accepted')
     if old == 'project-identity':
+        # A caller that bypasses the native guard must still red the same
+        # foreign-project vector. Do not replace ApplicationInfo with a stub.
         callback = block(text, 'function onFilesOpened(')
-        match = re.search(r'group\.project\s*(===|!==)\s*group\.webRequestProject', callback)
-        assert match, 'Load data routing escape: the callback owns its project identity guard'
-        changed_callback = callback.replace(match[0], 'true' if match[1] == '===' else 'false', 1)
+        changed_callback = callback.replace(
+            'ApplicationInfo.formFilesOpened(request, files, true);',
+            'if(request===group.webRequest){group.webRequest=0;'
+            'group.project.loadDataInto(group.webDataExperiment,files[0]);}',
+        )
         changed = text.replace(callback, changed_callback, 1)
     else:
         changed = text.replace(old, new, 1)

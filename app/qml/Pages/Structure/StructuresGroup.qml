@@ -12,8 +12,8 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // Structures (N) (easydiffractionbeta Pages/Model/SideBarBasic/Models.qml): the project's structures,
-// one current; a structure enters only from a `.edi` block file, while the project holds none — an
-// edi project holds one structure.
+// one current. The original Load accepts native .edi and the already supported
+// single-structure CIF vocabulary; all additions use the same editor/Undo.
 SideBarGroup {
     id: group
 
@@ -36,10 +36,7 @@ SideBarGroup {
             sourceModel: group.project ? group.project.structures : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentStructureIndex : -1
-            onRowActivated: row => {
-                if (group.project)
-                    group.project.currentStructureIndex = row;
-            }
+            onRowActivated: row => ApplicationInfo.activateFormBlock(row, true)
 
             columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
@@ -82,11 +79,13 @@ SideBarGroup {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    editMember: row
+                    editModel: group.project ? group.project.structures : null
+                    editIndex: row.index
                     horizontalAlignment: Text.AlignLeft
                     objectName: `structures.name.${row.index}`
                     value: row.name
-                    onActiveFocusChanged: if (activeFocus)
-                        group.project.currentStructureIndex = row.index
+                    onActiveFocusChanged: ApplicationInfo.finishUiEvent(10, undefined)
                     onCommitted: text => row.structure.name = text
                 }
                 EaComponents.ListViewButton {
@@ -112,14 +111,7 @@ SideBarGroup {
                 fontIcon: "upload"
                 text: qsTr("Load structure from file")
                 // In the browser the files come through the page (edi ADR-0023).
-                onClicked: {
-                    if (WebFiles.available) {
-                        group.webRequestProject = group.project;
-                        group.webRequest = WebFiles.openFiles(".cif,.edi", false);
-                    } else {
-                        loadDialog.open();
-                    }
-                }
+                onClicked: ApplicationInfo.loadFormFiles(false)
             }
             EaElements.SideBarButton {
                 objectName: "structures.create"
@@ -147,26 +139,31 @@ SideBarGroup {
         }
     }
 
+    property var pickerLife: ({
+            alive: true
+        })
+    Component.onDestruction: ApplicationInfo.formPickerDestroyed()
     // This page's browser file request and the project it was made for: only its own answer is used, and only
     // while that project is still open.
     property int webRequest: 0
     property var webRequestProject: null
+    property var webIntent: null
+    function chooseStructure() {
+        return ApplicationInfo.chooseStructureFile();
+    }
+    function takeWebIntent(request) {
+        return ApplicationInfo.takeStructureWebIntent(request);
+    }
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            if (group.project !== null && group.project === group.webRequestProject)
-                group.project.loadStructure(files[0]);
+            ApplicationInfo.formFilesOpened(request, files, false);
         }
         function onFailed(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
+            ApplicationInfo.formFilesCancelled(request, false);
         }
         function onCancelled(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
+            ApplicationInfo.formFilesCancelled(request, false);
         }
     }
 

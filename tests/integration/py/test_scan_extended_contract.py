@@ -571,12 +571,12 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     loader = block(session, 'bool Session::openExampleNamed(')
     require(
         loader,
-        r'extracted_ = std::make_unique<QTemporaryDir>\(\)',
+        r'copyRoot\s*=\s*prepareCopyRoot\("example"\)',
         'Working-copy wiring: the actual example loader allocates its temporary directory',
     )
     require(
         loader,
-        r'const QString target = extracted_->filePath\(',
+        r'const QString target\s*=\s*QDir\(copyRoot\)\.filePath\(',
         'Working-copy wiring: the copied project is under that temporary directory',
     )
     require(
@@ -600,20 +600,36 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
         'Working-copy wiring: each copied destination preserves the path '
         'beneath the opened target',
     )
+    allocator = block(session, 'QString Session::prepareCopyRoot(')
+    require(
+        allocator,
+        r'edi::fresh_archive_directory\(kind\)',
+        'Working-copy wiring: each native copy allocates a fresh independent root',
+    )
     qml = source('qml/Main.qml')
     action = block(qml, 'function saveProjectAs(')
     require(
         action,
-        r'saveAsChoice\.open\(\)',
+        r'ApplicationInfo\.saveCurrentProjectAs\(intent\)',
+        'Save As wiring: the actual action enters the native chooser owner',
+    )
+    native = source('src/app_info.cpp')
+    require(
+        block(native, 'void ApplicationInfo::saveCurrentProjectAs('),
+        r'projectInvoke\(frame, "saveAsChoice", "open"\)',
         'Save As wiring: every platform first opens the actual format dialog',
     )
     choice = item(qml, 'saveAs.choice')
-    accepted = block(choice, 'onAccepted:')
+    assert property_value(choice, 'onAccepted') == 'ApplicationInfo.acceptProjectSaveChoice()', (
+        'Save As wiring: the actual choice acceptance enters its native destination router'
+    )
+    accepted = block(native, 'void ApplicationInfo::acceptProjectSaveChoice(')
     for route in (
-        r'Session\.downloadWebProject\(\)',
-        r'Session\.saveWebProjectAs\(',
-        r'saveZip\.openAt\(Session\.suggestedSaveTarget\(true\)\)',
-        r'saveFolder\.openAt\(Session\.suggestedSaveTarget\(false\)\)',
+        r'projectInvoke\(frame, "Session", "downloadWebProject"\)',
+        r'projectInvoke\(frame, "Session", "saveWebProjectAs",',
+        r'zip \? "saveZip" : "saveFolder"',
+        r'projectInvoke\(frame, "Session", "suggestedSaveTarget",',
+        r'panelUsageMemberCall\(frame, picker, "openAt", \{target\}\)',
     ):
         require(
             accepted,
@@ -723,12 +739,35 @@ def resource_inventory(tmp_path, web, production=None):
     scratch = tmp_path / ('web' if web else 'desktop')
     scratch.mkdir(parents=True)
     receipt = scratch / 'inventory.tsv'
+    # The native runtime's executable/sidecar publication is outside this QRC
+    # inventory; its own CMake publication suite exercises it. Refuse this
+    # separation if it ever gains a resource or compilation-source producer.
+    runtime = re.sub(r'#[^\n]*', '', (ROOT / 'cmake/assistant_runtime.cmake').read_text())
+    assert not re.search(
+        r'\b(?:qt_add_resources|qt_add_qml_module|target_sources)\s*\(', runtime
+    ), 'The native runtime packager must remain outside the observed QRC/source inventory'
     harness = f"""cmake_minimum_required(VERSION 3.25)
 project(ResourceProbe NONE)
 set(PROJECT_SOURCE_DIR "{ROOT.as_posix()}")
 set(CMAKE_CURRENT_SOURCE_DIR "{APP.as_posix()}")
 set(EMSCRIPTEN {'TRUE' if web else 'FALSE'})
 file(WRITE "{receipt.as_posix()}" "")
+# This observer configures resources without a compiler or Qt installation.
+# Resolve only the two current compilation-package declarations; resource
+# producers, target edges, source reachability and payload bytes stay observed.
+function(find_package package)
+ if(package STREQUAL "crysta" AND "${{ARGN}}" STREQUAL "CONFIG;QUIET")
+  return()
+ elseif(package STREQUAL "Qt6QmlPrivate" AND "${{ARGN}}" STREQUAL "REQUIRED")
+  return()
+ endif()
+ message(FATAL_ERROR "Examples: unexpected unobserved package ${{package}} ${{ARGN}}")
+endfunction()
+function(edi_bundle_assistant_runtime)
+ if(NOT ARGC EQUAL 0)
+  message(FATAL_ERROR "Examples: unexpected native runtime publication arguments")
+ endif()
+endfunction()
 foreach(command include configure_file qt_add_library
  target_include_directories set_target_properties
  qt_add_executable target_compile_definitions add_custom_target add_dependencies

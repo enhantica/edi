@@ -13,6 +13,8 @@
 #include "parameter_item.hpp"
 #include "row_table_model.hpp"
 
+namespace edi { struct BackgroundPointInput; }
+
 namespace edi_app {
 
 class ParameterRegistry;
@@ -47,6 +49,20 @@ class ParameterListModel : public RowTableModel {
 };
 
 // The line-segment background points: `position` (text-editable) and `intensity` (ParameterItem).
+// What a defined background edit did: whether it `applied`, whether the result was `published`, and why not.
+struct BackgroundEditOutcome {
+    Q_GADGET
+    QML_VALUE_TYPE(backgroundEditOutcome)
+    Q_PROPERTY(bool applied MEMBER applied CONSTANT)
+    Q_PROPERTY(bool published MEMBER published CONSTANT)
+    Q_PROPERTY(QString message MEMBER message CONSTANT)
+
+   public:
+    bool applied = false, published = false;
+    QString message;
+    bool operator==(const BackgroundEditOutcome&) const = default;
+};
+
 class BackgroundListModel : public RowTableModel {
     Q_OBJECT
     QML_ELEMENT
@@ -59,7 +75,12 @@ class BackgroundListModel : public RowTableModel {
     Q_INVOKABLE bool setId(int row, const QString& id);
     Q_INVOKABLE bool setPosition(int row, double position);
     Q_INVOKABLE void append();
+    Q_INVOKABLE edi_app::BackgroundEditOutcome changeDefined(const QString& operation, const QString& id, double position, double intensity, bool free);
+    Q_PROPERTY(QString operationError READ operationError NOTIFY operationErrorChanged)
+    QString operationError() const { return operation_error_; }
     Q_INVOKABLE void remove(int row);
+ signals:
+    void operationErrorChanged();
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override {
@@ -71,6 +92,8 @@ class BackgroundListModel : public RowTableModel {
     edi::ExperimentBase& experiment_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
+    QString operation_error_;
+    BackgroundEditOutcome applyDefined(const edi::BackgroundPointInput& input);
 };
 
 // The polynomial or Chebyshev background terms: `id` and `order` (text-editable, each unique; the order within the
@@ -103,7 +126,7 @@ class BackgroundTermListModel : public RowTableModel {
 
 // The reflections the loaded file carried (`_refln`), read-only: `hkl` ("h k l"),
 // `dSpacing`, `position` (2θ or TOF), `fSquaredCalc` and, for a magnetic structure seen by neutrons,
-// `fMPerpSquaredCalc` (|M⊥|², edi ADR-0068) and `fSquaredTotalCalc` (F² + |M⊥|², as crysta computes it), numbers as
+// `fMPerpSquaredCalc` (|M⊥|², edi ADR-0070) and `fSquaredTotalCalc` (F² + |M⊥|², as crysta computes it), numbers as
 // read; NaN where a cell is not one.
 class ReflectionListModel : public RowTableModel {
     Q_OBJECT
@@ -171,6 +194,12 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double low() const { return low_; }
     double high() const { return high_; }
     bool calculatedShown() const { return calculated_shown_; }
+    /// Original native reflection order, before optional table sorting.
+    qsizetype fileRowCount() const noexcept { return file_rows_.size(); }
+    /// Actual published cell; invalid for an absent row/role. Does not sync or sort.
+    QVariant fileValue(qsizetype row, const QString& role) const;
+    /// Whether calculated cells currently display a running fit frame.
+    bool showingFrame() const noexcept { return bool(frame_); }
     // The hover read-out of one reflection: h k l, the measured value with its su by the project's IUCr rule and the
     // calculated value to the same decimals, in F² or F; rich text, one line each.
     Q_INVOKABLE QString hoverText(int row, bool squared) const;

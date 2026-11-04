@@ -1,0 +1,184 @@
+{
+  "kind": "diagnostic observation, not a numerical oracle or exact owner replay",
+  "binary_sha256": "cc4456c0d934ea09ef4e4c1500b0113b6c92244030e28fbc03eff70a3853c33d",
+  "evidence": "build/tests-seq17/replay7/RESULT.json",
+  "historical_binary_replay": "Not run; only the current compatible probe was available.",
+  "modes": [
+    {
+      "show_actions": false,
+      "driver_error": null,
+      "steps": [
+        {
+          "step": "create_project",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "created",
+          "saved": true,
+          "adopted": true
+        },
+        {
+          "step": "load_structure",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "step": "create_experiment",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "step": "set_experiment_type",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "no_change",
+          "applied": false
+        },
+        {
+          "step": "load_data",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "step": "save_project",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "succeeded",
+          "saved": true
+        },
+        {
+          "step": "set_free",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "edited"
+        },
+        {
+          "step": "run_fit",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "done",
+          "adopted": true
+        },
+        {
+          "step": "undo_fit",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "edited",
+          "applied": true
+        },
+        {
+          "step": "save_project",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "succeeded",
+          "saved": true
+        }
+      ],
+      "last_open_parent_used": false,
+      "actual_parent": "isolated OS Documents"
+    },
+    {
+      "show_actions": true,
+      "driver_error": null,
+      "steps": [
+        {
+          "step": "create_project",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "created",
+          "saved": true,
+          "adopted": true
+        },
+        {
+          "step": "load_structure",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "step": "create_experiment",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "step": "set_experiment_type",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "no_change",
+          "applied": false
+        },
+        {
+          "step": "load_data",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "step": "save_project",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "succeeded",
+          "saved": true
+        },
+        {
+          "step": "set_free",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "edited"
+        },
+        {
+          "step": "run_fit",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "done",
+          "adopted": true
+        },
+        {
+          "step": "undo_fit",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "edited",
+          "applied": true
+        },
+        {
+          "step": "save_project",
+          "folder_exists": true,
+          "location_matches_path": true,
+          "success": true,
+          "status": "succeeded",
+          "saved": true
+        }
+      ],
+      "last_open_parent_used": false,
+      "actual_parent": "isolated OS Documents"
+    }
+  ]
+}

@@ -146,10 +146,12 @@ Rectangle {
             compare(calculator.font.family, Style.Fonts.iconsFamily, "The calculator glyph is drawn with the application's icon font");
             compare(String(calculator.color).toUpperCase(), owner.calc.light, "The separate calculator uses the independently recorded light calculation colour");
             const strip = explanation.parent;
-            const colours = [];
-            for (const item of items(strip))
-                for (const colour of [item.color, item.textColor])
-                    colours.push(String(colour).toUpperCase());
+            const colourItems = items(strip), colourValues = [];
+            for (let index = 0; index < colourItems.length; ++index) {
+                const item = colourItems[index];
+                colourValues.push(String(item.color), String(item.textColor));
+            }
+            const colours = colourValues.map(value => value.toUpperCase());
             verify(owner.palettes[0].light.every(colour => colours.includes(colour)), "The live strip displays all eleven independently recorded palette positions");
             tryCompare(dialog, "opened", true, 2000, "The Preferences opening transition finishes before its pixel baseline");
             function stripSnapshot() {

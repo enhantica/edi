@@ -182,7 +182,7 @@ class AtomSiteAdpListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
-// The Magnetic moments group (edi ADR-0068; the owner, 2026-11-03): one row per atom site, in the sites' order, as the
+// The Magnetic moments group (edi ADR-0070; the owner, 2026-11-03): one row per atom site, in the sites' order, as the
 // Atomic displacement group — its id, the magnetic ion its moment takes ("none" when the site carries no moment), the three
 // components along the cell axes and the symmetry form crysta derives, read only. The ion belongs to the site's atom
 // type, so two sites of one type share it.
@@ -201,7 +201,7 @@ class AtomSiteMomentListModel : public RowTableModel {
     Q_INVOKABLE QStringList ions(int row) const;
     // "none" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
     Q_INVOKABLE void setIon(int row, const QString& ion);
-    // The row's moment in `form` ("crystal_axes", "cartesian" or "spherical"; edi ADR-0068): its three components,
+    // The row's moment in `form` ("crystal_axes", "cartesian" or "spherical"; edi ADR-0070): its three components,
     // their s.u. (NaN where the components have none) and the modulus |M| with its s.u.; empty for a site without
     // a moment.
     Q_INVOKABLE QVariantList components(int row, const QString& form) const;
@@ -248,7 +248,7 @@ class MagneticFormFactorListModel : public RowTableModel {
     ParameterRegistry& registry_;
 };
 
-// The Propagation vectors group (edi ADR-0068; the owner, 2026-11-03): the structure's commensurate k vectors, each
+// The Propagation vectors group (edi ADR-0070; the owner, 2026-11-03): the structure's commensurate k vectors, each
 // added, edited and removed through crysta's rule, so a vector the cell and the signed group cannot carry, or a
 // second spelling of one already there, is refused with its reason and the rows stay as they were. The last row
 // cannot be removed.
@@ -330,7 +330,7 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
     // The magnetic space group as the file names it (`_space_group_magn`, by item name), read only until it can be
     // chosen from crysta's table; and the parent group (`_parent_space_group`: name, number, transform), with
-    // `differs` when it is not the space group itself (edi ADR-0068).
+    // `differs` when it is not the space group itself (edi ADR-0070).
     Q_PROPERTY(QVariantMap magneticGroup READ magneticGroup NOTIFY magneticGroupChanged)
     Q_PROPERTY(QVariantMap parentGroup READ parentGroup NOTIFY parentGroupChanged)
     // Whether any site carries a moment.

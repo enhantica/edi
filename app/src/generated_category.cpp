@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include <QScopeGuard>
+
 #include "edi/display.hpp"
 
 namespace edi_app {
@@ -50,17 +52,84 @@ void GeneratedCategory::setCategoryId(const QString& id) {
     }
 }
 
+namespace {
+
+QVariantList option_identities(const QList<OptionListModel*>& options) {
+    QVariantList identities;
+    for (OptionListModel* options_model : options) {
+        identities.append(QVariant::fromValue(static_cast<QObject*>(options_model)));
+    }
+    return identities;
+}
+
+}  // namespace
+
+QList<GeneratedCell> GeneratedCategory::cells() const {
+    QList<GeneratedCell> cells;
+    for (qsizetype column = 0; column < names_.size(); ++column) {
+        cells.append({names_.at(column), static_cast<int>(column), kinds_.value(column, QStringLiteral("text"))});
+    }
+    return cells;
+}
+
 void GeneratedCategory::read() {
+    const QPointer<GeneratedCategory> receiver(this);
+    // A value is signalled against the one last signalled, once the read is complete and only by the latest read, so
+    // a read started from a notification never has an older one signal after it. What did not change is not
+    // signalled; the values always are (rowCount).
+    const auto remember = [this](const char* name, const QVariant& value) {
+        if (!property_notifications_.contains(name)) property_notifications_[name] = value;
+    };
+    remember("loop", QVariant::fromValue(loop_));
+    remember("output", QVariant::fromValue(output_));
+    remember("names", QVariant::fromValue(names_));
+    remember("labels", QVariant::fromValue(labels_));
+    remember("units", QVariant::fromValue(units_));
+    remember("setByProgram", QVariant::fromValue(set_by_program_));
+    remember("kinds", QVariant::fromValue(kinds_));
+    remember("options", option_identities(options_));
+    remember("cells", QVariant::fromValue(cells()));
+    quint64 publication = 0;
+    const auto propertyNotifications = qScopeGuard([receiver, &publication] {
+        const auto current = [&] {
+            return receiver && publication != 0 && receiver->notification_publication_ == publication;
+        };
+        const auto publish = [&](const char* name, const QVariant& value, void (GeneratedCategory::*signal)()) {
+            if (!current() || receiver->property_notifications_.value(name) == value) return;
+            receiver->property_notifications_[name] = value;
+            emit(receiver.data()->*signal)();
+        };
+        if (!current()) return;
+        publish("loop", QVariant::fromValue(receiver->loop_), &GeneratedCategory::loopChanged);
+        if (!current()) return;
+        publish("output", QVariant::fromValue(receiver->output_), &GeneratedCategory::outputChanged);
+        if (!current()) return;
+        publish("names", QVariant::fromValue(receiver->names_), &GeneratedCategory::namesChanged);
+        if (!current()) return;
+        publish("labels", QVariant::fromValue(receiver->labels_), &GeneratedCategory::labelsChanged);
+        if (!current()) return;
+        publish("units", QVariant::fromValue(receiver->units_), &GeneratedCategory::unitsChanged);
+        if (!current()) return;
+        publish("setByProgram", QVariant::fromValue(receiver->set_by_program_),
+                &GeneratedCategory::setByProgramChanged);
+        if (!current()) return;
+        // A field reads its value through value(), which this signal has it read again.
+        emit receiver->rowCountChanged();
+        if (!current()) return;
+        publish("kinds", QVariant::fromValue(receiver->kinds_), &GeneratedCategory::kindsChanged);
+        if (!current()) return;
+        publish("options", option_identities(receiver->options_), &GeneratedCategory::optionsChanged);
+        if (!current()) return;
+        publish("cells", QVariant::fromValue(receiver->cells()), &GeneratedCategory::cellsChanged);
+    });
     const std::string id = id_.toStdString();
     const edi::TextCategory category =
         source_ != nullptr && !id.empty() ? edi::text_category(source_->text().toStdString(), id) : edi::TextCategory{};
-    // What did not change is not signalled, so the controls showing it stay as they are; the values always are.
-    const bool loop = loop_;
-    const bool output = output_;
-    const QStringList names = names_, labels = labels_, units = units_, set_by_program = set_by_program_, kinds = kinds_;
+    publication = ++notification_publication_;
+    if (publication == 0) publication = ++notification_publication_;
     loop_ = category.loop;
     // The magnetic operators and centrings follow the magnetic space group, so they are shown read-only, as the
-    // symmetry operators are (edi ADR-0068; the owner, 2026-11-03).
+    // symmetry operators are (edi ADR-0070; the owner, 2026-11-03).
     output_ = edi::category_is_output(id) || id == "space_group_symop_magn_operation" ||
               id == "space_group_symop_magn_centering";
     names_.clear();
@@ -68,7 +137,6 @@ void GeneratedCategory::read() {
     units_.clear();
     set_by_program_.clear();
     kinds_.clear();
-    const QList<OptionListModel*> shown = options_;
     options_.clear();
     for (const std::string& name : category.names) {
         const std::string uid = id + "." + name;
@@ -109,31 +177,6 @@ void GeneratedCategory::read() {
         rows.append(values);
     }
     rows_->setRows(std::move(rows));
-    if (loop_ != loop) {
-        emit loopChanged();
-    }
-    if (output_ != output) {
-        emit outputChanged();
-    }
-    if (names_ != names) {
-        emit namesChanged();
-    }
-    if (labels_ != labels) {
-        emit labelsChanged();
-    }
-    if (units_ != units) {
-        emit unitsChanged();
-    }
-    if (set_by_program_ != set_by_program) {
-        emit setByProgramChanged();
-    }
-    emit rowCountChanged();  // a field reads its value through value(), which this signal has it read again
-    if (kinds_ != kinds) {
-        emit kindsChanged();
-    }
-    if (options_ != shown) {
-        emit optionsChanged();
-    }
 }
 
 QString GeneratedCategory::editedText(int row, const QString& name, const QString& value) const {

@@ -20,7 +20,7 @@ def rounded_pair(value, uncertainty, rule='iucr_19'):
         quantum = Decimal(1).scaleb(su.adjusted() - 1)
         digits = (su / quantum).to_integral_value(rounding=ROUND_CEILING)
         if digits == 100:
-            quantum *= 10
+            quantum = quantum.scaleb(1)
             digits = Decimal(10)
         if rule == 'iucr_19' and digits > 19:
             quantum = Decimal(1).scaleb(su.adjusted())

@@ -585,7 +585,7 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                     tensor_entries.push_back(entry);
                     continue;
                 } else if (category.id == "atom_site_moment") {
-                    // A magnetic site's moment components, after the structure's other values (edi ADR-0068).
+                    // A magnetic site's moment components, after the structure's other values (edi ADR-0070).
                     entry.row_label = structure->atom_site_moment[i / 3]->id;
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),

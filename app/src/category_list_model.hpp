@@ -93,6 +93,7 @@ struct CategoryPresentation {
     QString extras_title;  // the Extras part's own title, when it differs from the category's
 };
 CategoryPresentation category_presentation(const QString& id);
+std::vector<const edi::Category*> category_presentation_order(const std::vector<edi::Category>&);
 
 }  // namespace edi_app
 

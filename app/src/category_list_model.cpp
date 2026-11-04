@@ -24,7 +24,7 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("metadata"), {T::Basic}},         {QStringLiteral("space_group"), {T::Basic}},
         {QStringLiteral("cell"), {T::Basic}},             {QStringLiteral("atom_site"), {T::Basic}},
         {QStringLiteral("atom_site_aniso"), {T::Basic}},  {QStringLiteral("experiment_type"), {T::Basic}},
-        // The magnetic structure's Main groups (edi ADR-0068); its operators, parent group and form factors are Extra.
+        // The magnetic structure's Main groups (edi ADR-0070); its operators, parent group and form factors are Extra.
         {QStringLiteral("space_group_magn"), {T::Basic}},
         {QStringLiteral("parent_propagation_vector"), {T::Basic}},
         {QStringLiteral("atom_site_moment"), {T::Basic}},
@@ -69,7 +69,7 @@ namespace {
 // structure's saved view (`_structure_view`) in Extra's Appearance group.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
     // The parent group shows in the Magnetic space group group when it differs from the space group (edi
-    // ADR-0068).
+    // ADR-0070).
     static const char* const kShownElsewhere[] = {"experiment_type", "structure_view", "parent_space_group"};
     std::vector<const edi::Category*> ordered;
     for (const edi::Category& category : categories) {
@@ -265,6 +265,10 @@ QHash<int, QByteArray> CategoryListModel::roleNames() const {
             {IconRole, "icon"},             {ItemCountRole, "itemCount"}, {IsLoopRole, "isLoop"},
             {AdmittedRole, "admitted"}, {ExtrasPartRole, "extrasPart"}, {ToolTipRole, "toolTip"},
             {NeedsDataRole, "needsData"},   {ExtrasNeedsDataRole, "extrasNeedsData"}, {ExtrasTitleRole, "extrasTitle"}};
+}
+
+std::vector<const edi::Category*> category_presentation_order(const std::vector<edi::Category>& categories) {
+    return presentation_order(categories);
 }
 
 }  // namespace edi_app

@@ -1,0 +1,49 @@
+{
+  "formula_spans_in_source_order": [
+    "\\(x=2\\theta-2\\theta_{\\text{peak}}\\)",
+    "\\[\np(x)=(1-\\eta)\\,G(x;H)+\\eta\\,L(x;H),\n\\]",
+    "\\(H\\)",
+    "\\[\nG(x;H)=\\frac{2\\sqrt{\\ln2}}{H\\sqrt{\\pi}}\n\\exp\\!\\left[-4\\ln2\\left(\\frac{x}{H}\\right)^2\\right],\n\\]",
+    "\\[\nL(x;H)=\\frac{2}{\\pi H}\n\\frac{1}{1+4(x/H)^2}.\n\\]",
+    "\\(\\theta\\)",
+    "\\[\nH_G^2=U\\tan^2\\theta+V\\tan\\theta+W,\n\\qquad\nH_L=X\\tan\\theta+\\frac{Y}{\\cos\\theta}.\n\\]",
+    "\\[\n\\begin{aligned}\nH^5={}&H_G^5+2.69269H_G^4H_L\n+2.42843H_G^3H_L^2\\\\\n&+4.47163H_G^2H_L^3\n+0.07842H_GH_L^4+H_L^5,\n\\end{aligned}\n\\]",
+    "\\[\n\\eta=1.36603r-0.47719r^2+0.11116r^3,\n\\qquad r=\\frac{H_L}{H}.\n\\]",
+    "\\(\\eta\\)",
+    "\\(U\\)",
+    "\\(0.0837 \\pm 0.0035\\)",
+    "\\(V\\)",
+    "\\(-0.1365 \\pm 0.0074\\)",
+    "\\(W\\)",
+    "\\(0.1454 \\pm 0.0048\\)",
+    "\\(X\\)",
+    "\\(0.067 \\pm 0.015\\)",
+    "\\(Y\\)",
+    "\\(0.0254 \\pm 0.0095\\)",
+    "\\(H_G,H_L,H\\)",
+    "\\(2\\theta\\)"
+  ],
+  "table_rows": 6,
+  "table_columns": 2,
+  "table_cell_plain_text_in_order": [
+    "Coefficient",
+    "Value ± uncertainty",
+    "￼",
+    "￼ °²",
+    "￼",
+    "￼ °²",
+    "￼",
+    "￼ °²",
+    "￼",
+    "￼ °",
+    "￼",
+    "￼ °"
+  ],
+  "original_markdown_list_items": 0,
+  "original_markdown_headings": 0,
+  "bold_text": [
+    "Thompson–Cox–Hastings (TCH) pseudo-Voigt",
+    "Bragg angle"
+  ],
+  "reference_href": "https://www.osti.gov/servlets/purl/1222688"
+}

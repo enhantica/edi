@@ -27,10 +27,7 @@ SideBarGroup {
     // (the owner, 2026-11-02), and values stay editable. The disabled choice goes back to all parameters: one left from
     // a project with data showed one row under "Atomic displacement (4)" (the owner, 2026-10-27).
     readonly property bool measured: project !== null && project.fit.measured
-    onMeasuredChanged: {
-        if (!measured)
-            parameterFilter.variability = 0;
-    }
+    onMeasuredChanged: ApplicationInfo.parameterMeasuredChanged(false)
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
     property int selectedRow: -1
     property real tableViewportHeight: 0
@@ -68,21 +65,12 @@ SideBarGroup {
     // shown row, when a project opens, when the experiment changes or when the filters hide the selected row;
     // a row the user selected stays selected while it is shown.
     function ensureSelection() {
-        if (group.selected === null || !parameterFilter.shows(group.selected))
-            group.selected = parameterFilter.parameterAt(0);
-        group.selectedRow = parameterFilter.rowOf(group.selected);
+        ApplicationInfo.ensureParameterSelection();
     }
-    onSelectedChanged: selectedRow = parameterFilter.rowOf(selected)
+    onSelectedChanged: ApplicationInfo.parameterSelectionChanged(false)
 
-    onProjectChanged: {
-        group.selected = null;
-        group.ensureSelection();
-    }
-    Component.onCompleted: {
-        if (!measured)
-            parameterFilter.clearFilters();
-        group.ensureSelection();
-    }
+    onProjectChanged: ApplicationInfo.parameterSelectionChanged(true)
+    Component.onCompleted: ApplicationInfo.parameterMeasuredChanged(true)
 
     Connections {
         target: parameterFilter
@@ -116,51 +104,20 @@ SideBarGroup {
     // A picker entry's line: a datablock's icon in its colour, a category's icon in the minor colour, a kind heading in
     // bold, and the title with its parameter count.
     function datablockSegments(entry) {
-        if (!entry)
-            return [];
-        const title = {
-            "text": entry.title,
-            "elides": true
-        };
-        return entry.icon === "" ? [title] : [
-            {
-                "icon": entry.icon,
-                "color": group.datablockColor(entry.blockKind, entry.blockName)
-            },
-            title];
+        return ApplicationInfo.parameterSegments(entry, false);
     }
     function categorySegments(entry) {
-        if (!entry)
-            return [];
-        const title = {
-            "text": entry.title,
-            "bold": entry.datablock,
-            "elides": true
-        };
-        return entry.icon === "" ? [title] : [
-            {
-                "icon": entry.icon,
-                "color": EaStyle.Colors.themeForegroundMinor
-            },
-            title];
+        return ApplicationInfo.parameterSegments(entry, true);
     }
 
     // A datablock's colour, as its icon has it elsewhere: a structure's or an experiment's by its place in the
     // project's list.
     function datablockColor(kind, name) {
-        const blocks = group.project ? (kind === "structure" ? group.project.structures : group.project.experiments) : null;
-        let place = 0;
-        for (let row = 0; blocks && row < blocks.count; ++row) {
-            if (blocks.text(row, "name") === name) {
-                place = row;
-                break;
-            }
-        }
-        return kind === "structure" ? AppColors.structure(place) : AppColors.experiment(place);
+        return ApplicationInfo.parameterDatablockColor(kind, name);
     }
 
     function bound(value) {
-        return value === Infinity ? "inf" : value === -Infinity ? "-inf" : String(value);
+        return ApplicationInfo.parameterBound(value);
     }
 
     Column {
@@ -204,14 +161,8 @@ SideBarGroup {
                     popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
                     currentIndex: selectedIndex
                     displayText: selected ? selected.title : ""
-                    onModelChanged: {
-                        datablockPicker.follow();
-                        Qt.callLater(datablockPicker.follow);
-                    }
-                    onActivated: index => {
-                        parameterFilter.datablockFilter = parameterFilter.datablocks[index];
-                        datablockPicker.follow();
-                    }
+                    onModelChanged: ApplicationInfo.parameterPickerChanged(0, false, undefined)
+                    onActivated: index => ApplicationInfo.parameterPickerChanged(0, true, index)
                     contentItem: Item {
                         clip: true
                         IconLine {
@@ -257,14 +208,8 @@ SideBarGroup {
                     popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
                     currentIndex: selectedIndex
                     displayText: selected ? selected.title : ""
-                    onModelChanged: {
-                        categoryPicker.follow();
-                        Qt.callLater(categoryPicker.follow);
-                    }
-                    onActivated: index => {
-                        parameterFilter.categoryFilter = parameterFilter.categories[index];
-                        categoryPicker.follow();
-                    }
+                    onModelChanged: ApplicationInfo.parameterPickerChanged(1, false, undefined)
+                    onActivated: index => ApplicationInfo.parameterPickerChanged(1, true, index)
                     contentItem: Item {
                         clip: true
                         IconLine {
@@ -315,14 +260,8 @@ SideBarGroup {
                         model: titles
                         currentIndex: parameterFilter.variability
                         displayText: titles[parameterFilter.variability]
-                        onModelChanged: {
-                            variabilityPicker.follow();
-                            Qt.callLater(variabilityPicker.follow);
-                        }
-                        onActivated: index => {
-                            parameterFilter.variability = index;
-                            variabilityPicker.follow();
-                        }
+                        onModelChanged: ApplicationInfo.parameterPickerChanged(2, false, undefined)
+                        onActivated: index => ApplicationInfo.parameterPickerChanged(2, true, index)
                     }
                     HoverHandler {
                         id: variabilityHover
@@ -370,8 +309,7 @@ SideBarGroup {
                 // The Settings tab's show-filters, by ParameterItem.FitGroup from NotMeasured (edi ADR-0053).
                 readonly property var wanted: [Preferences.analysisShowNotMeasured, Preferences.analysisShowBySymmetry, Preferences.analysisShowByConstraint, Preferences.analysisShowFixedSettings]
                 function follow() {
-                    for (let i = 0; i < wanted.length; ++i)
-                        setShownGroup(i + 1, wanted[i]);
+                    ApplicationInfo.parameterShownGroupsFollow();
                 }
                 onWantedChanged: follow()
                 Component.onCompleted: follow()
@@ -519,8 +457,7 @@ SideBarGroup {
                     item: row.parameter
                     // An auto-mode background's values are the estimate's, as in the Experiment page's table.
                     locked: row.parameter ? row.parameter.estimated : false
-                    onActiveFocusChanged: if (activeFocus)
-                        group.selected = row.parameter
+                    onActiveFocusChanged: ApplicationInfo.finishUiEvent(11, undefined)
                 }
                 EaComponents.ListViewLabel {
                     color: EaStyle.Colors.themeForegroundMinor
@@ -590,14 +527,7 @@ SideBarGroup {
             property real upper: 1
 
             function updateLimits() {
-                if (!selected) {
-                    lower = 0;
-                    upper = 1;
-                    return;
-                }
-                const span = selected.sliderHalfWidth();
-                lower = selected.value - span;
-                upper = selected.value + span;
+                ApplicationInfo.updateParameterSliderLimits();
             }
 
             spacing: EaStyle.Sizes.fontPixelSize
@@ -606,8 +536,7 @@ SideBarGroup {
             Connections {
                 target: sliderRow.selected
                 function onValueChanged() {
-                    if (!slider.pressed)
-                        sliderRow.updateLimits();
+                    ApplicationInfo.finishUiEvent(6, undefined);
                 }
             }
 
@@ -637,17 +566,9 @@ SideBarGroup {
                 toolTipText: sliderRow.selected ? sliderRow.selected.fileValue : ""
                 onMoved: sliderRow.selected.value = value
                 // Held, the pattern charts keep their y range; let go, they fit it again (ProjectViewModel.adjusting).
-                onPressedChanged: {
-                    if (group.project)
-                        group.project.adjusting = pressed;
-                    if (!pressed)
-                        sliderRow.updateLimits();
-                }
+                onPressedChanged: ApplicationInfo.parameterSliderPressed(false)
                 // A slider gone while held (the page left) holds nothing.
-                Component.onDestruction: {
-                    if (pressed && group.project)
-                        group.project.adjusting = false;
-                }
+                Component.onDestruction: ApplicationInfo.parameterSliderPressed(true)
             }
             EaElements.TextField {
                 objectName: "parameters.slider.to"

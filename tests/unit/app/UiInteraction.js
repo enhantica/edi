@@ -132,16 +132,33 @@ function text(root) {
     return result;
 }
 
-function click(testCase, probe, window, name, localLayout = false) {
-    function available() {
-        const found = control(probe, window, name);
-        return found && found.enabled && exposed(target(found)) ? target(found) : null;
+// ADR-0052 pages are built sequentially in the background. Whole-window polish
+// is a stationary-layout gate only after the actual workflow tabs stop preparing.
+// Keep this scoped to the declared app-bar owner, not every item with such a flag.
+function preparingWorkflowTabs(window) {
+    const names = ["appBar.tab.project", "appBar.tab.structure", "appBar.tab.experiment",
+                   "appBar.tab.analysis", "appBar.tab.report"];
+    const preparing = [];
+    function visit(item) {
+        if (!item) return;
+        if (names.includes(item.objectName) && item.preparing === true)
+            preparing.push(item);
+        for (const child of item.children || [])
+            visit(child);
     }
+    visit(window.appBarCentralTabs);
+    return preparing;
+}
+
+function click(testCase, probe, window, name, localLayout = false) {
+    if (preparingWorkflowTabs(window).length > 0)
+        testCase.tryVerify(() => preparingWorkflowTabs(window).length === 0, 15000,
+                           "ADR-0052: declared workflow-page preparation completes before layout/input settling");
     if (localLayout) {
-        // A live chart or another page can keep the window polishing after the actual
-        // input target has settled. Check the target and its containing layouts and viewports.
+        // C18 callers explicitly request the target's layout while another live view keeps polishing.
         testCase.tryVerify(() => {
-            const item = available();
+            const found = control(probe, window, name);
+            const item = found && found.enabled && exposed(target(found)) ? target(found) : null;
             if (!item) return false;
             for (let ancestor = item; ancestor; ancestor = ancestor.parent)
                 if (ancestor.moving === true || testCase.isPolishScheduled(ancestor)) return false;
@@ -155,8 +172,10 @@ function click(testCase, probe, window, name, localLayout = false) {
         window.update();
         testCase.verify(testCase.waitForRendering(window.contentItem),
                         "I10/I19: the settled layout renders before locating real input");
-        testCase.tryVerify(() => available() !== null, 2000,
-                           "I10/I19: real input target is enabled and inside the visible viewport: " + name);
+        testCase.tryVerify(() => {
+            const found = control(probe, window, name);
+            return found !== null && found.enabled && exposed(target(found));
+        }, 2000, "I10/I19: real input target is enabled and inside the visible viewport: " + name);
     }
     const item = target(control(probe, window, name));
     // A ListView can deliberately defer presses (the pinned base uses pressDelay).

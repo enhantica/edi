@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstddef>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -342,7 +343,7 @@ inline std::vector<Category> structure_categories(Structure& structure) {
     }
     categories.push_back(aniso);
     categories.push_back({"scattering_length", true, structure.scattering_lengths_fm.size()});
-    // The magnetic description (edi ADR-0068), for a structure that has one: crysta reads and
+    // The magnetic description (edi ADR-0070), for a structure that has one: crysta reads and
     // writes it, so each category shows its rows as the file holds them.
     const MagneticDescription& magnetic = structure.magnetic;
     if (!magnetic.empty() || !structure.atom_site_moment.empty()) {
@@ -392,6 +393,10 @@ struct NamedParameter {
     const Parameter* parameter = nullptr;
 };
 std::vector<NamedParameter> named_parameters(const Project& project);
+// One exact member, formatted only by the FIRST writer slot walk. Callers own
+// this preparation bound through the lookup and output ownership transfer.
+std::size_t named_parameter_preparation_bytes(std::size_t maximum_name_bytes);
+std::optional<std::string> named_parameter(const Project& project,const Parameter* member,std::size_t maximum_name_bytes);
 
 // The dependents (each parameter a relation sets), by unique name, in the slot walk's order.
 std::vector<NamedParameter> named_dependents(const Project& project);

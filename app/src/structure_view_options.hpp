@@ -33,11 +33,11 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(bool cell READ cell WRITE setCell NOTIFY cellChanged)
     Q_PROPERTY(bool axes READ axes WRITE setAxes NOTIFY axesChanged)
     // Whether the magnetic moments are drawn (`_structure_view.show_moments`), and their arrows' length in
-    // Angstrom per Bohr magneton (`_structure_view.moment_scale`), saved with the structure (edi ADR-0068).
+    // Angstrom per Bohr magneton (`_structure_view.moment_scale`), saved with the structure (edi ADR-0070).
     Q_PROPERTY(bool showMoments READ showMoments WRITE setShowMoments NOTIFY showMomentsChanged)
     Q_PROPERTY(double momentScale READ momentScale WRITE setMomentScale NOTIFY momentScaleChanged)
     // The form the Magnetic moments table shows and edits the moments in: "crystal_axes", "cartesian" or "spherical"
-    // (`_structure_view.moment_form`, saved with the structure; the stored form stays crystal axes; edi ADR-0068).
+    // (`_structure_view.moment_form`, saved with the structure; the stored form stays crystal axes; edi ADR-0070).
     Q_PROPERTY(QString momentForm READ momentForm WRITE setMomentForm NOTIFY momentFormChanged)
     // Where a moment's arrow sits on its atom: "through_atom", "from_centre" or "from_surface"
     // (`_structure_view.moment_view`, saved with the structure; the owner, 2026-11-03).

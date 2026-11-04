@@ -1,0 +1,920 @@
+{
+  "format": 1,
+  "expected": [
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 138,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'selectedFiles' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 20,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'account' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 930,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'sessionsError' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 868,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'sessionsLoading' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 867,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'sessions' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 948,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'sessionsLoading' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 838,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 620,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'canCancel' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 622,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'state' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 624,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'state' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 606,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'canCancel' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 587,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'conversationAvailable' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 519,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'messages' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 2
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 545,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'messages' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 443,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'messages' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 427,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'conversationAvailable' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 352,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'state' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 323,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 289,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 258,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 262,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'canCancel' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 626,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'state' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 627,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'state' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 635,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'state' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 657,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 353,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantConnectionDialog.qml",
+        "line": 174,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantConnectionDialog.qml",
+        "line": 46,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantTrial.qml",
+        "line": 10,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'activeJobId' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantTrial.qml",
+        "line": 11,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'activeJobId' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantQuestion.qml",
+        "line": 49,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'pendingQuestion' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantQuestion.qml",
+        "line": 51,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'pendingQuestion' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantQuestion.qml",
+        "line": 19,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'pendingQuestion' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantQuestion.qml",
+        "line": 16,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'pendingQuestion' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantQuestion.qml",
+        "line": 10,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'pendingQuestion' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPlan.qml",
+        "line": 40,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'pendingPlan' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPlan.qml",
+        "line": 17,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'pendingPlan' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPlan.qml",
+        "line": 11,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'pendingPlan' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 579,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 766,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'canCancel' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 767,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 729,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'canCancel' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 29,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'models' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 28,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'availableEfforts' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 31,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'selectedEffort' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 26,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 556,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'showActions' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 536,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'connected' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 462,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'selectedFiles' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 348,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'selectedFiles' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 339,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'messages' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 228,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'selectedEffort' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 73,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'models' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 150,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'models' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 312,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'state' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 30,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'models' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "line": 248,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'selectedEffort' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 2
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 894,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'canCancel' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 2
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 922,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'canCancel' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 2
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 895,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'selectSession' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_browser_row_activation_precedes_current_owner_selection:346:session_row_click:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantPanel.qml",
+        "line": 649,
+        "column": -1,
+        "description": "TypeError: Cannot read property 'state' of null",
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "session_row_click"
+      },
+      "count": 1
+    }
+  ]
+}

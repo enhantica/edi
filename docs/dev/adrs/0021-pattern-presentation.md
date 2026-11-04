@@ -78,3 +78,10 @@ ADR-0017 §15's.
 | Each renderer selects and decimates for itself | Rejected: the owner's split puts the view description in the core, once |
 | LTTB decimation | Rejected: it loses per-pixel extremes |
 | Decimate on the worker | Rejected: see ADR-0020; the cost is far below a frame |
+
+
+## Native pattern view procedures
+
+ApplicationInfo executes PatternChart's tick and label projection, pane alignment, toolbar choices, shared-view synchronization, structure/Bragg series registration, label measurement, pointer and hover procedures, with ChartToolbar's state actions and ProjectPatternChart's renewal transaction. PatternChartController and the core presentation remain the sole owners of scientific series, scales, range transforms, decimation and hover/pick data. The first implementations are the chart and three-pane alignment described above, extended without another chart controller, range store, cache or policy.
+
+The existing QML fields and original named functions remain the view surface. Qt's queue still receives the same named alignPanes function. Native callbacks retain the original scale/axis captures, arity, QML context and lifetime relation; array methods, coercions, intrinsic iteration, type casts and script getters/setters execute in the same VM. Shared ranges retain original equality/NaN checks and read/write order. Removed series are still unregistered, cleared, given the undrawable point and then removed; renewal creates and assigns the new chart before hiding/destroying the old one. No extra retirement or currentness guard is added. QML keeps declarative QtGraphs/axis/grid/series/style objects, bindings and single native dispatches. Full desktop/browser compilation and scientific, lifecycle, pointer, reentry and error checks follow the complete source migration.

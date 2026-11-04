@@ -25,6 +25,7 @@
    "code": "U+00B1",
    "font": "PT Sans",
    "sites": [
+    "app/src/assistant_native_tools.cpp",
     "core/src/display.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -62,7 +63,8 @@
    "code": "U+00B5",
    "font": "PT Sans",
    "sites": [
-    "crysta:data/dictionary/parameters.yaml"
+    "crysta:data/dictionary/parameters.yaml",
+    "core/src/assistant.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -85,17 +87,23 @@
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
     "app/qml/Components/AppPreferencesDialog.qml",
+    "app/qml/Components/AssistantComposer.qml",
+    "app/qml/Components/AssistantMessage.qml",
+    "app/qml/Components/AssistantSkillsDialog.qml",
+    "app/qml/Components/AssistantTrial.qml",
     "app/qml/Components/SelectorField.qml",
     "app/qml/Globals/FitOutcomes.qml",
-    "app/qml/Globals/RecentProjects.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
     "app/qml/Pages/Home/AboutDialog.qml",
-    "app/qml/Pages/Project/BlockNames.qml",
     "app/qml/Pages/Project/ExamplesGroup.qml",
+    "app/src/app_info.cpp",
+    "app/src/assistant_message_presentation.hpp",
+    "app/src/assistant_view_model.cpp",
     "app/src/demo_driver.cpp",
     "app/src/example_list_model.cpp",
     "app/src/fit_view_model.cpp",
     "app/src/project_view_model.cpp",
+    "core/src/report_json.cpp",
     "core/src/report_model.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -159,6 +167,16 @@
    "sites": [
     "app/src/demo_driver.cpp",
     "app/src/structure_view_controller.cpp"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "é",
+   "code": "U+00E9",
+   "font": "PT Sans",
+   "sites": [
+    "crysta:data/dictionary/parameters.yaml"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -283,6 +301,7 @@
    "code": "U+03C7",
    "font": "PT Sans",
    "sites": [
+    "crysta:data/dictionary/parameters.yaml",
     "app/qml/Components/StatusBar.qml"
    ],
    "drawn_by": "Noto Sans",
@@ -303,8 +322,9 @@
    "code": "U+2013",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Pages/Experiment/InstrumentGroup.qml",
-    "app/qml/Pages/Experiment/MeasuredRangeGroup.qml",
+    "app/src/app_info.cpp",
+    "app/src/assistant_native_create.cpp",
+    "app/src/assistant_native_tools.cpp",
     "app/src/fit_view_model.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -359,11 +379,16 @@
    "code": "U+2026",
    "font": "PT Sans",
    "sites": [
+    "app/qml/Components/AppPreferencesDialog.qml",
+    "app/qml/Components/AssistantComposer.qml",
+    "app/qml/Components/AssistantPanel.qml",
     "app/qml/Components/StatusBar.qml",
     "app/qml/Main.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
     "app/qml/Pages/Project/BlockNames.qml",
     "app/qml/Pages/Project/GetStartedGroup.qml",
+    "app/src/app_info.cpp",
+    "app/src/assistant_view_model.cpp",
     "app/src/project_view_model.cpp",
     "app/src/session.cpp"
    ],
@@ -413,6 +438,16 @@
   {
    "char": "₂",
    "code": "U+2082",
+   "font": "PT Sans",
+   "sites": [
+    "crysta:data/dictionary/parameters.yaml"
+   ],
+   "drawn_by": "PT Sans",
+   "weight": 400
+  },
+  {
+   "char": "₃",
+   "code": "U+2083",
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml"
@@ -507,6 +542,7 @@
    "sites": [
     "app/qml/Components/DigitText.qml",
     "app/qml/Components/StatusBar.qml",
+    "app/src/app_info.cpp",
     "app/src/fit_view_model.cpp"
    ],
    "drawn_by": "Encode Sans",
@@ -527,6 +563,7 @@
    "code": "U+2212",
    "font": "PT Sans",
    "sites": [
+    "app/src/app_info.cpp",
     "core/src/presentation.cpp",
     "core/src/report_html.cpp",
     "core/src/report_model.cpp"

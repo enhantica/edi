@@ -10,6 +10,7 @@
 
 #include "edi/model.hpp"
 #include "edi/report_model.hpp"
+#include "report_json.hpp"
 #include "json.hpp"
 
 // The report model's JSON (edi ADR-0036 §1): every field, in declaration order, so a model read from its JSON writes
@@ -262,7 +263,106 @@ PatternSeries series_of(const Value& value) {
     return series;
 }
 
-Value pattern_json(const ReportPattern& pattern) {
+// Renderer projections are derived from the report's values and style tables. The browser consumes them offline.
+const SeriesStyle* browser_style(const std::vector<SeriesStyle>& styles, std::string_view key) {
+    const auto found = std::find_if(styles.begin(), styles.end(), [key](const SeriesStyle& style) { return style.key == key; });
+    return found == styles.end() ? nullptr : &*found;
+}
+std::string browser_colour(const std::string& text, const SeriesStyle* style) {
+    return "<span style=\"color:" + (style ? style->light : "undefined") + "\">" + text + "</span>";
+}
+std::string browser_axis_title(const AxisDescription& axis, const std::vector<SeriesStyle>& styles) {
+    if (axis.segments.empty()) return axis.title;
+    std::string result;
+    for (const TitleSegment& segment : axis.segments) result += segment.style.empty() ? segment.text : browser_colour(segment.text, browser_style(styles, segment.style));
+    return result;
+}
+// The source model's non-finite values become JSON null before the browser's original arithmetic (Number(null)).
+double browser_number(double value) { return std::isfinite(value) ? value : 0.0; }
+// A derived Infinity/NaN must survive the JSON boundary; raw model values keep the existing null representation.
+Value renderer_number(double value) {
+    if (std::isfinite(value)) return value;
+    return Object{{"edi_renderer_number", std::isnan(value) ? "NaN" : value < 0.0 ? "-Infinity" : "Infinity"}};
+}
+Value browser_trace(const ReportPattern& report, const PatternSeries& series, std::size_t index, const std::vector<SeriesStyle>& styles) {
+    const auto* style = browser_style(styles, series.style);
+    const auto marked = [style](std::string_view part) {
+        const std::string marks = style ? style->mark : "line";
+        std::size_t start = 0;
+        for (;;) {
+            const auto end = marks.find('+', start);
+            if (std::string_view(marks).substr(start, end == std::string::npos ? end : end - start) == part) return true;
+            if (end == std::string::npos) return false;
+            start = end + 1;
+        }
+    };
+    std::string name = browser_colour(series.label, style);
+    if (series.kind == SeriesKind::Residual && !report.presentation.y_residual.segments.empty()) name = browser_colour("Residual (", style) + browser_axis_title(report.presentation.y_residual, styles) + browser_colour(")", style);
+    Array x, y;
+    for (const PresentedPoint& point : series.points) { x.emplace_back(point.x); y.emplace_back(point.y); }
+    Object line{{"dash", marked("dash") ? "dash" : "solid"}};
+    if (style) { line.emplace_back("color", style->light); line.emplace_back("width", style->width_px); }
+    const char* pane = series.pane == Pane::Bragg ? "y2" : series.pane == Pane::Residual ? "y3" : "y";
+    Object trace{{"type", "scatter"}, {"name", name}, {"x", std::move(x)}, {"y", std::move(y)}, {"xaxis", "x"}, {"yaxis", pane},
+        {"mode", marked("markers") ? "lines+markers" : "lines"}, {"connectgaps", false}, {"opacity", style && std::isfinite(style->opacity) ? style->opacity : 1.0}, {"line", std::move(line)}, {"hovertemplate", "%{x}, %{y}<extra>%{fullData.name}</extra>"}};
+    if (marked("markers")) {
+        Object marker; if (style) { marker.emplace_back("color", style->light); marker.emplace_back("size", style->marker_px); } trace.emplace_back("marker", std::move(marker));
+    }
+    if (marked("bars") && series.bar_high.size() == series.points.size()) {
+        Array high, low;
+        for (std::size_t i = 0; i < series.points.size(); ++i) {
+            const double value = series.points[i].y;
+            high.push_back(!std::isfinite(value) || !std::isfinite(series.bar_high[i]) ? Value(nullptr) : renderer_number(series.bar_high[i] - value));
+            if (!std::isfinite(value)) low.emplace_back(nullptr);
+            else if (i >= series.bar_low.size()) low.push_back(renderer_number(std::numeric_limits<double>::quiet_NaN()));
+            else low.push_back(renderer_number(value - (std::isfinite(series.bar_low[i]) ? series.bar_low[i] : browser_number(report.presentation.y_main.min))));
+        }
+        Object errors{{"type", "data"}, {"symmetric", false}, {"thickness", 1}, {"width", 0}, {"array", std::move(high)}, {"arrayminus", std::move(low)}};
+        if (style) errors.emplace_back("color", style->light);
+        trace.emplace_back("error_y", std::move(errors));
+    }
+    if (series.kind == SeriesKind::BraggTicks) {
+        trace[1].second = browser_colour("Bragg peaks · " + series.label, style);
+        if (index < report.hover.size()) trace.emplace_back("text", strings(report.hover[index]));
+        for (auto& [key, value] : trace) if (key == "hovertemplate") value = "%{text}<extra>%{fullData.name}</extra>";
+    }
+    return trace;
+}
+Value browser_pattern(const ReportPattern& report, const std::vector<SeriesStyle>& styles) {
+    Array traces, shapes, annotations;
+    if (!report.title.empty()) annotations.emplace_back(Object{{"text", report.title}, {"xref", "paper"}, {"yref", "paper"}, {"x", 0}, {"y", 1}, {"xanchor", "left"}, {"yanchor", "bottom"}, {"showarrow", false}});
+    bool bragg = false, residual = false; double fixed = 0.0;
+    for (const PaneLayout& pane : report.presentation.layout) { bragg = bragg || pane.pane == Pane::Bragg; residual = residual || pane.pane == Pane::Residual; fixed += browser_number(pane.fixed_px); }
+    for (std::size_t i = 0; i < report.presentation.series.size(); ++i) traces.push_back(browser_trace(report, report.presentation.series[i], i, styles));
+    const auto* excluded = browser_style(styles, "excluded");
+    for (const ExcludedBand& band : report.presentation.excluded) {
+        Object shape{{"type", "rect"}, {"xref", "x"}, {"yref", "paper"}, {"x0", band.x_min}, {"x1", band.x_max}, {"y0", 0}, {"y1", 1}, {"line", Object{{"width", 0}}}, {"layer", "below"}};
+        if (excluded) { shape.emplace_back("fillcolor", excluded->light); shape.emplace_back("opacity", excluded->opacity); } shapes.emplace_back(std::move(shape));
+    }
+    if (bragg) for (const BraggRowLabel& label : report.presentation.bragg_labels) annotations.emplace_back(Object{{"text", browser_colour(label.text, browser_style(styles, label.style))}, {"xref", "paper"}, {"yref", "y2"}, {"x", 0}, {"y", label.centre}, {"xanchor", "right"}, {"xshift", -6}, {"showarrow", false}});
+    const auto rows = std::count_if(report.presentation.series.begin(), report.presentation.series.end(), [](const PatternSeries& series) { return series.kind == SeriesKind::BraggTicks; });
+    return Object{{"traces", std::move(traces)}, {"shapes", std::move(shapes)}, {"annotations", std::move(annotations)}, {"main_title", browser_axis_title(report.presentation.y_main, styles)}, {"residual_title", browser_axis_title(report.presentation.y_residual, styles)}, {"bottom_axis", residual ? "y3" : bragg ? "y2" : "y"}, {"bragg_rows", static_cast<double>(rows)}, {"fixed_height", renderer_number(fixed)}};
+}
+Value browser_single_crystal(const ReportSingleCrystal& crystal, const std::vector<SeriesStyle>& styles) {
+    double low = 0.0, high = 0.0;
+    for (std::size_t i = 0; i < crystal.meas.size(); ++i) {
+        const double measured = browser_number(crystal.meas[i]);
+        const double uncertainty = i < crystal.su.size() ? browser_number(crystal.su[i]) : std::numeric_limits<double>::quiet_NaN();
+        const double calculated = i < crystal.calc.size() ? crystal.calc[i] : std::numeric_limits<double>::quiet_NaN();
+        for (double end : {measured - uncertainty, measured + uncertainty, calculated}) if (std::isfinite(end)) { low = std::min(low, end); high = std::max(high, end); }
+    }
+    double pad = (high - low) * 0.05; if (pad == 0.0 || std::isnan(pad)) pad = 1.0;
+    Object out{{"range", Array{renderer_number(std::min(0.0, low - pad)), renderer_number(high + pad)}}};
+    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light); return out;
+}
+Value browser_evolution(const ReportEvolution& series, const std::vector<SeriesStyle>& styles) {
+    Array x, y, su, text;
+    for (const ReportEvolutionPoint& point : series.points) { x.emplace_back(point.x); y.emplace_back(point.y); su.emplace_back(point.su); text.emplace_back(point.text); }
+    Object out{{"x", std::move(x)}, {"y", std::move(y)}, {"su", std::move(su)}, {"text", std::move(text)}, {"title", series.units.empty() ? series.name : series.name + " (" + series.units + ")"}};
+    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light); return out;
+}
+
+Value pattern_json(const ReportPattern& pattern, const std::vector<SeriesStyle>& styles, bool browser) {
     const PatternPresentation& shown = pattern.presentation;
     Array series, excluded, layout, hover;
     for (const PatternSeries& item : shown.series) {
@@ -282,21 +382,25 @@ Value pattern_json(const ReportPattern& pattern) {
     for (const BraggRowLabel& label : shown.bragg_labels) {
         labels.emplace_back(Object{{"text", label.text}, {"style", label.style}, {"centre", label.centre}});
     }
-    return Object{{"current", shown.current},   {"x", axis_json(shown.x)},
+    Object object{{"current", shown.current},   {"x", axis_json(shown.x)},
                   {"y_main", axis_json(shown.y_main)}, {"y_residual", axis_json(shown.y_residual)},
                   {"series", std::move(series)}, {"excluded", std::move(excluded)},
                   {"layout", std::move(layout)}, {"hover", std::move(hover)},
                   {"bragg_labels", std::move(labels)}, {"title", pattern.title}, {"legend", pattern.legend}};
+    if (browser) object.emplace_back("browser", browser_pattern(pattern, styles));
+    return object;
 }
 
-Value single_crystal_json(const ReportSingleCrystal& crystal) {
+Value single_crystal_json(const ReportSingleCrystal& crystal, const std::vector<SeriesStyle>& styles, bool browser) {
     const auto indices = [](const std::vector<int>& values) {
         return numbers(std::vector<double>(values.begin(), values.end()));
     };
-    return Object{{"h", indices(crystal.h)},         {"k", indices(crystal.k)},       {"l", indices(crystal.l)},
+    Object object{{"h", indices(crystal.h)},         {"k", indices(crystal.k)},       {"l", indices(crystal.l)},
                   {"meas", numbers(crystal.meas)},     {"su", numbers(crystal.su)},     {"calc", numbers(crystal.calc)},
                   {"title", crystal.title},            {"name", crystal.name},          {"x_title", crystal.x_title},
                   {"y_title", crystal.y_title},        {"hover", strings(crystal.hover)}};
+    if (browser) object.emplace_back("browser", browser_single_crystal(crystal, styles));
+    return object;
 }
 
 ReportSingleCrystal single_crystal_of(const Value& value) {
@@ -658,6 +762,49 @@ SceneDrawing drawing_of(const Value& value) {
     return drawing;
 }
 
+Value browser_mesh(const SharedSiteMesh& mesh) {
+    Array positions, normals, colours, triangles;
+    for (const SharedSiteVertex& vertex : mesh.vertices) {
+        for (double value : {vertex.position.x, vertex.position.y, vertex.position.z}) positions.push_back(renderer_number(value));
+        for (double value : {vertex.normal.x, vertex.normal.y, vertex.normal.z}) normals.push_back(renderer_number(value));
+        for (double value : {vertex.color.x, vertex.color.y, vertex.color.z}) colours.push_back(renderer_number(value));
+    }
+    for (std::uint32_t index : mesh.indices) triangles.emplace_back(static_cast<double>(index));
+    return Object{{"positions", std::move(positions)}, {"normals", std::move(normals)}, {"colours", std::move(colours)}, {"indices", std::move(triangles)}};
+}
+Value browser_structure(const ReportStructure& structure, const std::vector<SceneStyle>& style_table) {
+    const auto& scene = structure.scene; const auto& drawing = structure.drawing;
+    if (!scene.current || drawing.spheres.size() + drawing.shared.size() == 0) return Object{{"empty", true}};
+    const auto basis = shared_site_browser_basis(scene);
+    Object subsets;
+    for (const std::string subset : {"all", "asymmetric", "none"}) {
+        const auto visible = [&](std::size_t atom) { return subset == "all" || (subset == "asymmetric" && scene.atoms[atom].asymmetric); };
+        std::vector<SceneInstance> spheres, bonds; std::vector<std::size_t> shared; Array labels;
+        for (const SceneInstance& instance : drawing.spheres) if (visible(instance.atom)) spheres.push_back(instance);
+        for (std::size_t atom : drawing.shared) if (visible(atom)) shared.push_back(atom);
+        const std::size_t halves = std::min(drawing.cylinders.size(), 2 * scene.bonds.size());
+        for (std::size_t i = 0; i < halves; ++i) {
+            const SceneBond& bond = scene.bonds[i / 2]; if (visible(bond.atom_1) && visible(bond.atom_2)) bonds.push_back(drawing.cylinders[i]);
+        }
+        for (const SceneLabel& label : structure.labels) labels.emplace_back(visible(label.atom));
+        const auto mesh = shared_site_mesh(scene, shared, 32, 16, SharedSiteMeshProfile::Three160, basis);
+        subsets.emplace_back(subset, Object{{"spheres", instances_json(spheres)}, {"shared", browser_mesh(mesh)}, {"bonds", instances_json(bonds)}, {"labels", std::move(labels)}});
+    }
+    const std::size_t halves = std::min(drawing.cylinders.size(), 2 * scene.bonds.size());
+    const std::vector<SceneInstance> cell(drawing.cylinders.begin() + static_cast<std::ptrdiff_t>(halves), drawing.cylinders.end());
+    Object styles;
+    for (const SceneStyle& style : style_table) {
+        if (std::any_of(styles.begin(), styles.end(), [&](const auto& item) { return item.first == style.key; })) continue;
+        styles.emplace_back(style.key, Object{{"key", style.key}, {"light", style.light}, {"dark", style.dark}, {"value", style.value}});
+    }
+    const Object boolean_next{{"false", true}, {"true", false}}, boolean_pressed{{"false", false}, {"true", true}};
+    Object next{{"atoms", Object{{"all", scene.has_copies ? "asymmetric" : "none"}, {"asymmetric", "none"}, {"none", "all"}}}};
+    Object pressed{{"atoms", Object{{"all", true}, {"asymmetric", true}, {"none", false}}}};
+    for (const char* key : {"labels", "bonds", "cell", "axes"}) { next.emplace_back(key, boolean_next); pressed.emplace_back(key, boolean_pressed); }
+    return Object{{"empty", !scene.current || drawing.spheres.size() + drawing.shared.size() == 0}, {"subsets", std::move(subsets)}, {"cell", instances_json(cell)}, {"styles", std::move(styles)}, {"next", std::move(next)}, {"pressed", std::move(pressed)},
+        {"controls", Object{{"atoms", !scene.atoms.empty()}, {"labels", !scene.atoms.empty() && !structure.labels.empty()}, {"bonds", !scene.atoms.empty() && !scene.bonds.empty()}, {"atom_title", scene.has_copies ? "Atoms: all / asymmetric unit / none" : "Atoms: show / hide"}}}};
+}
+
 // --- the style tables
 
 Value pattern_styles_json(const std::vector<SeriesStyle>& table) {
@@ -765,7 +912,9 @@ void check_indices(const ReportModel& model) {
 
 }  // namespace
 
-std::string report_to_json(const ReportModel& model) {
+namespace {
+std::string write_report_json(const ReportModel& model, bool browser) {
+    if (browser) check_indices(model);
     Array sections;
     for (ReportSection section : model.sections) {
         sections.emplace_back(report_section_name(section));
@@ -803,8 +952,9 @@ std::string report_to_json(const ReportModel& model) {
                 points.emplace_back(
                     Object{{"x", point.x}, {"y", point.y}, {"su", point.su}, {"text", point.text}});
             }
-            series.emplace_back(Object{
-                {"name", one.name}, {"units", one.units}, {"x_title", one.x_title}, {"points", std::move(points)}});
+            Object item{{"name", one.name}, {"units", one.units}, {"x_title", one.x_title}, {"points", std::move(points)}};
+            if (browser) item.emplace_back("browser", browser_evolution(one, model.pattern_styles));
+            series.emplace_back(std::move(item));
         }
         evolution = std::move(series);
     }
@@ -818,22 +968,24 @@ std::string report_to_json(const ReportModel& model) {
             labels.emplace_back(
                 Object{{"atom", whole(label.atom)}, {"anchor", vec_json(label.anchor)}, {"text", label.text}});
         }
-        structures.emplace_back(Object{{"id", structure.id},
+        Object item{{"id", structure.id},
                                        {"categories", categories(structure.categories)},
                                        {"scene", scene_json(structure.scene)},
                                        {"view", view_json(structure.view)},
                                        {"drawing", drawing_json(structure.drawing)},
                                        {"along", std::move(along)},
-                                       {"labels", std::move(labels)}});
+                                       {"labels", std::move(labels)}};
+        if (browser) item.emplace_back("browser", browser_structure(structure, model.structure_styles));
+        structures.emplace_back(std::move(item));
     }
     Array experiments;
     for (const ReportExperiment& experiment : model.experiments) {
         Object item{{"id", experiment.id},
                     {"categories", categories(experiment.categories)},
-                    {"pattern", pattern_json(experiment.pattern)}};
+                    {"pattern", pattern_json(experiment.pattern, model.pattern_styles, browser)}};
         // Only a single crystal carries its chart.
         if (experiment.single_crystal) {
-            item.emplace_back("single_crystal", single_crystal_json(*experiment.single_crystal));
+            item.emplace_back("single_crystal", single_crystal_json(*experiment.single_crystal, model.pattern_styles, browser));
         }
         experiments.emplace_back(std::move(item));
     }
@@ -858,6 +1010,11 @@ std::string report_to_json(const ReportModel& model) {
                           {"structure_styles", structure_styles_json(model.structure_styles)}};
     return json::write(document);
 }
+
+}  // namespace
+
+std::string report_to_json(const ReportModel& model) { return write_report_json(model, false); }
+std::string detail::report_html_model_json(const ReportModel& model) { return write_report_json(model, true); }
 
 ReportModel report_from_json(const std::string& text) {
     const Value document = json::parse(text);

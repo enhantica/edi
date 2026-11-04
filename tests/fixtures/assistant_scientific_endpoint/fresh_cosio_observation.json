@@ -1,0 +1,79 @@
+{
+  "kind": "Actual diagnostic observation; not a scientific oracle or acceptance",
+  "source_commit": "ebf99966dc2b6afb8d4a6cd51afdcf44cd55063c",
+  "probe_source_marker": [
+    "ebf99966dc2b6afb8d4a6cd51afdcf44cd55063c-dirty"
+  ],
+  "dirty_source_paths": [
+    "app/src/app_info.cpp"
+  ],
+  "fit_fix_files_match_source_commit": true,
+  "probe_sha256_at_launch": "c56b705d6b751947ff523506a938312b36255d35783a9abf48db02bfab3690ad",
+  "runtime_sha256": "5998898d46aa2b50697702155d6fd398553623c66120558b9ae32e7e062e4b0f",
+  "runtime_version": "0.162.1",
+  "existing_managed_login_available": true,
+  "login_refresh_requested": false,
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "show_actions": true,
+  "input_sha256": {
+    "d20.xye": "72ff3c5902cc9e87b7a9a6f4d87081e6367f1477a7958914e3d89c87ddc164e9",
+    "cosio.cif": "993c4770e9ee68929f537aaa132fb8d81f279eb4eb7b8af12516d5ff7c841b33"
+  },
+  "pre_send_fixture_observation": {
+    "send_count": 0,
+    "effort_radio_width": 0,
+    "effort_label_exposed": true,
+    "driver_correction": "Click the current visible effort label and its TapHandler; retain the exact selected model and effort criteria"
+  },
+  "scientific_session_send_count": 1,
+  "provider_completed": false,
+  "actual_provider_turn_identity_observed": false,
+  "final_state": "interrupted",
+  "final_error": "The official agent reply is invalid or exceeds its limits.",
+  "project_created": false,
+  "native_fit_observed": false,
+  "applied_undo_count": 0,
+  "ends_with_adopted_fit": false,
+  "current_fit_result_rows": null,
+  "live_gate": {
+    "passed": false,
+    "findings": [
+      "provider_or_observation_incomplete",
+      "requested_report_not_shown",
+      "no_adopted_final_fit",
+      "current_final_fit_result_missing"
+    ],
+    "last_adopted_fit_row": null,
+    "last_applied_undo_row": null,
+    "documented_undo_cleared_result": false,
+    "current_result_rows": null
+  },
+  "final_fit_required_after_rejected_trial_undo": {
+    "status": "unexercised",
+    "reason": "Transport failed before native scientific work; no rejected-trial Undo occurred"
+  },
+  "offline_gate": {
+    "exit": 1,
+    "findings": [
+      "unreadable_endpoint"
+    ],
+    "reason": "No uniquely owned canonical history existed to retain"
+  },
+  "gate_assertions_changed": false,
+  "original_failed_receipts_unchanged": true,
+  "post_run_identity": {
+    "binary_unchanged_after_run": false,
+    "runtime_unchanged_after_run": true,
+    "binary_sha256_after_run": "b00b1855834d57a9497d98fe3017d6e1ce0ab3e3a8a98527d9b613a9d5f45524",
+    "checked_utc": "2026-11-02T08:15:36.617600+00:00"
+  },
+  "observation_seconds": 23.41099160630256,
+  "primary_receipt_sha256": {
+    "RESULT.json": "bd9a01d120f7e2b7a6bb490f25be8b0420866e8a34bb7762bbbd153eca8aa3d2",
+    "final-ui.json": "4644ec56a2135e0f6bf727fec0d75c54d5ca7672622a397d7c404648bbda8e54",
+    "DRIVER.py": "073f346aa3d49b094ee641bc11bf2c9ab28dcdcb0f46a67aedf1bbe7418f0a63"
+  },
+  "qualification": "The failed single Send does not assess restoration of a final adopted fit after a rejected-trial Undo. No provider retry was made.",
+  "owned_main_and_display_processes_exited": true
+}

@@ -125,11 +125,7 @@ AppDialog {
                         objectName: "about.licence." + modelData
                         fontIcon: "balance-scale"
                         text: modelData
-                        onClicked: {
-                            licencePopup.title = modelData;
-                            licencePopup.licence = ApplicationInfo.licenceText(ApplicationInfo.appLicenceUrls[licenceEntry.index]);
-                            licencePopup.open();
-                        }
+                        onClicked: ApplicationInfo.aboutOpenLicence()
                     }
                 }
             }
@@ -185,14 +181,7 @@ AppDialog {
         ListModel {
             id: componentRows
 
-            Component.onCompleted: {
-                for (let index = 0; index < ApplicationInfo.componentNames.length; ++index)
-                    append({
-                        "component": ApplicationInfo.componentNames[index],
-                        "version": ApplicationInfo.componentVersions[index],
-                        "licence": ApplicationInfo.componentLicences[index]
-                    });
-            }
+            Component.onCompleted: ApplicationInfo.aboutPopulateComponents()
         }
         DataTable {
             id: components
@@ -200,7 +189,7 @@ AppDialog {
             objectName: "about.components"
             readonly property var naturalWidths: [naturalTextColumnWidth("component", qsTr("Component")), naturalTextColumnWidth("version", qsTr("Version")), naturalTextColumnWidth("licence", qsTr("Licence"))]
 
-            width: naturalWidths.reduce((sum, column) => sum + column, 0) + EaStyle.Sizes.tableColumnSpacing * (naturalWidths.length - 1) + EaStyle.Sizes.borderThickness * 2 + rowPadding * 2
+            width: ApplicationInfo.aboutComponentsWidth()
             // As many rows as fit in the window with the popup's title and OK button, so the popup is never taller than
             // the window and stays centred in it; the rest scroll.
             maxRowCountShow: Math.max(3, Math.floor(((thirdPartyPopup.parent ? thirdPartyPopup.parent.height : 0) - EaStyle.Sizes.fontPixelSize * 14) / tableRowHeight) - 1)

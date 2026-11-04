@@ -522,7 +522,7 @@ void StructureViewController::draw() {
         shafts.push_back(arrow_part(themed, 0.0, themed.shaft_length, themed.shaft_radius));
         heads.push_back(arrow_part(themed, themed.shaft_length, themed.head_length, themed.head_radius));
     }
-    // The magnetic moments share the arrow meshes; their arrows are placed in the scene (edi ADR-0068).
+    // The magnetic moments share the arrow meshes; their arrows are placed in the scene (edi ADR-0070).
     for (const edi::SceneArrow& arrow : drawing_.moments) {
         edi::SceneArrow themed = arrow;
         // One grey: darker on the light theme, lighter on the dark one.

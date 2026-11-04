@@ -13,17 +13,7 @@ EaElements.TabButton {
     id: tab
 
     function titleSegments() {
-        const name = {
-            "text": tab.text,
-            "bold": tab.checked
-        };
-        if (tab.fontIcon === "")
-            return [name];
-        const icon = {
-            "icon": tab.fontIcon,
-            "color": tab.iconColor !== "" ? tab.iconColor : tab.foregroundColor()
-        };
-        return [icon, name];
+        return ApplicationInfo.tabTitleSegments();
     }
 
     contentItem: Item {

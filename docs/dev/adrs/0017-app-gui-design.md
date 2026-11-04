@@ -150,6 +150,16 @@ The decisions it rests on, unchanged here:
   parent's last child, which in a column with a `Repeater` is the last delegate whether it is shown or not
   (gui-components#55), so edi sets `last` itself (`Globals/SideBarGroups.qml`). "Shown" is the group's tab
   rule (`CategoryGroup.shown`), not `visible`, which is also false while the page is hidden.
+  `CategoryGroup.admitted` is the explicit presentation input to that rule and defaults to true;
+  tier/extras and measured-data requirements still apply. Its readonly `shown` drives both `listed`
+  and `visible`, so logical ordering and the group's own visibility agree without filtering by
+  effective ancestor visibility. Project excludes `su_format` and `report` through this input:
+  standard uncertainties have their specialized group, and report settings belong to Report.
+  The former Project-only `visible` override left those hidden generated groups logically listed,
+  allowing a trailing hidden report group to steal the last-group border. Structure Basic/Extras,
+  Experiment Basic/Extras and Analysis Extras retain default admission and their original tier/data
+  rules. Category models, native interface eligibility, content loading, remembered open state and
+  backend sidebar ordering are unchanged; this is not a schema filter or scientific permission.
 
 ### 4. Actions not yet implemented are shown, disabled
 
@@ -536,7 +546,9 @@ Saving is active:
 - **Every dialog sits on whole pixels** (`Components/AppDialog.qml`: About, Preferences, Messages and the
   save refusal; the base's project-description dialog is placed the same way where edi opens it). The base
   centres a dialog with a half, so one of odd height lay on a half pixel and its edges were drawn differently
-  on Linux and macOS (edi PR 97, the three-row Messages dialog); edi rounds the centred position.
+  on Linux and macOS (edi PR 97, the three-row Messages dialog); edi rounds the centred position. A closed dialog
+  that has no parent item yet stays at (0, 0); attaching a parent restores the same rounded
+  centring bindings. It is not opened, reparented or given a window merely to measure geometry.
 - **A click opens the Messages dialog**, the same dialog as About and Preferences (the base `Dialog`: title
   bar, padding, background without an outline, OK). **Width fixed**: 38 font units
   (`AppSizes.messagesDialogContentWidth`, about Preferences' width), whatever the messages. **Height fits the
@@ -1018,6 +1030,77 @@ refuses to write its bank rows into it.
 - **Undo** is the app bar's Undo arrow: enabled while the model holds a fit's start state (after a finished or
   stopped fit), it restores the pre-fit state (`undo_fit`, one level) and clears the fit area.
 
+#### Status-action accessibility
+
+FIRST `FitStatusItem` owns the status-bar outcome and Fit/Continue/Refit/Stop,
+Reset and Follow controls. Effective clickability, visibility and enabled state
+project to one `accessibleAction` binding: a live action exposes its existing
+value text and tooltip as button name/description, and ignores its decorative or
+duplicate labels. Passive/unavailable items keep readable child text and no
+button role. Accessibility focusable/focused metadata explicitly follows that
+same availability, including true-to-false transitions. Desktop focus remains
+on the original control; the web representation below reports its own actual
+focus. Control.enabled, hover and tooltips are unchanged.
+
+ApplicationInfo owns the exact Qt Accessible press-signal connection to one thin
+QML forwarding method on the SAME control. Availability changes first disconnect
+that route synchronously, reconnecting only while live; component destruction
+retires it too. This avoids both an always-connected no-op press action and a
+notifying QML Connections endpoint waiting for deferred deletion. Qt owns the
+connection lifetime without a retained connection map or new scientific input
+source. The original guarded `statusItemPress` bridge rechecks the actual owner,
+context, visible/enabled state and live `clickable` property before emitting its
+same `clicked` signal. The original pointer TapHandler and QML fit/start/cancel,
+reset/follow/results handlers remain unchanged.
+
+This extends the FIRST custom Accessible role/name/native-press pattern in
+ExamplesGroup. It does not restore the retired Start fitting group or change
+labels, fitting policy, geometry, colours, animations, clocks, scientific results
+or Undo. Source-defined action enumeration and focus metadata must be exercised
+through initial passive/unavailable, available, retired and reentrant states;
+a guarded native no-op alone is not evidence of truthful accessibility.
+
+#### Web status actions follow actual accessible-object lifetime
+
+Pinned Qt's web accessibility bridge creates its HTML button or generic element
+from the initial native role and caches it by interface. Later attached-role
+changes do not rebuild that element. A real available Fit action was therefore
+still exposed as generic after its initial passive state; changing the browser
+selector or press-connection spelling would not repair that representation.
+
+On WebAssembly only, the original FitStatusItem is ignored in the accessibility
+tree while a nonvisual Loader child exists exactly for its existing
+accessibleAction interval. That child has a fixed Button role before its first
+component-complete ObjectShow, with the original value text and tooltip. It fills
+the same full control rectangle but contributes no layout, painting, pointer or
+key handler. Its sole accessibility Press calls the existing guarded C++
+statusItemPress on the original control; the original native role/NoRole,
+connection retirement, physical TapHandler and scientific clicked path remain.
+Desktop creates no child and retains its original accessibility representation.
+
+Qt's accessible tree flattens ignored ancestors, so the sole child action remains
+reachable and passive labels remain readable. Loader retirement invalidates its
+own component context, detaches and hides the child before deferred deletion;
+normal Qt hide/destruction retires the browser node. There is no fake QObject
+destruction, manual interface/cache surgery, global Qt patch, new timer or
+helper flag. Name changes while actionable retain the same fixed-role child.
+Inactive/passive fit metrics instantiate no Button child and expose no new Press.
+
+Accessibility SetFocus truthfully focuses that web child and reports the child's
+actual activeFocus. It does not fake focus on the ignored outer control or force
+a focus hand-off. The first status controls have no focus-driven visual, keyboard or
+business consumer beyond their accessibility metadata. Public outer identity,
+physical input and native focus behavior remain; web assistive focus belongs to
+its sole platform representation. No nonfocusable shortcut conceals this choice.
+
+This shared lifetime covers outcome/results, Reset, Follow and
+Fit/Stop/Continue/Refit, including visibility, enabled and fit-availability changes.
+Passive fit statistics remain passive. Plain StatusBarItem's always-active
+Messages action is its separate existing path, not another dynamic-role owner;
+its pointer/layout behavior is unchanged. Independent actual focus, one-action,
+press, same-geometry, availability, reentry/retirement and both-kit web coverage
+are required; source repair is not final browser or scientific acceptance.
+
 ### 18. Creating experiments
 
 (the owner, 2026-10-05)
@@ -1168,3 +1251,140 @@ saved files, the Report and the CLI write the numbers as before.
 | Keep singular loop titles (easydiffractionbeta's *Background*) | Rejected by the owner (idea 19): a loop names its rows, and the title carries their count. |
 | Leave unimplemented actions out until they work | Rejected (ideas 13, 17): the owner wants the final layout visible now. |
 | Fix `last` in gui-components | Deferred: the base is consumed unmodified (ADR-0015 §1); reported upstream as gui-components#55. |
+
+
+### Native Text-tab edit transactions
+
+ApplicationInfo executes TextTab's block presentation, kept-edit/refusal map operations, apply and leave/discard/return transactions. The original maps and action record stay on the view, and Session/BlockText retain actual text application and output preservation. An answer consumes the original action record before invoking it. Source changes retain their captured file/block/source/text references; a Show choice shares the same original continuation value for leave and drop. Native callbacks retain function arity, distinct/shared identity, creation scope and deletion strictness. Qt's existing queue owns guards for non-capturing QML-scope callbacks. No edit store, controller, parser or evaluated script is added.
+
+QML retains only the Show selector's inline declarative Qt.binding restoration. Native code decides when that installation executes. Native and browser compilation and complete kept-edit, refusal, destruction/reentry and error verification remain required after migration.
+
+
+## Native procedures for shared toolbar, icon, sidebar and status controls
+
+ApplicationInfo executes ToolbarLines row packing and width projection, IconLine elision and width accumulation, SideBarGroups repeater-aware ordering and remembered-state decisions, and StatusBar width/text reductions. These extend the original controls in §3, §10 and §17 and the grouped chart-toolbar rule in ADR-0041. ColourMapComboBox uses the same native callback bridge for its existing map-title projection. The controls keep their original view properties, visual delegates, native scientific/model actions and named forwarding functions. Toolbar layout still queues the same named layout function; this change introduces no second layout record, sidebar-state store, status model or controller.
+
+The implementation uses the current QML context and VM property, coercion, method and intrinsic iterator operations. Array methods and callback arguments remain real script operations, including original receiver/read timing, custom iterators, exceptions, repeated child reads and setter/reentry behavior. Original callback captures, formal arity and QML lifetime handling remain explicit. Status translations retain their original context and extraction markers. Direct geometry/style bindings and platform rendering remain in QML. Compilation and complete runtime verification follow the complete source migration.
+
+
+### Native numeric and axis presentation
+
+NumberText's scientific, uncertainty-aware, full/compact and width-fitted spelling procedures and axis tick/precision selection now execute in ApplicationInfo through its existing stateless script-operation bridge. The first numeric rule remains §21 and NumberText; ProjectViewModel::suText still delegates to edi::su_text/crysta for the project's uncertainty rule. This move does not change that scientific formatter, saved values, fitting calculations, Undo or report data. The QML singleton retains its named one-call functions and the same argument/return surfaces.
+
+Native code retains the original typeof/finite guards, arithmetic and default-hint addition, regex literals, UTF-16 numeric indexing, string/number methods, rounding limits and exponent/negative-zero behavior using the pinned VM. Global/context names and prototype methods remain observable, with the original callback captures and arity for every/map and actual Set construction. Axis input traverses the intrinsic for-of protocol, including original close/error behavior. No locale substitution, new rounding policy, format cache, controller or evaluated script is introduced. The view's FontMetrics and project remain the existing measurement/uncertainty authorities. Desktop/browser compilation and complete scientific/presentation runtime checks follow the complete source migration.
+
+
+## Native scene, legend and shared chart presentation
+
+ApplicationInfo executes StructureView's pointer/hover/colour-choice procedures, StructureScene's pick dispatch, ChartLegend's hit/mark/rich-label/segment construction, BlockSelector's step/selection/segment procedures, CorrelationChart's number/value/width/commit procedures, and FactorText/FitOutcomes formatting. These extend the first scene in ADR-0022, chart legend and block layout in §7/§10/§15, fit-outcome rule in §17, and agreement-factor escaping in ADR-0045. Existing native structure/chart/correlation controllers and scientific formatters remain authoritative; no view state, camera, model, controller or store is duplicated.
+
+Script property/method/context access, coercion, arithmetic, regex literals and global replacements, callbacks and literal member/order semantics stay on the current VM bridge. Legend callback captures preserve the original per-entry ink function and mutable label-map behavior. Style/translation reads retain their original contexts and extraction markers. Shared report/live correlation colours use the same native procedure. Typed QML forwarding signatures retain the original argument/result conversions. Only inline declarative Qt.binding installers remain at the selection and number-edit boundaries, called by native code at the original points. The visual scene, materials, axes, delegates, bindings and host rendering APIs remain QML declarations. Full compilation and live pointer, formatting, model/reentry, Undo and error verification follows the complete source migration.
+
+
+## Native common-control and working-indicator procedures
+
+ApplicationInfo executes ToolbarComboBox's font-dependent width measurement and delayed binding installation, IconTabButton's title pieces, DigitText's digit/run projection, PaletteStrip's occupied colour positions, ParameterNames' ordered icon/name pieces and BlockNames' bounded row/line projection. The first rules remain the controls in §2/§8/§10/§15 and ADR-0038's palette ownership. Existing view records and native models/setters remain authoritative; no table, palette or naming model/cache is added. The original constant icon-prefix table remains ordered, and every admitted name still uses its current script startsWith method. The delayed callback contains only its original compiled Qt.binding installer.
+
+AssistantWorking's elapsed text/state, initial/random variant choice, cadence/deadline/phase and animation-start/stop procedures also execute natively. Its existing view fields, Timers and RotationAnimator retain all state and scheduling. The current context's Date.now and Math.random calls occur at their original points, with the same intervals, fixed deadline, phase arithmetic, restart/stop order and exception behavior; no second clock, random source, animation controller or scheduler is introduced.
+
+All procedures retain current-VM property/context/method access, coercion, regex, array/literal/iterator semantics, repeated reads, setter order, font dependencies and translations. QML keeps visual objects, ordinary bindings, one-call forwarding functions and the necessary compiled binding installer. Desktop/browser compilation and complete font/layout/timing/lifecycle/reentry/error verification follows the complete source migration.
+
+
+## Native table-row setup and prepared member invocation
+
+ApplicationInfo executes TableRow's editing/activation, focus-policy traversal, cell signal setup and hover/click discovery/retirement procedures. DataTable and the original view/signal owners remain authoritative. Existing Qt callbacks retain their captured table/cell references and named delayed fitColumns identity. The only supplied inline callback installs the original compiled opacity binding with the discovered child and hover object; native code chooses its original installation point. No row controller, selection store, extra lifetime guard or focus policy is introduced.
+
+The member-call thunk bridge roots the original receiver, evaluates the argument thunk once, then resolves and calls the member on that receiver. This is the pinned Qt ordinary-dot-call sequence: argument effects precede a throwing getter or noncallable error, while replacing the receiver's method during argument evaluation is visible to the later lookup. The Math/string thunk helpers and common-control procedures share this rule, including nested random/measurement/formatting, concatenation and parameter-piece construction. Computed-subscript and optional-call forms retain their distinct original sequences; no universal early-callee rule is imposed. Earlier separately precomputed receiver/argument expressions remain part of the final finite source/error-order sweep rather than being certified by this helper change alone. Native and browser compilation and full persistence/selection/font/timing/lifetime/reentry/error verification follow the complete source migration.
+
+
+## Native searchable-popup procedures
+
+ApplicationInfo executes SearchableComboBox's folding/matching/pick algorithm, option and fitted measurement, popup positioning/placement, acceptance transaction, initial setup and opening/request/timer lifecycle. The first control remains §7's project/vocabulary picker. Existing control/popup/header/ListView/Timer objects and opening/request records retain their authority and state; no popup controller, filter model, timer or store is added. Every original identity/currentness check, property read, repeated check after layout/write, effect and exception point remains in its original sequence. Closed-list model binding, selection and focus policy are retained.
+
+The current VM handles String/regex/method/context operations, typed casts and arithmetic. The only inline callbacks install the original compiled alignment, closed-list model and focus bindings at native-selected original points; clear/focus and visual declarations remain direct Qt host actions. The pinned ordinary dot-call rule above applies to argument thunks; unlike an early-callee policy, a getter runs after argument effects. Full desktop/browser compilation and filtering/geometry/selection/coldness/destruction/reentry/error verification follows the complete source migration.
+
+
+## Native remaining form, filter and local-base procedures
+
+ApplicationInfo executes DescriptionTab's focus/name/title/authors/description commits; parameter-picker write/follow/deferred-follow and shown-group iteration; atom-site/ADP cold measurement and selectors; appearance, space-group and linked-structure commits; reflection display/placement; example/recent row opening transactions; and the app-owned ProjectDescriptionDialog, ToolTip and Sizes procedures. The first implementations remain the form/table rules in §5/§7/§11, the original structure/experiment native models (ADR-0022/ADR-0049/ADR-0051), parameter filtering (ADR-0046), settings/examples and project creation boundaries (ADR-0031). Existing project/scientific/native setters remain the only writes; native validation, conversion, Undo and refusal text are unchanged. No form/filter/controller/store is introduced.
+
+The current VM retains original admission, getter/read order, guards, regex, arithmetic, signal/reentry and exception behavior. Cold ADP measurement reads no values without a beta row. The ADP selector captures its original site/type/model before restoring the compiled binding and queues its original delayed setType callback; no new owner-change or retirement guard is added. Parameter model rebuilds retain the same immediate follow and named deferred follow identity. Example/recent continuations retain their original row/context reads at execution. Local base overlays retain the original validator/title limit, path separators, popup placement and scale rounding; no upstream package is edited.
+
+Only compiled Qt.binding installers remain inline, with native code deciding their original execution points; selector follow functions that only install those bindings remain named for Qt queue identity. Ordinary visual bindings and direct existing native actions stay QML. Desktop/browser compilation and full scientific/form/lifecycle/refusal/IME/Undo/reentry/error verification follows the complete source migration.
+
+
+## Native palette, results, parameter-menu and list projections
+
+ApplicationInfo now executes the original AppColors position/kind/element admission and projection rules, FitResults structure-header/column projections and passive-row traversal, result-width measurement and Evolution navigation, About licence/component population and width reduction, and the app-owned ParamTextField formatting and lazy menu dispatch. The first paths are the palette and readability rules (§8, ADR-0038/ADR-0047), fit results (ADR-0045), component/licence ownership (ADR-0015), and parameter fields (ADR-0029). Existing colour, scientific, fit-result and formatting owners remain authoritative; this change adds no controller, cache, model or alternative scientific policy.
+
+The same bridge also owns AssistantPlan group/budget text, skill selection, generated/measured table column and component-intensity maps, uncertainty option labels and example tooltip filtering/joining. The original native assistant/schema/table owners and actual QML context remain the sources. Native VM closures retain the original callback arity, mutable method receivers, repeated reads, array holes, nullish/NaN fallbacks, UTF-16 strings, translation scope, property capture, exception and reentry behavior. Ordinary dot calls preserve the pinned Qt compiler order: receiver first, arguments next, member lookup/call last.
+
+The local ParamTextField override still creates its original QML menu component only on the first opening and routes the same mouse button/source cases; the upstream package is unchanged. The actual rendering hierarchy, metrics, native model setters and direct bindings/actions remain in QML. Complete desktop/browser compilation and runtime verification follows the source migration.
+
+
+## Native window and project-creation lifecycle
+
+ApplicationInfo owns Main's remaining workflow-loader count/readiness and preparing-tab selection, assistant action-page/manual-takeover branches, browser-save notices/errors/button preparation, result/refusal presentation, unsaved-name escaping and ordered startup continuation. AppState's project-change chart reset runs through the same existing bridge. The first implementations are the workflow and fit presentation in this ADR, project/save/browser ownership (ADR-0052), persisted geometry/settings (ADR-0031), chart state (ADR-0041) and rendering observation. Direct rendering, coordinate mapping, property bindings and one-action signal forwarding stay at their real QML/Qt boundary.
+
+The original GetStarted Create preparation/defaults/name/title admission, intent retirement, dialog-open/reject/close/accept handlers, and deferred creation now execute in that owner. Existing Session, assistant intent APIs, original form validators/defaults and native project outcome remain authoritative. Original createLife/createIntent/createOperation/assistantCreate view values remain the only lifecycle tokens; no state store, controller, extra retirement guard or alternate creation policy is added. The original accepted values and model references are captured at the original points, with the same repeated project/token checks and original error/currentness handling. Close-tail and creation continuations remain distinct per invocation. Scope-only startup/open continuations retain Qt's existing QML context-lifetime guard; callbacks with original local captures retain those actual managed values without a new guard.
+
+The same VM supplies custom iterator completion/close, string/regex formatting, context/global name resolution, receiver/argument/member-call order, translations, error propagation and reentry. Browser project operations remain implemented outside assistant-only availability branches. Complete desktop/browser build and runtime/failure repair follows the source migration.
+
+
+## Final guarded event procedures and retained host boundaries
+
+ApplicationInfo executes the remaining warning viewed/dismiss actions, focus-driven current structure/experiment/parameter selection, RecentProjects refresh guards, Structure/Analysis tab fallback, reflection-sort/header preparation, slider pressed-state callback and TextInput/status visual-feedback timer sequencing. These extend the first existing warning/status, table selection, parameter editing, workflow and local-base implementations in this ADR and ADR-0029/ADR-0046/ADR-0051. Existing model setters, Undo and sorting remain authoritative. The native bridge keeps the same actual QML scope, original guards/repeated reads, receiver/argument/member order, exceptions and interruption behavior. The empty commented-out hover handler is removed; it had no action. No controller or state store is added.
+
+The retained application QML executable boundaries are concrete: FitProgressBar's Canvas path/clip/stripe paint loop; real compiled Qt.binding expression installers and their stable named installer forwarders; Fonts.fontPath's component-relative Qt.resolvedUrl resource adapter; Main's remote-pointer mapFromItem/coordinate drawing dispatch; declarative property/layout/colour/arithmetic bindings, object literals and single existing native/Qt action or property-set forwarders. The standalone report retains only its actual DOM/CSS/Plotly/THREE/resource/camera/viewport/buffer/download adapters, including height-dependent pane placement and renderer-number decoding; portable report projections and wedges are native. The app web COI service worker remains the browser isolation/install/fetch host adapter. Vendored library bodies and the documentation audience script are not application business procedures.
+
+This is source migration completion at those explicit boundaries, not build/runtime qualification. Normal native/frontend/desktop/browser/standalone/offline/scientific/assistant/lifecycle/Undo/error checks, classification of every observed failure and resulting production repairs remain required.
+
+
+## Typed and qualified migrated view bindings
+
+Delegate-owned selected/sent file and skill metadata, the joint-fit project and window assistant host now use their actual owning IDs in nested bindings. CategoryGroup declares its existing bound component relationship; the legend tooltip names its actual MouseArea. Main's workflow-page property now declares the real WorkflowPage type already returned by the native page selector. The generic loaded text item retains its original dynamic dirty-property relation through ApplicationInfo instead of imposing a TextTab-only cast. These extend this ADR's actual component/selection/lazy-loader boundaries without a new owner, cache, warning suppression or behavior fallback.
+
+GeneratedGroup's GeneratedCategory ID is renamed from data to categoryData across its declarative reads and both existing native generated-category entrances. This avoids collision with QQuickItem.data and observes the actual GeneratedCategory NOTIFY-bearing properties, restoring the intended dictionary-generated single/loop view and edit source. No GeneratedCategory state, validation or native edit policy changes. Original model setters, array projection, property/reentry order and cold collapsed behavior remain. Normal lint/compiler/runtime checks verify the repair; no source change is made to the correctly declared native enums.
+
+
+## Pinned native VM compiler interface
+
+The bridge accesses Qt's generic Object getter and resolve-getter function addresses through Object::staticVTable(), which the pinned Qt private API exposes publicly. It calls the same base getter with the same receiver/null and has-property parameters; it deliberately does not dispatch through the QQmlContextWrapper override while probing only its ordinary Object properties. The ordinary getter/proxy/prototype distinction, actual receiver, context capture, pending exception and original lookup/call order remain unchanged. No protected-member access cast, visibility macro or alternate lookup implementation is introduced.
+
+The shared global-call helper defaults omitted arguments to its existing empty argument list, preserving zero-argument calls throughout the migrated chart/recent/working procedures. The local curveSlots name avoids Qt's slots macro while leaving the computed value and write untouched. These compiler repairs retain this ADR's existing owner and procedure contracts. The separately observed generated-MOC wrong-header build-path failure requires a physical build graph; correctly declared production enums and opaque snapshot types are unchanged. Normal compilation/lint/runtime verification remains the executor's responsibility.
+
+
+## Dedicated mutable-property notifications
+
+AssistantMarkdown's document/editor/source/markdown/text colour/accent/body font/mono font/table border/shade/base properties and AssistantViewModel.sessionDraft now declare their own dedicated NOTIFY signals, extending this ADR's existing mutable-QObject property contract and native assistant presentation/session owners. No shared invalidation signal, CONSTANT annotation or lint suppression stands in for a changing property.
+
+Markdown setters retain their original equality checks, assignments, presentation revisions, render/format/default-font order and existing currentness checks. A guarded exit notification observes a surviving owner after those effects, including early return paths; it emits only when the exposed value changed. Document/editor lifetime connections also notify the automatic QPointer-to-null transition and retire only the corresponding old notification connection. They do not clear extra view state or introduce owner-change resets. The initial body-font setup still runs even when its internal initialization flag was unset and the exposed font value already compared equal.
+
+The session-draft property notifies both its public setter and its existing saved-session restoration assignment. Restoration keeps its original file publication, draft-restored/sessions/selected signal order; a scope-exit notification observes only a surviving same native state through the existing observed-value publication bookkeeping, and the original publication guard remains after that scope for reentry. Browser unavailable setters still change no value and emit nothing. This adds the required observable property contract without a new store/controller, persistence write or altered draft/session admission policy. Normal property-gate, compiler and reentry/runtime checks qualify the repair.
+
+
+### Dedicated notifications across native view projections
+
+The existing mutable-property rule applies to each exposed value, including prior native owners whose broad event signals also drove several properties. AssistantViewModel now gives each skill-source/session/cache/consent value its own signal. Its existing State::observed publication bookkeeping and FileProjection currentness checks compare values before emission, record them before callbacks, and stop when reentry retires the owner. The existing broad events remain available at their original call sites; their dedicated-property publications reuse the same owner rather than creating a second cache or controller. Existing context comparisons keep their ordering and legacy context event, with separate consent signals. Session draft and markdown notifications follow the preceding section.
+
+BlockText remains lazy: file-only invalidation never generates text, and unobserved invalidation still defers text generation to a read. Its initial-observed or last-notified file identity is notification bookkeeping only; file() continues to query the actual native source on every read. File identity is read during invalidation only when its dedicated signal has a listener; a source exception is propagated without substituting an empty identity, and owner survival is checked before recording the result. The bookkeeping never supplies a file() result or generates text. Text/error comparisons keep their original order, while input-only listeners now trigger the same required text computation and receive their own comparison-based signal. Owner survival is checked between publications. GeneratedCategory and ExperimentViewModel retain their original broad changed/description events and publish dedicated signals by comparing actual fields with their last notified values. This is notification bookkeeping, never a getter or second model projection.
+
+EdiTextHighlighter's MEMBER properties retain MOC's actual per-member equality check. Each dedicated colour signal forwards to the existing colorsChanged event and rehighlight connection, retaining that effect before later property observers. Manual broad-event consumers continue to work. The original native view owners and setters remain authoritative; no shared NOTIFY signal, CONSTANT annotation, lint suppression or alternate model is introduced. Full normal MOC/property checks, compilation and actual reentry/lazy-view behavior remain execution obligations.
+
+
+### Superseded property publication ownership
+
+A surviving QObject does not make an outer notification tail current. Each Markdown property now owns a separate publication version and last-notified value. A setter claims its property before render/format/document callbacks; its completion records the value and retires that version before emitting. Nested updates, pointer destruction and pointer round trips retire only the affected property's older tail. An unrelated accent change cannot suppress a pending source notification. Pointer lifetime callbacks use the same comparison/version path. The newly added lifetime-connection bookkeeping checks its pointer publication after disconnect/connect hooks as well, so their reentry cannot overwrite a newer connection or continue an older pointer setter; unrelated property work remains independent. Exposed values, render currentness, source/default-font ordering and live pointer getters remain in their original owners.
+
+GeneratedCategory and ExperimentViewModel keep notification-only observed values and a read/synchronization publication identity. The original native computation and option/source callbacks precede their original field commit. That commit claims its publication identity; the legacy event remains at its original point. Each dedicated emission records its value before callbacks and checks publication identity before the next tail step. A nested no-op synchronization can therefore publish an already committed but not yet notified outer value, while a nested new synchronization retires the older tail. Original native field-write ordering is retained, including a new original commit after a source/option callback; no alternative model state is served from notification metadata.
+
+BlockText gives each invalidation a publication identity and compares input/file notifications against notification-only observations recorded before callbacks. After any text/error/input/file callback, a superseded tail stops before another derived getter or notification. The original text computation may itself reenter before committing its result, so the completed original computation claims the ensuing publication. File and input reads remain live, never return bookkeeping and only seed an as-yet-unobserved value; each notified value is recorded before its signal. No old input is parsed during invalidation to manufacture a baseline, so a previous read refusal cannot prevent computation of a new source. File-only invalidation never computes text, and source exceptions remain exceptions. No additional cache supplies text, input or file values.
+
+AssistantViewModel uses its existing observed map for per-property publication versions as well as values. A nested publication during a getter or legacy context event retires only that property's pending dedicated emission, including return-to-earlier-value sequences. Draft restoration and the public draft setter share the same observed-value publication path, recording before callbacks; a restoration tail cannot repeat a draft already published by a nested setter. Existing FileProjection checks, legacy events, setter/restoration effect order and unavailable-browser behavior remain in force. Full normal MOC, reentry/lifetime, lazy-view and platform checks remain required.
+
+
+### Retire native Markdown callbacks before derived teardown
+
+AssistantMarkdown's own callbacks now use a private QObject lifetime context owned by that same presentation item. QQuickItem base teardown can emit windowChanged after AssistantMarkdown's derived members have been destroyed; waiting for QObject's later automatic disconnection allows a captured-this render callback to access those dead members. The explicit derived destructor removes its owned window event filter and destroys the private context while every derived member is still alive. Context destruction disconnects incoming functors and removes their queued deliveries before base teardown begins, without a post-destruction member flag or a change to public document/editor values.
+
+The context covers the self windowChanged and desktop clipboard callbacks, editor/document lifetime callbacks, and every PassiveDocument contents/layout callback, including old externally parented documents/layouts retained after a newer document is selected. It is declared last so construction unwinding also destroys it before the fields those callbacks use. It owns no model, document, editor, window or clipboard state and introduces no service/controller. Alive callbacks retain their captured actual owner, existing property publication/currentness checks, rendering, formatting, clipboard and DPI behavior. External observers' connections remain untouched. Qt's ordinary item virtual/polish/scenegraph lifecycle stays with QQuickItem; no live callback is disabled and no public setter/reset is invoked as a teardown substitute. Normal lifetime, reentry, rendering and platform verification remains required.

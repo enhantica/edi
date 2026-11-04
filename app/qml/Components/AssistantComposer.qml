@@ -1,0 +1,771 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Dialogs
+import QtQuick.Layouts
+import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
+import edi.app
+
+Rectangle {
+    id: composer
+    required property AssistantViewModel assistant
+    required property Item toggleControl
+    property Item popupBoundary: composer.parent
+    property var sessionDraftIntent: null
+    property Item previousFocusItem: toggleControl
+    readonly property Item firstFocusItem: editor
+    readonly property alias actionsControl: showActionsControl
+    readonly property real actionSize: AppSizes.assistantIconExtent
+    function closeChoices() {
+        ApplicationInfo.assistantCloseChoices();
+    }
+    readonly property bool choicesEnabled: assistant.connected && !assistant.canCancel
+    readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
+    readonly property var effortChoices: ApplicationInfo.assistantEffortChoices()
+    readonly property int selectedModelRow: ApplicationInfo.assistantSelectedModelRow()
+    readonly property string modelLabel: selectedModelRow >= 0 ? assistant.models.text(selectedModelRow, "displayName") : qsTr("Model")
+    readonly property string selectedEffortLabel: ApplicationInfo.assistantSelectedEffortLabel()
+    function effortRank(value) {
+        return ApplicationInfo.assistantEffortRank(value);
+    }
+    function effortLabel(value) {
+        return ApplicationInfo.assistantEffortLabel(value);
+    }
+    function openChoices() {
+        ApplicationInfo.assistantOpenChoices();
+    }
+    onAssistantChanged: ApplicationInfo.composerOwnerChanged()
+    onChoicesEnabledChanged: ApplicationInfo.composerChoicesEnabledChanged()
+    Connections {
+        target: composer.assistant
+        function onConversationRetired() {
+            composer.closeChoices();
+        }
+        function onConnectionLabelChanged() {
+            composer.closeChoices();
+        }
+    }
+    FontMetrics {
+        id: choiceMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+    }
+    ButtonGroup {
+        id: modelSelection
+        exclusive: true
+    }
+    ButtonGroup {
+        id: effortSelection
+        exclusive: true
+    }
+    AppDialog {
+        id: choicePopup
+        objectName: "assistant.modelEffort.popup"
+        title: qsTr("Model and reasoning effort")
+        standardButtons: Dialog.NoButton
+        property var intent: null
+        readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
+        readonly property real radioColumnWidth: AppSizes.iconColumnWidth
+        readonly property real desiredLabelWidth: ApplicationInfo.assistantChoiceLabelWidth()
+        readonly property real tableWidth: radioColumnWidth + desiredLabelWidth + EaStyle.Sizes.tableColumnSpacing + modelTable.rowPadding * 2 + EaStyle.Sizes.borderThickness * 2
+        bottomPadding: leftPadding
+        width: Math.min(choiceContent.implicitWidth + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
+        height: Math.min(implicitHeight, viewportHeight)
+        contentWidth: Math.max(0, width - leftPadding - rightPadding)
+        contentHeight: Math.min(choiceContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+        focus: true
+        modal: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        function current(original) {
+            return ApplicationInfo.assistantChoiceCurrent(original);
+        }
+        function focusRow(table, index, original) {
+            ApplicationInfo.assistantChoiceFocusRow(table, index, original);
+        }
+        function modelAvailable(model, index) {
+            return ApplicationInfo.assistantModelAvailable(model, index);
+        }
+        function reconcile(group, original) {
+            ApplicationInfo.assistantChoiceReconcile(group, original);
+        }
+        function focusModel(start, step, original) {
+            ApplicationInfo.assistantChoiceFocusModel(start, step, original);
+        }
+        function focusEffort(index, original) {
+            ApplicationInfo.assistantChoiceFocusEffort(index, original);
+        }
+        function chooseModel(id) {
+            ApplicationInfo.assistantChooseModel(id);
+        }
+        function chooseEffort(token) {
+            ApplicationInfo.assistantChooseEffort(token);
+        }
+        onOpened: ApplicationInfo.assistantChoicesOpened()
+        onClosed: ApplicationInfo.assistantChoicesClosed()
+        ScrollView {
+            id: choiceScroll
+            width: choicePopup.contentWidth
+            height: choicePopup.contentHeight
+            contentWidth: choiceContent.implicitWidth
+            contentHeight: choiceContent.implicitHeight
+            clip: false
+            contentItem.clip: true
+            ScrollBar.vertical: EaElements.ScrollBar {
+                id: choiceVerticalScrollBar
+                parent: choiceScroll
+                x: choiceScroll.mirrored ? -(choicePopup.leftPadding + width) / 2 : choiceScroll.width + (choicePopup.rightPadding - width) / 2
+                y: 0
+                height: choiceScroll.availableHeight
+                visible: choiceScroll.contentHeight > choiceScroll.availableHeight
+                policy: ScrollBar.AsNeeded
+            }
+            ScrollBar.horizontal: EaElements.ScrollBar {
+                id: choiceHorizontalScrollBar
+                parent: choiceScroll
+                x: 0
+                y: choiceScroll.height + (choicePopup.bottomPadding - height) / 2
+                width: choiceScroll.availableWidth
+                visible: choiceScroll.contentWidth > choiceScroll.availableWidth
+                policy: ScrollBar.AsNeeded
+            }
+            Row {
+                id: choiceContent
+                spacing: AppSizes.unit * 1.5
+                Column {
+                    width: choicePopup.tableWidth
+                    spacing: AppSizes.unit * 0.5
+                    EaElements.Label {
+                        text: qsTr("Model")
+                        font.bold: true
+                        width: parent.width
+                    }
+                    DataTable {
+                        id: modelTable
+                        objectName: "assistant.choice.models"
+                        width: choicePopup.tableWidth
+                        sourceModel: composer.assistant.models
+                        maxRowCountShow: Math.max(1, count)
+                        topMargin: EaStyle.Sizes.borderThickness
+                        bottomMargin: EaStyle.Sizes.borderThickness
+                        height: (count === 0 ? tableRowHeight * 2 : tableRowHeight * visibleRowCount + _headerHeight) + topMargin + bottomMargin
+                        interactive: false
+                        scrollBarPolicy: ScrollBar.AlwaysOff
+                        marksCurrentRow: true
+                        currentRow: composer.selectedModelRow
+                        columns: [choicePopup.radioColumnWidth, choicePopup.desiredLabelWidth]
+                        delegate: TableRow {
+                            id: modelRow
+                            required property var model
+                            readonly property string modelId: model.id
+                            readonly property alias selector: modelRadio
+                            objectName: "assistant.choice.model.row." + modelId
+                            Item {
+                                property int horizontalAlignment: Text.AlignHCenter
+                                height: parent.height
+                                EaElements.RadioButton {
+                                    id: modelRadio
+                                    objectName: "assistant.choice.model." + modelRow.modelId
+                                    anchors.centerIn: parent
+                                    width: parent.width
+                                    height: parent.height
+                                    padding: 0
+                                    ButtonGroup.group: modelSelection
+                                    readonly property bool selectionCurrent: composer.assistant.selectedModel === modelRow.modelId
+                                    checked: selectionCurrent
+                                    enabled: composer.choicesEnabled && modelRow.model.available
+                                    Accessible.name: modelRow.model.displayName
+                                    ToolTip.text: modelRow.model.displayName
+                                    onClicked: choicePopup.chooseModel(modelRow.modelId)
+                                    Keys.onReturnPressed: event => ApplicationInfo.assistantChoiceActivateKey(modelRow.modelId, event, true)
+                                    Keys.onEnterPressed: event => ApplicationInfo.assistantChoiceActivateKey(modelRow.modelId, event, true)
+                                    Keys.onTabPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, 1, event)
+                                    Keys.onBacktabPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, -1, event)
+                                    Keys.onDownPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, 1, event)
+                                    Keys.onUpPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, -1, event)
+                                }
+                            }
+                            EaComponents.ListViewLabel {
+                                objectName: "assistant.choice.model.label." + modelRow.modelId
+                                text: modelRow.model.displayName
+                                textFormat: Text.PlainText
+                                horizontalAlignment: Text.AlignLeft
+                                elide: Text.ElideNone
+                                color: modelRow.model.available ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                                ToolTip.text: text
+                                TapHandler {
+                                    enabled: composer.choicesEnabled && modelRow.model.available
+                                    onTapped: choicePopup.chooseModel(modelRow.modelId)
+                                }
+                            }
+                        }
+                    }
+                }
+                Column {
+                    width: choicePopup.tableWidth
+                    spacing: AppSizes.unit * 0.5
+                    EaElements.Label {
+                        text: qsTr("Reasoning effort")
+                        font.bold: true
+                        width: parent.width
+                    }
+                    DataTable {
+                        id: effortTable
+                        objectName: "assistant.choice.efforts"
+                        width: choicePopup.tableWidth
+                        sourceModel: composer.effortChoices
+                        maxRowCountShow: Math.max(1, count)
+                        topMargin: EaStyle.Sizes.borderThickness
+                        bottomMargin: EaStyle.Sizes.borderThickness
+                        height: (count === 0 ? tableRowHeight * 2 : tableRowHeight * visibleRowCount + _headerHeight) + topMargin + bottomMargin
+                        interactive: false
+                        scrollBarPolicy: ScrollBar.AlwaysOff
+                        marksCurrentRow: true
+                        currentRow: ApplicationInfo.assistantSelectedEffortRow()
+                        columns: [choicePopup.radioColumnWidth, choicePopup.desiredLabelWidth]
+                        delegate: TableRow {
+                            id: effortRow
+                            required property var modelData
+                            readonly property string choiceId: modelData.token.length ? "assistant.choice.effort.value." + modelData.token : "assistant.choice.effort.default"
+                            readonly property alias selector: effortRadio
+                            objectName: choiceId + ".row"
+                            Item {
+                                property int horizontalAlignment: Text.AlignHCenter
+                                height: parent.height
+                                EaElements.RadioButton {
+                                    id: effortRadio
+                                    objectName: effortRow.choiceId
+                                    anchors.centerIn: parent
+                                    width: parent.width
+                                    height: parent.height
+                                    padding: 0
+                                    ButtonGroup.group: effortSelection
+                                    readonly property bool selectionCurrent: composer.assistant.selectedEffort === effortRow.modelData.token
+                                    checked: selectionCurrent
+                                    enabled: composer.choicesEnabled
+                                    Accessible.name: effortRow.modelData.label
+                                    ToolTip.text: effortRow.modelData.token.length ? effortRow.modelData.label : qsTr("Provider default reasoning effort")
+                                    onClicked: choicePopup.chooseEffort(effortRow.modelData.token)
+                                    Keys.onReturnPressed: event => ApplicationInfo.assistantChoiceActivateKey(effortRow.modelData.token, event, false)
+                                    Keys.onEnterPressed: event => ApplicationInfo.assistantChoiceActivateKey(effortRow.modelData.token, event, false)
+                                    Keys.onTabPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, true, true, event)
+                                    Keys.onBacktabPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, false, true, event)
+                                    Keys.onDownPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, true, false, event)
+                                    Keys.onUpPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, false, false, event)
+                                }
+                            }
+                            EaComponents.ListViewLabel {
+                                objectName: effortRow.choiceId + ".label"
+                                text: effortRow.modelData.label
+                                textFormat: Text.PlainText
+                                horizontalAlignment: Text.AlignLeft
+                                elide: Text.ElideNone
+                                ToolTip.text: text
+                                TapHandler {
+                                    enabled: composer.choicesEnabled
+                                    onTapped: choicePopup.chooseEffort(effortRow.modelData.token)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    onWidthChanged: closeChoices()
+    Connections {
+        target: Preferences
+        function onSideBarOnLeftChanged() {
+            composer.closeChoices();
+        }
+    }
+    property bool hasPreviousUserMessage: false
+    property bool hasNextUserMessage: false
+    signal previousUserRequested
+    signal nextUserRequested
+    signal contextApprovalRequested(string draft)
+    signal submissionRequested(var draft)
+    signal submissionBlocked
+    property var clearDraft: null
+    property int textRevision: 0
+    property int selectionRevision: -1
+    property int savedSelectionStart: 0
+    property int savedSelectionEnd: 0
+    property var submittedDrafts: []
+    property var workReportDraft: null
+    property var workReportBinding: ({})
+    readonly property bool localWorkReport: ApplicationInfo.composerLocalWorkReport()
+    function finishWorkReport(receipt) {
+        ApplicationInfo.composerFinishWorkReport(receipt);
+    }
+    function submitWorkReport() {
+        ApplicationInfo.composerSubmitWorkReport();
+    }
+    property int draftOwnerRevision: 0
+    property int consentFileRevision: 0
+    property int pendingFileCount: 0
+    readonly property bool canSteer: assistant.state === "agent_active"
+    readonly property bool hasDraft: ApplicationInfo.composerHasDraft()
+    function chooseFiles() {
+        ApplicationInfo.composerChooseFiles();
+    }
+    FileDialog {
+        id: nativeFiles
+        objectName: "assistant.files.dialog"
+        property var selection: null
+        readonly property string requestId: selection ? selection.id : ""
+        readonly property var original: selection ? selection.owner : null
+        title: qsTr("Add files to the assistant")
+        fileMode: FileDialog.OpenFiles
+        onAccepted: ApplicationInfo.composerAcceptFiles()
+        onRejected: ApplicationInfo.composerCancelFiles()
+        Component.onDestruction: ApplicationInfo.composerCancelFiles()
+    }
+    Connections {
+        target: nativeFiles.original
+        function onFileSelectionRetired(requestId) {
+            ApplicationInfo.composerFileSelectionRetired(requestId);
+        }
+    }
+    function acknowledgeVisiblePrompt() {
+        ApplicationInfo.composerAcknowledgeVisiblePrompt();
+    }
+    Connections {
+        target: composer.assistant.messages
+        function onCountChanged() {
+            composer.acknowledgeVisiblePrompt();
+        }
+        function onDataChanged() {
+            composer.acknowledgeVisiblePrompt();
+        }
+    }
+    Connections {
+        target: composer.assistant.selectedFiles
+        function onCountChanged() {
+            ApplicationInfo.composerRefreshFilePresentation(composer, true);
+        }
+        function onDataChanged() {
+            ApplicationInfo.composerRefreshFilePresentation(composer, true);
+        }
+    }
+    Connections {
+        target: composer.assistant
+        function onSessionSelectionStarted(threadId) {
+            ApplicationInfo.composerSessionSelectionStarted(composer, editor, threadId);
+        }
+        function onSessionDraftRestored(threadId, text) {
+            ApplicationInfo.composerSessionDraftRestored(composer, editor, threadId, text);
+        }
+        function onConversationClearRequested(intent) {
+            ApplicationInfo.composerConversationClearRequested(composer, editor, intent);
+        }
+        function onConversationClearCommitted(intent) {
+            ApplicationInfo.composerConversationClearCommitted(composer, editor, intent);
+        }
+        function onConversationRetired() {
+            ApplicationInfo.composerConversationRetired(composer);
+        }
+        function onWorkReportFinished(receipt) {
+            composer.finishWorkReport(receipt);
+        }
+    }
+    Component.onCompleted: ApplicationInfo.composerRefreshFilePresentation(composer, false)
+    implicitHeight: composerContent.implicitHeight + AppSizes.unit * 1.5
+    color: EaStyle.Colors.contentBackground
+    border.color: EaStyle.Colors.appBorder
+    radius: AppSizes.unit
+    function rememberSelection() {
+        ApplicationInfo.composerRememberSelection();
+    }
+    function focusEditor() {
+        ApplicationInfo.composerFocusEditor();
+    }
+    function captureConsentDraft() {
+        return ApplicationInfo.composerCaptureConsentDraft();
+    }
+    function ownsConsentDraft(draft) {
+        return ApplicationInfo.composerOwnsConsentDraft(draft);
+    }
+    function submitApprovedDraft(draft) {
+        return ApplicationInfo.composerSubmitApprovedDraft(draft);
+    }
+    function explainBlockedSubmission() {
+        return ApplicationInfo.composerExplainBlockedSubmission();
+    }
+    function submit(approvedDraft) {
+        return ApplicationInfo.composerSubmit(approvedDraft);
+    }
+    Column {
+        id: composerContent
+        x: AppSizes.unit * 0.75
+        y: AppSizes.unit * 0.75
+        width: parent.width - AppSizes.unit * 1.5
+        spacing: AppSizes.unit * 0.25
+        ScrollView {
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical: EaElements.ScrollBar {
+                policy: ScrollBar.AsNeeded
+                interactive: false
+            }
+            width: parent.width
+            height: Math.min(AppSizes.unit * 10, Math.max(editor.font.pixelSize * 2.5 + editor.topPadding + editor.bottomPadding, editor.implicitHeight))
+            TextArea {
+                id: editor
+                objectName: "assistant.composer"
+                placeholderText: qsTr("Ask about your project or describe a fitting plan…")
+                wrapMode: TextEdit.Wrap
+                selectByMouse: true
+                persistentSelection: true
+                selectionColor: EaStyle.Colors.themeAccent
+                selectedTextColor: EaStyle.Colors.themeBackground
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: addFilesButton
+                KeyNavigation.backtab: composer.previousFocusItem
+                onTextChanged: ApplicationInfo.composerDraftEdited(composer, editor, true)
+                onPreeditTextChanged: ApplicationInfo.composerDraftEdited(composer, editor, false)
+                onInputMethodComposingChanged: ApplicationInfo.composerDraftEdited(composer, editor, false)
+                onSelectionStartChanged: composer.rememberSelection()
+                onSelectionEndChanged: composer.rememberSelection()
+                color: EaStyle.Colors.themeForeground
+                placeholderTextColor: EaStyle.Colors.themeForegroundMinor
+                font.family: EaStyle.Fonts.fontFamily
+                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                padding: AppSizes.unit * 0.4
+                background: null
+                Accessible.name: qsTr("Message to the assistant")
+                Keys.onReturnPressed: event => ApplicationInfo.composerReturnPressed(event)
+            }
+        }
+        ScrollView {
+            id: selectedFilesScroll
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical: EaElements.ScrollBar {
+                policy: ScrollBar.AsNeeded
+                interactive: false
+            }
+            width: parent.width
+            height: visible ? Math.min(selectedChips.implicitHeight, AppSizes.unit * 5) : 0
+            visible: composer.pendingFileCount > 0
+            clip: true
+            Column {
+                id: selectedChips
+                x: editor.leftPadding
+                width: Math.max(0, selectedFilesScroll.availableWidth - editor.leftPadding - editor.rightPadding)
+                spacing: 0
+                topPadding: AppSizes.unit * 0.5
+                Repeater {
+                    model: composer.assistant.selectedFiles
+                    delegate: Row {
+                        id: selectedFileChip
+                        required property var model
+                        objectName: "assistant.file." + selectedFileChip.model.id
+                        width: selectedChips.width
+                        visible: selectedFileChip.model.pending !== false
+                        spacing: attachmentMetrics.advanceWidth("  ")
+                        FontMetrics {
+                            id: attachmentMetrics
+                            font: selectedFileLabel.font
+                        }
+                        EaElements.Label {
+                            id: selectedFileLabel
+                            width: Math.min(implicitWidth, Math.max(0, selectedChips.width - removeFileButton.implicitWidth - parent.spacing))
+                            text: qsTr("%1 (%2)%3").arg(selectedFileChip.model.name).arg(ApplicationInfo.fileSizeKilobytes(selectedFileChip.model.bytes)).arg(selectedFileChip.model.textReadable ? "" : qsTr(" · text export required"))
+                            textFormat: Text.PlainText
+                            elide: Text.ElideMiddle
+                            Accessible.name: qsTr("Selected file: %1, %2. %3").arg(selectedFileChip.model.name).arg(ApplicationInfo.fileSizeKilobytes(selectedFileChip.model.bytes)).arg(selectedFileChip.model.textReadable ? qsTr("Available for consented text reads") : qsTr("Unsupported binary; text export required"))
+                        }
+                        EaElements.ToolButton {
+                            id: removeFileButton
+                            leftPadding: 0
+                            rightPadding: 0
+                            fontIcon: "times"
+                            implicitWidth: composer.actionSize
+                            implicitHeight: selectedFileLabel.implicitHeight
+                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
+                            showBackground: false
+                            contentItem: EaElements.Label {
+                                text: removeFileButton.fontIcon
+                                font.family: EaStyle.Fonts.iconsFamily
+                                font.pixelSize: removeFileButton.font.pixelSize * 1.25
+                                color: removeFileButton.foregroundColor()
+                                horizontalAlignment: Text.AlignLeft
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            enabled: composer.assistant.connected && !composer.assistant.canCancel
+                            ToolTip.text: qsTr("Remove %1").arg(selectedFileChip.model.name)
+                            Accessible.name: ToolTip.text
+                            onClicked: composer.assistant.removeSelectedFile(selectedFileChip.model.id)
+                        }
+                    }
+                }
+            }
+        }
+        Item {
+            width: parent.width
+            height: Math.max(0, composerContent.y - 2 * composerContent.spacing)
+        }
+        RowLayout {
+            id: composerToolbar
+            readonly property real choiceWidth: Math.max(0, width - addFilesButton.implicitWidth - showActionsControl.implicitWidth - (sendButton.visible ? sendButton.implicitWidth : 0) - (stopButton.visible ? stopButton.implicitWidth : 0) - previousUserButton.implicitWidth - nextUserButton.implicitWidth - spacing * (5 + (sendButton.visible ? 1 : 0) + (stopButton.visible ? 1 : 0)))
+            width: parent.width
+            spacing: AppSizes.unit * 0.5
+            EaElements.ToolButton {
+                id: addFilesButton
+                objectName: "assistant.files.add"
+                fontIcon: "plus"
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                showBackground: false
+                background: Rectangle {
+                    border.width: 0
+                    implicitWidth: composer.actionSize
+                    implicitHeight: implicitWidth
+                    color: addFilesButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed : addFilesButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
+                    radius: width * 0.5
+                }
+                enabled: composer.assistant.connected && !WebFiles.available && !composer.assistant.canCancel
+                ToolTip.text: WebFiles.available ? qsTr("Browser file selection is not available yet") : qsTr("Add files")
+                Accessible.name: qsTr("Add files")
+                Accessible.description: ToolTip.text
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: editor
+                KeyNavigation.tab: showActionsControl
+                onClicked: composer.chooseFiles()
+            }
+            EaElements.ToolButton {
+                id: showActionsControl
+                objectName: "assistant.showActions"
+                Layout.minimumWidth: implicitWidth
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
+                leftPadding: AppSizes.unit * 0.75
+                rightPadding: leftPadding
+                fontIcon: "eye"
+                text: qsTr("Show actions")
+                checkable: true
+                checked: composer.assistant.showActions
+                highlighted: checked
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                contentItem: RowLayout {
+                    spacing: AppSizes.unit * 0.4
+                    EaElements.Label {
+                        text: showActionsControl.fontIcon
+                        font.family: EaStyle.Fonts.iconsFamily
+                        font.pixelSize: AppSizes.assistantControlIconSize
+                        color: showActionsControl.checked ? EaStyle.Colors.themeAccent : showActionsControl.foregroundColor()
+                        Accessible.ignored: true
+                    }
+                    EaElements.Label {
+                        text: showActionsControl.text
+                        color: showActionsControl.checked ? EaStyle.Colors.themeAccent : showActionsControl.foregroundColor()
+                    }
+                }
+                background: Rectangle {
+                    border.width: 0
+                    implicitHeight: composer.actionSize
+                    radius: height * 0.5
+                    color: showActionsControl.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed : showActionsControl.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
+                }
+                enabled: composer.assistant.connected
+                ToolTip.text: qsTr("Show actions")
+                Accessible.name: ToolTip.text
+                Accessible.checkable: showActionsControl.checkable
+                Accessible.checked: showActionsControl.checked
+                Accessible.description: qsTr("Use real visible controls for supported actions")
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: addFilesButton
+                KeyNavigation.tab: modelEffortButton
+                onToggled: composer.assistant.showActions = checked
+            }
+            EaElements.Button {
+                id: modelEffortButton
+                objectName: "assistant.modelEffort"
+                Layout.preferredWidth: choiceMetrics.advanceWidth(composer.modelLabel + " " + composer.selectedEffortLabel) + leftPadding + rightPadding
+                Layout.maximumWidth: composerToolbar.choiceWidth
+                implicitHeight: composer.actionSize
+                leftPadding: AppSizes.unit * 0.75
+                rightPadding: AppSizes.unit * 0.75
+                enabled: composer.choicesEnabled
+                background: Rectangle {
+                    border.width: 0
+                    implicitHeight: composer.actionSize
+                    radius: height * 0.5
+                    color: modelEffortButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed : modelEffortButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
+                }
+                contentItem: Row {
+                    id: modelEffortText
+                    spacing: choiceMetrics.advanceWidth(" ")
+                    EaElements.Label {
+                        id: modelPillLabel
+                        height: parent.height
+                        verticalAlignment: Text.AlignVCenter
+                        text: composer.modelLabel
+                        color: !modelEffortButton.enabled ? EaStyle.Colors.themeForegroundDisabled : modelEffortButton.hovered || modelEffortButton.down || modelEffortButton.visualFocus ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                        textFormat: Text.PlainText
+                        elide: Text.ElideMiddle
+                        width: Math.max(0, Math.min(implicitWidth, modelEffortButton.availableWidth - effortPillLabel.width - modelEffortText.spacing))
+                    }
+                    EaElements.Label {
+                        id: effortPillLabel
+                        height: parent.height
+                        verticalAlignment: Text.AlignVCenter
+                        text: composer.selectedEffortLabel
+                        textFormat: Text.PlainText
+                        color: !modelEffortButton.enabled ? EaStyle.Colors.themeForegroundDisabled : modelEffortButton.hovered || modelEffortButton.down || modelEffortButton.visualFocus ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundMinor
+                        elide: Text.ElideRight
+                        width: Math.max(0, Math.min(implicitWidth, modelEffortButton.availableWidth * 0.45))
+                    }
+                }
+                ToolTip.text: qsTr("Model: %1 · Reasoning effort: %2").arg(composer.modelLabel).arg(composer.selectedEffortLabel)
+                Accessible.name: ToolTip.text
+                Accessible.description: qsTr("Choose model and reasoning effort")
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: showActionsControl
+                KeyNavigation.tab: previousUserButton
+                onClicked: composer.openChoices()
+                Keys.priority: Keys.BeforeItem
+                Keys.onPressed: event => ApplicationInfo.assistantChoicesKey(event, false)
+                Keys.onReleased: event => ApplicationInfo.assistantChoicesKey(event, true)
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            EaElements.ToolButton {
+                id: previousUserButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                objectName: "assistant.previousUserMessage"
+                fontIcon: "chevron-up"
+                enabled: composer.hasPreviousUserMessage
+                background: Rectangle {
+                    border.width: 0
+                    implicitWidth: composer.actionSize
+                    implicitHeight: implicitWidth
+                    radius: width * 0.5
+                    color: previousUserButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed : previousUserButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
+                }
+                ToolTip.text: qsTr("Previous user message")
+                Accessible.name: ToolTip.text
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: modelEffortButton
+                KeyNavigation.tab: nextUserButton
+                onClicked: composer.previousUserRequested()
+            }
+            EaElements.ToolButton {
+                id: nextUserButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                objectName: "assistant.nextUserMessage"
+                fontIcon: "chevron-down"
+                enabled: composer.hasNextUserMessage
+                background: Rectangle {
+                    border.width: 0
+                    implicitWidth: composer.actionSize
+                    implicitHeight: implicitWidth
+                    radius: width * 0.5
+                    color: nextUserButton.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed : nextUserButton.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
+                }
+                ToolTip.text: qsTr("Next user message")
+                Accessible.name: ToolTip.text
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.backtab: previousUserButton
+                KeyNavigation.tab: stopButton.visible ? stopButton : sendButton
+                onClicked: composer.nextUserRequested()
+            }
+            EaElements.ToolButton {
+                id: stopButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                background: Rectangle {
+                    border.width: 0
+                    implicitWidth: composer.actionSize
+                    implicitHeight: implicitWidth
+                    width: AppSizes.assistantIndicatorExtent
+                    height: width
+                    anchors.centerIn: parent
+                    radius: width * 0.5
+                    color: !stopButton.enabled ? composer.actionBackground : stopButton.hovered || stopButton.down || stopButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                }
+                contentItem: EaElements.Label {
+                    text: stopButton.fontIcon
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: AppSizes.assistantStopIconSize
+                    color: stopButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : stopButton.foregroundColor()
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: sendButton.visible ? sendButton : composer.toggleControl
+                KeyNavigation.backtab: nextUserButton
+                objectName: "assistant.stop"
+                fontIcon: "stop"
+                text: qsTr("Stop")
+                ToolTip.text: text
+                visible: composer.assistant.canCancel
+                enabled: visible
+                Accessible.name: text
+                onClicked: composer.assistant.cancel()
+            }
+            EaElements.ToolButton {
+                id: sendButton
+                Layout.minimumWidth: composer.actionSize
+                Layout.maximumWidth: composer.actionSize
+                Layout.minimumHeight: composer.actionSize
+                Layout.maximumHeight: composer.actionSize
+                implicitWidth: composer.actionSize
+                implicitHeight: composer.actionSize
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                background: Rectangle {
+                    border.width: 0
+                    implicitWidth: composer.actionSize
+                    implicitHeight: implicitWidth
+                    radius: width * 0.5
+                    color: !sendButton.enabled ? composer.actionBackground : sendButton.hovered || sendButton.down || sendButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                }
+                contentItem: EaElements.Label {
+                    text: sendButton.fontIcon
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: sendButton.font.pixelSize * 1.25
+                    color: sendButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : sendButton.foregroundColor()
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                KeyNavigation.priority: KeyNavigation.BeforeItem
+                KeyNavigation.tab: composer.toggleControl
+                KeyNavigation.backtab: nextUserButton
+                objectName: "assistant.send"
+                fontIcon: "arrow-up"
+                text: qsTr("Send")
+                ToolTip.text: text
+                highlighted: true
+                visible: composer.localWorkReport || !composer.assistant.canCancel || (composer.canSteer && composer.hasDraft)
+                enabled: composer.localWorkReport ? !editor.inputMethodComposing && editor.preeditText.length === 0 : composer.assistant.connected && (!composer.assistant.canCancel || composer.canSteer) && composer.hasDraft
+                Accessible.name: text
+                onClicked: composer.submit()
+            }
+        }
+    }
+}

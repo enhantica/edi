@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shlex
+import runpy
 import shutil
 import subprocess
 import sys
@@ -22,6 +22,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
+has_measured_data = runpy.run_path(str(HERE / 'declarations.py'))['has_measured_data']
 
 
 def arguments():
@@ -76,15 +77,7 @@ def main():
             source = args.input_path or ROOT / 'docs/user/cli' / entry['id'] / 'project'
             if args.update:
                 require_changed_input(manifest, args.update, source)
-            purpose = next(
-                (
-                    shlex.split(line)[1]
-                    for line in (source / 'project.edi').read_text().splitlines()
-                    if line.startswith('_metadata.purpose ')
-                ),
-                '',
-            )
-            if purpose == 'simulation':
+            if not has_measured_data(source):
                 continue  # Calculation-only projects have no fit-result category to capture.
             mode = str(edi.Project.load(str(source)).fitting_mode)
             if mode not in {'single', 'joint'}:

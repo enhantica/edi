@@ -46,7 +46,7 @@ struct PatternSource {
         std::shared_ptr<const std::vector<std::array<std::int32_t, 3>>> hkl;
         // The `_refln` row of each position; empty when they are rows 0, 1, 2, …
         std::vector<std::size_t> rows;
-        bool magnetic = false;  // a magnetic structure's magnetic reflections (edi ADR-0068)
+        bool magnetic = false;  // a magnetic structure's magnetic reflections (edi ADR-0070)
     };
     std::string x_title;                   // `2θ (deg)` or `TOF (µs)`
     std::string x_item;                    // the dictionary item of x, whose format its readouts take
@@ -59,7 +59,7 @@ struct PatternSource {
         std::size_t place = 0;  // the structure's place in the project's list: its colour
         Column net;
         // A magnetic structure's magnetic part, placed as its magnetic reflections are; its
-        // other component is then its nuclear part (edi ADR-0068).
+        // other component is then its nuclear part (edi ADR-0070).
         bool magnetic = false;
     };
     std::vector<Component> components;
@@ -86,7 +86,7 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
 // One experiment's `_refln` rows grouped into phases, one per structure id in the order the ids first
 // appear. A phase's place is its structure's place in `structure_names` (its first place when there
 // is no such name). capture_pattern groups this way, and so does a scan's fitted file. With the
-// rows' |M⊥|² (edi ADR-0068) a magnetic structure gets two phases, as two structures would: its
+// rows' |M⊥|² (edi ADR-0070) a magnetic structure gets two phases, as two structures would: its
 // nuclear reflections (F² above zero) and its magnetic ones (|M⊥|² above zero), the magnetic phase
 // marked `magnetic` and placed after every structure so its row and colour are its own.
 std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,
@@ -101,7 +101,7 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
 // Each structure's curve above the background out of crysta's row-major table (`net`, one value per point and
 // structure in `order`), one component per structure, placed as group_reflections places phases. None when the
 // table does not hold one value per point and structure. With crysta's magnetic and nuclear tables of the same
-// layout (edi ADR-0068), a structure whose magnetic part is not zero gives two components, as two structures would:
+// layout (edi ADR-0070), a structure whose magnetic part is not zero gives two components, as two structures would:
 // its nuclear part, in its own place, and its magnetic part, marked `magnetic` and placed after every structure as its
 // magnetic reflections are; a structure without moments draws as before.
 std::vector<PatternSource::Component> structure_components(std::span<const std::string> order,

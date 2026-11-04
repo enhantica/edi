@@ -50,7 +50,7 @@ class ChartLegendModel : public QAbstractListModel {
         // What a click on the entry hides or shows (the series' id, or a listed row's label), and whether it is hidden.
         QString key;
         bool hidden = false;
-        // A magnetic structure's magnetic reflections (edi ADR-0068): the magnet, as its tick row's label.
+        // A magnetic structure's magnetic reflections (edi ADR-0070): the magnet, as its tick row's label.
         bool magnetic = false;
         friend bool operator==(const Entry&, const Entry&) = default;
     };

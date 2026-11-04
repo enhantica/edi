@@ -107,3 +107,46 @@ to know where Qt puts it.
 | Page settings among each page's Extras | Rejected: Extras holds project data written to `.edi`, so options there look like part of the project. |
 | A chart's display choices also in the page's Settings tab | Rejected by the owner: one choice in two places, and the chart already shows it. |
 | View settings in the project's `.edi` files | Rejected: they would travel with a project to another machine and person, and a change of view would mark the project modified. |
+
+
+## Native owner for the original Main window-geometry procedures
+
+The FIRST app-settings owner is this ADR's `Window` group. Prior art is Main.qml's storeGeometry /
+restoreGeometry, geometryRestored startup gate and x/y/width/height notifications, together with
+ApplicationInfo::onScreenPosition. The pinned EasyApplication ApplicationWindow also has its
+existing ApplicationWindow.Geometry alias settings; Main restores its Window group after the base.
+That base and both existing lifecycles remain unchanged. No second settings store, writer, cache,
+QObject, controller, timer or persisted field is introduced by this extraction.
+
+ApplicationInfo executes the original store/restore procedures against the actual Main window and
+existing Settings object. Main's original public method names remain one-line native dispatch;
+startup and geometry notifications still use those hooks, and restore still invokes the actual
+window.storeGeometry hook after geometryRestored publication. WebFiles::available is the existing
+constant native platform getter and is consumed only at its original short-circuit points. No eager
+WebFiles argument, new minimized/hidden/owner/retirement guard or geometry snapshot is introduced.
+
+Preserve original read and setter order, repeated visibility and settings reads, Qt conversion,
+reentrant notifications, maximized/fullscreen exclusion, invalid-kept-size/default branches, browser
+coldness and existing onScreenPosition result/primary-screen/no-screen behavior. Settings still
+belong to the machine and do not modify project data. The screen-placement method is unchanged;
+restore uses the same actual meta-call before reading its point fields. This finite pair removes
+its procedural JavaScript decisions while retaining declarations, method dispatch and existing
+startup scheduling. Other Main/focus/project/geometry procedures remain separate migration work.
+
+Independent unchanged-original and identical-post controls must cover startup/default/kept size,
+all geometry and visibility branches, web availability, current setter/reentry order and the normal
+settings writer/readback, using actual window/Settings/Qt identities. This source-only extraction is
+not a build, runtime, platform, full migration or task-acceptance claim. The unrelated external
+ai-assistant-on-dev workstream is not copied or changed and still requires eventual reconciliation.
+
+
+## Native preference and shared view procedures
+
+ApplicationInfo executes Preferences' reset, application, legacy-palette reconciliation and immediate settings writes, extending its existing settings/thread owner. The original property order, stored keys and synchronization calls remain; no second preference store or new default is introduced. The preferences dialog's recursive row discovery, reduce callbacks and natural sizing run on the same VM with original method/receiver/coercion behavior. Shared field-title and workflow layout loops, anchor changes, tab selection and completion sequencing execute in the same existing native UI owner. QML keeps visual declarations and bindings.
+
+Qt.binding requires its actual compiled QML expression function. Existing entries therefore retain only inline binding-installation callbacks, invoked by native procedures at the original points. These callbacks contain no admission, validation, selection or layout decision logic. No JavaScript source is evaluated and no replacement QML helper contains the moved procedures. Desktop and WebAssembly compilation and complete input/layout/persistence/runtime checks remain required after migration.
+
+
+## Native recent-project persistence and navigation
+
+ApplicationInfo executes RecentProjects' browser/recovery-row construction, path/key/open decisions, recent filtering/deduplication and Settings writes, in-place row updates/removal and startup selection. The first store remains RecentProjects' Projects Settings group described above; Session, WebStorage and the existing ListModel remain the opening/storage/row authorities. Paths, order, duplicates/admission, synchronous settings-triggered refreshes and browser recovery/drop behavior retain their original sequence. No recent-project store, controller, cache or alternate persistence policy is added. Script methods, callbacks, coercions, literal fields and translations remain current-VM operations.

@@ -13,7 +13,7 @@ import edi.app
 // does not write them ("loop in .edi — table in gui"): Miller indices, d-spacing, position and F²calc,
 // with the same numeric-column sizing as the measured-data table (ADR-0029). A magnetic structure's reflections show
 // |M⊥|² and their total F² + |M⊥|², as the calculation gives them, beside F²calc, so a purely magnetic reflection
-// (F²calc 0) shows its intensity (edi ADR-0068); they are the last columns, hidden for a structure without moments.
+// (F²calc 0) shows its intensity (edi ADR-0070); they are the last columns, hidden for a structure without moments.
 DataTable {
     id: table
 
@@ -25,7 +25,7 @@ DataTable {
 
     // A reflection's values, each in its item's display format.
     function shown(uid, value) {
-        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
+        return ApplicationInfo.formShownValue(uid, value, true);
     }
 
     objectName: "reflections.list"

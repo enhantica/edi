@@ -26,6 +26,7 @@ Each surface lists only its own column: the application's About window reads thi
 | nanobind | 2.13.0 | BSD-3-Clause | — | — | compiled in | — | the Python bindings, compiled into the Python extension |
 | robin-map |  | MIT | — | — | compiled in | — | the hash map inside nanobind, compiled into the Python extension |
 | miniz | 3.0.2 | MIT | compiled in | compiled in | compiled in | — | reads and writes project .zip archives, compiled into edi's core |
+| JKQTMathText / JKQTCommon | 5.0.0 (9e9f0af8) | LGPL-2.1-or-later | linked | — | — | — | native assistant equation layout and generated images; only MathText/Common |
 | Emscripten runtime | 4.0.7 | MIT AND Apache-2.0 WITH LLVM-exception | — | compiled in | — | — | the C and C++ runtime of the web build (Emscripten's libc from musl, libc++ and libc++abi from LLVM) |
 
 ## Application framework
@@ -41,6 +42,24 @@ Each surface lists only its own column: the application's About window reads thi
 | Scientific colour maps |  | MIT | compiled in | compiled in | compiled in | — | Fabio Crameri's batlow and lapaz, two of the scan views' colour maps |
 | ColorBrewer |  | Apache-2.0 | compiled in | compiled in | compiled in | — | the Greys scheme spread to 256 colours, one of the scan views' colour maps |
 | coi-serviceworker | 0.1.7 | MIT | — | bundled | — | — | the service worker that lets the web app use threads on a host without the needed headers |
+
+## Assistant components
+
+The desktop app carries the official runtime beside the application. Its own notices and exact source/build
+references also travel in `libexec/edi/codex/edi-licenses`. This inventory does not certify complete binary
+transitive attribution, corresponding-source delivery or platform installer qualification.
+
+| Component | Version | Licence | Desktop app | Web app | Python package | CLI | In edi |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| OpenAI Codex | 0.162.1 | Apache-2.0 | bundled | — | — | — | official app-server and code-mode host in the desktop runtime package |
+| jwt-cpp | 0.7.2 | MIT | compiled in | — | — | — | native OpenID signature validation; headers in third_party/jwt-cpp |
+| picojson | bundled with jwt-cpp 0.7.2 | BSD-2-Clause | compiled in | — | — | — | the JSON adapter included with jwt-cpp |
+| ripgrep | 15.2.0 | MIT OR Unlicense | bundled | — | — | — | the official runtime package's rg executable, used under MIT |
+| zsh | 77045ef | Zsh | bundled | — | — | — | the official runtime package's patched shell helper; source and patch in data/assistant/runtime/PROVENANCE.md |
+| bubblewrap | vendored at Codex 092d3acd | LGPL-2.0-or-later | bundled (Linux) | — | — | — | the Linux runtime package's sandbox helper; corresponding-source delivery remains a release obligation |
+| rusty-V8 | 150.4.0 | MIT | bundled | — | — | — | Deno Rust bindings embedded in the code-mode host |
+| V8 (Codex code-mode host) | ac1e2398 | BSD-3-Clause AND additional notices | bundled | — | — | — | the V8 engine embedded in the code-mode host; distinct from Qt V8 |
+| ICU data (deno_core_icudata) | 0.77.0 / ee5f27ad | Unicode-3.0 AND additional notices | bundled | — | — | — | the ICU data embedded in the code-mode host via deno_core_icudata |
 
 ## HTML report libraries
 
@@ -94,6 +113,7 @@ The desktop app links these as shared libraries; the web build compiles Qt's own
 
 | Component | Version | Licence | Desktop app | Web app | Python package | CLI | In edi |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| XITS | pinned with JKQTMathText 9e9f0af8 | OFL-1.1 | bundled | — | — | — | native equation fonts |
 | PT Sans, PT Mono |  | OFL-1.1 | bundled | bundled | — | — | interface fonts, bundled |
 | Encode Sans |  | OFL-1.1 | bundled | bundled | — | — | fit summary arrow, bundled |
 | Noto Sans, Noto Sans Mono |  | OFL-1.1 | bundled | bundled | — | — | interface fonts, bundled |

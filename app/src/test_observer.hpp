@@ -4,6 +4,11 @@
 
 #include <QStringList>
 #include <optional>
+#include <span>
+#include <QVariantMap>
+#include <QJsonValue>
+#include <QStringView>
+#include <QByteArray>
 
 class QQmlApplicationEngine;
 
@@ -29,6 +34,30 @@ std::optional<int> refuse_test_observer(int argc, char* argv[]);
 void configure_test_observer(QQmlApplicationEngine& engine);
 void install_test_observer(QQmlApplicationEngine& engine);
 
+enum class WorkReportBoundary { BeforeGrowth, AfterGrowth, Frozen, WriterHandoff,
+    BeforeEncode, AfterEncode, Terminal, Released };
+enum class WorkReportOwnerRole { OriginalNative, OriginalItems, OriginalProgress,
+    OriginalTransport, PrimaryHistory, SupplementaryRow, FrozenExport, Encoding,
+    WriterScratch, WorkerCapture, QueuedCallback, Receipt, ObserverScratch };
+enum class WorkReportOwnerGroup { OriginalLive, ReportCurrent, ReportRetired, Observer };
+struct WorkReportOwnerTag { WorkReportOwnerGroup group; QStringView owner_instance_id; const void* shared_backing; };
+struct WorkReportBytesView { WorkReportOwnerRole role; WorkReportOwnerTag tag; const QByteArray* owner; };
+struct WorkReportTextView { WorkReportOwnerRole role; WorkReportOwnerTag tag; const QString* owner; };
+struct WorkReportJsonView { WorkReportOwnerRole role; WorkReportOwnerTag tag; const QJsonValue* owner; };
+struct WorkReportContainerView { WorkReportOwnerRole role; WorkReportOwnerTag tag; const void* backing;
+    quint64 size,capacity,element_size; };
+struct WorkReportTestView {
+    WorkReportBoundary boundary; QStringView scope_id,receipt_id;
+    quint64 aggregate_limit,original_reserved,report_reserved,requested_growth;
+    std::span<const WorkReportBytesView> bytes;
+    std::span<const WorkReportTextView> texts;
+    std::span<const WorkReportJsonView> json;
+    std::span<const WorkReportContainerView> containers;
+};
+void observe_work_report_boundary(const WorkReportTestView&) noexcept;
+QVariantMap work_report_test_observation();
+enum class WorkReportFaultPoint { StageWrite, BeforeAtomicPublish, AfterAtomicPublishReadback, OldCandidateCleanup };
+bool work_report_test_fault(WorkReportFaultPoint) noexcept;
 }  // namespace edi_app
 
 #endif  // EDI_APP_TEST_OBSERVER_HPP

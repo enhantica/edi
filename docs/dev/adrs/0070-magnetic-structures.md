@@ -1,4 +1,4 @@
-# 0068. Magnetic structures in edi
+# 0070. Magnetic structures in edi
 
 - **Status:** Accepted
 - **Date:** 2026-11-03

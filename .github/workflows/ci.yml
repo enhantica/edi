@@ -738,6 +738,12 @@ jobs:
             build/app/app/edi_app_tests
             build/tutorial-transactions
           key: edi-app-${{ matrix.platform }}-${{ github.run_id }}
+      # The integration tests whose wiring vectors run on the real app skip in the core job, which has no app. They
+      # run here, on every run, on the test runner just built from this commit; without it they fail.
+      - name: Native wiring vectors on this run's test runner
+        run: pixi run --skip-deps native-wiring
+        env:
+          EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
       - name: qmllint over edi's QML (zero warnings)
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing

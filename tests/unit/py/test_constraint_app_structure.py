@@ -166,26 +166,57 @@ def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
     assert 'named_parameters(' in text, (
         'the alias picker must enumerate core-owned suitable parameter identities'
     )
-    assert re.search(r'editor_\.apply_relation_edit\(edi::Edit::', text), (
+    assert re.search(r'editor_\.apply_relation_(?:edit|control)\(\s*edi::Edit::', text), (
         'relation edits must enter the shared relation door for publication and undo'
     )
-    # Relation models now delegate through the undo-aware relation entry, which uses the same door.
+    # The widget-aware route adds input identity; both typed routes retain the
+    # same recorded-edit and preview publisher (the relation Undo contract).
     relations = text.split('AnalysisViewModel::AnalysisViewModel', 1)[0]
     edits = re.findall(r'edi::Edit::\w+\(', relations)
-    routed = re.findall(r'editor_\.apply_relation_edit\(edi::Edit::\w+\(', relations)
+    routed = re.findall(
+        r'editor_\.apply_relation_(?:edit|control)\(\s*edi::Edit::\w+\(', relations
+    )
     assert edits and len(routed) == len(edits), (
         'every relation edit must enter the typed relation route without a direct-write escape'
     )
     project = source('src/project_view_model.cpp')
-    route = re.search(
-        r'QString ProjectViewModel::apply_relation_edit\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL
+
+    def body(name):
+        matches = re.findall(
+            r'ProjectViewModel::' + name + r'\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL
+        )
+        assert len(matches) == 1, (
+            f'The closed relation route requires one inspectable {name} implementation'
+        )
+        return matches[0]
+
+    for name in ('apply_relation_edit', 'apply_relation_control'):
+        assert 'applyRecordedEdit(change, true)' in body(name), (
+            'Each typed relation route must record Undo through the common structural edit door'
+        )
+    assert 'return apply_relation_edit(change)' in body('apply_relation_control'), (
+        'A relation control without native widget input retains the ordinary typed relation route'
     )
-    assert route and 'apply(change, true)' in route.group(1), (
-        'the relation route must delegate to the common structural edit door'
+    assert 'editor_.append_constraint(project_, std::move(row), action)' in relations, (
+        'Complete constraint rows retain the typed editor entry '
+        'rather than direct collection writes'
     )
-    door = re.search(r'QString ProjectViewModel::apply\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL)
-    assert door and 'preview_->apply(change)' in door.group(1), (
-        'the common edit door must submit the typed change through the preview publisher'
+    append = body('append_constraint')
+    appends = re.findall(r'edi::Edit::constraint_append\(', append)
+    recorded_appends = re.findall(
+        r'applyRecordedEdit\(edi::Edit::constraint_append\([^;]*\),\s*true\)', append
+    )
+    assert appends and len(recorded_appends) == len(appends), (
+        'Both native-widget and manual complete-constraint commits record structural Undo'
+    )
+    assert 'applyEdit(change, structural)' in body('applyRecordedEdit'), (
+        'Recorded relation changes retain the same common edit execution path'
+    )
+    assert 'applyEdit(change, structural)' in body('apply'), (
+        'Ordinary edits and recorded relations converge on the same edit execution path'
+    )
+    assert 'preview_->apply(change, applied, applied_result)' in body('applyEdit'), (
+        'The common edit door submits the same typed change and application receipts to preview'
     )
 
 

@@ -10,7 +10,7 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// `parent_propagation_vector` (edi ADR-0068; the owner, 2026-11-03): the structure's commensurate k vectors, edited,
+// `parent_propagation_vector` (edi ADR-0070; the owner, 2026-11-03): the structure's commensurate k vectors, edited,
 // added and removed as Excluded regions are. crysta checks every change against the cell and the signed group, and
 // a vector they cannot carry, or one already listed, is refused with its reason. The last vector stays.
 Column {

@@ -58,6 +58,40 @@ Control {
     readonly property real compactWidth: !framed ? iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + rightPadding : dropsWord ? frameHeight : iconLabel.implicitWidth + valueWidth + contentRow.spacing + sidePadding + afterWordPadding
     signal clicked
 
+    // Accessibility follows effective availability without disabling hover/tooltips.
+    readonly property bool accessibleAction: clickable && visible && enabled
+    Accessible.role: accessibleAction ? Accessible.Button : Accessible.NoRole
+    Accessible.name: accessibleAction ? valueText : ""
+    Accessible.description: accessibleAction ? control.ToolTip.text : ""
+    Accessible.focusable: accessibleAction
+    Accessible.focused: accessibleAction && activeFocus
+    // Web accessibility uses a fresh fixed-role object for each actual action lifetime.
+    Accessible.ignored: Qt.platform.os === "wasm"
+    onAccessibleActionChanged: ApplicationInfo.statusItemActionChanged(control, control.Accessible, accessibleAction)
+    Component.onCompleted: ApplicationInfo.statusItemActionChanged(control, control.Accessible, accessibleAction)
+    Component.onDestruction: ApplicationInfo.statusItemActionChanged(control, control.Accessible, false)
+    function pressAccessibleAction() {
+        ApplicationInfo.statusItemPress(control);
+    }
+
+    Loader {
+        anchors.fill: parent
+        active: Qt.platform.os === "wasm" && control.accessibleAction
+        sourceComponent: Component {
+            Item {
+                id: accessibleButton
+                objectName: control.objectName + ".accessibleAction"
+                anchors.fill: parent
+                Accessible.role: Accessible.Button
+                Accessible.name: control.valueText
+                Accessible.description: control.ToolTip.text
+                Accessible.focusable: true
+                Accessible.focused: accessibleButton.activeFocus
+                Accessible.onPressAction: ApplicationInfo.statusItemPress(control)
+            }
+        }
+    }
+
     visible: shown
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     // Whole pixels, so the fit area's items, the round buttons among them, sit on the pixel grid.
@@ -72,24 +106,11 @@ Control {
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 
-    // A clickable item is a button for the keyboard and assistive tools too, as the sidebar's fit buttons were: Tab
-    // reaches it, Space, Enter or Return activates it, it shows its focus, and an unavailable one does neither.
+    // A clickable item is a button for the keyboard too, as the sidebar's fit buttons were: Tab reaches it, Space, Enter
+    // or Return activates it, it shows its focus, and an unavailable one does neither. Assistive tools see the action
+    // above.
     focusPolicy: clickable ? Qt.StrongFocus : Qt.NoFocus
-    Keys.onPressed: event => {
-        const activates = event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter;
-        if (control.clickable && activates && !event.isAutoRepeat) {
-            event.accepted = true;
-            control.clicked();
-        }
-    }
-    Accessible.role: clickable ? Accessible.Button : Accessible.StaticText
-    Accessible.name: framed ? valueText : keyText + " " + valueText
-    Accessible.description: ToolTip.text
-    Accessible.focusable: clickable
-    Accessible.onPressAction: {
-        if (control.clickable)
-            control.clicked();
-    }
+    Keys.onPressed: event => ApplicationInfo.statusItemKeyPressed(control, event)
 
     contentItem: Row {
         id: contentRow
@@ -97,6 +118,7 @@ Control {
 
         EaElements.Label {
             id: iconLabel
+            Accessible.ignored: control.accessibleAction
             anchors.verticalCenter: parent.verticalCenter
             height: font.pixelSize
             verticalAlignment: Text.AlignVCenter
@@ -110,6 +132,7 @@ Control {
         }
         EaElements.Label {
             id: keyLabel
+            Accessible.ignored: control.accessibleAction
             visible: control.showKey && !control.framed
             anchors.verticalCenter: parent.verticalCenter
             height: font.pixelSize
@@ -124,6 +147,7 @@ Control {
         }
         DigitText {
             id: value
+            Accessible.ignored: control.accessibleAction
             objectName: "statusBar.fit.value"
             visible: !control.framed
             anchors.verticalCenter: parent.verticalCenter
@@ -135,6 +159,7 @@ Control {
         // ascent, which leaves a word a pixel low in the frame.
         EaElements.Label {
             id: word
+            Accessible.ignored: control.accessibleAction
             visible: control.wordShown
             anchors.verticalCenter: parent.verticalCenter
             font: control.font

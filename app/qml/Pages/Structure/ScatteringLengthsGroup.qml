@@ -56,12 +56,18 @@ Column {
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.lengths
+                editIndex: row.index
                 objectName: `scatteringLength.typeSymbol.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 value: row.typeSymbol
                 onCommitted: text => group.lengths.setTypeSymbol(row.index, text)
             }
             TextCell {
+                editMember: row
+                editModel: group.lengths
+                editIndex: row.index
                 horizontalAlignment: Text.AlignHCenter
                 objectName: `scatteringLength.lengthFm.${row.index}`
                 uid: "scattering_length.length_fm"

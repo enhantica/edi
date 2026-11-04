@@ -68,7 +68,7 @@ AtomSite new_atom_site(const Structure& structure, const std::function<double()>
 void change_adp_type(Structure& structure, AtomSite& site, const std::string& adp_type);
 // The structure's propagation vectors replaced by `rows` (id, `kx,ky,kz`), each id given and
 // unique, once crysta's rule admits them all (I7: a vector the cell and the signed group can carry,
-// no two alike); a refusal throws its reason and leaves the vectors as they were (edi ADR-0068).
+// no two alike); a refusal throws its reason and leaves the vectors as they were (edi ADR-0070).
 void set_propagation_vectors(Structure& structure, std::vector<std::pair<std::string, std::string>> rows);
 
 // One tensor row for each anisotropic site and none for any other (diffraction-lib's

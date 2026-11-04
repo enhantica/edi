@@ -70,10 +70,9 @@ SideBarGroup {
 
                 // Above 0 and at most 1 (diffraction-lib's range); anything else leaves the scale as it was.
                 function commit() {
-                    if (group.options !== null && text !== scale.value) {
-                        group.options.atomScale = Number(text);
+                    ApplicationInfo.appearanceCommit(false, () => {
                         text = Qt.binding(() => scale.value);
-                    }
+                    });
                 }
 
                 // Its title as every field's (edi ADR-0017 §5).
@@ -102,10 +101,9 @@ SideBarGroup {
 
                 // Above 0 and below 1 (diffraction-lib's range); anything else leaves the probability as it was.
                 function commit() {
-                    if (group.options !== null && text !== probability.value) {
-                        group.options.adpProbability = Number(text);
+                    ApplicationInfo.appearanceCommit(true, () => {
                         text = Qt.binding(() => probability.value);
-                    }
+                    });
                 }
 
                 Component.onCompleted: FieldTitles.align(probability)

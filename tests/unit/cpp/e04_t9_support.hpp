@@ -47,6 +47,21 @@ class OwnerQueue {
         }
         delivery();
     }
+    bool try_one() {
+        std::function<void()> delivery;
+        {
+            std::lock_guard lock(mutex_);
+            if (queue_.empty()) return false;
+            delivery = std::move(queue_.front());
+            queue_.pop_front();
+        }
+        delivery();
+        return true;
+    }
+    std::size_t pending() {
+        std::lock_guard lock(mutex_);
+        return queue_.size();
+    }
     void drain() {
         for (;;) {
             { std::lock_guard lock(mutex_); if (queue_.empty()) return; }

@@ -6,7 +6,7 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// `space_group_magn` (edi ADR-0068; the owner, 2026-11-03): the magnetic space group as the file names it, its BNS
+// `space_group_magn` (edi ADR-0070; the owner, 2026-11-03): the magnetic space group as the file names it, its BNS
 // number, BNS symbol and UNI symbol in one row, read only until the group can be chosen from crysta's table. Under
 // it the parent group, read only, when it is not the space group itself (a supercell or a lower family group).
 Column {

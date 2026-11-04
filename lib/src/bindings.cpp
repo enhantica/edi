@@ -1533,7 +1533,7 @@ static void def_collection_views(nb::module_& m) {
     nb::class_<AtomSiteAnisoIter> atom_site_aniso_iter(m, "_AtomSiteAnisoIterator");
     def_keyed_collection<AtomSiteAnisoView, AtomSiteAnisoIter, edi::AtomSiteAniso>(
         atom_site_aniso_view, atom_site_aniso_iter);
-    // The magnetic sites' moments, keyed by the site id (edi ADR-0068).
+    // The magnetic sites' moments, keyed by the site id (edi ADR-0070).
     nb::class_<AtomSiteMomentView> atom_site_moment_view(
         m, "AtomSiteMomentCollection",
         "Live keyed collection of a structure's magnetic moments (key: the site id).");
@@ -2339,7 +2339,7 @@ NB_MODULE(_edi, m) {
     def_parameter_field(atom_site_aniso, "adp_13", &edi::AtomSiteAniso::adp_13);
     def_parameter_field(atom_site_aniso, "adp_23", &edi::AtomSiteAniso::adp_23);
 
-    // A magnetic site's moment (edi ADR-0068), keyed by the site id: three components in Bohr
+    // A magnetic site's moment (edi ADR-0070), keyed by the site id: three components in Bohr
     // magnetons along the cell axes, and the symmetry form crysta derives for them.
     nb::class_<edi::AtomSiteMoment> atom_site_moment(m, "AtomSiteMoment");
     atom_site_moment.def("__setattr__", renewing_setattr<edi::AtomSiteMoment>({}, renew_epoch),
@@ -2531,7 +2531,7 @@ NB_MODULE(_edi, m) {
                 return ExpandedAtomSiteMomentsView{{&self, stored_geometry(self)}};
             },
             nb::keep_alive<0, 1>())
-        // The magnetic description besides the moments (edi ADR-0068), read as written: the
+        // The magnetic description besides the moments (edi ADR-0070), read as written: the
         // group's names, the signed operations and centring vectors, the parent group, the
         // propagation vectors and the form factors per atom type.
         .def_prop_ro("space_group_magn",
@@ -2654,7 +2654,7 @@ NB_MODULE(_edi, m) {
         });
     }
 
-    // The moments of every magnetic atom in the cell after symmetry (edi ADR-0068), as crysta
+    // The moments of every magnetic atom in the cell after symmetry (edi ADR-0070), as crysta
     // computes them.
     nb::class_<ExpandedAtomSiteMomentsView> expanded_moments(m, "ExpandedAtomSiteMoments");
     expanded_moments
@@ -3334,7 +3334,6 @@ NB_MODULE(_edi, m) {
                 nb::object out = cwl ? nb::cast(edi::PdCwlData(std::move(node)))
                                      : nb::cast(edi::PdTofData(std::move(node)));
                 nb::cast<edi::PdDataBase&>(out).source.link(self, self.data->epoch.value());
-                nb::detail::keep_alive(out.ptr(), self_object.ptr());
                 return out;
             },
             [](edi::ExperimentBase& self, std::optional<edi::PdDataBase> incoming) {
@@ -3346,13 +3345,14 @@ NB_MODULE(_edi, m) {
                 }
                 self.data = std::move(incoming);
                 self.refln.clear();
-            })
+            },
+            nb::for_getter(nb::keep_alive<0, 1>()))
         // The reflections crysta computed, as the leaf matching the beam mode. The getter itself
         // never calculates; a column read does (live_refln).
         .def_prop_ro("refln",
                      [](nb::handle self_object) -> nb::object {
-                         // Linked to this experiment and kept alive by it, so a retained object is
-                         // read against the experiment as it is then.
+                         // Linked to this experiment; the getter's keep_alive makes the view
+                         // retain its experiment and read it as it is then.
                          edi::ExperimentBase& self = nb::cast<edi::ExperimentBase&>(self_object);
                          // A single crystal's reflections are its measured ones with their F2calc.
                          if (self.reflections) {
@@ -3360,7 +3360,6 @@ NB_MODULE(_edi, m) {
                                  self.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH
                                      ? nb::cast(edi::views::ScCwlReflnView(&self))
                                      : nb::cast(edi::views::ScTofReflnView(&self));
-                             nb::detail::keep_alive(view.ptr(), self_object.ptr());
                              return view;
                          }
                          edi::PowderReflnDataBase rows =
@@ -3370,9 +3369,9 @@ NB_MODULE(_edi, m) {
                                  ? nb::cast(edi::PowderCwlReflnData(std::move(rows)))
                                  : nb::cast(edi::PowderTofReflnData(std::move(rows)));
                          nb::cast<edi::PowderReflnDataBase&>(out).source.link(self, 0);
-                         nb::detail::keep_alive(out.ptr(), self_object.ptr());
                          return out;
-                     })
+                     },
+                     nb::keep_alive<0, 1>())
         // A single crystal's extinction; None for a powder.
         .def_prop_ro(
             "extinction",

@@ -9,11 +9,36 @@ import sys
 import tempfile
 import threading
 import time
+from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 OBSERVER = r"""<script>
 const errors = [];
+const structureDraws = new WeakMap();
+const structureClears = new WeakMap();
+if (REQUIRE_STRUCTURE) {
+  for (const constructor of [window.WebGLRenderingContext, window.WebGL2RenderingContext]) {
+    if (!constructor) continue;
+    for (const name of ['clearColor', 'drawArrays', 'drawElements',
+                        'drawArraysInstanced', 'drawElementsInstanced']) {
+      const original = constructor.prototype[name];
+      if (typeof original !== 'function') continue;
+      constructor.prototype[name] = function(...args) {
+        const result = Reflect.apply(original, this, args);
+        if (name === 'clearColor') {
+          const colours = structureClears.get(this.canvas) || [];
+          colours.push(args.slice()); structureClears.set(this.canvas, colours);
+        } else structureDraws.set(this.canvas, (structureDraws.get(this.canvas) || 0) + 1);
+        return result;
+      };
+    }
+  }
+}
+const structureFacts = () => [...document.querySelectorAll('.structure-figure')].map(figure => ({
+  canvases: [...figure.querySelectorAll('canvas')].map(canvas => ({
+    width: canvas.width, height: canvas.height, draws: structureDraws.get(canvas) || 0,
+    clearColours: structureClears.get(canvas) || []}))}));
 window.addEventListener('error', e => errors.push(String(e.message)));
 window.addEventListener('unhandledrejection', e => errors.push(String(e.reason)));
 const observeLoaded = () => {
@@ -22,7 +47,7 @@ const observeLoaded = () => {
     const plots = [...document.querySelectorAll('.js-plotly-plot')]
       .filter(plot => plot.closest('.evolution-figure'));
     const result = {selectors: document.querySelectorAll('.evolution-figure select').length,
-      viewport: innerWidth, errors, ready,
+      viewport: innerWidth, errors, ready, structures: structureFacts(),
       patterns: [...document.querySelectorAll('.js-plotly-plot')]
         .filter(plot => plot.closest('.pattern-figure')).map(plot => ({
         traces: (plot.data || []).map(trace => ({
@@ -54,7 +79,10 @@ const observeLoaded = () => {
       || figure.querySelector('.js-plotly-plot') !== null)
       && plots.every(plot => Array.isArray(plot.data)
         && plot.querySelector('svg,canvas') !== null);
-    if (ready || performance.now() >= deadline) report(ready);
+    const structuresReady = !REQUIRE_STRUCTURE || structureFacts().every(figure =>
+      figure.canvases.length > 0 && figure.canvases.some(canvas => canvas.draws > 0));
+    if ((ready && structuresReady) || performance.now() >= deadline)
+      report(ready && structuresReady);
     else setTimeout(inspect, 25);
   };
   inspect();
@@ -79,9 +107,44 @@ def receive_pages(received, process, deadline):
     return results
 
 
-def observe(html, *, render_timeout_ms=5000):
+class _ObserverHead(HTMLParser):
+    def __init__(self, html):
+        super().__init__()
+        self.offset = None
+        self.lines = html.splitlines(keepends=True)
+        self.feed(html)
+
+    def handle_starttag(self, tag, _attrs):
+        if tag != 'head':
+            return
+        if self.offset is not None:
+            raise ValueError('Structure observation requires one actual HTML head')
+        line, column = self.getpos()
+        self.offset = (
+            sum(map(len, self.lines[: line - 1])) + column + len(self.get_starttag_text())
+        )
+
+
+def _observed_html(html, name, timeout_ms, require_structure):
+    script = (
+        OBSERVER
+        .replace('CASE', name)
+        .replace('RENDER_TIMEOUT', str(timeout_ms))
+        .replace('REQUIRE_STRUCTURE', 'true' if require_structure else 'false')
+    )
+    if not require_structure:
+        return html + script
+    head = _ObserverHead(html)
+    if head.offset is None:
+        raise ValueError('Native structure observation requires an actual HTML head')
+    return html[: head.offset] + script + html[head.offset :]
+
+
+def observe(html, *, render_timeout_ms=5000, require_structure_rendering=False):
     if type(render_timeout_ms) is not int or not 0 < render_timeout_ms <= 5000:
         raise ValueError('The browser drawing deadline must be an integer from 1 to 5000 ms')
+    if type(require_structure_rendering) is not bool:
+        raise ValueError('Structure readiness must be an explicit boolean')
     candidates = [shutil.which(name) for name in ('firefox', 'chromium', 'google-chrome')]
     candidates += [
         '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -95,7 +158,7 @@ def observe(html, *, render_timeout_ms=5000):
     temporary = Path(tempfile.mkdtemp(prefix='edi-evolution-browser-'))
     documents = {
         '/' + name: (
-            html + OBSERVER.replace('CASE', name).replace('RENDER_TIMEOUT', str(render_timeout_ms))
+            _observed_html(html, name, render_timeout_ms, require_structure_rendering)
         ).encode()
         for name in ('wide', 'narrow')
     }

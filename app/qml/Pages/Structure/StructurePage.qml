@@ -65,10 +65,7 @@ WorkflowPage {
     // structures.
     readonly property bool patternShown: mainTabIndex === 1
     readonly property bool patternEnabled: project !== null && project.experiments.count > 0
-    onPatternEnabledChanged: {
-        if (!patternEnabled && patternShown)
-            showMainTab(0);
-    }
+    onPatternEnabledChanged: ApplicationInfo.finishUiEvent(2, undefined)
     extrasEnabled: structure !== null
     textEnabled: structure !== null
     basicItem: Component {
@@ -119,12 +116,7 @@ WorkflowPage {
     blockTemplateRole: patternShown && project !== null && project.scan ? "isTemplate" : ""
     blockCurrentTemplate: patternShown && project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
     blockIndex: project ? (patternShown ? project.currentExperimentIndex : project.currentStructureIndex) : -1
-    onBlockActivated: index => {
-        if (page.patternShown)
-            page.project.currentExperimentIndex = index;
-        else
-            page.project.currentStructureIndex = index;
-    }
+    onBlockActivated: index => ApplicationInfo.finishUiEvent(15, index)
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Experiment)
 

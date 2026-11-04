@@ -59,30 +59,35 @@ EaElements.ParamTextField {
         "units": item.displayUnits
     } : ({})
 
+    // Canonical value/menu/edit text stays the native file token. Only the idle
+    // renderer fits its spelling, through the same backend as a table cell.
+    readonly property string valueText: value
+    readonly property string narrowText: item === null ? "" : written ? NumberText.writtenNarrow(item.fileValue, item.fileSu) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0)
+    readonly property real room: width - leftPadding - rightPadding
+    property string shownValue: valueText
+    readonly property FontMetrics shownMetrics: FontMetrics {
+        font: field.font
+    }
+    function refit() {
+        ApplicationInfo.parameterFieldRefit();
+    }
+    onRoomChanged: refit()
+    onValueTextChanged: refit()
+    onNarrowTextChanged: refit()
+    onFontChanged: refit()
+
     // The value as edited: the same text, so a field left as it was changes nothing.
     readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
 
-    // A value wider than the field shows from its start and clips at the end, without an ellipsis, as a table
-    // cell does; it is shown in full while edited.
-    onActiveFocusChanged: {
-        if (activeFocus && text === value) {
-            text = editText;
-        } else if (!activeFocus) {
-            commit();
-            cursorPosition = 0;
-        }
-    }
-    onTextChanged: if (!activeFocus)
-        cursorPosition = 0
-    Component.onCompleted: {
-        // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
-        FieldTitles.align(field);
-        cursorPosition = 0;
-    }
+    // A value too wide uses the same significant-digit scientific spelling as a
+    // table cell; the full native token remains the edit/menu/hover value.
+    onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterFieldEditor)
+    onTextChanged: ApplicationInfo.editorTextChanged()
+    Component.onCompleted: ApplicationInfo.parameterEditorCompleted()
 
     warned: warningText !== ""
     // The warning, else the item's label and `.edi` name (edi ADR-0051).
-    ToolTip.text: warningText !== "" ? warningText : item !== null ? item.toolTip : ""
+    ToolTip.text: warningText !== "" ? warningText : !activeFocus && (shownValue !== valueText || contentWidth > room) ? valueText : item !== null ? item.toolTip : ""
     ToolTip.visible: ToolTip.text !== "" && !warned && hovered && EaGlobals.Vars.showToolTips
     WarningToolTip {
         text: field.warningText
@@ -93,25 +98,58 @@ EaElements.ParamTextField {
         visible: field.hint !== "" && !field.warned && field.hovered && EaGlobals.Vars.showToolTips
     }
 
-    onValueChanged: typedRefusal = ""
-    onAccepted: commit()
+    readonly property var editOwner: Session.project
+    property var ownerToken: ({})
+    property var draft: null
+    property var commitInProgress: null
+    property var editorLife: ({
+            alive: true
+        })
+    property bool assistantEditing: false
+    property bool assistantCommitReady: false
+    readonly property bool manualEditing: draft !== null && draft.kind === "manual"
+    readonly property ParameterItem manualItem: manualEditing ? draft.item : null
+    readonly property ParameterItem manualDraftParameter: manualItem
+    readonly property bool assistantManualDraft: inputMethodComposing || (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
+    onEditOwnerChanged: ApplicationInfo.editorRetireOwner()
+    onObjectNameChanged: ApplicationInfo.editorRetireOwner()
+    Component.onDestruction: ApplicationInfo.editorDestroyed()
+    onItemChanged: ApplicationInfo.parameterEditorItemChanged(ApplicationInfo.ParameterFieldEditor)
+    Binding {
+        target: field
+        property: "text"
+        value: field.activeFocus ? field.editText : field.shownValue
+        when: field.draft === null && !field.assistantEditing && !field.assistantCommitReady && field.commitInProgress === null && !field.inputMethodComposing
+        restoreMode: Binding.RestoreNone
+    }
+    function refreshCleanText() {
+        ApplicationInfo.parameterFieldRefreshCleanText();
+    }
+    function rememberManualDraft() {
+        ApplicationInfo.editorRememberDraft(ApplicationInfo.ParameterFieldEditor);
+    }
+    onTextEdited: rememberManualDraft()
+    onInputMethodComposingChanged: ApplicationInfo.editorCompositionChanged(ApplicationInfo.ParameterFieldEditor)
+    onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.ParameterFieldEditor)
+    onEditTextChanged: refreshCleanText()
+    function beginAssistantEdit() {
+        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterFieldEditor);
+    }
+    function allowAssistantCommit() {
+        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterFieldEditor);
+    }
+    function resetEditorText() {
+        ApplicationInfo.parameterEditorReset();
+    }
+    function cancelAssistantEdit() {
+        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterFieldEditor);
+    }
+    Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.ParameterFieldEditor, event)
+    // editingFinished owns Return as well as focus loss; accepted is the same
+    // Return's second signal and cannot acquire a successor draft.
     onEditingFinished: commit()
-
-    // Return and leaving the field both commit; the second of the two finds nothing new. Text left as shown, rounded or
-    // in full, changes nothing.
     function commit() {
-        if (item === null)
-            return;
-        if (text !== field.value && text !== field.editText) {
-            typedRefusal = TypedInput.refusal(text, "number");
-            if (typedRefusal === "") {
-                item.value = Number(text);
-            }
-        }
-        text = Qt.binding(() => field.value);
+        ApplicationInfo.editorCommit(ApplicationInfo.ParameterFieldEditor);
     }
-    onFitToggled: checked => {
-        if (item !== null)
-            item.free = checked;
-    }
+    onFitToggled: checked => ApplicationInfo.parameterEditorFitToggled(checked)
 }

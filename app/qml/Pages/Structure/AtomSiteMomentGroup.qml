@@ -9,7 +9,7 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// `atom_site_moment` (edi ADR-0068; the owner, 2026-11-03): one row per atom site, as Atomic displacement — its id,
+// `atom_site_moment` (edi ADR-0070; the owner, 2026-11-03): one row per atom site, as Atomic displacement — its id,
 // read only; the magnetic ion its moment takes, "none" for a site without a moment, so choosing an ion marks the site
 // magnetic; the three components along the cell axes, those the site symmetry leaves free editable; and the symmetry
 // form crysta derives, read only. The ion belongs to the atom type, so sites of one type share it.
@@ -77,7 +77,7 @@ Column {
         return group.undetermined(parts, 1) ? qsTr("Undetermined: the moment is zero") : qsTr("Undetermined: the moment is along z");
     }
     // A derived value's tooltip: its s.u. and how it was found, from the fit's covariance (index 8) or propagated
-    // from the components' own s.u. as if they were uncorrelated (edi ADR-0068).
+    // from the components' own s.u. as if they were uncorrelated (edi ADR-0070).
     function suTip(parts, su) {
         if (typeof su !== "number" || !isFinite(su))
             return "";

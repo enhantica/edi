@@ -1,0 +1,6 @@
+{
+  "structure_source": "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/structures/lbco.edi",
+  "structure_source_sha256": "d1c245e00052e5ba22a07a5f26d645d97bc4576e369599467bfc85af224bfb04",
+  "transcription": "Cell, space group, sites, occupancies and Biso transcribed to standard CIF tags; free flags omitted. Not the exact owner attachment. No fitted result oracle.",
+  "measurement": "tests/fixtures/background_estimate/meas-lbco-hrpt.xye"
+}

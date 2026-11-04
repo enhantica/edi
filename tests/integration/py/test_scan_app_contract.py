@@ -11,6 +11,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_ui_script.job_controls import check_job_requirements
+from tests.fixtures.native_ui_script.runner import run_javascript
+
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
 
@@ -51,7 +54,7 @@ def spans(text):
     return found
 
 
-def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
+def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces(tmp_path, monkeypatch):
     text = 'Item { // owner\'s } comment\n text: "{fake}"; Child { value: 3 } /* } */ }'
     blocks = [text[a:b] for a, b in spans(text)]
     assert blocks == ['{ value: 3 }', text[text.index('{') :]], (
@@ -80,6 +83,13 @@ def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
     )
     with pytest.raises(pytest.fail.Exception, match='observed block must close'):
         block('Item { Child { value: 3 }', 'Item {')
+    call = 'ApplicationInfo.forward(() => {\n return "} )";\n }, () => {\n return 7;\n })'
+    assert property_value('Item {\n onReady: ' + call + '\n}', 'onReady') == call, (
+        'The observer retains every callback of the complete native forwarding expression'
+    )
+    # The same observer must distinguish unavailable core capability from a
+    # broken app artifact before any native vector can be skipped.
+    check_job_requirements(tmp_path, monkeypatch)
 
 
 def block(text, marker):
@@ -136,6 +146,41 @@ def continued_expression(text, start):
     return line
 
 
+def multiline_forwarding_value(text, start):
+    # A native forwarding call may contain several multiline callbacks.
+    # Observe the complete expression rather than its first callback block.
+    masked = lexical_mask(text, strings=True)
+    first_end = text.find('\n', start)
+    first_end = len(text) if first_end < 0 else first_end
+    pairs = {')': '(', ']': '[', '}': '{'}
+    pending = []
+    for char in masked[start:first_end]:
+        if char in '([{':
+            pending.append(char)
+        elif char in pairs:
+            if not pending:
+                return None
+            assert pending[-1] == pairs[char], (
+                'A forwarding expression must balance every delimiter before observation'
+            )
+            pending.pop()
+    if pending:
+        for end in range(first_end, len(masked)):
+            char = masked[end]
+            if char in '([{':
+                pending.append(char)
+            elif char in pairs:
+                assert pending and pending[-1] == pairs[char], (
+                    'A multiline forwarding expression must retain matched delimiters'
+                )
+                pending.pop()
+            if char == '\n' and not pending:
+                return text[start:end].strip()
+        assert not pending, 'A forwarding call must close before its expression is observed'
+        return text[start:].strip()
+    return None
+
+
 def property_value(text, name):
     text = lexical_mask(text)
     opening = text.find('{')
@@ -162,6 +207,9 @@ def property_value(text, name):
                     depth -= 1
                     if depth == 0:
                         return text[start : end + 1]
+        forwarded = multiline_forwarding_value(text, start)
+        if forwarded is not None:
+            return forwarded
         line = continued_expression(text, start)
         if line.endswith('{'):
             opening = text.index('{', start)
@@ -181,9 +229,7 @@ def control_type(text, name):
 def javascript(program):
     node = Path(sys.prefix) / 'bin/node'
     assert node.is_file(), 'Scan wiring: the declared Python environment supplies Node'
-    result = subprocess.run(
-        [node], input=program, text=True, capture_output=True, check=False, timeout=5
-    )
+    result = run_javascript(program, timeout=5)
     assert result.returncode == 0, (
         'Scan wiring: the actual expression must execute: ' + result.stderr
     )
@@ -308,11 +354,20 @@ console.log(JSON.stringify(output));"""
     assert property_value(holder, 'visible') == 'control.searchable', (
         'Search wiring: threshold controls the attached field or its enclosing header'
     )
-    completed = block(shared, 'Component.onCompleted:')
-    require(
-        completed,
-        r'control\.popup\.contentItem\.header\s*=\s*searchHeader\s*;',
-        'Search wiring: input is the popup list header',
+    completed = property_value(shared, 'Component.onCompleted')
+    header_result = javascript(
+        'const searchHeader={marker:"actual-search-header"};'
+        'const ListView={OverlayHeader:"overlay-probe"};'
+        'const Qt={binding:callback=>callback};const Text={AlignLeft:"left"};'
+        'const control={inTable:false,contentItemLabel:null,delegateModel:{},searchable:true,'
+        'popup:{visible:false,contentItem:{header:null},focus:false}};'
+        '(function(){' + completed + '}).call(control);'
+        'console.log(JSON.stringify([control.popup.contentItem.header===searchHeader,'
+        'control.popup.contentItem.headerPositioning===ListView.OverlayHeader]));'
+    )
+    assert header_result == [True, True], (
+        'Search wiring: the complete original completion procedure attaches its actual '
+        'search header above the popup list entries'
     )
     accepted = property_value(field, 'onAccepted')
     # Each interaction has fresh state; execute the complete matrix in one declared Node host.
@@ -323,9 +378,9 @@ console.log(JSON.stringify(output));"""
         'activated:i=>picked.push(i),popup:{close:()=>closed++}};'
         + search_functions(shared)
         + 'control.filter=control.folded(term);'
-        + '(function()'
+        + '(function(){'
         + accepted
-        + ')();'
+        + '})();'
         'results.push([control.currentIndex,picked,closed]);}'
         'console.log(JSON.stringify(results));'
     )
@@ -692,8 +747,14 @@ statusBarIconForeground:'neutral'}};"""
     assert re.search(r'7.*2.*TIME.*ETA.*CHI', shown), (
         'Status bar wiring: the live-value consumer displays ok, fail, time, ETA and chi in order'
     )
-    assert not re.search(r'\.(?:cancel|stop)\s*\(', text), (
-        'Status bar wiring: no handler in the bar stops a fit'
+    # ADR-0017 §17 gives the shared Fit/Stop control this lifecycle. The
+    # independent assistant Cancel consumer elsewhere in the bar is unrelated.
+    fit_control = block(area, 'StatusBarFitButton {')
+    assert property_value(fit_control, 'fit') == 'bar.fit', (
+        'The shared Fit and Stop control must retain this actual fit owner'
+    )
+    assert not re.search(r'\.(?:cancel|stop)\s*\(', area), (
+        'The progress display delegates fitting lifecycle actions to the shared fit control'
     )
 
 
@@ -717,7 +778,7 @@ def test_create_experiment_is_enabled_and_routes_to_view_model():
     body = block(source('src/project_view_model.cpp'), 'bool ProjectViewModel::createExperiment(')
     require(
         body,
-        r'apply\(edi::Edit::create_experiment\(',
+        r'apply_creation_control\(edi::Edit::create_experiment\(',
         'Create wiring: the supported method applies the closed core edit',
     )
     require(
@@ -727,7 +788,7 @@ def test_create_experiment_is_enabled_and_routes_to_view_model():
     )
     require(
         item(text, 'experiments.load'),
-        r'loadDialog\.open\(\)|WebFiles\.openFiles\(',
+        r'ApplicationInfo\.loadFormFiles\(true\)',
         'Load wiring: the actual action opens the multi-file loader',
     )
     require(
@@ -751,7 +812,7 @@ const WebFiles={available:AVAILABLE,openFiles:(filter,multiple)=>{calls.push(['w
 
 filter,multiple]);return 41}};
 const loadDialog={open:()=>calls.push(['desktop'])};
-(function()ACTION)();
+(function(){ACTION})();
 RECEIVED
 if(WebFiles.available) onFilesOpened(41,files);
 console.log(JSON.stringify(calls));"""
@@ -819,13 +880,15 @@ def test_data_free_experiment_type_has_a_write_boundary(axis):
         'Type wiring: each supported axis uses the selected-row edit route',
     )
     chooser = block(text, 'function choose(')
-    activation = block(source('qml/Components/SelectorField.qml'), 'onActivated:').split(':', 1)[1]
+    activation = property_value(source('qml/Components/SelectorField.qml'), 'onActivated')
     program = (
         """const Qt={binding:f=>f()}; let calls=[];
 const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}};
 const options={tokenAt:index=>['old','chosen','other'][index],
                indexOf:value=>['old','chosen','other'].indexOf(value)};
-const selector={token:'old'}; const token=selector.token; let currentIndex=0; let refusal='';
+const editorLife={alive:true}; let activation=null;
+const selector={token:'old',options,get activation(){return activation}};
+const token=selector.token; let currentIndex=0; let refusal='';
 const Session={project:{lastError:''}};
 CHOOSER
 const selected=token=>choose(AXIS,token);
@@ -841,7 +904,7 @@ console.log(JSON.stringify([calls,currentIndex]));"""
     )
     require(
         block(source('src/project_view_model.cpp'), 'bool ProjectViewModel::setExperimentType('),
-        r'apply\(edi::Edit::replace_experiment\(project,\s*experiment,',
+        r'apply_creation_control\(edi::Edit::replace_experiment\(project,\s*experiment,',
         'Type wiring: supported edits reach the core replacement boundary',
     )
 
@@ -1072,17 +1135,23 @@ def test_effective_consumers_reject_wrong_branches_and_disconnected_search(chann
         ),
         ('matching ? 1 : 0', 'matching ? 0 : 1'),
         (
-            'control.popup.contentItem.header = searchHeader',
-            'control.popup.contentItem.header = null',
+            'control.popup.contentItem.model = Qt.binding(',
+            (
+                'control.popup.contentItem.header = null; '
+                'control.popup.contentItem.model = Qt.binding('
+            ),
         ),
-        ('control.currentIndex = index', 'control.currentIndex = 0'),
+        (
+            'ApplicationInfo.searchAccepted()',
+            'control.currentIndex = 0; control.activated(0); control.popup.close()',
+        ),
     ]:
         key = {
             'control.searchText = text': 'search-input',
             'matching ? EaStyle.Sizes.comboBoxHeight : 0': 'search-height',
             'matching ? 1 : 0': 'search-opacity',
-            'control.popup.contentItem.header = searchHeader': 'search-header',
-            'control.currentIndex = index': 'search-index',
+            'control.popup.contentItem.model = Qt.binding(': 'search-header',
+            'ApplicationInfo.searchAccepted()': 'search-index',
         }[old]
         if channel != key:
             continue
@@ -1142,15 +1211,15 @@ def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibil
         ),
         (
             'qml/Components/SelectorField.qml',
-            'options.tokenAt(index)',
-            'options.tokenAt(0)',
+            'ApplicationInfo.activateSelector(index,',
+            'ApplicationInfo.activateSelector(0,',
             test_data_free_experiment_type_has_a_write_boundary,
             ('beamMode',),
         ),
         (
             'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'row.experimentIndex, axis, token',
-            '0, axis, token',
+            'ApplicationInfo.chooseExperimentType(axis, token);',
+            'row.project.setExperimentType(0, axis, token);',
             test_data_free_experiment_type_has_a_write_boundary,
             ('beamMode',),
         ),
@@ -1177,8 +1246,8 @@ def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibil
         ),
         (
             'qml/Pages/Experiment/ExperimentsGroup.qml',
-            'group.project.loadExperiments(files)',
-            'group.project.loadExperiments([])',
+            'ApplicationInfo.formFilesOpened(request, files, true);',
+            'group.project.loadExperiments([]);',
             test_create_experiment_is_enabled_and_routes_to_view_model,
             (),
         ),
