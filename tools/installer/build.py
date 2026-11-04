@@ -129,7 +129,12 @@ def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> N
     options = ['-DCRYSTA_CXX_PACKAGE=ON', '-DCRYSTA_LTO=OFF']
     if SYSTEM == 'windows':
         common.append('-DCMAKE_CXX_FLAGS=/utf-8')
-        options.append('-DCRYSTA_EIGEN_FETCH=ON')
+        options.extend([
+            '-DCRYSTA_EIGEN_FETCH=ON',
+            '-DBUILD_TESTING=OFF',
+            '-DEIGEN_BUILD_TESTING=OFF',
+            '-DEIGEN_BUILD_DOC=OFF',
+        ])
     run(['cmake', '-S', crysta, '-B', engine, *common, *options])
     run(['cmake', '--build', engine, '--target', 'crysta_core', 'crysta_cli', '--parallel', '4'])
     run(['cmake', '--install', engine, '--prefix', prefix])
