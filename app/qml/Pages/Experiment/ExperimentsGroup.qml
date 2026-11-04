@@ -504,14 +504,16 @@ SideBarGroup {
                 spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
                 ChoiceRadioButton {
+                    id: jointChoice
                     objectName: "datasets.separate"
-                    text: qsTr("Separate experiments, one per file, set up as %1").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
+                    // Named by the fit each choice is for (the owner, 2026-11-04).
+                    text: qsTr("Joint fit: one experiment per file, fitted together")
                     checked: !datasetsChoice.asScan
                     onClicked: datasetsChoice.asScan = false
                 }
                 ChoiceRadioButton {
                     objectName: "datasets.scan"
-                    text: qsTr("One experiment with a scan: %1 is the template, the files its datasets").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
+                    text: qsTr("Sequential fit: the first dataset is the template for the initial fit. When it is ready, switch to sequential mode yourself.")
                     checked: datasetsChoice.asScan
                     onClicked: datasetsChoice.asScan = true
                 }
@@ -522,6 +524,8 @@ SideBarGroup {
                     ToolTip.text: datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")
                     ToolTip.visible: copyBox.hovered && EaGlobals.Vars.showToolTips
                     visible: datasetsChoice.asScan
+                    // The same spacing as between the two choices.
+                    height: jointChoice.height
                     text: qsTr("Copy data into the project")
                     checked: datasetsChoice.copy
                     onToggled: datasetsChoice.copy = checked
