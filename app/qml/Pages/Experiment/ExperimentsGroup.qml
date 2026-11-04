@@ -186,7 +186,7 @@ SideBarGroup {
                             elide: Text.ElideMiddle
                             color: empty ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.themeForeground
                             text: empty ? qsTr("— no data yet") : row.file
-                            ToolTip.text: empty ? qsTr("Load measured data with Load ▾ below") : row.file
+                            ToolTip.text: empty ? qsTr("Load measured data with the Load button below") : row.file
                         }
                         EaComponents.ListViewLabel {
                             id: templateTag
@@ -258,7 +258,18 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "upload"
-                text: qsTr("Load") + " ▾"
+                text: qsTr("Load")
+
+                // The menu's caret, from the icon font: the text fonts have no such character.
+                EaElements.Label {
+                    anchors.right: parent.right
+                    anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.75
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                    color: loadButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                    text: "caret-down"
+                }
                 ToolTip.text: qsTr("Load a full experiment, or measured data into the selected one, from a file or from the web")
                 onClicked: loadMenu.open()
 
