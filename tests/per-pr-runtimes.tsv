@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-04T02:47:29Z
+# measured_utc = 2026-11-04T02:54:51Z
 #
-# Recorded from: measured test run (66 node(s) measured once, 166261 banked, 0 stale row(s) dropped)
-# Collected tests: 211443; with a reported duration: 70564
+# Recorded from: measured test run (70 node(s) measured once, 166257 banked, 0 stale row(s) dropped)
+# Collected tests: 211443; with a reported duration: 70566
 # Module-scoped fixture costs recorded: 115
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 211443
 # inventory_cpp = 396
-# inventory_measured = 166324
-# inventory_unmeasured = 45515
+# inventory_measured = 166326
+# inventory_unmeasured = 45513
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 68018
 
@@ -316,10 +316,10 @@ UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[recent_table_grows_when_sidebar_grows]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[six_links_have_icons_and_two_columns]
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[status_header_is_empty]
-0.780	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-experiment]
-0.680	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-measured]
-0.770	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-structure]
-0.720	tests/integration/app/test_online_load.py::test_online_load_controls[new_experiment_wavelength-]
+0.785	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-experiment]
+0.570	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-measured]
+0.730	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-structure]
+0.710	tests/integration/app/test_online_load.py::test_online_load_controls[new_experiment_wavelength-]
 0.168	tests/integration/app/test_online_structure_loading.py::test_cod_falls_back_to_easydiffraction
 0.800	tests/integration/app/test_online_structure_loading.py::test_structure_matches_disk
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[independent]
@@ -149507,41 +149507,41 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.430	tests/integration/py/test_plain_data_build.py::test_timeout_stops_the_build_descendant_and_preserves_output[False]
 0.430	tests/integration/py/test_plain_data_build.py::test_timeout_stops_the_build_descendant_and_preserves_output[True]
 0.000	tests/integration/py/test_plain_data_build.py::test_unset_budget_uses_detected_cores
-0.590	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-disabled]
-0.640	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-enabled]
-0.640	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[simulation-only]
-0.320	tests/integration/py/test_plain_data_picker.py::test_load_data_availability_uses_ownership_after_first_load
-0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-accepted]
-0.510	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-closed-project]
+0.550	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-disabled]
+0.590	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-enabled]
+0.580	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[simulation-only]
+0.300	tests/integration/py/test_plain_data_picker.py::test_load_data_availability_uses_ownership_after_first_load
+0.620	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-accepted]
+0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-closed-project]
 0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-create-target]
-0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-foreign-project]
+0.450	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-foreign-project]
 0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-reindexed]
-0.520	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-retargeted-row]
-0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-accepted]
-0.500	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-cancelled]
-0.450	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-closed-project]
-0.490	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-create-target]
+0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-retargeted-row]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-accepted]
+0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-cancelled]
+0.440	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-closed-project]
+0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-create-target]
 0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-empty-cancelled]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-empty-failed]
-0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-failed]
-0.450	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-cancel]
-0.510	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-failure]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-failed]
+0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-cancel]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-failure]
 0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-project]
-0.530	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-request]
-0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-reindexed]
-0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-retargeted-row]
-0.480	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-click]
-0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-accept]
-0.520	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-open]
-0.500	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[early-browser-return]
-0.450	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-project]
-0.500	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-request]
-0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-browser-row]
-0.500	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
-0.480	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
-0.510	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
-0.450	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
-0.500	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-request]
+0.450	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-reindexed]
+0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-retargeted-row]
+0.484	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-click]
+0.490	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-accept]
+0.470	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-open]
+0.490	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[early-browser-return]
+0.470	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-project]
+0.470	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-request]
+0.490	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-browser-row]
+0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
+0.470	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
+0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
+0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
+0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[Clang]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[New design helper]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[diffraction-lib]
@@ -149957,7 +149957,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.310	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[open-project]
 0.160	tests/integration/py/test_reset_and_required.py::test_scan_rule_required_is_an_unlabelled_editable_icon_toggle
 0.010	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
-0.650	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
+0.480	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
 0.160	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
 0.170	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
 0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
@@ -150931,7 +150931,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.000	tests/system/py/test_approved_palettes.py::test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls
 0.180	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_compiles_after_an_unrelated_app_failure
 0.290	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_runs_wasm_compiler_task[app/src/assistant_view_model.cpp]
-0.280	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_runs_wasm_compiler_task[app/src/assistant_work_report.hpp]
+0.300	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_runs_wasm_compiler_task[app/src/assistant_work_report.hpp]
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[all-used-next-free]
 0.013	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[prefer-unused-rounded]
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[redraw-rounded-special]
@@ -153914,7 +153914,7 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-linux]
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-macos]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[diagnostics]
-2.560	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[native-forwarding-controls]
+2.340	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[native-forwarding-controls]
 0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[nightly-linux-pull_request]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[nightly-linux-push]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[nightly-linux-schedule]
@@ -153924,7 +153924,7 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.230	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[scan-independent]
 0.230	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[scan-sequential]
 3.300	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[status-results-banner]
-0.470	tests/system/py/test_ci_cadence.py::test_inventory_migrations_name_frozen_witnesses_and_available_successors
+0.420	tests/system/py/test_ci_cadence.py::test_inventory_migrations_name_frozen_witnesses_and_available_successors
 0.100	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[pull_request]
 0.090	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[push]
 0.100	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[schedule]
@@ -204963,30 +204963,30 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_logging.py::test_r
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_logging.py::test_rounded_delta_and_padded_columns_align_messages[12345000-12345]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_logging.py::test_rounded_delta_and_padded_columns_align_messages[50647-50.65]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_logging.py::test_rounded_delta_and_padded_columns_align_messages[9999-9.999]
-0.364	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[disabled_source-button]
-0.550	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[disabled_source-stale-dispatch]
-0.980	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-experiment]
-1.030	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-measured]
-1.090	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-removed-target]
-0.430	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-structure]
-0.180	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-local-cancel]
+0.274	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[disabled_source-button]
+0.330	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[disabled_source-stale-dispatch]
+0.470	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-experiment]
+0.670	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-measured]
+0.460	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-removed-target]
+0.460	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-structure]
+0.160	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-local-cancel]
 0.130	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-local-corrupt]
 0.330	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-local-valid]
-0.170	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-web-corrupt]
+0.160	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-web-corrupt]
 0.160	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-web-refused-probe]
 0.390	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-web-valid]
-0.800	tests/system/py/test_online_file_loading.py::test_online_fixture_loading[experiment]
-1.070	tests/system/py/test_online_file_loading.py::test_online_fixture_loading[measured]
-0.420	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-comma]
-0.290	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-extra-elements]
-0.370	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-semicolon]
-0.400	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-spacegroup]
-0.440	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-absent-file]
-0.360	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-download-503]
-0.390	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-missing-entry]
-0.430	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-service-503]
-UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_load_actions[experiment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_load_actions[structure]
+0.850	tests/system/py/test_online_file_loading.py::test_online_fixture_loading[experiment]
+1.180	tests/system/py/test_online_file_loading.py::test_online_fixture_loading[measured]
+0.360	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-comma]
+0.330	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-extra-elements]
+0.330	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-semicolon]
+0.330	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-spacegroup]
+0.330	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-absent-file]
+0.370	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-download-503]
+0.370	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-missing-entry]
+0.330	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-service-503]
+0.290	tests/system/py/test_online_file_loading.py::test_online_load_actions[experiment]
+0.570	tests/system/py/test_online_file_loading.py::test_online_load_actions[structure]
 3.690	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-chebyshev-chebyshev]
 1.180	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-line-segment-points]
 2.200	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-polynomial-polynomial]
@@ -211898,7 +211898,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 927.726	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 27.200	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
-# module-cost: 4.560	tests/integration/app/test_online_load.py
+# module-cost: 5.065	tests/integration/app/test_online_load.py
 # module-cost: 0.782	tests/integration/app/test_online_structure_loading.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
@@ -211912,7 +211912,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 0.930	tests/integration/py/test_plain_data_picker.py
+# module-cost: 0.956	tests/integration/py/test_plain_data_picker.py
 # module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.555	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.373	tests/integration/py/test_scan_extended_contract.py
@@ -211958,7 +211958,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 216.560	tests/system/py/test_legend_visibility.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 28.190	tests/system/py/test_onboarding_extra_tables.py
-# module-cost: 1.416	tests/system/py/test_online_file_loading.py
+# module-cost: 0.756	tests/system/py/test_online_file_loading.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 27.704	tests/system/py/test_pattern_range.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
