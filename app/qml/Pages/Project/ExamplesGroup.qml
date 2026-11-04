@@ -24,6 +24,14 @@ SideBarGroup {
         ExampleFilters {
             catalogue: Session.examples
         }
+        // Why no example can be opened: every online source holding the projects failed (ADR-0068).
+        EaElements.Label {
+            objectName: "examples.notice"
+            visible: Session.examplesNotice !== ""
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: Session.examplesNotice
+        }
         DataTable {
             id: table
             objectName: "examples.list"
@@ -59,15 +67,12 @@ SideBarGroup {
                 Accessible.role: Accessible.Button
                 Accessible.name: `${row.exampleId}: ${row.sample} · ${row.origin}`
                 Accessible.description: row.detail
-                Accessible.onPressAction: AppState.afterChanges(() => Session.openExample(row.exampleId))
+                Accessible.onPressAction: ApplicationInfo.openProjectRow(false, false)
                 MouseArea {
                     parent: row
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        row.activated();
-                        AppState.afterChanges(() => Session.openExample(row.exampleId));
-                    }
+                    onClicked: ApplicationInfo.openProjectRow(false, true)
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter

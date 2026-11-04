@@ -90,7 +90,13 @@ Window {
             if (currentCase.kind === "scan" && currentCase.mode !== "evolution") {
                 counts.rowLabels = chart.rowLabels;
                 const rows = objects(chart).filter(item => item.objectName.startsWith("scanView." + currentCase.mode + ".rowLabel.") && item.visible);
-                add(rows.flatMap(row => texts(row).filter(item => item.isIcon !== true)), "row-names");
+                const rowNames = [];
+                for (let rowIndex = 0; rowIndex < rows.length; ++rowIndex) {
+                    const names = texts(rows[rowIndex]).filter(item => item.isIcon !== true);
+                    for (let nameIndex = 0; nameIndex < names.length; ++nameIndex)
+                        rowNames.push(names[nameIndex]);
+                }
+                add(rowNames, "row-names");
             }
             if (currentCase.mode === "map") add([named(chart, "scanView.map.colourBar.min"), named(chart, "scanView.map.colourBar.max")].filter(item => item && item.visible && item.text), "key");
         }

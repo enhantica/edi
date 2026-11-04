@@ -36,8 +36,7 @@ AppDialog {
     contentWidth: listArea.width
     contentHeight: listArea.height
 
-    onOpened: if (dialog.messages)
-        dialog.messages.markViewed()
+    onOpened: ApplicationInfo.finishUiEvent(7, undefined)
 
     footer: EaElements.DialogButtonBox {
         EaElements.Button {
@@ -45,8 +44,7 @@ AppDialog {
             enabled: dialog.messages !== null && dialog.messages.count > 0
             text: qsTr("Dismiss all")
             DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-            onClicked: if (dialog.messages)
-                dialog.messages.dismissAll()
+            onClicked: ApplicationInfo.finishUiEvent(8, undefined)
         }
     }
 
@@ -126,8 +124,7 @@ AppDialog {
                     anchors.verticalCenter: parent.verticalCenter
                     fontIcon: "minus-circle"
                     ToolTip.text: qsTr("Dismiss this message")
-                    onClicked: if (dialog.messages)
-                        dialog.messages.dismiss(row.index)
+                    onClicked: ApplicationInfo.finishUiEvent(9, undefined)
                 }
             }
         }

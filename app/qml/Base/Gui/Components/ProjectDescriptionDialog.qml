@@ -22,6 +22,14 @@ EaElements.Dialog {
     property alias projectAuthors: projectAuthorsField.text
     property alias projectDescription: projectDescriptionField.text
 
+    function acceptsProjectName(value) {
+        return ApplicationInfo.projectDescriptionAdmitted(value, false);
+    }
+    function acceptsProjectTitle(value) {
+        return ApplicationInfo.projectDescriptionAdmitted(value, true);
+    }
+    readonly property int projectTitleMaximumLength: projectTitleField.maximumLength
+
     property string projectLocation: ""
     property string projectParentDirectory: ""
     property string defaultProjectParentDirectory: projectLocation
@@ -29,12 +37,7 @@ EaElements.Dialog {
     // A folder and a name joined by one separator, whatever separators the folder ends with (a folder chosen in
     // the dialog arrives as a URL that may end in one).
     function joinedPath(folder, name) {
-        let path = folder;
-        while (path.length > 1 && (path.endsWith("/") || path.endsWith("\\")))
-            path = path.slice(0, -1);
-        if (path === "")
-            return name;
-        return path.endsWith("/") || path.endsWith("\\") ? path + name : path + EaLogic.Utils.osPathSep() + name;
+        return ApplicationInfo.projectJoinedPath(folder, name);
     }
 
     property int inputFieldWidth: EaStyle.Sizes.fontPixelSize * 35
@@ -43,21 +46,38 @@ EaElements.Dialog {
 
     title: qsTr("Create project")
 
-    standardButtons: Dialog.Ok
+    // Whether the user chose Replace for a project already at the location (replaceAsked); reset at every opening.
+    property bool replaceExisting: false
+    signal replaceAsked(string name, string folder)
+    // OK: a location already taken asks first, "Replace it?", and the form stays as typed until the answer (the
+    // owner, 2026-11-04); Replace comes back through accept() with replaceExisting set.
+    function tryAccept() {
+        const location = projectLocationField.text;
+        if (showsLocation && !replaceExisting && location !== "" && Session.locationExists(location)) {
+            replaceAsked(projectName, Session.existingParentFolder(location));
+            return;
+        }
+        accept();
+    }
+
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: "createProject.accept"
+            highlighted: true
+            text: qsTr("OK")
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: dialog.tryAccept()
+        }
+    }
 
     onAccepted: projectLocation = projectLocationField.text
     // OK is named as the dialog starts to show, and the name field takes the keyboard as it opens: what the user
     // types goes into the name at once.
-    function nameAccept() {
-        const create = standardButton(Dialog.Ok);
-        if (create)
-            create.objectName = "createProject.accept";
+    onAboutToShow: {
+        replaceExisting = false;
+        ApplicationInfo.projectDescriptionOpened(false);
     }
-    onAboutToShow: nameAccept()
-    onOpened: {
-        nameAccept();
-        projectNameField.forceActiveFocus();
-    }
+    onOpened: ApplicationInfo.projectDescriptionOpened(true)
 
     // Main layout
 
@@ -84,8 +104,8 @@ EaElements.Dialog {
                 }
                 placeholderText: qsTr("Enter project name here")
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                Keys.onReturnPressed: dialog.tryAccept()
+                Keys.onEnterPressed: dialog.tryAccept()
             }
         }
 
@@ -106,8 +126,8 @@ EaElements.Dialog {
                 horizontalAlignment: TextInput.AlignLeft
                 placeholderText: qsTr("Enter project title here (optional)")
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                Keys.onReturnPressed: dialog.tryAccept()
+                Keys.onEnterPressed: dialog.tryAccept()
             }
         }
 
@@ -128,8 +148,8 @@ EaElements.Dialog {
                 horizontalAlignment: TextInput.AlignLeft
                 placeholderText: qsTr("Enter authors here, separated by ; (optional)")
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                Keys.onReturnPressed: dialog.tryAccept()
+                Keys.onEnterPressed: dialog.tryAccept()
             }
         }
 
@@ -145,7 +165,7 @@ EaElements.Dialog {
             MultiLineField {
                 id: projectDescriptionField
 
-                objectName: "createProject.description"
+                editorObjectName: "createProject.description"
                 implicitWidth: dialog.inputFieldWidth
                 placeholderText: qsTr("Enter project description here (optional)")
             }
@@ -171,8 +191,8 @@ EaElements.Dialog {
                 placeholderText: qsTr("Enter project location here")
                 text: dialog.joinedPath(dialog.projectParentDirectory ? EaLogic.Utils.urlToLocalFile(dialog.projectParentDirectory) : dialog.defaultProjectParentDirectory, dialog.projectName)
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                Keys.onReturnPressed: dialog.tryAccept()
+                Keys.onEnterPressed: dialog.tryAccept()
 
                 EaElements.ToolButton {
                     id: chooseParentDirectoryButton

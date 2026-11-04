@@ -2,10 +2,11 @@
 
 import math
 import re
+import stat
 import sys
 import tempfile
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import edi
 
@@ -137,14 +138,41 @@ def assert_documents(before, after, expected):
 
 def archive_files(path):
     with zipfile.ZipFile(path) as archive:
-        names = [name for name in archive.namelist() if not name.endswith('/')]
-        roots = [name[: -len('project.edi')] for name in names if name.endswith('/project.edi')]
+        members = archive.infolist()
+        for member in members:
+            name = member.filename[:-1] if member.is_dir() else member.filename
+            parsed = PurePosixPath(name)
+            assert (
+                name
+                and member.orig_filename == member.filename
+                and not parsed.is_absolute()
+                and not PureWindowsPath(name).drive
+                and '\\' not in name
+                and '..' not in parsed.parts
+                and parsed.as_posix() == name
+            ), 'Saved archive member paths must be canonical and safe'
+            assert not stat.S_ISLNK(member.external_attr >> 16), (
+                'Saved archives must not contain symbolic links'
+            )
+        names = [member.filename for member in members if not member.is_dir()]
+        roots = [
+            name[: -len('project.edi')]
+            for name in names
+            if name == 'project.edi' or name.endswith('/project.edi')
+        ]
         assert len(roots) == 1, 'A saved browser archive must have exactly one project root'
         root = roots[0]
         assert len(set(names)) == len(names), 'Saved archives must not duplicate a file path'
         assert all(name.startswith(root) for name in names), (
             'All saved files must belong to the project'
         )
+        files = {PurePosixPath(name) for name in names}
+        directories = {
+            PurePosixPath(member.filename[:-1]) for member in members if member.is_dir()
+        }
+        assert not files.intersection(directories) and all(
+            parent not in files for name in files for parent in name.parents
+        ), 'Saved archive file/directory paths must not conflict'
         return {name[len(root) :]: archive.read(name) for name in names}
 
 

@@ -100,26 +100,39 @@ ExampleListModel::ExampleListModel(const QList<Item>& items, QObject* parent)
       properties_({"value", "title"}, this),
       options_({"value", "title", "matchingCount"}, this) {
     publishProperties();
+    for (const Item& item : items) addItem(item);
+    refresh();
+}
+void ExampleListModel::addItem(const Item& item) {
+    Entry entry;
+    entry.id = item.id;
+    entry.sample = item.title;
+    entry.origin = item.origin;
+    entry.detail = item.detail;
+    entry.search = item.id + " " + item.title + " " + item.origin + " " + item.detail;
+    for (const QString& tag : item.tags) {
+        const qsizetype colon = tag.indexOf(QLatin1Char(':'));
+        const QString family = colon < 0 ? QString() : tag.left(colon);
+        const QString value = tag.mid(colon + 1).trimmed();
+        addTag(entry, family, value, value);
+        if (!keys.contains(family)) continue;
+        QStringList& data = entry.values[family];
+        if (!data.contains(value)) data.append(value);
+        entry.search += " " + value + " " + label(value);
+    }
+    for (const auto& key : keys)
+        if (entry.values.value(key).isEmpty()) entry.values.insert(key, {unknown});
+    entry.search = normalize(entry.search + " " + entry.tags.join(' '));
+    entries_.append(entry);
+}
+void ExampleListModel::replaceItems(const QList<Item>& items) {
+    entries_.removeIf([this](const Entry& entry) { return added_ids_.contains(entry.id); });
+    added_ids_.clear();
     for (const Item& item : items) {
-        Entry entry;
-        entry.id = item.id;
-        entry.sample = item.title;
-        entry.detail = item.detail;
-        entry.search = item.id + " " + item.title + " " + item.detail;
-        for (const QString& tag : item.tags) {
-            const qsizetype colon = tag.indexOf(QLatin1Char(':'));
-            const QString family = colon < 0 ? QString() : tag.left(colon);
-            const QString value = tag.mid(colon + 1).trimmed();
-            addTag(entry, family, value, value);
-            if (!keys.contains(family)) continue;
-            QStringList& data = entry.values[family];
-            if (!data.contains(value)) data.append(value);
-            entry.search += " " + value + " " + label(value);
-        }
-        for (const auto& key : keys)
-            if (entry.values.value(key).isEmpty()) entry.values.insert(key, {unknown});
-        entry.search = normalize(entry.search + " " + entry.tags.join(' '));
-        entries_.append(entry);
+        const bool present = std::any_of(entries_.cbegin(), entries_.cend(), [&item](const Entry& entry) { return entry.id == item.id; });
+        if (present) continue;
+        addItem(item);
+        added_ids_.insert(item.id);
     }
     refresh();
 }

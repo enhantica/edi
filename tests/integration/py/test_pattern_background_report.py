@@ -6,16 +6,35 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_ui_script.report_projection import browser_model, complete_schema
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.mark.parametrize('kind', ['background', 'structure'])
-def test_report_background_dash_and_solid_structure_outline(kind):
+def test_report_background_dash_and_solid_structure_outline(kind, tmp_path):
+    fixture = ROOT / 'tests/fixtures/pattern_styles/observe_report.cjs'
+    authored = json.loads(
+        subprocess.check_output(
+            [
+                str(ROOT / '.pixi/envs/default/bin/node'),
+                str(fixture),
+                str(ROOT / 'data/report/report.js'),
+                '--model',
+            ],
+            text=True,
+        )
+    )
+    document = complete_schema(authored)
+    document['structures'] = []
+    data = tmp_path / 'delivered.json'
+    data.write_text(json.dumps(browser_model(document)))
     observed = subprocess.run(
         [
             str(ROOT / '.pixi/envs/default/bin/node'),
             str(ROOT / 'tests/fixtures/pattern_styles/observe_report.cjs'),
             str(ROOT / 'data/report/report.js'),
+            str(data),
         ],
         capture_output=True,
         text=True,

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_ui_script.report_projection import browser_model, complete_schema
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/report_units'
 REFERENCE = json.loads((FIXTURE / 'reference.json').read_text())
@@ -21,7 +23,7 @@ def observe(tmp_path, *, structure=True):
         'position': [1.25, 2.5, 3.75],
         'scale': [0.2, 1.5, 0.2],
         'rotation': q,
-        'color': '#0c2238',
+        'color': '#0C2238',
     }
     pattern = {
         'current': True,
@@ -43,7 +45,7 @@ def observe(tmp_path, *, structure=True):
                 'label': 'Measured',
                 'x': [1, None, 3],
                 'y': [100, None, 110],
-                'rows': [0, None, 2],
+                'rows': [0, 1, 2],
                 'bar_low': [90, None, 100],
                 'bar_high': [112, None, 122],
             },
@@ -87,7 +89,7 @@ def observe(tmp_path, *, structure=True):
         'magnification': 0.9,
         'pan_x': 0,
         'pan_y': 0,
-        'projection': 'Orthographic',
+        'projection': 'orthographic',
     }
     model = {
         'schema_version': 1,
@@ -158,6 +160,8 @@ def observe(tmp_path, *, structure=True):
             }
         ],
     }
+    # The original hand-authored scientific model keeps its numeric inputs.
+    # Supply the schema's non-scientific section selection explicitly.
     model['pattern_styles'] = model['experiments'][0].pop('styles')
     if not structure:
         model['structures'] = []
@@ -174,7 +178,9 @@ def observe(tmp_path, *, structure=True):
         for suffix, value in [('', strength), ('.right', right), ('.up', up), ('.toward', toward)]:
             model['structure_styles'].append({'key': 'light.' + light + suffix, 'value': value})
     path = tmp_path / 'model.json'
-    path.write_text(json.dumps(model, ensure_ascii=False, allow_nan=False))
+    path.write_text(
+        json.dumps(browser_model(complete_schema(model)), ensure_ascii=False, allow_nan=False)
+    )
     result = subprocess.run(
         ['node', str(FIXTURE / 'observe_renderer.js'), str(source), str(path)],
         capture_output=True,

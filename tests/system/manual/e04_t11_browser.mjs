@@ -11,15 +11,18 @@ import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { checkTutorialFileDownloads } from './web_tutorial_files.mjs';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
+import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
+import { statusActionLifetimeChecks } from './web_status_action_lifetime.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
-import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
+import { assertSavedProject, assertSavedNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const tutorialFilesOnly = process.argv.includes('--tutorial-files-only');
 const saveRouteOnly = process.argv.includes('--save-route-only');
 const exampleOnly = process.argv.includes('--example-only');
+const statusActionLifetimeOnly = process.argv.includes('--status-action-lifetime-only');
 const fileRequestsOnly = saveRouteOnly || process.argv.includes('--file-requests-only');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
@@ -33,6 +36,22 @@ assert(!reopenControl || ['noop', 'refuse'].includes(reopenControl),
   'reopen counterfactual must be the explicit no-op or refused-open case');
 assert(!exampleOnly || (!fileRequestsOnly && !reopenControl && fileRequestCase === 'none'),
   'The example-only scope must omit file requests, save-only and reopen controls');
+assert(!statusActionLifetimeOnly || (!fileRequestsOnly && !exampleOnly && !reopenControl && fileRequestCase==='none' &&
+  !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only')),
+  'The focused action-lifetime scope is explicit, without save/request/example/reopen counterfactual scope aliases');
+// A written-domain counterpart is ephemeral and RAW-qualified; it never replaces
+// the committed live/native physics reference or its conditioning capture.
+const writtenReference = process.argv.find(arg => arg.startsWith('--written-reference='))?.slice('--written-reference='.length);
+const writtenRequired = !fileRequestsOnly && !exampleOnly && !statusActionLifetimeOnly &&
+  !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only');
+const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
+if (writtenRequired) {
+  assert(writtenReference, 'Full browser fitting requires the explicitly owned ordinary-native-written reference directory');
+  const admitted = spawnSync('python', ['-m','tests.fixtures.e04_t11_wasm.written','admit',
+    '--root',sourceRoot,'--case',fitCase,'--reference',join(resolve(writtenReference),fitCase)],
+    {encoding:'utf8',timeout:10000});
+  assert.equal(admitted.status,0,'Written reference custody, raw anchors and reopen captures must qualify before browser actions: '+admitted.stderr);
+}
 console.log(`browser ${mode}: starting`);
 assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(mode),
   'requires the produced site, an explicit thread case and a persistent output directory');
@@ -254,14 +273,48 @@ try {
       const deadline=Date.now()+45000;
       let selected=false;
       do {
-        const tree=await send('Accessibility.getFullAXTree');
-        selected=tree.nodes.some(n=>!n.ignored && n.role?.value==='tab' &&
-          n.name?.value===node.name.value && (n.properties || []).some(p=>p.name==='selected' && p.value.value));
+        // Pinned Qt/WASM does not publish PageTab aria-selected. Observe the
+        // actual named native tab; a matching label in a retained page is insufficient.
+        const tab=await evaluate(`window.ediControlGeometry(${JSON.stringify(nativeObjectName)})`);
+        selected=tab?.objectName===nativeObjectName && tab.checked===true &&
+          tab.visible===true && tab.enabled===true;
         if (!selected) await frame();
       } while (!selected && Date.now()<deadline);
       assert(selected,'page navigation must select the requested tab, not reuse labels from a hidden page');
     }
 
+  };
+  const discardResetGuard = async () => {
+    await restoreCanvasViewport(evaluate);
+    const title = await waitControlGeometry(evaluate, frame, 'unsavedChanges.title', {enabled:false});
+    assert.equal(title.text, 'Save the changes?',
+      'Reset must expose the exact native unsaved-changes title before Discard');
+    await waitControlGeometry(evaluate, frame, 'unsavedChanges.discard');
+    // The existing geometry helper refuses missing/ambiguous/nonpositive/outside-viewport controls.
+    const point = await controlPointer(evaluate, 'unsavedChanges.discard');
+    console.log(`browser ${mode}: real unsaved Discard pointer ${point.x},${point.y}`);
+    await send('Input.dispatchMouseEvent', {type:'mouseMoved', ...point});
+    for (const type of ['mousePressed','mouseReleased']) {
+      await send('Input.dispatchMouseEvent', {type, ...point, button:'left', clickCount:1});
+      await frame();
+    }
+    await frame();
+  };
+  const requireResetGuardClosed = async () => {
+    for (const name of ['unsavedChanges.title','unsavedChanges.discard']) {
+      const exposed = await evaluate(`(() => {
+        const name=${JSON.stringify(name)};
+        try { window.ediControlGeometry(name); return true; }
+        catch(error) {
+          const message=error?.message;
+          if(message===\`ediControlGeometry: no item is named '\${name}'\` ||
+             message===\`ediControlGeometry: no visible item is named '\${name}'\`) return false;
+          throw error;
+        }
+      })()`);
+      assert.equal(exposed, false,
+        'The admitted unsaved control must retire before unchanged Reset-effect checks: '+name);
+    }
   };
   const openExampleRow = async (exampleId, exampleName) => {
     // Filter through real keyboard input so the requested row is materialised and unclipped.
@@ -428,6 +481,7 @@ try {
   await send('Runtime.callFunctionOn', { objectId: node.object.objectId,
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
+  await checkDesktopOnlyAssistant({send, evaluate, frame, click, output, mode});
   await inspectDevelopDiagnostics(evaluate, frame, mode,
     snapshot => writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify(snapshot, null, 2)),
     () => shot('develop-diagnostics'));
@@ -442,6 +496,8 @@ try {
     await checkTutorialFileDownloads({ click, event, output, evaluate, send, mode });
   await click(/^Start$/);
   await click(/^Project$/);
+  const statusActions=statusActionLifetimeOnly ? statusActionLifetimeChecks({send,evaluate,frame,output,mode}) : null;
+  if(statusActionLifetimeOnly)await statusActions.noActions('initial-empty-project');
   const beforeExample=await send('Accessibility.getFullAXTree');
   assert(beforeExample.nodes.some(n=> !n.ignored && n.role?.value==='tab' && n.name?.value==='Analysis' &&
     (n.properties || []).some(p=>p.name==='disabled' && p.value.value)),
@@ -488,6 +544,29 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     assert.equal(result.status, 0, 'each browser save must produce a readable scientific project archive');
     return JSON.parse(result.stdout);
   };
+  if (statusActionLifetimeOnly) {
+    // New finite scope: genuine public project lifetime, entirely BEFORE fitting/Save.
+    await click(/^Analysis$/);
+    const first=await statusActions.live('first-fit');
+    await shot('status-action-first-focus');
+    // Same original toolbar Reset route as the full workflow, no native setter.
+    await click(/^Reset to initial state without project, model and data$/);
+    await settleRenderedPage();
+    await click(/^Start$/); await click(/^Project$/);
+    const empty=await send('Accessibility.getFullAXTree');
+    assert(['Structure','Experiment','Analysis'].every(name=>empty.nodes.some(node=>
+      !node.ignored&&node.role?.value==='tab'&&node.name?.value===name&&
+      (node.properties||[]).some(p=>p.name==='disabled'&&p.value.value===true))),
+      'The public Reset really retires the project before any cached action is assessed');
+    await statusActions.retired('project-closed',first);
+    await click(/Examples$/, 'button');
+    await openExampleRow(exampleId,exampleName);
+    await waitAX(/^Analysis$/,true,'tab');
+    await click(/^Analysis$/);
+    const recreated=await statusActions.live('recreated-fit',{oldBackendDOMNodeId:first.backendDOMNodeId});
+    assert.notEqual(recreated.nodeId,first.nodeId,'The recreated active AX node is not its retired predecessor');
+    await shot('status-action-recreated-focus');
+  } else {
   if (saveRouteOnly) {
     await click(/^Project$/);
     const archive = await saveArchive();
@@ -519,20 +598,44 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     const progressKind = (${fittingObservationKind.toString()});
     const roots = [document];
     for (let i=0;i<roots.length;++i) for (const element of roots[i].querySelectorAll('*')) if (element.shadowRoot) roots.push(element.shadowRoot);
+    const observeValue = (node, value) => {
+      if (progressKind(value)) {
+        window.__e04Progress.push(value);
+        return;
+      }
+      if (typeof value !== 'string' || !/^(?:stop-circle\\s*)?Stop$/i.test(value.trim())) return;
+      const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+      const button = element?.closest('button');
+      if (!button || !button.isConnected) return;
+      const fromFitControl = button === window.__e04FitControl || window.__e04FitControl.contains(button);
+      if (!fromFitControl) return;
+      // Existing read-only Qt hooks, never a native writer or caption selector.
+      const state = window.ediFitProgress();
+      if (state.running !== true) return;
+      const owner = window.ediControlGeometry('statusBar.fit.button');
+      const action = window.ediControlGeometry('statusBar.fit.button.accessibleAction');
+      const box = button.getBoundingClientRect(), style = getComputedStyle(button);
+      const observed = {text:value,control:owner.objectName,action:action.objectName,
+        role:button.tagName.toLowerCase(),running:state.running,visible:owner.visible,
+        enabled:owner.enabled,actionVisible:action.visible,actionEnabled:action.enabled,
+        connected:button.isConnected,
+        domVisible:style.display !== 'none' && style.visibility !== 'hidden' && button.getClientRects().length > 0,
+        nativeRect:{x:owner.x,y:owner.y,width:owner.width,height:owner.height},
+        actionRect:{x:action.x,y:action.y,width:action.width,height:action.height},
+        domRect:{x:box.x,y:box.y,width:box.width,height:box.height}};
+      if (progressKind(observed) === 'control') window.__e04Progress.push(observed);
+    };
     const observer = new MutationObserver(records => {
       for (const record of records) {
-        const values = [record.oldValue,record.target.getAttribute?.('aria-label'),record.target.textContent];
+        // Same original candidate reads/order, retaining each actual DOM owner.
+        const values = [[record.target,record.oldValue],
+          [record.target,record.target.getAttribute?.('aria-label')],
+          [record.target,record.target.textContent]];
         for (const node of record.addedNodes || []) {
-          values.push(node.getAttribute?.('aria-label'), node.textContent);
-          for (const child of node.querySelectorAll?.('[aria-label]') || []) values.push(child.getAttribute('aria-label'));
+          values.push([node,node.getAttribute?.('aria-label')], [node,node.textContent]);
+          for (const child of node.querySelectorAll?.('[aria-label]') || []) values.push([child,child.getAttribute('aria-label')]);
         }
-        for (const value of values) {
-          const kind = progressKind(value);
-          const fromFitControl = record.target === window.__e04FitControl ||
-            window.__e04FitControl.contains(record.target);
-          if (kind === 'iteration' || (kind === 'control' && fromFitControl))
-            window.__e04Progress.push(value);
-        }
+        for (const [node,value] of values) observeValue(node,value);
       }
     });
     for (const root of roots) observer.observe(root,{subtree:true,attributes:true,attributeOldValue:true,characterData:true,characterDataOldValue:true,childList:true});
@@ -601,9 +704,9 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const chi = Number(before.analysis.match(/^_fit_result.reduced_chi_square\s+(\S+)/m)?.[1]);
   const referenceChi = nativeOracle.reduced_chi_square;
   const chiTolerance = fitCase === 'ncaf' ? 0.005 : 1e-11 + 1e-9*Math.abs(referenceChi);
-  assertNativeChi(chi, referenceChi, chiTolerance);
+  const writtenReferenceChi = assertSavedNativeChi(chi, referenceChi, chiTolerance);
   await writeFile(join(output, `${mode}-saved-fit.json`), JSON.stringify({
-    project:before.name, chi, referenceChi, chiTolerance,
+    project:before.name, chi, referenceChi, writtenReferenceChi, chiTolerance,
   }, null, 2));
 
   const iterations = Number(before.analysis.match(/^_fit_result.iterations\s+(\S+)/m)?.[1]);
@@ -631,7 +734,9 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert.deepEqual(toolbar.map(button=>button.name),toolbarNames,
     'The actual left app toolbar must name Save, Undo, Redo and Reset in its displayed order');
   await click(/^Reset to initial state without project, model and data$/);
+  await discardResetGuard();
   await settleRenderedPage();
+  await requireResetGuardClosed();
   await click(/^Start$/); await click(/^Project$/);
   await waitAX(/^Save project as/, false, 'button');
   const emptyTree = await send('Accessibility.getFullAXTree');
@@ -661,16 +766,11 @@ if sys.argv[3] == 'refuse':
     markers[0].write_text('_edi.schema_version invalid\\n')
 print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encoding: 'utf8', timeout: 10000 });
   assert.equal(unpack.status, 0, 'browser save must produce a real reopenable project archive');
-  const numerical = spawnSync('python', ['-c', `import json, pathlib, sys
-from tests.fixtures.web_parallel.numeric import scientific, compare_scientific
-actual = scientific(pathlib.Path(sys.argv[1]))
-oracle = json.loads(pathlib.Path(sys.argv[2]).read_text())
-conditioning = json.loads(pathlib.Path(sys.argv[2].replace('-native.json', '-conditioning.json')).read_text())
-compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning, saved_iucr=True)
-pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
-    fileURLToPath(new URL(`../../fixtures/e04_t11_wasm/catalogue_scientific/${fitCase}-native.json`, import.meta.url)),
-    join(output, `${mode}-${fitCase}-scientific.json`)], {encoding:'utf8',timeout:10000});
-  assert.equal(numerical.status, 0, 'browser fitted parameters and pattern arrays must agree with the independent native capture: ' + numerical.stderr);
+  const numerical = spawnSync('python', ['-m','tests.fixtures.e04_t11_wasm.written','compare',
+    '--root',sourceRoot,'--case',fitCase,'--reference',join(resolve(writtenReference),fitCase),
+    '--archive',saved,'--output',join(output, `${mode}-${fitCase}-scientific.json`)],
+    {encoding:'utf8',timeout:10000});
+  assert.equal(numerical.status, 0, 'browser written parameters, SUs, bank fields and pattern arrays must agree with the independently raw-qualified ordinary native Save: ' + numerical.stderr);
   await writeFile(join(output, `${mode}-${fitCase}-measurement.json`), JSON.stringify({
     mode, fitCase, coreCount, fitElapsedMs, isolated, sharedArrayBuffer, kit: expected,
     chiSquare: chi, iterations, rwp, nativeNumerics: true
@@ -720,16 +820,11 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
         functionDeclaration:'function() { this.click(); }',userGesture:true});
       await frame(); await settleRenderedPage();
     };
-    const beginPicker = async regex => {
+    const beginPicker = async (regex, menu, action) => {
       lastEvents.delete('Page.fileChooserOpened');
       const opened=event('Page.fileChooserOpened');
-      // Before: synthetic click on Qt's accessibility element. Now: pointer
-      // input on the app control, including Qt's openFiles/Load data path.
-      const nativeObjectName = /Load structure/.test(regex.source) ? 'structures.load' :
-        /Load experiment/.test(regex.source) ? 'experiments.load' :
-        /Load data/.test(regex.source) ? 'experiments.loadData.0' : undefined;
-      const role = /Load data/.test(regex.source) ? 'StaticText' : 'button';
-      await click(regex, role, nativeObjectName);
+      if (menu) await click(/^Load\b/, 'button', menu);
+      await click(regex, menu ? 'menuitem' : 'button', action);
       if (/Open project/.test(regex.source)) {
         await waitNative('open.folder'); await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
       }
@@ -784,7 +879,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     const createWithStructure = async name => {
       await createEmpty(name);
       await click(/^Structure$/); await waitAX(/Structures \(0\)/);
-      const structure=await beginPicker(/^Load structure from file$/);
+      const structure=await beginPicker(/^From file…$/, 'structures.load', 'structures.load.file');
       await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
       await waitAX(/Structures \(1\)/);
     };
@@ -868,12 +963,12 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     // stale receiver makes an unrelated refused call (a refusal can leave archive bytes unchanged).
     // Experiment needs a structure (ADR-0017); seed it before testing cancellation.
     await createWithStructure('routing_empty_c');
-    await beginPicker(/^Load structure from file$/);
+    await beginPicker(/^From file…$/, 'structures.load', 'structures.load.file');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must preserve the standalone single-file chooser contract');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    const experiment=await beginPicker(/^Load experiment$/);
+    const experiment=await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.experimentFile');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),true,
       'Experiment must retain its batch chooser contract');
     await send('DOM.setFileInputFiles',{...experiment,files:[join(inputs,'blocks/experiment-1.edi'),join(inputs,'blocks/experiment-2.edi')]});
@@ -883,10 +978,10 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     if (['all','cancel-experiment'].includes(fileRequestCase)) {
     await createWithStructure('routing_empty_d');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    await beginPicker(/^Load experiment$/);
+    await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.experimentFile');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await click(/^Structure$/); await waitAX(/Structures \(1\)/);
-    const structure=await beginPicker(/^Load structure from file$/);
+    const structure=await beginPicker(/^From file…$/, 'structures.load', 'structures.load.file');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must keep a single-file chooser after Experiment cancellation');
     await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure-2.edi')]});
@@ -898,19 +993,27 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     await click(/^Create experiment$/, 'button', 'experiments.create');
     await waitAX(/Experiments \(1\)/);
-    await beginPicker(/^Load data(?:…|\.\.\.)$/);
+    await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.dataFile');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
-      'Load data must open a real single-file browser chooser through its experiment control');
+      'Measured data From file must open a real single-file browser chooser for the selected experiment');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await waitAX(/Experiments \(1\)/);
     }
     await writeFile(join(output,`${mode}-file-requests.json`),JSON.stringify({case:fileRequestCase,completed:true},null,2));
   }
+  } // The original fit/save/reopen/request workflow above is unchanged in its ordinary scope.
+  if(statusActionLifetimeOnly) {
+    assert.equal(errors.length,0,'The focused actual action-lifetime workflow has no browser exception');
+    await writeFile(join(output,`${mode}-status-action-only.json`),JSON.stringify({mode,fitCase,completed:true,
+      scope:'Actual empty/open/focus/close/reopen action lifetime only; no fit, Save, provider or scientific pass'},null,2));
+    console.log(`${mode}: focused status-action lifetime/focus passed; original fit/save/science scope not run`);
+  } else {
   assert.equal(errors.length, 0, 'both browser workflows must complete without runtime exceptions');
   await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase, exampleOnly }, null, 2));
   if (exampleOnly) console.log(`${mode}: example-only opening passed; fit/save/reopen checks not run`);
   else if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
+  }
   }
   }
   }

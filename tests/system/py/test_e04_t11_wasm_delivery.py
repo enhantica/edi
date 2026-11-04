@@ -115,6 +115,24 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     )
 
 
+def test_public_webapp_packer_preserves_inventory_through_symlinked_build_parent(tmp_path):
+    physical = tmp_path / 'physical wasm'
+    physical.mkdir()
+    alias = tmp_path / 'source/build/wasm'
+    alias.parent.mkdir(parents=True)
+    alias.symlink_to(physical, target_is_directory=True)
+    assert alias.is_symlink(), 'The actual packer follows an armed external build-parent alias'
+    # Reuse EVERY original actual-packer/archive/vendor/docs-placement assertion,
+    # with the SAME fixture bytes and ordinary subprocess budgets.
+    test_public_webapp_packer_excludes_native_build_outputs(tmp_path)
+    assert (physical / 'edi-webapp.zip').is_file(), (
+        'The normal site zip is published at the actual destination'
+    )
+    assert (physical / 'site').is_dir(), (
+        'The packed site lives under the same physical build parent'
+    )
+
+
 def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
     oracle = json.loads((FIXTURE / 'native.json').read_text())
     digest = hashlib.sha256()

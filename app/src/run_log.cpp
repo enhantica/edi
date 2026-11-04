@@ -11,7 +11,6 @@
 #include <QSocketNotifier>
 #include <QStandardPaths>
 #include <QSysInfo>
-#include <QTimeZone>
 #include <algorithm>
 #include <array>
 #include <cstdio>
@@ -39,6 +38,16 @@ constexpr std::array<const char*, 4> kLevels{"Debug", "Info", "Error", "Disabled
 RunLog* g_log = nullptr;
 QtMessageHandler g_previous_handler = nullptr;
 
+// The ISO offset name, UTC+hh:mm: Qt for WebAssembly builds without the time-zone feature, so it is spelled
+// from the offset QDateTime always has.
+QString utcOffsetName(const QDateTime& when) {
+    const int offset = when.offsetFromUtc();
+    const int minutes = qAbs(offset) / 60;
+    return QStringLiteral("UTC%1%2:%3")
+        .arg(offset < 0 ? u'-' : u'+')
+        .arg(minutes / 60, 2, 10, QLatin1Char('0'))
+        .arg(minutes % 60, 2, 10, QLatin1Char('0'));
+}
 void handle_message(QtMsgType type, const QMessageLogContext& context, const QString& message) {
     if (g_log != nullptr) {
         g_log->write(type, context, message);
@@ -412,25 +421,6 @@ QString run_log_directory() {
 #endif
 }
 
-namespace {
-
-// The offset as "UTC+01:00". The WebAssembly Qt kits are built without time-zone support,
-// so there the name is formed from the plain UTC offset.
-QString utc_offset_name(const QDateTime& when) {
-#if QT_CONFIG(timezone)
-    return when.timeZone().displayName(when, QTimeZone::OffsetName);
-#else
-    const int offset = when.offsetFromUtc();
-    const int minutes = qAbs(offset) / 60;
-    return QStringLiteral("UTC%1%2:%3")
-        .arg(QChar(offset < 0 ? u'-' : u'+'))
-        .arg(minutes / 60, 2, 10, QLatin1Char('0'))
-        .arg(minutes % 60, 2, 10, QLatin1Char('0'));
-#endif
-}
-
-}  // namespace
-
 RunLog::Header run_log_header() {
     const ApplicationInfo info;
     const QSettings settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
@@ -447,8 +437,8 @@ RunLog::Header run_log_header() {
         QStringLiteral("sidebar ") + value("Edi.Preferences/sideBarSide", QStringLiteral("Right")),
         QStringLiteral("tooltips ") + value("Edi.Preferences/toolTips", true)};
     return {
-        {QStringLiteral("date"), now.toString(QStringLiteral("yyyy-MM-dd")) + QStringLiteral(" (") +
-                                     utc_offset_name(now) + QStringLiteral(")")},
+        {QStringLiteral("date"), now.toString(QStringLiteral("yyyy-MM-dd")) + QStringLiteral(" (") + utcOffsetName(now) +
+                                     QStringLiteral(")")},
         {QStringLiteral("app"), info.version() + QStringLiteral(" (commit ") +
                                     QString::fromLatin1(edi::build_commit()) + QStringLiteral(")")},
         {QStringLiteral("crysta"), QStringLiteral(EDI_APP_CRYSTA_VERSION " (commit " EDI_APP_CRYSTA_COMMIT ")")},

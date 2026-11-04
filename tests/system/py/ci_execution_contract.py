@@ -97,9 +97,9 @@ def expression_tokens(text, ctx):
         'false': False,
         'null': None,
         'always()': True,
-        'success()': True,
-        'failure()': False,
-        'cancelled()': False,
+        'success()': ctx.get('success()', True),
+        'failure()': ctx.get('failure()', False),
+        'cancelled()': ctx.get('cancelled()', False),
     }
     while index < len(text):
         match = grammar.match(text, index)

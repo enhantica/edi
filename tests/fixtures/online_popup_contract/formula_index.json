@@ -1,0 +1,209 @@
+{
+  "schema": "edi-data-index/1",
+  "entries": [
+    {
+      "id": "structure-aaa-substituted",
+      "kind": "structure",
+      "name": "A substituted",
+      "formula": "Ba0.5 Co La0.5 O3",
+      "elements": [
+        "Ba",
+        "Co",
+        "La",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "structures/aaa-substituted.cif",
+          "format": "cif"
+        }
+      ]
+    },
+    {
+      "id": "structure-bbb-unrelated",
+      "kind": "structure",
+      "name": "B lacks La",
+      "formula": "Co O3",
+      "elements": [
+        "Co",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "structures/bbb-unrelated.cif",
+          "format": "cif"
+        }
+      ]
+    },
+    {
+      "id": "structure-zzz-exact",
+      "kind": "structure",
+      "name": "Z exact",
+      "formula": "Co La O3",
+      "elements": [
+        "Co",
+        "La",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "structures/zzz-exact.cif",
+          "format": "cif"
+        }
+      ]
+    },
+    {
+      "id": "experiment-aaa-substituted",
+      "kind": "experiment",
+      "name": "A substituted",
+      "formula": "Ba0.5 Co La0.5 O3",
+      "elements": [
+        "Ba",
+        "Co",
+        "La",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "experiments/aaa-substituted.edi",
+          "format": "edi"
+        }
+      ]
+    },
+    {
+      "id": "experiment-bbb-unrelated",
+      "kind": "experiment",
+      "name": "B lacks La",
+      "formula": "Co O3",
+      "elements": [
+        "Co",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "experiments/bbb-unrelated.edi",
+          "format": "edi"
+        }
+      ]
+    },
+    {
+      "id": "experiment-zzz-exact",
+      "kind": "experiment",
+      "name": "Z exact",
+      "formula": "Co La O3",
+      "elements": [
+        "Co",
+        "La",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "experiments/zzz-exact.edi",
+          "format": "edi"
+        }
+      ]
+    },
+    {
+      "id": "data-aaa-substituted",
+      "kind": "data",
+      "name": "A substituted",
+      "formula": "Ba0.5 Co La0.5 O3",
+      "elements": [
+        "Ba",
+        "Co",
+        "La",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "data/aaa-substituted.xye",
+          "format": "xye"
+        }
+      ]
+    },
+    {
+      "id": "data-bbb-unrelated",
+      "kind": "data",
+      "name": "B lacks La",
+      "formula": "Co O3",
+      "elements": [
+        "Co",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "data/bbb-unrelated.xye",
+          "format": "xye"
+        }
+      ]
+    },
+    {
+      "id": "data-zzz-exact",
+      "kind": "data",
+      "name": "Z exact",
+      "formula": "Co La O3",
+      "elements": [
+        "Co",
+        "La",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "data/zzz-exact.xye",
+          "format": "xye"
+        }
+      ]
+    },
+    {
+      "id": "project-aaa-substituted",
+      "kind": "project",
+      "name": "A substituted",
+      "formula": "Ba0.5 Co La0.5 O3",
+      "elements": [
+        "Ba",
+        "Co",
+        "La",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "projects/aaa-substituted.zip",
+          "format": "zip"
+        }
+      ]
+    },
+    {
+      "id": "project-bbb-unrelated",
+      "kind": "project",
+      "name": "B lacks La",
+      "formula": "Co O3",
+      "elements": [
+        "Co",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "projects/bbb-unrelated.zip",
+          "format": "zip"
+        }
+      ]
+    },
+    {
+      "id": "project-zzz-exact",
+      "kind": "project",
+      "name": "Z exact",
+      "formula": "Co La O3",
+      "elements": [
+        "Co",
+        "La",
+        "O"
+      ],
+      "files": [
+        {
+          "path": "projects/zzz-exact.zip",
+          "format": "zip"
+        }
+      ]
+    }
+  ]
+}

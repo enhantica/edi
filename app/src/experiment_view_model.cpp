@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_view_model.hpp"
+#include <QPointer>
+#include <QScopeGuard>
+#include <string_view>
 
 #include <QStringList>
 
@@ -284,6 +287,31 @@ QString ExperimentViewModel::facility() const {
 // whether they can be chosen, which they can once a data file was loaded into it in this session. The saved data file
 // name is not that: it comes back when the project is reopened, and then the file's description stands.
 void ExperimentViewModel::sync_description() {
+    const QPointer<ExperimentViewModel> receiver(this);
+    if (!property_notifications_.contains("facilityToken")) property_notifications_["facilityToken"] = QVariant::fromValue(facility_token_);
+    if (!property_notifications_.contains("instrumentToken")) property_notifications_["instrumentToken"] = QVariant::fromValue(instrument_token_);
+    if (!property_notifications_.contains("descriptionEditable")) property_notifications_["descriptionEditable"] = QVariant::fromValue(description_editable_);
+    quint64 publication = 0;
+    const auto propertyNotifications = qScopeGuard([receiver, &publication] {
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant facilityToken = QVariant::fromValue(receiver->facility_token_);
+        if (receiver->property_notifications_.value("facilityToken") != facilityToken) {
+            receiver->property_notifications_["facilityToken"] = facilityToken;
+            emit receiver->facilityTokenChanged();
+        }
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant instrumentToken = QVariant::fromValue(receiver->instrument_token_);
+        if (receiver->property_notifications_.value("instrumentToken") != instrumentToken) {
+            receiver->property_notifications_["instrumentToken"] = instrumentToken;
+            emit receiver->instrumentTokenChanged();
+        }
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant descriptionEditable = QVariant::fromValue(receiver->description_editable_);
+        if (receiver->property_notifications_.value("descriptionEditable") != descriptionEditable) {
+            receiver->property_notifications_["descriptionEditable"] = descriptionEditable;
+            emit receiver->descriptionEditableChanged();
+        }
+    });
     const std::string held_facility = facility().toStdString();
     const std::string held_instrument = instrumentName().toStdString();
     const bool single_crystal = experiment_.experiment_type.effective_sample_form() != edi::SampleFormEnum::POWDER;
@@ -308,19 +336,13 @@ void ExperimentViewModel::sync_description() {
     }
     set_description_options(facility_options_, facilities, held_facility);
     set_description_options(instrument_options_, instruments, held_instrument);
+    publication = ++notification_publication_;
+    if (publication == 0) publication = ++notification_publication_;
     facility_token_ = facility_token;
     instrument_token_ = instrument_token;
     description_editable_ = editable;
-    if (facility_changed) {
-        emit facilityTokenChanged();
-    }
-    // The instrument options follow the facility, so the instrument selector looks again when either changes.
-    if (facility_changed || instrument_changed) {
-        emit instrumentTokenChanged();
-    }
-    if (editable_changed) {
-        emit descriptionEditableChanged();
-    }
+    // The scope guard above announces each changed token once (edi ADR-0017, dedicated notifications); the
+    // instrument choices follow the facility through their own options model, set above.
 }
 
 // A facility chosen: its instrument stays when the new facility has it, else it becomes "Not specified".
@@ -480,19 +502,25 @@ void ExperimentViewModel::setRange(double start, double end, double step) {
 }
 
 void ExperimentViewModel::setPeakType(const QString& token) {
-    if (token == peak_type_) {
+    if (token.toStdString() == edi::effective_peak_type_view(experiment_)) {
         return;
     }
+    const QPointer<ExperimentViewModel> self(this);
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::peak_profile(experiment, token.toStdString()), true));
+    const auto refusal=editor_.apply_creation_control(edi::Edit::peak_profile(experiment, token.toStdString()), true,
+        {ProjectEditor::CreationAction::Kind::PeakProfile, &experiment, {}, token});
+    if (self) setLastError(refusal);
 }
 
 void ExperimentViewModel::setAbsorptionType(const QString& token) {
-    if (token == absorption_type_) {
+    if (token.toStdString() == (experiment_.absorption.type?std::string_view(*experiment_.absorption.type):std::string_view("none"))) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::absorption(experiment, token.toStdString()), true));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::absorption(experiment, token.toStdString()),true,
+        {ProjectEditor::CreationAction::Kind::AbsorptionType,&experiment,{},token});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setExtinctionType(const QString& token) {
@@ -500,7 +528,10 @@ void ExperimentViewModel::setExtinctionType(const QString& token) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::extinction(experiment, token.toStdString()), true));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::extinction(experiment,token.toStdString()),true,
+        {ProjectEditor::CreationAction::Kind::ExtinctionType,&experiment,{},token});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setMosaicDistribution(const QString& token) {
@@ -508,7 +539,10 @@ void ExperimentViewModel::setMosaicDistribution(const QString& token) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::mosaic_distribution(experiment, token.toStdString()), false));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::mosaic_distribution(experiment,token.toStdString()),false,
+        {ProjectEditor::CreationAction::Kind::MosaicDistribution,&experiment,{},token});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setReflnsThresholdSigma(double sigma) {
@@ -532,7 +566,10 @@ void ExperimentViewModel::setReflnsThresholdBasis(const QString& token) {
 
 void ExperimentViewModel::setCutoffFwhm(double cutoff) {
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::assign(experiment.peak.cutoff_fwhm, cutoff), false));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::assign(experiment.peak.cutoff_fwhm, cutoff),false,
+        {ProjectEditor::CreationAction::Kind::CutoffFwhm,&experiment,{},{},cutoff});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setLinkedStructureId(const QString& id) {
@@ -543,12 +580,20 @@ void ExperimentViewModel::setLinkedStructureId(const QString& id) {
                          .arg(experiment.linked_structures.size()));
         return;
     }
-    setLastError(editor_.apply(edi::Edit::link_structure(experiment.linked_structure(), id.toStdString()), false));
+    const QPointer<ExperimentViewModel> self(this);
+    auto& link=experiment.linked_structure();
+    if(!link.enabled.get()){setLastError(tr("The linked structure is disabled"));return;}
+    const auto refusal=editor_.apply_creation_control(edi::Edit::link_structure(link,id.toStdString()),true,
+        {ProjectEditor::CreationAction::Kind::PhaseRetarget,&link,{},id});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setDatasetWeight(double weight) {
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::assign(experiment.dataset_weight, weight), false));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::assign(experiment.dataset_weight, weight),false,
+        {ProjectEditor::CreationAction::Kind::DatasetWeight,&experiment,{},{},weight});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setLastError(const QString& error) {
@@ -602,6 +647,7 @@ void ExperimentViewModel::sync() {
     };
     sync_description();
     update(name_, QString::fromStdString(experiment_.name), &ExperimentViewModel::nameChanged);
+    update(calculation_only_, static_cast<bool>(experiment_.calculation_only), &ExperimentViewModel::calculationOnlyChanged);
     const std::string default_profile = edi::default_peak_profile(experiment_.effective_beam_mode());
     update(peak_type_, QString::fromStdString(experiment_.peak.type.value_or(default_profile)),
            &ExperimentViewModel::peakTypeChanged);

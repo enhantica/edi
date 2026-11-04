@@ -1,0 +1,335 @@
+{
+  "format": 1,
+  "expected": [
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 783,
+        "description": "TypeError: Cannot read property 'connected' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 986,
+        "description": "TypeError: Cannot read property 'canCancel' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 987,
+        "description": "TypeError: Cannot read property 'connected' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 947,
+        "description": "TypeError: Cannot read property 'canCancel' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 28,
+        "description": "TypeError: Cannot read property 'models' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 26,
+        "description": "TypeError: Cannot read property 'availableEfforts' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 33,
+        "description": "TypeError: Cannot read property 'selectedEffort' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 24,
+        "description": "TypeError: Cannot read property 'connected' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 759,
+        "description": "TypeError: Cannot read property 'showActions' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 739,
+        "description": "TypeError: Cannot read property 'connected' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 663,
+        "description": "TypeError: Cannot read property 'selectedFiles' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 448,
+        "description": "TypeError: Cannot read property 'selectedFiles' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 443,
+        "description": "TypeError: Cannot read property 'messages' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 271,
+        "description": "TypeError: Cannot read property 'selectedEffort' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 77,
+        "description": "TypeError: Cannot read property 'models' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 201,
+        "description": "TypeError: Cannot read property 'models' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 365,
+        "description": "TypeError: Cannot read property 'state' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 32,
+        "description": "TypeError: Cannot read property 'models' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 290,
+        "description": "TypeError: Cannot read property 'selectedEffort' of null"
+      },
+      "count": 2
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:627:manual_ime:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "manual_ime",
+        "line": 623,
+        "description": "TypeError: Value is null and could not be converted to an object"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:630:manual_ime:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "manual_ime",
+        "line": 623,
+        "description": "TypeError: Value is null and could not be converted to an object"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:660:manual_text:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "manual_text",
+        "line": 623,
+        "description": "TypeError: Value is null and could not be converted to an object"
+      },
+      "count": 17
+    }
+  ]
+}

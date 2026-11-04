@@ -14,10 +14,8 @@ SideBarGroup {
     objectName: "group.recentProjects"
     title: qsTr("Recent projects")
     icon: "archive"
-    onVisibleChanged: if (visible)
-        RecentProjects.refresh()
-    onCollapsedChanged: if (!collapsed)
-        RecentProjects.refresh()
+    onVisibleChanged: ApplicationInfo.finishUiEvent(13, undefined)
+    onCollapsedChanged: ApplicationInfo.finishUiEvent(14, undefined)
 
     // The sidebar column the group sits in, found from its parents: the table takes the room left under the groups
     // above it, as the Examples table fills the sidebar, and the column scrolls past that.
@@ -99,11 +97,7 @@ SideBarGroup {
                     height: row.height
                     width: row.width - AppSizes.iconColumnWidth - table.rowPadding - EaStyle.Sizes.tableColumnSpacing
                     cursorShape: row.available ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: {
-                        row.activated();
-                        if (row.available)
-                            AppState.afterChanges(() => RecentProjects.open(row.path));
-                    }
+                    onClicked: ApplicationInfo.openProjectRow(true, true)
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter

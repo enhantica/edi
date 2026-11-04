@@ -115,3 +115,49 @@ MIGRATIONS[
     f'test_status_fit_contract[test_outdated_results_banner:{mode}]'
     for mode in ('sequential', 'independent')
 ]
+
+
+# The combined native forwarding witness exceeded the integration bound.
+MIGRATIONS[
+    'tests/integration/py/test_scan_app_contract.py::'
+    'test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility'
+] = [
+    (
+        'tests/system/py/test_scan_forwarding_controls.py::'
+        'test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility'
+    )
+]
+
+
+# Archive and resource controls retain their identities in the system tier.
+SCAN_DELIVERY_NODES = (
+    'test_bundled_project_load_and_save_as_use_the_writable_copy_routes',
+    'test_effective_bundle_contains_selected_scan_payloads[desktop]',
+    'test_effective_bundle_contains_selected_scan_payloads[web]',
+    'test_resource_observer_rejects_comment_only_and_inactive_bundle_calls',
+    'test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]',
+    'test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[target]',
+    'test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]',
+    'test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]',
+    'test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]',
+    'test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]',
+    'test_resource_observer_refuses_non_compilation_target_sources[resource.dat]',
+    'test_resource_observer_refuses_non_compilation_target_sources[resource.qrc]',
+    'test_resource_observer_refuses_non_compilation_target_sources["$<IF:$<BOOL:1>,resource.dat,source.cpp>"]',
+    'test_working_copy_observer_rejects_copy_to_an_unrelated_destination',
+    'test_resource_observer_accepts_a_separately_linked_example_library',
+    'test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]',
+    'test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]',
+    'test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]',
+    'test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]',
+    'test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]',
+    'test_resource_observer_distinguishes_executable_and_library_interfaces[INTERFACE]',
+    'test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]',
+    'test_resource_observer_rejects_a_second_payload_at_the_index_address',
+)
+MIGRATIONS.update({
+    'tests/integration/py/test_scan_extended_contract.py::' + node: [
+        'tests/system/py/test_scan_collection_delivery.py::' + node
+    ]
+    for node in SCAN_DELIVERY_NODES
+})

@@ -3,6 +3,7 @@
 #define EDI_APP_EXPERIMENT_VIEW_MODEL_HPP
 
 #include <QObject>
+#include <QVariantMap>
 #include <QSet>
 #include <QtNumeric>
 #include <QString>
@@ -123,7 +124,8 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(double cutoffFwhm READ cutoffFwhm WRITE setCutoffFwhm NOTIFY cutoffFwhmChanged)
     Q_PROPERTY(QString linkedStructureId READ linkedStructureId WRITE setLinkedStructureId NOTIFY linkedStructureIdChanged)
     Q_PROPERTY(double datasetWeight READ datasetWeight WRITE setDatasetWeight NOTIFY datasetWeightChanged)
-    Q_PROPERTY(bool calculationOnly READ calculationOnly CONSTANT)
+    // Notified: a scan's template keeps its view while its data arrives (Load N datasets as), so it can turn measured.
+    Q_PROPERTY(bool calculationOnly READ calculationOnly NOTIFY calculationOnlyChanged)
     // Load data… reads a plain-data file into this experiment, in place of any data it has: every experiment but a
     // scan's (the owner, 2026-10-11). `dataFile`: the plain-data file its data came from, or empty.
     Q_PROPERTY(bool canLoadData READ canLoadData NOTIFY canLoadDataChanged)
@@ -262,7 +264,7 @@ class ExperimentViewModel : public QObject {
     void setLinkedStructureId(const QString& id);
     double datasetWeight() const { return dataset_weight_; }
     void setDatasetWeight(double weight);
-    bool calculationOnly() const { return experiment_.calculation_only; }
+    bool calculationOnly() const { return calculation_only_; }
     bool canLoadData() const { return can_load_data_; }
     QString dataFile() const { return QString::fromStdString(experiment_.data_file); }
     // Set by the project, which knows how the experiment was made.
@@ -352,6 +354,7 @@ class ExperimentViewModel : public QObject {
     void syncEstimate();
 
    signals:
+    void calculationOnlyChanged();
     void nameChanged();
     void canLoadDataChanged();
     void fitOutcomeChanged();
@@ -398,6 +401,8 @@ class ExperimentViewModel : public QObject {
     void patternShownChanged();
 
    private:
+    QVariantMap property_notifications_;
+    quint64 notification_publication_ = 0;
     edi::Category category(const char* id) const;
     void setLastError(const QString& error);
     // The experiment's place in the project.
@@ -405,6 +410,7 @@ class ExperimentViewModel : public QObject {
 
     edi::Project& project_;
     edi::ExperimentBase& experiment_;
+    bool calculation_only_ = experiment_.calculation_only;
     const edi::ExperimentType made_for_;
     QSet<const QObject*> shown_charts_;
     QSet<const QObject*> d_charts_;

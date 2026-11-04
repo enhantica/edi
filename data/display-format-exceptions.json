@@ -1,114 +1,9 @@
 {
  "exceptions": [
   {
-   "file": "app/qml/Base/Gui/Elements/ParamTextField.qml",
-   "match": "EaLogic.Utils.toErrSinglePrecision(parameter.value, parameter.error)",
-   "reason": "the base library rounds only a number it is given; every edi field passes the value as text from the bridge"
-  },
-  {
-   "file": "app/qml/Base/Gui/Elements/ParamTextField.qml",
-   "match": "EaLogic.Utils.toSinglePrecision(parameter.error)",
-   "reason": "the base library rounds only a number it is given; every edi field passes the s.u. as text from the bridge"
-  },
-  {
    "file": "app/qml/Components/CorrelationChart.qml",
    "match": "text: modelData.toFixed(1)",
    "reason": "the colour bar tick labels (1, 0.5, 0, -0.5, -1), not a value of an item"
-  },
-  {
-   "file": "app/qml/Components/SingleCrystalTable.qml",
-   "match": "value.toFixed(2)",
-   "reason": "a single crystal's normalised residual (F\u00b2 meas - F\u00b2 calc)/s.u., no item's value, to two decimals as the report shows it"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "return exponentOf(value.toExponential(3));",
-   "reason": "the fit-to-width rule (owner, 2026-10-22): a number too wide for its cell shows in scientific notation with the digits of its shown text"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "return value.toExponential(3).replace(\"e+\", \"e\");",
-   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "const place = exponentOf(error.toExponential(0));",
-   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "text = value.toFixed(Math.min(-place, 100));",
-   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "text = String(Number(value.toPrecision(most)));",
-   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "return mantissa.toFixed(3) + \"e\" + power;",
-   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "const plain = String(Number(value.toPrecision(1)));",
-   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "const shift = exponentOf(value.toExponential()) - power;",
-   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "thousandths = String(Math.round(Number(value.toExponential().split(\"e\")[0])",
-   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "const text = value.toExponential(Math.min(shift + 3, 14));",
-   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "Math.abs(mantissa - Number(mantissa.toFixed(decimals)))",
-   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "(tick / Math.pow(10, power)).toFixed(decimals)",
-   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "exponent(value, 4).replace(\"e+\", \"e\") : String(Number(value.toPrecision(6)))",
-   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "const text = (value / Math.pow(10, format.power)).toFixed(format.decimals);",
-   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "return format.power !== 0 ? \"0\" : (0).toFixed(format.decimals);",
-   "reason": "chart axis tick labels, one shared format per axis, not a value of an item"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "number.power - exponentOf(error.toExponential(0)) + 1",
-   "reason": "the fit-to-width rule (owner, 2026-10-22): a number too wide for its cell shows in scientific notation with the digits of its shown text"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "const written = text ? text.su : String(Number(value.toPrecision(1)));",
-   "reason": "the app rule for a number with no dictionary item (a parameter without a spec, a computed phase fraction); a number of an item goes through the bridge"
-  },
-  {
-   "file": "app/qml/Globals/NumberText.qml",
-   "match": "const text = value.toExponential(Math.max(0, digits - 1));",
-   "reason": "the fit-to-width rule (owner, 2026-10-22): a number too wide for its cell shows in scientific notation with the digits of its shown text"
   },
   {
    "file": "app/src/scan_view_model.cpp",
@@ -234,6 +129,31 @@
    "file": "app/src/run_log.cpp",
    "match": "QString::number(seconds, 'f', 0)",
    "reason": "the run log's seconds-since-the-previous-record column (ADR-0062), a duration rounded to five characters, not a value of an item"
+  },
+  {
+   "file": "app/src/assistant_markdown.cpp",
+   "match": "QString::number(dpr,'g',16)",
+   "reason": "part of a cache key for a rendered formula picture, never shown"
+  },
+  {
+   "file": "app/src/assistant_view_model.cpp",
+   "match": "QString::number(value,'g',std::numeric_limits<double>::max_digits10)",
+   "reason": "the exact text typed into a setup control, which the control parses back to the same double; not a displayed value"
+  },
+  {
+   "file": "app/src/codex_agent.cpp",
+   "match": "QStringLiteral(\"n:\") + QString::number(number, 'f', 0)",
+   "reason": "a lookup key for a JSON-RPC request id, never shown"
+  },
+  {
+   "file": "core/src/fit_inputs.hpp",
+   "match": "settings << std::setprecision(17)",
+   "reason": "an identity key of the fit settings, compared and never shown"
+  },
+  {
+   "file": "app/qml/Components/OnlineLoadDialog.qml",
+   "match": "row.cellA.toFixed(2), row.cellB.toFixed(2), row.cellC.toFixed(2), row.cellAlpha.toFixed(1), row.cellBeta.toFixed(1), row.cellGamma.toFixed(1)",
+   "reason": "the search results' compact cell column, lengths with two decimals and angles with one (the owner, 2026-11-04); a listing of entries found online, not a value of the project's items"
   }
  ],
  "names": [
@@ -241,11 +161,6 @@
    "file": "app/qml/Base/Gui/Elements/ParamTextField.qml",
    "literal": "s.u.",
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
-  },
-  {
-   "file": "app/qml/Components/AppPreferencesDialog.qml",
-   "literal": "Auto",
-   "reason": "an app preference (engine threads), outside the dictionary (I1)"
   },
   {
    "file": "app/qml/Components/PaletteStrip.qml",
@@ -436,6 +351,31 @@
    "file": "app/src/session.cpp",
    "literal": "project saved",
    "reason": "a run-log record of a save (ADR-0062), not a name shown to the user"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "Project",
+   "reason": "a page name (edi ADR-0017), not the _metadata category"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "Report",
+   "reason": "a page name (edi ADR-0017), not the _report category"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "None",
+   "reason": "the assistant's reasoning-effort choice, an app preference outside the dictionary (I1)"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "WP",
+   "reason": "the sample text that measures the Wyckoff column's header width, not the item's label"
+  },
+  {
+   "file": "core/src/assistant.cpp",
+   "literal": "\u00b5s",
+   "reason": "the axis unit in the assistant's read result for the model, a data field and not a label"
   }
  ]
 }

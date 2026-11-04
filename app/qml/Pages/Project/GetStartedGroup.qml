@@ -30,7 +30,7 @@ SideBarGroup {
             objectName: "project.create"
             fontIcon: "plus-circle"
             text: qsTr("Create a new project")
-            onClicked: AppState.afterChanges(() => EaGlobals.Vars.showProjectDescriptionDialog = true, true)
+            onClicked: ApplicationInfo.createProjectClicked()
         }
 
         EaElements.SideBarButton {
@@ -39,7 +39,7 @@ SideBarGroup {
             text: qsTr("Open project…")
             // A folder or a .zip, first, on every platform: a chooser picks files or a folder, never both (edi
             // ADR-0052 §3).
-            onClicked: AppState.afterChanges(() => openChoice.open())
+            onClicked: ApplicationInfo.askOpenProjectChoice()
         }
 
         EaElements.SideBarButton {
@@ -59,8 +59,39 @@ SideBarGroup {
         }
     }
 
+    property var createLife: ({
+            alive: true
+        })
+    property var createIntent: null
+    property var createOperation: null
+    property var assistantCreate: null
+    Component.onDestruction: createLife.alive = false
+    function prepareAssistantCreate(id) {
+        return ApplicationInfo.assistantBuilt ? ApplicationInfo.prepareAssistantCreate(id) : null;
+    }
+    function assistantCreateDialog(id) {
+        return ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantCreateDialog(id) : null;
+    }
+    function retireAssistantCreate(id, manual) {
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.retireAssistantCreate(id, manual);
+    }
+    // Native Create reuses this actual form's remembered parent/defaults. It does
+    // not accept a dialog or synthesize a chooser selection.
+    function nativeProjectNameError(name) {
+        return ApplicationInfo.createProjectNameError(name);
+    }
+    function nativeCreateDefaults(name, description, title) {
+        return ApplicationInfo.createProjectDefaults(name, description, title);
+    }
+    function chooseCreate() {
+        ApplicationInfo.chooseCreateProject();
+    }
+
     EaComponents.ProjectDescriptionDialog {
         id: createDialog
+        objectName: "createProject.dialog"
+        readonly property string assistantIntentId: group.createIntent !== null && group.createIntent.assistant !== null ? group.createIntent.assistant.id : ""
         // The base's dialog (edi's copy joins the location cleanly), placed on whole pixels as AppDialog is.
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
@@ -68,22 +99,52 @@ SideBarGroup {
         // A tutorial's project, made by the user in a tutorial that set theirs aside, is not saved until they keep
         // it (edi ADR-0064).
         showsLocation: !AppState.tutorialRunning || !Session.hasProjectSetAside || Session.project !== null
-        onClosed: EaGlobals.Vars.showProjectDescriptionDialog = false
-        // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
-        // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
-        defaultProjectParentDirectory: EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
+        onOpened: ApplicationInfo.createProjectDialogEvent(0)
+        onRejected: ApplicationInfo.createProjectDialogEvent(1)
+        onClosed: ApplicationInfo.createProjectDialogEvent(2)
+        // A new project's folder is beside the last project opened, else under the user's documents, unless one was
+        // chosen before; it is saved there at once (the owner, 2026-10-08 and 2026-11-02). The browser has no folder to
+        // save into: Save As downloads it.
+        readonly property string lastOpenFolder: Session.existingParentFolder(RecentProjects.last)
+        defaultProjectParentDirectory: lastOpenFolder !== "" ? lastOpenFolder : EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
         // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges). The flag is
         // reset here, not only when the dialog has closed: this page goes before its closing ends, and the new page's
         // dialog would open again on a flag still set.
+        onAccepted: ApplicationInfo.createProjectDialogEvent(3)
+        onReplaceAsked: (name, folder) => {
+            replaceProject.projectName = name;
+            replaceProject.folder = folder;
+            replaceProject.open();
+        }
+    }
+
+    // A project already at the chosen location (the owner, 2026-11-04): Replace writes the new one over it through
+    // the ordinary save, so a refused write leaves the old project; Cancel returns to the form as typed.
+    AppDialog {
+        id: replaceProject
+        objectName: "createProject.replace"
+        property string projectName: ""
+        property string folder: ""
+        parent: Overlay.overlay
+        title: qsTr("Replace project?")
+        standardButtons: Dialog.Yes | Dialog.Cancel
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: replaceText.implicitHeight
+        onAboutToShow: {
+            const yes = standardButton(Dialog.Yes);
+            yes.text = qsTr("Replace");
+            yes.objectName = "createProject.replace.accept";
+        }
         onAccepted: {
-            EaGlobals.Vars.showProjectDescriptionDialog = false;
-            const name = createDialog.projectName, description = createDialog.projectDescription;
-            const location = WebFiles.available || createDialog.showsLocation === false ? "" : createDialog.projectLocation;
-            const title = createDialog.projectTitle, authors = createDialog.projectAuthors;
-            Qt.callLater(() => {
-                if (!Session.createProject(name, description, location, Preferences.newProjectSuRule, title, authors, Preferences.newReportLibraries === "embedded"))
-                    AppState.createFailed();
-            });
+            createDialog.replaceExisting = true;
+            createDialog.accept();
+        }
+
+        EaElements.Label {
+            id: replaceText
+            width: replaceProject.contentWidth
+            wrapMode: Text.Wrap
+            text: qsTr("A project named %1 already exists in %2. Replace it?").arg(replaceProject.projectName).arg(replaceProject.folder)
         }
     }
 
@@ -102,14 +163,7 @@ SideBarGroup {
         contentWidth: Math.max(openChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: openChoiceColumn.implicitHeight
         onAboutToShow: zip = false
-        onAccepted: {
-            if (WebFiles.available)
-                Session.openWebProject(zip ? "file" : "folder");
-            else if (zip)
-                openZipDialog.open();
-            else
-                openFolderDialog.open();
-        }
+        onAccepted: ApplicationInfo.openProjectChoice()
 
         Column {
             id: openChoiceColumn

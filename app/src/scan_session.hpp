@@ -51,6 +51,10 @@ class ScanSession : public QObject {
     // What `listing` loaded of the same project in another place, taken whole: the datasets, the index and the run.
     // Nothing is read, so a save takes the listing it read of its staged folder before it was published.
     void take(ScanSession& listing);
+    /// Rebase an already loaded native staging snapshot before its tree moves.
+    /// Only a data-directory path under from follows to; external paths remain.
+    /// Retains snapshot as the immutable source. No read, calculation or row change.
+    void relocate(std::shared_ptr<const edi::Project> snapshot, const QString& from, const QString& to);
     // Indexes the results again (after a run or an undo); the refusal, if any.
     QString reindex(const edi::Project& project, bool writing = false);
     const edi::ScanDatasets& datasets() const { return datasets_; }
@@ -82,8 +86,9 @@ class ScanSession : public QObject {
     // in-memory provenance goes with them. The refusal, if any; a refusal that could not put everything back says
     // where the files were kept.
     QString takeFiles(const edi::Project& project, Files& taken);
-    // Puts the three files back as they were, all or none, with the same refusal; the provenance is read again.
-    QString putFiles(const edi::Project& project, const Files& files);
+    // Prepared provenance and bounded rename ledgers precede file writes. committed
+    // latches actual reversal; later cleanup cannot turn it into an unperformed Undo.
+    QString putFiles(const edi::Project& project, const Files& files, bool* committed = nullptr);
     // The provenance file alone, as it is now (a single fit's Undo restores it), and put back.
     // The provenance file's bytes (absent: none) in `bytes`; false when it is there but cannot be read.
     bool runFile(const edi::Project& project, std::optional<std::string>& bytes) const;
@@ -127,6 +132,7 @@ class ScanSession : public QObject {
     std::shared_ptr<std::atomic<bool>> metadata_stop_;
     void readWanted();
     QString readRun(const edi::Project& project);
+    static QString decodeRun(const std::optional<std::string>& bytes, Run& run);
 };
 
 }  // namespace edi_app

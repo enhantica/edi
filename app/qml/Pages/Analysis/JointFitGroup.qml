@@ -65,6 +65,9 @@ DataTable {
             text: row.name
         }
         TextCell {
+            editMember: row
+            editModel: table.project ? table.project.experiments : null
+            editIndex: row.index
             horizontalAlignment: Text.AlignHCenter
             objectName: `jointFit.weight.${row.index}`
             uid: "joint_fit.weight"

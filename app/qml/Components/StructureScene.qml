@@ -28,11 +28,7 @@ Node {
     // The text for a pick: a sphere by its instance, a shared site by the texture coordinate its
     // triangles carry.
     function hoverText(result) {
-        if (result.objectHit === spheresModel)
-            return scene.controller.hoverAtSphere(result.instanceIndex);
-        if (result.objectHit === sharedModel)
-            return scene.controller.hoverAtShared(result.uvPosition.x);
-        return "";
+        return ApplicationInfo.structureHoverText(result);
     }
 
     // The core's projection (edi::project) as the camera's own matrices; the lights move with it, each shining

@@ -253,7 +253,7 @@ TestCase {
         }
     }
 
-    function test_data_file_header_link_and_free_width() {
+    function test_data_file_header_label_and_free_width() {
         verify(Session.createProject("empty-experiment", "Data file layout witness"), "The data-file witness must create a project");
         verify(Session.project.createStructure(), "The data-file witness must create a structure");
         verify(Session.project.createExperiment(), "The data-file witness must create an experiment");
@@ -262,26 +262,29 @@ TestCase {
         const list = control("experiments.list");
         verify(list !== null, "The Experiments table must show its production ListView");
         verify(Ui.text(list).includes("Data file"), "The free-width data column must have its Data file header");
-        compare(list.columnWidths[4], -1, "Data file must own the table's free width");
-        const load = control("experiments.loadData.0");
-        verify(load !== null && load.text === "Load data…", "An experiment without data must offer a Load data text link");
-        verify(load.width > 0 && load.enabled, "The Load data link must have a usable width and accept input");
-        compare(load.horizontalAlignment, Text.AlignLeft, "The data-file link must be left aligned");
-        compare(String(load.color), String(Style.Colors.themeAccent), "An empty data-file link must use accent blue");
+        compare(list.columns[4], -1, "Data file must declare the free-width column");
+        compare(list.fillerIndex, 4, "Data file must own the table's free width");
+        verify(list.columnWidths[4] > 0, "The free-width column must have positive rendered width");
+        const empty = control("experiments.file.0");
+        verify(empty !== null && empty.text === "— no data yet", "An empty experiment shows a passive data placeholder");
+        verify(empty.width > 0, "The placeholder has usable width in the data column");
+        compare(empty.horizontalAlignment, Text.AlignLeft, "The data label must be left aligned");
+        compare(String(empty.color), String(Style.Colors.themeForegroundMinor), "The empty data label uses the muted foreground");
         open("tests/fixtures/e04_t1/editable-project");
         click("appBar.tab.experiment");
         Ui.expandGroup(test, Probe, appWindow, "group.experiments");
-        const loaded = control("experiments.loadData.0");
-        verify(loaded !== null && loaded.text.length > 0, "An experiment loaded from disk must retain its data-file link");
-        const point = Ui.clickPoint(loaded);
-        verify(point !== null, "The loaded filename must expose a pointer target");
-        mouseMove(loaded, point.x, point.y);
-        tryCompare(loaded, "color", Style.Colors.themeAccent, 1000, "Hovering the loaded filename must turn it accent blue");
-        verify(Session.saveAs(Probe.repoUrl("build/test-tmp/data-link-reload")), "The linked experiment must save for reload");
-        open("build/test-tmp/data-link-reload");
+        const loaded = control("experiments.file.0");
+        verify(loaded !== null && loaded.text.length > 0 && loaded.text !== "— no data yet",
+               "A loaded experiment shows its actual data filename");
+        const filename = loaded.text;
+        compare(filename, Probe.rows(Session.project.experiments)[0].file, "The rendered name matches the loaded experiment");
+        compare(String(loaded.color), String(Style.Colors.themeForeground), "The filename uses the normal text color");
+        const saved = SettingsProof.childUrl(SettingsProof.emptyDirectory(), "saved-project");
+        verify(Session.saveAs(saved), "The measured experiment must save for reload");
+        verify(Session.openProject(saved), "The saved measured experiment must reopen");
         click("appBar.tab.experiment");
         Ui.expandGroup(test, Probe, appWindow, "group.experiments");
-        verify(control("experiments.loadData.0") !== null, "The data-file link must remain available after a save and reload");
+        compare(control("experiments.file.0").text, filename, "The same filename is displayed after save and reopen");
     }
 
     function test_diagnostics_button_matches_the_preferences_control_column() {

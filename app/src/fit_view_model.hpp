@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <functional>
 #include <optional>
 #include <string>
 #include <utility>
@@ -181,6 +182,9 @@ class FitViewModel : public QObject {
     ~FitViewModel() override;
 
     bool running() const { return running_; }
+    // Internal native adapter: actual worker admission is independent of UI publication.
+    bool nativeRunning() const noexcept { return job_ && job_->running(); }
+    void startNative(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt = 0);
     bool continuable() const { return continuable_; }
     bool canReset() const { return can_reset_; }
     bool scanMode() const { return scan_mode_; }
@@ -258,6 +262,39 @@ class FitViewModel : public QObject {
     // The project closes: the fit stops and delivers nothing more. Before the worker goes.
     void close();
 
+    // An assistant trial (edi ADR-0055): an edit the assistant applied after an accepted fit opens a candidate owned by
+    // that assistant session (`owner`); an accepted fit or an Undo closes it, and a manual edit drops it, so a
+    // rollback never overwrites a change the trial did not make. restoreAccepted puts the whole accepted project
+    // back over the owner's open candidate as one Undo step and answers whether it did; restoreAcceptedOnStop does it
+    // now, or when a running fit ends.
+    void markCandidate(quint64 owner) noexcept {
+        if (!accepted_fit_ || restoring_ || manual_since_accepted_) return;  // disarmed until the next accepted fit
+        if (candidate_ && candidate_owner_ != owner) { dropCandidate(); return; }  // another session's edit
+        candidate_ = true;
+        candidate_owner_ = owner;
+    }
+    void dropCandidate() noexcept {
+        if (!restoring_) { candidate_ = stop_rollback_ = false; manual_since_accepted_ = true; }
+    }
+    bool restoreAccepted(quint64 owner);
+    // A Save ends the trial: what was saved is the new accepted baseline, and nothing before it is rolled back.
+    void saved();
+    void restoreAcceptedOnStop(quint64 owner);
+    // Whether an assistant trial is open: there is an accepted fit to go back to, and a candidate, an assistant fit,
+    // its pending acceptance or a stopped rollback is outstanding. The project refuses every other edit and every
+    // save meanwhile (ProjectViewModel::criticalEditRefusal, saveRefusal).
+    bool trialOpen() const noexcept {
+        return accepted_fit_ &&
+               ((candidate_ && assistant_busy_) || stop_rollback_ || pending_accept_ || static_cast<bool>(native_completion_));
+    }
+    // Whether the assistant is working a turn: the lock holds a candidate only then. Between turns the user may act,
+    // and a manual edit ends the trial for good (dropCandidate), a Save makes the saved state the baseline (saved).
+    void setAssistantBusy(bool busy) noexcept { assistant_busy_ = busy; }
+    // Whether this fit view is putting a state back (a rollback or a fit Undo), which the trial lock admits.
+    bool restoring() const noexcept { return restoring_; }
+    // Whether this fit view is writing its own fit (its start state, its adopted result), which the lock admits too.
+    bool fitWriting() const noexcept { return fit_writing_ > 0; }
+
    signals:
     void runningChanged();
     void continuableChanged();
@@ -291,10 +328,12 @@ class FitViewModel : public QObject {
     void scanTextChanged();
     void etaChanged();
     void outOfDateChanged();
-    // A scan ended with its rows on disk (finished or stopped): the pop-up.
+    // A scan ended with its rows on disk (finished or stopped).
     void scanFinished();
-    // A fit ended with a result the project now holds (finished, cancelled or stopped early): the pop-up.
+    // A fit ended with a result the project now holds (finished, cancelled or stopped early).
     void finished();
+    // Only a manual fit requests automatic results presentation; explicit opening is separate.
+    void automaticResultsRequested();
     // A fit was refused or failed; the project is unchanged.
     void refused(const QString& message);
 
@@ -304,6 +343,42 @@ class FitViewModel : public QObject {
     void frame(const edi::FitFrame& frame);
     void showFrame();
     void ended(const edi::FitReport& report);
+    void presentEnded(const edi::FitReport& report, bool automatic_results, std::uint64_t attempt);
+    void startImpl(std::uint64_t attempt);
+    friend class ProjectViewModel;
+    // Fixed correlation only: never a history of attempts or a scientific snapshot.
+    std::uint64_t beginAttempt() noexcept;
+    void invalidateFitUndo() noexcept { undo_attempt_ = history_attempt_ = 0; }
+    std::uint64_t attempt_serial_ = 0, latest_attempt_ = 0, submitted_attempt_ = 0;
+    std::uint64_t undo_attempt_ = 0, history_attempt_ = 0, finished_attempt_ = 0, native_attempt_ = 0;
+    // What the assistant's Undo of a rejected fit restores (Edit::undo_fit_to, edi ADR-0055). accepted_fit_ is the
+    // project as the latest adopted single or joint fit left it. A starting fit records its attempt, the project as it
+    // starts and the accepted state before it; its adoption makes that record the one its Undo restores.
+    struct UndoTarget {
+        std::uint64_t attempt = 0;
+        std::shared_ptr<const edi::Project> before, accepted;
+        bool owned = false;  // no manual edit since the accepted fit: Undo may put the whole accepted project back
+        std::size_t depth = 0;  // the Undo depth when that accepted fit was taken
+    };
+    std::shared_ptr<const edi::Project> accepted_fit_;
+    UndoTarget starting_, undo_target_;
+    // Whether the assistant changed the project since the accepted fit (markCandidate), and which session did.
+    bool candidate_ = false, stop_rollback_ = false, manual_since_accepted_ = false, restoring_ = false;
+    int fit_writing_ = 0;
+    bool assistant_busy_ = false;
+    quint64 candidate_owner_ = 0;
+    // The project's Undo depth when the accepted fit was taken: a whole-project restore drops the trial's own Undo
+    // entries above it, so a later ordinary Undo cannot bring back a fragment of the trial.
+    std::size_t accepted_history_depth_ = 0;
+    // The project as an adopted fit left it, accepted only once its presentation completes.
+    std::shared_ptr<const edi::Project> pending_accept_;
+    void dropTrialHistory() noexcept;
+    bool presenting_ = false, submitted_single_joint_ = false;
+    friend class AssistantViewModel;
+    std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);
+    void discardNativePreparation(std::uint64_t token) noexcept;
+    std::uint64_t native_completion_serial_ = 0;
+    std::function<void(const edi::FitReport&, bool)> native_completion_;
     void scanStarted(const edi::ScanPreamble& preamble);
     void fileCompleted(const edi::ScanFileRecord& record);
     // A followed file's pattern, as its fit left it.
@@ -317,7 +392,7 @@ class FitViewModel : public QObject {
     void syncBehind();
     // The counts from the files on disk once the driver returned, before the running presentation ends.
     void settleScanCounts();
-    void scanEnded(const edi::FitReport& report);
+    void scanEnded(const edi::FitReport& report, bool automatic_results);
     void setScanning(bool scanning);
     void setScanRefused(bool refused);
     void setContinuable(bool continuable);

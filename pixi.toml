@@ -4,6 +4,7 @@
 
 [workspace]
 name = "edi"
+preview = ["pixi-build"]
 channels = ["conda-forge"]
 platforms = [
     # osx-64 is not built (ADR-0017): crysta publishes no osx-64 SDK. One platform per subdir, with the floor
@@ -153,12 +154,12 @@ llvm-openmp = "23.*"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-8ba9537cc90857afeedf768693f70635f607ee36"
-CRYSTA_SDK_SHA256 = "216ca56754a1c16d981616f1ccf576c2d8f03722692b74b6e7496ee38ae85f56"
+CRYSTA_SDK_TAG = "build-01de6bfdf6e9023af12b8754da6f6a934fb01c6f"
+CRYSTA_SDK_SHA256 = "dd7481ebf8525e3427b4d1f12caf5ea89f765694b1fcb1dfde1313f8cade4a19"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-8ba9537cc90857afeedf768693f70635f607ee36"
-CRYSTA_SDK_SHA256 = "586eba41c9e4efd7ca4694aabbefb9f2eaf0ecdecad900316e92f3441596daef"
+CRYSTA_SDK_TAG = "build-01de6bfdf6e9023af12b8754da6f6a934fb01c6f"
+CRYSTA_SDK_SHA256 = "b1d1a7540b884a47de42b2aa14f980d71b2bf22d4b7f9015aa3ba819ec13e127"
 
 [target.linux-64.dependencies]
 cxx-compiler = "*"
@@ -173,6 +174,7 @@ sysroot_linux-64 = "2.28.*"
 # for the structure view, and the distributed app is a GPLv3 work while edi's source stays BSD-3 (ADR-0015
 # §6, ADR-0008).
 [feature.app.dependencies]
+edi-assistant-runtime = { path = "tools/deps/assistant-runtime" }
 # The app environment imports the extension the default environment builds, so it keeps that Python's minor.
 python = "3.14.*"
 # The same Qt as the web build's kits (EDI_WASM_QT, tools/ci/wasm-env.sh), which wasm-toolchain.sh checks.
@@ -241,9 +243,9 @@ CMAKE_C_COMPILER_LAUNCHER = "ccache"
 # step below builds first when run on its own (an incremental build, every time); a full sequence builds once
 # and runs each step on that build: app-verify (and the verify chains that include it) through pixi's shared
 # dependency, each CI app job through `pixi run --skip-deps` (as the owner corrected it on 2026-09-29).
-app-build = { cmd = ["bash", "tools/ci/app-build.sh"] }
+app-build = { cmd = ["bash", "tools/ci/app-build.sh"]  }
 # Build, then start the app: `pixi run -e app app` (arguments pass through: `pixi run -e app app --demo out/`).
-app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh" }
+app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh"  }
 # Start the already-built app with no build and no network check.
 app-run = { cmd = ["bash", "tools/ci/app-run.sh"] }
 # Development only: build crysta from a local checkout, link the app to it and start it
@@ -279,12 +281,12 @@ app-ui-test = { cmd = ["bash", "tools/ci/app-ui-test.sh"], depends-on = [{ task 
 app-ui-bless = { cmd = ["bash", "tools/ci/app-ui-bless.sh"] }
 # ADR-0017 §15: the measured-layer benchmark, by hand: Qt Graphs' own series against edi's scene-graph
 # item, on the stress dataset's measured series. Prints one table.
-app-chart-bench = { cmd = "EDI_APP_TARGETS=edi_app_chart_bench bash tools/ci/app-build.sh && build/app/app/edi_app_chart_bench" }
+app-chart-bench = { cmd = "EDI_APP_TARGETS=edi_app_chart_bench bash tools/ci/app-build.sh && build/app/app/edi_app_chart_bench"  }
 # ADR-0041: the scan views' renderer benchmark, by hand: the 324-file scan drawn by each candidate. Prints one table.
-app-scan-bench = { cmd = "EDI_APP_TARGETS=edi_app_scan_bench bash tools/ci/app-build.sh && build/app/app/edi_app_scan_bench" }
+app-scan-bench = { cmd = "EDI_APP_TARGETS=edi_app_scan_bench bash tools/ci/app-build.sh && build/app/app/edi_app_scan_bench"  }
 # ADR-0041: the plotting benchmark, by hand: every way of feeding Qt Graphs on the Stacked and Pattern workloads, its
 # table written to build/plot-bench/; plot-bench-compare prints two tables side by side.
-plot-bench = { cmd = "EDI_APP_TARGETS=edi_app_plot_bench bash tools/ci/app-build.sh && bash tools/ci/plot-bench.sh" }
+plot-bench = { cmd = "EDI_APP_TARGETS=edi_app_plot_bench bash tools/ci/app-build.sh && bash tools/ci/plot-bench.sh"  }
 plot-bench-compare = { cmd = ["python", "app/tools/plot_bench_compare.py"] }
 # app-build's recovery from a stale build/app (another environment's compilers): CI's last app step.
 app-build-recovery = { cmd = ["bash", "tools/ci/app-build-recovery.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
@@ -366,6 +368,9 @@ weekly-only-tests = { cmd = [
 # nightly schedule runs the nightly-only group and the Sunday schedule the weekly-only group.
 core-tests = { cmd = ["bash", "tools/ci/core-tests.sh"], depends-on = ["core-build"] }
 system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build", { task = "onboarding-probes", environment = "app" }, { task = "tutorial-transactions-ready", environment = "app" }] }
+# The integration tests whose wiring vectors need the real app, on the test runner the app job built
+# (EDI_APP_TEST_RUNNER); the core job, which has no app, skips them.
+native-wiring = { cmd = ["bash", "tools/ci/native-wiring-tests.sh"], depends-on = ["core-build"] }
 # --- core (C++) ---------------------------------------------------------------------- / item 8: the
 # pinned crysta SDK (downloaded or reused, never compiled) and its source, for every prefix reader — also
 # in a consumer job, where core-build only restores the native build.

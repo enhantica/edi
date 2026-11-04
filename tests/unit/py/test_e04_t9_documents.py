@@ -40,9 +40,42 @@ def test_dependency_manifest_and_about_notice_match_the_owner_decision():
     assert 'model: ApplicationInfo.appLicenceIds' in about, (
         'About shows one clickable identifier for each app and source licence'
     )
-    assert (
-        'ApplicationInfo.licenceText(ApplicationInfo.appLicenceUrls[licenceEntry.index])' in about
-    ), 'Each licence identifier opens the matching bundled full text'
+    icon_link = (ROOT / 'app/qml/Components/IconLink.qml').read_text()
+    assert re.search(r'^EaElements\.Button\s*\{', icon_link, re.MULTILINE), (
+        'Required: the licence delegate uses the original Button click signal.'
+    )
+    licence_delegate = re.search(
+        r'Repeater\s*\{\s*model: ApplicationInfo\.appLicenceIds\s+'
+        r'IconLink\s*\{([^{}]*)\}',
+        about,
+    )
+    assert licence_delegate and re.search(
+        r'^\s*onClicked: ApplicationInfo\.aboutOpenLicence\(\)\s*$',
+        licence_delegate.group(1),
+        re.MULTILINE,
+    ), 'Required: clicking each app licence IconLink calls its native licence-opening procedure.'
+    opener = re.search(
+        r'void ApplicationInfo::aboutOpenLicence\(\) const\s*{(.*?)\n}', info, re.DOTALL
+    )
+    assert opener, 'The About licence action has its native presentation implementation'
+    body = re.sub(r'\s+', ' ', opener.group(1))
+    assert 'panelUsageContextRead(f, "ApplicationInfo")' in body, (
+        'Licence activation keeps the actual current ApplicationInfo receiver'
+    )
+    assert re.search(
+        r'textIndex\(f, assistantContextField\(f, "ApplicationInfo", "appLicenceUrls"\), '
+        r'assistantContextField\(f, "licenceEntry", "index"\)\)',
+        body,
+    ), 'Each licence identifier retains its exact indexed bundled URL selection'
+    assert 'panelUsageDeferredMemberCall(f, info, "licenceText"' in body, (
+        'The selected bundled URL is read through the original licenceText method'
+    )
+    assert 'assistantMemberWrite(f, next, "licence", licence)' in body, (
+        'The same complete bundled text is published into the original licence popup'
+    )
+    assert 'projectInvoke(f, "licencePopup", "open")' in body, (
+        'Licence activation opens the original popup after populating its full text'
+    )
     assert re.search(
         r'QStringList appLicenceIds\(\) const\s*\{\s*return \{'
         r'QStringLiteral\("BSD-3-Clause"\), QStringLiteral\("GPL-3.0-only"\)\}',

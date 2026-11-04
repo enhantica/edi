@@ -1,57 +1,133 @@
 // SPDX-License-Identifier: BSD-3-Clause
-#include <memory>
-#include <QDebug>
+#include <QtQml/qqml.h>
+#include <QtTest/qtestcase.h>
+#include <QtTest/qtestkeyboard.h>
+
 #include <QAnimationDriver>
-#include <QElapsedTimer>
-#include <QPdfWriter>
-#include <QPainter>
-#include <QProcess>
-#include <QProcessEnvironment>
-#include <QStandardPaths>
-#include <QJsonDocument>
+#include <QCoreApplication>
 #include <QCryptographicHash>
-#include <QJSEngine>
-#include <QRegularExpression>
-#include <atomic>
-#include <vector>
-#include <QTemporaryDir>
+#include <QDebug>
+#include <QDir>
 #include <QDirIterator>
-#include <QScreen>
-#include <QSet>
-#include <QGuiApplication>
-#include <QJSValue>
-#include <QKeyEvent>
-#include <QMimeData>
 #include <QDragEnterEvent>
 #include <QDropEvent>
-#include <QQuickItem>
-#include <QQuickWindow>
-#include <QtTest/qtestkeyboard.h>
-#include <QtTest/qtestcase.h>
+#include <QElapsedTimer>
+#include <QFile>
+#include <QFileInfo>
+#include <QGuiApplication>
+#include <QJSEngine>
+#include <QJSValue>
+#include <QJsonDocument>
+#include <QKeyEvent>
 #include <QLoggingCategory>
+#include <QMetaProperty>
+#include <QMimeData>
 #include <QMutex>
 #include <QMutexLocker>
-#include "measured_layer.hpp"
-#include "project_view_model.hpp"
-#include "fit_view_model.hpp"
-#include <QCoreApplication>
-#include <QDir>
-#include <QMetaProperty>
-#include <QFileInfo>
-#include <QFile>
-#include <QTextStream>
-#include <QTextLayout>
-#include <QSettings>
-#include <QUrl>
-#include <QVariantMap>
+#include <QPainter>
+#include <QPdfWriter>
+#include <QPointer>
+#include <QProcess>
+#include <QProcessEnvironment>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQmlError>
+#include <QQmlIncubationController>
+#include <QQmlIncubator>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QRegularExpression>
 #include <QScopeGuard>
-#include <QtQml/qqml.h>
+#include <QScreen>
+#include <QSet>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QTemporaryDir>
+#include <QTextLayout>
+#include <QTextStream>
+#include <QUrl>
+#include <QVariantMap>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <initializer_list>
+#include <memory>
+#include <mutex>
+#include <sstream>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "edi/fit_job.hpp"
 #include "engine_setup.hpp"
+#include "fit_view_model.hpp"
+#include "measured_layer.hpp"
+#include "project_view_model.hpp"
+#include "scan_session.hpp"
+#include "session.hpp"
 
 namespace {
+// Only this normal app-test carrier installs this existing process-wide observer.
+// A callback owns its state lease; it never reads a GUI QObject on the worker.
+struct ScanStopHold {
+    std::mutex mutex;
+    std::condition_variable changed;
+    std::thread::id ownerThread;
+    std::thread::id workerThread;
+    std::string file;
+    std::vector<std::pair<std::string, double>> starts;
+    std::vector<std::string> expectedFiles;
+    std::string expectedIdentity;
+    unsigned long long generation = 0;
+    int entered = 0;
+    int exited = 0;
+    bool blocked = false;
+    bool released = false;
+    bool expired = false;
+};
+std::mutex scan_stop_registry_mutex;
+std::shared_ptr<ScanStopHold> scan_stop_registered;
+unsigned long long scan_stop_generation = 0;
+
+void observe_scan_stop_file(const std::string& file,
+                            const std::vector<std::pair<std::string, double>>& starts) {
+    std::shared_ptr<ScanStopHold> hold;
+    {
+        const std::lock_guard lock(scan_stop_registry_mutex);
+        hold = scan_stop_registered;
+    }
+    if (!hold) return;
+    std::unique_lock lock(hold->mutex);
+    ++hold->entered;
+    if (hold->entered != 1 || hold->released) {
+        ++hold->exited;
+        return;
+    }
+    hold->workerThread = std::this_thread::get_id();
+    hold->file = file;
+    hold->starts = starts;
+    if (hold->workerThread == hold->ownerThread) {
+        // Never block the GUI even if an incorrectly configured worker reaches us.
+        hold->expired = true;
+        ++hold->exited;
+        return;
+    }
+    hold->blocked = true;
+    // Existing completion bound, solely a fatal deadlock guard, not a success wait.
+    const auto safety = std::chrono::steady_clock::now() + std::chrono::milliseconds(12000);
+    if (!hold->changed.wait_until(lock, safety, [&] { return hold->released; }))
+        hold->expired = true;
+    hold->blocked = false;
+    ++hold->exited;
+}
+
+QString scan_stop_thread_name(std::thread::id id) {
+    std::ostringstream text;
+    text << id;
+    return QString::fromStdString(text.str());
+}
+
 QMutex report_console_mutex;
 QVariantList report_console_messages;
 std::atomic<QtMessageHandler> report_previous_handler{nullptr};
@@ -117,6 +193,129 @@ public:
         return result;
     }
     using QObject::QObject;
+    ~ReportSettingsProof() override {
+        releaseScanStop();
+        // If a failed case still owns real work, keep the registry reserved rather
+        // than allowing a new generation to borrow an in-flight callback.
+        clearScanStop();
+    }
+    Q_INVOKABLE bool armScanStop(QObject* object) {
+#if EDI_WORKER_OWNER_THREAD
+        Q_UNUSED(object);
+        return false;  // Blocking is unsupported on an owner-thread worker.
+#else
+        auto* project = qobject_cast<edi_app::ProjectViewModel*>(object);
+        auto* session = project ? qobject_cast<edi_app::Session*>(project->parent()) : nullptr;
+        if (!project || !session || session->project() != project || !project->scan() ||
+            !project->fit() || project->fit()->nativeRunning() || !project->scanSession() ||
+            scan_stop_hold_)
+            return false;
+        const auto* scan = project->scanSession();
+        if (scan->datasets().files.empty() || scan->run().invalid ||
+            !scan->run().outcome.isEmpty())
+            return false;
+        auto hold = std::make_shared<ScanStopHold>();
+        hold->ownerThread = std::this_thread::get_id();
+        hold->expectedFiles = scan->datasets().files;
+        const auto* originalTemplate = project->scanTemplate();
+        hold->expectedIdentity = edi_app::ScanSession::templateIdentity(
+            originalTemplate ? *originalTemplate : project->project());
+        if (hold->expectedIdentity.empty()) return false;
+        {
+            const std::lock_guard lock(scan_stop_registry_mutex);
+            if (scan_stop_registered) return false;
+            hold->generation = ++scan_stop_generation;
+            scan_stop_hold_ = hold;
+            scan_stop_project_ = project;
+            scan_stop_registered = hold;
+            edi::set_scan_file_start_observer(observe_scan_stop_file);
+        }
+        return true;
+#endif
+    }
+    Q_INVOKABLE QVariantMap scanStopFacts(QObject* object) const {
+        const auto hold = scan_stop_hold_;
+        QVariantMap facts{{"armed", bool(hold)}, {"ready", false}};
+        if (!hold) return facts;
+        const auto* project = scan_stop_project_.data();
+        const auto* session =
+            project ? qobject_cast<edi_app::Session*>(project->parent()) : nullptr;
+        const bool current =
+            project && object == project && session && session->project() == project;
+        const bool nativeRunning = project && project->fit() && project->fit()->nativeRunning();
+        const std::lock_guard lock(hold->mutex);
+        const bool fileOwned = std::find(hold->expectedFiles.begin(), hold->expectedFiles.end(),
+                                         hold->file) != hold->expectedFiles.end();
+        const bool distinctThread = hold->workerThread != hold->ownerThread;
+        const bool ready = current && nativeRunning && hold->entered == 1 && hold->exited == 0 &&
+                           hold->blocked && !hold->released && !hold->expired && distinctThread &&
+                           !hold->file.empty() && fileOwned && !hold->starts.empty();
+        QVariantList starts;
+        for (const auto& [name, value] : hold->starts)
+            starts.append(QVariantMap{{"name", QString::fromStdString(name)}, {"value", value}});
+        facts.insert("ready", ready);
+        facts.insert("generation", QString::number(hold->generation));
+        facts.insert("owner_current", current);
+        facts.insert("native_running", nativeRunning);
+        facts.insert("entered", hold->entered);
+        facts.insert("exited", hold->exited);
+        facts.insert("blocked", hold->blocked);
+        facts.insert("released", hold->released);
+        facts.insert("expired", hold->expired);
+        facts.insert("distinct_thread", distinctThread);
+        facts.insert("owner_thread", scan_stop_thread_name(hold->ownerThread));
+        facts.insert("worker_thread", scan_stop_thread_name(hold->workerThread));
+        facts.insert("file", QString::fromStdString(hold->file));
+        facts.insert("file_owned", fileOwned);
+        facts.insert("starts", starts);
+        facts.insert("expected_identity", QString::fromStdString(hold->expectedIdentity));
+        if (current && project->scanSession()) {
+            const auto& run = project->scanSession()->run();
+            facts.insert("run_identity", QString::fromStdString(run.identity));
+            facts.insert("run_identity_matches",
+                         !run.identity.empty() && run.identity == hold->expectedIdentity);
+            facts.insert("run_outcome", run.outcome);
+            facts.insert("run_invalid", run.invalid);
+            facts.insert("run_error", run.error);
+        }
+        return facts;
+    }
+    Q_INVOKABLE bool scanStopReady(QObject* object) const {
+        return scanStopFacts(object).value("ready").toBool();
+    }
+    Q_INVOKABLE void releaseScanStop() {
+        const auto hold = scan_stop_hold_;
+        if (!hold) return;
+        {
+            const std::lock_guard lock(scan_stop_registry_mutex);
+            if (scan_stop_registered == hold) edi::set_scan_file_start_observer(nullptr);
+        }
+        {
+            const std::lock_guard lock(hold->mutex);
+            hold->released = true;
+        }
+        hold->changed.notify_all();
+    }
+    Q_INVOKABLE bool clearScanStop() {
+        const auto hold = scan_stop_hold_;
+        if (!hold) return true;
+        // This never releases a live hold: the negative must not alter its premise.
+        {
+            const std::lock_guard lock(hold->mutex);
+            if (!hold->released || hold->blocked || hold->entered != hold->exited || hold->expired)
+                return false;
+        }
+        if (scan_stop_project_ && scan_stop_project_->fit()->nativeRunning()) return false;
+        {
+            const std::lock_guard lock(scan_stop_registry_mutex);
+            if (scan_stop_registered != hold) return false;
+            edi::set_scan_file_start_observer(nullptr);
+            scan_stop_registered.reset();
+        }
+        scan_stop_hold_.reset();
+        scan_stop_project_.clear();
+        return true;
+    }
     bool webAvailable() const { return true; }
     QString webExportError() const { return web_export_error_; }
     Q_INVOKABLE QObject* creationDialog(QObject* root) const {
@@ -219,18 +418,37 @@ public:
         return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
     }
     Q_INVOKABLE QVariantMap fileFacts(const QUrl& location, const QString& relative) const {
-        if (!localDirectory(location)) return {{"error", "An absolute local directory URL is required"}};
+        if (!localDirectory(location))
+            return {{"error", "An absolute local directory URL is required"}};
         QFile file(QDir(location.toLocalFile()).filePath(relative));
-        if (!file.open(QIODevice::ReadOnly)) return {{"error", "The project file cannot be opened"}};
+        const QFileInfo info(file);
+        const bool regular = info.isFile() && !info.isSymLink();
+        const bool readable = regular && file.open(QIODevice::ReadOnly);
+        QVariantMap facts{{"exists", info.exists() || info.isSymLink()},
+                          {"regular", regular},
+                          {"readable", readable}};
+        if (!readable) {
+            facts.insert("error", "The project file cannot be opened as a regular file");
+            return facts;
+        }
         const auto bytes = file.readAll();
-        if (file.error() != QFileDevice::NoError) return {{"error", "The project file cannot be read"}};
-        return {{"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
-                {"bytes", bytes.size()}, {"modified", QFileInfo(file).lastModified().toMSecsSinceEpoch()}};
+        if (file.error() != QFileDevice::NoError) {
+            facts.insert("error", "The project file cannot be read");
+            return facts;
+        }
+        facts.insert("sha256",
+                     QString::fromLatin1(
+                         QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()));
+        facts.insert("bytes", bytes.size());
+        facts.insert("modified", info.lastModified().toMSecsSinceEpoch());
+        return facts;
     }
     Q_INVOKABLE QUrl childUrl(const QUrl& location, const QString& relative) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         return QUrl::fromLocalFile(QDir(location.toLocalFile()).filePath(relative));
     }
     Q_INVOKABLE QVariantMap htmlModel(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QFile file(location.toLocalFile());
         if (!file.open(QIODevice::ReadOnly)) return {{"error", "Actual HTML report cannot be opened"}};
         const auto html = QString::fromUtf8(file.readAll());
@@ -243,6 +461,7 @@ public:
         return document.toVariant().toMap();
     }
     Q_INVOKABLE QVariantMap pdfImageColours(const QUrl& location, const QStringList& colours) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QFile file(location.toLocalFile());
         if (!file.open(QIODevice::ReadOnly)) return {{"error", "Actual saved PDF cannot be opened"}};
         const auto pdf = QString::fromLatin1(file.readAll());
@@ -305,6 +524,7 @@ public:
         return {{"images", images}, {"counts", counts}, {"maxVerticalRun", verticalRuns}};
     }
     Q_INVOKABLE QVariantMap pdfFacts(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
         const auto python = QStandardPaths::findExecutable("python");
         if (python.isEmpty()) return {{"error", "PDF observer requires the runner's Python"}};
@@ -316,6 +536,7 @@ public:
         return json.toVariant().toMap();
     }
     Q_INVOKABLE QVariantMap htmlEvolutionFacts(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
         root.cd("../../..");
         const auto python = QStandardPaths::findExecutable("python");
@@ -329,6 +550,7 @@ public:
         return json.toVariant().toMap();
     }
     Q_INVOKABLE QVariantMap reportHtmlMatrices(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
         root.cd("../../..");
         const auto python = QStandardPaths::findExecutable("python");
@@ -463,9 +685,11 @@ public:
         return result;
     }
     Q_INVOKABLE QUrl copyProject(const QUrl& input) {
+        if (!absoluteLocalFileUrl(input)) return {};
         auto directory = std::make_unique<QTemporaryDir>(QDir::tempPath() + "/edi-settings-XXXXXX");
         if (!directory->isValid()) return {};
         QDir source(input.toLocalFile());
+        if (!source.exists()) return {};
         QDirIterator files(source.absolutePath(), QDir::AllEntries | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
         while (files.hasNext()) {
             const auto from = files.next();
@@ -478,8 +702,7 @@ public:
         return result;
     }
     static bool localDirectory(const QUrl& project) {
-        return project.isValid() && project.isLocalFile() &&
-               QDir::isAbsolutePath(project.toLocalFile()) && QFileInfo(project.toLocalFile()).isDir();
+        return absoluteLocalFileUrl(project) && QFileInfo(project.toLocalFile()).isDir();
     }
     Q_INVOKABLE QVariantMap fileObservation(const QUrl& project, const QString& relative) const {
         if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};
@@ -537,7 +760,9 @@ public:
         return QFile::remove(QDir(project.toLocalFile()).filePath(relative));
     }
     Q_INVOKABLE QUrl copyProjectArchive(const QUrl& source, bool readOnly = false) {
+        if (!absoluteLocalFileUrl(source)) return {};
         const QUrl root = emptyDirectory();
+        if (!absoluteLocalFileUrl(root) || !QFileInfo(root.toLocalFile()).isDir()) return {};
         const QString path = QDir(root.toLocalFile()).filePath("opened.zip");
         if (!QFile::copy(source.toLocalFile(), path)) return {};
         if (readOnly) {
@@ -550,6 +775,7 @@ public:
         return QUrl::fromLocalFile(path);
     }
     Q_INVOKABLE bool archiveLocationWritable(const QUrl& archive) const {
+        if (!absoluteLocalFileUrl(archive)) return false;
         return QFileInfo(archive.toLocalFile()).isWritable() ||
                QFileInfo(QFileInfo(archive.toLocalFile()).absolutePath()).isWritable();
     }
@@ -598,11 +824,13 @@ public:
         return drop.isAccepted();
     }
     Q_INVOKABLE QString projectArchiveBytes(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QFile file(location.toLocalFile());
         return file.open(QIODevice::ReadOnly) ? QString::fromLatin1(file.readAll().toBase64())
                                               : QString();
     }
     Q_INVOKABLE QVariantMap projectFolderBytes(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QVariantMap result;
         QDir root(location.toLocalFile());
         QDirIterator files(root.absolutePath(), QDir::Files | QDir::Hidden,
@@ -616,7 +844,9 @@ public:
         }
         return result;
     }
-    Q_INVOKABLE QString localPath(const QUrl& location) const { return location.toLocalFile(); }
+    Q_INVOKABLE QString localPath(const QUrl& location) const {
+        return absoluteLocalFileUrl(location) ? location.toLocalFile() : QString();
+    }
     Q_INVOKABLE QVariantMap palette(bool safe) const { return paletteForScheme(safe ? "colourBlindSafe" : "default"); }
     Q_INVOKABLE QVariantMap paletteForScheme(const QString& scheme) const {
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
@@ -649,26 +879,32 @@ public:
         return output;
     }
     Q_INVOKABLE QString fileName(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         return QFileInfo(location.toLocalFile()).fileName();
     }
     Q_INVOKABLE QString parentName(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         return QFileInfo(QFileInfo(location.toLocalFile()).absolutePath()).fileName();
     }
     Q_INVOKABLE bool temporary(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return false;
         return QFileInfo(location.toLocalFile()).absoluteFilePath().startsWith(QDir::tempPath() + '/');
     }
     Q_INVOKABLE QUrl legacy(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QDir root = QFileInfo(location.toLocalFile()).absoluteDir();
         if (root.dirName() == "EasyScience") root.cdUp();
         return QUrl::fromLocalFile(root.filePath("settings.ini"));
     }
     Q_INVOKABLE void erase(const QUrl& location, const QString& group, const QString& key) const {
+        if (!absoluteLocalFileUrl(location)) return;
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);
         settings.beginGroup(group);
         settings.remove(key);
         settings.sync();
     }
     Q_INVOKABLE QVariantMap settingFacts(const QUrl& location, const QString& group, const QString& key) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);
         settings.beginGroup(group);
         const auto value = settings.value(key);
@@ -677,15 +913,285 @@ public:
                 {"value", value}, {"list", value.toStringList()}};
     }
     Q_INVOKABLE QVariant value(const QUrl& location, const QString& group, const QString& key) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);
         settings.beginGroup(group);
         return settings.value(key);
     }
     Q_INVOKABLE void seed(const QUrl& location, const QString& group, const QString& key, const QVariant& value) const {
+        if (!absoluteLocalFileUrl(location)) return;
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);
         settings.beginGroup(group);
         settings.setValue(key, value);
         settings.sync();
+    }
+    Q_INVOKABLE QVariantMap archiveCreationFailureProof(const QUrl& source, const QUrl& owned) {
+        if (!absoluteLocalFileUrl(source) || !QFileInfo(source.toLocalFile()).isFile() ||
+            !absoluteLocalFileUrl(owned) || !QFileInfo(owned.toLocalFile()).isDir())
+            return {{"error", "Actual owned source and directory are required"}};
+        const QString blocked = QDir(owned.toLocalFile()).filePath("blocked-temp-parent");
+        const QString output = QDir(owned.toLocalFile()).filePath("opened.zip");
+        if (QFileInfo::exists(blocked) || QFileInfo::exists(output))
+            return {{"error", "The owned failure witness must start with absent destinations"}};
+        QFile blocker(blocked);
+        const QByteArray blockerBytes("owned-blocker");
+        if (!blocker.open(QIODevice::WriteOnly) ||
+            blocker.write(blockerBytes) != blockerBytes.size())
+            return {{"error", "The owned non-directory temporary parent could not be armed"}};
+        blocker.close();
+        struct EnvironmentEntry {
+            const char* name;
+            bool set;
+            QByteArray value;
+        };
+        std::vector<EnvironmentEntry> saved;
+        for (const char* name : {"TMPDIR", "TMP", "TEMP"})
+            saved.push_back({name, qEnvironmentVariableIsSet(name), qgetenv(name)});
+        const QString previous = QDir::currentPath();
+        bool environmentRestored = true, cwdRestored = false;
+        QVariantMap facts;
+        {
+            const auto restore = qScopeGuard([&] {
+                for (const auto& entry : saved) {
+                    const bool ok =
+                        entry.set ? qputenv(entry.name, entry.value) : qunsetenv(entry.name);
+                    environmentRestored = ok && environmentRestored;
+                }
+                cwdRestored = QDir::setCurrent(previous);
+            });
+            if (!QDir::setCurrent(owned.toLocalFile()))
+                return {
+                    {"error", "The owned archive ambient-directory witness could not be armed"}};
+            for (const auto& entry : saved)
+                if (!qputenv(entry.name, blocked.toUtf8()))
+                    return {{"error", "The owned temporary-parent failure could not be armed"}};
+            facts.insert("temporaryParentArmed",
+                         QDir::cleanPath(QDir::tempPath()) == QDir::cleanPath(blocked));
+            if (!facts["temporaryParentArmed"].toBool())
+                return {{"error",
+                         "This actual Qt platform did not select the owned temporary parent"}};
+            facts.insert("creatorActuallyFailed", emptyDirectory().isEmpty());
+            if (!facts["creatorActuallyFailed"].toBool())
+                return {{"error", "The actual temporary-directory creator did not refuse"}};
+            facts.insert("archiveCopyRefused", copyProjectArchive(source).isEmpty());
+            facts.insert("noAmbientArchive", !QFileInfo::exists(output));
+        }
+        facts.insert("environmentRestored", environmentRestored);
+        facts.insert("cwdRestored", cwdRestored && QDir::currentPath() == previous);
+        return facts;
+    }
+    Q_INVOKABLE QVariantMap localRootBoundaryProof(const QUrl& owned) {
+        if (!absoluteLocalFileUrl(owned) || !QDir(owned.toLocalFile()).exists())
+            return {{"error", "The boundary proof requires its actual owned directory"}};
+        const QString previous = QDir::currentPath();
+        bool restored = false;
+        QVariantList rows;
+        {
+            if (!QDir::setCurrent(owned.toLocalFile()))
+                return {{"error", "The owned ambient-directory control could not be armed"}};
+            const auto restore = qScopeGuard([&] { restored = QDir::setCurrent(previous); });
+            const std::vector<std::pair<QString, QUrl>> roots{
+                {"empty", QUrl()},
+                {"plain-absolute", QUrl(owned.toLocalFile())},
+                {"relative", QUrl("relative-root")},
+                {"relative-file", QUrl("file:.")},
+                {"https", QUrl("https://invalid.invalid/root")},
+                {"qrc", QUrl("qrc:/not-a-local-file")},
+                {"query", QUrl(owned.toString() + "?not-a-path")},
+                {"fragment", QUrl(owned.toString() + "#not-a-path")}};
+            for (const auto& [name, root] : roots) {
+                const QString marker = QStringLiteral("e11-root-sentinel.txt");
+                const QByteArray expected("independent-owned-sentinel");
+                QFile actual(QDir(owned.toLocalFile()).filePath(marker));
+                if (!actual.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+                    actual.write(expected) != expected.size())
+                    return {{"error", "The independent ambient sentinel could not be written"}};
+                actual.close();
+                QVariantMap row{{"name", name},
+                                {"emptyText", fileObservation(root, marker).contains("error")},
+                                {"emptyFacts", fileFacts(root, marker).contains("error")},
+                                {"noChild", childUrl(root, marker).isEmpty()},
+                                {"projectRefusal", projectBytes(root).contains("error")},
+                                {"emptyFolder", projectFolderBytes(root).isEmpty()},
+                                {"noCopy", copyProject(root).isEmpty()},
+                                {"writeRefused", !write(root, marker, "CORRUPTION")},
+                                {"removeRefused", !remove(root, marker)}};
+                row.insert("sameBytes",
+                           actual.open(QIODevice::ReadOnly) && actual.readAll() == expected);
+                rows.append(row);
+            }
+            const QUrl remote("file://nonlocal.invalid/owned-root");
+            rows.append(QVariantMap{{"name", "nonlocal-file-authority"},
+                                    {"emptyText", fileObservation(remote, "sentinel").contains("error")},
+                                    {"emptyFacts", fileFacts(remote, "sentinel").contains("error")},
+                                    {"noChild", childUrl(remote, "sentinel").isEmpty()},
+                                    {"projectRefusal", projectBytes(remote).contains("error")},
+                                    {"emptyFolder", projectFolderBytes(remote).isEmpty()}});
+            QFile ini("owned.ini");
+            const QByteArray expectedIni("[owned]\nkey=original\n");
+            if (!ini.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+                ini.write(expectedIni) != expectedIni.size())
+                return {{"error", "The independent settings sentinel could not be armed"}};
+            ini.close();
+            const QUrl relativeIni("file:owned.ini");
+            QVariantMap settings{
+                {"name", "relative-settings"},
+                {"noValue", !value(relativeIni, "owned", "key").isValid()},
+                {"settingsRefusal", settingFacts(relativeIni, "owned", "key").contains("error")},
+                {"noLegacy", legacy(relativeIni).isEmpty()},
+                {"noParent", parentName(relativeIni).isEmpty()},
+                {"noName", fileName(relativeIni).isEmpty()},
+                {"notTemporary", !temporary(relativeIni)},
+                {"noLocalPath", localPath(relativeIni).isEmpty()}};
+            seed(relativeIni, "owned", "key", "CORRUPTION");
+            erase(relativeIni, "owned", "key");
+            settings.insert("sameBytes",
+                            ini.open(QIODevice::ReadOnly) && ini.readAll() == expectedIni);
+            rows.append(settings);
+        }
+        return {{"rows", rows}, {"cwdRestored", restored && QDir::currentPath() == previous}};
+    }
+    Q_INVOKABLE QVariantMap incubationOwnership(QObject* context, bool destroyFirst) const {
+        auto* caller = qmlEngine(context);
+        auto* original = caller ? caller->incubationController() : nullptr;
+        auto* originalObject = dynamic_cast<QObject*>(original);
+        if (!caller || !original || !originalObject)
+            return {{"error", "The existing configured caller/controller is unavailable"}};
+        QPointer<QQmlEngine> callerGuard(caller);
+        QPointer<QObject> originalGuard(originalObject);
+        bool restored = false;
+        const auto restoreCaller = [&] {
+            if (restored) return;
+            if (callerGuard && originalGuard) {
+                // Test cleanup only, AFTER all measured engines/jobs are gone.
+                // Force a real setter transition even if the old forward field
+                // still aliases the shared controller whose private link moved.
+                callerGuard->setIncubationController(nullptr);
+                callerGuard->setIncubationController(original);
+            }
+            restored = true;
+        };
+        const auto callerCleanup = qScopeGuard(restoreCaller);
+        QVariantMap facts;
+        try {
+            struct Job {
+                QQmlComponent component;
+                QQmlIncubator incubation{QQmlIncubator::Asynchronous};
+                bool started = false;
+                int queued = 0;
+                explicit Job(QQmlEngine& engine) : component(&engine) {
+                    component.setData("import QtQml; QtObject { property int answer: 6 * 7 }",
+                                      QUrl("file:///actual-configured-incubation.qml"));
+                    if (component.isReady()) component.create(incubation, engine.rootContext());
+                    started = incubation.isLoading();
+                    if (auto* controller = engine.incubationController())
+                        queued = controller->incubatingObjectCount();
+                }
+                ~Job() {
+                    QObject* ready = incubation.object();
+                    incubation.clear();  // Aborts pending work; does not delete Ready objects.
+                    delete ready;
+                }
+                QVariantMap snapshot() const {
+                    QStringList errors;
+                    for (const auto& error : component.errors()) errors.append(error.toString());
+                    for (const auto& error : incubation.errors()) errors.append(error.toString());
+                    auto* object = incubation.object();
+                    return {{"started_loading", started},
+                            {"queued_at_start", queued},
+                            {"status", int(incubation.status())},
+                            {"ready", incubation.isReady()},
+                            {"answer", object ? object->property("answer") : QVariant{}},
+                            {"errors", errors}};
+                }
+            };
+            const auto waitJobs = [](std::initializer_list<Job*> jobs) {
+                QElapsedTimer deadline;
+                deadline.start();
+                for (;;) {
+                    bool pending = false;
+                    for (const auto* job : jobs) pending = pending || job->incubation.isLoading();
+                    if (!pending || deadline.elapsed() >= 5000) return;
+                    QTest::qWait(10);  // Existing restart carrier's bound/event-loop primitive.
+                }
+            };
+            const auto belongsTo = [](const QObject* object, const QObject* engine) {
+                for (auto* current = object; current; current = current->parent())
+                    if (current == engine) return true;
+                return false;
+            };
+            auto first = std::make_unique<QQmlEngine>();
+            edi_app::configure_engine(*first);
+            auto* a = first->incubationController();
+            QPointer<QObject> aObject(dynamic_cast<QObject*>(a));
+            facts["a_present"] = a != nullptr;
+            facts["a_engine_owned"] = aObject && belongsTo(aObject, first.get());
+            auto beforeB = std::make_unique<Job>(*first);
+            auto second = std::make_unique<QQmlEngine>();
+            edi_app::configure_engine(*second);
+            auto* b = second->incubationController();
+            QPointer<QObject> bObject(dynamic_cast<QObject*>(b));
+            facts["b_present"] = b != nullptr;
+            const bool distinct = a && b && a != b;
+            facts["distinct_controllers"] = distinct;
+            facts["a_forward_after_b"] = first->incubationController() == a;
+            facts["b_engine_owned"] = bObject && belongsTo(bObject, second.get());
+            const bool independent =
+                distinct && aObject && bObject && belongsTo(aObject, first.get()) &&
+                belongsTo(bObject, second.get()) && first->incubationController() == a &&
+                second->incubationController() == b;
+            facts["independent_live_ownership"] = independent;
+            auto duringB = std::make_unique<Job>(*first);
+            auto bWork = std::make_unique<Job>(*second);
+            waitJobs({beforeB.get(), duringB.get(), bWork.get()});
+            facts["a_queued_before_b"] = beforeB->snapshot();
+            facts["a_work_with_b"] = duringB->snapshot();
+            facts["b_work"] = bWork->snapshot();
+            beforeB.reset();
+            duringB.reset();
+            bWork.reset();
+            auto& survivor = destroyFirst ? second : first;
+            auto& victim = destroyFirst ? first : second;
+            auto* survivingController = destroyFirst ? b : a;
+            QPointer<QObject> survivingObject = destroyFirst ? bObject : aObject;
+            QPointer<QObject> victimObject = destroyFirst ? aObject : bObject;
+            victim.reset();
+            facts["destroyed_engine_controller_deleted"] = victimObject.isNull();
+            facts["survivor_controller_alive"] = !survivingObject.isNull();
+            facts["survivor_forward_after_destroy"] =
+                survivor->incubationController() == survivingController;
+            facts["survivor_owner_after_destroy"] =
+                survivingObject && belongsTo(survivingObject, survivor.get());
+            if (survivingController && survivingObject &&
+                survivor->incubationController() == survivingController) {
+                auto afterDestroy = std::make_unique<Job>(*survivor);
+                waitJobs({afterDestroy.get()});
+                facts["survivor_work_after_destroy"] = afterDestroy->snapshot();
+                afterDestroy.reset();
+                survivor->setIncubationController(nullptr);
+                facts["explicit_detach_forward_null"] =
+                    survivor->incubationController() == nullptr;
+                facts["detached_owner_still_alive"] = !survivingObject.isNull();
+                // No controller.engine() getter is queried, here or anywhere else.
+                facts["detached_count"] = survivingController->incubatingObjectCount();
+                survivor->setIncubationController(survivingController);
+                facts["explicit_reattach_forward"] =
+                    survivor->incubationController() == survivingController;
+                auto reattached = std::make_unique<Job>(*survivor);
+                waitJobs({reattached.get()});
+                facts["reattached_work"] = reattached->snapshot();
+                reattached.reset();
+            }
+            survivor.reset();
+            facts["both_controller_lifetimes_ended"] = aObject.isNull() && bObject.isNull();
+            // No getter is called on either destroyed measured engine/controller.
+        } catch (const std::exception& error) {
+            facts["error"] = QString::fromUtf8(error.what());
+        }
+        restoreCaller();
+        facts["caller_restored"] =
+            callerGuard && originalGuard && callerGuard->incubationController() == original;
+        return facts;
     }
     Q_INVOKABLE QVariantMap restart(const QString& source) const {
         auto* controller = engine_->incubationController();
@@ -727,6 +1233,12 @@ public:
         return result;
     }
 private:
+    static bool absoluteLocalFileUrl(const QUrl& url) {
+        return url.isValid() && url.isLocalFile() && url.host().isEmpty() && !url.hasQuery() &&
+               !url.hasFragment() && QDir::isAbsolutePath(url.toLocalFile());
+    }
+    std::shared_ptr<ScanStopHold> scan_stop_hold_;
+    QPointer<edi_app::ProjectViewModel> scan_stop_project_;
     QQmlEngine* engine_;
     mutable QString web_export_error_;
     std::unique_ptr<AcceptanceAnimationDriver> animation_driver_;

@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.ci_cadence.identity_migrations import MIGRATIONS
+from tests.fixtures.ci_cadence.identity_migrations import MIGRATIONS, SCAN_DELIVERY_NODES
 from tests.fixtures.ci_cadence.inventory import identity
 from tests.system.py.ci_execution_contract import (
     contexts,
@@ -505,6 +505,8 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
         'axis-zero-absent',
         *[f'catalogue-{index}' for index in range(21)],
         'status-results-banner',
+        'native-forwarding-controls',
+        *[f'collection-{index}' for index in range(len(SCAN_DELIVERY_NODES))],
     ],
 )
 def test_inventory_migration_refuses_every_dropped_successor(retired):

@@ -12,6 +12,7 @@ ScrollView {
     id: field
 
     property alias text: area.text
+    property alias editorObjectName: area.objectName
     property alias placeholderText: area.placeholderText
     // The text area's own name, for the controls that find it by name.
     property alias areaObjectName: area.objectName

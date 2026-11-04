@@ -7,6 +7,7 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.native_ui_script.report_projection import browser_model
 from tests.unit.py.test_report_collection_domain import model
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -30,7 +31,7 @@ def test_all_delivered_axis_buttons_consume_the_complete_collection(tmp_path, in
         )
     restored = edi.ReportModel.from_json(json.dumps(document))
     data = tmp_path / 'model.json'
-    data.write_text(restored.to_json())
+    data.write_text(json.dumps(browser_model(json.loads(restored.to_json()))))
     result = subprocess.run(
         [
             'node',

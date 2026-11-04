@@ -17,21 +17,21 @@ import edi.app
 Column {
     id: group
 
-    // The block's text, read while the group is open, and the category.
+    // The block's text, read while the group is open, and the categoryData.
     property BlockText source: null
     property string categoryId: ""
     // Why the last edit was refused.
     property string refusal: ""
 
     function apply(row: int, name: string, value: string) {
-        group.refusal = Session.project ? Session.project.applyText(group.source.file, category.editedText(row, name, value)) : "";
+        ApplicationInfo.applyGeneratedCategory(row, name, value);
     }
 
     spacing: AppSizes.groupContentSpacing
     width: EaStyle.Sizes.sideBarContentWidth
 
     GeneratedCategory {
-        id: category
+        id: categoryData
         source: group.source
         categoryId: group.categoryId
     }
@@ -40,23 +40,23 @@ Column {
     Grid {
         id: fields
 
-        visible: !category.loop
-        columns: Math.min(4, Math.max(1, category.names.length))
+        visible: !categoryData.loop
+        columns: Math.min(4, Math.max(1, categoryData.names.length))
         columnSpacing: AppSizes.inputSpacing
         rowSpacing: AppSizes.groupContentSpacing
 
         // Each item in the control its dictionary type asks for: a selector, a check box, or a field taking a number
         // or a text.
         Repeater {
-            model: category.loop ? [] : category.names
+            model: categoryData.loop ? [] : categoryData.names
             delegate: Loader {
                 id: field
 
                 required property int index
                 required property string modelData
-                readonly property string kind: category.kinds[index] ?? "text"
-                readonly property string value: category.rowCount > 0 ? category.value(0, index) : ""
-                readonly property bool editable: !category.output && !category.setByProgram.includes(modelData) && group.source !== null && group.source.file !== ""
+                readonly property string kind: categoryData.kinds[index] ?? "text"
+                readonly property string value: categoryData.rowCount > 0 ? categoryData.value(0, index) : ""
+                readonly property bool editable: !categoryData.output && !categoryData.setByProgram.includes(modelData) && group.source !== null && group.source.file !== ""
 
                 width: (EaStyle.Sizes.sideBarContentWidth - (fields.columns - 1) * AppSizes.inputSpacing) / fields.columns
                 sourceComponent: kind === "choice" ? choiceField : kind === "flag" ? flagField : valueField
@@ -65,7 +65,7 @@ Column {
                     id: choiceField
                     SelectorField {
                         objectName: `generated.${group.categoryId}.${field.modelData}`
-                        options: category.options[field.index] ?? null
+                        options: categoryData.options[field.index] ?? null
                         uid: `${group.categoryId}.${field.modelData}`
                         token: field.value
                         writable: field.editable
@@ -77,7 +77,7 @@ Column {
                     EaElements.CheckBox {
                         objectName: `generated.${group.categoryId}.${field.modelData}`
                         leftPadding: 0
-                        text: category.labels[field.index] ?? field.modelData
+                        text: categoryData.labels[field.index] ?? field.modelData
                         checked: field.value === "true"
                         enabled: field.editable
                         onToggled: group.apply(0, field.modelData, checked ? "true" : "false")
@@ -87,8 +87,8 @@ Column {
                     id: valueField
                     ValueField {
                         objectName: `generated.${group.categoryId}.${field.modelData}`
-                        label: category.labels[field.index] ?? field.modelData
-                        unit: category.units[field.index] ?? ""
+                        label: categoryData.labels[field.index] ?? field.modelData
+                        unit: categoryData.units[field.index] ?? ""
                         accepts: field.kind === "number" ? "number" : "text"
                         fieldValue: field.value
                         editable: field.editable
@@ -101,7 +101,7 @@ Column {
 
     // A loop: the shared table, made only for a loop, so no empty table stands for single items.
     Loader {
-        active: category.loop
+        active: categoryData.loop
         width: parent.width
         sourceComponent: Component {
             DataTable {
@@ -109,21 +109,21 @@ Column {
 
                 objectName: `generated.${group.categoryId}.list`
                 defaultInfoText: qsTr("No rows")
-                sourceModel: category.loop ? category.rows : null
+                sourceModel: categoryData.loop ? categoryData.rows : null
                 // The cells a Repeater makes come before it, so the Repeater, declared last, takes the last width.
-                columns: [numberColumnWidth].concat(category.names.map(() => -1)).concat([0.001])
+                columns: ApplicationInfo.nativeListProjection(0)
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                     Repeater {
-                        model: category.labels
+                        model: categoryData.labels
                         delegate: EaComponents.ListViewLabel {
                             required property int index
                             required property string modelData
                             horizontalAlignment: Text.AlignHCenter
-                            text: category.units[index] ? `${modelData} (${category.units[index]})` : modelData
+                            text: categoryData.units[index] ? `${modelData} (${categoryData.units[index]})` : modelData
                         }
                     }
                 }
@@ -141,11 +141,7 @@ Column {
                     // Each item in the cell its dictionary type asks for: a selector with the dictionary's labels, or
                     // a text cell, a number of a dictionary item a number cell, aligned and written as the dictionary's.
                     Repeater {
-                        model: category.names.map((name, column) => ({
-                                    "name": name,
-                                    "column": column,
-                                    "kind": category.kinds[column] ?? "text"
-                                }))
+                        model: categoryData.cells
                         delegate: DelegateChooser {
                             role: "kind"
                             DelegateChoice {
@@ -154,10 +150,10 @@ Column {
                                     id: choice
 
                                     required property var modelData
-                                    readonly property bool editable: !category.output && group.source !== null && group.source.file !== ""
+                                    readonly property bool editable: !categoryData.output && group.source !== null && group.source.file !== ""
 
                                     SearchableComboBox {
-                                        readonly property OptionListModel options: category.options[choice.modelData.column] ?? null
+                                        readonly property OptionListModel options: categoryData.options[choice.modelData.column] ?? null
 
                                         objectName: `generated.${group.categoryId}.${choice.modelData.name}.${row.index}`
                                         inTable: true
@@ -183,9 +179,9 @@ Column {
                                     horizontalAlignment: Text.AlignHCenter
                                     accepts: modelData.kind === "number" ? "number" : "text"
                                     uid: isNumber ? `${group.categoryId}.${modelData.name}` : ""
-                                    displayed: category.output
+                                    displayed: categoryData.output
                                     value: isNumber ? Number(cellText) : cellText
-                                    readOnly: category.output || group.source === null || group.source.file === ""
+                                    readOnly: categoryData.output || group.source === null || group.source.file === ""
                                     onCommitted: text => group.apply(row.index, modelData.name, text)
                                 }
                             }

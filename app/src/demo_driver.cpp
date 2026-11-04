@@ -594,6 +594,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "6-develop", {"preferences.tab.develop"}});
         }
     }
+    // An example from an online collection (ADR-0068), opened from the Examples list, the list searched down to the
+    // rows that fit the sidebar. Run only when asked (`--demo-only collection-`), with EDI_ONLINE_SOURCES naming the
+    // fixture collections under tests/fixtures/online_sources.
+    if (only.startsWith(QLatin1String("collection-"))) {
+        steps_.push_back({"collection-1-list", start + QStringList{"appBar.tab.project", basic, "examples.search", "type:HRPT"}});
+        steps_.push_back({"collection-2-opened", {"examples.open.lbco-hrpt-project"}});
+    }
     // The Report page's sidebar, Main and Text, in both themes. Run only when asked (`--demo-only report-sidebar-`).
     if (only.startsWith(QLatin1String("report-sidebar-"))) {
         const QString report = QStringLiteral("appBar.tab.report");
@@ -1672,9 +1679,9 @@ bool DemoDriver::perform(const QString& action) {
         const QStringList parts = action.mid(17).split(QLatin1Char('|'));
         for (const QString& resource : parts.first().split(QLatin1Char(','))) {
             const QString target = loaded_files_.filePath(resource.section(QLatin1Char('/'), -1));
-            QFile source(QStringLiteral(":/edi/examples/") + resource);
+            QFile source(QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + u'/' + resource);
             if (!source.open(QIODevice::ReadOnly)) {
-                fail(QStringLiteral("step %1: no bundled file %2").arg(steps_[current_].image, resource));
+                fail(QStringLiteral("step %1: no example file %2").arg(steps_[current_].image, resource));
                 return false;
             }
             QString content = QString::fromUtf8(source.readAll());
@@ -1801,6 +1808,8 @@ void DemoDriver::settle_then(std::function<void()> next) {
         auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         const bool calculating =
             session != nullptr && session->project() != nullptr && session->project()->calculating();
+        // An example fetched from an online collection opens once its download lands (ADR-0068).
+        const bool opening = session != nullptr && session->openingExample();
         // A page still being made after a project opened keeps its tab disabled, which no frame shows.
         bool preparing = false;
         for (const QString& tab : {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
@@ -1809,7 +1818,7 @@ void DemoDriver::settle_then(std::function<void()> next) {
             preparing = preparing || (item != nullptr && item->property("preparing").toBool());
         }
         const QImage frame = window_.grabWindow();
-        if (!calculating && !preparing && !previous_frame_.isNull() && frame == previous_frame_) {
+        if (!calculating && !opening && !preparing && !previous_frame_.isNull() && frame == previous_frame_) {
             next();
             return;
         }
@@ -1823,8 +1832,9 @@ void DemoDriver::settle_then(std::function<void()> next) {
                      .arg(steps_[current_].image)
                      .arg(kSettleIntervalMs * max_attempts)
                      .arg(calculating ? QStringLiteral("a calculation is in flight")
-                                      : preparing ? QStringLiteral("a workflow page is preparing")
-                                                  : QStringLiteral("the window kept changing")));
+                          : opening   ? QStringLiteral("an example is being fetched")
+                          : preparing ? QStringLiteral("a workflow page is preparing")
+                                      : QStringLiteral("the window kept changing")));
             return;
         }
         previous_frame_ = frame;

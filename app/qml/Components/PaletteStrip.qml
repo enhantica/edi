@@ -19,17 +19,7 @@ Column {
     readonly property bool dark: EaStyle.Colors.isDarkPalette
     readonly property real cell: EaStyle.Sizes.fontPixelSize * 1.25
     // Each position's block kind in the open project: "experiment", "structure" or "" when free.
-    readonly property var used: {
-        const kinds = [];
-        const project = Session.project;
-        if (project) {
-            for (const position of project.experimentColourPositions)
-                kinds[position] = "experiment";
-            for (const position of project.structureColourPositions)
-                kinds[position] = "structure";
-        }
-        return kinds;
-    }
+    readonly property var used: ApplicationInfo.palettePositions()
 
     spacing: EaStyle.Sizes.fontPixelSize * 0.5
 

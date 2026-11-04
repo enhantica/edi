@@ -45,6 +45,7 @@ struct LivePreview::State {
     // obsolete: it stops at its next checkpoint and its result is rejected. The newest state is
     // calculated as soon as the worker is free.
     static void request(const std::shared_ptr<State>& self) {
+        if (!self->open) return;
         self->owed = true;
         if (self->in_flight != 0) {
             self->worker.cancel(self->ticket);
@@ -54,14 +55,12 @@ struct LivePreview::State {
     }
 
     static void start(const std::shared_ptr<State>& self) {
-        self->owed = false;
+        if (!self->open || self->in_flight != 0) return;
         const std::uint64_t generation = self->newest;
-        self->in_flight = generation;
         auto snapshot = std::make_shared<WorkSnapshot>(snapshot_for_work(self->live));
         self->trace(work::EventKind::Snapshot, generation);
-        self->ticket = self->worker.submit(
-            kChannel,
-            [self, snapshot, generation](const work::CancelToken& token,
+        if (!self->open) return;
+        work::Job job = [self, snapshot, generation](const work::CancelToken& token,
                                          const work::Emit& emit) -> work::Delivery {
                 // The calculation traces its own start and end (edi::calculate), so the two events lie
                 // inside whatever times the call. A seam that replaces the calculation without running
@@ -80,7 +79,20 @@ struct LivePreview::State {
                     observe(self, work::EventKind::Calculated, generation, emit);
                 }
                 return [self, result, generation] { deliver(self, generation, *result); };
-            });
+            };
+        // Post may deliver inline. Publish generation/owed before admission can
+        // call any observer; only that still-live generation may take the ticket.
+        self->in_flight=generation;self->ticket=0;self->owed=false;
+        work::Ticket ticket=0;
+        try {ticket=self->worker.submit(kChannel,std::move(job));}
+        catch(...) {
+            if(self->in_flight==generation && self->ticket==0){self->in_flight=0;self->owed=true;}
+            throw;
+        }
+        if(self->in_flight==generation && self->ticket==0)self->ticket=ticket;
+        if(!self->open || (self->in_flight==generation && self->owed)) {
+            try{self->worker.cancel(ticket);}catch(...) {}
+        }
     }
 
     // Owner thread: the calculation of `generation` has finished.
@@ -90,6 +102,7 @@ struct LivePreview::State {
             return;
         }
         self->in_flight = 0;
+        self->ticket = 0; // A finished ticket can never stand for a later preparation.
         if (generation != self->newest || result.cancelled) {
             // A newer request exists: nothing is written and nothing is shown.
             self->trace(work::EventKind::Rejected, generation);
@@ -98,7 +111,7 @@ struct LivePreview::State {
             PreviewResult shown{generation, result.refusal};
             if (publish(self->live, std::move(result)) == PublishOutcome::Published) {
                 self->trace(work::EventKind::Published, generation);
-                if (self->hooks.published) {
+                if (self->open && self->hooks.published) {
                     self->hooks.published(shown);
                 }
             } else {
@@ -110,7 +123,18 @@ struct LivePreview::State {
         }
         // The next calculation, in the same turn — unless a hook started it already.
         if (self->open && self->owed && self->in_flight == 0) {
-            start(self);
+            try { start(self); }
+            catch (...) {
+                // This is an owner-thread delivery, outside an edit's catch.
+                // No new job was admitted; keep owed for an actual edit/Undo retry.
+                // The normal observer reports the preparation refusal, not a
+                // fabricated completed calculation or cleared busy state.
+                if (self->open && self->hooks.published) {
+                    const PreviewResult refused{self->newest,
+                        "The newest calculation could not be prepared; retry the edit or Undo."};
+                    self->hooks.published(refused);
+                }
+            }
         }
     }
 };
@@ -121,38 +145,63 @@ LivePreview::LivePreview(Project& live, work::Worker& worker, Hooks hooks, Seams
 LivePreview::~LivePreview() {
     state_->open = false;
     if (state_->in_flight != 0) {
-        state_->worker.cancel(state_->ticket);
+        try { state_->worker.cancel(state_->ticket); }
+        catch (...) { /* Cancel sets the real token before fallible tracing; Worker teardown also owns it. */ }
     }
 }
 
 void LivePreview::apply(const Edit& edit) {
-    State& s = *state_;
+    apply(edit, nullptr, nullptr);
+}
+
+void LivePreview::apply(const Edit& edit, bool* applied) {
+    apply(edit, applied, nullptr);
+}
+
+void LivePreview::apply(const Edit& edit, bool* applied, Edit::AppliedResult* result) {
+    if (applied != nullptr) *applied = false;
+    if (result != nullptr) *result = {};
+    const auto self = state_; // The edited hook may retire/delete the LivePreview owner.
+    State& s = *self;
+    if (!s.open) return;
     s.trace(work::EventKind::Input, s.newest + 1);
+    if (!s.open) return;
+    const auto editor_before=s.live.edits_.record();
+    const auto editor_before_epoch=editor_before->epoch.value();
     // An Edit refuses before it writes (edi/edit.hpp), so a refusal leaves nothing to undo: the model,
     // its publication and a calculation in flight are untouched because nothing touched them (I10).
     try {
-        edit();
+        const auto actual = edit.apply_result();
+        if (result != nullptr) *result = actual;
     } catch (...) {
         s.trace(work::EventKind::Refused, s.newest + 1);
         throw;
     }
+    if (applied != nullptr) *applied = true;
     s.live.note_edit();
+    if(result) {
+        result->editor_before=editor_before;result->editor_before_epoch=editor_before_epoch;
+        result->editor_after=s.live.edits_.record();result->editor_after_epoch=result->editor_after->epoch.value();
+    }
     ++s.newest;
     s.trace(work::EventKind::Applied, s.newest);
+    if (!s.open) return;
     if (s.hooks.edited) {
         s.hooks.edited();
     }
-    State::request(state_);
+    if (s.open) State::request(self);
 }
 
 void LivePreview::apply_setting(const Edit& edit) { edit(); }
 
 void LivePreview::recalculate() {
-    State& s = *state_;
+    const auto self = state_;
+    State& s = *self;
+    if (!s.open) return;
     s.trace(work::EventKind::Input, s.newest + 1);
     ++s.newest;
     s.trace(work::EventKind::Applied, s.newest);
-    State::request(state_);
+    if (s.open) State::request(self);
 }
 
 bool LivePreview::busy() const noexcept { return state_->in_flight != 0 || state_->owed; }

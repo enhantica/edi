@@ -5,8 +5,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 
-import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
+import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -21,6 +21,10 @@ import edi.app
 // file in its place. Create, Load and Load data are each one undoable step.
 SideBarGroup {
     id: group
+    property var pickerLife: ({
+            alive: true
+        })
+    Component.onDestruction: ApplicationInfo.formPickerDestroyed()
 
     property ProjectViewModel project: null
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
@@ -58,10 +62,7 @@ SideBarGroup {
             sourceModel: group.project ? group.project.experiments : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentExperimentIndex : -1
-            onRowActivated: row => {
-                if (group.project)
-                    group.project.currentExperimentIndex = row;
-            }
+            onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
             columns: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
@@ -152,11 +153,13 @@ SideBarGroup {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    editMember: row
+                    editModel: group.project ? group.project.experiments : null
+                    editIndex: row.index
                     objectName: `experiments.name.${row.index}`
                     horizontalAlignment: Text.AlignLeft
                     value: row.name
-                    onActiveFocusChanged: if (activeFocus)
-                        group.project.currentExperimentIndex = row.index
+                    onActiveFocusChanged: ApplicationInfo.finishUiEvent(12, undefined)
                     onCommitted: text => row.experiment.name = text
                 }
                 // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,
@@ -168,17 +171,23 @@ SideBarGroup {
                     property int horizontalAlignment: Text.AlignLeft
                     height: parent ? parent.height : 0
 
+                    // The data file's name, or that there is none yet: loading moved to the Load menu below (the
+                    // owner, 2026-11-03).
                     Row {
                         height: parent.height
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
-                        visible: !loadData.visible
 
                         EaComponents.ListViewLabel {
+                            readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
+
+                            objectName: `experiments.file.${row.index}`
                             width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideMiddle
-                            text: row.file
+                            color: empty ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.themeForeground
+                            text: empty ? qsTr("— no data yet") : row.file
+                            ToolTip.text: empty ? qsTr("Load measured data with the Load button below") : row.file
                         }
                         EaComponents.ListViewLabel {
                             id: templateTag
@@ -189,38 +198,6 @@ SideBarGroup {
                             elide: Text.ElideNone
                             color: EaStyle.Colors.themeAccent
                             text: Session.label("sequential_fit.template_file")
-                        }
-                    }
-                    // The file name as left-aligned text that loads another file in its place: the accent blue and a
-                    // pointing hand on hover, and "Load data…" in the accent blue before any data (the owner,
-                    // 2026-10-11). Every experiment but a scan's dataset can load data.
-                    EaComponents.ListViewLabel {
-                        id: loadData
-
-                        readonly property bool empty: row.experiment !== null && row.experiment.calculationOnly
-
-                        signal clicked
-
-                        objectName: `experiments.loadData.${row.index}`
-                        visible: !group.scan && row.experiment !== null && row.experiment.canLoadData
-                        width: Math.min(implicitWidth, fileCell.width)
-                        height: parent.height
-                        horizontalAlignment: Text.AlignLeft
-                        elide: Text.ElideMiddle
-                        color: empty || loadDataHover.hovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-                        text: empty ? qsTr("Load data…") : row.file
-                        onClicked: group.chooseData(row.experiment)
-
-                        HoverHandler {
-                            id: loadDataHover
-                            cursorShape: Qt.PointingHandCursor
-                        }
-                        TapHandler {
-                            onTapped: loadData.clicked()
-                        }
-                        EaElements.ToolTip {
-                            text: qsTr("Load another data file in place of this one")
-                            visible: loadDataHover.hovered && EaGlobals.Vars.showToolTips
                         }
                     }
                 }
@@ -266,8 +243,37 @@ SideBarGroup {
             experiment: group.project ? group.project.currentExperiment : null
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
         }
+        // A scan whose data folder cannot be found (ADR-0069): the project still opens; this line says which folder
+        // and Locate folder… points the scan at its new place.
+        Row {
+            objectName: "experiments.dataNotFound"
+            visible: group.project !== null && group.project.missingDataFolder !== ""
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                width: EaStyle.Sizes.sideBarContentWidth - locateButton.width - parent.spacing
+                wrapMode: Text.Wrap
+                color: EaStyle.Colors.red
+                text: group.project !== null ? qsTr("Data not found: %1").arg(group.project.missingDataFolder) : ""
+            }
+            EaElements.Button {
+                id: locateButton
+                objectName: "experiments.locateFolder"
+                text: qsTr("Locate folder…")
+                onClicked: locateDialog.open()
+            }
+        }
+        FolderDialog {
+            id: locateDialog
+            title: qsTr("Locate the scan's data folder")
+            onAccepted: {
+                if (group.project !== null)
+                    group.project.locateDataFolder(selectedFolder);
+            }
+        }
 
-        // Load, Create and Duplicate side by side at equal widths (the owner, 2026-10-11).
+        // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-10-11, 2026-11-03). The Load menu
+        // holds a full experiment and measured data for the selected experiment, each from a file or from the web.
         Row {
             id: buttons
 
@@ -276,20 +282,88 @@ SideBarGroup {
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
+                id: loadButton
                 objectName: "experiments.load"
                 width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "upload"
-                text: qsTr("Load experiment")
-                ToolTip.text: qsTr("Load experiments from CIF or .edi files, each with its type, data and parameters")
-                // In the browser the files come through the page (edi ADR-0023).
-                onClicked: {
-                    if (WebFiles.available) {
-                        group.webRequestProject = group.project;
-                        group.webDataExperiment = null;
-                        group.webRequest = WebFiles.openFiles(".cif,.edi", true);
-                    } else {
-                        loadDialog.open();
+                text: qsTr("Load")
+
+                // The menu's caret, from the icon font: the text fonts have no such character.
+                EaElements.Label {
+                    anchors.right: parent.right
+                    anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.75
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                    color: loadButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                    text: "caret-down"
+                }
+                EaElements.ToolTip {
+                    text: qsTr("Load a full experiment, or measured data into the selected one, from a file or from the web")
+                    visible: loadButton.hovered && EaGlobals.Vars.showToolTips
+                }
+                onClicked: loadMenu.open()
+
+                EaElements.Menu {
+                    id: loadMenu
+                    objectName: "experiments.load.menu"
+                    y: loadButton.height
+                    // Nothing below the last item (the owner, 2026-11-04).
+                    bottomPadding: 0
+                    width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 24)
+
+                    readonly property ExperimentViewModel selected: group.project ? group.project.currentExperiment : null
+
+                    LoadMenuHeader {
+                        first: true
+                        text: qsTr("Full experiment")
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.experimentFile"
+                        fontIcon: "file"
+                        text: qsTr("From file…")
+                        hint: ".edi .cif"
+                        toolTip: qsTr("Load experiments from .edi or CIF files, each with its type, data and parameters")
+                        // In the browser the files come through the page (edi ADR-0023).
+                        onTriggered: ApplicationInfo.loadFormFiles(true)
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.experimentWeb"
+                        fontIcon: "globe"
+                        text: qsTr("From web…")
+                        hint: "EasyDiffraction"
+                        toolTip: qsTr("Search EasyDiffraction's collection for a full experiment and open it")
+                        onTriggered: onlineLoad.openFor("experiment", null)
+                    }
+                    // Measured data goes into the selected experiment, or replaces what it holds (the owner, 2026-11-04):
+                    // a new experiment always starts from Create experiment. With none selected the line says so and
+                    // the two items are greyed.
+                    readonly property bool dataIntoSelected: loadMenu.selected !== null && !group.scan && loadMenu.selected.canLoadData
+                    readonly property bool replacing: loadMenu.selected !== null && !loadMenu.selected.calculationOnly
+                    LoadMenuHeader {
+                        objectName: "experiments.load.dataHeader"
+                        // Guidance in the warning orange, as the Messages count (the owner, 2026-11-04).
+                        color: loadMenu.selected === null ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
+                        text: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace measured data of %1").arg(loadMenu.selected.name) : qsTr("Load measured data into %1").arg(loadMenu.selected.name)
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.dataFile"
+                        enabled: loadMenu.dataIntoSelected
+                        fontIcon: "file"
+                        text: qsTr("From file…")
+                        hint: ".xye .xy .dat .txt .csv · .int .hkl"
+                        toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace the measured data of %1 with a file's; its type and parameters stay, Undo brings the data back").arg(loadMenu.selected.name) : qsTr("Load a measured pattern or reflection list into %1").arg(loadMenu.selected.name)
+                        onTriggered: group.chooseDataForSelected()
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.dataWeb"
+                        enabled: loadMenu.dataIntoSelected
+                        fontIcon: "globe"
+                        text: qsTr("From web…")
+                        hint: "EasyDiffraction"
+                        toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : qsTr("Search EasyDiffraction's collection for measured data for %1").arg(loadMenu.selected.name)
+                        onTriggered: onlineLoad.openFor("data", loadMenu.selected)
                     }
                 }
             }
@@ -316,19 +390,26 @@ SideBarGroup {
         }
     }
 
+    OnlineLoadDialog {
+        id: onlineLoad
+        project: group.project
+        onDatasetsReady: (files, experiment) => {
+            if (experiment !== null && group.project !== null)
+                group.askDatasets(experiment, files);
+        }
+    }
+
+    // Measured data goes into the selected experiment (the owner, 2026-11-04); the menu offers it only then.
+    function chooseDataForSelected() {
+        if (project !== null && project.currentExperiment !== null)
+            chooseData(project.currentExperiment);
+    }
+
     // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to
     // that experiment wherever its row is by then, and is refused if it has gone.
     readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv,.int,.hkl"
     function chooseData(experiment) {
-        if (WebFiles.available) {
-            group.webRequestProject = group.project;
-            group.webDataExperiment = experiment;
-            group.webRequest = WebFiles.openFiles(group.dataFilter, false);
-        } else {
-            dataDialog.experiment = experiment;
-            dataDialog.project = group.project;
-            dataDialog.open();
-        }
+        ApplicationInfo.chooseExperimentData(experiment);
     }
 
     // This page's browser file request and the project it was made for: only its own answer is used, and only
@@ -340,30 +421,13 @@ SideBarGroup {
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            const experiment = group.webDataExperiment;
-            const forData = experiment !== null;
-            group.webDataExperiment = null;
-            if (group.project !== null && group.project === group.webRequestProject) {
-                if (forData)
-                    group.project.loadDataInto(experiment, files[0]);
-                else
-                    group.project.loadExperiments(files);
-            }
+            ApplicationInfo.formFilesOpened(request, files, true);
         }
         function onFailed(request) {
-            if (request === group.webRequest) {
-                group.webRequest = 0;
-                group.webDataExperiment = null;
-            }
+            ApplicationInfo.formFilesCancelled(request, true);
         }
         function onCancelled(request) {
-            if (request === group.webRequest) {
-                group.webRequest = 0;
-                group.webDataExperiment = null;
-            }
+            ApplicationInfo.formFilesCancelled(request, true);
         }
     }
 
@@ -379,19 +443,90 @@ SideBarGroup {
     // is still the open one.
     FileDialog {
         id: dataDialog
+        property var intent: null
         property var experiment: null
         property var project: null
         title: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? qsTr("Load measured reflections from FullProf's .int or a plain h k l F² su file (.hkl, .dat or any other)") : qsTr("Load measured data from a plain two- or three-column file")
         nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
+        // Several files at once (the owner, 2026-11-04): more than one asks how to load them.
+        fileMode: FileDialog.OpenFiles
         onAccepted: {
-            if (dataDialog.project !== null && dataDialog.project === group.project)
-                group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile);
-            dataDialog.project = null;
-            dataDialog.experiment = null;
+            if (selectedFiles.length > 1 && dataDialog.experiment !== null && dataDialog.project === group.project) {
+                const experiment = dataDialog.experiment;
+                const files = selectedFiles;
+                dataDialog.intent = null;
+                group.askDatasets(experiment, files);
+                return;
+            }
+            ApplicationInfo.acceptExperimentDataFile();
         }
-        onRejected: {
-            dataDialog.project = null;
-            dataDialog.experiment = null;
+        onRejected: ApplicationInfo.rejectExperimentDataFile()
+    }
+
+    // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup
+    // named after its file, or one experiment with a scan, the selected experiment its template and the files its
+    // datasets. Up to five files default to separate experiments, more to a scan.
+    function askDatasets(experiment, files) {
+        // Copied by default for a small set, linked above 20 files or 50 MB (the owner, 2026-11-04).
+        const dialog = datasetsComponent.createObject(Overlay.overlay, {
+            experiment: experiment,
+            files: files,
+            asScan: files.length > 5,
+            copy: files.length <= 20 && group.project.filesBytes(files) <= 50 * 1024 * 1024
+        });
+        dialog.open();
+    }
+
+    // Made only while it is asked and destroyed once closed. A Component is no item of the group: the group sizes to
+    // its one content column, and a second item (a Loader) left it an empty strip.
+    Component {
+        id: datasetsComponent
+        AppDialog {
+            id: datasetsChoice
+            objectName: "datasets.choice"
+            property var files: []
+            property ExperimentViewModel experiment: null
+            property bool asScan: false
+            property bool copy: true
+            title: qsTr("Load %1 datasets as").arg(files.length)
+            standardButtons: Dialog.Ok | Dialog.Cancel
+            contentWidth: AppSizes.messagesDialogContentWidth
+            contentHeight: datasetsColumn.implicitHeight
+            onClosed: destroy()
+            onAccepted: {
+                if (group.project !== null && datasetsChoice.experiment !== null)
+                    group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan, datasetsChoice.copy);
+            }
+
+            Column {
+                id: datasetsColumn
+                width: datasetsChoice.contentWidth
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                ChoiceRadioButton {
+                    objectName: "datasets.separate"
+                    text: qsTr("Separate experiments, one per file, set up as %1").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
+                    checked: !datasetsChoice.asScan
+                    onClicked: datasetsChoice.asScan = false
+                }
+                ChoiceRadioButton {
+                    objectName: "datasets.scan"
+                    text: qsTr("One experiment with a scan: %1 is the template, the files its datasets").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
+                    checked: datasetsChoice.asScan
+                    onClicked: datasetsChoice.asScan = true
+                }
+                EaElements.CheckBox {
+                    id: copyBox
+                    objectName: "datasets.copy"
+                    // What the choice means is its tool tip, shown when tool tips are on (the owner, 2026-11-04).
+                    ToolTip.text: datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")
+                    ToolTip.visible: copyBox.hovered && EaGlobals.Vars.showToolTips
+                    visible: datasetsChoice.asScan
+                    text: qsTr("Copy data into the project")
+                    checked: datasetsChoice.copy
+                    onToggled: datasetsChoice.copy = checked
+                }
+            }
         }
     }
 }

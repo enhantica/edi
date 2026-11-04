@@ -27,8 +27,7 @@ Grid {
 
     // A choice on one axis makes the experiment anew; the selector returns to the stored value otherwise.
     function choose(axis, token) {
-        if (row.project)
-            row.project.setExperimentType(row.experimentIndex, axis, token);
+        ApplicationInfo.chooseExperimentType(axis, token);
     }
 
     objectName: "experimentType"

@@ -45,9 +45,9 @@ File requests use real pointer input on the app's button instead of a synthetic 
 accessibility element. `Page.fileChooserOpened.backendNodeId` identifies the real file input;
 the former `backendDOMNodeId` lookup confused this event with an AX node. The chooser event's
 backend node must still equal the file input captured from the app's own request. The pointer
-action and chooser event are awaited together so a refused request retains its failure evidence. Structure remains single-file, Experiment remains batch, and Load data is
-single-file. The `--file-request-case=load-data` case creates an experiment and opens its actual
-Load data control; the full `all` case includes it. The driver never opens the input directly. Structure and Experiment groups start open
+action and chooser event are awaited together so a refused request retains its failure evidence. Structure remains single-file and full experiment remains batch. The
+`--file-request-case=load-data` case creates an experiment and opens **Load ▾ → Measured data into → From file…**.
+It requires a single-file chooser, and the full `all` case includes it. The driver never opens the input directly. Structure and Experiment groups start open
 (edi ADR-0017 section 3); the former unconditional header toggles closed them before Load.
 The driver preserves their open state and still requires the real chooser and native results.
 

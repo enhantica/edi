@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
@@ -12,8 +13,8 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // Structures (N) (easydiffractionbeta Pages/Model/SideBarBasic/Models.qml): the project's structures,
-// one current; a structure enters only from a `.edi` block file, while the project holds none — an
-// edi project holds one structure.
+// one current. The original Load accepts native .edi and the already supported
+// single-structure CIF vocabulary; all additions use the same editor/Undo.
 SideBarGroup {
     id: group
 
@@ -36,10 +37,7 @@ SideBarGroup {
             sourceModel: group.project ? group.project.structures : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentStructureIndex : -1
-            onRowActivated: row => {
-                if (group.project)
-                    group.project.currentStructureIndex = row;
-            }
+            onRowActivated: row => ApplicationInfo.activateFormBlock(row, true)
 
             columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
@@ -82,11 +80,13 @@ SideBarGroup {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    editMember: row
+                    editModel: group.project ? group.project.structures : null
+                    editIndex: row.index
                     horizontalAlignment: Text.AlignLeft
                     objectName: `structures.name.${row.index}`
                     value: row.name
-                    onActiveFocusChanged: if (activeFocus)
-                        group.project.currentStructureIndex = row.index
+                    onActiveFocusChanged: ApplicationInfo.finishUiEvent(10, undefined)
                     onCommitted: text => row.structure.name = text
                 }
                 EaComponents.ListViewButton {
@@ -99,30 +99,74 @@ SideBarGroup {
             }
         }
 
-        // Load and Create side by side, as easydiffractionbeta's Load and Define manually: Create adds
-        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). Under them Duplicate,
-        // and Load from COD, not available yet (the owner, 2026-10-11).
-        Grid {
-            columns: 2
+        // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-11-03): Create adds
+        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). The Load menu takes a
+        // structure from a file or from the web (COD or EasyDiffraction's collection).
+        Row {
+            id: buttons
+
+            readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
+                id: loadButton
                 objectName: "structures.load"
+                width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canLoadStructure
                 fontIcon: "upload"
-                text: qsTr("Load structure from file")
-                // In the browser the files come through the page (edi ADR-0023).
-                onClicked: {
-                    if (WebFiles.available) {
-                        group.webRequestProject = group.project;
-                        group.webRequest = WebFiles.openFiles(".cif,.edi", false);
-                    } else {
-                        loadDialog.open();
+                text: qsTr("Load")
+
+                // The menu's caret, from the icon font: the text fonts have no such character.
+                EaElements.Label {
+                    anchors.right: parent.right
+                    anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.75
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                    color: loadButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                    text: "caret-down"
+                }
+                EaElements.ToolTip {
+                    text: qsTr("Load a structure from a file or from the web")
+                    visible: loadButton.hovered && EaGlobals.Vars.showToolTips
+                }
+                onClicked: loadMenu.open()
+
+                EaElements.Menu {
+                    id: loadMenu
+                    objectName: "structures.load.menu"
+                    y: loadButton.height
+                    // Nothing below the last item (the owner, 2026-11-04).
+                    bottomPadding: 0
+                    width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 20)
+
+                    LoadMenuHeader {
+                        first: true
+                        text: qsTr("Structure")
+                    }
+                    LoadMenuItem {
+                        objectName: "structures.load.file"
+                        fontIcon: "file"
+                        text: qsTr("From file…")
+                        hint: ".cif .edi"
+                        toolTip: qsTr("Load a structure from a CIF or .edi file")
+                        // In the browser the files come through the page (edi ADR-0023).
+                        onTriggered: ApplicationInfo.loadFormFiles(false)
+                    }
+                    LoadMenuItem {
+                        objectName: "structures.load.web"
+                        fontIcon: "globe"
+                        text: qsTr("From web…")
+                        hint: "COD · EasyDiffraction"
+                        toolTip: qsTr("Search the Crystallography Open Database or EasyDiffraction's collection for a structure")
+                        onTriggered: onlineLoad.openFor("structure", null)
                     }
                 }
             }
             EaElements.SideBarButton {
                 objectName: "structures.create"
+                width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "plus-circle"
                 text: qsTr("Create structure")
@@ -131,42 +175,46 @@ SideBarGroup {
             }
             EaElements.SideBarButton {
                 objectName: "structures.duplicate"
+                width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.currentStructure !== null
                 fontIcon: "clone"
                 text: qsTr("Duplicate structure")
                 ToolTip.text: qsTr("Add a copy of the selected structure, linked to no experiment")
                 onClicked: group.project.duplicateStructure()
             }
-            EaElements.SideBarButton {
-                objectName: "structures.loadCod"
-                enabled: false
-                fontIcon: "cloud-download-alt"
-                text: qsTr("Load from COD")
-                ToolTip.text: qsTr("Loading from the Crystallography Open Database is not available yet")
-            }
         }
     }
 
+    OnlineLoadDialog {
+        id: onlineLoad
+        project: group.project
+    }
+
+    property var pickerLife: ({
+            alive: true
+        })
+    Component.onDestruction: ApplicationInfo.formPickerDestroyed()
     // This page's browser file request and the project it was made for: only its own answer is used, and only
     // while that project is still open.
     property int webRequest: 0
     property var webRequestProject: null
+    property var webIntent: null
+    function chooseStructure() {
+        return ApplicationInfo.chooseStructureFile();
+    }
+    function takeWebIntent(request) {
+        return ApplicationInfo.takeStructureWebIntent(request);
+    }
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            if (group.project !== null && group.project === group.webRequestProject)
-                group.project.loadStructure(files[0]);
+            ApplicationInfo.formFilesOpened(request, files, false);
         }
         function onFailed(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
+            ApplicationInfo.formFilesCancelled(request, false);
         }
         function onCancelled(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
+            ApplicationInfo.formFilesCancelled(request, false);
         }
     }
 

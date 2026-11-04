@@ -1032,4 +1032,84 @@ const std::vector<SceneStyle>& structure_style_table() {
     return table;
 }
 
+SharedSiteBasis shared_site_browser_basis(const StructureScene& scene) {
+    const auto normalized = [](Vec3 value) {
+        const double length = std::sqrt(value.x * value.x + value.y * value.y + value.z * value.z);
+        const double scale = 1.0 / (length == 0.0 || std::isnan(length) ? 1.0 : length);
+        return Vec3{value.x * scale, value.y * scale, value.z * scale};
+    };
+    // Non-finite raw report numbers were JSON null before the original THREE arithmetic, hence numeric zero.
+    const auto browser = [](Vec3 value) { return Vec3{std::isfinite(value.x) ? value.x : 0.0, std::isfinite(value.y) ? value.y : 0.0, std::isfinite(value.z) ? value.z : 0.0}; };
+    const Vec3 axis = normalized(browser(scene.frame.view_direction)), up = normalized(browser(scene.frame.view_up));
+    return {axis, up, normalized(cross(up, axis))};
+}
+SharedSiteMesh shared_site_mesh(const StructureScene& scene, std::span<const std::size_t> sites, int segments,
+                               int rings, SharedSiteMeshProfile profile, const SharedSiteBasis& basis) {
+    for (std::size_t site : sites) {
+        if (site >= scene.atoms.size()) throw std::invalid_argument("shared site mesh: site " + std::to_string(site) + " is not one of " + std::to_string(scene.atoms.size()) + " atoms");
+    }
+    segments = std::max(segments, 3); rings = std::max(rings, 2);
+    const bool qt = profile == SharedSiteMeshProfile::QtFloat;
+    SharedSiteMesh out;
+    const double limit = qt ? static_cast<double>(std::numeric_limits<float>::max()) : std::numeric_limits<double>::max();
+    out.low = {limit, limit, limit}; out.high = {-limit, -limit, -limit};
+    const auto colour = [qt](std::uint8_t channel) {
+        const double c = channel / 255.0;
+        if (qt) return static_cast<double>(static_cast<float>(c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4)));
+        // The pinned THREE 0.160.0 SRGBToLinear conversion, before Float32BufferAttribute storage.
+        return c < 0.04045 ? 0.0773993808 * c : std::pow(0.9478672986 * c + 0.0521327014, 2.4);
+    };
+    const auto component = [qt](double centre, double radius, double normal) {
+        if (qt) return static_cast<double>(static_cast<float>(centre) + static_cast<float>(radius) * static_cast<float>(normal));
+        return normal * radius + centre;
+    };
+    for (std::size_t k = 0; k < sites.size(); ++k) {
+        const SceneAtom& atom = scene.atoms[sites[k]];
+        Vec3 centre = atom.centre; double radius = atom.radius;
+        if (qt) { centre = {static_cast<float>(centre.x), static_cast<float>(centre.y), static_cast<float>(centre.z)}; radius = static_cast<float>(radius); }
+        else { centre = {std::isfinite(centre.x) ? centre.x : 0.0, std::isfinite(centre.y) ? centre.y : 0.0, std::isfinite(centre.z) ? centre.z : 0.0}; if (!std::isfinite(radius)) radius = 0.0; }
+        const auto bound = [qt](double a, double b, bool high) { return qt ? static_cast<double>(high ? static_cast<float>(a) + static_cast<float>(b) : static_cast<float>(a) - static_cast<float>(b)) : high ? a + b : a - b; };
+        out.low = {std::min(out.low.x, bound(centre.x, radius, false)), std::min(out.low.y, bound(centre.y, radius, false)), std::min(out.low.z, bound(centre.z, radius, false))};
+        out.high = {std::max(out.high.x, bound(centre.x, radius, true)), std::max(out.high.y, bound(centre.y, radius, true)), std::max(out.high.z, bound(centre.z, radius, true))};
+        const double ordinal = qt ? static_cast<double>(static_cast<float>(k) + 0.5f) : static_cast<double>(k) + 0.5;
+        double start = 0.0;
+        for (const ScenePart& part : atom.parts) {
+            const double fraction = std::isfinite(part.fraction) ? std::clamp(part.fraction, 0.0, 1.0) : 0.0;
+            if (fraction <= 0.0) continue;
+            const double span = fraction * 2.0 * std::numbers::pi;
+            const int steps = std::max(1, static_cast<int>(std::ceil(fraction * segments)));
+            const Vec3 color{colour(part.color.r), colour(part.color.g), colour(part.color.b)};
+            const auto base = static_cast<std::uint32_t>(out.vertices.size());
+            for (int i = 0; i <= rings; ++i) {
+                const double theta = std::numbers::pi * i / rings;
+                for (int j = 0; j <= steps; ++j) {
+                    const double phi = start + span * j / steps;
+                    const auto normal_component = [&](double axis, double up, double right) {
+                        if (qt) {
+                            const float side = static_cast<float>(up) * static_cast<float>(std::cos(phi)) + static_cast<float>(right) * static_cast<float>(std::sin(phi));
+                            const float normal = side * static_cast<float>(std::sin(theta)) + static_cast<float>(axis) * static_cast<float>(std::cos(theta));
+                            return static_cast<double>(normal);
+                        }
+                        double normal = axis * std::cos(theta);
+                        normal += up * (std::sin(theta) * std::cos(phi));
+                        normal += right * (std::sin(theta) * std::sin(phi));
+                        return normal;
+                    };
+                    const Vec3 normal{normal_component(basis.axis.x, basis.up.x, basis.right.x), normal_component(basis.axis.y, basis.up.y, basis.right.y), normal_component(basis.axis.z, basis.up.z, basis.right.z)};
+                    const Vec3 position{component(centre.x, radius, normal.x), component(centre.y, radius, normal.y), component(centre.z, radius, normal.z)};
+                    out.vertices.push_back({position, normal, color, ordinal});
+                }
+            }
+            const auto row = static_cast<std::uint32_t>(steps + 1);
+            for (int i = 0; i != rings; ++i) for (int j = 0; j != steps; ++j) {
+                const std::uint32_t a = base + static_cast<std::uint32_t>(i) * row + static_cast<std::uint32_t>(j), b = a + row;
+                out.indices.insert(out.indices.end(), {a, a + 1, b, a + 1, b + 1, b});
+            }
+            start += span;
+        }
+    }
+    if (out.vertices.empty()) out.low = out.high = {};
+    return out;
+}
+
 }  // namespace edi

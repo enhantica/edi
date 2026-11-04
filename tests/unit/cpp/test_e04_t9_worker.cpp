@@ -309,7 +309,7 @@ TEST_CASE("E04-T9 C1 C2 C3 C4 C7 C8 newest previews and independent ordered stre
             const auto prior_measured = project.experiment().data->intensity_meas;
             const auto before = edi::snapshot_for_work(project).stamps;
             const auto callback = [&] { project.structure().cell.length_a.value = a + .03; };
-            using Apply = decltype(&edi::LivePreview::apply);
+            using Apply = decltype(static_cast<void (edi::LivePreview::*)(const edi::Edit&)>(&edi::LivePreview::apply));
             CHECK_MESSAGE((!std::is_invocable_v<Apply, edi::LivePreview&, decltype(callback)>),
                           " C4 the edit door cannot accept a raw state-writing lambda");
             CHECK_MESSAGE((!std::is_invocable_v<Apply, edi::LivePreview&, std::function<void()>>),

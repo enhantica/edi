@@ -29,6 +29,14 @@ const std::vector<edi::SpaceGroupSettingName>& space_group_settings() {
     static const std::vector<edi::SpaceGroupSettingName> settings = edi::space_group_settings();
     return settings;
 }
+// The categories as the Structure page shows them: the Atomic displacement group lists one row per atom site, of
+// any ADP type, so its count is the sites', not the anisotropic tensors' the core loop holds (the owner, 2026-11-04).
+std::vector<edi::Category> shown_categories(edi::Structure& structure) {
+    std::vector<edi::Category> categories = edi::structure_categories(structure);
+    for (edi::Category& category : categories)
+        if (category.id == "atom_site_aniso") category.rows = structure.atom_sites.size();
+    return categories;
+}
 }  // namespace
 
 QStringList SpaceGroupViewModel::names() const {
@@ -56,17 +64,17 @@ void SpaceGroupViewModel::setNameHM(const QString& name) {
         return;  // the same group: its code stays as chosen
     }
     const std::optional<edi::SpaceGroupSettingName> setting = edi::space_group_setting_for_name(typed);
-    editor_.apply(setting ? edi::Edit::space_group_setting(group, *setting, false) : edi::Edit::assign(group.name_h_m, typed),
-                  false);
+    editor_.apply_creation_control(setting ? edi::Edit::space_group_setting(group, *setting, false) : edi::Edit::assign(group.name_h_m, typed),
+                  false,{ProjectEditor::CreationAction::Kind::SpaceGroupName,&structure_,{},name});
 }
 
 void SpaceGroupViewModel::setCoordSystemCode(const QString& code) {
     edi::SpaceGroup& group = structure_.space_group;
     const std::string chosen = code.toStdString();
     const std::optional<edi::SpaceGroupSettingName> setting = edi::space_group_setting_for_code(it_number_, chosen);
-    editor_.apply(setting ? edi::Edit::space_group_setting(group, *setting, false)
+    editor_.apply_creation_control(setting ? edi::Edit::space_group_setting(group, *setting, false)
                           : edi::Edit::assign(group.coord_system_code, chosen),
-                  false);
+                  false,{ProjectEditor::CreationAction::Kind::SpaceGroupSetting,&structure_,{},code});
 }
 
 void SpaceGroupViewModel::setItNumber(int number) {
@@ -76,9 +84,9 @@ void SpaceGroupViewModel::setItNumber(int number) {
     edi::SpaceGroup& group = structure_.space_group;
     const std::optional<edi::SpaceGroupSettingName> setting =
         number > 0 ? edi::space_group_setting_for_number(number) : std::nullopt;
-    editor_.apply(setting ? edi::Edit::space_group_setting(group, *setting, true)
+    editor_.apply_creation_control(setting ? edi::Edit::space_group_setting(group, *setting, true)
                           : edi::Edit::assign(group.it_number, number > 0 ? std::optional<int>(number) : std::nullopt),
-                  false);
+                  false,{ProjectEditor::CreationAction::Kind::SpaceGroupNumber,&structure_,{},{},static_cast<double>(number)});
 }
 
 void SpaceGroupViewModel::sync() {
@@ -272,7 +280,8 @@ bool AtomSiteListModel::setText(int row, const QString& role, const QString& val
                            : role == QLatin1String("wyckoffLetter")   ? edi::Edit::assign(site->wyckoff_letter, text)
                                                                       : edi::Edit::adp_type(structure, *site, text);
     // A type change can add or remove a tensor row, which changes the parameter set.
-    return editor_.apply(edit, label || role == QLatin1String("adpType")).isEmpty();
+    return editor_.apply_creation_control(edit, label || role == QLatin1String("adpType"),
+        {ProjectEditor::CreationAction::Kind::AtomText,site,role,value}).isEmpty();
 }
 
 std::optional<std::uint64_t>& AtomSiteListModel::fixedSeed() {
@@ -290,7 +299,8 @@ void AtomSiteListModel::append() {
     }
     std::uniform_real_distribution<double> unit(0.0, 1.0);
     edi::AtomSite site = edi::new_atom_site(structure, [this, &unit] { return unit(*random_); });
-    editor_.apply(edi::Edit::append(structure.atom_sites, std::move(site)), true);
+    const ProjectEditor::CreationAction action{ProjectEditor::CreationAction::Kind::AtomAppend,&structure,{},QString::fromStdString(site.id.value())};
+    editor_.apply_creation_control(edi::Edit::append(structure.atom_sites, std::move(site)), true, action);
 }
 
 void AtomSiteListModel::duplicate(int row) {
@@ -315,7 +325,8 @@ void AtomSiteListModel::remove(int row) {
         return;
     }
     edi::Structure& structure = structure_;
-    editor_.apply(edi::Edit::erase_atom_site(structure, static_cast<std::size_t>(row)), true);
+    editor_.apply_creation_control(edi::Edit::erase_atom_site(structure, static_cast<std::size_t>(row)), true,
+        {ProjectEditor::CreationAction::Kind::AtomRemove,keyAt(row)});
 }
 
 // ---- AtomSiteAdpListModel -----------------------------------------------------------------------
@@ -363,7 +374,8 @@ void AtomSiteAdpListModel::setType(int row, const QString& type) {
         return;
     }
     // A tensor row comes or goes: the parameter set changes.
-    editor_.apply(edi::Edit::adp_type(structure_, *site, type.toStdString()), true);
+    editor_.apply_creation_control(edi::Edit::adp_type(structure_, *site, type.toStdString()), true,
+        {ProjectEditor::CreationAction::Kind::AtomAdpType,site,{},type});
 }
 
 // ---- ScatteringLengthListModel ------------------------------------------------------------------
@@ -433,7 +445,7 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
       text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this,
                           [&structure] { return std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string(); }, {},
                           [saved, &structure] { return saved.discovered(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); })) {
-    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
+    categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
     captureScene();
 }
@@ -466,7 +478,7 @@ void StructureViewModel::sync() {
     atom_sites_->sync();
     atom_site_adps_->sync();
     scattering_lengths_->sync();
-    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
+    categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
 }
 

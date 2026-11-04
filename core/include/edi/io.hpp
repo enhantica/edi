@@ -51,6 +51,12 @@ using WarningSink = std::function<void(const std::string&)>;
 // new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
 // and it reads its scan data from the unpacked folder.
 Project load_project(const std::string& path, const WarningSink& on_warning = {});
+// Ordinary GUI Open/Text restoration also accepts saved construction states with absent
+// structures, experiments or data. Present content and all held-structure references still
+// pass the same parser/integrity checks; no placeholder members are manufactured.
+// The original overload above remains the strict complete-model contract for non-GUI users.
+enum class ProjectLoadMode : std::uint8_t { Complete, Construction };
+Project load_project(const std::string& path, ProjectLoadMode mode, const WarningSink& on_warning = {});
 
 // Structures and experiments enter an open project from files. Every structure and experiment
 // text these loads and the project loader read goes through one check first: crysta decides once,
@@ -176,7 +182,8 @@ bool adopt_values(Project& project, const Project& saved);
 // it from the adopted values and write it again, so the files, the open project and a reopen agree, the calculated
 // pattern and R factors included; a project without results whose values changed is written again too, so what the
 // save derives from those values follows them. Returns whether any value changed. A project still being built is
-// adopted the same way. Throws IoError when the save cannot be read back.
+// adopted the same way. After a rewrite, verifies parameter values/s.u.s and bank settings from the final
+// original files. Throws IoError when readback fails or disagrees with the adopted scientific inputs.
 bool adopt_saved_project(Project& project, const std::string& directory);
 
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
@@ -302,7 +309,7 @@ UndoFitOutcome restore_fit_start(Project& project);
 void copy_fit_result(Project& to, const Project& from);
 // One experiment's share of the last fit (its `_fit_result_bank` row and its phases' `_fit_result_phase` rows),
 // from its counterpart in another copy of the project.
-void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept;
 void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
 // `tag` when its category belongs only to a powder pattern, which a single crystal refuses by name; else empty.
@@ -400,6 +407,11 @@ bool persistable_name(const std::string& name);
 /// row.
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name);
+/// Same reader and assembly, with an internal approved-byte reader path and the original source path
+/// for file identity/naming. A reflection capture must preserve the source's case-insensitive
+/// .int/plain suffix class; mismatch refuses before reading. No second parser or input authority is introduced.
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
+                                         const std::string& source_path, bool take_file_name);
 
 // Registration-live loader vocabulary (seam 20 / I15): the Python registration seam adds a new
 // `_peak.type` token here so the loader and selector accept it without a rebuild — crysta's
@@ -411,6 +423,8 @@ bool peak_type_known(const std::string& token);
 // and every registered token in the registry's order — the selector's supported-set query.
 std::optional<BeamModeEnum> peak_type_beam_mode(const std::string& token);
 std::vector<std::string> registered_peak_types();
+/// Visit registered tokens and their implemented beam modes without copying.
+void visit_registered_peak_types(const std::function<void(const std::string&, std::optional<BeamModeEnum>)>& visitor);
 
 
 

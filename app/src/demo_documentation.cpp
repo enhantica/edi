@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QFile>
+#include <QDir>
 #include <QFileInfo>
 #include <QJSEngine>
 #include <QJsonDocument>
@@ -83,7 +84,8 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
     const auto values = metadata.value("values").toObject();
     if (values.value("purpose").toArray().first().toString() != "refinement")
         return refuse("the refinement walkthrough requires an example with measured data");
-    const auto base = ":/edi/examples/" + example + "/project";
+    // The example's files from the source tree: the app bundles the catalogue, not the projects (ADR-0068).
+    const auto base = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/" + example + "/project";
     const auto structures = QDir(base + "/structures").entryList({"*.edi"}, QDir::Files);
     const auto experiments = QDir(base + "/experiments").entryList({"*.edi"}, QDir::Files);
     if (structures.isEmpty() || experiments.isEmpty() ||
@@ -313,6 +315,20 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
         if (!session || !session->project() || !QFileInfo(file).isFile() ||
             !session->project()->loadData(0, QUrl::fromLocalFile(file))) {
             fail("cannot load the tutorial measured data: " + file);
+            return false;
+        }
+        return true;
+    }
+    // A folder's data files loaded at once into the first experiment as a scan (Load N datasets as), copied into the
+    // project: `import-scan:<folder>`.
+    if (action.startsWith("import-scan:")) {
+        auto* session = session_for(window_);
+        const QDir folder(action.mid(12));
+        QList<QUrl> files;
+        for (const QString& name : folder.entryList(QDir::Files, QDir::Name)) files.append(QUrl::fromLocalFile(folder.filePath(name)));
+        if (!session || !session->project() || session->project()->experimentModels().isEmpty() || files.size() < 2 ||
+            !session->project()->loadDatasets(session->project()->experimentModels().front(), files, true, true)) {
+            fail("cannot load the scan's files from " + folder.path());
             return false;
         }
         return true;

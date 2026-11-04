@@ -75,6 +75,9 @@ build_kit() {
   kit="$QT/wasm_$flavour"
   wasm_check_emsdk_pin "$kit"
   out="$ROOT/build/wasm/$flavour"
+  # CMake and automoc need one physical graph path even through a build/wasm alias.
+  mkdir -p "$out"
+  out="$(cd "$out" && pwd -P)"
 
   key="crysta $SHA kit $EDI_WASM_QT/$flavour emsdk $EDI_WASM_EMSDK eigen $EDI_WASM_EIGEN_SHA256 fetched threads $threads"
   key+=" simd $simd sleef $simd require-simd ON"
@@ -95,7 +98,7 @@ build_kit() {
 
   echo "wasm-build: the app for $flavour"
   local args=(-S . -B "$out/app" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Release
-    -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF -DEDI_WORKER_OWNER_THREAD="$owner"
+    -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF -DEDI_APP_ASSISTANT=OFF -DEDI_WORKER_OWNER_THREAD="$owner"
     -DQT_HOST_PATH="$HOST" -DQT_HOST_PATH_CMAKE_DIR="$HOST/lib/cmake"
     -Dcrysta_DIR="$out/crysta-prefix/lib/cmake/crysta" -DEigen3_DIR="$EIGEN_DIR")
   # The multithread build starts its Web Workers with the page: Qt's four, the calculation worker and crysta's fill pool
@@ -110,6 +113,8 @@ build_kit() {
   # qt-cmake carries no exec bit in Qt's all_os archive.
   sh "$kit/bin/qt-cmake" "${args[@]}"
   cmake --build "$out/app" --target edi_app
+  # The web app carries no AI assistant (ADR-0023 §6): the linked kit is checked for its names.
+  bash "$ROOT/tools/ci/wasm-assistant-check.sh" "$out/app"
   printf '%s\n' "$SHA" >"$out/app/app/CRYSTA_SOURCE_SHA"
   ls -l "$out/app/app/edi_app.wasm"
 }

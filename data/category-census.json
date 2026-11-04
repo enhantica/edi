@@ -3759,6 +3759,36 @@
       "part": "the row token of the object's non-loop categories"
     },
     {
+      "member": "PreparedPeakRestore::target",
+      "type": "PeakBase*",
+      "not_storage": "a peak family Undo, prepared before it is written"
+    },
+    {
+      "member": "PreparedPeakRestore::image",
+      "type": "PeakBase",
+      "not_storage": "a peak family Undo, prepared before it is written"
+    },
+    {
+      "member": "PreparedPeakRestore::retirements",
+      "type": "std::vector<PeakRetirement>",
+      "not_storage": "a peak family Undo, prepared before it is written"
+    },
+    {
+      "member": "PeakRetirement::slot",
+      "type": "OptionalParameter*",
+      "not_storage": "a peak parameter an Undo retires (ADR-0012)"
+    },
+    {
+      "member": "PeakRetirement::detached",
+      "type": "std::shared_ptr<Membership>",
+      "not_storage": "a peak parameter an Undo retires (ADR-0012)"
+    },
+    {
+      "member": "PeakRetirement::retired",
+      "type": "std::vector<std::shared_ptr<OptionalParameter::ParameterCell>>",
+      "not_storage": "a peak parameter an Undo retires (ADR-0012)"
+    },
+    {
       "member": "InstrumentBase::calib_d_to_tof_offset",
       "type": "Parameter",
       "category": "_instrument"
@@ -3924,6 +3954,36 @@
       "part": "the row token of the object's non-loop categories"
     },
     {
+      "member": "PreparedAbsorptionRestore::target",
+      "type": "AbsorptionBase*",
+      "not_storage": "an absorption family Undo, prepared before it is written"
+    },
+    {
+      "member": "PreparedAbsorptionRestore::image",
+      "type": "AbsorptionBase",
+      "not_storage": "an absorption family Undo, prepared before it is written"
+    },
+    {
+      "member": "PreparedAbsorptionRestore::retirements",
+      "type": "std::vector<AbsorptionRetirement>",
+      "not_storage": "an absorption family Undo, prepared before it is written"
+    },
+    {
+      "member": "AbsorptionRetirement::slot",
+      "type": "OptionalParameter*",
+      "not_storage": "an absorption parameter an Undo retires (ADR-0012)"
+    },
+    {
+      "member": "AbsorptionRetirement::detached",
+      "type": "std::shared_ptr<Membership>",
+      "not_storage": "an absorption parameter an Undo retires (ADR-0012)"
+    },
+    {
+      "member": "AbsorptionRetirement::retired",
+      "type": "std::vector<std::shared_ptr<OptionalParameter::ParameterCell>>",
+      "not_storage": "an absorption parameter an Undo retires (ADR-0012)"
+    },
+    {
       "member": "ExtinctionBase::type",
       "type": "std::optional<std::string>",
       "category": "_extinction"
@@ -3997,6 +4057,36 @@
       "member": "ExtinctionBase::table_row",
       "type": "detail::CategoryRow",
       "part": "the row token of the object's non-loop categories"
+    },
+    {
+      "member": "PreparedExtinctionRestore::target",
+      "type": "ExtinctionBase*",
+      "not_storage": "an extinction family Undo, prepared before it is written"
+    },
+    {
+      "member": "PreparedExtinctionRestore::image",
+      "type": "ExtinctionBase",
+      "not_storage": "an extinction family Undo, prepared before it is written"
+    },
+    {
+      "member": "PreparedExtinctionRestore::retirements",
+      "type": "std::vector<ExtinctionRetirement>",
+      "not_storage": "an extinction family Undo, prepared before it is written"
+    },
+    {
+      "member": "ExtinctionRetirement::slot",
+      "type": "OptionalParameter*",
+      "not_storage": "an extinction parameter an Undo retires (ADR-0012)"
+    },
+    {
+      "member": "ExtinctionRetirement::detached",
+      "type": "std::shared_ptr<Membership>",
+      "not_storage": "an extinction parameter an Undo retires (ADR-0012)"
+    },
+    {
+      "member": "ExtinctionRetirement::retired",
+      "type": "std::vector<std::shared_ptr<OptionalParameter::ParameterCell>>",
+      "not_storage": "an extinction parameter an Undo retires (ADR-0012)"
     },
     {
       "member": "ReflnDataBase::index_h",
@@ -4531,6 +4621,11 @@
     {
       "member": "IterationRecord::values",
       "type": "std::map<std::string, double>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "IterationRecord::objective_value",
+      "type": "std::optional<double>",
       "not_storage": "a fit report"
     },
     {

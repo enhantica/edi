@@ -130,7 +130,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_control_geometry(const char* obj
                  {QStringLiteral("width"), rect.width()},
                  {QStringLiteral("height"), rect.height()},
                  {QStringLiteral("visible"), true},
-                 {QStringLiteral("enabled"), item->isEnabled()}};
+                 {QStringLiteral("enabled"), item->isEnabled()},
+                 {QStringLiteral("activeFocus"), item->hasActiveFocus()}};
         // What it says: its own text, else its visible descendants' texts in order (a tooltip's column of labels).
         if (item->metaObject()->indexOfProperty("text") >= 0) {
             state[QStringLiteral("text")] = item->property("text").toString();
@@ -194,7 +195,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE int edi_pattern_updates(int mode) {
     return fit->property("patternUpdates").toInt();
 }
 
-// Session::openExample(id) on Qt's main thread: 1 opened, 0 refused (Session names why), -1 no Session.
+// Session::openExample(id) on Qt's main thread: 1 started (the project opens when its download lands and
+// openingExample clears; exampleOpenFinished tells), 0 refused (Session names why), -1 no Session.
 extern "C" EMSCRIPTEN_KEEPALIVE int edi_open_example(const char* example_id) {
     auto* session = g_engine != nullptr ? g_engine->singletonInstance<edi_app::Session*>("edi.app", "Session") : nullptr;
     if (session == nullptr) {

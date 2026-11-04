@@ -11,6 +11,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_ui_script.job_controls import check_job_requirements
+from tests.fixtures.native_ui_script.runner import run_javascript
+
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
 
@@ -51,7 +54,7 @@ def spans(text):
     return found
 
 
-def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
+def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces(tmp_path, monkeypatch):
     text = 'Item { // owner\'s } comment\n text: "{fake}"; Child { value: 3 } /* } */ }'
     blocks = [text[a:b] for a, b in spans(text)]
     assert blocks == ['{ value: 3 }', text[text.index('{') :]], (
@@ -80,6 +83,13 @@ def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
     )
     with pytest.raises(pytest.fail.Exception, match='observed block must close'):
         block('Item { Child { value: 3 }', 'Item {')
+    call = 'ApplicationInfo.forward(() => {\n return "} )";\n }, () => {\n return 7;\n })'
+    assert property_value('Item {\n onReady: ' + call + '\n}', 'onReady') == call, (
+        'The observer retains every callback of the complete native forwarding expression'
+    )
+    # The same observer must distinguish unavailable core capability from a
+    # broken app artifact before any native vector can be skipped.
+    check_job_requirements(tmp_path, monkeypatch)
 
 
 def block(text, marker):
@@ -136,6 +146,41 @@ def continued_expression(text, start):
     return line
 
 
+def multiline_forwarding_value(text, start):
+    # A native forwarding call may contain several multiline callbacks.
+    # Observe the complete expression rather than its first callback block.
+    masked = lexical_mask(text, strings=True)
+    first_end = text.find('\n', start)
+    first_end = len(text) if first_end < 0 else first_end
+    pairs = {')': '(', ']': '[', '}': '{'}
+    pending = []
+    for char in masked[start:first_end]:
+        if char in '([{':
+            pending.append(char)
+        elif char in pairs:
+            if not pending:
+                return None
+            assert pending[-1] == pairs[char], (
+                'A forwarding expression must balance every delimiter before observation'
+            )
+            pending.pop()
+    if pending:
+        for end in range(first_end, len(masked)):
+            char = masked[end]
+            if char in '([{':
+                pending.append(char)
+            elif char in pairs:
+                assert pending and pending[-1] == pairs[char], (
+                    'A multiline forwarding expression must retain matched delimiters'
+                )
+                pending.pop()
+            if char == '\n' and not pending:
+                return text[start:end].strip()
+        assert not pending, 'A forwarding call must close before its expression is observed'
+        return text[start:].strip()
+    return None
+
+
 def property_value(text, name):
     text = lexical_mask(text)
     opening = text.find('{')
@@ -162,6 +207,9 @@ def property_value(text, name):
                     depth -= 1
                     if depth == 0:
                         return text[start : end + 1]
+        forwarded = multiline_forwarding_value(text, start)
+        if forwarded is not None:
+            return forwarded
         line = continued_expression(text, start)
         if line.endswith('{'):
             opening = text.index('{', start)
@@ -181,9 +229,7 @@ def control_type(text, name):
 def javascript(program):
     node = Path(sys.prefix) / 'bin/node'
     assert node.is_file(), 'Scan wiring: the declared Python environment supplies Node'
-    result = subprocess.run(
-        [node], input=program, text=True, capture_output=True, check=False, timeout=5
-    )
+    result = run_javascript(program, timeout=5)
     assert result.returncode == 0, (
         'Scan wiring: the actual expression must execute: ' + result.stderr
     )
@@ -200,31 +246,41 @@ def evaluate(expression, context=''):
 
 
 def require_availability(text):
-    control = item(text, 'experiments.loadData.${row.index}')
-    visible = property_value(control, 'visible')
-    enabled = (
-        property_value(control, 'enabled') if re.search(r'(?m)^\s*enabled:', control) else 'true'
-    )
+    control = item(text, 'experiments.load.dataFile')
+    enabled = property_value(control, 'enabled')
+    selected = property_value(object_id(text, 'loadMenu'), 'selected')
+    created_empty = {'canLoadData': True, 'calculationOnly': True}
+    created_loaded = {'canLoadData': True, 'calculationOnly': False}
+    imported_empty = {'canLoadData': False, 'calculationOnly': True}
+    imported_loaded = {'canLoadData': False, 'calculationOnly': False}
     contexts = [
-        (False, {'canLoadData': True, 'calculationOnly': True}, True),
-        (False, {'canLoadData': True, 'calculationOnly': False}, True),
-        (False, {'canLoadData': False, 'calculationOnly': True}, False),
-        (False, {'canLoadData': False, 'calculationOnly': False}, False),
-        (False, None, False),
-        (True, {'canLoadData': True, 'calculationOnly': True}, False),
-        (True, {'canLoadData': True, 'calculationOnly': False}, False),
+        (False, created_empty, True, True, True),
+        (False, created_loaded, True, True, True),
+        (False, imported_empty, True, True, False),
+        (False, imported_loaded, True, True, False),
+        (False, None, True, True, True),
+        (False, None, False, True, False),
+        (False, None, False, False, False),
+        (True, created_empty, True, True, False),
+        (True, created_loaded, True, True, False),
+        (True, None, True, True, False),
     ]
     program = 'let observed=[];'
-    for scan, experiment, _ in contexts:
+    for scan, experiment, can_create, has_project, _ in contexts:
+        project = {'currentExperiment': experiment, 'canCreateExperiment': can_create}
         program += (
-            '{const group={scan:' + json.dumps(scan) + '};'
-            'const row={experiment:' + json.dumps(experiment) + '};'
-            'observed.push(Boolean((' + visible + ') && (' + enabled + ')));}'
+            '{const group={scan:'
+            + json.dumps(scan)
+            + ',project:'
+            + json.dumps(project if has_project else None)
+            + '};'
+            'const loadMenu={selected:' + selected + '};'
+            'observed.push(Boolean(' + enabled + '));}'
         )
     program += 'console.log(JSON.stringify(observed));'
-    assert javascript(program) == [expected for _, _, expected in contexts], (
-        'Load data availability: created unloaded and loaded rows admit the action; '
-        'imported, absent and scan rows cannot invoke it'
+    assert javascript(program) == [expected for *_, expected in contexts], (
+        'Load data availability: the menu uses the selected experiment ownership after '
+        'first load and permits an empty selection only when creation is available'
     )
 
 
@@ -308,11 +364,20 @@ console.log(JSON.stringify(output));"""
     assert property_value(holder, 'visible') == 'control.searchable', (
         'Search wiring: threshold controls the attached field or its enclosing header'
     )
-    completed = block(shared, 'Component.onCompleted:')
-    require(
-        completed,
-        r'control\.popup\.contentItem\.header\s*=\s*searchHeader\s*;',
-        'Search wiring: input is the popup list header',
+    completed = property_value(shared, 'Component.onCompleted')
+    header_result = javascript(
+        'const searchHeader={marker:"actual-search-header"};'
+        'const ListView={OverlayHeader:"overlay-probe"};'
+        'const Qt={binding:callback=>callback};const Text={AlignLeft:"left"};'
+        'const control={inTable:false,contentItemLabel:null,delegateModel:{},searchable:true,'
+        'popup:{visible:false,contentItem:{header:null},focus:false}};'
+        '(function(){' + completed + '}).call(control);'
+        'console.log(JSON.stringify([control.popup.contentItem.header===searchHeader,'
+        'control.popup.contentItem.headerPositioning===ListView.OverlayHeader]));'
+    )
+    assert header_result == [True, True], (
+        'Search wiring: the complete original completion procedure attaches its actual '
+        'search header above the popup list entries'
     )
     accepted = property_value(field, 'onAccepted')
     # Each interaction has fresh state; execute the complete matrix in one declared Node host.
@@ -323,9 +388,9 @@ console.log(JSON.stringify(output));"""
         'activated:i=>picked.push(i),popup:{close:()=>closed++}};'
         + search_functions(shared)
         + 'control.filter=control.folded(term);'
-        + '(function()'
+        + '(function(){'
         + accepted
-        + ')();'
+        + '})();'
         'results.push([control.currentIndex,picked,closed]);}'
         'console.log(JSON.stringify(results));'
     )
@@ -692,8 +757,14 @@ statusBarIconForeground:'neutral'}};"""
     assert re.search(r'7.*2.*TIME.*ETA.*CHI', shown), (
         'Status bar wiring: the live-value consumer displays ok, fail, time, ETA and chi in order'
     )
-    assert not re.search(r'\.(?:cancel|stop)\s*\(', text), (
-        'Status bar wiring: no handler in the bar stops a fit'
+    # ADR-0017 §17 gives the shared Fit/Stop control this lifecycle. The
+    # independent assistant Cancel consumer elsewhere in the bar is unrelated.
+    fit_control = block(area, 'StatusBarFitButton {')
+    assert property_value(fit_control, 'fit') == 'bar.fit', (
+        'The shared Fit and Stop control must retain this actual fit owner'
+    )
+    assert not re.search(r'\.(?:cancel|stop)\s*\(', area), (
+        'The progress display delegates fitting lifecycle actions to the shared fit control'
     )
 
 
@@ -717,7 +788,7 @@ def test_create_experiment_is_enabled_and_routes_to_view_model():
     body = block(source('src/project_view_model.cpp'), 'bool ProjectViewModel::createExperiment(')
     require(
         body,
-        r'apply\(edi::Edit::create_experiment\(',
+        r'apply_creation_control\(edi::Edit::create_experiment\(',
         'Create wiring: the supported method applies the closed core edit',
     )
     require(
@@ -725,49 +796,77 @@ def test_create_experiment_is_enabled_and_routes_to_view_model():
         r'setCurrentExperimentIndex\(static_cast<int>\(experiment_models_\.size\(\)\) - 1\);',
         'Create wiring: creation selects the newly added row',
     )
-    require(
-        item(text, 'experiments.load'),
-        r'loadDialog\.open\(\)|WebFiles\.openFiles\(',
-        'Load wiring: the actual action opens the multi-file loader',
-    )
-    require(
-        block(text, 'FileDialog {'),
-        r'onAccepted:\s*group\.project\.loadExperiments\(selectedFiles\)',
-        'Load wiring: accepted files reach the supported edit boundary',
-    )
-
-    assert property_value(block(text, 'FileDialog {'), 'fileMode') == 'FileDialog.OpenFiles', (
+    dialog = object_id(text, 'loadDialog')
+    accepted = property_value(dialog, 'onAccepted')
+    assert property_value(dialog, 'fileMode') == 'FileDialog.OpenFiles', (
         'Load wiring: desktop chooses multiple files'
     )
-    action = property_value(item(text, 'experiments.load'), 'onClicked')
-    received = block(text, 'function onFilesOpened(')
-    for available in (False, True):
-        program = (
-            """let calls=[]; const files=['a.edi','b.edi'];
-const group={project:{loadExperiments:x=>calls.push(['loaded',x])},
-
-webRequest:0,webRequestProject:null};
-const WebFiles={available:AVAILABLE,openFiles:(filter,multiple)=>{calls.push(['web',
-
-filter,multiple]);return 41}};
-const loadDialog={open:()=>calls.push(['desktop'])};
-(function()ACTION)();
-RECEIVED
-if(WebFiles.available) onFilesOpened(41,files);
-console.log(JSON.stringify(calls));"""
-            .replace('AVAILABLE', json.dumps(available))
-            .replace('ACTION', action)
-            .replace('RECEIVED', received)
-        )
-        expected = (
-            [['web', '.cif,.edi', True], ['loaded', ['a.edi', 'b.edi']]]
-            if available
-            else [['desktop']]
-        )
-        assert javascript(program) == expected, (
-            'Load wiring: each platform opens its multi-file route and '
-            'browser files reach the initiating project'
-        )
+    load = item(text, 'experiments.load')
+    action = property_value(load, 'onClicked')
+    chosen = property_value(
+        item(object_id(load, 'loadMenu'), 'experiments.load.experimentFile'), 'onTriggered'
+    )
+    received = next(
+        (
+            block(text[match.start() :], 'function onFilesOpened(')
+            for match in re.finditer(r'function onFilesOpened\(', text)
+            if 'ApplicationInfo.formFilesOpened'
+            in block(text[match.start() :], 'function onFilesOpened(')
+        ),
+        '',
+    )
+    assert received, 'Load wiring: the full-experiment result reaches the C++ bridge'
+    program = """
+const files=['a.edi','b.edi'];
+function exercise(available, target) {
+    const calls=[];
+    const original={loadExperiments:paths=>calls.push(['original',paths])};
+    const successor={loadExperiments:paths=>calls.push(['successor',paths])};
+    const group={project:original,webRequest:0,webRequestProject:null,webDataExperiment:null};
+    const WebFiles={available,openFiles:(filter,multiple)=>{
+        calls.push(['web',filter,multiple]); return 41;
+    }};
+    const loadDialog={open:()=>calls.push(['desktop'])};
+    const loadMenu={open:()=>calls.push(['menu'])};
+    function openMenu() { OPEN }
+    function chooseFile() { CHOSEN }
+    function accept(selectedFiles) { ACCEPTED }
+    RECEIVED
+    openMenu();
+    chooseFile();
+    if (available) {
+        if (target === 'foreign') group.project=successor;
+        if (target === 'closed') group.project=null;
+        onFilesOpened(42,['foreign.edi']);
+        onFilesOpened(41,files);
+        onFilesOpened(41,['duplicate.edi']);
+    } else {
+        accept(files);
+    }
+    return calls;
+}
+console.log(JSON.stringify([
+    exercise(false, 'original'), exercise(true, 'original'),
+    exercise(true, 'foreign'), exercise(true, 'closed')
+]));
+"""
+    for marker, handler in (
+        ('OPEN', action),
+        ('CHOSEN', chosen),
+        ('ACCEPTED', accepted),
+        ('RECEIVED', received),
+    ):
+        program = program.replace(marker, handler)
+    web = ['web', '.cif,.edi', True]
+    assert javascript(program) == [
+        [['menu'], ['desktop'], ['original', ['a.edi', 'b.edi']]],
+        [['menu'], web, ['original', ['a.edi', 'b.edi']]],
+        [['menu'], web],
+        [['menu'], web],
+    ], (
+        'Load wiring: the real menu dispatches a multi-file chooser on either platform '
+        'and the browser only delivers the matching result to its original open project'
+    )
 
 
 def test_type_selectors_live_in_explorer_and_follow_selected_row():
@@ -819,13 +918,15 @@ def test_data_free_experiment_type_has_a_write_boundary(axis):
         'Type wiring: each supported axis uses the selected-row edit route',
     )
     chooser = block(text, 'function choose(')
-    activation = block(source('qml/Components/SelectorField.qml'), 'onActivated:').split(':', 1)[1]
+    activation = property_value(source('qml/Components/SelectorField.qml'), 'onActivated')
     program = (
         """const Qt={binding:f=>f()}; let calls=[];
 const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}};
 const options={tokenAt:index=>['old','chosen','other'][index],
                indexOf:value=>['old','chosen','other'].indexOf(value)};
-const selector={token:'old'}; const token=selector.token; let currentIndex=0; let refusal='';
+const editorLife={alive:true}; let activation=null;
+const selector={token:'old',options,get activation(){return activation}};
+const token=selector.token; let currentIndex=0; let refusal='';
 const Session={project:{lastError:''}};
 CHOOSER
 const selected=token=>choose(AXIS,token);
@@ -841,7 +942,7 @@ console.log(JSON.stringify([calls,currentIndex]));"""
     )
     require(
         block(source('src/project_view_model.cpp'), 'bool ProjectViewModel::setExperimentType('),
-        r'apply\(edi::Edit::replace_experiment\(project,\s*experiment,',
+        r'apply_creation_control\(edi::Edit::replace_experiment\(project,\s*experiment,',
         'Type wiring: supported edits reach the core replacement boundary',
     )
 
@@ -1072,17 +1173,23 @@ def test_effective_consumers_reject_wrong_branches_and_disconnected_search(chann
         ),
         ('matching ? 1 : 0', 'matching ? 0 : 1'),
         (
-            'control.popup.contentItem.header = searchHeader',
-            'control.popup.contentItem.header = null',
+            'control.popup.contentItem.model = Qt.binding(',
+            (
+                'control.popup.contentItem.header = null; '
+                'control.popup.contentItem.model = Qt.binding('
+            ),
         ),
-        ('control.currentIndex = index', 'control.currentIndex = 0'),
+        (
+            'ApplicationInfo.searchAccepted()',
+            'control.currentIndex = 0; control.activated(0); control.popup.close()',
+        ),
     ]:
         key = {
             'control.searchText = text': 'search-input',
             'matching ? EaStyle.Sizes.comboBoxHeight : 0': 'search-height',
             'matching ? 1 : 0': 'search-opacity',
-            'control.popup.contentItem.header = searchHeader': 'search-header',
-            'control.currentIndex = index': 'search-index',
+            'control.popup.contentItem.model = Qt.binding(': 'search-header',
+            'ApplicationInfo.searchAccepted()': 'search-index',
         }[old]
         if channel != key:
             continue
@@ -1126,76 +1233,6 @@ def test_search_accepts_direct_field_and_state_compositions():
     assert visible_delegate != delegate, 'Search wiring: the control supplies visibility filtering'
     assert_search(shared)
     assert_search(direct, visible_delegate)
-
-
-def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility(monkeypatch):
-    original = source
-    # Load-data availability escapes live in test_plain_data_picker, with their
-    # own valid controls for unloaded, loaded and imported rows.
-    checks = [
-        (
-            'src/project_view_model.cpp',
-            'setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);',
-            'setCurrentExperimentIndex(0);',
-            test_create_experiment_is_enabled_and_routes_to_view_model,
-            (),
-        ),
-        (
-            'qml/Components/SelectorField.qml',
-            'options.tokenAt(index)',
-            'options.tokenAt(0)',
-            test_data_free_experiment_type_has_a_write_boundary,
-            ('beamMode',),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'row.experimentIndex, axis, token',
-            '0, axis, token',
-            test_data_free_experiment_type_has_a_write_boundary,
-            ('beamMode',),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'row.experiment.polarisationOptions',
-            'row.experiment.dimensionalityOptions',
-            test_disabled_placeholders_and_load_data_are_present,
-            (),
-        ),
-        (
-            'qml/Pages/Experiment/MeasuredRangeGroup.qml',
-            'setRange(Number(text), group.range.maximum, group.range.step)',
-            'setRange(group.range.minimum, Number(text), group.range.step)',
-            test_simulation_range_fields_have_live_write_bindings,
-            ('minimum',),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentsGroup.qml',
-            'fileMode: FileDialog.OpenFiles',
-            'fileMode: FileDialog.OpenFile',
-            test_create_experiment_is_enabled_and_routes_to_view_model,
-            (),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentsGroup.qml',
-            'group.project.loadExperiments(files)',
-            'group.project.loadExperiments([])',
-            test_create_experiment_is_enabled_and_routes_to_view_model,
-            (),
-        ),
-    ]
-    for path, old, new, check, args in checks:
-        changed = original(path).replace(old, new)
-        assert changed != original(path), (
-            'Scan wiring: every forwarding escape must reach its actual operation'
-        )
-        monkeypatch.setattr(
-            __import__(__name__, fromlist=['source']),
-            'source',
-            lambda name, changed=changed, path=path: changed if name == path else original(name),
-        )
-        with pytest.raises((AssertionError, pytest.fail.Exception)):
-            check(*args)
-    monkeypatch.setattr(__import__(__name__, fromlist=['source']), 'source', original)
 
 
 @pytest.fixture(scope='module')

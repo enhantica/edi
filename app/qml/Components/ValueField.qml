@@ -23,6 +23,9 @@ EaElements.ParamTextField {
     property var fieldValue: ""
     property string unit: uid !== "" ? Session.units(uid, variant) : ""
     property bool editable: true
+    // Same displayed-value comparison as commit(), before navigation can blur.
+    // Invalid/partial text is still a draft; this property never submits it.
+    readonly property bool assistantManualDraft: editable && text !== field.value
     // "text", "number" or "integer": what the field accepts before anything reaches the model.
     property string accepts: "text"
     // An empty text is committed as it is (the owner reads it as "no value") rather than refused.
@@ -64,15 +67,8 @@ EaElements.ParamTextField {
 
     // Return and leaving the field both commit; the second of the two finds nothing new.
     function commit() {
-        if (!editable || text === field.value)
-            return;
-        refusal = clearable && text === "" ? "" : TypedInput.refusal(text, accepts);
-        if (refusal === "" && !typedAdmitted)
-            refusal = admitsRule;
-        if (refusal === "") {
-            committed(text);
-            refusal = Session.project ? Session.project.lastError : "";
-        }
-        text = Qt.binding(() => field.value);
+        ApplicationInfo.commitValueField(() => {
+            text = Qt.binding(() => field.value);
+        });
     }
 }

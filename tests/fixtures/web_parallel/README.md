@@ -194,7 +194,8 @@ hardcode positions, read AX rectangles, force visibility, expand groups or
 activate the control inside this hook.
 
 Required names from the shipped QML are `structures.load`, `experiments.load`,
-`experiments.create`, `experiments.loadData.0`, `examples.search`,
+`structures.load.file`, `experiments.create`, `experiments.load.experimentFile`,
+`experiments.load.dataFile`, `examples.search`,
 `examples.list` and each chosen `examples.open.<id>` delegate. The driver refuses wrong
 names, hidden/disabled controls, nonfinite/nonpositive geometry and rectangles
 outside the viewport. It still proves that `Page.fileChooserOpened.backendNodeId`

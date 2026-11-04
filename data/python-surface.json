@@ -963,6 +963,53 @@
      "verdict": "public"
     }
    },
+   "Collection": {
+    "entries": {
+     "need": {
+      "by": "deviation",
+      "ref": "D93",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "fetch": {
+     "need": {
+      "by": "deviation",
+      "ref": "D93",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "find": {
+     "need": {
+      "by": "deviation",
+      "ref": "D93",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "search": {
+     "need": {
+      "by": "deviation",
+      "ref": "D93",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "source": {
+     "need": {
+      "by": "deviation",
+      "ref": "D93",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
    "Constraint": {
     "enabled": {
      "need": {
@@ -6049,6 +6096,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "Collection": {
+    "need": {
+     "by": "deviation",
+     "ref": "D93",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "Constraint": {
     "need": {
      "by": "counterpart",
@@ -6742,6 +6798,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "load_collection": {
+    "need": {
+     "by": "deviation",
+     "ref": "D93",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "machine_report": {
     "need": {
      "by": "deviation",
@@ -6816,7 +6881,7 @@
    }
   }
  },
- "directionality": "crysta-py \u2286 edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration \u2014 crysta cannot add a public name without edi following",
+ "directionality": "crysta-py ⊆ edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration — crysta cannot add a public name without edi following",
  "public": {
   "AbsorptionBase": {
    "kind": "class",
@@ -6990,6 +7055,16 @@
     "length_b",
     "length_c",
     "parameters"
+   ]
+  },
+  "Collection": {
+   "kind": "class",
+   "members": [
+    "entries",
+    "fetch",
+    "find",
+    "search",
+    "source"
    ]
   },
   "Constraint": {
@@ -7910,6 +7985,9 @@
    "kind": "function"
   },
   "iteration_line": {
+   "kind": "function"
+  },
+  "load_collection": {
    "kind": "function"
   },
   "machine_report": {

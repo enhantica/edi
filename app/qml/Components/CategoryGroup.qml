@@ -24,6 +24,8 @@ SideBarGroup {
     property Component fallback: generatedContent
     // Whether the block holds measured data: a category only of use with it is hidden without (the owner, 2026-10-27).
     property bool measured: true
+    // Specialized controls can own a category instead of this generated group.
+    property bool admitted: true
 
     readonly property string categoryId: model.categoryId
     // The key its open or closed state is kept by, across the blocks the page shows.
@@ -31,7 +33,7 @@ SideBarGroup {
 
     // A Basic category with an Extras part has a group in each tab; `contents` is the tab's own.
     readonly property bool extrasPart: shownTier === "Extras" && model.tier !== "Extras" && model.extrasPart
-    readonly property bool shown: (model.tier === shownTier || extrasPart) && (measured || !(extrasPart ? model.extrasNeedsData : model.needsData))
+    readonly property bool shown: admitted && (model.tier === shownTier || extrasPart) && (measured || !(extrasPart ? model.extrasNeedsData : model.needsData))
     // Among the groups its tab lists (SideBarGroups).
     readonly property bool listed: shown
 

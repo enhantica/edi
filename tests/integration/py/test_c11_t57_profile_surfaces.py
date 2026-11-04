@@ -68,7 +68,9 @@ def test_selected_profile_loads_calculates_and_survives_save(tmp_path, kind):
     expected_parameters = saved_parameters(project, 'iucr_99')
     saved = tmp_path / 'saved'
     project.save_as(saved)
-    require_saved_parameters(project.parameters, expected_parameters)
+    require_saved_parameters(
+        project.parameters, expected_parameters, model=project, phase='completed'
+    )
     emitted = '\n'.join(path.read_text() for path in (saved / 'experiments').glob('*.edi'))
     if limit:
         assert re.search(r'(?m)^_peak\.asym_beba_limit\s+40(?:\.0*)?\s*$', emitted), (
@@ -76,7 +78,9 @@ def test_selected_profile_loads_calculates_and_survives_save(tmp_path, kind):
         )
     assert TOKENS[kind] in emitted, ' save must retain the selected profile type'
     reloaded = edi.Project.load(saved)
-    require_saved_parameters(reloaded.parameters, expected_parameters)
+    require_saved_parameters(
+        reloaded.parameters, expected_parameters, model=reloaded, phase='loaded'
+    )
     reloaded.analysis.calculate()
     np.testing.assert_array_equal(
         expected_pattern,

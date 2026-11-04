@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.native_ui_script.runner import run_javascript
+from tests.integration.py.test_scan_app_contract import block, item, property_value, spans
 
 ROOT = Path(__file__).resolve().parents[3]
 QML = ROOT / 'app/qml'
@@ -18,13 +20,21 @@ def text(path):
 
 
 def body(source, declaration):
-    start = source.index('{', source.index(declaration)) + 1
-    depth = 1
-    for i in range(start, len(source)):
-        depth += (source[i] == '{') - (source[i] == '}')
-        if depth == 0:
-            return source[start:i]
-    raise ValueError('The production QML declaration must close its block')
+    if declaration.rstrip().endswith(':') and not declaration.lstrip().startswith('component '):
+        name = re.search(r'([A-Za-z_]\w*)\s*:$', declaration).group(1)
+        at = source.index(declaration)
+        begin, end = min(
+            (pair for pair in spans(source) if pair[0] < at < pair[1]),
+            key=lambda pair: pair[1] - pair[0],
+        )
+        expression = property_value(source[begin:end], name).strip()
+        if expression.startswith('{'):
+            return expression[1:-1]
+        if re.match(r'(?:\([^)]*\)|[A-Za-z_]\w*)\s*=>', expression):
+            return 'return (' + expression + ').apply(this, arguments);'
+        return 'return (' + expression + ');'
+    observed = block(source, declaration)
+    return observed[observed.index('{') + 1 : -1]
 
 
 def test_correlations_follows_the_existing_analysis_tabs():
@@ -84,9 +94,7 @@ def test_workflow_pages_follow_structure_and_experiment_presence(property_name, 
         visit(pending[0])
         script += ''.join('const ' + name + '=' + definitions[name] + ';' for name in ordered)
         script += 'process.stdout.write(JSON.stringify(Boolean(' + property_name + ')));'
-        outcome = subprocess.run(
-            ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
-        )
+        outcome = run_javascript(script, timeout=3)
         assert outcome.returncode == 0, (
             'The production enabled predicate must evaluate with the declared project counts'
         )
@@ -105,12 +113,18 @@ def test_create_project_passes_the_chosen_location_to_the_session():
     const EaGlobals={Vars:{showProjectDescriptionDialog:true}};
     const Preferences={newProjectSuRule:'iucr_99',newReportLibraries:'embedded'};
     const AppState={createFailed(){throw Error('creation refused')}};
+    let createIntent=null,createOperation=null; const assistantCreate=null;
+    const createLife={alive:true};
     const createDialog={projectName:'first',projectDescription:'desc',
       projectLocation:'/chosen/first',
       projectTitle:'title',projectAuthors:'author'};
     const WebFiles={available:false};
-    const Session={createProject(...args){calls.push(args);return true}};
-    function accept(){BODY}accept();
+    const Session={project:null,createProjectWithOutcome(...args){
+      calls.push(args);return {success:true,current:true,error:''}}};
+    function chooseCreate(){CHOOSE}
+    chooseCreate();
+    const group={createLife,createIntent,createOperation,assistantCreate};
+    function accept(){BODY}accept.call(createDialog);
     const before=calls.length;
     const flagBeforeCreate=EaGlobals.Vars.showProjectDescriptionDialog;
     createDialog.projectLocation='/other';createDialog.projectName='changed';
@@ -118,10 +132,10 @@ def test_create_project_passes_the_chosen_location_to_the_session():
     createDialog.projectTitle='changed title';createDialog.projectAuthors='changed author';
     queued.splice(0).forEach(callback=>callback());
     process.stdout.write(JSON.stringify({before,calls,flagBeforeCreate,
-      flagAfterCreate:EaGlobals.Vars.showProjectDescriptionDialog}));""".replace('BODY', accepted)
-    result = subprocess.run(
-        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
-    )
+      flagAfterCreate:EaGlobals.Vars.showProjectDescriptionDialog}));""".replace(
+        'BODY', accepted
+    ).replace('CHOOSE', body(source, 'function chooseCreate('))
+    result = run_javascript(script, timeout=3)
     assert result.returncode == 0, (
         'The actual Create acceptance handler must execute with its captured dialog values: '
         + result.stderr
@@ -129,7 +143,7 @@ def test_create_project_passes_the_chosen_location_to_the_session():
     observed = json.loads(result.stdout)
     assert [observed['before'], observed['calls']] == [
         0,
-        [['first', 'desc', '/chosen/first', 'iucr_99', 'title', 'author', True]],
+        [['first', 'desc', '/chosen/first', 'iucr_99', 'title', 'author', True, '']],
     ], 'Create must defer replacement and retain the accepted name, chosen location and metadata'
     assert observed['flagBeforeCreate'] is False, (
         'Create acceptance clears the open-dialog flag before the queued project replacement'
@@ -184,61 +198,49 @@ def test_wyckoff_open_list_and_closed_display_have_separate_formats():
 
 
 def test_experiment_data_header_and_link_are_declared():
+    """The data file column stays in place and the input action lives in Load."""
     source = text('Pages/Experiment/ExperimentsGroup.qml')
     assert 'qsTr("Data file")' in source, (
         'The experiments table must label its data column Data file'
     )
-    marker = source.index('id: loadData')
-    opening = source.rfind('EaComponents.ListViewLabel {', 0, marker)
-    assert opening >= 0, 'The load-data cell must be a plain table label'
-    cell = body(source[opening:], 'EaComponents.ListViewLabel')
-    assert 'id: loadData' in cell and 'horizontalAlignment: Text.AlignLeft' in cell, (
-        'The data-file link must use left-aligned plain text'
+    cell = item(source, 'experiments.file.${row.index}')
+    assert property_value(cell, 'horizontalAlignment') == 'Text.AlignLeft', (
+        'The data file column retains its left-aligned plain text'
     )
-    assert 'Qt.PointingHandCursor' in cell and 'HoverHandler' in cell, (
-        'The data-file link must offer a pointing-hand hover target'
+    assert not any(handler in cell for handler in ('TapHandler', 'HoverHandler', 'onClicked')), (
+        'The data file cell is passive because the menu owns measured-data input'
     )
-    assert 'TapHandler' in cell and 'onTapped: loadData.clicked()' in cell, (
-        'Pointer input on the data-file link must reach its production click signal'
+    menu_action = item(source, 'experiments.load.dataFile')
+    assert property_value(menu_action, 'onTriggered') == 'group.chooseDataForSelected()', (
+        'The measured-data file action dispatches to the selected experiment'
     )
-    assert 'onClicked: group.chooseData(row.experiment)' in cell, (
-        'The link click must load data into its own experiment'
+    assert 'loadMenu.selected.name' in property_value(menu_action, 'toolTip'), (
+        'The file action explains which selected experiment receives the data'
     )
-    assert 'Load another data file in place of this one' in cell and 'ToolTip' in cell, (
-        'The data-file link must explain in-place loading in its tooltip'
-    )
-    expressions = {
-        key: re.search(r'(?m)^\s*' + key + r':\s*([^\n]+)', cell).group(1)
-        for key in ('color', 'text', 'visible')
-    }
+
+    expressions = ','.join(property_value(cell, key) for key in ('color', 'text', 'ToolTip.text'))
     script = (
-        'const EaStyle={Colors:{themeAccent:"blue",themeForeground:"normal"}}; const qsTr=s=>s;'
-    )
-    script += 'let cases=[]; for(const empty of [false,true]) for(const hovered of [false,true]) {'
-    script += 'const row={file:"data.xy",experiment:{canLoadData:true}},group={scan:false};'
-    script += 'const loadDataHover={hovered};'
-    script += (
-        'cases.push(['
-        + expressions['color']
-        + ','
-        + expressions['text']
-        + ','
-        + expressions['visible']
+        'const EaStyle={Colors:{themeForegroundMinor:"muted",themeForeground:"normal"}};'
+        'const qsTr=s=>s;let cases=[];'
+        'for(const experiment of [{calculationOnly:false},{calculationOnly:true},null]) {'
+        'const row={file:"data.xy",experiment};const empty=('
+        + property_value(cell, 'empty')
+        + ');cases.push(['
+        + expressions
         + ']);}'
+        'process.stdout.write(JSON.stringify(cases));'
     )
-    script += 'process.stdout.write(JSON.stringify(cases));'
-    result = subprocess.run(
-        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
-    )
+    result = run_javascript(script, timeout=3)
     assert result.returncode == 0, (
-        'The actual link colour, label and visibility expressions must evaluate'
+        'The actual filename, placeholder and tooltip bindings must evaluate'
     )
-    assert json.loads(result.stdout) == [
-        ['normal', 'data.xy', True],
-        ['blue', 'data.xy', True],
-        ['blue', 'Load data…', True],
-        ['blue', 'Load data…', True],
-    ], 'The existing filename must turn blue on hover and the empty link must stay blue'
+    loaded, empty, no_experiment = json.loads(result.stdout)
+    assert loaded == no_experiment == ['normal', 'data.xy', 'data.xy'], (
+        'A populated data label shows and describes the actual filename'
+    )
+    assert empty[:2] == ['muted', '— no data yet'] and re.search(
+        r'load measured data.*\bLoad\b', empty[2], re.IGNORECASE
+    ), 'The muted empty label points users to Load for measured data'
     widths = re.search(r'(?m)^\s*columns:\s*(\[[^\n]+\])', source)
     assert widths, 'The Experiments table must declare each column through the shared width rule'
     common = text('Components/DataTable.qml')
@@ -250,7 +252,7 @@ def test_experiment_data_header_and_link_are_declared():
         'const columns=(' + widths[1] + ');const equalColumns=false,spreadColumns=[];'
         'process.stdout.write(JSON.stringify([columns,(' + filler[1] + ')]));'
     )
-    result = subprocess.run(['node', '-e', script], capture_output=True, text=True, check=False)
+    result = run_javascript(script, timeout=5)
     assert result.returncode == 0, 'The production Experiments column declarations must evaluate'
     actual, filler_index = json.loads(result.stdout)
     assert actual == [20, 17, 35, -1, -1, 0.001, 25] and filler_index == 4, (
@@ -262,6 +264,11 @@ def test_experiment_data_header_and_link_are_declared():
 def test_diagnostics_uses_the_preferences_shared_control_width():
     # Before: the Logging level box supplied the width. After: the dialog's
     # common control column supplies every full-width button and box.
+    authored = 'Item {\n component RowButton: Button { width: 37 }\n}'
+    assert body(authored, 'component RowButton:').strip() == 'width: 37', (
+        'The declaration observer must distinguish an inline component colon '
+        'from a property binding'
+    )
     source = text('Components/AppPreferencesDialog.qml')
     match = re.search(
         r'(?P<kind>(?:EaElements\.)?Button|RowButton)\s*\{\s*'
@@ -303,9 +310,7 @@ def test_create_location_joins_folder_and_edited_name_once(folder, name, expecte
     script += (
         'process.stdout.write(joinedPath(' + json.dumps(folder) + ',' + json.dumps(name) + '));'
     )
-    result = subprocess.run(
-        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
-    )
+    result = run_javascript(script, timeout=3)
     assert result.returncode == 0, 'The actual create-dialog path join must execute'
     assert result.stdout == expected, (
         'A chosen folder and an edited project name must join with exactly one native separator'
@@ -320,13 +325,15 @@ def test_save_asks_once_then_uses_the_existing_location():
     const Session={project:{path:'/chosen/first'},needsSaveAs:true,save(){saves++;return true}};
     """
     script += 'function saveProject(){' + body(source, 'function saveProject(') + '}'
-    script += 'function saveProjectAs(){' + body(source, 'function saveProjectAs(') + '}'
+    script += (
+        'let assistantSaveIntent="";function saveProjectAs(intent=""){'
+        + body(source, 'function saveProjectAs(')
+        + '}'
+    )
     script += 'const window={saveProjectAs};'
     script += 'saveProject();Session.needsSaveAs=false;saveProject();'
     script += 'process.stdout.write(JSON.stringify([asks,saves]));'
-    result = subprocess.run(
-        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
-    )
+    result = run_javascript(script, timeout=3)
     assert result.returncode == 0, (
         'The production Save action must execute through both lifecycle states'
     )
@@ -334,9 +341,10 @@ def test_save_asks_once_then_uses_the_existing_location():
         'Save must open the format dialog once and save later changes in '
         'place without another dialog'
     )
-    accepted = body(source[source.index('id: saveAsChoice') :], 'onAccepted:')
+    accepted = body(item(source, 'saveAs.choice'), 'onAccepted:')
     script = """let calls=[];
     const saveAsChoice={zip:false,copy:false,diskWritable:true};const WebFiles={available:false};
+    const window={assistantSaveIntent:''};
     const Session={downloadWebProject(){calls.push(['download'])},
       saveWebProjectAs(...args){calls.push(['web',...args])},
       suggestedSaveTarget(zip){return zip?'/chosen/name.zip':'/chosen/name'}};
@@ -348,9 +356,7 @@ def test_save_asks_once_then_uses_the_existing_location():
       WebFiles.available=browser;Object.assign(saveAsChoice,{zip,copy});accept();}
     WebFiles.available=true;saveAsChoice.diskWritable=false;accept();
     process.stdout.write(JSON.stringify(calls));""".replace('BODY', accepted)
-    outcome = subprocess.run(
-        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
-    )
+    outcome = run_javascript(script, timeout=3)
     assert outcome.returncode == 0, (
         'The actual Save-as acceptance must execute every desktop and browser destination: '
         + outcome.stderr
@@ -414,9 +420,7 @@ def test_background_switch_requires_confirmation_before_discarding_rows():
         'process.stdout.write(JSON.stringify([experiment.backgroundType,'
         'typeQuestion.opened,typeQuestion.token,typeQuestion.rows]));'
     )
-    outcome = subprocess.run(
-        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
-    )
+    outcome = run_javascript(script, timeout=3)
     assert outcome.returncode == 0, 'The production switch must evaluate before any mutation'
     assert json.loads(outcome.stdout) == ['polynomial', True, 'chebyshev', 3], (
         'Choosing another type with rows must leave the old model intact pending confirmation'

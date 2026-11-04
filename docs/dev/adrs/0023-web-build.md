@@ -143,6 +143,15 @@ The app links Qt Graphs (GPL-3.0), so the site is a GPLv3 work (ADR-0008, ADR-00
 and LGPL texts, the desktop app's licence files (`LICENSE`, `COPYING`, `THIRD-PARTY-NOTICES`), `DEPENDENCIES.md`
 and the shim's MIT licence. edi's source stays BSD 3-Clause.
 
+### 6. No AI assistant on the web
+
+The web app carries no AI assistant (the owner, 2026-11-04): the build option `EDI_APP_ASSISTANT`, on for the
+desktop and off under Emscripten, leaves the assistant's C++ (`assistant_*`, `codex_agent`), its QML components
+and its resources out of both kits; nothing stands in for them. The AI button stays, and on the web it opens a short
+popup instead of the panel: the assistant is available in the desktop app with the user's ChatGPT account, with a
+link to download it. `tools/ci/wasm-assistant-check.sh` runs after every kit links and fails the build if the linked
+`edi_app.wasm`, its loader or a data file still holds an assistant symbol, component or resource.
+
 ## Consequences
 
 - The owner can test the app in a browser from one archive; every later app change is built for the browser too.
@@ -162,3 +171,17 @@ and the shim's MIT licence. edi's source stays BSD 3-Clause.
 | QtWidgets' `QFileDialog::getOpenFileContent` / `saveFileContent` | Rejected: links QtWidgets into the browser build for two calls. |
 | IndexedDB (IDBFS) for the settings | Rejected: asynchronous, so the app would wait for it before loading QML; one local-storage key is synchronous. |
 | Emscripten's own zlib port for the archive | Rejected: Qt's archive classes are already linked. |
+
+
+### Physical paths for CMake graphs
+
+The normal WASM builder creates and resolves each kit's output directory with
+`pwd -P` before inspecting its native-build key or passing any graph/install path
+to CMake. A workspace may keep `build/wasm` on another filesystem through a
+symlink; CMake and automoc must use the same physical graph root when deriving
+source-header paths. Both kit modes, native-prefix identity keys, compiler flags,
+source selection and the logical output locations used by the packer stay the
+same. Existing caches are neither rewritten nor deleted to disguise another
+graph identity: a cache created with a different spelling may refuse a genuine
+reconfigure, which must be retained and handled explicitly. This path correction
+is not evidence of either kit compiling, linking or passing browser checks.

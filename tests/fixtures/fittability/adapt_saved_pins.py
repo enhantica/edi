@@ -72,13 +72,62 @@ def advance_table_helper(root, previous):
     transition_path.write_text(json.dumps(transition, indent=2) + '\n')
 
 
+def advance_table_assets(root, previous):
+    """Advance only copied non-scientific assets after proving every other hash."""
+    case = 'tests/fixtures/table_display'
+    names = ('README.md', 'metadata_bytes.py', 'notices.json')
+    repo = root.parents[2]
+    path = root / 'saved-main.json'
+    pins = json.loads(path.read_text())
+    transition_path = root / 'rounded-save-transitions.json'
+    transitions = json.loads(transition_path.read_text())
+    old = {name: hashlib.sha256((previous / name).read_bytes()).hexdigest() for name in names}
+    new = {name: (repo / case / name).read_bytes() for name in names}
+    hashes = {name: hashlib.sha256(data).hexdigest() for name, data in new.items()}
+    for rule in ('iucr_19', 'iucr_99'):
+        expected = pins['projects'][case][rule]
+        if any(expected[name] != old[name] for name in names):
+            raise ValueError('Every old copied asset must reproduce its immutable current pin')
+        with tempfile.TemporaryDirectory() as folder:
+            scratch = Path(folder)
+            actual = snapshot(
+                importlib.import_module('edi'),
+                repo / case,
+                scratch,
+                rule,
+                order_reference=expected,
+            )
+            if any((scratch / 'saved' / name).read_bytes() != new[name] for name in names):
+                raise ValueError('Saved copied assets must retain every actual source byte')
+        if actual != {**expected, **hashes}:
+            raise ValueError('Any other saved path or byte refuses the copied-asset transition')
+        for name in names:
+            expected[name] = hashes[name]
+            transitions['changes'].append({
+                'case': case,
+                'rule': rule,
+                'path': name,
+                'before': old[name],
+                'after': hashes[name],
+                'reason': 'Copied asset changed in the merged source; scientific bytes unchanged',
+            })
+    path.write_text(json.dumps(pins, indent=2, sort_keys=True) + '\n')
+    transition_path.write_text(json.dumps(transitions, indent=2) + '\n')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--before', type=Path)
     parser.add_argument('--after', type=Path)
     parser.add_argument('--before-helper', type=Path)
+    parser.add_argument('--before-assets', type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parent
+    if args.before_assets is not None:
+        if any(value is not None for value in (args.before, args.after, args.before_helper)):
+            parser.error('--before-assets cannot be combined with other transitions')
+        advance_table_assets(root, args.before_assets)
+        return
     if args.before_helper is not None:
         if args.before is not None or args.after is not None:
             parser.error('--before-helper cannot be combined with capture inputs')
