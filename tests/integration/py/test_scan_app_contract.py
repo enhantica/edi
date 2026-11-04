@@ -246,31 +246,41 @@ def evaluate(expression, context=''):
 
 
 def require_availability(text):
-    control = item(text, 'experiments.loadData.${row.index}')
-    visible = property_value(control, 'visible')
-    enabled = (
-        property_value(control, 'enabled') if re.search(r'(?m)^\s*enabled:', control) else 'true'
-    )
+    control = item(text, 'experiments.load.dataFile')
+    enabled = property_value(control, 'enabled')
+    selected = property_value(object_id(text, 'loadMenu'), 'selected')
+    created_empty = {'canLoadData': True, 'calculationOnly': True}
+    created_loaded = {'canLoadData': True, 'calculationOnly': False}
+    imported_empty = {'canLoadData': False, 'calculationOnly': True}
+    imported_loaded = {'canLoadData': False, 'calculationOnly': False}
     contexts = [
-        (False, {'canLoadData': True, 'calculationOnly': True}, True),
-        (False, {'canLoadData': True, 'calculationOnly': False}, True),
-        (False, {'canLoadData': False, 'calculationOnly': True}, False),
-        (False, {'canLoadData': False, 'calculationOnly': False}, False),
-        (False, None, False),
-        (True, {'canLoadData': True, 'calculationOnly': True}, False),
-        (True, {'canLoadData': True, 'calculationOnly': False}, False),
+        (False, created_empty, True, True, True),
+        (False, created_loaded, True, True, True),
+        (False, imported_empty, True, True, False),
+        (False, imported_loaded, True, True, False),
+        (False, None, True, True, True),
+        (False, None, False, True, False),
+        (False, None, False, False, False),
+        (True, created_empty, True, True, False),
+        (True, created_loaded, True, True, False),
+        (True, None, True, True, False),
     ]
     program = 'let observed=[];'
-    for scan, experiment, _ in contexts:
+    for scan, experiment, can_create, has_project, _ in contexts:
+        project = {'currentExperiment': experiment, 'canCreateExperiment': can_create}
         program += (
-            '{const group={scan:' + json.dumps(scan) + '};'
-            'const row={experiment:' + json.dumps(experiment) + '};'
-            'observed.push(Boolean((' + visible + ') && (' + enabled + ')));}'
+            '{const group={scan:'
+            + json.dumps(scan)
+            + ',project:'
+            + json.dumps(project if has_project else None)
+            + '};'
+            'const loadMenu={selected:' + selected + '};'
+            'observed.push(Boolean(' + enabled + '));}'
         )
     program += 'console.log(JSON.stringify(observed));'
-    assert javascript(program) == [expected for _, _, expected in contexts], (
-        'Load data availability: created unloaded and loaded rows admit the action; '
-        'imported, absent and scan rows cannot invoke it'
+    assert javascript(program) == [expected for *_, expected in contexts], (
+        'Load data availability: the menu uses the selected experiment ownership after '
+        'first load and permits an empty selection only when creation is available'
     )
 
 

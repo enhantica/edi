@@ -31,44 +31,42 @@ def by_id(text, name):
 
 
 def require_picker(text, browser, scenario='accepted', *, sample_form='powder'):
-    control = item(text, 'experiments.loadData.${row.index}')
-    chooser = block(text, 'function chooseData(')
-    received = block(text, 'function onFilesOpened(')
-    failed = block(text, 'function onFailed(')
-    cancelled = block(text, 'function onCancelled(')
+    selected = block(text, 'function chooseDataForSelected(')
     dialog = by_id(text, 'dataDialog')
-    accepted = property_value(dialog, 'onAccepted')
-    filters = property_value(dialog, 'nameFilters')
-    data_filter = property_value(text, 'dataFilter')
     program = """
 let calls=[];
 const ExperimentViewModel={SingleCrystal:'single crystal'};
 const initiator={id:'initiator',canLoadData:true,calculationOnly:true,sampleForm:SAMPLE_FORM};
 const other={id:'other',canLoadData:true,calculationOnly:true};
-const original={currentExperimentIndex:4,
+const original={currentExperimentIndex:4,currentExperiment:initiator,
+    createExperiment:()=>{
+        calls.push(['created']);
+        original.currentExperiment=initiator;
+        return true;
+    },
     loadDataInto:(experiment,file)=>calls.push(['loaded','original',experiment.id,file]),
     loadExperiments:files=>calls.push(['wrong-action',files])};
 const foreign={currentExperimentIndex:7,
     loadDataInto:(experiment,file)=>calls.push(['loaded','foreign',experiment.id,file])};
 const group={project:original,webRequest:0,webRequestProject:null,webDataExperiment:null,
     pickerLife:{alive:true}};
-const row={index:2,experiment:initiator};
 const Session={get project(){return group.project}};
 const qsTr=text=>text;
 const WebFiles={available:BROWSER,
     openFiles:(filter,multiple)=>{calls.push(['web',filter,multiple]);return 41;}};
-const dataDialog={intent:null,experiment:null,project:null,selectedFile:'chosen.dat',
+const dataDialog={intent:null,experiment:null,project:null,visible:false,selectedFile:'chosen.dat',
     open:()=>calls.push(['desktop',dataDialog.experiment.id])};
 group.dataFilter=DATA_FILTER;
-group.chooseData=function(experiment) CHOOSE;
+group.chooseData=CHOOSE;
+group.chooseDataForSelected=function() { with(group) SELECTED }
 function click() { ACTION }
 function accept() { ACCEPTED }
 RECEIVED
 FAILED
 CANCELLED
+BEFORE
 click();
 let desktopFilters=FILTERS;
-original.currentExperimentIndex=8;
 SCENARIO
 console.log(JSON.stringify({calls,desktopFilters}));
 """
@@ -86,38 +84,43 @@ console.log(JSON.stringify({calls,desktopFilters}));
         'failed': 'onFailed(41);',
         'foreign-cancel': 'onCancelled(42);',
         'foreign-failure': 'onFailed(42);',
-        'reindexed': 'row.index=9;',
-        'retargeted-row': 'row.experiment=other;',
+        'reindexed': 'original.currentExperimentIndex=9;',
+        'retargeted-row': 'original.currentExperiment=other;',
+        'create-target': '',
     }[scenario]
     substitutions = {
         'BROWSER': json.dumps(browser),
         'SAMPLE_FORM': json.dumps(sample_form),
-        'DATA_FILTER': data_filter,
-        'CHOOSE': chooser[chooser.index('{') :],
-        'ACTION': property_value(control, 'onClicked'),
-        'ACCEPTED': accepted,
-        'RECEIVED': received,
-        'FAILED': failed,
-        'CANCELLED': cancelled,
-        'FILTERS': filters,
+        'DATA_FILTER': property_value(text, 'dataFilter'),
+        'CHOOSE': block(text, 'function chooseData('),
+        'SELECTED': selected[selected.index('{') :],
+        'BEFORE': 'original.currentExperiment=null;' if scenario == 'create-target' else '',
+        'ACTION': property_value(item(text, 'experiments.load.dataFile'), 'onTriggered'),
+        'ACCEPTED': property_value(dialog, 'onAccepted'),
+        'RECEIVED': block(text, 'function onFilesOpened('),
+        'FAILED': block(text, 'function onFailed('),
+        'CANCELLED': block(text, 'function onCancelled('),
+        'FILTERS': property_value(dialog, 'nameFilters'),
         'SCENARIO': prefix + 'try {' + route + '} catch(error) {calls.push(["error"]);}',
     }
     for token, value in substitutions.items():
         program = program.replace(token, value)
     observed = javascript(program)
+    created = [['created']] if scenario == 'create-target' else []
     if browser:
-        assert observed['calls'] and observed['calls'][0][0] == 'web', (
+        calls = observed['calls'][len(created) :]
+        assert calls and calls[0][0] == 'web', (
             'The real browser click must open its file chooser before routing a result'
         )
         assert (
             {'.xye', '.xy', '.dat', '.txt', '.csv', '.int'}
             | ({'.hkl'} if sample_form == 'single crystal' else set())
-        ).issubset(set(observed['calls'][0][1].split(','))), (
+        ).issubset(set(calls[0][1].split(','))), (
             'The browser picker must admit every supported reflection extension, including hkl'
         )
-        expected = [['web', observed['calls'][0][1], False]]
+        expected = [*created, ['web', calls[0][1], False]]
     else:
-        expected = [['desktop', 'initiator']]
+        expected = [*created, ['desktop', 'initiator']]
     if scenario not in {'foreign-project', 'closed-project', 'cancelled', 'failed'}:
         expected.append(['loaded', 'original', 'initiator', 'chosen.dat'])
     assert observed['calls'] == expected, (
@@ -149,6 +152,7 @@ def test_load_data_availability_uses_ownership_after_first_load():
         (False, case)
         for case in [
             'accepted',
+            'create-target',
             'foreign-project',
             'closed-project',
             'reindexed',
@@ -159,6 +163,7 @@ def test_load_data_availability_uses_ownership_after_first_load():
         (True, case)
         for case in [
             'accepted',
+            'create-target',
             'foreign-request',
             'foreign-project',
             'closed-project',
@@ -179,10 +184,10 @@ def test_load_data_click_and_result_reach_the_initiating_row(browser, scenario):
 def test_availability_observer_rejects_retired_or_overbroad_rules(damage):
     text = source(PATH)
     require_availability(text)
-    control = item(text, 'experiments.loadData.${row.index}')
-    property_name = 'visible'  # The actual ownership/availability guard moved onto visibility.
+    control = item(text, 'experiments.load.dataFile')
+    property_name = 'enabled'
     replacement = (
-        'row.experiment !== null && row.experiment.calculationOnly'
+        'loadMenu.selected !== null && loadMenu.selected.calculationOnly'
         if damage == 'simulation-only'
         else 'false'
         if damage == 'always-disabled'
@@ -195,11 +200,19 @@ def test_availability_observer_rejects_retired_or_overbroad_rules(damage):
         require_availability(changed)
 
 
+@pytest.fixture(scope='module')
+def picker_control():
+    text = source(PATH)
+    for browser in (False, True):
+        require_picker(text, browser, 'accepted')
+    return text
+
+
 @pytest.mark.parametrize(
     ('old', 'new', 'browser', 'scenario'),
     [
-        ('onClicked: group.chooseData(row.experiment)', 'onClicked: {}', True, 'accepted'),
-        ('group.chooseData(row.experiment)', 'group.chooseData(other)', False, 'accepted'),
+        ('onTriggered: group.chooseDataForSelected()', 'onTriggered: {}', True, 'accepted'),
+        ('chooseData(project.currentExperiment)', 'chooseData(other)', False, 'accepted'),
         ('ApplicationInfo.chooseExperimentData(experiment);', 'return;', False, 'accepted'),
         (
             'ApplicationInfo.acceptExperimentDataFile()',
@@ -256,10 +269,9 @@ def test_availability_observer_rejects_retired_or_overbroad_rules(damage):
     ],
 )
 def test_picker_observer_rejects_disconnected_and_wrong_target_handlers(
-    old, new, browser, scenario
+    picker_control, old, new, browser, scenario
 ):
-    text = source(PATH)
-    require_picker(text, browser, 'accepted')
+    text = picker_control
     if old == 'project-identity':
         # A caller that bypasses the native guard must still red the same
         # foreign-project vector. Do not replace ApplicationInfo with a stub.
