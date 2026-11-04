@@ -480,13 +480,8 @@ EaComponents.ApplicationWindow {
                 // The web build's note (the owner, 2026-11-04): what the desktop app offers and how it signs in.
                 text: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your ChatGPT account. It signs in through OpenAI's official app server; your plan's usage limits apply.")
             }
-            EaElements.Label {
-                objectName: "assistant.desktopOnly.download"
+            AssistantDownloadLink {
                 visible: !ApplicationInfo.assistantBuilt
-                width: parent.width
-                textFormat: Text.RichText
-                text: "<a href=\"https://enhantica.github.io/edi/application/desktop/\">" + qsTr("Download the desktop app") + "</a>"
-                onLinkActivated: link => Qt.openUrlExternally(link)
             }
         }
     }

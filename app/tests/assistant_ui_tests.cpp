@@ -31,6 +31,7 @@ class AssistantUiTests : public QObject {
     Q_OBJECT
 private slots:
     void initTestCase() {
+        qputenv("QT_QUICK_CONTROLS_HOVER_ENABLED", "1");
         edi_app::use_fresh_settings();
         const auto root = QString::fromUtf8(EDI_SOURCE_DIR);
         const auto cod = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/cod/").toString();
@@ -117,6 +118,53 @@ private slots:
         for (auto* original : popups)
             structurePopup |= original->property("visible").toBool() && original->property("kind") == "structure";
         QVERIFY(structurePopup);
+    }
+    void downloadLinkMatchesOrdinaryStyle_data() {
+        QTest::addColumn<bool>("dark");
+        QTest::newRow("light") << false;
+        QTest::newRow("dark") << true;
+    }
+    void downloadLinkMatchesOrdinaryStyle() {
+        QFETCH(bool, dark);
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import edi.app
+            import EasyApplication.Gui.Style as EaStyle
+            Item {
+                width: 800; height: 180
+                function useDarkTheme(dark) { EaStyle.Colors.theme = dark ? EaStyle.Colors.DarkTheme : EaStyle.Colors.LightTheme }
+                readonly property color linkColor: download.foregroundColor()
+                readonly property color referenceColor: reference.foregroundColor()
+                readonly property bool linkHovered: download.hovered
+                AssistantDownloadLink { id: download; x: 20; y: 20 }
+                IconLink { id: reference; x: 20; y: 100; text: "Ordinary About-style link" }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        QVERIFY(QMetaObject::invokeMethod(root.data(), "useDarkTheme", Q_ARG(QVariant, dark)));
+        auto* link = root->findChild<QQuickItem*>("assistant.desktopOnly.download");
+        QVERIFY(link);
+        QCOMPARE(link->property("fontIcon").toString(), QString("external-link-alt"));
+        QCOMPARE(link->property("text").toString(), QString("Open the desktop download page"));
+        QCOMPARE(root->property("linkColor"), root->property("referenceColor"));
+        const auto normal = root->property("linkColor");
+        QQuickWindow window;
+        window.resize(800, 180);
+        auto* item = qobject_cast<QQuickItem*>(root.data());
+        item->setParentItem(window.contentItem());
+        const auto detach = qScopeGuard([item] { item->setParentItem(nullptr); });
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(&window));
+        QTest::mouseMove(&window, QPoint(790, 170));
+        QTest::mouseMove(&window, link->mapToScene(QPointF(link->width() / 2, link->height() / 2)).toPoint());
+        QTRY_VERIFY2(root->property("linkHovered").toBool(), qPrintable(QString("size=%1x%2 visible=%3 enabled=%4 hover=%5 active=%6").arg(link->width()).arg(link->height()).arg(link->isVisible()).arg(link->isEnabled()).arg(link->property("hoverEnabled").toBool()).arg(window.isActive())));
+        QTRY_VERIFY(root->property("linkColor") != normal);
     }
     void shownActionsKeepWorkingIndicator() {
         QQmlApplicationEngine engine;

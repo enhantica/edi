@@ -185,3 +185,10 @@ same. Existing caches are neither rewritten nor deleted to disguise another
 graph identity: a cache created with a different spelling may refuse a genuine
 reconfigure, which must be retained and handled explicitly. This path correction
 is not evidence of either kit compiling, linking or passing browser checks.
+
+## Desktop download page link
+
+The browser assistant popup reuses IconLink, the same theme-aware link used in
+About. Its external-link icon and wording say that it opens the desktop download
+page, which offers download choices. It does not imply an immediate download.
+The style regression checks its normal and hover colours in both themes.
