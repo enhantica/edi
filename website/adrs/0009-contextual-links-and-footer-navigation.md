@@ -1,7 +1,7 @@
 # ADR-0009: Contextual links and native footer navigation
 
 Date: 2026-10-30
-Status: accepted — owner requests less clutter and Previous/Next navigation
+Status: accepted for contextual links; footer navigation superseded on 2026-11-04
 
 ## Prior art and decision
 
@@ -14,3 +14,15 @@ Remove generic Related Physics and related-documentation trails. Link scientific
 ## Validation
 
 Strict builds verify all internal links and anchors. Check native Previous/Next targets and keyboard links at desktop/phone widths, ensure the landing page remains uncluttered, and inspect the Parameters page cited by the owner.
+
+
+## Footer-free documentation — 2026-11-04
+
+The owner requested the same footer-free presentation as Home on every user
+documentation page. Move the existing empty footer block from the Home template
+to the shared main override, inherited by the ordinary, Physics, GUI and interface
+templates. Remove `navigation.footer`; Previous/Next and the theme footer are no
+longer rendered. The contextual-link decision above remains in effect.
+
+A strict site build and inspection of its generated HTML verify that pages across
+all sections contain no footer element, while normal page content still renders.

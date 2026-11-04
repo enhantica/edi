@@ -28,7 +28,6 @@ theme:
     - navigation.indexes
     - navigation.path
     - navigation.top
-    - navigation.footer
     - toc.follow
     - content.code.copy
 extra_css:
