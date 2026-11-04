@@ -27,7 +27,7 @@ Deployment is opt-in (`EDI_DEPLOY_APP`); ordinary developer and WebAssembly buil
 layout. macOS gets an application bundle; Linux and Windows get a relocatable application directory.
 Use a user-writable default installation directory and do not require administrator access.
 After offline qualification, publish only the online installer. Initial component repositories use
-GitHub Pages under `/installers/testing/<platform>/repository/`. Installers are development artifacts,
+GitHub Pages under `/repository/testing/<platform>/`. Installers are development artifacts,
 without a signing identity or public release step. The Preferences update controls use the installed
 maintenance tool; ordinary development and WebAssembly builds do not pretend to support native updates.
 
@@ -64,3 +64,23 @@ receipts for Linux x86-64, Windows x86-64 and macOS arm64 independently.
 - [Installer command line](https://doc.qt.io/qtinstallerframework/ifw-cli.html)
 - [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits)
 - [Earlier installer workflow](https://github.com/easyscience/EasyDiffractionBeta/blob/master/.github/workflows/installer.yml)
+
+## Distribution layout and mirror
+
+GitHub Releases carries the small online installer archives. The generated component repository is a
+separate static file tree on GitHub Pages. Keep `repository/<channel>/<platform>/` for installer
+metadata and archives, using explicit platform/architecture names. This preserves the older project's
+platform separation while distinguishing testing from stable publication.
+
+`data/distribution.json` declares the primary Pages base and `https://download.easydiffraction.org/`
+as the future mirror. Both use identical relative paths and immutable archive bytes. The mirror is
+preconfigured but disabled in the installer until its content is available, so an empty mirror cannot
+block the initial installation. Native update metadata can try the mirror after the primary fails.
+The mirror host itself is populated by the owner; no DNS or hosting change is implied.
+
+Keep versioned third-party report libraries under `third-party/`, separate from application repositories.
+Preserve the existing pinned vendor files and their integrity hashes. Offline reports continue to embed
+those libraries and do not acquire a network dependency merely because a mirror exists.
+
+The initial supported Linux target is Ubuntu 24.04 or newer. Preserve the official helper rather than
+building a custom helper or packaging a replacement system C library for older systems.

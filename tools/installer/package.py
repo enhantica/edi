@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import urllib.request
@@ -19,6 +20,18 @@ import py7zr
 ROOT = Path(__file__).resolve().parents[2]
 SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.system()]
 SUFFIX = '.exe' if SYSTEM == 'windows' else ''
+PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'windows-x86_64'}[
+    SYSTEM
+]
+
+
+def repository_urls(channel: str) -> tuple[str, ...]:
+    """Return the primary repository and configured mirrors for this build platform."""
+    policy = json.loads((ROOT / 'data/distribution.json').read_text())
+    tail = policy['repository_path'].format(channel=channel, platform=PLATFORM_ID)
+    return tuple(
+        base.rstrip('/') + '/' + tail for base in [policy['primary_base'], *policy['mirror_bases']]
+    )
 
 
 def run(args, **kwargs: object) -> None:
@@ -90,7 +103,81 @@ def payload_manifest(stage: Path) -> dict:
     return result
 
 
-def package_app(stage: Path, tools: Path, output: Path, version: str) -> Path:
+def write_metadata(
+    config: Path,
+    meta: Path,
+    version: str,
+    repository_url: str | None,
+    mirrors: tuple[str, ...] = (),
+) -> None:
+    """Write the installer configuration and component metadata for either transport."""
+    shutil.copy2(ROOT / 'LICENSE', meta / 'LICENSE')
+    shutil.copy2(ROOT / 'COPYING', meta / 'COPYING')
+    configuration = xml_file(
+        config / 'config.xml',
+        'Installer',
+        {
+            'Name': 'EasyDiffraction',
+            'Version': version,
+            'Title': 'EasyDiffraction installer',
+            'Publisher': 'EasyScience',
+            'ProductUrl': 'https://enhantica.github.io/edi/',
+            'TargetDir': '@HomeDir@/Applications/EasyDiffraction'
+            if SYSTEM == 'macos'
+            else '@HomeDir@/EasyDiffraction',
+            'MaintenanceToolName': 'MaintenanceTool',
+            'AllowNonAsciiCharacters': 'true',
+            'AllowSpaceInPath': 'true',
+            'WizardStyle': 'Modern',
+        },
+    )
+    if repository_url:
+        if not repository_url.startswith(('https://', 'file://')):
+            raise RuntimeError('Online repositories require HTTPS or a local fixture URL')
+        remote = ET.SubElement(configuration.getroot(), 'RemoteRepositories')
+        repository = ET.SubElement(remote, 'Repository')
+        ET.SubElement(repository, 'Url').text = repository_url
+        ET.SubElement(repository, 'Enabled').text = '1'
+        for mirror_url in mirrors:
+            mirror = ET.SubElement(remote, 'Repository')
+            ET.SubElement(mirror, 'Url').text = mirror_url
+            ET.SubElement(mirror, 'Enabled').text = '0'
+            ET.SubElement(mirror, 'DisplayName').text = 'EasyDiffraction mirror'
+        ET.indent(configuration)
+        configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
+    root = xml_file(
+        meta / 'package.xml',
+        'Package',
+        {
+            'DisplayName': 'EasyDiffraction',
+            'Description': 'Diffraction analysis with crysta, Qt and the assistant runtime.',
+            'Version': version,
+            'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
+            'Default': 'true',
+            'ForcedInstallation': 'true',
+            'RequiresAdminRights': 'false',
+        },
+    )
+    licenses = ET.SubElement(root.getroot(), 'Licenses')
+    ET.SubElement(
+        licenses,
+        'License',
+        {'name': 'GNU General Public License v3 (application)', 'file': 'COPYING'},
+    )
+    ET.indent(root)
+    root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
+
+
+def package_app(
+    stage: Path,
+    tools: Path,
+    output: Path,
+    version: str,
+    repository_url: str | None = None,
+    mirrors: tuple[str, ...] = (),
+) -> Path:
+    if not re.fullmatch(r'[0-9]+(?:[.-][0-9]+)*', version):
+        raise RuntimeError('Installer version must contain only numeric components')
     stage, tools, output = stage.resolve(), tools.resolve(), output.resolve()
     executable = stage / (
         'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
@@ -113,43 +200,20 @@ def package_app(stage: Path, tools: Path, output: Path, version: str) -> Path:
     meta.mkdir(parents=True)
     shutil.copytree(stage, data, symlinks=True)
     (data / 'payload-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    shutil.copy2(ROOT / 'LICENSE', meta / 'LICENSE')
-    xml_file(
-        config / 'config.xml',
-        'Installer',
-        {
-            'Name': 'EasyDiffraction',
-            'Version': version,
-            'Title': 'EasyDiffraction installer',
-            'Publisher': 'EasyScience',
-            'ProductUrl': 'https://enhantica.github.io/edi/',
-            'TargetDir': '@HomeDir@/Applications/EasyDiffraction'
-            if SYSTEM == 'macos'
-            else '@HomeDir@/EasyDiffraction',
-            'MaintenanceToolName': 'MaintenanceTool',
-            'AllowNonAsciiCharacters': 'true',
-            'AllowSpaceInPath': 'true',
-            'WizardStyle': 'Modern',
-        },
-    )
-    root = xml_file(
-        meta / 'package.xml',
-        'Package',
-        {
-            'DisplayName': 'EasyDiffraction',
-            'Description': 'Diffraction analysis with crysta, Qt and the assistant runtime.',
-            'Version': version,
-            'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
-            'Default': 'true',
-            'ForcedInstallation': 'true',
-            'RequiresAdminRights': 'false',
-        },
-    )
-    licenses = ET.SubElement(root.getroot(), 'Licenses')
-    ET.SubElement(licenses, 'License', {'name': 'EasyDiffraction licence', 'file': 'LICENSE'})
-    ET.indent(root)
-    root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
-    name = f'EasyDiffraction-{version}-{SYSTEM}-{platform.machine()}'
+    write_metadata(config, meta, version, repository_url, mirrors)
+    if repository_url:
+        run([
+            tools / ('bin/repogen' + SUFFIX),
+            '--verbose',
+            '--component-metadata',
+            '--compression',
+            '1',
+            '-p',
+            source / 'packages',
+            output / 'repository',
+        ])
+    kind = 'online' if repository_url else 'offline'
+    name = f'EasyDiffraction-{version}-{PLATFORM_ID}-{kind}'
     installer = output / (
         name + ('.app' if SYSTEM == 'macos' else '.exe' if SYSTEM == 'windows' else '.run')
     )
@@ -158,7 +222,7 @@ def package_app(stage: Path, tools: Path, output: Path, version: str) -> Path:
         '--verbose',
         '--compression',
         '1',
-        '--offline-only',
+        '--online-only' if repository_url else '--offline-only',
         '-c',
         config / 'config.xml',
         '-p',
@@ -167,6 +231,7 @@ def package_app(stage: Path, tools: Path, output: Path, version: str) -> Path:
     ])
     archive = output / (name + '.zip')
     if SYSTEM == 'macos':
+        run(['codesign', '--force', '--deep', '--sign', '-', installer])
         run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, archive])
     else:
         with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
@@ -178,8 +243,10 @@ def package_app(stage: Path, tools: Path, output: Path, version: str) -> Path:
                 'zip': archive.name,
                 'zip_sha256': sha256(archive),
                 'ifw': '4.11.0',
-                'platform': SYSTEM,
+                'platform': PLATFORM_ID,
                 'version': version,
+                'kind': kind,
+                'repository_url': repository_url,
             },
             indent=2,
         )
@@ -245,7 +312,7 @@ def check_linux_dependencies(root: Path, env: dict) -> dict:
     return receipts
 
 
-def test_installer(installer: Path, output: Path) -> None:
+def exercise_installer(installer: Path, output: Path, repository: str | None = None) -> None:
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     home, target = output / 'isolated home', output / 'installed app'
@@ -256,10 +323,12 @@ def test_installer(installer: Path, output: Path) -> None:
     command = installer.resolve()
     if SYSTEM == 'macos':
         command = next((command / 'Contents/MacOS').iterdir())
+    repository_args = ['--set-temp-repository', repository] if repository else []
     with (output / 'install.log').open('w') as log:
         run(
             [
                 command,
+                *repository_args,
                 '--root',
                 target,
                 '--accept-licenses',
@@ -364,18 +433,30 @@ def main() -> None:
     package.add_argument('--tools', type=Path, required=True)
     package.add_argument('--output', type=Path, required=True)
     package.add_argument('--version', default='0.0.0')
+    package.add_argument('--kind', choices=['offline', 'online'], default='offline')
+    package.add_argument('--repository-url')
+    package.add_argument('--channel', choices=['testing', 'stable'], default='testing')
     test = commands.add_parser('test')
     test.add_argument('--installer', type=Path, required=True)
     test.add_argument('--output', type=Path, required=True)
+    test.add_argument('--repository')
     args = parser.parse_args()
     if args.command == 'relocate-linux':
         relocate_linux(args.stage, args.patchelf, args.qt_prefix)
     elif args.command == 'tools':
         fetch_tools(args.output)
     elif args.command == 'package':
-        package_app(args.stage, args.tools, args.output, args.version)
+        urls = repository_urls(args.channel)
+        package_app(
+            args.stage,
+            args.tools,
+            args.output,
+            args.version,
+            (args.repository_url or urls[0]) if args.kind == 'online' else None,
+            urls[1:] if args.kind == 'online' else (),
+        )
     else:
-        test_installer(args.installer, args.output)
+        exercise_installer(args.installer, args.output, args.repository)
 
 
 if __name__ == '__main__':

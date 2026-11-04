@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+from defusedxml import ElementTree
 
 SPEC = importlib.util.spec_from_file_location(
     'installer_package', Path(__file__).resolve().parents[3] / 'tools/installer/package.py'
@@ -96,3 +97,23 @@ def test_installer_workspace_preserves_the_app_toolchain_pins():
     for platform in ['linux-64', 'osx-arm64']:
         for name, specification in app['target'][platform]['dependencies'].items():
             assert installer['target'][platform]['dependencies'][name] == specification
+
+
+@pytest.mark.parametrize('version', ['../escape', '2026.11.0\n', '1;command', ''])
+def test_invalid_version_cannot_escape_installer_output(tmp_path, version):
+    with pytest.raises(RuntimeError, match='numeric components'):
+        PACKAGE.package_app(tmp_path, tmp_path, tmp_path / 'output', version)
+    assert not (tmp_path / 'output').exists()
+
+
+def test_future_mirror_is_configured_without_enabling_an_empty_repository(tmp_path):
+    config, meta = tmp_path / 'config', tmp_path / 'meta'
+    config.mkdir()
+    meta.mkdir()
+    urls = PACKAGE.repository_urls('testing')
+    PACKAGE.write_metadata(config, meta, '2026.11.0', urls[0], urls[1:])
+    xml = ElementTree.parse(config / 'config.xml')
+    repositories = xml.findall('RemoteRepositories/Repository')
+    assert repositories[0].findtext('Enabled') == '1'
+    assert repositories[1].findtext('Url').startswith('https://download.easydiffraction.org/')
+    assert repositories[1].findtext('Enabled') == '0'

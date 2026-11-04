@@ -1,0 +1,8 @@
+{
+  "schema": "edi.distribution/1",
+  "release_page": "https://github.com/enhantica/edi/releases",
+  "primary_base": "https://enhantica.github.io/edi/",
+  "mirror_bases": ["https://download.easydiffraction.org/"],
+  "repository_path": "repository/{channel}/{platform}/",
+  "third_party_path": "third-party/"
+}
