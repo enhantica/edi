@@ -32,7 +32,7 @@ without a signing identity or public release step. The Preferences update contro
 maintenance tool; ordinary development and WebAssembly builds do not pretend to support native updates.
 
 Extend the existing independent docs/web-app publisher rather than adding a separate site owner.
-Docs updates preserve both `/webapp/` and `/installers/`; a platform repository update preserves docs,
+Docs updates preserve `/webapp/`, `/repository/` and `/third-party/`; a platform repository update preserves docs,
 the web app and other platforms. Only a successfully deployed full-site artifact can become the next
 base. The publication jobs share the same concurrency group. Keep previous versioned component
 archives for downloads already in flight, reject different bytes under a reused archive identity, and

@@ -51,13 +51,14 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
         raise RuntimeError('The deployed base must contain documentation and the web app')
     if component == 'docs':
         if not (incoming / 'index.html').is_file() or any(
-            (incoming / name).exists() for name in ['webapp', 'installers']
+            (incoming / name).exists() for name in ['webapp', 'repository', 'third-party']
         ):
             raise RuntimeError(
-                'Documentation must have an index and must not own /webapp/ or /installers/'
+                'Documentation must have an index and must not own '
+                '/webapp/, /repository/ or /third-party/'
             )
         for child in site.iterdir():
-            if child.name in {'webapp', 'installers'}:
+            if child.name in {'webapp', 'repository', 'third-party'}:
                 continue
             if child.is_dir() and not child.is_symlink():
                 shutil.rmtree(child)
@@ -78,30 +79,37 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
 
 def overlay_installers(site: Path, incoming: Path) -> None:
     """Replace complete platform repositories while retaining the other published platforms."""
-    parts = list(incoming.iterdir())
+    channels = list(incoming.iterdir())
     allowed = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
-    if not parts or any(
-        part.name not in allowed or not part.is_dir() or part.is_symlink() for part in parts
-    ):
-        raise RuntimeError('Installer input must contain known platform directories')
-    for part in parts:
-        if not (part / 'repository/Updates.xml').is_file():
-            raise RuntimeError(f'Installer repository is incomplete: {part.name}')
-    destination = site / 'installers/testing'
-    destination.mkdir(parents=True, exist_ok=True)
-    for part in parts:
-        target = destination / part.name
+    repositories = []
+    if not channels:
+        raise RuntimeError('Installer input must contain a publication channel')
+    for channel in channels:
+        if (
+            channel.name not in {'testing', 'stable'}
+            or not channel.is_dir()
+            or channel.is_symlink()
+        ):
+            raise RuntimeError('Installer input has an unknown publication channel')
+        parts = list(channel.iterdir())
+        if not parts or any(
+            part.name not in allowed or not part.is_dir() or part.is_symlink() for part in parts
+        ):
+            raise RuntimeError('Installer input must contain known platform directories')
+        for part in parts:
+            if not (part / 'Updates.xml').is_file():
+                raise RuntimeError(f'Installer repository is incomplete: {part.name}')
+            repositories.append((part, site / 'repository' / channel.name / part.name))
+    for part, target in repositories:
         for source in part.rglob('*'):
             if source.is_symlink():
                 raise RuntimeError('Installer repository must not contain symbolic links')
             relative = source.relative_to(part)
             previous = target / relative
             mutable = relative.as_posix() in {
-                'repository/Updates.xml',
-                'repository/Updates.xml.sha1',
-                'repository/Updates.xml.sha256',
-                'installer.json',
-                'index.html',
+                'Updates.xml',
+                'Updates.xml.sha1',
+                'Updates.xml.sha256',
             }
             if source.is_file() and previous.exists() and not mutable:
                 with source.open('rb') as new, previous.open('rb') as old:
@@ -110,6 +118,7 @@ def overlay_installers(site: Path, incoming: Path) -> None:
                         != hashlib.file_digest(old, 'sha256').digest()
                     ):
                         raise RuntimeError(f'Installer archive identity was reused: {relative}')
+    for part, target in repositories:
         shutil.copytree(part, target, dirs_exist_ok=True)
 
 

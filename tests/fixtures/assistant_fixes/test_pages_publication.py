@@ -109,7 +109,7 @@ def test_wasm_update_preserves_current_docs(tmp_path):
     assert (site / 'webapp/kit/edi_app.wasm').read_bytes() == b'new compiled app'
 
 
-@pytest.mark.parametrize('reserved', ['webapp', 'installers'])
+@pytest.mark.parametrize('reserved', ['webapp', 'repository', 'third-party'])
 def test_docs_must_not_replace_reserved_component(tmp_path, reserved):
     site = tmp_path / 'site'
     (site / 'webapp').mkdir(parents=True)
@@ -129,7 +129,7 @@ def test_docs_update_preserves_installer_components(tmp_path):
     (site / 'webapp').mkdir(parents=True)
     (site / 'webapp/index.html').write_text('app')
     (site / 'index.html').write_text('old docs')
-    repository = site / 'installers/testing/linux-x86_64/repository'
+    repository = site / 'repository/testing/linux-x86_64'
     repository.mkdir(parents=True)
     (repository / 'Updates.xml').write_text('original components')
     docs.mkdir()
@@ -143,17 +143,15 @@ def test_installers_update_preserves_other_platforms_docs_and_app(tmp_path):
     (site / 'webapp').mkdir(parents=True)
     (site / 'webapp/index.html').write_text('app')
     (site / 'index.html').write_text('docs')
-    previous = site / 'installers/testing/windows-x86_64/repository'
+    previous = site / 'repository/testing/windows-x86_64'
     previous.mkdir(parents=True)
     (previous / 'Updates.xml').write_text('previous Windows')
-    part = incoming / 'linux-x86_64/repository'
+    part = incoming / 'testing/linux-x86_64'
     part.mkdir(parents=True)
     (part / 'Updates.xml').write_text('new Linux')
     MODULE.overlay_component(site, incoming, 'installers')
     assert (previous / 'Updates.xml').read_text() == 'previous Windows'
-    assert (
-        site / 'installers/testing/linux-x86_64/repository/Updates.xml'
-    ).read_text() == 'new Linux'
+    assert (site / 'repository/testing/linux-x86_64/Updates.xml').read_text() == 'new Linux'
     assert (site / 'index.html').read_text() == 'docs'
     assert (site / 'webapp/index.html').read_text() == 'app'
 
@@ -163,7 +161,7 @@ def test_incomplete_installer_update_keeps_previous_components(tmp_path):
     (site / 'webapp').mkdir(parents=True)
     (site / 'webapp/index.html').write_text('app')
     (site / 'index.html').write_text('docs')
-    (incoming / 'linux-x86_64').mkdir(parents=True)
+    (incoming / 'testing/linux-x86_64').mkdir(parents=True)
     with pytest.raises(RuntimeError, match='incomplete'):
         MODULE.overlay_component(site, incoming, 'installers')
     assert (site / 'index.html').read_text() == 'docs'
@@ -189,11 +187,11 @@ def test_new_metadata_retains_previous_downloads_and_rejects_reused_identity(tmp
     (site / 'webapp').mkdir(parents=True)
     (site / 'webapp/index.html').write_text('app')
     (site / 'index.html').write_text('docs')
-    old = site / 'installers/testing/linux-x86_64/repository'
+    old = site / 'repository/testing/linux-x86_64'
     old.mkdir(parents=True)
     (old / 'Updates.xml').write_text('old metadata')
     (old / '1.0.0content.7z').write_bytes(b'old download in flight')
-    new = incoming / 'linux-x86_64/repository'
+    new = incoming / 'testing/linux-x86_64'
     new.mkdir(parents=True)
     (new / 'Updates.xml').write_text('new metadata')
     (new / '2.0.0content.7z').write_bytes(b'new download')
@@ -203,3 +201,25 @@ def test_new_metadata_retains_previous_downloads_and_rejects_reused_identity(tmp
     (new / '2.0.0content.7z').write_bytes(b'changed under an existing version')
     with pytest.raises(RuntimeError, match='identity was reused'):
         MODULE.overlay_component(site, incoming, 'installers')
+
+
+def test_docs_preserve_versioned_third_party_report_libraries(tmp_path):
+    site, docs = tmp_path / 'site', tmp_path / 'docs'
+    (site / 'webapp').mkdir(parents=True)
+    (site / 'webapp/index.html').write_text('app')
+    (site / 'index.html').write_text('old docs')
+    library = site / 'third-party/plotly/1.0/plotly.min.js'
+    library.parent.mkdir(parents=True)
+    library.write_bytes(b'pinned report library')
+    docs.mkdir()
+    (docs / 'index.html').write_text('new docs')
+    MODULE.overlay_component(site, docs, 'docs')
+    assert library.read_bytes() == b'pinned report library'
+
+
+def test_invalid_channel_cannot_escape_the_repository_root(tmp_path):
+    site, incoming = tmp_path / 'site', tmp_path / 'incoming'
+    (incoming / 'unexpected/linux-x86_64').mkdir(parents=True)
+    with pytest.raises(RuntimeError, match='channel'):
+        MODULE.overlay_installers(site, incoming)
+    assert not site.exists()
