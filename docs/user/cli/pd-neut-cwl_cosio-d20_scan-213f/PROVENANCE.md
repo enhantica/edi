@@ -20,7 +20,9 @@
   temperature. The Lorentzian width Y is held at 0.0114, the value the 2.3 K example fits with Y free (0.0114(48)):
   freed in every file, Y trades against U, V and W, and the fits then depend on the order the files are fitted in
   (summed reduced χ² 1146.44 one after another, up to 1152.7 with two to five files at once). Held, both give 1146.28
-  and 1146.29 and agree within 0.0032 per file (the owner, 2026-11-04).
+  and 1146.29 and agree within 0.0032 per file (the owner, 2026-11-04). The Co²⁺ form factor is the 2.3 K example's,
+  ⟨j0⟩ + C₂⟨j2⟩, with C₂ held at 0.591, the value that example fits (C₂ = 2/g − 1 against J, g ≈ 1.26): freed in
+  each file it agrees with that value below about 51 K and is not determined above, where the moments are near zero.
 - **Analysis:** the 162-file scan's sequential settings (data directory, file pattern, temperature from each file's
   `TEMP` line, Co1 and Co2 sharing one displacement parameter), the fast descent, and
   `_sequential_fit.reverse true`: the fit runs from 2.344 K upwards, each file starting from the previous result, so
@@ -34,9 +36,9 @@
 
 `expected.json` pins the number of free parameters, 45, counted from the model (an independent reference), and the
 terminal record of this project's own fit as **regression pins**, which gate drift, not correctness: the last file,
-`01_001` (497.379 K), reduced χ² 4.322075055 after 7 iterations, measured by `python -m edi fit --report machine`
-with this project's analysis, linked against crysta `dd99e1ba`, `OMP_NUM_THREADS=1` (re-pinned 2026-11-04 when Y was
-held; with Y free it was 4.32385689). The moments falling towards
+`01_001` (497.379 K), reduced χ² 4.322075055 after 6 iterations, measured by `python -m edi fit --report machine`
+with this project's analysis, linked against crysta `2948ccef`, `OMP_NUM_THREADS=1` (re-pinned 2026-11-04 when Y was
+held, from 4.32385689, and again for the dipole form factor, from 7 iterations). The moments falling towards
 zero as the temperature approaches 50 K (A. Sazonov et al., Acta Cryst. B65 (2009) 664–675) is a sanity check, not a
 reference.
 

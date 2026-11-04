@@ -19,7 +19,8 @@ Per project, every unit in its ``expected.json`` runs ``python -m edi`` on a dis
   names its variants after the descent they pin), DECLARED as ``_minimizer.descent`` in the
   copy's ``analysis/analysis.edi`` (the CLI carries no minimization condition); or
   ``asymmetry-off``, the copy with every Bérar-Baldinozzi coefficient fixed at 0, which compares
-  a model whose asymmetry form differs between programs on everything else; any other name fails;
+  a model whose asymmetry form differs between programs on everything else; or ``form-factor-j0``,
+  the copy with every magnetic form factor at <j0> alone, as FullProf's are; any other name fails;
 - an ``edi`` block — the default invocation (the corpus's per-entry-point overlay);
 - a ``calc`` block — ``python -m edi calc`` instead, for a simulation, which has no data to fit.
 
@@ -261,8 +262,47 @@ def fit_template_only(project: Path) -> None:
     analysis.write_text(text, encoding='utf-8')
 
 
+def form_factor_j0(project: Path) -> None:
+    """Set every magnetic form factor of the project copy to <j0> alone, as FullProf's are.
+
+    Its coefficients are fixed, as a coefficient the approximation does not use cannot be free.
+    """
+    changed = 0
+    for path in sorted((project / 'structures').glob('*.edi')):
+        lines = path.read_text(encoding='utf-8').split('\n')
+        out: list[str] = []
+        index = 0
+        while index < len(lines):
+            out.append(lines[index])
+            if lines[index].strip() != 'loop_' or index + 1 >= len(lines):
+                index += 1
+                continue
+            header: list[str] = []
+            index += 1
+            while index < len(lines) and lines[index].startswith('_'):
+                header.append(lines[index].strip())
+                out.append(lines[index])
+                index += 1
+            if '_magnetic_form_factor.approximation' not in header:
+                continue
+            column = header.index('_magnetic_form_factor.approximation')
+            coefficients = [k for k, name in enumerate(header) if name.endswith('_coefficient')]
+            while index < len(lines) and lines[index].strip() and not lines[index].startswith(('_', 'loop_')):
+                cells = lines[index].split()
+                cells[column] = 'j0'
+                # A coefficient <j0> does not use cannot be free.
+                for k in coefficients:
+                    cells[k] = re.sub(r'\(.*\)$', '', cells[k])
+                out.append(' '.join(cells))
+                changed += 1
+                index += 1
+        path.write_text('\n'.join(out), encoding='utf-8')
+    if not changed:
+        raise ValueError('form-factor-j0: the project declares no form-factor approximation')
+
+
 # A variant names a registered descent, or one of these changes to the project copy.
-PROJECT_VARIANTS = {'asymmetry-off': fix_asymmetry_off}
+PROJECT_VARIANTS = {'asymmetry-off': fix_asymmetry_off, 'form-factor-j0': form_factor_j0}
 
 Unit = tuple[str, dict[str, str], dict, Callable[[Path], None] | None, str]
 

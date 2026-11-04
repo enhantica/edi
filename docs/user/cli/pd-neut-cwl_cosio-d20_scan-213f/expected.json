@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "source": {
-    "engine": "crysta via python -m edi (crysta dd99e1ba, fast descent, OMP_NUM_THREADS=1)",
+    "engine": "crysta via python -m edi (crysta 2948ccef, fast descent, OMP_NUM_THREADS=1)",
     "artifact": "machine record (--report machine); per-file rows in project/analysis/results.csv",
     "provenance": "PROVENANCE.md"
   },
@@ -19,7 +19,7 @@
       "tol_rel": null
     },
     "iterations": {
-      "value": 7.0,
+      "value": 6.0,
       "kind": "regression-pin",
       "tol_abs": 0.0,
       "tol_rel": null

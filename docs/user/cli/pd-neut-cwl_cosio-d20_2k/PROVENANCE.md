@@ -14,6 +14,10 @@
   Co₂SiO₄ in Pnma.1 (irrep mGM1+): its eight operators. The moments start along b at 1 μB, Co1 (0, 1, 0) and
   Co2 (0, 1, 0), a start any user could choose; from it the fit reaches the same minimum (Rwp 4.73 %, the owner's
   run of 2026-11-03).
+- **Form factor:** Co²⁺ in the dipole approximation, ⟨j0⟩ + C₂⟨j2⟩ (the owner, 2026-11-04), with C₂ fitted from 0.
+  The fit gives C₂ = 0.591(54), counted against the total moment J as C₂ = 2/g − 1, so g ≈ 1.26, near the free
+  Co²⁺ ion's g_J = 4/3 (⁴F₉/₂, C₂ = 0.50). Against ⟨j0⟩ alone, reduced χ² falls from 6.712 to 6.246 and both moments
+  come out a little smaller: Co1 |M| 3.25 to 3.18 μB, Co2 2.74 to 2.62 μB.
 - **Reference:** A. Sazonov et al., *Magnetic behaviour of synthetic Co₂SiO₄*, Acta Cryst. B65 (2009) 664–675.
 - **Excluded:** 0–6° and 150–180°, and 64.65–64.74°, which holds only the dead D20 detector cell at 64.6953°.
 - **Background:** sixteen points, none between 7.6° and 12.6°, so none sits under the first magnetic peak.
@@ -23,7 +27,11 @@
   and only their common value is determined. The fit gives 0.0627(9).
 - **Descent:** the default. The fast descent, which this project declared before, reaches the same minimum from this
   start (reduced χ² 6.71250 against 6.71243, every parameter within 0.05 s.u.) in 104 iterations instead of 57.
-- **Expected values:** `expected.json` holds FullProf's fit of the same pattern, background, profile and magnetic
-  model (`knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/`, S/L and D/L both held at 0.0619): Rwp within 5 % of
-  FullProf's 4.91 %, and the three well-determined moment components within 0.15 μB of FullProf's, about
-  four of its standard deviations. Co1's Mz is not compared: powder data barely determine it.
+- **Expected values:** `expected.json` pins this project's own fit as **regression pins**, which gate drift, not
+  correctness: reduced χ² 6.246437081 after 66 iterations and C₂ 0.5908354455, from `python -m edi fit --report
+  machine` linked against crysta `2948ccef`, `OMP_NUM_THREADS=1`; the 42 free parameters are counted from the model.
+  FullProf's form factor here is ⟨j0⟩ alone (`MCO2`), so its fit is compared with edi's fit of a copy using ⟨j0⟩ (the
+  `form-factor-j0` variant), on the same pattern, background, profile and magnetic model
+  (`knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/`, S/L and D/L both held at 0.0619): Rwp within 5 % of
+  FullProf's 4.91 %, and the three well-determined moment components within 0.15 μB of FullProf's, about four of its
+  standard deviations. Co1's Mz is not compared: powder data barely determine it.

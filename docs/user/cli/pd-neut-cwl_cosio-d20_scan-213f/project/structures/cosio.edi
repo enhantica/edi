@@ -57,7 +57,9 @@ _space_group_symop_magn_operation.xyz
 loop_
 _magnetic_form_factor.type_symbol
 _magnetic_form_factor.ion
-Co Co2+
+_magnetic_form_factor.approximation
+_magnetic_form_factor.j2_coefficient
+Co Co2+ dipole 0.591
 
 loop_
 _atom_site_moment.label
