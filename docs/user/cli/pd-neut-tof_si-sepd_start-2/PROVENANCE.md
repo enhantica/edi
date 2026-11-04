@@ -39,3 +39,8 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 | ladder | `rwp` | 0.06941177283 | 0.06941010775 |
 | fast-descent | `reduced_chi_square` | 3.611114586 | 3.610941859 |
 | fast-descent | `rwp` | 0.06941171497 | 0.06941005489 |
+
+**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
+change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
+machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: fast-descent iterations 12 → 11; fast-descent rwp
+0.06941005489 → 0.06941004614.

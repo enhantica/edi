@@ -1,0 +1,5 @@
+{
+  "program": "diffraction-lib",
+  "model_compatible": false,
+  "reason": "Magnetic structure: diffraction-lib has no magnetic structures."
+}

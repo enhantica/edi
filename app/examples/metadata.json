@@ -37,6 +37,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -87,6 +90,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -137,6 +143,9 @@
         ],
         "polarisation": [
           "__not_applicable__"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -187,6 +196,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -237,6 +249,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -287,6 +302,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -299,6 +317,60 @@
         "docs/user/cli/pd-neut-cwl_cosio-d20/project/analysis/analysis.edi",
         "docs/user/cli/pd-neut-cwl_cosio-d20/project/experiments/d20.edi",
         "docs/user/cli/pd-neut-cwl_cosio-d20/project/structures/cosio.edi"
+      ]
+    },
+    "pd-neut-cwl_cosio-d20_2k": {
+      "samples": [
+        "Co₂SiO₄ [Pnma.1]"
+      ],
+      "origin": "D20 @ ILL",
+      "detail": "Olivine at 2.3 K · Magnetic structure, k = 0",
+      "values": {
+        "sampleForm": [
+          "powder"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "ILL"
+        ],
+        "instruments": [
+          "D20"
+        ],
+        "dimensionality": [
+          "1d"
+        ],
+        "polarisation": [
+          "unpolarised"
+        ],
+        "structure": [
+          "crystal",
+          "magnetic"
+        ]
+      },
+      "searchAliases": [
+        "pd-neut-cwl_cosio-d20_2k",
+        "Co₂SiO₄ [Pnma.1] · D20 @ ILL",
+        "Olivine at 2.3 K · Magnetic structure, k = 0"
+      ],
+      "sources": [
+        "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/structures/cosio.edi"
       ]
     },
     "pd-neut-cwl_lmo-echidna": {
@@ -337,6 +409,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -387,6 +462,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -438,6 +516,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -489,6 +570,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -539,6 +623,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -589,6 +676,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -640,6 +730,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -691,6 +784,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -746,6 +842,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -798,6 +897,9 @@
         ],
         "polarisation": [
           "__not_applicable__"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -848,6 +950,9 @@
         ],
         "polarisation": [
           "__not_applicable__"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -902,6 +1007,9 @@
         "polarisation": [
           "__not_applicable__",
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -917,12 +1025,12 @@
         "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/structures/pbso4.edi"
       ]
     },
-    "pd-neut-cwl_cosio-d20_scan": {
+    "pd-neut-cwl_cosio-d20_scan-213f": {
       "samples": [
-        "Co₂SiO₄ [Pnma]"
+        "Co₂SiO₄ [Pnma.1]"
       ],
       "origin": "D20 @ ILL",
-      "detail": "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out",
+      "detail": "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure",
       "values": {
         "sampleForm": [
           "powder"
@@ -953,18 +1061,22 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal",
+          "magnetic"
         ]
       },
       "searchAliases": [
-        "pd-neut-cwl_cosio-d20_scan",
-        "Co₂SiO₄ [Pnma] · D20 @ ILL",
-        "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out"
+        "pd-neut-cwl_cosio-d20_scan-213f",
+        "Co₂SiO₄ [Pnma.1] · D20 @ ILL",
+        "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure"
       ],
       "sources": [
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/project.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/analysis/analysis.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/experiments/d20.edi",
-        "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/structures/cosio.edi"
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/project.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/analysis/analysis.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/experiments/d20.edi",
+        "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/structures/cosio.edi"
       ]
     },
     "pd-xray-cwl_latp-bm01_scan": {
@@ -1005,6 +1117,9 @@
         ],
         "polarisation": [
           "__not_applicable__"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -1057,6 +1172,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -1107,6 +1225,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [
@@ -1157,6 +1278,9 @@
         ],
         "polarisation": [
           "unpolarised"
+        ],
+        "structure": [
+          "crystal"
         ]
       },
       "searchAliases": [

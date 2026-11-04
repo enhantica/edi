@@ -120,6 +120,20 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
                     }
                 }
             }
+            // A moment's components name their site as its own parameters do (the owner, 2026-11-03).
+            for (const auto& moment : structure->atom_site_moment) {
+                if (moment->id.value() == site->id.value()) {
+                    for (const edi::Parameter* parameter : moment->parameters()) {
+                        element.emplace(parameter, site->type_symbol);
+                    }
+                }
+            }
+        }
+        // A form factor's coefficients take the colour of the atom type they belong to.
+        for (const auto& row : structure->magnetic_form_factors) {
+            for (const edi::Parameter* parameter : row->parameters()) {
+                element.emplace(parameter, row->id.value());
+            }
         }
     }
     // An ADP's label and units for its site's declared type, from the dictionary's variants.

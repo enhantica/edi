@@ -104,6 +104,8 @@ class ProjectEditor {
     // Why no parameter may be set free or fixed now: empty when they may. A project with no measured data in any
     // experiment has nothing to fit, so it refuses (edi ADR-0046).
     virtual QString free_refusal() const { return {}; }
+    // The open project, for a reader of its fit record (the moments' covariance); none outside a project.
+    virtual const edi::Project* currentProject() const { return nullptr; }
     // An edit of an experiment's background rows (an id, position or order, a row added or removed, the rows named):
     // refused in auto mode (estimated_background_refusal), else applied as `apply` does.
     virtual QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,

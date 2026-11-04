@@ -6,6 +6,7 @@ _minimizer.type "crysta (lm)"
 _minimizer.max_iterations 1000
 _minimizer.descent fast_descent
 _minimizer.chi_square_tolerance 1e-4
+_minimizer.stop_rule shift_su
 
 loop_
 _alias.id

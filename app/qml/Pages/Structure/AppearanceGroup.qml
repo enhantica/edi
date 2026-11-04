@@ -17,6 +17,8 @@ SideBarGroup {
 
     property StructureViewOptions options: null
     property StructureViewController controller: null
+    // The structure shown: its moments bring the Moment scale field.
+    property StructureViewModel structure: null
 
     readonly property string openKey: "Extras:appearance"
 
@@ -31,7 +33,7 @@ SideBarGroup {
     Column {
         spacing: AppSizes.groupContentSpacing
 
-        // Two fields in equal columns, as ParameterGrid lays out the instrument's.
+        // Two fields in equal columns and rows spaced, as ParameterGrid lays out the instrument's.
         Grid {
             id: grid
 
@@ -39,6 +41,7 @@ SideBarGroup {
 
             columns: 2
             columnSpacing: AppSizes.inputSpacing
+            rowSpacing: AppSizes.groupContentSpacing
 
             SelectorField {
                 objectName: "structure.appearance.atomView"
@@ -104,6 +107,47 @@ SideBarGroup {
                 }
 
                 Component.onCompleted: FieldTitles.align(probability)
+                onAccepted: commit()
+                onEditingFinished: commit()
+            }
+            // Where each moment's arrow sits on its atom, left of the moment scale (the owner, 2026-11-03).
+            SelectorField {
+                objectName: "structure.appearance.momentView"
+                visible: momentScale.visible
+                width: grid.fieldWidth
+                uid: "structure_view.moment_view"
+                options: group.options ? group.options.momentViewOptions : null
+                token: group.options ? group.options.momentView : ""
+                onSelected: token => group.options.momentView = token
+            }
+            // The moment arrows' length per Bohr magneton, in the right column below the atom scale, beside the moment
+            // view (the owner, 2026-11-03).
+            EaElements.ParamTextField {
+                id: momentScale
+
+                objectName: "structure.appearance.momentScale"
+                visible: group.structure !== null && group.structure.magnetic
+                width: grid.fieldWidth
+                parameter: group.options ? {
+                    "value": group.options.momentScale,
+                    "error": 0,
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "name": "moment_scale",
+                    "shortPrettyName": qsTr("Moment scale"),
+                    "units": "Å/μB"
+                } : ({})
+
+                // Above 0; anything else leaves the scale as it was.
+                function commit() {
+                    if (group.options !== null && text !== momentScale.value) {
+                        group.options.momentScale = Number(text);
+                        text = Qt.binding(() => momentScale.value);
+                    }
+                }
+
+                Component.onCompleted: FieldTitles.align(momentScale)
                 onAccepted: commit()
                 onEditingFinished: commit()
             }

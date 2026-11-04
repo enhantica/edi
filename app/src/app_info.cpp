@@ -696,7 +696,8 @@ QString ApplicationInfo::diagnostics() const {
     const edi::EngineThreading engine = edi::engine_threading();
     add(QStringLiteral("Engine backend"), QString::fromLatin1(engine.backend));
     const int threads = edi::engine_threads_setting();
-    add(QStringLiteral("Engine threads (preference)"), threads > 0 ? QString::number(threads) : QStringLiteral("Auto"));
+    add(QStringLiteral("Threads per calculation (preference)"), threads > 0 ? QString::number(threads) : QStringLiteral("Auto"));
+    add(QStringLiteral("Parallel fits in a scan (preference)"), QString::number(edi::scan_workers_setting()));
     add(QStringLiteral("Engine workers"), QString::number(engine.workers));
     add(QStringLiteral("WebAssembly SIMD"), engine.wasm_simd ? QStringLiteral("on") : QStringLiteral("off"));
 #ifdef Q_OS_WASM
@@ -4389,7 +4390,7 @@ void ApplicationInfo::resetPreferences() const {
     projectWrite(f, "preferences", "assistantWidth", assistantContextField(f, "AppSizes", "assistantDefaultWidth"));
     const std::pair<const char*, QJSValue> defaults[] = {
         {"toolTips", QJSValue(true)}, {"autoCollapse", QJSValue(true)}, {"sideBarSide", QJSValue(QStringLiteral("Right"))},
-        {"engineThreads", QJSValue(0)}, {"loggingLevel", QJSValue(QStringLiteral("Info"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
+        {"engineThreads", QJSValue(0)}, {"scanWorkers", QJSValue(1)}, {"loggingLevel", QJSValue(QStringLiteral("Info"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
         {"analysisShowBySymmetry", QJSValue(false)}, {"analysisShowByConstraint", QJSValue(false)}, {"analysisShowFixedSettings", QJSValue(false)},
         {"showFitResults", QJSValue(true)}, {"scanRenderer", QJSValue(QStringLiteral("auto"))}, {"newProjectSuRule", QJSValue(QStringLiteral("iucr_99"))},
         {"newReportLibraries", QJSValue(QStringLiteral("online"))}, {"colourScheme", QJSValue(QStringLiteral("earth"))}, {"patternYScale", QJSValue(QStringLiteral("linear"))},
@@ -4409,6 +4410,7 @@ void ApplicationInfo::applyPreferences() const {
     globals = assistantContextField(f, "EaGlobals", "Vars");
     assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", assistantContextField(f, "preferences", "autoCollapse"));
     projectInvoke(f, "ApplicationInfo", "setEngineThreads", {assistantContextField(f, "preferences", "engineThreads")});
+    projectInvoke(f, "ApplicationInfo", "setScanWorkers", {assistantContextField(f, "preferences", "scanWorkersApplied")});
     globals = assistantContextField(f, "EaGlobals", "Vars");
     assistantMemberWrite(f, globals, "checkUpdateOnAppStart", QJSValue(false));
     const auto sizes = assistantContextField(f, "EaStyle", "Sizes");
@@ -4451,6 +4453,7 @@ void ApplicationInfo::persistPreference(int kind) const {
     if (kind == 0) projectInvoke(f, "ApplicationInfo", "setEngineThreads", {panelUsageContextRead(f, "engineThreads")});
     else if (kind == 1) { settings = "chartSettings"; key = "includedOnly"; property = "chartIncludedOnly"; }
     else if (kind == 2) { settings = "scanViewSettings"; key = "renderer"; property = "scanRenderer"; }
+    else if (kind == 4) { key = "scanWorkers"; property = "scanWorkers"; }
     else { settings = "analysisSettings"; key = "scanPatternUpdates"; property = "scanPatternUpdates"; }
     const auto target = panelUsageContextRead(f, settings);
     const auto value = panelUsageContextRead(f, property);
@@ -8403,7 +8406,10 @@ QJSValue ApplicationInfo::legendSegments() const {
     const auto mark = panelUsageMemberCall(f, legend, "markPiece", {kind, width, color});
     if (panelUsageTruth(assistantContextField(f, "entry", "bragg"))) {
         const auto title = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("ChartLegend", "Bragg peaks")))});
-        const auto text = chartRecord(f, {{"text", title}}); auto icon = panelUsageLiteral(f); panelUsageWrite(f, icon.value, "icon", QJSValue(QStringLiteral("layer-group")));
+        const auto text = chartRecord(f, {{"text", title}}); auto icon = panelUsageLiteral(f);
+        // A magnetic structure's magnetic reflections: the magnet, as on its tick row.
+        const bool magnetic = panelUsageTruth(assistantContextField(f, "entry", "magnetic"));
+        panelUsageWrite(f, icon.value, "icon", QJSValue(magnetic ? QStringLiteral("magnet") : QStringLiteral("layer-group")));
         panelUsageWrite(f, icon.value, "color", projectCall(f, ink, {assistantContextField(f, "entry", "color")}));
         const auto last = chartRecord(f, {{"text", assistantContextField(f, "entry", "label")}});
         return assistantGeometryArray(f, {mark, text, panelUsageComplete(f, icon), last});
@@ -9643,11 +9649,22 @@ QJSValue ApplicationInfo::nameSegments(const QJSValue& item) const {
     auto block = panelUsageLiteral(f); const auto names = panelUsageContextRead(f, "names"); panelUsageWrite(f, block.value, "icon", panelUsageDeferredMemberCall(f, names, "blockIcon", [&] { return QJSValueList({panelUsageRead(f, item, "blockKind")}); }));
     const auto colors = panelUsageContextRead(f, "AppColors"); panelUsageWrite(f, block.value, "color", panelUsageDeferredMemberCall(f, colors, "block", [&] { return QJSValueList({panelUsageRead(f, item, "blockKind"), panelUsageRead(f, item, "blockIndex")}); }));
     const auto pieces = assistantGeometryArray(f, {panelUsageComplete(f, block)});
-    if (!panelUsageRead(f, item, "categoryIcon").strictlyEquals(QJSValue(QStringLiteral("")))) {
-        panelUsageDeferredMemberCall(f, pieces, "push", [&] { return QJSValueList({chartRecord(f, {{"icon", panelUsageRead(f, item, "categoryIcon")}, {"color", categoryColor}})}); });
+    // A moment component names its site as the site's own parameters do: the atom, its label in the element's colour,
+    // then the moment.
+    const bool moment = panelUsageRead(f, item, "category").strictlyEquals(QJSValue(QStringLiteral("atom_site_moment")));
+    QJSValue siteIcon = panelUsageRead(f, item, "categoryIcon");
+    if (moment) {
+        const auto session = panelUsageContextRead(f, "Session");
+        siteIcon = panelUsageDeferredMemberCall(f, session, "categoryIcon", [&] { return QJSValueList({QJSValue(QStringLiteral("atom_site"))}); });
+    }
+    if (!siteIcon.strictlyEquals(QJSValue(QStringLiteral("")))) {
+        panelUsageDeferredMemberCall(f, pieces, "push", [&] { return QJSValueList({chartRecord(f, {{"icon", siteIcon}, {"color", categoryColor}})}); });
     }
     if (!panelUsageRead(f, item, "rowLabel").strictlyEquals(QJSValue(QStringLiteral("")))) {
         panelUsageDeferredMemberCall(f, pieces, "push", [&] { return QJSValueList({chartRecord(f, {{"text", panelUsageRead(f, item, "rowLabel")}, {"color", categoryColor}})}); });
+    }
+    if (moment && !panelUsageRead(f, item, "categoryIcon").strictlyEquals(QJSValue(QStringLiteral("")))) {
+        panelUsageDeferredMemberCall(f, pieces, "push", [&] { return QJSValueList({chartRecord(f, {{"icon", panelUsageRead(f, item, "categoryIcon")}, {"color", minor}})}); });
     }
     const auto receiver = panelUsageContextRead(f, "names"), parameter = panelUsageDeferredMemberCall(f, receiver, "parameterIcon", [&] { return QJSValueList({panelUsageRead(f, item, "name")}); });
     if (!parameter.strictlyEquals(QJSValue(QStringLiteral("")))) panelUsageDeferredMemberCall(f, pieces, "push", [&] { return QJSValueList({chartRecord(f, {{"icon", parameter}, {"color", minor}})}); });
@@ -11558,6 +11575,10 @@ bool ApplicationInfo::engineThreadsSelectable() const {
 int ApplicationInfo::engineThreadsMaximum() const { return std::clamp(2 * QThread::idealThreadCount(), 16, 64); }
 
 void ApplicationInfo::setEngineThreads(int count) const { edi::set_engine_threads(count); }
+
+int ApplicationInfo::scanWorkersMaximum() const { return std::max(1, QThread::idealThreadCount()); }
+
+void ApplicationInfo::setScanWorkers(int count) const { edi::set_scan_workers(count); }
 
 void ApplicationInfo::storeSettings() const { edi_app::store_settings_now(); }
 

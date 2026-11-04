@@ -1974,6 +1974,10 @@ QString Session::categoryTitle(const QString& id) const {
     return from_bridge([&] { return edi::category_label(id.toStdString()); });
 }
 
+QString Session::categoryIcon(const QString& id) const {
+    return from_bridge([&] { return edi::category_icon(id.toStdString()); });
+}
+
 // A number that is not finite (an excluded row's computed value, an empty range) has no spelling: it shows nothing.
 QString Session::written(const QString& uid, double value) const {
     if (!std::isfinite(value)) {

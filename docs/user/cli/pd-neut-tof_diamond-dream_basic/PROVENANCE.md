@@ -25,3 +25,7 @@ FullProf's fitted value and is the only free parameter.
 The pins gate drift only. FullProf's own figures for the same fit — `Rwp 16.9`, `Chi2 18.1` — are
 printed to three digits, with 15 parameters free rather than one, so they are not used as
 references for edi's Rwp or χ²; edi's `rwp = 0.1696` agrees with them to that precision.
+
+**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
+change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
+machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 2 → 1.
