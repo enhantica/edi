@@ -799,18 +799,26 @@ jobs:
       # would not notice a broken web build without this. One kit, no site checks; the toolchain comes from the
       # same cache as the WebAssembly job's.
       - name: Restore the WebAssembly toolchain
-        if: ${{ matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
+        if: ${{ !cancelled() && matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
         uses: actions/cache@v4
         with:
           path: ~/.cache/edi-wasm
           key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
+      # The step itself runs on every Linux app job, an earlier failure notwithstanding, so the CI contract can
+      # require it; it compiles only when the pull request changed the assistant's sources and says so either way.
       - name: Compile the app for WebAssembly
-        if: ${{ matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
+        if: ${{ !cancelled() && matrix.platform == 'Linux' }}
         run: |
+          if [ "$EDI_WASM_OWED" != true ]; then
+            echo "compile-wasm: not owed, no change under app/src/assistant* in this run"
+            exit 0
+          fi
+          echo "compile-wasm: owed, the multithread kit follows"
           pixi run crysta-sdk
           pixi run -e app wasm-toolchain
           pixi run -e app --skip-deps wasm-build multithread
         env:
+          EDI_WASM_OWED: ${{ needs.changes.outputs.wasm_build }}
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
 
   # The app as a WebAssembly site (ADR-0023): both Qt wasm kits, the start page and the service-worker shim,
