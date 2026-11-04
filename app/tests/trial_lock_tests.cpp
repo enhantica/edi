@@ -7,6 +7,7 @@
 #include "assistant_view_model.hpp"
 #include "edi/io.hpp"
 #include "engine_setup.hpp"
+#include "session.hpp"
 
 namespace edi_app {
 class TrialLockTests : public QObject {
@@ -125,7 +126,9 @@ private slots:
     }
     void assistantFollowupCanFreeAndSave() {
         const auto source = std::string(EDI_SOURCE_DIR) + "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project";
-        ProjectViewModel project(edi::load_project(source), nullptr);
+        auto input = edi::load_project(source);
+        input.minimizer_max_iterations = 2;
+        ProjectViewModel project(std::move(input), nullptr);
         QTRY_VERIFY_WITH_TIMEOUT(!project.calculating(), 30000);
         candidate(project);
         auto& coefficient = project.assistantProject()->experiment().peak.broad_gauss_u;
@@ -136,6 +139,13 @@ private slots:
         }
         QTRY_VERIFY_WITH_TIMEOUT(!project.calculating(), 30000);
         QVERIFY(coefficient->free.get());
+        bool fitted = false, adopted = false;
+        project.fit()->startNative([&](const edi::FitReport& report, bool presented) {
+            fitted = true;
+            adopted = report.adopted() && presented;
+        }, 0);
+        QTRY_VERIFY_WITH_TIMEOUT(fitted, 30000);
+        QVERIFY(adopted);
         QTemporaryDir target;
         {
             ProjectViewModel::AssistantEditScope edit(&project, 8);
@@ -146,6 +156,83 @@ private slots:
         QVERIFY(saved.experiment().peak.broad_gauss_u->free.get());
         QCOMPARE(saved.experiment().peak.broad_gauss_u->value.get(), coefficient->value.get());
         QVERIFY(!project.fit()->trialOpen());
+    }
+    void observerCannotSaveCopyDuringOwnEdit_data() {
+        QTest::addColumn<bool>("existing");
+        QTest::newRow("fresh-folder") << false;
+        QTest::newRow("existing-folder") << true;
+    }
+    void observerCannotSaveCopyDuringOwnEdit() {
+        QFETCH(bool, existing);
+        Session session(nullptr);
+        const auto source = QString::fromUtf8(EDI_SOURCE_DIR) + "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project";
+        QVERIFY(session.openProject(QUrl::fromLocalFile(source)));
+        auto* project = session.project();
+        QVERIFY(project);
+        QTRY_VERIFY_WITH_TIMEOUT(!project->calculating(), 30000);
+        project->setModified(false);
+        candidate(*project);
+        QTemporaryDir output;
+        const auto destination = existing ? output.path() : output.filePath("foreign");
+        bool observed = false, saved = false;
+        connect(project, &ProjectViewModel::modifiedChanged, this, [&] {
+            if (observed) return;
+            observed = true;
+            saved = session.saveProjectAs(QUrl::fromLocalFile(destination), false, true);
+        });
+        {
+            ProjectViewModel::AssistantEditScope edit(project, 7);
+            const auto result = project->applyRecordedEdit(edi::Edit::assign(project->assistantProject()->metadata.title, std::string("candidate")), false);
+            QVERIFY2(result.applied, qPrintable(result.message));
+        }
+        QVERIFY(observed);
+        QVERIFY(!saved);
+        QVERIFY(!QFile::exists(QDir(destination).filePath("project.edi")));
+    }
+    void assistantCanAddSharedSiteRelationAndFit() {
+        auto source = edi::load_project(std::string(EDI_SOURCE_DIR) + "/docs/user/cli/pd-neut-cwl_lbco-hrpt/project");
+        source.aliases.clear();
+        source.constraints.clear();
+        source.minimizer_max_iterations = 2;
+        auto* la = &source.structures[0]->atom_sites[0]->adp_iso;
+        auto* ba = &source.structures[0]->atom_sites[1]->adp_iso;
+        for (const auto& slot : edi::named_slots(source)) {
+            slot.parameter->free = slot.parameter == ba;
+            if (slot.parameter != la && slot.parameter != ba) continue;
+            edi::ParameterAlias alias;
+            alias.id = slot.parameter == la ? "b_la" : "b_ba";
+            alias.parameter_unique_name = slot.unique_name;
+            source.aliases.push_back(std::move(alias));
+        }
+        ProjectViewModel project(std::move(source), nullptr);
+        QTRY_VERIFY_WITH_TIMEOUT(!project.calculating(), 30000);
+        candidate(project);
+        ProjectEditor::RelationAction action;
+        action.kind = ProjectEditor::RelationAction::Kind::ConstraintAppend;
+        action.text = "shared_biso";
+        action.expression = "b_la = b_ba";
+        action.enabled = true;
+        {
+            ProjectViewModel::AssistantEditScope edit(&project, 7);
+            auto input = project.prepareWidgetRelations(action);
+            const auto result = project.analysis()->constraints()->appendComplete(action.text, action.expression, true);
+            project.finishWidgetRelations(input);
+            QVERIFY2(result.applied && result.published, qPrintable(result.message));
+            QVERIFY(input->consumed);
+            QCOMPARE(input->applied_result.constraint, project.assistantProject()->constraints[0].get());
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(!project.calculating(), 30000);
+        QCOMPARE(project.assistantProject()->constraints.size(), std::size_t(1));
+        bool completed = false, adopted = false;
+        project.fit()->startNative([&](const edi::FitReport& report, bool presented) {
+            completed = true;
+            adopted = report.adopted() && presented;
+        }, 0);
+        QTRY_VERIFY_WITH_TIMEOUT(completed, 30000);
+        QVERIFY(adopted);
+        const auto& structure = *project.assistantProject()->structures[0];
+        QVERIFY(std::abs(structure.atom_sites[0]->adp_iso.value.get() - structure.atom_sites[1]->adp_iso.value.get()) < 1e-8);
+        QCOMPARE(project.assistantProject()->constraints[0]->expression.value(), std::string("b_la = b_ba"));
     }
     void retiringEditClearsOriginalProject() {
         ProjectViewModel original(model(), nullptr), successor(model(), nullptr);

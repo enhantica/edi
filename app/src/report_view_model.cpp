@@ -438,7 +438,7 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     // The rows, in reports/report.edi alone; the project's other files are left as they are.
     if (!rows.empty()) {
         try {
-            project_.recordReportFiles(std::move(rows));
+            project_.recordReportFiles(std::move(rows), true);
         } catch (const std::exception& error) {
             emit saveFailed(QString::fromUtf8(error.what()));
             failed = true;

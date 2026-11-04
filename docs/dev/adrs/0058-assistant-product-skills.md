@@ -777,3 +777,21 @@ reference the common contract without unconditional accepted-group freezing;
 they need no duplicate editorial rule. Captured source delivery and actual model
 adherence require the next independently qualified current-guide run; source alone
 is not scientific or runtime acceptance.
+
+## Shared isotropic displacements on mixed sites
+
+The fitting skill uses the ordinary relation tool for species sharing a
+crystallographic site, including La/Ba Biso equality. It preserves occupancy and
+composition, refits, and checks current evidence instead of leaving an
+undetermined pair with only a warning. Distinct displacement models need a user
+constraint or a physical justification. Other shared-site, anisotropic and
+uncertainty limits remain in the same skill.
+
+The relation control prepares its input under the assistant's edit scope, as the
+other follow-up controls do (ADR-0055). The regression appends a complete equality
+through the ordinary constraint model during a candidate, then fits it.
+Publication observers cannot borrow that operation's permission for Save Copy,
+including the older existing-folder route. The ordinary save fence rejects them;
+only the private already-admitted staging call continues inside its own save.
+Only the report writer can continue an admitted report index update inside that
+fence, and staged adoption holds the same publication fence as a direct Save.

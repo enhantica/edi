@@ -442,7 +442,7 @@ class Session : public QObject {
     };
     // What a Save writes (round, adopt, recalculate, write), done on a copy in `name` inside a new folder (the folder
     // itself for an empty name), once the project may be saved; the open project is left as it is.
-    bool stageCopy(const char* purpose, const QString& name, Staged& staged, const QString& parent = {});
+    bool stageCopy(const char* purpose, const QString& name, Staged& staged, const QString& parent = {}, bool admitted = false);
     // Writes the staged snapshot into the .zip `archive`, then the project takes it and works in its folder.
     bool publishArchive(const Staged& staged, const QString& archive);
     // The browser's place holds the staged snapshot: the project takes it and works in its folder, unless it was

@@ -722,10 +722,11 @@ bool Session::saveProjectAsFresh(const QUrl& destination,bool zip,bool copy,bool
         target->editing_=true;editingSet=true;
         target->notifyProjectEdited(origin);
     }
+    if(!editingSet) { target->editing_=true; editingSet=true; }
     if(!current())return false;
     const auto revision=target->revision();
     Staged staged;
-    if(!stageCopy(copy?"copy":"saved",QStringLiteral("project"),staged,requested.absolutePath()))return false;
+    if(!stageCopy(copy?"copy":"saved",QStringLiteral("project"),staged,requested.absolutePath(),true))return false;
     const auto release=qScopeGuard([receiver,root=staged.root]{if(receiver)receiver->releaseTemporaryRoots({root});});
     if(!current() || target->revision()!=revision)return false;
     const auto parent=QDir(requested.absolutePath()).canonicalPath();
@@ -838,10 +839,10 @@ bool Session::takeWebSave(const Staged& staged, quint64 revision) {
     return true;
 }
 
-bool Session::stageCopy(const char* purpose, const QString& name, Staged& staged,const QString& parent) {
+bool Session::stageCopy(const char* purpose, const QString& name, Staged& staged,const QString& parent, bool admitted) {
     // What a Save writes (round, adopt, recalculate, write), done on a copy in a folder of its own, once the project
     // may be saved at all: the open project is left as it is.
-    if (const QString refusal = project_->saveRefusal(); !refusal.isEmpty()) {
+    if (const QString refusal = project_->saveRefusal(admitted); !refusal.isEmpty()) {
         setLastError(refusal);
         return false;
     }

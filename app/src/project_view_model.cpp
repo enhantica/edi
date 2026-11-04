@@ -568,7 +568,11 @@ void ProjectViewModel::setReportFormat(const QString& format, bool on) {
 }
 
 void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
-    if (const auto refusal = saveRefusal(); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    recordReportFiles(std::move(rows), false);
+}
+
+void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows, bool admitted) {
+    if (const auto refusal = saveRefusal(admitted); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
     edi::Project& project = *project_;
     // The open project's rows change with reports/report.edi, or not at all.
     const edi::ItemVec<edi::ReportFile> before = project.report_files;
@@ -4615,8 +4619,10 @@ QString ProjectViewModel::trialLockRefusal() const {
                : QString();
 }
 
-QString ProjectViewModel::saveRefusal() const {
-    if (edit_notification_ || (fit_ && fit_->presenting_))
+QString ProjectViewModel::saveRefusal() const { return saveRefusal(false); }
+
+QString ProjectViewModel::saveRefusal(bool admitted) const {
+    if ((editing_ && !admitted) || edit_notification_ || (fit_ && fit_->presenting_))
         return tr("The current project change is still being published");
     if (assistant_edit_ == 0)
         if (const QString lock = trialLockRefusal(); !lock.isEmpty()) return lock;
@@ -4662,7 +4668,7 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         setLastError(message);
         return message;
     }
-    const QString adopted = adoptSave(directory, saved.metadata);
+    const QString adopted = adoptSave(directory, saved.metadata, true);
     // What was written is the new accepted baseline, even when the readback after it refused: no assistant rollback
     // reaches behind files a Save wrote (edi ADR-0055).
     if (fit_ != nullptr && !retired_) fit_->saved();
@@ -4699,6 +4705,11 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
 }
 
 void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& staged, StagedScan scan) {
+    const PublicationScope publication(*this);
+    if (retired_) return;
+    const bool previous_editing = editing_;
+    editing_ = true;
+    const auto release_editing = qScopeGuard([this, previous_editing] { editing_ = previous_editing; });
     // The staged save already wrote, adopted and calculated what the project takes: nothing here reads or writes a
     // file, so nothing can refuse after the save was published.
     edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
@@ -4761,9 +4772,13 @@ void ProjectViewModel::viewAfterSave(bool shown) {
 }
 
 QString ProjectViewModel::adoptSave(const QString& directory, const edi::ProjectMetadata& metadata) {
+    return adoptSave(directory, metadata, false);
+}
+
+QString ProjectViewModel::adoptSave(const QString& directory, const edi::ProjectMetadata& metadata, bool admitted) {
     const PublicationScope publication(*this);
     if(retired_)return tr("The original saved project owner was replaced");
-    if (const QString refusal = saveRefusal(); !refusal.isEmpty()) {
+    if (const QString refusal = saveRefusal(admitted); !refusal.isEmpty()) {
         setLastError(refusal);
         return refusal;
     }

@@ -8,7 +8,7 @@ description: Choose and revise a fitting strategy from actual model, data, nativ
 Say fit, fitting and fitted to the user, never refine or refinement: these are Edi's words. The
 references below keep their own titles.
 
-Version: 1.6.5. Follow the user's goal, supplied constraints and actually offered
+Version: 1.6.6. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
@@ -162,10 +162,16 @@ never use another experiment's fitted value.
 
 ### Mixed sites and shared displacement models
 
-Establish actual same-phase co-occupancy/scope before relations/shared coordinates.
-Weak independent isotropic ADPs at a mixed-species site can justify a sharing
-TRIAL with an explicit physical assumption; position/symmetry alone never demands
-it. Distinct same-element sites in similar bonding environments may also justify
+Establish actual same-phase co-occupancy and the user's scope first. Species
+sharing one crystallographic site normally share an isotropic displacement model.
+For example, tie Biso(La) = Biso(Ba) on a mixed La/Ba site through add_relations,
+using actual returned unique names and ordinary aliases. Inspect existing
+relations first: reuse a matching equality instead of adding a duplicate or
+reverse relation. Refit and inspect the
+relation, current residuals and uncertainties. Near-perfect anticorrelation of
+independently free same-site ADPs calls for this shared model, not merely a warning
+that the fit is undetermined. Preserve occupancies and composition. Keep distinct
+ADPs only for an explicit user constraint or a stated physical justification. Distinct same-element sites in similar bonding environments may also justify
 restorable sharing from weak identifiability/actual correlations: co-location is
 unnecessary, element alone insufficient. If unresolved, consider justified broader
 or overall isotropic groups OR state unavailable comparison/lost information.

@@ -768,6 +768,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // `trial`: the assistant's own trial asks (its fit start). While an assistant trial is open nothing else may edit
     // the project (edi ADR-0055).
     QString criticalEditRefusal(bool restoring = false, bool trial = false) const;
+    QString saveRefusal(bool admitted) const;
+    QString adoptSave(const QString& directory, const edi::ProjectMetadata& metadata, bool admitted);
+    void recordReportFiles(std::vector<edi::ReportFile> rows, bool admitted);
     // The trial lock's own plain message while an assistant trial is open, else empty (edi ADR-0055).
     QString trialLockRefusal() const;
     // The assistant edit in progress (its own-edit identity), which the trial lock admits.
