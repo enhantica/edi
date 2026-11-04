@@ -289,6 +289,88 @@
       "row": "AtomSiteMoment"
     },
     {
+      "name": "_magnetic_form_factor",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "MagneticFormFactor::id",
+          "type": "ItemKey",
+          "items": [
+            "type_symbol"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "MagneticFormFactor::ion",
+          "type": "detail::WrittenText",
+          "items": [
+            "ion"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "MagneticFormFactor::approximation",
+          "type": "detail::WrittenText",
+          "items": [
+            "approximation"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "MagneticFormFactor::j2_coefficient",
+          "type": "Parameter",
+          "items": [
+            "j2_coefficient"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "MagneticFormFactor::j4_coefficient",
+          "type": "Parameter",
+          "items": [
+            "j4_coefficient"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "MagneticFormFactor::j6_coefficient",
+          "type": "Parameter",
+          "items": [
+            "j6_coefficient"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        }
+      ],
+      "row": "MagneticFormFactor",
+      "legacy": [
+        "_edi_magnetic_form_factor"
+      ]
+    },
+    {
       "name": "structure",
       "form": "loop",
       "columns": [
@@ -2394,11 +2476,6 @@
       "why": "held as written in the structure's magnetic description; crysta checks it"
     },
     {
-      "name": "_magnetic_form_factor",
-      "form": "derived",
-      "why": "held as written in the structure's magnetic description; crysta checks it"
-    },
-    {
       "name": "_space_group_symop",
       "form": "columns",
       "columns": [
@@ -3313,6 +3390,46 @@
       "part": "the row's identity as a calculation input"
     },
     {
+      "member": "MagneticFormFactor::id",
+      "type": "ItemKey",
+      "category": "_magnetic_form_factor"
+    },
+    {
+      "member": "MagneticFormFactor::ion",
+      "type": "detail::WrittenText",
+      "category": "_magnetic_form_factor"
+    },
+    {
+      "member": "MagneticFormFactor::approximation",
+      "type": "detail::WrittenText",
+      "category": "_magnetic_form_factor"
+    },
+    {
+      "member": "MagneticFormFactor::j2_coefficient",
+      "type": "Parameter",
+      "category": "_magnetic_form_factor"
+    },
+    {
+      "member": "MagneticFormFactor::j4_coefficient",
+      "type": "Parameter",
+      "category": "_magnetic_form_factor"
+    },
+    {
+      "member": "MagneticFormFactor::j6_coefficient",
+      "type": "Parameter",
+      "category": "_magnetic_form_factor"
+    },
+    {
+      "member": "MagneticFormFactor::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "MagneticFormFactor::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
       "member": "MagneticDescription::group",
       "type": "crysta::MagneticGroupName",
       "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
@@ -3340,11 +3457,6 @@
     {
       "member": "MagneticDescription::propagation_vectors",
       "type": "std::vector<std::pair<std::string, std::string>>",
-      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
-    },
-    {
-      "member": "MagneticDescription::form_factors",
-      "type": "std::map<std::string, crysta::MagneticIon>",
       "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
     },
     {
@@ -3646,6 +3758,13 @@
       "member": "Structure::magnetic",
       "type": "detail::Written<MagneticDescription>",
       "not_storage": "the magnetic description as written, crysta's to read, check and write (ADR-0068)"
+    },
+    {
+      "member": "Structure::magnetic_form_factors",
+      "type": "ItemVec<MagneticFormFactor>",
+      "holds": [
+        "_magnetic_form_factor"
+      ]
     },
     {
       "member": "Structure::scattering_lengths_fm",
@@ -5651,6 +5770,9 @@
     ],
     "_edi": [
       "_edi"
+    ],
+    "_edi_magnetic_form_factor": [
+      "_magnetic_form_factor"
     ],
     "_evolution_chart": [
       "_evolution_chart"

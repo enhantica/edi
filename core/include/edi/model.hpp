@@ -51,6 +51,7 @@ struct Structure;
 struct AtomSite;
 struct AtomSiteAniso;
 struct AtomSiteMoment;
+struct MagneticFormFactor;
 class Project;
 class ItemKey;
 struct Parameter;
@@ -2792,6 +2793,42 @@ struct RowTraits<AtomSiteMoment> {
     static const detail::RowLink* primary(const AtomSiteMoment& row) noexcept { return &row.row; }
 };
 
+// An atom type's magnetic form factor, keyed by the type symbol: the ion (empty: the type's own), the
+// approximation (`j0`, `dipole` or `beyond_dipole`) and the weights C2, C4, C6 of the <j2>, <j4> and
+// <j6> terms, which a fit can free. crysta checks and calculates it.
+struct MagneticFormFactor : std::enable_shared_from_this<MagneticFormFactor> {
+    ItemKey id;  // the type symbol;: owned by magnetic_form_factors
+    detail::WrittenText ion = "";
+    detail::WrittenText approximation = "j0";
+    Parameter j2_coefficient;
+    Parameter j4_coefficient;
+    Parameter j6_coefficient;
+
+    MagneticFormFactor();
+
+    std::vector<Parameter*> parameters() { return {&j2_coefficient, &j4_coefficient, &j6_coefficient}; }
+    std::vector<Parameter*> free_parameters();
+    detail::RowLink row;
+    detail::Epoch epoch;
+};
+
+template <>
+struct KeyTraits<MagneticFormFactor> {
+    static ItemKey& key(MagneticFormFactor& row) { return row.id; }
+    static const ItemKey& key(const MagneticFormFactor& row) { return row.id; }
+    static std::string canonical(const std::string& id) { return id; }
+    static const char* category() { return "magnetic form factor"; }
+};
+
+template <>
+struct RowTraits<MagneticFormFactor> {
+    static void link(MagneticFormFactor& row, const std::shared_ptr<detail::Membership>& record) noexcept {
+        row.row.link(record);
+    }
+    static void unlink(MagneticFormFactor& row) noexcept { row.row.unlink(); }
+    static const detail::RowLink* primary(const MagneticFormFactor& row) noexcept { return &row.row; }
+};
+
 // A structure's magnetic description besides its moments, each category as written: crysta reads,
 // checks and writes it.
 struct MagneticDescription {
@@ -2801,11 +2838,10 @@ struct MagneticDescription {
     std::vector<std::pair<std::string, std::string>> centerings;
     crysta::ParentSpaceGroup parent;
     std::vector<std::pair<std::string, std::string>> propagation_vectors;
-    std::map<std::string, crysta::MagneticIon> form_factors;
 
     bool empty() const noexcept {
         return group.empty() && transforms.empty() && operations.empty() && centerings.empty() &&
-               parent.empty() && propagation_vectors.empty() && form_factors.empty();
+               parent.empty() && propagation_vectors.empty();
     }
     friend bool operator==(const MagneticDescription&, const MagneticDescription&) = default;
 };
@@ -2837,6 +2873,20 @@ struct RowSchema<edi::AtomSiteMoment> {
                                               &edi::AtomSiteMoment::crystalaxis_y, &edi::AtomSiteMoment::crystalaxis_z,
                                               &edi::AtomSiteMoment::symmform};
     static constexpr std::array items{"id", "crystalaxis_x", "crystalaxis_y", "crystalaxis_z", "symmform"};
+};
+
+// The columns of the `_magnetic_form_factor` table.
+template <>
+struct RowSchema<edi::MagneticFormFactor> {
+    static constexpr const char* name = "_magnetic_form_factor";
+    static constexpr auto fields =
+        std::tuple{&edi::MagneticFormFactor::id, &edi::MagneticFormFactor::ion, &edi::MagneticFormFactor::approximation,
+                   &edi::MagneticFormFactor::j2_coefficient, &edi::MagneticFormFactor::j4_coefficient,
+                   &edi::MagneticFormFactor::j6_coefficient};
+    static constexpr std::array items{"type_symbol", "ion", "approximation", "j2_coefficient", "j4_coefficient",
+                                      "j6_coefficient"};
+    // The CIF spelling: magCIF has no form-factor items, so CIF takes local names.
+    static constexpr std::array legacy{"_edi_magnetic_form_factor"};
 };
 }  // namespace crysta
 
@@ -2978,6 +3028,8 @@ struct Structure : std::enable_shared_from_this<Structure> {
     // description; both empty for a structure without magnetic order.
     ItemVec<AtomSiteMoment> atom_site_moment;
     detail::Written<MagneticDescription> magnetic;
+    // The magnetic atom types' form factors, one row per type a file or an edit declares.
+    ItemVec<MagneticFormFactor> magnetic_form_factors;
     // Element -> coherent bound neutron scattering length b_c (fm). Empty => the adapter uses crysta's
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).
     // A loop category held in one cell; written whole or with `modify`.
@@ -3015,6 +3067,7 @@ struct Structure : std::enable_shared_from_this<Structure> {
         atom_sites.holder_ = this;
         atom_site_aniso.holder_ = this;
         atom_site_moment.holder_ = this;
+        magnetic_form_factors.holder_ = this;
     }
 };
 
@@ -3027,6 +3080,7 @@ inline Structure::Structure(const Structure& other)
       atom_site_aniso(other.atom_site_aniso),
       atom_site_moment(other.atom_site_moment),
       magnetic(other.magnetic),
+      magnetic_form_factors(other.magnetic_form_factors),
       scattering_lengths_fm(other.scattering_lengths_fm),
       view(other.view),
       epoch(other.epoch),
@@ -5146,6 +5200,7 @@ inline void link_nested(Structure& structure, const std::shared_ptr<const Projec
     static_cast<KeyedBase&>(structure.atom_sites).host_link_ = link;
     static_cast<KeyedBase&>(structure.atom_site_aniso).host_link_ = link;
     static_cast<KeyedBase&>(structure.atom_site_moment).host_link_ = link;
+    static_cast<KeyedBase&>(structure.magnetic_form_factors).host_link_ = link;
 }
 
 inline void link_nested(ExperimentBase& experiment, const std::shared_ptr<const ProjectLink>& link) noexcept {
@@ -5323,7 +5378,7 @@ inline std::optional<std::string> ParameterRenames::operator()(const std::string
     }
     const std::string category = rest.substr(0, end);
     static const std::set<std::string> structure_categories{"cell", "atom_site", "atom_site_aniso",
-                                                            "atom_site_moment"};
+                                                            "atom_site_moment", "magnetic_form_factor"};
     static const std::set<std::string> experiment_categories{
         "peak", "instrument", "absorption", "background", "linked_structure", "preferred_orientation"};
     if (block == from && (structure ? structure_categories : experiment_categories).contains(category)) {
@@ -5782,10 +5837,6 @@ struct SpaceGroupMagnTransformsCategory {
     static constexpr const char* name = "_space_group_magn_transforms";
     static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
 };
-struct MagneticFormFactorCategory {
-    static constexpr const char* name = "_magnetic_form_factor";
-    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
-};
 
 // The computed categories: columns crysta published, shared and read-only here, with ordinal ids.
 struct SpaceGroupSymopCategory {
@@ -5861,6 +5912,12 @@ inline AtomSiteMoment::AtomSiteMoment() {
     crystalaxis_z.spec = &spec::atom_site_moment_crystalaxis_z;
 }
 
+inline MagneticFormFactor::MagneticFormFactor() {
+    j2_coefficient.spec = &spec::magnetic_form_factor_j2_coefficient;
+    j4_coefficient.spec = &spec::magnetic_form_factor_j4_coefficient;
+    j6_coefficient.spec = &spec::magnetic_form_factor_j6_coefficient;
+}
+
 inline AtomSiteAniso::AtomSiteAniso() {
     adp_11.spec = &spec::atom_site_aniso_adp_11;
     adp_22.spec = &spec::atom_site_aniso_adp_22;
@@ -5921,6 +5978,9 @@ inline std::vector<Parameter*> AtomSiteAniso::free_parameters() {
 inline std::vector<Parameter*> AtomSiteMoment::free_parameters() {
     return detail::free_of(parameters());
 }
+inline std::vector<Parameter*> MagneticFormFactor::free_parameters() {
+    return detail::free_of(parameters());
+}
 inline std::vector<Parameter*> LineSegment::free_parameters() {
     return detail::free_of(parameters());
 }
@@ -5941,6 +6001,11 @@ inline std::vector<Parameter*> Structure::parameters() {
     }
     for (const std::shared_ptr<AtomSiteMoment>& moment : atom_site_moment) {
         for (Parameter* parameter : moment->parameters()) {
+            out.push_back(parameter);
+        }
+    }
+    for (const std::shared_ptr<MagneticFormFactor>& row : magnetic_form_factors) {
+        for (Parameter* parameter : row->parameters()) {
             out.push_back(parameter);
         }
     }
@@ -6242,6 +6307,7 @@ inline void point_parameters(AtomSite& site) {
 }
 inline void point_parameters(AtomSiteAniso& tensor) { point_at_row(tensor); }
 inline void point_parameters(AtomSiteMoment& moment) { point_at_row(moment); }
+inline void point_parameters(MagneticFormFactor& row) { point_at_row(row); }
 inline void point_parameters(LineSegment& point) { point_at_row(point); }
 inline void point_parameters(PolynomialTerm& term) { point_at_row(term); }
 inline void point_parameters(PrefOrient& row) { point_at_row(row); }
@@ -6259,6 +6325,9 @@ inline void point_parameters(Structure& structure) {
     }
     for (const std::shared_ptr<AtomSiteMoment>& moment : structure.atom_site_moment) {
         point_parameters(*moment);
+    }
+    for (const std::shared_ptr<MagneticFormFactor>& row : structure.magnetic_form_factors) {
+        point_parameters(*row);
     }
 }
 inline void point_parameters(ExperimentBase& experiment) {

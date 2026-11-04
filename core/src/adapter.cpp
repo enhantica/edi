@@ -2848,8 +2848,18 @@ void to_crysta_magnetic(const Structure& s, crysta::Structure& built) {
         built.magnetic_operations = magnetic.operations;
         built.magnetic_centerings = magnetic.centerings;
         built.propagation_vectors = magnetic.propagation_vectors;
-        built.magnetic_form_factors = magnetic.form_factors;
     }
+    std::vector<crysta::MagneticFormFactor> form_factors;
+    form_factors.reserve(s.magnetic_form_factors.size());
+    for (const auto& item : s.magnetic_form_factors) {
+        const MagneticFormFactor& f = *item;
+        form_factors.emplace_back(
+            f.id.value(), f.ion.value(), f.approximation.value(),
+            std::array<crysta::Parameter, 3>{param(f.j2_coefficient, crysta::MAGNETIC_FORM_FACTOR, "j2_coefficient"),
+                                             param(f.j4_coefficient, crysta::MAGNETIC_FORM_FACTOR, "j4_coefficient"),
+                                             param(f.j6_coefficient, crysta::MAGNETIC_FORM_FACTOR, "j6_coefficient")});
+    }
+    built.magnetic_form_factors = std::move(form_factors);
     std::vector<crysta::AtomSiteMoment> rows;
     rows.reserve(s.atom_site_moment.size());
     for (const auto& item : s.atom_site_moment) {

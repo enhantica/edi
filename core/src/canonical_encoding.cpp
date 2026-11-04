@@ -289,12 +289,6 @@ void put_magnetic(std::string& out, const MagneticDescription& magnetic) {
     put_text(out, magnetic.parent.it_number);
     put_text(out, magnetic.parent.transform_pp_abc);
     put_text(out, magnetic.parent.child_transform_pp_abc);
-    put_u64(out, magnetic.form_factors.size());
-    for (const auto& [symbol, ion] : magnetic.form_factors) {
-        put_text(out, symbol);
-        put_text(out, ion.ion);
-        put_text(out, ion.j2_coefficient);
-    }
 }
 
 void put_structure(std::string& out, const Structure& structure, Scope scope) {
@@ -343,6 +337,19 @@ void put_structure(std::string& out, const Structure& structure, Scope scope) {
             put_text(out, moment.id);
             for (const Parameter* component : moment.parameters()) {
                 put_parameter(out, *component, scope);
+            }
+        }
+    }
+    // The magnetic form factors, an input of the magnetic intensity; none adds nothing.
+    if (!structure.magnetic_form_factors.empty()) {
+        put_u64(out, structure.magnetic_form_factors.size());
+        for (const auto& row_item : structure.magnetic_form_factors) {
+            MagneticFormFactor& row = *row_item;
+            put_text(out, row.id);
+            put_text(out, row.ion.value());
+            put_text(out, row.approximation.value());
+            for (const Parameter* coefficient : row.parameters()) {
+                put_parameter(out, *coefficient, scope);
             }
         }
     }
@@ -456,6 +463,23 @@ std::string geometry_inputs(const Structure& structure) {
             put_u64(out, moment.id.written());
             for (const Parameter* component : moment.parameters()) {
                 put_written(out, component->value);
+            }
+        }
+    }
+    // A form factor's ion is checked with the structure, so it is a geometry input as crysta records.
+    if (!structure.magnetic_form_factors.empty()) {
+        put_u64(out, structure.magnetic_form_factors.size());
+        put_u64(out, structure.magnetic_form_factors.generation());
+        for (const auto& row_item : structure.magnetic_form_factors) {
+            MagneticFormFactor& row = *row_item;
+            put_text(out, row.id);
+            put_u64(out, row.id.written());
+            put_text(out, row.ion.value());
+            put_u64(out, row.ion.written());
+            put_text(out, row.approximation.value());
+            put_u64(out, row.approximation.written());
+            for (const Parameter* coefficient : row.parameters()) {
+                put_written(out, coefficient->value);
             }
         }
     }

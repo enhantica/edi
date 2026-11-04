@@ -820,17 +820,33 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                                           cell("_space_group_magn_transforms.source")});
         }
     }
+    // An absent ion is the type's own, an absent coefficient 0, and an absent approximation `dipole`
+    // when the row gives C2 and `j0` otherwise (crysta's reading).
     if (const Loop* loop = block.loop_with("_magnetic_form_factor.type_symbol")) {
+        const ParameterSpec* const specs[3] = {&spec::magnetic_form_factor_j2_coefficient,
+                                               &spec::magnetic_form_factor_j4_coefficient,
+                                               &spec::magnetic_form_factor_j6_coefficient};
         for (const auto& row : loop->rows) {
             const auto cell = [&](const char* tag) {
                 const std::string value =
                     loop->column(tag) >= 0 ? loop_cell(*loop, row, tag, where) : std::string();
                 return value == "." || value == "?" ? std::string() : value;
             };
-            magnetic.form_factors.emplace(
-                cell("_magnetic_form_factor.type_symbol"),
-                crysta::MagneticIon{cell("_magnetic_form_factor.ion"),
-                                    cell("_magnetic_form_factor.j2_coefficient")});
+            MagneticFormFactor form_factor;
+            form_factor.id = cell("_magnetic_form_factor.type_symbol");
+            form_factor.ion = cell("_magnetic_form_factor.ion");
+            const std::vector<Parameter*> coefficients = form_factor.parameters();
+            for (std::size_t n = 0; n < 3; ++n) {
+                const std::string value = cell(specs[n]->edi_names[0]);
+                if (!value.empty()) {
+                    read_into(*coefficients[n], parse_parameter(value, where), where);
+                }
+            }
+            const std::string approximation = cell("_magnetic_form_factor.approximation");
+            form_factor.approximation =
+                !approximation.empty() ? approximation
+                                       : (cell("_magnetic_form_factor.j2_coefficient").empty() ? "j0" : "dipole");
+            structure.magnetic_form_factors.push_back(std::move(form_factor));
         }
     }
     if (!magnetic.empty()) {
@@ -2656,6 +2672,15 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
             add(prefix + "crystalaxis_x", unique + "crystalaxis_x", &moment.crystalaxis_x);
             add(prefix + "crystalaxis_y", unique + "crystalaxis_y", &moment.crystalaxis_y);
             add(prefix + "crystalaxis_z", unique + "crystalaxis_z", &moment.crystalaxis_z);
+        }
+        // The magnetic atom types' form-factor coefficients, after every moment (crysta's order).
+        for (auto& row_item : structure.magnetic_form_factors) {
+            auto& row = *row_item;
+            const std::string prefix = base + row.id.value() + ".";
+            const std::string unique = block + ".magnetic_form_factor." + row.id.value() + ".";
+            add(prefix + "j2_coefficient", unique + "j2_coefficient", &row.j2_coefficient);
+            add(prefix + "j4_coefficient", unique + "j4_coefficient", &row.j4_coefficient);
+            add(prefix + "j6_coefficient", unique + "j6_coefficient", &row.j6_coefficient);
         }
     }
     for (auto& experiment_item : project.experiments) {

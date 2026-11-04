@@ -340,6 +340,17 @@ std::optional<ResolvedParameter> resolve_structural_label(Structure& structure,
                 if (field == names[k]) return ResolvedParameter{components[k], base + names[k]};
             }
         }
+        // A magnetic atom type's form-factor coefficient, `<type>.j<n>_coefficient`.
+        for (auto& row_item : structure.magnetic_form_factors) {
+            MagneticFormFactor& row = *row_item;
+            if (row.id != site) continue;
+            const std::string base = root + "magnetic_form_factor[" + row.id + "].";
+            const char* const names[3] = {"j2_coefficient", "j4_coefficient", "j6_coefficient"};
+            const std::vector<Parameter*> coefficients = row.parameters();
+            for (std::size_t n = 0; n < 3; ++n) {
+                if (field == names[n]) return ResolvedParameter{coefficients[n], base + names[n]};
+            }
+        }
     }
     return std::nullopt;
 }
@@ -579,6 +590,12 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
                         field.parameter, root + "atom_site_moment[" + entry.row_label + "]." + field.name);
+                } else if (category.id == "magnetic_form_factor") {
+                    // A magnetic atom type's form-factor coefficients, after its moments.
+                    entry.row_label = structure->magnetic_form_factors[i / 3]->id;
+                    entry.path = path_of(
+                        detail::resolve_structural_label(*structure, entry.row_label + "." + field.name, root),
+                        field.parameter, root + "magnetic_form_factor[" + entry.row_label + "]." + field.name);
                 } else {
                     entry.path = path_of(
                         detail::resolve_structural_label(*structure, category.id + "_" + field.name, root),

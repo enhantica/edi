@@ -400,17 +400,57 @@ class Edit {
             }
         });
     }
-    // The magnetic ion of an atom type, whose form factor its moments take; empty: the type's default ion.
+    // The magnetic ion of an atom type, whose form factor its moments take; empty: the type's default ion. The
+    // type's form-factor row is added for an ion, and removed with its ion when nothing else in it is set.
     static Edit magnetic_ion(Structure& structure, std::string type_symbol, std::string ion) {
         return Edit([&structure, type_symbol = std::move(type_symbol), ion = std::move(ion)] {
-            structure.magnetic.modify([&](MagneticDescription& magnetic) {
-                if (ion.empty()) {
-                    magnetic.form_factors.erase(type_symbol);
-                } else {
-                    magnetic.form_factors[type_symbol].ion = ion;
-                }
-            });
+            MagneticFormFactor& row = form_factor_row(structure, type_symbol);
+            row.ion = ion;
+            drop_default_form_factor(structure, type_symbol);
         });
+    }
+    // The form-factor approximation of an atom type: `j0`, `dipole` or `beyond_dipole`.
+    static Edit magnetic_approximation(Structure& structure, std::string type_symbol, std::string approximation) {
+        return Edit([&structure, type_symbol = std::move(type_symbol), approximation = std::move(approximation)] {
+            if (approximation != "j0" && approximation != "dipole" && approximation != "beyond_dipole") {
+                throw std::invalid_argument("magnetic form-factor approximation '" + approximation +
+                                            "' is none of j0, dipole and beyond_dipole");
+            }
+            form_factor_row(structure, type_symbol).approximation = approximation;
+            drop_default_form_factor(structure, type_symbol);
+        });
+    }
+    // The form-factor row of an atom type, added with the defaults when the structure has none.
+    static MagneticFormFactor& form_factor_row(Structure& structure, const std::string& type_symbol) {
+        for (const auto& row : structure.magnetic_form_factors) {
+            if (row->id.value() == type_symbol) {
+                return *row;
+            }
+        }
+        MagneticFormFactor added;
+        added.id = type_symbol;
+        structure.magnetic_form_factors.push_back(std::move(added));
+        return *structure.magnetic_form_factors.back();
+    }
+    // Removes an atom type's form-factor row when it holds only defaults: no ion, `j0`, every coefficient 0 and
+    // fixed. Such a row means what no row means.
+    static void drop_default_form_factor(Structure& structure, const std::string& type_symbol) {
+        for (std::size_t at = 0; at < structure.magnetic_form_factors.size(); ++at) {
+            MagneticFormFactor& row = *structure.magnetic_form_factors[at];
+            if (row.id.value() != type_symbol) {
+                continue;
+            }
+            const std::vector<Parameter*> coefficients = row.parameters();
+            const bool plain = std::all_of(coefficients.begin(), coefficients.end(), [](const Parameter* c) {
+                const double value = c->value;
+                const bool free = c->free;
+                return value == 0.0 && !free;
+            });
+            if (row.ion.value().empty() && row.approximation.value() == "j0" && plain) {
+                structure.magnetic_form_factors.erase_at(at);
+            }
+            return;
+        }
     }
     static Edit texture_axis_component(PrefOrient& row, detail::Written<int> PrefOrient::*component, int value) {
         return Edit([&row, component, value] { set_texture_axis_component(row, component, value); });

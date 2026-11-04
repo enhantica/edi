@@ -1540,6 +1540,13 @@ static void def_collection_views(nb::module_& m) {
     nb::class_<AtomSiteMomentIter> atom_site_moment_iter(m, "_AtomSiteMomentIterator");
     def_keyed_collection<AtomSiteMomentView, AtomSiteMomentIter, edi::AtomSiteMoment>(
         atom_site_moment_view, atom_site_moment_iter);
+    // The magnetic atom types' form factors, keyed by the type symbol.
+    nb::class_<MagneticFormFactorView> magnetic_form_factor_view(
+        m, "MagneticFormFactorCollection",
+        "Live keyed collection of a structure's magnetic form factors (key: the type symbol).");
+    nb::class_<MagneticFormFactorIter> magnetic_form_factor_iter(m, "_MagneticFormFactorIterator");
+    def_keyed_collection<MagneticFormFactorView, MagneticFormFactorIter, edi::MagneticFormFactor>(
+        magnetic_form_factor_view, magnetic_form_factor_iter);
 
     nb::class_<PrefOrientsView> pref_orients_view(
         m, "PrefOrients",
@@ -2347,6 +2354,34 @@ NB_MODULE(_edi, m) {
     def_parameter_field(atom_site_moment, "crystalaxis_y", &edi::AtomSiteMoment::crystalaxis_y);
     def_parameter_field(atom_site_moment, "crystalaxis_z", &edi::AtomSiteMoment::crystalaxis_z);
 
+    // An atom type's magnetic form factor, keyed by the type symbol: the ion (empty: the type's own),
+    // the approximation (j0, dipole or beyond_dipole) and the coefficients C2, C4, C6 of the <j2>,
+    // <j4> and <j6> terms.
+    nb::class_<edi::MagneticFormFactor> magnetic_form_factor(m, "MagneticFormFactor");
+    magnetic_form_factor.def("__setattr__", renewing_setattr<edi::MagneticFormFactor>({}, renew_epoch),
+                             nb::arg("name"), nb::arg("value").none());
+    magnetic_form_factor.def(nb::new_([]() { return std::make_shared<edi::MagneticFormFactor>(); }))
+        .def_prop_rw(
+            "id", [](const edi::MagneticFormFactor& self) { return self.id.value(); },
+            [](edi::MagneticFormFactor& self, std::string value) { self.id = std::move(value); })
+        .def_prop_rw(
+            "ion", [](const edi::MagneticFormFactor& self) { return self.ion.value(); },
+            [](edi::MagneticFormFactor& self, std::string value) { self.ion = std::move(value); })
+        .def_prop_rw(
+            "approximation", [](const edi::MagneticFormFactor& self) { return self.approximation.value(); },
+            [](edi::MagneticFormFactor& self, std::string value) {
+                if (value != "j0" && value != "dipole" && value != "beyond_dipole") {
+                    throw nb::value_error(("magnetic form-factor approximation '" + value +
+                                           "' is none of j0, dipole and beyond_dipole")
+                                              .c_str());
+                }
+                self.approximation = std::move(value);
+            });
+    def_parameter_walks(magnetic_form_factor);
+    def_parameter_field(magnetic_form_factor, "j2_coefficient", &edi::MagneticFormFactor::j2_coefficient);
+    def_parameter_field(magnetic_form_factor, "j4_coefficient", &edi::MagneticFormFactor::j4_coefficient);
+    def_parameter_field(magnetic_form_factor, "j6_coefficient", &edi::MagneticFormFactor::j6_coefficient);
+
     // One upstream PrefOrient row — the March-Dollase coefficient and random fraction (fit
     // parameters), the fixed integer texture axis, the structure it corrects.
     nb::class_<edi::PrefOrient> pref_orient(m, "PrefOrient");
@@ -2529,16 +2564,13 @@ NB_MODULE(_edi, m) {
                      })
         .def_prop_ro("parent_propagation_vector",
                      [](const edi::Structure& self) { return self.magnetic->propagation_vectors; })
-        .def_prop_ro("magnetic_form_factor", [](const edi::Structure& self) {
-            nb::dict out;
-            for (const auto& [type, ion] : self.magnetic->form_factors) {
-                nb::dict row;
-                row["ion"] = ion.ion;
-                row["j2_coefficient"] = ion.j2_coefficient;
-                out[type.c_str()] = row;
-            }
-            return out;
-        })
+        .def_prop_ro(
+            "magnetic_form_factor",
+            [](edi::Structure& self) {
+                return edi::views::MagneticFormFactorView{&self, &edi::Structure::magnetic_form_factors,
+                                                          &edi::MagneticFormFactor::id};
+            },
+            nb::keep_alive<0, 1>())
         .def_prop_ro(
             "atom_sites_cartn_transform",
             [](edi::Structure& self) {

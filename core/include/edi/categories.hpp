@@ -362,7 +362,15 @@ inline std::vector<Category> structure_categories(Structure& structure) {
             }
         }
         categories.push_back(moments);
-        categories.push_back({"magnetic_form_factor", true, magnetic.form_factors.size()});
+        Category form_factors{"magnetic_form_factor", true, structure.magnetic_form_factors.size()};
+        for (const auto& row : structure.magnetic_form_factors) {
+            const char* names[] = {"j2_coefficient", "j4_coefficient", "j6_coefficient"};
+            const std::vector<Parameter*> parameters = row->parameters();
+            for (std::size_t i = 0; i < parameters.size(); ++i) {
+                form_factors.fields.push_back({names[i], parameters[i], true, refinable(parameters[i])});
+            }
+        }
+        categories.push_back(form_factors);
     }
     detail::mark_dependents(categories);
     return categories;
