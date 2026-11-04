@@ -40,7 +40,7 @@ def windows_inputs(work: Path) -> tuple[Path, Path]:
         download(archive['url'], archive['sha256'], path)
         with py7zr.SevenZipFile(path) as compressed:
             compressed.extractall(sdk)  # noqa: S202 - checksum-pinned 7z, not tarfile
-    qt = sdk / kit['version'] / 'msvc2022_64'
+    qt = sdk
     (qt / 'bin/qt.conf').write_text('[Paths]\nPrefix=..\n')
     recipe = yaml.safe_load((ROOT / 'tools/deps/assistant-runtime/recipe.yaml').read_text())
     template = jinja2.Environment(
