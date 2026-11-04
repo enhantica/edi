@@ -82,6 +82,7 @@ std::map<std::string, double> counted_elements(const std::string& formula) {
             }
         }
         counts[symbol] += count;
+        if (!std::isfinite(counts[symbol])) throw std::invalid_argument("not a chemical formula: " + formula);
     }
     if (counts.empty()) throw std::invalid_argument("not a chemical formula: " + formula);
     return counts;
@@ -100,7 +101,7 @@ std::vector<std::string> hill_order(const std::map<std::string, double>& counts)
 
 std::string count_text(double count) {
     if (count == 1.0) return {};
-    if (count == std::floor(count) && count < 1e15) return std::to_string(static_cast<long long>(count));
+    if (count == std::floor(count) && count >= 0 && count < 1e15) return std::to_string(static_cast<long long>(count));
     std::ostringstream out;
     out.precision(10);
     out << count;
@@ -176,7 +177,11 @@ Index parse_index(const std::string& text) {
         entry.source = text_member(item, "source");
         const json::Value& cell = item.get("cell");
         if (!cell.is_null()) {
-            for (const json::Value& number : cell.array("cell")) entry.cell.push_back(number.number("cell"));
+            for (const json::Value& number : cell.array("cell")) {
+                const double value = number.number("cell");
+                if (!std::isfinite(value)) throw std::invalid_argument("entry " + entry.id + " has a cell value that is not a number");
+                entry.cell.push_back(value);
+            }
             if (entry.cell.size() != 6) throw std::invalid_argument("entry " + entry.id + " has a cell without six values");
         }
         for (const json::Value& file : item.at("files").array("files")) {
@@ -190,8 +195,11 @@ Index parse_index(const std::string& text) {
                 throw std::invalid_argument("entry " + entry.id + " has a sha256 that is not 64 hex digits: " + f.path);
             const json::Value& bytes = file.get("bytes");
             if (!bytes.is_null()) {
+                // A whole number a double holds exactly (below 2^53) and a file can have; anything else is refused
+                // before the conversion, which would otherwise be undefined for an out-of-range value.
                 const double n = bytes.number("bytes");
-                if (n < 0 || n != std::floor(n)) throw std::invalid_argument("entry " + entry.id + " has a size that is not a whole number: " + f.path);
+                if (!(n >= 0) || n != std::floor(n) || n > 9007199254740992.0)
+                    throw std::invalid_argument("entry " + entry.id + " has a size that is not a whole number of bytes: " + f.path);
                 f.bytes = static_cast<long long>(n);
             }
             entry.files.push_back(std::move(f));
@@ -301,7 +309,9 @@ std::vector<Entry> cod_entries(const std::string& text) {
             const std::string value = cod_text(row, key);
             try {
                 if (value.empty()) throw std::invalid_argument(key);
-                entry.cell.push_back(std::stod(value));
+                const double number = std::stod(value);
+                if (!std::isfinite(number)) throw std::invalid_argument(key);
+                entry.cell.push_back(number);
             } catch (const std::exception&) {
                 cell = false;
                 break;
