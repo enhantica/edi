@@ -39,7 +39,9 @@ jobs:
     steps:
       - name: Enable long source paths on Windows
         if: runner.os == 'Windows'
-        run: git config --global core.longpaths true
+        run: |
+          git config --global core.longpaths true
+          git config --global core.protectNTFS false
       - uses: actions/checkout@v5
         if: runner.os != 'Windows'
         with:
