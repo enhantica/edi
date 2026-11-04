@@ -18,6 +18,7 @@
 #include "example_list_model.hpp"
 #include "online_search.hpp"
 #include "online_sources.hpp"
+#include "collection_examples.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
 #include "assistant_view_model.hpp"
@@ -88,6 +89,8 @@ class Session : public QObject {
     Q_PROPERTY(bool assistantWorkReportsAutomatic READ assistantWorkReportsAutomatic CONSTANT)
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
+    /// An example from an online collection is being fetched; its project opens, or loadFailed fires, when this clears.
+    Q_PROPERTY(bool openingExample READ openingExample NOTIFY openingExampleChanged)
     // A project set aside while a tutorial works in its own (edi ADR-0064), and whether it has unsaved changes.
     Q_PROPERTY(bool hasProjectSetAside READ hasProjectSetAside NOTIFY projectSetAsideChanged)
     Q_PROPERTY(bool projectSetAsideModified READ projectSetAsideModified NOTIFY projectSetAsideModifiedChanged)
@@ -129,6 +132,7 @@ class Session : public QObject {
 
     ProjectViewModel* project() const { return project_; }
     bool hasProject() const { return project_ != nullptr; }
+    bool openingExample() const { return opening_example_; }
     QString lastError() const { return last_error_; }
     ExampleListModel* examples() const { return examples_; }
     OnlineSourcesModel* onlineSources() const { return online_sources_; }
@@ -247,6 +251,7 @@ class Session : public QObject {
     void assistantSaveAsRequested(const QString& token);
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
+    void openingExampleChanged();
     void projectSetAsideChanged();
     void projectSetAsideNameChanged();
     void projectSetAsideModifiedChanged();
@@ -321,6 +326,8 @@ class Session : public QObject {
     ExampleListModel* examples_;
     OnlineSourcesModel* online_sources_ = nullptr;
     OnlineSearch* online_search_ = nullptr;
+    CollectionExamples* collection_examples_ = nullptr;
+    bool opening_example_ = false;
     WarningListModel* warnings_;
     int project_messages_ = 0;  // the keys of the project's messages
     QString opened_example_;

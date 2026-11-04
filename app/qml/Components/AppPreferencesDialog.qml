@@ -456,7 +456,7 @@ AppDialog {
                         objectName: "preferences.online.source.kinds." + onlineRow.id
                         horizontalAlignment: Text.AlignLeft
                         elide: Text.ElideRight
-                        text: onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : qsTr("data")).join(", ")
+                        text: onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : k === "project" ? qsTr("projects") : qsTr("data")).join(", ")
                     }
                     EaComponents.ListViewButton {
                         objectName: "preferences.online.source.enabled." + onlineRow.id

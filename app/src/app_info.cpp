@@ -297,7 +297,7 @@ edi_app::ExampleListModel* ApplicationInfo::tutorialCatalogue() {
     if (tutorial_catalogue_ == nullptr) {
         QList<edi_app::ExampleListModel::Item> items;
         for (const Tutorial& tutorial : tutorials()) {
-            items.append({tutorial.id, tutorial.title, tutorial.description, tutorial.tags});
+            items.append({tutorial.id, tutorial.title, tutorial.description, {}, tutorial.tags});
         }
         tutorial_catalogue_ = new edi_app::ExampleListModel(items, this);
     }

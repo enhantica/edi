@@ -13,7 +13,7 @@ namespace edi_app {
 namespace {
 
 const QString kStoreKey = QStringLiteral("Online/sources");
-const QStringList kAllKinds{QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("data")};
+const QStringList kAllKinds{QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("data"), QStringLiteral("project")};
 
 QList<OnlineSourcesModel::Source> builtin_sources() {
     return {

@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include "online_fetch.hpp"
 #include "online_sources.hpp"
 
 namespace edi_app {
@@ -59,26 +60,6 @@ OnlineEntry entry_value(const edi::online::Entry& e) {
     return out;
 }
 
-bool unreachable_error(QNetworkReply::NetworkError error) {
-    switch (error) {
-        case QNetworkReply::ConnectionRefusedError:
-        case QNetworkReply::RemoteHostClosedError:
-        case QNetworkReply::HostNotFoundError:
-        case QNetworkReply::TimeoutError:
-        case QNetworkReply::NetworkSessionFailedError:
-        case QNetworkReply::TemporaryNetworkFailureError:
-        case QNetworkReply::UnknownNetworkError:
-        case QNetworkReply::ProxyConnectionRefusedError:
-        case QNetworkReply::ProxyNotFoundError:
-        case QNetworkReply::ProxyTimeoutError:
-        case QNetworkReply::ServiceUnavailableError:
-        case QNetworkReply::OperationCanceledError:
-        case QNetworkReply::SslHandshakeFailedError:
-            return true;
-        default:
-            return false;
-    }
-}
 
 }  // namespace
 
@@ -397,13 +378,7 @@ void OnlineSearch::setBusy(bool busy) {
     emit busyChanged();
 }
 
-QUrl OnlineSearch::fileUrl(const QString& base, const QString& path) const {
-    QString root = base;
-    while (root.endsWith(u'/')) root.chop(1);
-    const QUrl url(root + u'/' + path);
-    if (url.scheme().isEmpty()) return QUrl::fromLocalFile(root + u'/' + path);
-    return url;
-}
+QUrl OnlineSearch::fileUrl(const QString& base, const QString& path) const { return joined_url(base, path); }
 
 void OnlineSearch::withIndex(const QString& url, const std::function<void(const edi::online::Index*, const QString&, bool)>& done) {
     if (const auto cached = indexes_.value(url)) {
@@ -425,40 +400,6 @@ void OnlineSearch::withIndex(const QString& url, const std::function<void(const 
     });
 }
 
-// Local files answer on the next event-loop turn, so callers see one asynchronous shape for every source.
-void OnlineSearch::fetch(const QUrl& url, Bytes done) {
-    if (url.isLocalFile() || url.scheme().isEmpty()) {
-        const QString path = url.isLocalFile() ? url.toLocalFile() : url.toString();
-        QTimer::singleShot(0, this, [path, done] {
-            QFile file(path);
-            // A folder that is not there is the offline stand-in for a host that does not answer.
-            if (!file.exists()) {
-                done({}, tr("%1 does not exist").arg(path), true);
-                return;
-            }
-            if (!file.open(QIODevice::ReadOnly)) {
-                done({}, tr("%1 cannot be read").arg(path), false);
-                return;
-            }
-            done(file.readAll(), {}, false);
-        });
-        return;
-    }
-    if (network_ == nullptr) network_ = new QNetworkAccessManager(this);
-    QNetworkRequest request(url);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setTransferTimeout(30000);
-    QNetworkReply* reply = network_->get(request);
-    connect(reply, &QNetworkReply::finished, this, [reply, done, url] {
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            const QString what = status > 0 ? tr("%1 answered %2").arg(url.toString()).arg(status) : reply->errorString();
-            done({}, what, unreachable_error(reply->error()));
-            return;
-        }
-        done(reply->readAll(), {}, false);
-    });
-}
+void OnlineSearch::fetch(const QUrl& url, Bytes done) { fetch_url(this, network_, url, std::move(done)); }
 
 }  // namespace edi_app

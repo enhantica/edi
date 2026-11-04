@@ -36,7 +36,7 @@ class ExampleListModel : public RowTableModel {
     // A catalogue entry that is not a bundled example (a tutorial, ADR-0064): its id, title and description, and its
     // tags as "family:value", which give its chips, in their order, and its values for the filters.
     struct Item {
-        QString id, title, detail;
+        QString id, title, detail, origin;
         QStringList tags;
     };
     // The bundled examples.
@@ -44,6 +44,8 @@ class ExampleListModel : public RowTableModel {
     // Other items, filtered as the examples are.
     ExampleListModel(const QList<Item>& items, QObject* parent);
     static QStringList bundledIds();
+    /// Replace every row whose id starts with `prefix` by `items`, built as the items constructor builds them.
+    void replaceItems(const QString& prefix, const QList<Item>& items);
     // A bundled example's title, its sample and origin as the list shows them; empty for an unknown id.
     QString titleOf(const QString& id) const;
     QString searchText() const { return search_text_; }
@@ -71,6 +73,7 @@ class ExampleListModel : public RowTableModel {
     // Adds a chip for `family`'s `value`, once.
     static void addTag(Entry& entry, const QString& family, const QString& value, const QString& fallback);
     void refresh();
+    void addItem(const Item& item);
     QList<Entry> entries_;
     ExampleOptions properties_, options_;
     QString search_text_, filter_property_ = QStringLiteral("purpose"), filter_value_;

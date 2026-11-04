@@ -188,6 +188,11 @@ Session::Session(QObject* parent, AssistantWorkReportOptions options)
     : QObject(parent), work_report_options_(options), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
     online_sources_ = new OnlineSourcesModel(this);
     online_search_ = new OnlineSearch(online_sources_, this);
+    // The Examples list adds the collections' projects to the bundled examples (ADR-0068).
+    collection_examples_ = new CollectionExamples(online_sources_, this);
+    connect(collection_examples_, &CollectionExamples::itemsChanged, this,
+            [this] { examples_->replaceItems(QStringLiteral("collection/"), collection_examples_->items()); });
+    examples_->replaceItems(QStringLiteral("collection/"), collection_examples_->items());
     assistant_ = new AssistantViewModel(this, options);
     initializeSession();
 }
@@ -196,6 +201,11 @@ Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject
     : QObject(parent),work_report_options_(options),examples_(new ExampleListModel(this)),warnings_(new WarningListModel(this)) {
     online_sources_ = new OnlineSourcesModel(this);
     online_search_ = new OnlineSearch(online_sources_, this);
+    // The Examples list adds the collections' projects to the bundled examples (ADR-0068).
+    collection_examples_ = new CollectionExamples(online_sources_, this);
+    connect(collection_examples_, &CollectionExamples::itemsChanged, this,
+            [this] { examples_->replaceItems(QStringLiteral("collection/"), collection_examples_->items()); });
+    examples_->replaceItems(QStringLiteral("collection/"), collection_examples_->items());
     assistant_=new AssistantViewModel(std::move(dependencies),this,options);
     initializeSession();
 }
@@ -877,6 +887,26 @@ bool Session::saveCopy(const QString& target, bool zip) {
 }
 
 bool Session::openExampleNamed(const QString& exampleId) {
+    // A collection example: its zipped project is downloaded, then opened as any archive; the open follows the
+    // download, so a failure is reported through loadFailed rather than a return value.
+    if (CollectionExamples::isCollectionId(exampleId)) {
+        const QPointer<Session> receiver(this);
+        opening_example_ = true;
+        emit openingExampleChanged();
+        collection_examples_->fetchProject(exampleId, [receiver, exampleId](const QUrl& archive, const QString& error) {
+            if (!receiver) return;
+            receiver->opening_example_ = false;
+            emit receiver->openingExampleChanged();
+            if (!error.isEmpty()) {
+                receiver->setLastError(error);
+                emit receiver->loadFailed(error);
+                return;
+            }
+            if (receiver->openProjectAt(archive)) qCInfo(lcApp, "collection example opened: %s", qPrintable(exampleId));
+            else emit receiver->loadFailed(receiver->last_error_.isEmpty() ? tr("The project could not be opened") : receiver->last_error_);
+        });
+        return true;
+    }
     const QString source = kExamples + QLatin1Char('/') + exampleId + QStringLiteral("/project");
     if (!ExampleListModel::bundledIds().contains(exampleId) || !QFileInfo(source).isDir()) {
         setLastError(QStringLiteral("no bundled example named '%1'").arg(exampleId));

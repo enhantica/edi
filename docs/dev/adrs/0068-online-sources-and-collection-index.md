@@ -2,9 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-04
-- **Implementation:** 🟡 Partially implemented — the app's Load ▾ From web… popup, the sources table and the index
-  reader; the collection repository and its mirror, the Examples list from the collection, and the CLI and Python
-  readers are later work
+- **Implementation:** 🟡 Partially implemented — the app's Load ▾ From web… popup, the sources table, the index
+  reader, the index generator, the CLI and Python readers and the Examples list from the collections; the collection
+  repository and its mirror, and moving the bundled examples into it, wait for the owner
 - **Priority:** High
 
 ## Context
@@ -30,7 +30,8 @@ no database server.
   temporary file and hands it to the project's ordinary loaders, `loadStructure`, `loadExperiments` and `loadData`:
   there is no second reader. Measured data without a selected experiment creates one, taking the probe and beam mode
   from the entry's radiation and technique. When a source cannot be reached, the popup says so and offers the next
-  source that holds the same kind.
+  source that holds the same kind. Unreachable is decided by the failure's class, never by a list of codes: a
+  transport, proxy or server failure, or any 5xx answer; a 404 or a refused request is an answer, reported as such.
 - **A sources table in Preferences.** Three rows are built in: COD (`https://www.crystallography.net/cod`),
   EasyDiffraction's collection on GitHub (`enhantica/edi-data`) and its mirror (`https://data.easydiffraction.org`).
   A row can be disabled; user rows, a name and a URL, can be added, edited and removed. The table persists in the
@@ -60,5 +61,7 @@ no database server.
 - Online loading reuses the file loaders, so a format the app reads from disk it reads from the web, and nothing else.
 - The web app searches and loads through the browser's fetch; a source that forbids cross-origin requests shows as
   unreachable there and the popup offers the collection instead.
-- The collection repository, its mirror, moving the bundled examples into it and the CLI and Python readers follow in
-  later work; until the repository exists the two EasyDiffraction rows answer "cannot be reached".
+- The Examples list adds every enabled source's `project` entries to the bundled examples, each opened by
+  downloading its archive; `edi.load_collection` and `edi collection list|find|fetch` read the same index.
+- The collection repository, its mirror and moving the bundled examples into it follow once the repository exists;
+  until then the two EasyDiffraction rows answer "cannot be reached" and the Examples list shows the bundled set.

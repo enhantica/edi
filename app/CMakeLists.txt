@@ -113,6 +113,8 @@ qt_add_qml_module(edi_app_module
         src/online_sources.hpp src/online_sources.cpp
         src/online_search.hpp src/online_search.cpp
         src/online_values.hpp
+        src/online_fetch.hpp src/online_fetch.cpp
+        src/collection_examples.hpp src/collection_examples.cpp
         src/web_files.hpp src/web_files.cpp
         src/web_storage.hpp src/web_storage.cpp
     QML_FILES

@@ -176,8 +176,7 @@ def populate(output: Path) -> int:
             return (values.get(key) or [''])[0]
 
         common = {
-            'name': ' / '.join(meta.get('samples', []))
-            + (' at ' + meta['origin'] if meta.get('origin') else ''),
+            'name': ' / '.join(meta.get('samples', [])),
             'description': meta.get('detail', ''),
             'radiation': first('probe'),
             'technique': ' '.join(
