@@ -133,7 +133,7 @@ def build(
     ]
     options = ['-DCRYSTA_CXX_PACKAGE=ON', '-DCRYSTA_LTO=OFF']
     if SYSTEM == 'windows':
-        common.append('-DCMAKE_CXX_FLAGS=/utf-8')
+        common.append('-DCMAKE_CXX_FLAGS=/utf-8 /EHsc')
         options.extend([
             f'-DEigen3_DIR={qt.as_posix()}/share/eigen3/cmake',
             f'-DCMAKE_PREFIX_PATH={qt.as_posix()}',

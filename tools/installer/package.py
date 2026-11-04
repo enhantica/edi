@@ -238,27 +238,34 @@ def acquire_package_licenses(metadata: dict, destination: Path, target: Path) ->
         raise RuntimeError('Dependency licence archive checksum differs')
     target.mkdir(parents=True)
     with zipfile.ZipFile(archive) as zipped:
-        infos = [
-            name
-            for name in zipped.namelist()
-            if name.startswith('info-') and name.endswith('.tar.zst')
-        ]
-        if len(infos) != 1:
-            raise RuntimeError('Dependency archive has no unique info member')
-        with zipped.open(infos[0]) as stream, tarfile.open(fileobj=stream, mode='r|zst') as info:
-            for member in info:
-                relative = Path(member.name)
-                if relative.parts[:2] != ('info', 'licenses'):
-                    continue
-                if '..' in relative.parts or not (member.isdir() or member.isfile()):
-                    raise RuntimeError('Dependency licence archive contains an unsafe member')
-                if member.isfile():
-                    path = target / Path(*relative.parts[2:])
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    with info.extractfile(member) as source, path.open('wb') as sink:
-                        shutil.copyfileobj(source, sink)
+        members = [name for name in zipped.namelist() if name.endswith('.tar.zst')]
+        if (
+            sum(name.startswith('info-') for name in members) != 1
+            or sum(name.startswith('pkg-') for name in members) != 1
+            or len(members) != 2
+        ):
+            raise RuntimeError('Dependency archive has no unique info and payload members')
+        for name in members:
+            extract_license_member(zipped, name, target)
+
     if not any(target.rglob('*')):
         raise RuntimeError(f'Dependency archive contains no licence files: {metadata["name"]}')
+
+
+def extract_license_member(zipped: zipfile.ZipFile, name: str, target: Path) -> None:
+    """Read licence files from either conda member without extracting executable payloads."""
+    with zipped.open(name) as stream, tarfile.open(fileobj=stream, mode='r|zst') as info:
+        for member in info:
+            relative = Path(member.name)
+            if relative.parts[:2] != ('info', 'licenses'):
+                continue
+            if '..' in relative.parts or not (member.isdir() or member.isfile()):
+                raise RuntimeError('Dependency licence archive contains an unsafe member')
+            if member.isfile():
+                path = target / Path(*relative.parts[2:])
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with info.extractfile(member) as source, path.open('wb') as sink:
+                    shutil.copyfileobj(source, sink)
 
 
 def installer_runtime_notices(

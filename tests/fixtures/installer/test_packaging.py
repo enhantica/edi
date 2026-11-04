@@ -202,7 +202,10 @@ def test_deployment_gate_rejects_runtime_byte_or_membership_changes(tmp_path, da
 
 
 @pytest.mark.parametrize('fault', ['none', 'checksum', 'escape'])
-def test_pinned_license_acquisition_is_independent_of_the_package_cache(tmp_path, fault):
+@pytest.mark.parametrize('member_kind', ['info', 'pkg'])
+def test_pinned_license_acquisition_is_independent_of_the_package_cache(
+    tmp_path, fault, member_kind
+):
     archive = tmp_path / 'recorded.conda'
     info = io.BytesIO()
     with tarfile.open(fileobj=info, mode='w:zst') as tar:
@@ -212,7 +215,13 @@ def test_pinned_license_acquisition_is_independent_of_the_package_cache(tmp_path
         member.size = len(b'licence text')
         tar.addfile(member, io.BytesIO(b'licence text'))
     with zipfile.ZipFile(archive, 'w') as zipped:
-        zipped.writestr('info-example.tar.zst', info.getvalue())
+        zipped.writestr(member_kind + '-example.tar.zst', info.getvalue())
+        empty = io.BytesIO()
+        with tarfile.open(fileobj=empty, mode='w:zst'):
+            pass
+        zipped.writestr(
+            ('pkg' if member_kind == 'info' else 'info') + '-example.tar.zst', empty.getvalue()
+        )
     metadata = {
         'name': 'example',
         'url': 'https://conda.anaconda.org/conda-forge/linux-64/example.conda',

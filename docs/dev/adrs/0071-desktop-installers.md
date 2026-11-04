@@ -135,3 +135,8 @@ cache. Keep checksum-pinned upstream GCC runtime and FreeType notices for the ex
 versions and declared licences in `tools/installer/licenses`. An unknown version must acquire its own
 notices or fail; it cannot borrow a nearby version's texts. Keep the FreeType acknowledgement alongside
 its unchanged upstream notices. Windows environment keys are read without assuming their letter case.
+
+Conda packages can place `info/licenses` in either their info archive or their payload archive. Check
+both checksum-verified members while extracting only the licence subtree; do not extract executable
+payload files during licence acquisition. Keep MSVC exception semantics when adding UTF-8 compilation
+flags rather than replacing them with a source-encoding flag alone.
