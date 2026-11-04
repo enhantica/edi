@@ -69,10 +69,10 @@ counts are below 1, its factors carry that rounding.
 | [`pd-neut-cwl_cosio-d20`](../cli/pd-neut-cwl_cosio-d20/index.md) | edi | 1418 | 42 | 3.01 | 3.97 | 1.88 | 4.452 |
 |  | FullProf | 1418 | 42 | 3.02 | 4.02 | 1.88 | 4.56 |
 |  | diffraction-lib | 1418 | 42 | 5.57 | 7.87 | 1.88 | 17.52 |
-| [`pd-neut-cwl_cosio-d20_2k`](../cli/pd-neut-cwl_cosio-d20_2k/index.md) | edi | 1438 | 42 | 3.52 | 4.70 | 1.88 | 6.246 |
+| [`pd-neut-cwl_cosio-d20_2k`](../cli/pd-neut-cwl_cosio-d20_2k/index.md) | edi | 1438 | 42 | 3.52 | 4.70 | 1.88 | 6.249 |
 |  | FullProf | 1438 | 40 | 3.70 | 4.94 | 1.88 | 6.902 |
 |  | diffraction-lib | – | – | – | – | – | not compared¹ |
-| [`pd-neut-cwl_lmo-echidna`](../cli/pd-neut-cwl_lmo-echidna/index.md) | edi | 3002 | 24 | 3.91 | 5.00 | 3.23 | 2.394 |
+| [`pd-neut-cwl_lmo-echidna`](../cli/pd-neut-cwl_lmo-echidna/index.md) | edi | 3002 | 24 | 3.90 | 4.99 | 3.23 | 2.386 |
 |  | FullProf | 3002 | 24 | 4.00 | 5.07 | 3.23 | 2.457 |
 |  | diffraction-lib | 3002 | 24 | 4.04 | 5.13 | 3.23 | 2.52 |
 | [`pd-neut-cwl_y2o3-spodi`](../cli/pd-neut-cwl_y2o3-spodi/index.md) | edi | 2509 | 43 | 1.12 | 1.34 | 1.23 | 1.199 |
@@ -108,7 +108,7 @@ counts are below 1, its factors carry that rounding.
 | [`pd-neut-xray-cwl_pbso4-d1a-lab`](../cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md) | edi | 8709 | 51 | 5.78 | 5.80 | 2.93 | 3.915 |
 |  | FullProf | 8709 | 51 | 5.72 | 5.76 | 2.93 | 3.855 |
 |  | diffraction-lib | – | – | – | – | – | not compared¹ |
-| [`pd-neut-cwl_cosio-d20_scan-213f`](../cli/pd-neut-cwl_cosio-d20_scan-213f/index.md) | edi | 1438 | 44 | 3.52 | 4.69 | 1.88 | 6.239 |
+| [`pd-neut-cwl_cosio-d20_scan-213f`](../cli/pd-neut-cwl_cosio-d20_scan-213f/index.md) | edi | 1438 | 44 | 3.53 | 4.69 | 1.88 | 6.24 |
 |  | FullProf | – | – | – | – | – | not compared¹ |
 |  | diffraction-lib | – | – | – | – | – | not compared¹ |
 | [`pd-xray-cwl_latp-bm01_scan`](../cli/pd-xray-cwl_latp-bm01_scan/index.md) | edi | 3114 | 59 | 3.88 | 4.51 | 0.00 | 1.422e+08 |
@@ -141,11 +141,11 @@ Examples whose programs free different numbers of parameters:
 
 | example | phase | edi (Å) | FullProf (Å) | diffraction-lib (Å) |
 | --- | --- | --- | --- | --- |
-| `pd-neut-cwl_lbco-hrpt` | lbco | 3.890791(38) | 3.89079 | 3.890868(38) |
-| `pd-neut-cwl_hs-hrpt` | hs | 6.86399(47), 14.1417(11) | 6.86245, 14.13864 | – |
+| `pd-neut-cwl_lbco-hrpt` | lbco | 3.890790(38) | 3.89079 | 3.890868(38) |
+| `pd-neut-cwl_hs-hrpt` | hs | 6.86397(47), 14.1417(11) | 6.86245, 14.13864 | – |
 | `pd-neut-cwl_cosio-d20` | cosio | 10.30873(25), 6.00379(15), 4.78665(12) | 10.30872, 6.00378, 4.78665 | 10.30844, 6.00358, 4.78671 |
-| `pd-neut-cwl_cosio-d20_2k` | cosio | 10.31470(33), 6.00590(20), 4.79064(16) | 10.31593, 6.00680, 4.79115 | – |
-| `pd-neut-cwl_lmo-echidna` | lmo | 2.875137(62), 14.18322(37) | 2.87516, 14.18333 | 2.875718(17), 14.18651(15) |
+| `pd-neut-cwl_cosio-d20_2k` | cosio | 10.31462(33), 6.00585(20), 4.79060(16) | 10.31593, 6.00680, 4.79115 | – |
+| `pd-neut-cwl_lmo-echidna` | lmo | 2.874880(62), 14.18191(37) | 2.87516, 14.18333 | 2.875718(17), 14.18651(15) |
 | `pd-neut-cwl_y2o3-spodi` | y2o3 | 10.604451(72) | 10.60445 | 10.604524(71) |
 | `pd-neut-cwl_yalo3-al2o3-spodi` | Al2O3 | 4.75840(43), 12.9668(22) | 4.75674, 12.97262 | – |
 | `pd-neut-cwl_yalo3-al2o3-spodi` | YAlO3 | 5.172477(72), 5.326738(74), 7.36083(10) | 5.17241, 5.32658, 7.36084 | – |

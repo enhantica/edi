@@ -3399,6 +3399,9 @@ Project empty_project(const std::string& name, const std::string& description) {
     project.experiments.clear();
     project.metadata.name = validated_project_name(name);
     project.metadata.description = description;
+    // A new project stops a fit on Shift/s.u. 0.1 (the owner, 2026-11-04); a file that declares no rule keeps the
+    // chi-square change.
+    project.minimizer_stop_rule = "shift_su";
     return project;
 }
 

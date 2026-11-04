@@ -13,19 +13,19 @@
       "tol_rel": null
     },
     "reduced_chi_square": {
-      "value": 6.245734584,
+      "value": 6.248741768,
       "kind": "regression-pin",
       "tol_abs": 1e-06,
       "tol_rel": null
     },
     "iterations": {
-      "value": 57.0,
+      "value": 22.0,
       "kind": "regression-pin",
       "tol_abs": 0.0,
       "tol_rel": null
     },
     "param.Co.j2_coefficient.value": {
-      "value": 0.5894931888,
+      "value": 0.6028460903,
       "kind": "regression-pin",
       "tol_abs": 0.0001,
       "tol_rel": null

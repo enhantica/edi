@@ -1,32 +1,32 @@
 {
   "program": "edi",
-  "crysta_sdk": "build-e25adc97e4151b76b8e5f5b08b4fa7470b010977",
+  "crysta_sdk": "crysta 609586d9, built locally before its SDK build",
   "banks": [
     "echidna"
   ],
   "n_free": 24,
   "status": "done",
   "converged": true,
-  "iterations": 18,
-  "rwp": 0.050035658286053136,
-  "reduced_chi_square": 2.3940683506667093,
+  "iterations": 5,
+  "rwp": 0.04994719610231463,
+  "reduced_chi_square": 2.3856104905774442,
   "cells": {
     "lmo": {
       "a": [
-        2.875137167804712,
-        6.240089099109308e-05
+        2.874879672243695,
+        6.219955656794316e-05
       ],
       "b": [
-        2.875137167804712,
-        6.240089099109308e-05
+        2.874879672243695,
+        6.219955656794316e-05
       ],
       "c": [
-        14.18321874018622,
-        0.0003664209626594589
+        14.181909400758276,
+        0.00036506602196209994
       ]
     }
   },
   "artifacts_sha256": {
-    "echidna.csv": "3d3a7e9e6adba633f41df050ac01ec37d0479915c1f59ed6d7725b15b5c545ef"
+    "echidna.csv": "c91b6adfdcf9bb3e11e9694743ebfbe155990b9bc19016755424c8e64741e94f"
   }
 }

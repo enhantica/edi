@@ -30,7 +30,9 @@ PEAK_CW = [
 
 def calculation_analysis() -> str:
     return text(
-        ['_edi.schema_version 3'], ['_fitting_mode.type single'], ['_minimizer.type crysta']
+        ['_edi.schema_version 3'],
+        ['_fitting_mode.type single'],
+        ['_minimizer.type crysta', '_minimizer.stop_rule shift_su'],
     )
 
 
@@ -229,7 +231,11 @@ def pd_neut_cwl_cosio_d20_scan() -> dict[str, str]:
         'analysis/analysis.edi': text(
             ['_edi.schema_version 3'],
             ['_fitting_mode.type sequential'],
-            ['_minimizer.type crysta', '_minimizer.max_iterations 1000'],
+            [
+                '_minimizer.type crysta',
+                '_minimizer.max_iterations 1000',
+                '_minimizer.stop_rule shift_su',
+            ],
             loop(
                 ['_alias.id', '_alias.parameter_unique_name'],
                 [
@@ -270,8 +276,8 @@ def pd_neut_cwl_cosio_d20_scan() -> dict[str, str]:
                 f'_peak.broad_gauss_v {free(-0.5)}',
                 f'_peak.broad_gauss_w {free(0.4)}',
                 '_peak.broad_lorentz_x 0',
-                # Held at the 2.3 K example's fitted value: freed per file, it trades against U, V and W, and the
-                # fits then depend on the order the files are fitted in.
+                # Held at the 2.3 K example's fitted value: freed per file, it trades against
+                # U, V and W, and the fits then depend on the order the files are fitted in.
                 '_peak.broad_lorentz_y 0.0114',
                 '_peak.cutoff_fwhm 8',
             ],

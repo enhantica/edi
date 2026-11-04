@@ -219,9 +219,10 @@ disabled** rather than left out, so the layout is final:
   shows crysta's default. A project that declares none showed an empty field before.
 - **Minimizer's stop rule** (the owner, 2026-11-04): a selector, χ² change or Shift/s.u., on the left of one row, and on
   its right one value field holding the chosen rule's value (`_minimizer.chi_square_tolerance` or
-  `_minimizer.shift_tolerance`, declared or crysta's default). A project that declares no rule shows the χ² change,
-  which is what it fits with. Below them, the iteration bound, and beside it, for a project with a magnetic structure
-  only, "Magnetic moments near zero": Try exact zero (also when none is declared) or Keep free
+  `_minimizer.shift_tolerance`, declared or crysta's default). A new project declares Shift/s.u. 0.1 (the owner,
+  2026-11-04), which also ends on the χ² change when that passes first; a project that declares no rule shows the χ²
+  change, which is what it fits with. Below them, the iteration bound, and beside it, for a project with a magnetic
+  structure only, "Magnetic moments near zero": Try exact zero (also when none is declared) or Keep free
   (`_minimizer.moments_near_zero`).
 - **Fields share the full row** unless a rule above says otherwise: a row of fields takes the sidebar content
   width, split evenly (the base's `GroupRow` fields, and `ParameterGrid` with `fillRows`, as Instrument).
