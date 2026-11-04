@@ -28,12 +28,13 @@ theme:
     - navigation.indexes
     - navigation.path
     - navigation.top
+    - navigation.footer
     - toc.follow
     - content.code.copy
 extra_css:
   - assets/brand-colors.css?v=1
   - assets/wordmark.css?v=header-2
-  - assets/site-components.css?v=table-icons-2
+  - assets/site-components.css?v=footer-credits-3
   - assets/experiment-tags.css?v=2
   - assets/parameter-reference.css?v=3
 extra_javascript:

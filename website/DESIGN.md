@@ -89,7 +89,8 @@ CONTENT-SOURCES.md. The archived workflow-first alternative is retained as histo
 
 The selected Home uses a page-specific template and stylesheet. The template inherits Zensical's
 header, navigation, search, fonts and runtime; it adds only the landing CSS. The shared main
-override omits the footer on every user documentation page, including Home.
+override retains native Previous/Next navigation on documentation pages. Only the
+credit strip is hidden globally; Home keeps its footer-free composition.
 The stylesheet is loaded only on Home and scopes its content rules to the hero. Documentation
 pages keep the native Zensical design. There are no theme-wide width or typography changes,
 animations, decorative badges, extra feature sections or new JavaScript. The official wordmark

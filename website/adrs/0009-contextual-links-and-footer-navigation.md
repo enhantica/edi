@@ -1,7 +1,7 @@
 # ADR-0009: Contextual links and native footer navigation
 
 Date: 2026-10-30
-Status: accepted for contextual links; footer navigation superseded on 2026-11-04
+Status: accepted
 
 ## Prior art and decision
 
@@ -16,13 +16,14 @@ Remove generic Related Physics and related-documentation trails. Link scientific
 Strict builds verify all internal links and anchors. Check native Previous/Next targets and keyboard links at desktop/phone widths, ensure the landing page remains uncluttered, and inspect the Parameters page cited by the owner.
 
 
-## Footer-free documentation — 2026-11-04
+## Footer credit strip — 2026-11-04
 
-The owner requested the same footer-free presentation as Home on every user
-documentation page. Move the existing empty footer block from the Home template
-to the shared main override, inherited by the ordinary, Physics, GUI and interface
-templates. Remove `navigation.footer`; Previous/Next and the theme footer are no
-longer rendered. The contextual-link decision above remains in effect.
+Hide only the credit strip containing EasyDiffraction, Contributor documentation
+and the Zensical generator credit. The selector is `.md-footer-meta`, not the whole
+footer. Keep `navigation.footer` and the native Previous/Next links on documentation
+pages. Home retains its existing empty footer override. The shared main template
+inherits the ordinary footer. No page navigation or inline attribution is removed.
 
-A strict site build and inspection of its generated HTML verify that pages across
-all sections contain no footer element, while normal page content still renders.
+A strict site build checks valid links. Inspect generated Previous/Next anchors
+on ordinary pages and the narrowly scoped credit-strip rule; Home remains free
+of footer navigation. This replaces the earlier whole-footer suppression.

@@ -92,3 +92,8 @@
   .md-typeset .ed-workflow-stage-table td:first-child .ed-icon-label {flex-wrap:nowrap;inline-size:max-content;max-inline-size:none}
   .md-typeset .ed-workflow-stage-table td:first-child .ed-icon-text {flex:none;white-space:nowrap}
 }
+
+/* Keep page navigation; hide only the credits strip below it. */
+.md-footer-meta {
+  display: none;
+}
