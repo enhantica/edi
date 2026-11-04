@@ -120,6 +120,13 @@ std::string percent_encoded(const std::string& text) {
     return out;
 }
 
+// An element list as typed: commas or semicolons stand for spaces.
+std::string element_words(const std::string& text) {
+    std::string symbols;
+    for (char c : text) symbols += (c == ',' || c == ';') ? ' ' : c;
+    return symbols;
+}
+
 std::string cod_text(const json::Value& row, const char* key) {
     const json::Value& value = row.get(key);
     if (value.is_null()) return {};
@@ -213,11 +220,7 @@ std::vector<const Entry*> search(const Index& index, const std::string& kind, co
     std::vector<const Entry*> found;
     const std::string wanted_formula = trimmed(query.formula).empty() ? std::string() : hill_formula(query.formula);
     std::vector<std::string> wanted_elements;
-    if (!trimmed(query.elements).empty()) {
-        std::string symbols;
-        for (char c : query.elements) symbols += (c == ',' || c == ';') ? ' ' : c;
-        wanted_elements = formula_elements(symbols);
-    }
+    if (!trimmed(query.elements).empty()) wanted_elements = formula_elements(element_words(query.elements));
     const std::string wanted_group = lower(without_spaces(query.space_group));
     const std::string wanted_id = lower(trimmed(query.id));
     for (const Entry& entry : index.entries) {
@@ -240,6 +243,8 @@ std::vector<const Entry*> search(const Index& index, const std::string& kind, co
     return found;
 }
 
+std::vector<std::string> element_list(const std::string& text) { return formula_elements(element_words(text)); }
+
 const Entry* find(const Index& index, const std::string& id) {
     for (const Entry& entry : index.entries)
         if (entry.id == id) return &entry;
@@ -253,15 +258,15 @@ std::string cod_search_url(const std::string& base, const Query& query) {
     if (!trimmed(query.id).empty()) url += "&id=" + percent_encoded(trimmed(query.id));
     if (!trimmed(query.formula).empty()) url += "&formula=" + percent_encoded(hill_formula(query.formula));
     if (!trimmed(query.elements).empty()) {
-        std::string symbols;
-        for (char c : query.elements) symbols += (c == ',' || c == ';') ? ' ' : c;
+        // The service takes el1 to el8; a longer list is sent in full up to eight and the caller filters the
+        // answer with the whole query (search over the mapped entries), so no constraint is dropped.
         int n = 0;
-        for (const std::string& symbol : formula_elements(symbols)) {
-            if (++n > 8) break;  // the service takes el1 to el8
+        for (const std::string& symbol : formula_elements(element_words(query.elements))) {
+            if (++n > 8) break;
             url += "&el" + std::to_string(n) + "=" + percent_encoded(symbol);
         }
     }
-    if (!trimmed(query.space_group).empty()) url += "&sg=" + percent_encoded(trimmed(query.space_group));
+    if (!trimmed(query.space_group).empty()) url += "&spacegroup=" + percent_encoded(trimmed(query.space_group));
     return url;
 }
 

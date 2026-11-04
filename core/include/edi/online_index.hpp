@@ -62,8 +62,13 @@ std::string hill_formula(const std::string& formula);
 /// The elements of a formula, each once, in Hill order.
 std::vector<std::string> formula_elements(const std::string& formula);
 
-/// The COD query service URL for `query` under `base` (https://www.crystallography.net/cod).
+/// The COD query service URL for `query` under `base` (https://www.crystallography.net/cod): `id`, `formula`,
+/// `el1`..`el8` and `spacegroup`. The service holds eight element slots, so the caller runs `search` over the
+/// mapped answer with the same query to apply every constraint.
 std::string cod_search_url(const std::string& base, const Query& query);
+
+/// The element list's symbols, commas or semicolons read as spaces; refuses text that is not a list.
+std::vector<std::string> element_list(const std::string& text);
 
 /// The entries in a COD JSON answer; each structure's CIF sits at `<base>/<id>.cif`.
 std::vector<Entry> cod_entries(const std::string& text);

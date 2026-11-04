@@ -161,7 +161,8 @@ OnlineSearch::OnlineSearch(OnlineSourcesModel* sources, QObject* parent)
       fields_model_(new OnlineChoiceModel(this)) {
     if (sources_) connect(sources_, &OnlineSourcesModel::sourcesChanged, this, [this] {
         refreshSources();
-        if (!source_id_.isEmpty() && sources_->urlOf(source_id_).isEmpty()) setSourceId({});
+        // A source disabled or removed in Preferences leaves the selection: the first still offered, or none.
+        if (!source_id_.isEmpty() && !eligible(source_id_)) setSourceId(sources_model_->keyAt(0));
     });
     refreshSources();
     refreshFields();
@@ -215,6 +216,13 @@ QString OnlineSearch::sourceName() const { return sources_ ? sources_->nameOf(so
 
 QString OnlineSearch::alternativeName() const { return sources_ ? sources_->nameOf(alternative_id_) : QString(); }
 
+bool OnlineSearch::eligible(const QString& id) const {
+    if (!sources_ || id.isEmpty()) return false;
+    for (const OnlineSourcesModel::Source& s : sources_->sourcesFor(kind_))
+        if (s.id == id) return true;
+    return false;
+}
+
 bool OnlineSearch::codService(const QString& url) const {
     return sources_ && sources_->isCod(source_id_) && !QUrl(url).isLocalFile() && QUrl(url).scheme() != QStringLiteral("file");
 }
@@ -223,7 +231,7 @@ void OnlineSearch::search() {
     const QHash<QString, QString> values = field_values_;
     if (!sources_) return;
     const QString base = sources_->urlOf(source_id_);
-    if (base.isEmpty()) {
+    if (base.isEmpty() || !eligible(source_id_)) {
         fail(tr("Choose a source first"), false);
         return;
     }
@@ -245,21 +253,28 @@ void OnlineSearch::search() {
     try {
         query = query_from(values);
         if (!query.formula.empty()) edi::online::hill_formula(query.formula);
-        if (!query.elements.empty()) edi::online::formula_elements(query.elements);
+        if (!query.elements.empty()) edi::online::element_list(query.elements);
     } catch (const std::exception& error) {
         fail(QString::fromUtf8(error.what()), false);
         return;
     }
     if (codService(base)) {
         fetch(QUrl(QString::fromStdString(edi::online::cod_search_url(base.toStdString(), query))),
-              [this, generation](const QByteArray& bytes, const QString& error, bool unreachable) {
+              [this, generation, query](const QByteArray& bytes, const QString& error, bool unreachable) {
                   if (generation != generation_) return;
                   if (!error.isEmpty()) {
                       fail(error, unreachable);
                       return;
                   }
                   try {
-                      finish(edi::online::cod_entries(bytes.toStdString()));
+                      // The service holds eight element slots and no result filter of its own: the whole query
+                      // is applied to the mapped answer, so nothing typed is silently dropped.
+                      edi::online::Index answered;
+                      answered.schema = "edi-data-index/1";
+                      answered.entries = edi::online::cod_entries(bytes.toStdString());
+                      std::vector<edi::online::Entry> found;
+                      for (const edi::online::Entry* e : edi::online::search(answered, kind_.toStdString(), query)) found.push_back(*e);
+                      finish(std::move(found));
                   } catch (const std::exception& problem) {
                       fail(QString::fromUtf8(problem.what()), false);
                   }
@@ -283,9 +298,17 @@ void OnlineSearch::useAlternative() {
     setSourceId(alternative_id_);
 }
 
-void OnlineSearch::load(int row) {
+void OnlineSearch::load(int row, QObject* project, QObject* target) {
     const edi::online::Entry* entry = results_->at(row);
     if (entry == nullptr || entry->files.empty() || !sources_) return;
+    if (!eligible(source_id_)) {
+        fail(tr("Choose a source first"), false);
+        return;
+    }
+    // The request keeps the project and target it was made for; a QPointer goes null when either is destroyed.
+    const QPointer<QObject> requestProject(project);
+    const QPointer<QObject> requestTarget(target);
+    const bool newTarget = target == nullptr;
     const QString base = sources_->urlOf(source_id_);
     const QUrl url = fileUrl(base, QString::fromStdString(entry->files.front().path));
     const OnlineEntry fields = entry_value(*entry);
@@ -293,7 +316,7 @@ void OnlineSearch::load(int row) {
     const QString name = QFileInfo(url.path()).fileName();
     const int generation = generation_;
     setBusy(true);
-    fetch(url, [this, generation, fields, kind, name](const QByteArray& bytes, const QString& error, bool unreachable) {
+    fetch(url, [this, generation, fields, kind, name, requestProject, requestTarget, newTarget](const QByteArray& bytes, const QString& error, bool unreachable) {
         if (generation != generation_) return;
         if (!error.isEmpty()) {
             fail(error, unreachable);
@@ -318,7 +341,7 @@ void OnlineSearch::load(int row) {
         }
         out.close();
         setBusy(false);
-        emit fileReady(kind, QUrl::fromLocalFile(path), fields);
+        emit fileReady(kind, QUrl::fromLocalFile(path), fields, requestProject.data(), requestTarget.data(), newTarget);
     });
 }
 
@@ -431,7 +454,7 @@ void OnlineSearch::fetch(const QUrl& url, Bytes done) {
         if (reply->error() != QNetworkReply::NoError) {
             const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             const QString what = status > 0 ? tr("%1 answered %2").arg(url.toString()).arg(status) : reply->errorString();
-            done({}, what, status == 0 && unreachable_error(reply->error()));
+            done({}, what, unreachable_error(reply->error()));
             return;
         }
         done(reply->readAll(), {}, false);

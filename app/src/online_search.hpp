@@ -135,8 +135,9 @@ public:
     Q_INVOKABLE void search();
     /// Switch to the alternative source offered after an unreachable one, keeping the results empty.
     Q_INVOKABLE void useAlternative();
-    /// Download the first file of a result into a temporary file; `fileReady` then carries it to the loaders.
-    Q_INVOKABLE void load(int row);
+    /// Download the first file of a result into a temporary file; `fileReady` then carries it to the loaders
+    /// with the project and the measured-data target the request was made for (null target: a new one).
+    Q_INVOKABLE void load(int row, QObject* project, QObject* target);
     /// Forget everything shown: results, message, the chosen source stays.
     Q_INVOKABLE void reset();
 
@@ -153,8 +154,11 @@ signals:
     void alternativeIdChanged();
     void alternativeNameChanged();
     void searchedChanged();
-    /// A downloaded entry: its kind, the local file and the entry.
-    void fileReady(const QString& kind, const QUrl& file, const edi_app::OnlineEntry& entry);
+    /// A downloaded entry: its kind, the local file, the entry, and the request's authority: the project it was
+    /// made for and its measured-data target (null when it was made for a new experiment, `newTarget` true; null
+    /// with `newTarget` false when the target has gone since).
+    void fileReady(const QString& kind, const QUrl& file, const edi_app::OnlineEntry& entry, QObject* project,
+                   QObject* target, bool newTarget);
 
 private:
     using Bytes = std::function<void(const QByteArray& bytes, const QString& error, bool unreachable)>;
@@ -167,6 +171,8 @@ private:
     void setBusy(bool busy);
     QUrl fileUrl(const QString& base, const QString& path) const;
     bool codService(const QString& url) const;
+    /// Whether `id` is an enabled source offering the current kind.
+    bool eligible(const QString& id) const;
 
     QPointer<OnlineSourcesModel> sources_;
     OnlineResultsModel* results_;
