@@ -66,6 +66,9 @@ and the command line carries none of them: `python -m edi fit` takes the project
 | `_minimizer.descent` | the descent strategy: `ladder`, `fast_descent`, `fast_descent_linear_snap`, `fast_descent_guarded_linear_snap`, `multistart_prune` | `ladder` |
 | `_minimizer.chi_square_tolerance` | a positive number: the relative chi-square improvement below which the fit has converged | `1e-6` |
 | `_minimizer.max_iterations` | a positive integer: the iteration budget | `50` |
+| `_minimizer.stop_rule` | what ends a fit as converged: `chi_square_change` (the tolerance above) or `shift_su`, every free parameter's last shift below `shift_tolerance` times its s.u. | `chi_square_change` |
+| `_minimizer.shift_tolerance` | a positive number: the Shift/s.u. value | `0.1` |
+| `_minimizer.moments_near_zero` | `try_exact_zero`: late in a fit, free magnetic moments are tried at exactly zero and kept there when χ² is lower; `keep_free`: never | `try_exact_zero` |
 
 ```text
 _minimizer.descent fast_descent

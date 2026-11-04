@@ -265,6 +265,15 @@ class Edit {
     static Edit chi_square_tolerance(Project& project, double tolerance) {
         return Edit([&project, tolerance] { set_minimizer_chi_square_tolerance(project, tolerance); });
     }
+    static Edit stop_rule(Project& project, std::string rule) {
+        return Edit([&project, rule = std::move(rule)] { set_minimizer_stop_rule(project, rule); });
+    }
+    static Edit shift_tolerance(Project& project, double tolerance) {
+        return Edit([&project, tolerance] { set_minimizer_shift_tolerance(project, tolerance); });
+    }
+    static Edit moments_near_zero(Project& project, std::string option) {
+        return Edit([&project, option = std::move(option)] { set_minimizer_moments_near_zero(project, option); });
+    }
     // The facility and instrument that measured an experiment (ADR-0054), both at once, as a change of facility
     // may also clear the instrument. "?" states an unknown one.
     static Edit instrument_description(ExperimentBase& experiment, std::string facility, std::string instrument) {

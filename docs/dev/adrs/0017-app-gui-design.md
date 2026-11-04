@@ -217,6 +217,12 @@ disabled** rather than left out, so the layout is final:
 - **Minimizer's max iterations shows the bound the fit uses**: the declared `_minimizer.max_iterations`, or,
   when none is declared, the fit's own cap (`edi::default_max_iterations()`, 50) — as the tolerance beside it
   shows crysta's default. A project that declares none showed an empty field before.
+- **Minimizer's stop rule** (the owner, 2026-11-04): a selector, χ² change or Shift/s.u., on the left of one row, and on
+  its right one value field holding the chosen rule's value (`_minimizer.chi_square_tolerance` or
+  `_minimizer.shift_tolerance`, declared or crysta's default). A project that declares no rule shows the χ² change,
+  which is what it fits with. Below them, the iteration bound, and beside it, for a project with a magnetic structure
+  only, "Magnetic moments near zero": Try exact zero (also when none is declared) or Keep free
+  (`_minimizer.moments_near_zero`).
 - **Fields share the full row** unless a rule above says otherwise: a row of fields takes the sidebar content
   width, split evenly (the base's `GroupRow` fields, and `ParameterGrid` with `fillRows`, as Instrument).
   Absorption now does so too: μR alone takes the row, ABSCOR1 and ABSCOR2 half each (the owner, 2026-09-29; it

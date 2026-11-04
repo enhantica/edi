@@ -3668,6 +3668,34 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             }
             project.minimizer_chi_square_tolerance = value;
         }
+        // The stop rule, its Shift/s.u. value and the moment-zero option, as crysta reads them.
+        if (const std::string* rule = block.find("_minimizer.stop_rule")) {
+            if (*rule != "chi_square_change" && *rule != "shift_su") {
+                throw IoError("unknown _minimizer.stop_rule '" + *rule + "' (chi_square_change or shift_su): " +
+                              analysis_file.string());
+            }
+            project.minimizer_stop_rule = *rule;
+        }
+        if (const std::string* shift = block.find("_minimizer.shift_tolerance")) {
+            double value = 0.0;
+            try {
+                value = to_double(*shift, analysis_file.string());
+            } catch (const std::exception&) {
+                value = 0.0;
+            }
+            if (!(value > 0.0)) {
+                throw IoError("malformed _minimizer.shift_tolerance '" + *shift +
+                              "' (need a positive number): " + analysis_file.string());
+            }
+            project.minimizer_shift_tolerance = value;
+        }
+        if (const std::string* zero = block.find("_minimizer.moments_near_zero")) {
+            if (*zero != "try_exact_zero" && *zero != "keep_free") {
+                throw IoError("unknown _minimizer.moments_near_zero '" + *zero + "' (try_exact_zero or keep_free): " +
+                              analysis_file.string());
+            }
+            project.minimizer_moments_near_zero = *zero;
+        }
         // The `_sequential_fit.*` declaration and its extract loop (crysta's parse,
         // mirrored). Boolean tokens are strict ("true"/"false" only) — a token that silently
         // parsed as false would run the scan in the wrong order, the iteration bound's own

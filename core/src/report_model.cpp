@@ -769,6 +769,23 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
                            ? formatted("minimizer.chi_square_tolerance", project.minimizer_chi_square_tolerance)
                            : "crysta's default",
                        ""}};
+    // The stop rule and the moment-zero option, when declared: an undeclared one is the default above.
+    if (!project.minimizer_stop_rule.empty()) {
+        const bool shift = project.minimizer_stop_rule == "shift_su";
+        minimizer.rows.push_back(
+            {label("minimizer.stop_rule"), shift ? "Shift/s.u." : "χ² change", ""});
+        if (shift) {
+            minimizer.rows.push_back({label("minimizer.shift_tolerance"),
+                                      project.minimizer_shift_tolerance > 0.0
+                                          ? formatted("minimizer.shift_tolerance", project.minimizer_shift_tolerance)
+                                          : "crysta's default",
+                                      ""});
+        }
+    }
+    if (!project.minimizer_moments_near_zero.empty()) {
+        minimizer.rows.push_back({label("minimizer.moments_near_zero"),
+                                  project.minimizer_moments_near_zero == "keep_free" ? "Keep free" : "Try exact zero", ""});
+    }
     ReportCategory mode = category("fitting_mode");
     mode.rows = {{label("fitting_mode.type"), fitting_mode_name(project.fitting_mode), ""}};
     ReportCategory result = category("fit_result");

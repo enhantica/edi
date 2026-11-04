@@ -4577,6 +4577,8 @@ std::uint64_t engine_structure_factor_evaluations() noexcept;
 // LINKED crysta's default, forwarded like default_descent() (the app shows the value the minimizer
 // actually uses).
 double default_chi_square_tolerance();
+// The Shift/s.u. value a fit uses under that stop rule when `_minimizer.shift_tolerance` is not declared.
+double default_shift_tolerance();
 // The iteration bound a fit uses when `_minimizer.max_iterations` is not declared (the fit policy's cap),
 // for the app to show the value the minimizer actually uses, as the tolerance above.
 int default_max_iterations();
@@ -5065,6 +5067,13 @@ class Project : public detail::ProjectAnchor {
     // The declared `_minimizer.chi_square_tolerance` (the LM relative chi-square stop).
     // 0 = not declared -> crysta's default. Honored by every fit path, like the bound above.
     double minimizer_chi_square_tolerance = 0.0;
+    // The declared stop rule, `chi_square_change` or `shift_su` (empty = not declared -> the χ² change), and the
+    // Shift/s.u. value (0 = not declared -> crysta's default, 0.1).
+    std::string minimizer_stop_rule;
+    double minimizer_shift_tolerance = 0.0;
+    // Whether a fit tries free magnetic moments at exactly zero: `try_exact_zero` or `keep_free` (empty = not
+    // declared -> try_exact_zero).
+    std::string minimizer_moments_near_zero;
     // The declared `_minimizer.type`, kept as written so a save round-trips it — an empty value
     // included (absent = not declared; a save does not add it). Only `crysta` is supported: any
     // other value warns at load and the fit runs with crysta.
@@ -5658,8 +5667,15 @@ static_assert(detail::one_entry_per_column(FittingModeCategory::columns, Fitting
 struct MinimizerCategory {
     using Owner = Project;
     static constexpr const char* name = "_minimizer";
-    static constexpr auto columns = std::tuple{&Project::minimizer_type, &Project::minimizer_max_iterations, &Project::descent, &Project::minimizer_chi_square_tolerance};
-    static constexpr std::array items{"type", "max_iterations", "descent", "chi_square_tolerance"};
+    static constexpr auto columns = std::tuple{&Project::minimizer_type,
+                                               &Project::minimizer_max_iterations,
+                                               &Project::descent,
+                                               &Project::minimizer_chi_square_tolerance,
+                                               &Project::minimizer_stop_rule,
+                                               &Project::minimizer_shift_tolerance,
+                                               &Project::minimizer_moments_near_zero};
+    static constexpr std::array items{"type",      "max_iterations",  "descent",          "chi_square_tolerance",
+                                      "stop_rule", "shift_tolerance", "moments_near_zero"};
 };
 static_assert(detail::one_entry_per_column(MinimizerCategory::columns, MinimizerCategory::items));
 

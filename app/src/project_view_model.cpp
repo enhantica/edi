@@ -2539,6 +2539,9 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
             scan_template_->descent = project_->descent;
             scan_template_->minimizer_max_iterations = project_->minimizer_max_iterations;
             scan_template_->minimizer_chi_square_tolerance = project_->minimizer_chi_square_tolerance;
+            scan_template_->minimizer_stop_rule = project_->minimizer_stop_rule;
+            scan_template_->minimizer_shift_tolerance = project_->minimizer_shift_tolerance;
+            scan_template_->minimizer_moments_near_zero = project_->minimizer_moments_near_zero;
             scan_template_->su_rule = project_->su_rule;
             scan_template_->report_html = project_->report_html;
             scan_template_->report_pdf = project_->report_pdf;

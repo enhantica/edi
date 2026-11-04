@@ -2356,6 +2356,9 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     // The declared descent and chi-square tolerance round-trip the same way.
     cproject.minimizer_descent = model.descent;
     cproject.minimizer_chi_square_tolerance = model.minimizer_chi_square_tolerance;
+    cproject.minimizer_stop_rule = model.minimizer_stop_rule;
+    cproject.minimizer_shift_tolerance = model.minimizer_shift_tolerance;
+    cproject.minimizer_moments_near_zero = model.minimizer_moments_near_zero;
     cproject.minimizer_type = model.minimizer_type;
     // The last fit's result rides the save (crysta writes `_fit_result` iff one is held).
     {
@@ -5079,6 +5082,7 @@ std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
 std::string default_descent() { return crysta::kDefaultDescent; }
 double default_chi_square_tolerance() { return crysta::kDefaultChiSquareTolerance; }
+double default_shift_tolerance() { return crysta::kDefaultShiftTolerance; }
 
 // Validate a descent id at EDI's boundary — against the linked crysta registry (never a
 // transcribed set), naming the registered ids on refusal. edi never passes an unknown id
@@ -5106,18 +5110,26 @@ namespace {
 
 // The project's declared minimization conditions as one crysta request — the descent
 // (`_minimizer.descent`, empty -> crysta's default), the bounded iteration budget and the
-// chi-square stop (`_minimizer.chi_square_tolerance`, 0 -> crysta's default).
-crysta::DescentRequest declared_request(const std::string& descent, int max_iterations,
-                                        double chi_square_tolerance) {
+// chi-square stop (`_minimizer.chi_square_tolerance`, 0 -> crysta's default), the stop rule and the moment-zero
+// option (crysta's own reading of the declared items).
+crysta::DescentRequest declared_request(const Project& project) {
     crysta::DescentRequest request;
-    if (!descent.empty()) {
-        request.descent = descent;
+    if (!project.descent.empty()) {
+        request.descent = project.descent;
     }
-    request.max_iterations = detail::bounded_max_iterations(max_iterations);
-    if (chi_square_tolerance > 0.0) {
-        request.chi_square_tolerance = chi_square_tolerance;
+    request.max_iterations = detail::bounded_max_iterations(project.minimizer_max_iterations);
+    if (project.minimizer_chi_square_tolerance > 0.0) {
+        request.chi_square_tolerance = project.minimizer_chi_square_tolerance;
     }
+    request.stop = crysta::declared_stop_test(project.minimizer_stop_rule, project.minimizer_shift_tolerance);
+    request.moment_zero_trial = crysta::declared_moment_zero_trial(project.minimizer_moments_near_zero);
     return request;
+}
+
+// Whether the project declares none of the conditions: its fit keeps the historical direct call.
+bool declares_no_conditions(const Project& project) {
+    return project.descent.empty() && project.minimizer_chi_square_tolerance <= 0.0 &&
+           project.minimizer_stop_rule.empty() && project.minimizer_moments_near_zero.empty();
 }
 
 }  // namespace
@@ -5257,10 +5269,10 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // seed/polish pair mirrors `separable_linear=true` exactly (crysta descent.hpp: the
             // ordinary provider overloads set both from it).
             crysta::DescentRequest request =
-                declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
+                declared_request(*this);
             const crysta::FitResultBase result = [&] {
                 if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
-                  if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                  if (declares_no_conditions(*this)) {
                     return crysta::fit_problem(
                         provider, /*separable_linear=*/true, request.max_iterations,
                         collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
@@ -5696,6 +5708,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // tolerance and records them per row in analysis/results-provenance.csv.
         cproject.minimizer_descent = descent;
         cproject.minimizer_chi_square_tolerance = minimizer_chi_square_tolerance;
+        cproject.minimizer_stop_rule = minimizer_stop_rule;
+        cproject.minimizer_shift_tolerance = minimizer_shift_tolerance;
+        cproject.minimizer_moments_near_zero = minimizer_moments_near_zero;
         cproject.minimizer_type = minimizer_type;
         fill_crysta_sequential(sequential_fit, cproject.sequential_fit);
         cproject.path = path;
@@ -6054,10 +6069,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             // (F-bound) /: the same declared conditions and the same registry-or-historical
             // split as the single-bank path above.
             crysta::DescentRequest request =
-                declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
+                declared_request(*this);
             const crysta::FitResultBase result = [&] {
                 if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
-                    if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                    if (declares_no_conditions(*this)) {
                         return crysta::fit_problem(
                             provider, /*separable_linear=*/true, request.max_iterations,
                             collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
