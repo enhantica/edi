@@ -1,7 +1,9 @@
 """The magnetic worked examples retain their declared execution and fit records."""
 
 import csv
+import hashlib
 import json
+import re
 from pathlib import Path
 
 import edi
@@ -38,9 +40,14 @@ def test_magnetic_examples_have_records_and_documentation(name, execution):
     assert record.get('source'), 'Magnetic fit records name the calculation that produced them'
     quantities = record.get('quantities', {})
     assert quantities, 'Magnetic examples carry nonempty fit-result records'
-    assert any(value.get('kind') == 'regression-pin' for value in quantities.values()), (
-        'Fit outcomes must distinguish regression pins from independent correctness references'
-    )
+    if name.endswith('_2k'):
+        assert all(value.get('kind') == 'reference' for value in quantities.values()), (
+            'The low-temperature example names independent FullProf reference quantities'
+        )
+    else:
+        assert any(value.get('kind') == 'regression-pin' for value in quantities.values()), (
+            'The scan labels its engine-generated outcomes as regression pins'
+        )
     if execution == 'offline':
         assert rows[0].get('offline') is True, (
             'The extended temperature scan explicitly records its offline execution status'
@@ -56,24 +63,44 @@ def test_low_temperature_fit_record_has_independent_moment_sanity_bounds():
     path = CLI / 'pd-neut-cwl_cosio-d20_2k/expected.json'
     assert path.is_file(), 'The low-temperature fit delivers a machine result record'
     record = json.loads(path.read_text())
-    assert 'crysta' in record['source']['engine'].lower(), (
-        'The example records its actual engine fit rather than relabelling FullProf results'
+    assert 'fullprof' in record['source']['engine'].lower(), (
+        'The low-temperature correctness record identifies the independent FullProf engine'
     )
-    quantities = record['quantities']
-    components = []
-    for axis in 'xyz':
-        value = quantities[f'param.Co1.crystalaxis_{axis}.value']
-        assert value['kind'] == 'regression-pin', (
-            'Powder moment fit outputs are regression pins, not independent correctness references'
+    folder = ROOT / 'knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k'
+    provenance = (folder / 'PROVENANCE.md').read_text()
+    pins = re.findall(r'^\s+([0-9a-f]{64})\s+(\S+)\s*$', provenance, re.MULTILINE)
+    assert len(pins) == 5, (
+        'The FullProf rerun identifies all five independent input and output files'
+    )
+    for digest, filename in pins:
+        assert hashlib.sha256((folder / filename).read_bytes()).hexdigest() == digest, (
+            'Each independent FullProf reference matches its committed authoring provenance'
         )
-        components.append(float(value['value']))
-    magnitude = sum(value * value for value in components) ** 0.5
-    assert 2.68 <= magnitude <= 3.87, (
+    summary = (folder / 'cosio.sum').read_text()
+    moments = summary.split('=> Magnetic Moment Components and Standard Deviations', 1)[1]
+    cobalt = {}
+    for site in ['Co1', 'Co2']:
+        row = re.search(r'^\s*' + site + r'_1\s+(.+)$', moments, re.MULTILINE)
+        assert row, 'The independent FullProf summary contains each magnetic cobalt site'
+        cobalt[site] = [float(value) for value in row[1].split()]
+    quantities = record['quantities']
+    rwp = float(re.search(r'Rwp:\s+([\d.]+)', summary)[1]) / 100
+    assert quantities['rwp']['value'] == pytest.approx(rwp, abs=0.00005, rel=0), (
+        'The Rwp target comes from the rerun with both apertures held at 0.0619'
+    )
+    for site, axis, index in [('Co1', 'x', 0), ('Co1', 'y', 2), ('Co2', 'y', 2)]:
+        value = quantities[f'param.{site}.crystalaxis_{axis}.value']
+        assert value['kind'] == 'reference', 'Each retained component is a FullProf reference'
+        assert value['value'] == pytest.approx(cobalt[site][index], abs=0.00005, rel=0), (
+            'The referenced component matches the independent FullProf printed result'
+        )
+    assert 'param.Co1.crystalaxis_z.value' not in quantities, (
+        'The poorly determined powder Mz has no independent fit target'
+    )
+    assert 2.68 <= cobalt['Co1'][6] <= 3.87, (
         'Co1 magnitude lies between the declared report minimum and single-crystal value'
     )
-    second = quantities['param.Co2.crystalaxis_y.value']
-    assert second['kind'] == 'regression-pin', 'The fitted Co2 component is a regression pin'
-    assert 2.620 <= float(second['value']) <= 3.35, (
+    assert 2.620 <= cobalt['Co2'][2] <= 3.35, (
         'The fitted Co2 moment lies within the packet declared physical sanity interval'
     )
 
@@ -128,8 +155,8 @@ def test_magnetic_examples_share_cobalt_displacements_and_exclude_only_dead_cell
         assert detector.value == sample.value, 'The detector aperture follows the sample aperture'
     else:
         assert not sample.free and not detector.free, 'The scan fixes both axial apertures'
-        assert sample.value == pytest.approx(0.0595, abs=4 * 0.0009), (
-            'The scan holds the shared aperture within four s.u. of the ADR-0110 fitted width'
+        assert sample.value == pytest.approx(0.0619, abs=1e-12), (
+            'The scan holds the common aperture used in the committed FullProf rerun'
         )
     structure = model.structure
     structure.atom_sites['Co1'].adp_iso.value = 0.42
