@@ -262,7 +262,7 @@ AppDialog {
             }
             delegate: TableRow {
                 id: row
-                required property string id
+                required property var model
                 required property string kind
                 required property string name
                 required property string formula
@@ -292,7 +292,7 @@ AppDialog {
                     objectName: `onlineLoad.id.${row.index}`
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideMiddle
-                    text: row.id
+                    text: row.model.id
                     ToolTip.text: row.source
                 }
                 EaComponents.ListViewLabel {
