@@ -100,6 +100,7 @@ nav:
           - dev/adrs/0066-finding-a-control-by-name.md
           - dev/adrs/0067-whats-new.md
           - dev/adrs/0068-online-sources-and-collection-index.md
+          - dev/adrs/0069-linked-data.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

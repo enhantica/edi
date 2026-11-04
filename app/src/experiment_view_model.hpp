@@ -296,7 +296,7 @@ class ExperimentViewModel : public QObject {
     const edi::PatternSource& patternSource(edi::PatternAxis axis = edi::PatternAxis::Native) const {
         return axis == edi::PatternAxis::DSpacing && d_source_ ? *d_source_ : pattern_source_;
     }
-    void capturePattern();
+    void capturePattern(bool categories = true);
     // The sidebar's categories as the experiment holds them now (edi::experiment_categories).
     void syncCategories();
     // A running fit's pattern at one iteration: shown until the fit ends and the pattern is captured

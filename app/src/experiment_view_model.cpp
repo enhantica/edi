@@ -736,12 +736,12 @@ void ExperimentViewModel::syncCategories() {
                                [this] { return edi::calculated_categories(experiment_); });
 }
 
-void ExperimentViewModel::capturePattern() {
+void ExperimentViewModel::capturePattern(bool categories) {
     // What the calculation publishes with the pattern: a single crystal's calculated F², a powder's reflections, and
     // the categories its file holds with them, with their counts.
     single_crystal_reflections_->sync();
     reflections_->sync();
-    syncCategories();
+    if (categories) syncCategories();
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {

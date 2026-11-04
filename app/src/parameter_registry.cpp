@@ -248,6 +248,12 @@ void ParameterRegistry::refreshEstimated(const edi::Project& project) {
     }
 }
 
+void ParameterRegistry::publishValues() {
+    for (ParameterItem* item : items_) {
+        item->publish();
+    }
+}
+
 void ParameterRegistry::refreshSpelling(const edi::Project& project) {
     // A field shows a value as the save writes it, exactly where the save does: a cell that rounded would not
     // load, or every value. That follows any edit, so it is read again with the rule at every publish.

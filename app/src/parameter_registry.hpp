@@ -34,6 +34,8 @@ class ParameterRegistry : public QObject {
 
     void rebuild(edi::Project& project);
     void publish(edi::Project& project);
+    /// The fields' values alone, during a slider drag: the spelling, fittability and warnings follow on release.
+    void publishValues();
     const QList<ParameterItem*>& items() const { return items_; }
     ParameterItem* find(const edi::Parameter* parameter) const;
     // Whether these already-published fileValue/fileSu pairs describe this exact

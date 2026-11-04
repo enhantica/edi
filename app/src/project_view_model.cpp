@@ -3325,6 +3325,13 @@ void ProjectViewModel::setAdjusting(bool adjusting) {
         experiment->setAdjusting(adjusting);
     }
     emit adjustingChanged();
+    // Released after a drag: everything the steps left waits once, now.
+    if (!adjusting && std::exchange(adjusted_, false) && !retired_) {
+        const PublicationScope publication(*this);
+        publish(false);
+        if (retired_) return;
+        for (ExperimentViewModel* experiment : experiment_models_) experiment->capturePattern();
+    }
 }
 
 void ProjectViewModel::scanCaughtUp() {
@@ -4814,6 +4821,13 @@ void ProjectViewModel::publish(bool structural) {
         syncBlocks();
         showStructureView();  // an apply or an undo can change what the structure saved
     }
+    // During a slider drag only the values, the calculation and the charts follow each step; the rest (the save
+    // spelling, the texts, the categories, the report) once on release (the owner, 2026-11-04; setAdjusting).
+    if (adjusting_ && !structural) {
+        registry_->publishValues();
+        adjusted_ = true;
+        return;
+    }
     registry_->publish(*project_);
     followScanDeclaration();
     for (StructureViewModel* structure : structure_models_) {
@@ -5118,6 +5132,21 @@ void ProjectViewModel::syncBlocks() {
 void ProjectViewModel::published(const edi::PreviewResult& result) {
     const PublicationScope publication(*this);
     if (retired_) return;
+    if (adjusting_) {
+        // A drag step: the values and the charts only.
+        registry_->publishValues();
+        const QString error = QString::fromStdString(result.refusal);
+        for (ExperimentViewModel* experiment : experiment_models_) {
+            experiment->pattern()->calculated(error);
+            experiment->capturePattern(false);
+        }
+        for (StructureViewModel* structure : structure_models_) structure->captureScene();
+        adjusted_ = true;
+        publishCalculating();
+        if (retired_) return;
+        emit recalculated();
+        return;
+    }
     registry_->publish(*project_);
     if (retired_) return;
     // The project holds the calculation now (or its refusal, with every computed category cleared): the
