@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T19:56:25Z
+# measured_utc = 2026-11-04T02:58:23Z
 #
-# Recorded from: scoped Evolution and arrow receipts; previous inventory carried pending the scan reference
-# Collected tests: 210357; with a reported duration: 70525
+# Recorded from: banked rows retained; one retired committed-CSV assertion removed
+# Collected tests: 226680; with a reported duration: 70525
 # Module-scoped fixture costs recorded: 102
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 210357
+# inventory_python = 210356
 # inventory_cpp = 401
 # inventory_measured = 166251
-# inventory_unmeasured = 44507
+# inventory_unmeasured = 44506
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 66955
+# inventory_pr_python = 66954
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -149404,7 +149404,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_invalid_signed_groups_and_characters_refuse[wrong-positive-character-project]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_named_magnetic_cif_imports_preserve_moments_and_iso_loops[cosio1.mcif]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_commensurate.py::test_named_magnetic_cif_imports_preserve_moments_and_iso_loops[isodistort.mcif]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_extended_magnetic_scan_records_every_temperature_in_ascending_order
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_extended_scan_retains_the_original_files_and_reverses_the_full_sequence
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_low_temperature_fit_record_has_independent_moment_sanity_bounds
 UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_examples.py::test_magnetic_examples_have_records_and_documentation[pd-neut-cwl_cosio-d20_2k-executing]

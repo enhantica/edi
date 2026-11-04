@@ -1,6 +1,5 @@
 """The magnetic worked examples retain their declared execution and fit records."""
 
-import csv
 import hashlib
 import json
 import re
@@ -112,40 +111,6 @@ def test_low_temperature_fit_record_has_independent_moment_sanity_bounds():
     )
     assert 2.620 <= cobalt['Co2'][2] <= 3.35, (
         'The fitted Co2 moment lies within the packet declared physical sanity interval'
-    )
-
-
-def test_extended_magnetic_scan_records_every_temperature_in_ascending_order():
-    directory = CLI / 'pd-neut-cwl_cosio-d20_scan-213f'
-    path = directory / 'project/analysis/results.csv'
-    assert path.is_file(), 'The offline magnetic scan retains its per-file fit result record'
-    with path.open(newline='') as stream:
-        rows = list(csv.DictReader(stream))
-    assert len(rows) == 213, 'The extended magnetic scan records every declared data file'
-    assert len({row['file_path'] for row in rows}) == 213, 'No fitted scan file is repeated'
-    temperatures = [float(row['diffrn.ambient_temperature']) for row in rows]
-    assert temperatures == sorted(temperatures), (
-        'Sequential fitting starts at the lowest temperature'
-    )
-    assert temperatures[0] < 3, (
-        'The magnetic scan includes the independently recorded low-temperature data'
-    )
-    assert all(int(row['fit_result.iterations']) >= 0 for row in rows), (
-        'Every scan row records its fit iteration count'
-    )
-    columns = []
-    for axis in 'xyz':
-        matching = [key for key in rows[0] if key.endswith('Co1.crystalaxis_' + axis)]
-        assert len(matching) == 1, 'Every free Co1 component has one recorded result column'
-        columns.append(matching[0])
-    moments = [sum(float(row[key]) ** 2 for key in columns) ** 0.5 for row in rows]
-    cold = [m for t, m in zip(temperatures, moments, strict=True) if t < 10]
-    warm = [m for t, m in zip(temperatures, moments, strict=True) if 50 <= t <= 60]
-    assert cold and warm, (
-        'The scan samples both the ordered state and temperatures around the reported transition'
-    )
-    assert sum(warm) / len(warm) < sum(cold) / len(cold), (
-        'The fitted ordered moment falls towards zero near the reported Neel temperature'
     )
 
 

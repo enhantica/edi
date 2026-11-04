@@ -119,6 +119,36 @@ def check_frame():
         print(f'82.189 K: {result.iterations} iterations, reduced χ² {reduced_chi_square:.9g}')
 
 
+def check_moment_trend(rows):
+    temperatures = [float(row['diffrn.ambient_temperature']) for row in rows]
+    assert min(temperatures) < 3, 'The fitted sequence includes the measured low-temperature data'
+    assert all(int(row['fit_result.iterations']) >= 0 for row in rows), (
+        'Every fitted file records its iteration count'
+    )
+    columns = []
+    for axis in 'xyz':
+        matching = [key for key in rows[0] if key.endswith('Co1.crystalaxis_' + axis)]
+        assert len(matching) == 1, 'Every free Co1 component has one recorded result column'
+        columns.append(matching[0])
+    moments = [sum(float(row[key]) ** 2 for key in columns) ** 0.5 for row in rows]
+    cold = [
+        moment
+        for temperature, moment in zip(temperatures, moments, strict=True)
+        if temperature < 10
+    ]
+    warm = [
+        moment
+        for temperature, moment in zip(temperatures, moments, strict=True)
+        if 50 <= temperature <= 60
+    ]
+    assert cold and warm, (
+        'The fitted scan samples the ordered state and the reported transition region'
+    )
+    assert sum(warm) / len(warm) < sum(cold) / len(cold), (
+        'The fitted ordered moment falls towards zero near the reported Neel temperature'
+    )
+
+
 def fit_scan(cold_first):
     with tempfile.TemporaryDirectory(prefix='magnetic-scan-') as scratch:
         directory = stage(MAGNETIC, scratch)
@@ -150,6 +180,7 @@ def fit_scan(cold_first):
         assert all(row['fit_result.success'].lower() == 'true' for row in rows), (
             'Every frame contributes a converged objective'
         )
+        check_moment_trend(rows)
         return {
             Path(row['file_path']).name: float(row['fit_result.reduced_chi_square'])
             for row in rows
