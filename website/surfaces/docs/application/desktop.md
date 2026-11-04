@@ -9,12 +9,12 @@ Use native file dialogs and work directly with projects on your computer.
 ## Download
 
 <!-- distribution:desktop -->
-<div class="ed-downloads"><button class="md-button" type="button" disabled aria-label="macOS download not available yet">macOS</button>
-<button class="md-button" type="button" disabled aria-label="Windows download not available yet">Windows</button>
-<button class="md-button" type="button" disabled aria-label="Linux download not available yet">Linux</button></div>
+<div class="ed-downloads"><a class="md-button" href="https://github.com/enhantica/edi/releases" aria-label="Download for macOS">macOS</a>
+<a class="md-button" href="https://github.com/enhantica/edi/releases" aria-label="Download for Windows">Windows</a>
+<a class="md-button" href="https://github.com/enhantica/edi/releases" aria-label="Download for Linux">Linux</a></div>
 <!-- /distribution -->
 
-Installer links will be added here when the new releases are available. You can use the [web app](browser.md) now.
+Open GitHub Releases and choose the online installer for your system. It downloads the application and its required components. Linux builds initially target Ubuntu 24.04 or newer. You can also use the [web app](browser.md).
 
 ## Open local projects
 

@@ -24,3 +24,10 @@ Build checks verify generated links and assets. Browser checks cover the interfa
 The Command Line entry explicitly compares standalone executable (no Python installation) with Python package (Python environment), including each invocation. Both use shell commands without Python scripting. Use tabs for differing command syntax; keep the shared Application preview with web/desktop entry links and explain file-access differences on the dedicated pages.
 
 2026-10-31 clarification: browser-specific saving instructions use native icon-labelled Chrome, Edge, Firefox and Safari tabs instead of a comparison table. Keep the shared browser-storage note and data-loss warning outside those tabs and visible for every selection.
+
+## Desktop release links — 2026-11-04
+
+Enable the desktop platform controls and link them to edi's GitHub Releases page. The page explains
+that the user chooses the matching online installer there; do not invent direct asset URLs before
+those assets exist. Keep `distributions.json` as the source for the generated controls. Standalone
+command-line controls remain disabled until corresponding executable downloads are available.

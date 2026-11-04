@@ -118,7 +118,9 @@ Math.abs(ratio-.012)<.00001;
         browser.goto(base + 'application/desktop/#download')
         require(
             browser.execute(
-                "return document.querySelectorAll('.ed-downloads button:disabled').length === 3;"
+                "return document.querySelectorAll('.ed-downloads a.md-button').length === 3 && "
+                "[...document.querySelectorAll('.ed-downloads a.md-button')].every(link => "
+                "link.href === 'https://github.com/enhantica/edi/releases');"
             )
         )
         require(not browser.execute('return document.documentElement.scrollWidth > innerWidth;'))
