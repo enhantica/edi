@@ -192,3 +192,13 @@ The browser assistant popup reuses IconLink, the same theme-aware link used in
 About. Its external-link icon and wording say that it opens the desktop download
 page, which offers download choices. It does not imply an immediate download.
 The style regression checks its normal and hover colours in both themes.
+
+## Parallel website publication
+
+The Pages workflow builds documentation and both WebAssembly kits in independent
+jobs at the same revision. Each uploads a named artifact; an assembly job downloads
+both, checks the existing reserved `/webapp/` boundary and uploads one Pages artifact.
+Deployment waits for successful assembly. The site therefore retains its documentation,
+contributor pages and web app together, without separate full-site deployments racing
+to replace one another. Manual dispatch retains the optional exact crysta commit for
+unreleased web-app previews and the existing unexecuted-notebook behavior in that case.

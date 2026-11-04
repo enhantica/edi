@@ -19,14 +19,17 @@ on:
 permissions:
   contents: read
 
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: build the site
-    if: github.event.pull_request.head.repo.fork == false
+  docs:
+    name: build documentation
+    if: github.repository == 'enhantica/edi'
     environment: crysta-sdk
     runs-on: &linux ubuntu-24.04
     steps:
@@ -34,6 +37,58 @@ jobs:
       - uses: ./.github/actions/setup-pixi
       - name: Prepare notebooks
         run: pixi run notebook-prepare
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+          permission-actions: read
+      - name: Check the crysta commit
+        if: inputs.crysta_commit != ''
+        run: |
+          [[ "$CRYSTA_COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "crysta_commit must be a full 40-hex sha"; exit 1; }
+        env:
+          CRYSTA_COMMIT: ${{ inputs.crysta_commit }}
+      - name: Build the native code
+        if: inputs.crysta_commit == ''
+        run: pixi run core-build
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Execute notebooks for rendering
+        if: inputs.crysta_commit == ''
+        run: pixi run notebook-exec-ci
+        env:
+          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+      - name: Strict contributor docs build  # mkdocs.yml writes site/dev
+        run: pixi run docs-build
+      - name: Build the public site  # website/, Zensical, strict, its links checked
+        run: pixi run site-build --base-url https://enhantica.github.io/edi/
+      - name: Place the public site at the root
+        run: |
+          for path in dev webapp; do
+            [ ! -e "website/_build/$path" ] || { echo "the public site must not own /$path/"; exit 1; }
+          done
+          cp -R website/_build/. site/
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-docs
+          path: site
+          include-hidden-files: true
+          if-no-files-found: error
+
+  wasm:
+    name: build WebAssembly
+    if: github.repository == 'enhantica/edi'
+    environment: crysta-sdk
+    runs-on: *linux
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-pixi
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -58,34 +113,43 @@ jobs:
           ref: ${{ inputs.crysta_commit }}
           token: ${{ steps.crysta-token.outputs.token }}
           path: crysta-source
-      - name: Build the native code
+      - name: Fetch the pinned crysta source
         if: inputs.crysta_commit == ''
-        run: pixi run core-build
+        run: pixi run crysta-sdk
         env:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-      - name: Execute notebooks for rendering
-        if: inputs.crysta_commit == ''
-        run: pixi run notebook-exec-ci
-        env:
-          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-      - name: Strict contributor docs build  # mkdocs.yml writes site/dev
-        run: pixi run docs-build
-      - name: Build the public site  # website/, Zensical, strict, its links checked
-        run: pixi run site-build --base-url https://enhantica.github.io/edi/
-      - name: Place the public site at the root
-        run: |
-          for path in dev webapp; do
-            [ ! -e "website/_build/$path" ] || { echo "the public site must not own /$path/"; exit 1; }
-          done
-          cp -R website/_build/. site/
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
       - name: Build both kits and pack the web app
         run: pixi run -e app --skip-deps wasm-build
         env:
           EDI_WASM_CRYSTA_SRC: ${{ inputs.crysta_commit != '' && format('{0}/crysta-source', github.workspace) || '' }}
+      - name: Upload WebAssembly
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-webapp
+          path: build/wasm/site
+          include-hidden-files: true
+          if-no-files-found: error
+
+  assemble:
+    name: assemble the site
+    needs: [docs, wasm]
+    runs-on: *linux
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: pages-docs
+          path: site
+      - name: Download WebAssembly
+        uses: actions/download-artifact@v4
+        with:
+          name: pages-webapp
+          path: webapp
       - name: Place the web app at /webapp/
-        run: bash tools/ci/docs-webapp.sh build/wasm/site site
+        run: bash tools/ci/docs-webapp.sh webapp site
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3
         with:
@@ -93,7 +157,7 @@ jobs:
 
   deploy:
     name: deploy the site
-    needs: build
+    needs: assemble
     # A Pages site is publicly visible, so it deploys only while the repository is public.
     if: github.event.repository.private == false
     permissions:
