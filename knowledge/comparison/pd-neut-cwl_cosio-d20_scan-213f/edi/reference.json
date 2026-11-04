@@ -1,32 +1,32 @@
 {
   "program": "edi",
-  "crysta_sdk": "crysta 32483b94, built locally before its SDK build",
+  "crysta_sdk": "crysta 7e3ab03e, built locally before its SDK build",
   "banks": [
     "d20"
   ],
   "n_free": 45,
   "status": "done",
   "converged": true,
-  "iterations": 34,
-  "rwp": 0.047287784499552385,
-  "reduced_chi_square": 6.347102707890214,
+  "iterations": 30,
+  "rwp": 0.048633855606790836,
+  "reduced_chi_square": 6.713592759372188,
   "cells": {
     "cosio": {
       "a": [
-        10.32250957727379,
-        0.00027617435283009973
+        10.315075193649976,
+        0.00028582129344690974
       ],
       "b": [
-        6.010402323179147,
-        0.0001653525273758838
+        6.006227491832468,
+        0.00017144181083712508
       ],
       "c": [
-        4.793860352438522,
-        0.00012885422574650094
+        4.790772141595401,
+        0.00013296207383720009
       ]
     }
   },
   "artifacts_sha256": {
-    "d20.csv": "9372473906fa0c27af6becdeb46e71c763f742b5fd7a898023734d16c7b5fdf4"
+    "d20.csv": "49cd38524497f59f030e08525d703953caa50ecdf3f5c9e6920dc0ceb77c7e95"
   }
 }

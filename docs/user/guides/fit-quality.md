@@ -62,7 +62,7 @@ counts are below 1, its factors carry that rounding.
 | [`pd-neut-cwl_cosio-d20`](../cli/pd-neut-cwl_cosio-d20/index.md) | edi | 1418 | 42 | 3.01 | 3.97 | 1.88 | 4.452 |
 |  | FullProf | 1418 | 42 | 3.02 | 4.02 | 1.88 | 4.56 |
 |  | diffraction-lib | 1418 | 42 | 5.57 | 7.87 | 1.88 | 17.52 |
-| [`pd-neut-cwl_cosio-d20_2k`](../cli/pd-neut-cwl_cosio-d20_2k/index.md) | edi | 1438 | 42 | 3.62 | 4.73 | 1.88 | 6.337 |
+| [`pd-neut-cwl_cosio-d20_2k`](../cli/pd-neut-cwl_cosio-d20_2k/index.md) | edi | 1438 | 41 | 3.66 | 4.87 | 1.88 | 6.713 |
 |  | FullProf | 1438 | 40 | 3.64 | 4.78 | 1.88 | 6.467 |
 |  | diffraction-lib | – | – | – | – | – | not compared¹ |
 | [`pd-neut-cwl_lmo-echidna`](../cli/pd-neut-cwl_lmo-echidna/index.md) | edi | 3002 | 24 | 3.91 | 5.00 | 3.23 | 2.394 |
@@ -101,7 +101,7 @@ counts are below 1, its factors carry that rounding.
 | [`pd-neut-xray-cwl_pbso4-d1a-lab`](../cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md) | edi | 8709 | 51 | 5.78 | 5.80 | 2.93 | 3.915 |
 |  | FullProf | 8709 | 51 | 5.72 | 5.76 | 2.93 | 3.855 |
 |  | diffraction-lib | – | – | – | – | – | not compared¹ |
-| [`pd-neut-cwl_cosio-d20_scan-213f`](../cli/pd-neut-cwl_cosio-d20_scan-213f/index.md) | edi | 1438 | 45 | 3.63 | 4.73 | 1.88 | 6.347 |
+| [`pd-neut-cwl_cosio-d20_scan-213f`](../cli/pd-neut-cwl_cosio-d20_scan-213f/index.md) | edi | 1438 | 45 | 3.67 | 4.86 | 1.88 | 6.714 |
 |  | FullProf | – | – | – | – | – | not compared¹ |
 |  | diffraction-lib | – | – | – | – | – | not compared¹ |
 | [`pd-xray-cwl_latp-bm01_scan`](../cli/pd-xray-cwl_latp-bm01_scan/index.md) | edi | 3114 | 59 | 3.88 | 4.51 | 0.00 | 1.422e+08 |
@@ -128,7 +128,7 @@ Examples where edi's R<sub>wp</sub> exceeds FullProf's by more than 5 %:
 
 Examples whose programs free different numbers of parameters:
 
-- `pd-neut-cwl_cosio-d20_2k`: edi 42, FullProf 40
+- `pd-neut-cwl_cosio-d20_2k`: edi 41, FullProf 40
 
 ### Cell lengths
 
@@ -137,7 +137,7 @@ Examples whose programs free different numbers of parameters:
 | `pd-neut-cwl_lbco-hrpt` | lbco | 3.890791(38) | 3.89079 | 3.890868(38) |
 | `pd-neut-cwl_hs-hrpt` | hs | 6.86399(47), 14.1417(11) | 6.86245, 14.13864 | – |
 | `pd-neut-cwl_cosio-d20` | cosio | 10.30873(25), 6.00379(15), 4.78665(12) | 10.30872, 6.00378, 4.78665 | 10.30844, 6.00358, 4.78671 |
-| `pd-neut-cwl_cosio-d20_2k` | cosio | 10.32233(43), 6.01028(25), 4.79380(19) | 10.32256, 6.01039, 4.79392 | – |
+| `pd-neut-cwl_cosio-d20_2k` | cosio | 10.31522(34), 6.00634(20), 4.79085(16) | 10.32256, 6.01039, 4.79392 | – |
 | `pd-neut-cwl_lmo-echidna` | lmo | 2.875137(62), 14.18322(37) | 2.87516, 14.18333 | 2.875718(17), 14.18651(15) |
 | `pd-neut-cwl_y2o3-spodi` | y2o3 | 10.604451(72) | 10.60445 | 10.604524(71) |
 | `pd-neut-cwl_yalo3-al2o3-spodi` | Al2O3 | 4.75840(43), 12.9668(22) | 4.75674, 12.97262 | – |
@@ -153,7 +153,7 @@ Examples whose programs free different numbers of parameters:
 | `pd-xray-cwl_pbso4-lab` | pbso4 | 8.480763(89), 5.398867(58), 6.960385(75) | 8.48066, 5.39888, 6.96026 | – |
 | `pd-xray-cwl_lam7o3-p021` | lam7o3 | 5.46218(11), 7.73302(16), 5.49022(11) | 5.46218, 7.73294, 5.49018 | 5.46225(10), 7.73308(16), 5.49026(11) |
 | `pd-neut-xray-cwl_pbso4-d1a-lab` | pbso4 | 8.479965(85), 5.398120(56), 6.959593(73) | 8.48004, 5.39848, 6.95972 | – |
-| `pd-neut-cwl_cosio-d20_scan-213f` | cosio | 10.32251(28), 6.01040(17), 4.79386(13) | – | – |
+| `pd-neut-cwl_cosio-d20_scan-213f` | cosio | 10.31508(29), 6.00623(17), 4.79077(13) | – | – |
 | `pd-xray-cwl_latp-bm01_scan` | alpo4_c2221 | 6.968(21), 7.111(21), 7.003(19) | 6.96964, 7.11593, 7.00370 | – |
 | `pd-xray-cwl_latp-bm01_scan` | alpo4_p63mc | 4.9828(68), 9.504(19) | 4.98695, 9.50427 | – |
 | `pd-xray-cwl_latp-bm01_scan` | latp | 8.49519(25), 20.82674(87) | 8.49690, 20.83213 | – |
