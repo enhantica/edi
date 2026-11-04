@@ -33,7 +33,8 @@ public:
     enum Role {
         IdRole = Qt::UserRole + 1, KindRole, NameRole, FormulaRole, SpaceGroupRole, HasCellRole,
         CellARole, CellBRole, CellCRole, CellAlphaRole, CellBetaRole, CellGammaRole,
-        RadiationRole, TechniqueRole, InstrumentRole, SourceRole, ReferenceRole, ReferenceUrlRole
+        RadiationRole, TechniqueRole, InstrumentRole, SourceRole, ReferenceRole, ReferenceUrlRole, ReferenceStyledRole,
+        DescriptionRole
     };
     Q_ENUM(Role)
 
@@ -43,13 +44,22 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     void assign(std::vector<edi::online::Entry> entries);
+    /// More rows of the same search (a later chunk of a long COD answer).
+    void append(std::vector<edi::online::Entry> entries);
     const edi::online::Entry* at(int row) const;
+    const std::vector<edi::online::Entry>& entries() const { return entries_; }
+    /// The journals' ISO 4 abbreviations by their normalised full name (journal_key); a journal not in the table
+    /// shows its full name. Every row's reference is re-read.
+    void setJournalAbbreviations(QHash<QString, QString> byName);
+    /// The journal as the reference shows it: its abbreviation when the table holds it, else the name itself.
+    QString journalShown(const std::string& journal) const;
 
 signals:
     void countChanged();
 
 private:
     std::vector<edi::online::Entry> entries_;
+    QHash<QString, QString> journals_;
 };
 
 /// A short list of choices for the popup: the sources offering a kind (key = id, name), or a source's search fields
@@ -61,10 +71,11 @@ class OnlineChoiceModel : public QAbstractListModel {
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 
 public:
-    enum Role { KeyRole = Qt::UserRole + 1, NameRole, HintRole };
+    enum Role { KeyRole = Qt::UserRole + 1, NameRole, HintRole, OptionsRole };
     Q_ENUM(Role)
     struct Choice {
         QString key, name, hint;
+        QStringList options;  // a selector's values (radiation, technique); empty for a text field
     };
 
     using QAbstractListModel::QAbstractListModel;
@@ -74,6 +85,8 @@ public:
 
     Q_INVOKABLE int indexOfKey(const QString& key) const;
     Q_INVOKABLE QString keyAt(int row) const;
+    Q_INVOKABLE QString hintAt(int row) const;
+    Q_INVOKABLE QStringList optionsAt(int row) const;
     void assign(QList<Choice> choices);
 
 signals:
@@ -105,6 +118,12 @@ class OnlineSearch : public QObject {
     Q_PROPERTY(QString alternativeId READ alternativeId NOTIFY alternativeIdChanged)
     Q_PROPERTY(QString alternativeName READ alternativeName NOTIFY alternativeNameChanged)
     Q_PROPERTY(bool searched READ searched NOTIFY searchedChanged)
+    /// How many entries the search matched (-1 before an answer); the table may hold fewer while a long COD answer
+    /// loads 100 at a time (moreAvailable, loadingMore, chunkError).
+    Q_PROPERTY(int total READ total NOTIFY totalChanged)
+    Q_PROPERTY(bool moreAvailable READ moreAvailable NOTIFY moreAvailableChanged)
+    Q_PROPERTY(bool loadingMore READ loadingMore NOTIFY loadingMoreChanged)
+    Q_PROPERTY(QString chunkError READ chunkError NOTIFY chunkErrorChanged)
 
 public:
     OnlineSearch(OnlineSourcesModel* sources, QObject* parent = nullptr);
@@ -127,6 +146,10 @@ public:
     QString alternativeId() const { return alternative_id_; }
     QString alternativeName() const;
     bool searched() const { return searched_; }
+    int total() const { return total_; }
+    bool moreAvailable() const { return !pending_ids_.empty(); }
+    bool loadingMore() const { return loading_more_; }
+    QString chunkError() const { return chunk_error_; }
 
     /// A field's value for the next search; the fields are cleared when the source changes.
     Q_INVOKABLE void setField(const QString& key, const QString& value);
@@ -140,6 +163,19 @@ public:
     Q_INVOKABLE void load(int row, QObject* project, QObject* target);
     /// Forget everything shown: results, message, the chosen source stays.
     Q_INVOKABLE void reset();
+    /// The next chunk of a long answer (also the retry after a failed one); nothing while one is loading.
+    Q_INVOKABLE void loadMore();
+    /// Reads the chosen collection's index ahead of a search, so the selectors (radiation, technique) offer its values.
+    Q_INVOKABLE void prepare();
+    /// The last search of this kind and source, for the app session: its fields and results come back, and
+    /// rememberedSelection says which row was selected. False, with the popup empty, when there was none.
+    Q_INVOKABLE bool recall();
+    /// Forgets this kind and source's last search and empties the popup.
+    Q_INVOKABLE void clear();
+    /// The fields' values, by key, as the last search or recall left them.
+    Q_INVOKABLE QVariantMap fieldValues() const;
+    Q_INVOKABLE void rememberSelection(int row);
+    Q_INVOKABLE int rememberedSelection() const;
 
 signals:
     void kindChanged();
@@ -154,6 +190,10 @@ signals:
     void alternativeIdChanged();
     void alternativeNameChanged();
     void searchedChanged();
+    void totalChanged();
+    void moreAvailableChanged();
+    void loadingMoreChanged();
+    void chunkErrorChanged();
     /// A downloaded entry: its kind, the local file, the entry, and the request's authority: the project it was
     /// made for and its measured-data target (null when it was made for a new experiment, `newTarget` true; null
     /// with `newTarget` false when the target has gone since).
@@ -168,8 +208,18 @@ private:
     void finish(std::vector<edi::online::Entry> entries);
     void refreshSources();
     void refreshFields();
+    /// The fields of the kind and source, with the selectors' values from `index` when it is a collection's.
+    void buildFields(const edi::online::Index* index);
+    /// The next up-to-100 ids of a long COD answer; `first` when the table is still empty.
+    void loadChunk(int generation, bool first);
+    std::vector<edi::online::Entry> codAnswer(const QByteArray& bytes) const;
+    /// The paging properties, told together after any of them moved.
+    void pagingChanged();
     void fail(const QString& message, bool unreachable);
     void setBusy(bool busy);
+    /// The journal abbreviations, once per session, from the EasyDiffraction source when it is enabled.
+    void loadJournals();
+    QString memoryKey() const { return kind_ + u'\n' + source_id_; }
     QUrl fileUrl(const QString& base, const QString& path) const;
     bool codService(const QString& url) const;
     /// Whether `id` is an enabled source offering the current kind.
@@ -186,6 +236,22 @@ private:
     bool busy_ = false, unreachable_ = false, searched_ = false;
     int generation_ = 0;
     QHash<QString, std::shared_ptr<edi::online::Index>> indexes_;
+    struct Remembered {
+        QHash<QString, QString> fields;
+        std::vector<edi::online::Entry> entries;
+        int selected = -1;
+        std::vector<std::string> pending;  // a long COD answer's ids not loaded yet
+        int total = -1;
+        QString base;
+        edi::online::Query rest;
+    };
+    std::vector<std::string> pending_ids_;
+    int total_ = -1;
+    bool loading_more_ = false;
+    QString chunk_error_, chunk_base_;
+    edi::online::Query chunk_rest_;
+    QHash<QString, Remembered> memory_;  // per kind and source, the app session only
+    bool journals_requested_ = false;
     std::unique_ptr<QTemporaryDir> downloads_;
 };
 

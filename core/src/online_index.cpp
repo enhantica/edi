@@ -196,6 +196,9 @@ Index parse_index(const std::string& text) {
         entry.first_page = text_member(item, "first_page");
         entry.year = text_member(item, "year");
         entry.doi = text_member(item, "doi");
+        const json::Value& structures = item.get("structures");
+        if (!structures.is_null())
+            for (const json::Value& id : structures.array("structures")) entry.structures.push_back(id.string("structures"));
         const json::Value& cell = item.get("cell");
         if (!cell.is_null()) {
             for (const json::Value& number : cell.array("cell")) {
@@ -289,10 +292,10 @@ const Entry* find(const Index& index, const std::string& id) {
     return nullptr;
 }
 
-std::string cod_search_url(const std::string& base, const Query& query) {
+std::string cod_search_url(const std::string& base, const Query& query, const std::string& format) {
     std::string url = base;
     while (!url.empty() && url.back() == '/') url.pop_back();
-    url += "/result?format=json";
+    url += "/result?format=" + format;
     if (!trimmed(query.id).empty()) url += "&id=" + percent_encoded(trimmed(query.id));
     if (!trimmed(query.formula).empty()) url += "&formula=" + percent_encoded(hill_formula(query.formula));
     if (!trimmed(query.elements).empty()) {
@@ -311,8 +314,8 @@ std::string cod_search_url(const std::string& base, const Query& query) {
     return url;
 }
 
-std::string short_reference(const Entry& entry) {
-    std::string out;
+Reference reference_parts(const Entry& entry, const std::string& journal) {
+    Reference out;
     const std::string authors = trimmed(entry.authors);
     if (!authors.empty()) {
         // "Smith, J.; Doe, A." or "Smith, J. and Doe, A.": the first surname, "et al." when others follow.
@@ -321,14 +324,29 @@ std::string short_reference(const Entry& entry) {
         const std::size_t and_at = first.find(" and ");
         if (and_at != std::string::npos) first = trimmed(first.substr(0, and_at));
         const bool several = authors.find(';') != std::string::npos || authors.find(" and ") != std::string::npos;
-        out = first + (several ? " et al." : "");
+        out.authors = first + (several ? " et al." : "");
     }
-    std::string where = trimmed(entry.journal);
+    std::string where = trimmed(journal.empty() ? entry.journal : journal);
     if (!trimmed(entry.volume).empty()) where += (where.empty() ? "" : " ") + trimmed(entry.volume);
     if (!trimmed(entry.first_page).empty()) where += (where.empty() ? "" : ", ") + trimmed(entry.first_page);
-    if (!where.empty()) out += (out.empty() ? "" : ", ") + where;
-    if (!trimmed(entry.year).empty()) out += (out.empty() ? "" : " ") + ("(" + trimmed(entry.year) + ")");
+    if (!trimmed(entry.year).empty()) where += (where.empty() ? "" : " ") + ("(" + trimmed(entry.year) + ")");
+    out.where = where;
     return out;
+}
+
+std::string cod_details_url(const std::string& base, const std::vector<std::string>& ids) {
+    std::string url = base;
+    while (!url.empty() && url.back() == '/') url.pop_back();
+    url += "/result?format=json&id=";
+    for (std::size_t i = 0; i < ids.size(); ++i) url += (i ? "," : "") + percent_encoded(trimmed(ids[i]));
+    return url;
+}
+
+std::string short_reference(const Entry& entry) {
+    const Reference parts = reference_parts(entry);
+    if (parts.authors.empty()) return parts.where;
+    if (parts.where.empty()) return parts.authors;
+    return parts.authors + ", " + parts.where;
 }
 
 std::string reference_url(const Entry& entry) {

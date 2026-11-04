@@ -110,26 +110,29 @@ def structure_facts(text: str) -> dict:
         facts['formula'] = formula
     if group:
         facts['space_group'] = group
+    # The project's dotted tags (`_cell.length_a`) or a plain CIF's (`_cell_length_a`, as COD
+    # writes them).
     cell = [
-        number(cif_value(text, tag))
-        for tag in (
-            '_cell.length_a',
-            '_cell.length_b',
-            '_cell.length_c',
-            '_cell.angle_alpha',
-            '_cell.angle_beta',
-            '_cell.angle_gamma',
+        number(cif_value(text, f'_cell.{name}') or cif_value(text, f'_cell_{name}'))
+        for name in (
+            'length_a',
+            'length_b',
+            'length_c',
+            'angle_alpha',
+            'angle_beta',
+            'angle_gamma',
         )
     ]
     if all(v is not None for v in cell):
         facts['cell'] = cell
-    loop = re.search(r'loop_\s*((?:_atom_site\.[A-Za-z_]+\s*)+)((?:.+\n)+?)(?:\n|loop_|$)', text)
+    loop = re.search(r'loop_\s*((?:_atom_site[._][A-Za-z_]+\s*)+)((?:.+\n)+?)(?:\n|loop_|$)', text)
     if loop:
         columns = loop.group(1).split()
-        try:
-            column = columns.index('_atom_site.type_symbol')
-        except ValueError:
-            column = -1
+        column = -1
+        for tag in ('_atom_site.type_symbol', '_atom_site_type_symbol'):
+            if tag in columns:
+                column = columns.index(tag)
+                break
         if column >= 0:
             symbols = []
             for row in loop.group(2).splitlines():
@@ -160,6 +163,30 @@ def experiment_facts(text: str) -> dict:
         if value:
             facts[key] = value
     return facts
+
+
+def linked_structures(text: str) -> list[str]:
+    """The structure ids an experiment links: its `_linked_structure` loop or single tag."""
+    single = cif_value(text, '_linked_structure.structure_id')
+    if single:
+        return [single]
+    match = re.search(
+        r'^loop_\s*\n((?:_linked_structure\.\S+[ \t]*\n)+)((?:[^_\n][^\n]*\n?)*)',
+        text,
+        re.MULTILINE,
+    )
+    if not match:
+        return []
+    tags = match.group(1).split()
+    if '_linked_structure.structure_id' not in tags:
+        return []
+    column = tags.index('_linked_structure.structure_id')
+    ids = []
+    for row in match.group(2).splitlines():
+        parts = row.split()
+        if len(parts) > column and parts[0] != 'loop_':
+            ids.append(parts[column].strip('\'"'))
+    return ids
 
 
 def write_sidecar(path: Path, meta: dict) -> None:
@@ -246,7 +273,15 @@ def populate(output: Path) -> int:
         for experiment in sorted((project / 'experiments').glob('*.edi')):
             target = output / 'experiments' / f'{example}-{experiment.stem}.edi'
             shutil.copyfile(experiment, target)
-            write_sidecar(target, {'id': f'{example}-{experiment.stem}', **common})
+            # The structures it links, by their entry ids: Load from the web brings them with it.
+            linked = [
+                f'{example}-{name}'
+                for name in linked_structures(experiment.read_text(errors='replace'))
+                if (project / 'structures' / f'{name}.edi').is_file()
+            ]
+            write_sidecar(
+                target, {'id': f'{example}-{experiment.stem}', 'structures': linked, **common}
+            )
             count += 1
     # The tutorials' inputs: a structure CIF and a measured pattern, both of the CIF's sample.
     tutorial_sample = sample_facts([
@@ -312,6 +347,7 @@ def entries_of(output: Path) -> list[dict]:
                 'first_page',
                 'year',
                 'doi',
+                'structures',
             ):
                 value = meta.get(key, facts.get(key))
                 if value not in (None, '', []):

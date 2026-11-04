@@ -48,6 +48,9 @@
    "instrument": "HRPT",
    "facility": "PSI",
    "source": "EasyDiffraction",
+   "structures": [
+    "lbco"
+   ],
    "files": [
     {
      "path": "experiments/lbco_hrpt.edi",

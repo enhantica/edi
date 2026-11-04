@@ -1094,6 +1094,79 @@ bool ProjectViewModel::loadExperiments(const QList<QUrl>& files) {
     return true;
 }
 
+bool ProjectViewModel::loadExperimentWithStructures(const QUrl& file, const QList<QUrl>& structures, const QString& label) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    if (retired_) return false;
+    const QString entry = label.isEmpty() ? QFileInfo(file.toLocalFile()).completeBaseName() : label;
+    // The core names the file it refused; the entry stands in for a temporary download.
+    const auto plain = [&](const QString& message, const QString& path) {
+        const QString prefix = path + QStringLiteral(": ");
+        return message.startsWith(prefix) ? message.mid(prefix.size()) : message;
+    };
+    const auto refuse = [&](const QString& message) {
+        setLastError(message);
+        if (self && !retired_) emit refused(message);
+        return false;
+    };
+    for (const QUrl& url : structures)
+        if (!url.isLocalFile()) return refuse(QStringLiteral("not a local file: %1").arg(url.toString()));
+    if (!file.isLocalFile()) return refuse(QStringLiteral("not a local file: %1").arg(file.toString()));
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refuse(refusal);
+    edi::Project& project = *project_;
+    const auto show = [this](const std::string& note) { emit message(QString::fromStdString(note)); };
+    // The structures the project lacks, by name: one it holds already is reused, never added twice.
+    std::vector<edi::Structure> missing;
+    for (const QUrl& url : structures) {
+        edi::Structure structure;
+        try {
+            structure = edi::load_structure_file(url.toLocalFile().toStdString(), show);
+        } catch (const std::exception& refusal) {
+            return refuse(tr("%1 needs the structure %2, which could not be loaded: %3")
+                              .arg(entry, QFileInfo(url.toLocalFile()).completeBaseName(), plain(QString::fromUtf8(refusal.what()), url.toLocalFile())));
+        }
+        const std::string key = edi::KeyTraits<edi::Structure>::canonical(structure.name.value());
+        const bool held = std::any_of(project.structures.begin(), project.structures.end(), [&key](const auto& item) {
+                              return edi::KeyTraits<edi::Structure>::canonical(item->name.value()) == key;
+                          }) || std::any_of(missing.begin(), missing.end(), [&key](const edi::Structure& item) {
+                              return edi::KeyTraits<edi::Structure>::canonical(item.name.value()) == key;
+                          });
+        if (!held) missing.push_back(std::move(structure));
+    }
+    AddedExperimentsWithStructures record;
+    record.structures = edi::capture_structures(project);
+    const std::size_t structuresBefore = project.structures.size(), experimentsBefore = project.experiments.size();
+    QString error;
+    try {
+        for (edi::Structure& structure : missing) {
+            const EditOutcome added = applyEdit(edi::Edit::add_structure(project, std::move(structure)), true);
+            if (!self || retired_) return false;
+            if (!added.applied) { error = added.message; break; }
+        }
+        if (error.isEmpty()) {
+            const std::vector<std::string> paths{file.toLocalFile().toStdString()};
+            error = apply(edi::Edit::add_experiments(project, edi::load_experiment_edi_files(project, paths, show)), true);
+        }
+    } catch (const std::exception& refusal) {
+        error = QString::fromUtf8(refusal.what());
+    }
+    if (!self || retired_) return false;
+    if (!error.isEmpty()) {
+        // The structures added before the refusal go again: nothing of the entry stays.
+        if (project.structures.size() > structuresBefore) applyEdit(edi::Edit::restore_structures(project, record.structures), true, true);
+        if (!self || retired_) return false;
+        return refuse(tr("%1 could not be loaded: %2").arg(entry, plain(error, file.toLocalFile())));
+    }
+    for (std::size_t i = experimentsBefore; i < project.experiments.size(); ++i) record.experiments.push_back(project.experiments[i].get());
+    undo_history_.emplace_back(std::move(record));
+    syncUndo();
+    if (!self || retired_) return true;
+    if (project.structures.size() > structuresBefore) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+    setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+    qCInfo(lcApp, "experiment loaded from the web with %d structure(s)", static_cast<int>(project.structures.size() - structuresBefore));
+    return true;
+}
+
 bool ProjectViewModel::canCreateExperiment() const {
     // A scan project holds its one template experiment (edi::Edit refuses another).
     return !(project_->sequential_fit.declared() && !project_->experiments.empty());
@@ -1363,6 +1436,9 @@ void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, con
     for (UndoRecord& record : undo_history_) {
         if (auto* added = std::get_if<AddedExperiments>(&record)) {
             std::replace(added->experiments.begin(), added->experiments.end(), before, after);
+        } else if (auto* brought = std::get_if<AddedExperimentsWithStructures>(&record)) {
+            std::replace(brought->experiments.begin(), brought->experiments.end(), before, after);
+            for (auto& rows : brought->structures.experiments) rows.experiment = rows.experiment == before ? after : rows.experiment;
         } else if (auto* loaded = std::get_if<LoadedData>(&record)) {
             loaded->experiment = loaded->experiment == before ? after : loaded->experiment;
         } else if (auto* control = std::get_if<edi::ExperimentControlsUndo>(&record)) {
@@ -3919,6 +3995,11 @@ void ProjectViewModel::undo() {
         undone = restore(edi::Edit::undo_empty_population(*project_, population->prepared), true);
     } else if (const auto* added = std::get_if<AddedExperiments>(&undo_history_.back())) {
         undone = restore(edi::Edit::erase_experiments(*project_, added->experiments), true);
+    } else if (const auto* brought = std::get_if<AddedExperimentsWithStructures>(&undo_history_.back())) {
+        // The experiment goes first (it links the structures), then the structures it brought.
+        const AddedExperimentsWithStructures copy = *brought;
+        undone = restore(edi::Edit::erase_experiments(*project_, copy.experiments), true) &&
+                 restore(edi::Edit::restore_structures(*project_, copy.structures), true);
     } else if (const auto* run = std::get_if<ScanRun>(&undo_history_.back())) {
         undone = restoreScanRun(*run, true);
     } else if (const auto* loaded = std::get_if<LoadedData>(&undo_history_.back())) {

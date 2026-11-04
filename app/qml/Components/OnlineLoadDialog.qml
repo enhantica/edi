@@ -37,27 +37,53 @@ AppDialog {
     contentWidth: Math.min(parent ? Math.floor(parent.width * 0.9) - 2 * EaStyle.Sizes.fontPixelSize : 0, EaStyle.Sizes.fontPixelSize * 96)
     contentHeight: column.implicitHeight
 
+    // The fields two or three per row, as the Feedback dialog lays its form out (the owner, 2026-11-04).
+    // Re-read whenever the fields model is rebuilt (a source change, the collection's values arriving).
+    readonly property int fieldsRevision: search.fields.count
+    readonly property var fieldRows: kind === "structure" ? [["id", "name"], ["formula", "elements", "space_group"]] : [["id", "name"], ["formula", "elements"], ["radiation", "technique", "instrument"]]
+
     function openFor(kind, experiment) {
         dialog.kind = kind;
         dialog.targetExperiment = experiment ?? null;
-        dialog.values = {};
         dialog.deliveryMessage = "";
         results.clearSelection();
         search.kind = kind;
         const remembered = dialog.lastSource[kind];
         if (search.sources.count > 0)
             search.sourceId = search.sources.indexOfKey(remembered) >= 0 ? remembered : search.sources.keyAt(0);
-        search.reset();
+        dialog.recall();
+        search.prepare();
         dialog.visible = true;
+    }
+
+    // This kind and source's last search, for the session: its fields, results and selected row come back.
+    function recall() {
+        results.clearSelection();
+        search.recall();
+        dialog.values = search.fieldValues();
+        const row = search.rememberedSelection();
+        if (row >= 0)
+            Qt.callLater(() => {
+                if (dialog.visible && row < search.results.count && dialog.selectedRow < 0)
+                    results.selectWithModifiers(row, Qt.NoModifier);
+            });
     }
 
     function runSearch() {
         results.clearSelection();
+        dialog.deliveryMessage = "";
         for (let row = 0; row < search.fields.count; ++row) {
             const key = search.fields.keyAt(row);
             search.setField(key, dialog.values[key] ?? "");
         }
         search.search();
+    }
+
+    function clearSearch() {
+        results.clearSelection();
+        dialog.deliveryMessage = "";
+        dialog.values = {};
+        search.clear();
     }
 
     function loadSelected() {
@@ -87,12 +113,32 @@ AppDialog {
         }
         return key;
     }
+    // The title inside the field, with its short hint: "Formula, any order: LaCoO3, La Co O3".
+    function placeholder(key) {
+        const row = search.fields.indexOfKey(key);
+        const hint = row >= 0 ? search.fields.hintAt(row) : "";
+        return hint === "" ? fieldLabel(key) : fieldLabel(key) + ", " + hint;
+    }
+    function fieldOptions(key) {
+        const row = search.fields.indexOfKey(key);
+        return row >= 0 ? search.fields.optionsAt(row) : [];
+    }
 
-    // The cell as the bridge displays each length and angle, compact: "3.89 3.89 3.89 90 90 90".
+    // The cell, compact: lengths with two decimals, angles with one (the owner, 2026-11-04).
     function cellText(row) {
         if (!row.hasCell)
             return "";
-        return [Session.display("cell.length_a", row.cellA), Session.display("cell.length_b", row.cellB), Session.display("cell.length_c", row.cellC), Session.display("cell.angle_alpha", row.cellAlpha), Session.display("cell.angle_beta", row.cellBeta), Session.display("cell.angle_gamma", row.cellGamma)].join(" ");
+        return [row.cellA.toFixed(2), row.cellB.toFixed(2), row.cellC.toFixed(2), row.cellAlpha.toFixed(1), row.cellBeta.toFixed(1), row.cellGamma.toFixed(1)].join(" ");
+    }
+
+    // How many entries the search matched, and how many of them the table holds while a long answer loads.
+    function countText() {
+        if (search.total < 0)
+            return "";
+        const total = Number(search.total).toLocaleString(Qt.locale(), "f", 0);
+        if (search.results.count < search.total)
+            return qsTr("%1 entries, %2 loaded").arg(total).arg(search.results.count);
+        return search.total === 1 ? qsTr("1 entry") : qsTr("%1 entries").arg(total);
     }
 
     // A new experiment's type from the entry: its technique and radiation when it states them, else the page's
@@ -120,11 +166,12 @@ AppDialog {
                 dialog.deliveryMessage = qsTr("The project changed while the download was running; nothing was loaded");
                 return;
             }
+            // A refused load says why in the window's dialog (the project's refusal), once (the owner, 2026-11-04).
             let done = false;
             if (kind === "structure")
                 done = dialog.project.loadStructure(file);
             else if (kind === "experiment")
-                done = dialog.project.loadExperiments([file]);
+                done = dialog.project.loadExperimentWithStructures(file, entry.structureFiles, entry.name !== "" ? entry.name : entry.id);
             else if (!newTarget && target === null) {
                 dialog.deliveryMessage = qsTr("The experiment the data was for is no longer in the project; nothing was loaded");
                 return;
@@ -136,8 +183,6 @@ AppDialog {
             }
             if (done)
                 dialog.close();
-            else
-                dialog.deliveryMessage = dialog.project.lastError;
         }
     }
     contentItem: Column {
@@ -145,73 +190,87 @@ AppDialog {
         width: dialog.contentWidth
         spacing: EaStyle.Sizes.fontPixelSize
 
-        // The source: a row of its own, as a form's first line.
-        Row {
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.Label {
-                width: column.labelWidth
-                anchors.verticalCenter: parent.verticalCenter
-                horizontalAlignment: Text.AlignRight
-                text: qsTr("Source") + ":"
+        // The source, a selector on a row of its own, as the Feedback dialog's kind.
+        EaElements.ComboBox {
+            id: sourceBox
+            objectName: "onlineLoad.source"
+            width: column.width
+            textRole: "name"
+            valueRole: "key"
+            model: dialog.search.sources
+            currentIndex: Math.max(0, dialog.search.sources.indexOfKey(dialog.search.sourceId))
+            // The shown name follows the chosen source, also after the kind's source list was rebuilt.
+            displayText: Session.onlineSources.nameOf(dialog.search.sourceId)
+            onActivated: index => {
+                dialog.deliveryMessage = "";
+                dialog.search.sourceId = dialog.search.sources.keyAt(index);
+                const remembered = Object.assign({}, dialog.lastSource);
+                remembered[dialog.kind] = dialog.search.sourceId;
+                dialog.lastSource = remembered;
+                dialog.recall();
+                dialog.search.prepare();
             }
-            EaElements.ComboBox {
-                id: sourceBox
-                objectName: "onlineLoad.source"
-                width: column.fieldWidth
-                textRole: "name"
-                valueRole: "key"
-                model: dialog.search.sources
-                currentIndex: Math.max(0, dialog.search.sources.indexOfKey(dialog.search.sourceId))
-                // The shown name follows the chosen source, also after the kind's source list was rebuilt.
-                displayText: Session.onlineSources.nameOf(dialog.search.sourceId)
-                onActivated: index => {
-                    dialog.values = {};
-                    dialog.deliveryMessage = "";
-                    results.clearSelection();
-                    dialog.search.sourceId = dialog.search.sources.keyAt(index);
-                    const remembered = Object.assign({}, dialog.lastSource);
-                    remembered[dialog.kind] = dialog.search.sourceId;
-                    dialog.lastSource = remembered;
-                }
-                // The base combo box has no tool tip of its own; this one follows the preference as the others do.
-                EaElements.ToolTip {
-                    text: qsTr("Where to search: the online sources enabled in Preferences")
-                    visible: sourceBox.hovered && EaGlobals.Vars.showToolTips
-                }
+            // The base combo box has no tool tip of its own; this one follows the preference as the others do.
+            EaElements.ToolTip {
+                text: qsTr("Where to search: the online sources enabled in Preferences")
+                visible: sourceBox.hovered && EaGlobals.Vars.showToolTips
             }
         }
-        readonly property real labelWidth: EaStyle.Sizes.fontPixelSize * 7
-        readonly property real fieldWidth: Math.min(EaStyle.Sizes.fontPixelSize * 28, dialog.contentWidth - labelWidth - EaStyle.Sizes.fontPixelSize)
 
-        // The fields of the chosen source, ID first, one per line.
+        // The fields of the chosen source, their titles inside as placeholders, two or three per row.
         Column {
             id: fieldColumn
+            width: column.width
             spacing: EaStyle.Sizes.fontPixelSize * 0.5
             Repeater {
-                model: dialog.search.fields
+                model: dialog.fieldRows
                 delegate: Row {
                     id: fieldRow
-                    required property string key
-                    required property string hint
+                    required property var modelData
+                    readonly property real fieldWidth: (width - (modelData.length - 1) * spacing) / modelData.length
+                    width: fieldColumn.width
                     spacing: EaStyle.Sizes.fontPixelSize
-                    EaElements.Label {
-                        width: column.labelWidth
-                        anchors.verticalCenter: parent.verticalCenter
-                        horizontalAlignment: Text.AlignRight
-                        text: dialog.fieldLabel(fieldRow.key) + ":"
-                    }
-                    EaElements.TextField {
-                        objectName: "onlineLoad.field." + fieldRow.key
-                        width: column.fieldWidth
-                        horizontalAlignment: TextInput.AlignLeft
-                        placeholderText: fieldRow.hint
-                        text: dialog.values[fieldRow.key] ?? ""
-                        onTextEdited: {
-                            const next = Object.assign({}, dialog.values);
-                            next[fieldRow.key] = text;
-                            dialog.values = next;
+                    Repeater {
+                        model: fieldRow.modelData
+                        // A text field with its title and hint inside, or, for a field with values to choose from
+                        // (radiation, technique), a selector with "Any" first (the owner, 2026-11-04).
+                        delegate: Item {
+                            id: fieldSlot
+                            required property string modelData
+                            readonly property string key: modelData
+                            readonly property var options: dialog.fieldsRevision >= 0 ? dialog.fieldOptions(key) : []
+                            readonly property var choices: [""].concat(options)
+                            width: fieldRow.fieldWidth
+                            height: options.length > 0 ? box.height : textField.height
+                            EaElements.TextField {
+                                id: textField
+                                objectName: "onlineLoad.field." + fieldSlot.key
+                                visible: fieldSlot.options.length === 0
+                                width: parent.width
+                                horizontalAlignment: TextInput.AlignLeft
+                                placeholderText: dialog.fieldsRevision >= 0 ? dialog.placeholder(fieldSlot.key) : ""
+                                text: dialog.values[fieldSlot.key] ?? ""
+                                onTextEdited: {
+                                    const next = Object.assign({}, dialog.values);
+                                    next[fieldSlot.key] = text;
+                                    dialog.values = next;
+                                }
+                                onAccepted: dialog.runSearch()
+                            }
+                            EaElements.ComboBox {
+                                id: box
+                                objectName: "onlineLoad.choice." + fieldSlot.key
+                                visible: fieldSlot.options.length > 0
+                                width: parent.width
+                                model: fieldSlot.choices.map(value => value === "" ? qsTr("Any %1").arg(dialog.fieldLabel(fieldSlot.key).toLowerCase()) : value)
+                                currentIndex: Math.max(0, fieldSlot.choices.indexOf(dialog.values[fieldSlot.key] ?? ""))
+                                onActivated: index => {
+                                    const next = Object.assign({}, dialog.values);
+                                    next[fieldSlot.key] = fieldSlot.choices[index];
+                                    dialog.values = next;
+                                }
+                            }
                         }
-                        onAccepted: dialog.runSearch()
                     }
                 }
             }
@@ -221,22 +280,31 @@ AppDialog {
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.SideBarButton {
                 objectName: "onlineLoad.search"
-                width: EaStyle.Sizes.fontPixelSize * 12
+                width: EaStyle.Sizes.fontPixelSize * 10
                 fontIcon: "search"
                 text: dialog.search.busy && dialog.selectedRow < 0 ? qsTr("Searching…") : qsTr("Search")
                 enabled: !dialog.search.busy && dialog.search.sourceId !== ""
                 ToolTip.text: qsTr("Search the selected source with the fields above; empty fields do not filter")
                 onClicked: dialog.runSearch()
             }
+            EaElements.SideBarButton {
+                objectName: "onlineLoad.clear"
+                width: EaStyle.Sizes.fontPixelSize * 10
+                fontIcon: "eraser"
+                text: qsTr("Clear")
+                enabled: !dialog.search.busy
+                ToolTip.text: qsTr("Empty the fields and the results; the next search starts afresh")
+                onClicked: dialog.clearSearch()
+            }
             EaElements.Label {
                 id: messageLabel
                 objectName: "onlineLoad.message"
                 anchors.verticalCenter: parent.verticalCenter
-                width: dialog.contentWidth - EaStyle.Sizes.fontPixelSize * 13 - (alternative.visible ? alternative.width + parent.spacing : 0)
+                width: column.width - EaStyle.Sizes.fontPixelSize * 22 - (alternative.visible ? alternative.width + parent.spacing : 0)
                 visible: text !== ""
                 wrapMode: Text.Wrap
                 color: dialog.search.message !== "" || dialog.deliveryMessage !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForegroundMinor
-                text: dialog.search.message !== "" ? dialog.search.message : dialog.deliveryMessage !== "" ? dialog.deliveryMessage : dialog.search.searched && dialog.search.results.count === 0 ? qsTr("Nothing found") : ""
+                text: dialog.search.message !== "" ? dialog.search.message : dialog.deliveryMessage !== "" ? dialog.deliveryMessage : dialog.search.searched && dialog.search.results.count === 0 && dialog.search.total <= 0 ? qsTr("Nothing found") : ""
                 HoverHandler {
                     id: messageHover
                 }
@@ -260,18 +328,34 @@ AppDialog {
             }
         }
 
-        // The results, this kind only, fitted to the popup: the flexible column takes what the fixed ones leave.
+        // The count above the table, for every search (the owner, 2026-11-04).
+        EaElements.Label {
+            objectName: "onlineLoad.count"
+            visible: text !== ""
+            color: EaStyle.Colors.themeForegroundMinor
+            text: dialog.countText()
+        }
+
+        // The results, this kind only. Every column fits its content after each answer; the one named in
+        // spreadColumns takes what is left and elides (Reference for structures, Description otherwise).
         DataTable {
             id: results
             objectName: "onlineLoad.results"
-            width: dialog.contentWidth
+            width: column.width
             maxRowCountShow: 8
             sourceModel: dialog.search.results
             defaultInfoText: dialog.search.searched ? qsTr("No entries") : qsTr("Search to list entries")
             readonly property bool structures: dialog.kind === "structure"
-            // Name and Reference share what the fixed columns leave; the cell shows six displayed values.
-            columns: structures ? [numberColumnWidth, AppSizes.dataColumnWidth * 1.3, -1, AppSizes.dataColumnWidth * 1.7, AppSizes.dataColumnWidth * 1.3, AppSizes.dataColumnWidth * 3.6, -1] : [numberColumnWidth, AppSizes.dataColumnWidth * 1.6, -1, AppSizes.dataColumnWidth * 1.6, AppSizes.dataColumnWidth * 2.2]
-            spreadColumns: structures ? [2, 6] : [2]
+            columns: structures ? [numberColumnWidth, -1, -1, -1, -1, -1, -1] : [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1]
+            spreadColumns: structures ? [6] : [3]
+            // A long COD answer loads 100 at a time: the next chunk is asked for one chunk ahead of the end.
+            onContentYChanged: {
+                if (dialog.search.moreAvailable && !dialog.search.loadingMore && dialog.search.chunkError === "" && count > 0) {
+                    const rowHeight = contentHeight / count;
+                    if (contentHeight - (contentY + height) < 100 * rowHeight)
+                        dialog.search.loadMore();
+                }
+            }
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {}
                 EaComponents.ListViewLabel {
@@ -283,21 +367,24 @@ AppDialog {
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
-                    text: results.structures ? qsTr("Formula") : Session.categoryTitle("instrument")
+                    visible: !results.structures
+                    text: qsTr("Description")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
-                    text: results.structures ? Session.categoryTitle("space_group") : qsTr("Technique")
+                    text: qsTr("Formula")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
-                    visible: results.structures
-                    text: Session.categoryTitle("cell")
+                    text: results.structures ? Session.categoryTitle("space_group") : qsTr("Radiation")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
-                    visible: results.structures
-                    text: qsTr("Reference")
+                    text: results.structures ? Session.categoryTitle("cell") : qsTr("Technique")
+                    horizontalAlignment: Text.AlignLeft
+                }
+                EaComponents.ListViewLabel {
+                    text: results.structures ? qsTr("Reference") : Session.categoryTitle("instrument")
                     horizontalAlignment: Text.AlignLeft
                 }
             }
@@ -305,6 +392,7 @@ AppDialog {
                 id: row
                 required property var model
                 required property string name
+                required property string description
                 required property string formula
                 required property string spaceGroup
                 required property bool hasCell
@@ -319,22 +407,28 @@ AppDialog {
                 required property string instrument
                 required property string source
                 required property string reference
+                required property string referenceStyled
                 required property string referenceUrl
                 objectName: `onlineLoad.row.${row.index}`
-                // A click selects the row through the table's own selection; a double click loads it. Beneath the
-                // cells, so the reference's link keeps its own click.
+                // A click selects the row through the table's own selection (remembered for the next opening); a
+                // double click loads it. Beneath the cells, so the reference's link keeps its own click.
                 MouseArea {
                     parent: row
                     anchors.fill: parent
                     z: -1
-                    onClicked: mouse => results.selectWithModifiers(row.index, mouse.modifiers)
+                    onClicked: mouse => {
+                        results.selectWithModifiers(row.index, mouse.modifiers);
+                        dialog.search.rememberSelection(row.index);
+                    }
                     onDoubleClicked: {
                         results.selectWithModifiers(row.index, Qt.NoModifier);
                         dialog.loadSelected();
                     }
                 }
+                // The row number as the app's other tables show it: greyed, highlighted with the selected row.
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
+                    marksCurrentRow: true
                     text: row.index + 1
                 }
                 EaComponents.ListViewLabel {
@@ -350,36 +444,62 @@ AppDialog {
                     text: row.name
                 }
                 EaComponents.ListViewLabel {
+                    visible: !results.structures
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
-                    text: results.structures ? row.formula : row.instrument
+                    text: row.description
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
-                    text: results.structures ? row.spaceGroup : [row.radiation, row.technique].filter(s => s !== "").join(", ")
+                    text: row.formula
                 }
                 EaComponents.ListViewLabel {
-                    visible: results.structures
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
-                    text: dialog.cellText(row)
+                    text: results.structures ? row.spaceGroup : row.radiation
+                }
+                EaComponents.ListViewLabel {
+                    horizontalAlignment: Text.AlignLeft
+                    elide: Text.ElideRight
+                    text: results.structures ? dialog.cellText(row) : row.technique
                 }
                 EaComponents.ListViewLabel {
                     id: referenceCell
                     objectName: `onlineLoad.reference.${row.index}`
-                    visible: results.structures
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
-                    text: row.reference
-                    color: row.referenceUrl !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForeground
-                    // The DOI opens in the browser; a click elsewhere on the row selects it as any click does.
+                    // The reference with its authors in italic; the DOI opens in the browser, a click elsewhere on the
+                    // row selects it as any click does.
+                    textFormat: results.structures ? Text.StyledText : Text.PlainText
+                    text: results.structures ? row.referenceStyled : row.instrument
+                    color: results.structures && row.referenceUrl !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForeground
                     TapHandler {
-                        enabled: row.referenceUrl !== ""
+                        enabled: results.structures && row.referenceUrl !== ""
                         acceptedButtons: Qt.LeftButton
                         onTapped: Qt.openUrlExternally(row.referenceUrl)
                     }
                 }
+            }
+        }
+        // A chunk of a long answer that did not arrive: the rows shown stay, this line offers it again.
+        Row {
+            objectName: "onlineLoad.chunk"
+            visible: dialog.search.chunkError !== "" || dialog.search.loadingMore
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                width: column.width - (retry.visible ? retry.width + parent.spacing : 0)
+                elide: Text.ElideRight
+                color: dialog.search.chunkError !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForegroundMinor
+                text: dialog.search.chunkError !== "" ? qsTr("The next entries could not be loaded: %1").arg(dialog.search.chunkError) : qsTr("Loading the next entries…")
+            }
+            EaElements.Button {
+                id: retry
+                objectName: "onlineLoad.retry"
+                visible: dialog.search.chunkError !== ""
+                text: qsTr("Retry")
+                onClicked: dialog.search.loadMore()
             }
         }
 
@@ -397,7 +517,7 @@ AppDialog {
                 objectName: "onlineLoad.load"
                 enabled: dialog.canLoad
                 text: dialog.search.busy && dialog.selectedRow >= 0 ? qsTr("Loading…") : qsTr("Load")
-                ToolTip.text: dialog.kind === "structure" ? qsTr("Load the selected structure into the project") : dialog.kind === "experiment" ? qsTr("Open the selected experiment in the project") : dialog.targetExperiment !== null ? qsTr("Load the selected pattern into %1").arg(dialog.targetExperiment.name) : qsTr("Create an experiment from the selected data")
+                ToolTip.text: dialog.kind === "structure" ? qsTr("Load the selected structure into the project") : dialog.kind === "experiment" ? qsTr("Open the selected experiment in the project, with the structures it links") : dialog.targetExperiment !== null ? qsTr("Load the selected pattern into %1").arg(dialog.targetExperiment.name) : qsTr("Create an experiment from the selected data")
                 onClicked: dialog.loadSelected()
             }
         }

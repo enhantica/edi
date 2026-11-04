@@ -389,6 +389,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // D12: add blocks from `.edi` files; on a refusal nothing changes and `refused` names the reason.
     Q_INVOKABLE bool loadStructure(const QUrl& file);
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
+    /// A full experiment from the web with the structures it links (ADR-0068): each structure file whose name the
+    /// project does not hold yet is added, then the experiment, as one undoable change; `label` names the entry in a
+    /// refusal, which never names a temporary file.
+    Q_INVOKABLE bool loadExperimentWithStructures(const QUrl& file, const QList<QUrl>& structures, const QString& label);
     // A structure's removal takes every experiment's link to it (and texture row for it) with it, in one undoable
     // step, with a message naming the experiments.
     Q_INVOKABLE void removeStructure(int index);
@@ -756,6 +760,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct AddedExperiments {
         std::vector<const edi::ExperimentBase*> experiments;
     };
+    // A full experiment loaded from the web with the structures it brought: undone together.
+    struct AddedExperimentsWithStructures {
+        edi::StructuresUndo structures;
+        std::vector<const edi::ExperimentBase*> experiments;
+    };
     // A fresh scan run: the result files it replaced, as they were (absent: there was none, also recorded).
     // The fit records Reset fits clears: the model's and, while a dataset is shown, the template's.
     struct FitRecords {
@@ -803,7 +812,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::shared_ptr<const edi::Project> before;
     };
     struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
-    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, AddedExperimentsWithStructures, ScanRun, LoadedData,
                                     edi::StructuresUndo, edi::ExperimentControlsUndo, EmptyPopulationUndo, FreeFlags, PointIds, BackgroundPointUndo, BackgroundPoints, BlockName,
                                     edi::ReportSettingsState, AppliedText>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.

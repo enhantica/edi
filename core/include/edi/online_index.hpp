@@ -38,6 +38,7 @@ struct Entry {
     std::string first_page;   ///< may be empty
     std::string year;         ///< may be empty
     std::string doi;          ///< without a scheme, may be empty
+    std::vector<std::string> structures;  ///< an experiment's linked structures, by their entry ids; may be empty
     std::vector<File> files;  ///< at least one
 };
 
@@ -45,6 +46,14 @@ struct Entry {
 /// (the first author's surname, "et al." for more than one), journal, volume, first page and year, each omitted
 /// when empty; empty when the entry names no publication.
 std::string short_reference(const Entry& entry);
+
+/// The two parts of that reference: the authors ("Smith et al.") and the rest ("Phys. Rev. B 40, 34 (2026)"), with
+/// `journal` in place of the entry's journal when given (its abbreviation). Either part may be empty.
+struct Reference {
+    std::string authors;
+    std::string where;
+};
+Reference reference_parts(const Entry& entry, const std::string& journal = {});
 
 /// Where the publication is read: `https://doi.org/<doi>` when the entry has a DOI, else empty.
 std::string reference_url(const Entry& entry);
@@ -79,10 +88,12 @@ std::string hill_formula(const std::string& formula);
 /// The elements of a formula, each once, in Hill order.
 std::vector<std::string> formula_elements(const std::string& formula);
 
-/// The COD query service URL for `query` under `base` (https://www.crystallography.net/cod): `id`, `formula`,
-/// `el1`..`el8` and `spacegroup`. The service holds eight element slots, so the caller runs `search` over the
-/// mapped answer with the same query to apply every constraint.
-std::string cod_search_url(const std::string& base, const Query& query);
+/// COD's query URL for `query` at `base`, answering in `format`: "json" for the entries' details, "count" for
+/// their number, "lst" for their ids one per line (COD's documented formats).
+std::string cod_search_url(const std::string& base, const Query& query, const std::string& format = "json");
+
+/// COD's query URL for the details of the entries `ids` name (a chunk of a long answer).
+std::string cod_details_url(const std::string& base, const std::vector<std::string>& ids);
 
 /// The element list's symbols, commas or semicolons read as spaces; refuses text that is not a list.
 std::vector<std::string> element_list(const std::string& text);

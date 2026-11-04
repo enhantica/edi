@@ -4,6 +4,8 @@
 #include <QMetaType>
 #include <QObject>
 #include <QString>
+#include <QStringList>
+#include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
 namespace edi_app {
@@ -22,8 +24,14 @@ struct OnlineEntry {
     Q_PROPERTY(QString instrument MEMBER instrument CONSTANT)
     Q_PROPERTY(QString source MEMBER source CONSTANT)
     Q_PROPERTY(QString format MEMBER format CONSTANT)
+    Q_PROPERTY(QString description MEMBER description CONSTANT)
+    Q_PROPERTY(QStringList structureIds MEMBER structureIds CONSTANT)
+    Q_PROPERTY(QList<QUrl> structureFiles MEMBER structureFiles CONSTANT)
    public:
-    QString id, kind, name, formula, spaceGroup, radiation, technique, instrument, source, format;
+    QString id, kind, name, formula, spaceGroup, radiation, technique, instrument, source, format, description;
+    // A full experiment's linked structures: their entry ids, and once downloaded their local files, in one order.
+    QStringList structureIds;
+    QList<QUrl> structureFiles;
     bool operator==(const OnlineEntry&) const = default;
 };
 
