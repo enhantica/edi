@@ -808,3 +808,15 @@ Uncovered questions search the published edi documentation first, with physics
 questions starting in its physics section. Bundled skills remain first, current
 build facts remain authoritative for controls, and other primary references remain
 available. Search queries still exclude private inputs and paths.
+
+## Experiment-type clarification
+
+The existing question-card flow collects missing experiment-type choices before
+creation or import. Both setup and fitting guidance require sample form, radiation
+probe, beam mode and calibration, and check the remaining type axes against app
+capabilities. Questions offer supported choices together and retain supplied facts;
+NPD already establishes neutron powder diffraction. Defaults and filenames do not
+confirm a radiation type. Single-choice capability limits do not justify applying
+that model to incompatible data. Numeric calibration remains an open question.
+This extends the existing prerequisite and question-card contract without a new
+selector widget or a second source of experiment-type options.

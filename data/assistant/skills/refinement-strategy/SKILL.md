@@ -8,7 +8,7 @@ description: Choose and revise a fitting strategy from actual model, data, nativ
 Say fit, fitting and fitted to the user, never refine or refinement: these are Edi's words. The
 references below keep their own titles.
 
-Version: 1.6.6. Follow the user's goal, supplied constraints and actually offered
+Version: 1.6.7. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
@@ -18,7 +18,12 @@ planning; native eligibility and ownership still apply.
 1. **Establish essentials, then wait if needed.** Inspect the current project and
    small attachment/header portions. Use the native reader for supported format,
    columns and sigma; ask about those only after a real loading failure or genuine
-   ambiguity. If probe, wavelength or TOF calibration is missing/conflicting, show
+   ambiguity. Establish sample form, radiation probe, beam mode and wavelength/TOF calibration,
+   checking the other experiment-type axes against current capabilities. Defaults
+   and file extensions do not confirm an experiment type; explicit NPD already
+   establishes neutron powder diffraction. If required type choices or calibration
+   are missing/conflicting, collect the missing choices together with selectable
+   question-card options matching the app, without reasking established facts. Show
    Assistant and use offered structured questions; wait for the actual answer.
    Without that flow, issue a FINAL question and END the turn. Do no creation,
    import, independent structure preparation, setup, fitting or Save meanwhile.

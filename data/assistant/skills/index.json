@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.10.3",
+      "version": "1.10.4",
       "title": "Work with the displayed Edi project",
       "summary": "Work with the current native project, genuine CIF/data inputs, Estimate, ordinary saves and public scientific research.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "08a7ece30e787ec84d8148dbd7bae4cbf169a3458dbb44d7311f1a63751c0acf",
+      "sha256": "3ec4226dbb610abb53efb1f53fe70c6fe7ebabb39295d2bb19e79efd309cd65c",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -71,11 +71,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.6.6",
+      "version": "1.6.7",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "be2f218a515439ce2c52e5bcb58f91ede2b0e16d172dbaedeb7dadcf91ba46f6",
+      "sha256": "cf7ffc28c43414afb78396c96083ff4b6c71487bd7ed4e8ec44145203c5ab47f",
       "requires": [],
       "capabilities": [
         "inspect_project",
