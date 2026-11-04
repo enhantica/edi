@@ -3,6 +3,11 @@ name: Desktop installers
 on:
   workflow_dispatch:
     inputs:
+      publish_components:
+        description: Publish tested components to the Pages testing repository
+        required: true
+        default: false
+        type: boolean
       crysta_commit:
         description: Exact crysta source commit to build before edi
         required: true
@@ -11,6 +16,7 @@ on:
   push:
     paths:
       - .github/workflows/installers.yml
+      - .github/actions/setup-pixi/action.yml
       - tools/installer/**
       - cmake/assistant_runtime*
       - app/src/installer_smoke.cpp
@@ -103,11 +109,47 @@ jobs:
         run: |
           installer=$(cat build/installer/package/installer.json | sed -n 's/.*"zip": "\([^"]*\)".*/\1/p')
           pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
-      - name: Upload installer
+      - name: Create the online distribution installer
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --version "0.0.${{ github.run_number }}.${{ github.run_attempt }}" --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online"
+      - name: Qualify the online ZIP with local component transport
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
+          import json, subprocess
+          from pathlib import Path
+          root = Path.cwd()
+          package = root / 'build/installer/online'
+          metadata = json.loads((package / 'installer.json').read_text())
+          subprocess.run([
+              'python', str(root / 'tools/installer/package.py'), 'test',
+              '--installer', str(package / metadata['zip']),
+              '--repository', (package / 'repository').as_uri() + '/',
+              '--output', str(root / 'build/installer/online-test'),
+          ], check=True)
+          PYTHON
+      - name: Prepare the tested platform repository
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
+          import json, shutil
+          from pathlib import Path
+          package = Path('build/installer/online')
+          metadata = json.loads((package / 'installer.json').read_text())
+          target = Path('build/installer/components/testing') / metadata['platform']
+          shutil.copytree(package / 'repository', target)
+          PYTHON
+      - name: Upload online installer
         uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform }}
-          path: build/installer/package/*.zip
+          path: build/installer/online/*.zip
+          if-no-files-found: error
+          compression-level: 0
+      - name: Upload tested components
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-components-${{ matrix.platform }}
+          path: build/installer/components
           if-no-files-found: error
           compression-level: 0
       - name: Upload installation diagnostics
@@ -116,8 +158,55 @@ jobs:
         with:
           name: installer-check-${{ matrix.platform }}
           path: |
-            build/installer/test/**
+            build/installer/test/*.log
+            build/installer/test/*.json
+            build/installer/test/smoke/**
+            build/installer/online-test/*.log
+            build/installer/online-test/*.json
+            build/installer/online-test/smoke/**
+            build/installer/online/installer.json
+            build/installer/stage/bundle-audit.json
             build/installer/protocol/*.log
             build/installer/protocol/passed.json
             build/installer/package/installer.json
           if-no-files-found: ignore
+
+  publish-installers:
+    name: publish tested installer components
+    needs: installers
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_components && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: pages-publication
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download tested platform repositories
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-components-*
+          merge-multiple: true
+          path: components
+      - name: Preserve documentation, web app and previous components
+        run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload the assembled site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-site-installers-${{ github.run_attempt }}
+          path: site
+          retention-days: 90
+      - name: Deploy installers to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-site-installers-${{ github.run_attempt }}

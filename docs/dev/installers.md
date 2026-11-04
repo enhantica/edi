@@ -49,3 +49,15 @@ can run the app but cannot qualify that complete upstream runtime. The installer
 system C library or graphics drivers.
 
 See [ADR-0071](adrs/0071-desktop-installers.md) for the deployment and qualification contract.
+
+## Online qualification and initial testing publication
+
+Each platform first qualifies the offline bundle, then generates an online-only bootstrap and tests
+its ZIP against a local file repository. The final installer artifacts contain only that online ZIP.
+Development component versions use `0.0.RUN.ATTEMPT`; published calendar releases use their single
+release-plan identity instead. Offline candidates remain local qualification inputs.
+
+The manual workflow's `publish_components` input enables initial GitHub Pages publication after every
+platform passes. This writes only `repository/testing/<platform>/`, preserving the docs, web app,
+other platform repositories and previous immutable component archives. It does not publish a stable
+GitHub release. The future download-domain mirror remains disabled until it is populated.

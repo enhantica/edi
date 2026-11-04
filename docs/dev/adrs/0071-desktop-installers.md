@@ -121,3 +121,11 @@ Qt modules and the largest files. Count link aliases once. Reject deployed nativ
 Multimedia and test-library families, which this application does not use. Keep Qt Widgets: the native
 mathematical text renderer depends on it. Keep the complete verified assistant runtime unchanged;
 its size is measured separately so it cannot be mistaken for unnecessary Qt deployment.
+
+After the offline application check passes, qualify the online ZIP using its real component repository
+through a local file URL. CI retains only online installer downloads as distribution artifacts. Keep
+diagnostics small: logs, receipts, screenshot and dependency inventory, without another copy of the
+large offline bootstrap. Publish testing components only on an explicit manual workflow run and only
+after all platform checks succeed. Publication shares the docs/web app lock and preserves their content.
+Testing component identities use `0.0.RUN.ATTEMPT` to avoid overwriting earlier downloads on a retry;
+they are development candidates, not entries in the calendar release history.
