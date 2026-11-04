@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
@@ -153,7 +154,11 @@ AppDialog {
                     remembered[dialog.kind] = dialog.search.sourceId;
                     dialog.lastSource = remembered;
                 }
-                ToolTip.text: qsTr("Where to search: the online sources enabled in Preferences")
+                // The base combo box has no tool tip of its own; this one follows the preference as the others do.
+                EaElements.ToolTip {
+                    text: qsTr("Where to search: the online sources enabled in Preferences")
+                    visible: sourceBox.hovered && EaGlobals.Vars.showToolTips
+                }
             }
         }
 
@@ -204,6 +209,7 @@ AppDialog {
                 onClicked: dialog.runSearch()
             }
             EaElements.Label {
+                id: messageLabel
                 objectName: "onlineLoad.message"
                 anchors.verticalCenter: parent.verticalCenter
                 width: dialog.width - EaStyle.Sizes.fontPixelSize * 14 - (alternative.visible ? alternative.width + parent.spacing : 0)
@@ -211,7 +217,13 @@ AppDialog {
                 wrapMode: Text.Wrap
                 color: dialog.search.message !== "" || dialog.deliveryMessage !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForegroundMinor
                 text: dialog.search.message !== "" ? dialog.search.message : dialog.deliveryMessage !== "" ? dialog.deliveryMessage : dialog.search.searched && dialog.search.results.count === 0 ? qsTr("Nothing found") : ""
-                ToolTip.text: dialog.search.detail
+                HoverHandler {
+                    id: messageHover
+                }
+                EaElements.ToolTip {
+                    text: dialog.search.detail
+                    visible: text !== "" && messageHover.hovered && EaGlobals.Vars.showToolTips
+                }
             }
             // An unreachable source offers the next one that holds this kind.
             EaElements.SideBarButton {

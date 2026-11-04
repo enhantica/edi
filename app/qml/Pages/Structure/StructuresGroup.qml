@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
@@ -126,7 +127,10 @@ SideBarGroup {
                     color: loadButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
                     text: "caret-down"
                 }
-                ToolTip.text: qsTr("Load a structure from a file or from the web")
+                EaElements.ToolTip {
+                    text: qsTr("Load a structure from a file or from the web")
+                    visible: loadButton.hovered && EaGlobals.Vars.showToolTips
+                }
                 onClicked: loadMenu.open()
 
                 EaElements.Menu {

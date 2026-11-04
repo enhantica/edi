@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 
@@ -40,6 +41,6 @@ EaElements.MenuItem {
     }
     EaElements.ToolTip {
         text: item.toolTip
-        visible: item.hovered && item.toolTip !== ""
+        visible: item.hovered && item.toolTip !== "" && EaGlobals.Vars.showToolTips
     }
 }
