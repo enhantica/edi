@@ -163,7 +163,8 @@ signals:
 private:
     using Bytes = std::function<void(const QByteArray& bytes, const QString& error, bool unreachable)>;
     void fetch(const QUrl& url, Bytes done);
-    void withIndex(const QString& url, const std::function<void(const edi::online::Index*, const QString& error, bool unreachable)>& done);
+    void withIndex(const QStringList& bases, const std::function<void(const edi::online::Index*, const QString& error, bool unreachable)>& done);
+    void fetchFrom(const QStringList& bases, const QString& path, Bytes done);
     void finish(std::vector<edi::online::Entry> entries);
     void refreshSources();
     void refreshFields();

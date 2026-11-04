@@ -20,7 +20,8 @@ Point the app at them for one run:
 EDI_ONLINE_SOURCES="cod=file://$PWD/tests/fixtures/online_sources/cod;easydiffraction=file://$PWD/tests/fixtures/online_sources/easydiffraction"
 ```
 
-or `--online-source cod=file://…` and `--online-source easydiffraction=file://…` on the command line. A source
+or `--online-source cod=file://…` and `--online-source easydiffraction=file://…` on the command line; an override
+replaces every location of the source (EasyDiffraction's built-in row has two, GitHub then the mirror). A source
 that should be unreachable can point at a folder that does not exist. The full collection, the bundled examples
 and the tutorial files, is generated into `build/collection` by `python tools/data/build_collection.py populate
 build/collection` followed by `index`.

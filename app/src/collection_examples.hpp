@@ -62,7 +62,8 @@ signals:
 
 private:
     struct Known {
-        QString source, path, kind;
+        QStringList sources;  ///< the entry's source's locations, in order
+        QString path, kind;
         long long bytes = -1;
         QString sha256;
     };

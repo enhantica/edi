@@ -31,6 +31,7 @@ public:
         bool builtin = false;
         bool enabled = true;
         QString override;  ///< the URL from the command line or environment, empty when none
+        QStringList mirrors;  ///< further locations of the same files, tried in order when `url` is unavailable
     };
 
     explicit OnlineSourcesModel(QObject* parent = nullptr);
@@ -43,6 +44,8 @@ public:
     QList<Source> sourcesFor(const QString& kind) const;
     /// The URL in force for a source, its override first; empty for an unknown id.
     Q_INVOKABLE QString urlOf(const QString& id) const;
+    /// Every location of the source in order: the override alone when one is set, else the URL and its mirrors.
+    Q_INVOKABLE QStringList urlsOf(const QString& id) const;
     Q_INVOKABLE QString nameOf(const QString& id) const;
     Q_INVOKABLE QStringList kindsOf(const QString& id) const;
     /// Whether a source is COD, searched through its query service rather than an index file.
@@ -64,6 +67,7 @@ signals:
 
 private:
     int indexOf(const QString& id) const;
+    static QStringList locations(const Source& s);
     void load();
     void store() const;
     void applyOverrides();

@@ -19,10 +19,10 @@ QList<OnlineSourcesModel::Source> builtin_sources() {
     return {
         {QStringLiteral("cod"), QStringLiteral("COD"), QStringLiteral("https://www.crystallography.net/cod"),
          {QStringLiteral("structure")}, true, true, {}},
+        // One EasyDiffraction source, two locations in order: GitHub, then the mirror (the owner, 2026-11-04).
         {QStringLiteral("easydiffraction"), QStringLiteral("EasyDiffraction"),
-         QStringLiteral("https://raw.githubusercontent.com/enhantica/edi-data/main"), kAllKinds, true, true, {}},
-        {QStringLiteral("easydiffraction-mirror"), QStringLiteral("EasyDiffraction mirror"),
-         QStringLiteral("https://data.easydiffraction.org"), kAllKinds, true, true, {}},
+         QStringLiteral("https://raw.githubusercontent.com/enhantica/edi-data/main"), kAllKinds, true, true, {},
+         {QStringLiteral("https://data.easydiffraction.org")}},
     };
 }
 
@@ -68,7 +68,7 @@ QVariant OnlineSourcesModel::data(const QModelIndex& index, int role) const {
     switch (role) {
         case IdRole: return s.id;
         case NameRole: return s.name;
-        case UrlRole: return s.override.isEmpty() ? s.url : s.override;
+        case UrlRole: return locations(s).join(QStringLiteral(" · "));
         case KindsRole: return s.kinds;
         case BuiltinRole: return s.builtin;
         case EnabledRole: return s.enabled;
@@ -89,10 +89,21 @@ QList<OnlineSourcesModel::Source> OnlineSourcesModel::sourcesFor(const QString& 
     return out;
 }
 
+QStringList OnlineSourcesModel::locations(const Source& s) {
+    if (!s.override.isEmpty()) return {s.override};
+    QStringList out{s.url};
+    out.append(s.mirrors);
+    return out;
+}
+
 QString OnlineSourcesModel::urlOf(const QString& id) const {
     const int row = indexOf(id);
-    if (row < 0) return {};
-    return sources_[row].override.isEmpty() ? sources_[row].url : sources_[row].override;
+    return row < 0 ? QString() : locations(sources_[row]).constFirst();
+}
+
+QStringList OnlineSourcesModel::urlsOf(const QString& id) const {
+    const int row = indexOf(id);
+    return row < 0 ? QStringList() : locations(sources_[row]);
 }
 
 QString OnlineSourcesModel::nameOf(const QString& id) const {
@@ -191,7 +202,8 @@ void OnlineSourcesModel::load() {
             sources_[at].enabled = row.value(QStringLiteral("enabled")).toBool(true);
             continue;
         }
-        if (id.isEmpty()) continue;
+        // A row an earlier build stored for a built-in that no longer exists (the mirror is a location now) is dropped.
+        if (id.isEmpty() || id == QStringLiteral("easydiffraction-mirror")) continue;
         Source s;
         s.id = id;
         s.name = row.value(QStringLiteral("name")).toString();

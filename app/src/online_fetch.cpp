@@ -41,6 +41,22 @@ QUrl joined_url(const QString& base, const QString& path) {
     return url;
 }
 
+void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, FetchDone done) {
+    if (bases.isEmpty()) {
+        done({}, QCoreApplication::translate("OnlineSearch", "No location to read %1 from").arg(path), true);
+        return;
+    }
+    const QStringList rest = bases.mid(1);
+    fetch_url(owner, manager, joined_url(bases.constFirst(), path),
+              [owner, &manager, rest, path, done](const QByteArray& bytes, const QString& error, bool unreachable) {
+                  if (!error.isEmpty() && unreachable && !rest.isEmpty()) {
+                      fetch_from(owner, manager, rest, path, done);
+                      return;
+                  }
+                  done(bytes, error, unreachable);
+              });
+}
+
 void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done) {
     if (url.isLocalFile() || url.scheme().isEmpty()) {
         const QString path = url.isLocalFile() ? url.toLocalFile() : url.toString();

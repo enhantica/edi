@@ -24,6 +24,11 @@ void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
 /// `base` joined with a relative `path`: a URL stays a URL, a bare folder becomes a file URL.
 QUrl joined_url(const QString& base, const QString& path);
 
+/// `path` from the first of `bases` that serves it: the next location is tried only when the one before was
+/// unavailable (an outage, by class), never for an answer such as a 404; `done` gets the last failure, unreachable
+/// only when every location was.
+void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, FetchDone done);
+
 /// Why `bytes` is not the file the index describes: a size other than `expected_bytes` (when not negative) or a
 /// SHA-256 other than `sha256` (when given). Empty when the content agrees or the index states neither.
 QString content_problem(const QByteArray& bytes, long long expected_bytes, const QString& sha256, const QString& name);

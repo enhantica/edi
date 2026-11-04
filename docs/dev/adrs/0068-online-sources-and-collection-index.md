@@ -32,8 +32,11 @@ no database server.
   from the entry's radiation and technique. When a source cannot be reached, the popup says so and offers the next
   source that holds the same kind. Unreachable is decided by the failure's class, never by a list of codes: a
   transport, proxy or server failure, or any 5xx answer; a 404 or a refused request is an answer, reported as such.
-- **A sources table in Preferences.** Three rows are built in: COD (`https://www.crystallography.net/cod`),
-  EasyDiffraction's collection on GitHub (`enhantica/edi-data`) and its mirror (`https://data.easydiffraction.org`).
+- **A sources table in Preferences.** Two rows are built in: COD (`https://www.crystallography.net/cod`) and
+  EasyDiffraction's collection, one source with two locations in order, GitHub (`enhantica/edi-data`) then the
+  mirror `https://data.easydiffraction.org` (the owner, 2026-11-04): a request uses the first and falls back to the
+  next only when it is unavailable, by the same outage classes as a source, and "cannot be reached" is said only
+  when every location failed. The index, the examples, the tutorials, Python and the CLI share the rule.
   A row can be disabled; user rows, a name and a URL, can be added, edited and removed. The table persists in the
   settings file (`Online/sources`); a built-in row's name and URL come from the program, so an update can move them.
 - **The index.** A collection is plain files in a git repository behind one base URL, with one generated

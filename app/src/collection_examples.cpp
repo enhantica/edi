@@ -50,10 +50,10 @@ void CollectionExamples::refresh() {
     updateNotice();
     if (pending_ == 0) settle();
     for (const OnlineSourcesModel::Source& source : sources) {
-        const QString base = sources_->urlOf(source.id);
+        const QStringList bases = sources_->urlsOf(source.id);
         const QString sourceName = source.name;
-        fetch_url(this, network_, joined_url(base, QStringLiteral("index.json")),
-                  [this, generation, base, sourceName](const QByteArray& bytes, const QString& error, bool) {
+        fetch_from(this, network_, bases, QStringLiteral("index.json"),
+                  [this, generation, bases, sourceName](const QByteArray& bytes, const QString& error, bool) {
                       if (generation != generation_) return;
                       --pending_;
                       edi::online::Index index;
@@ -73,7 +73,7 @@ void CollectionExamples::refresh() {
                           const QString id = QString::fromStdString(entry.id);
                           if (known_.contains(id)) continue;  // the first source holding an id serves it
                           const edi::online::File& file = entry.files.front();
-                          known_.insert(id, {base, QString::fromStdString(file.path), QString::fromStdString(entry.kind), file.bytes,
+                          known_.insert(id, {bases, QString::fromStdString(file.path), QString::fromStdString(entry.kind), file.bytes,
                                              QString::fromStdString(file.sha256)});
                           if (entry.kind != "project") continue;
                           ++projects_;
@@ -145,7 +145,7 @@ void CollectionExamples::fetchBytes(const QString& id, BytesDone done) {
         return;
     }
     const Known known = *it;
-    fetch_url(this, network_, joined_url(known.source, known.path), [known, done](const QByteArray& bytes, const QString& error, bool) {
+    fetch_from(this, network_, known.sources, known.path, [known, done](const QByteArray& bytes, const QString& error, bool) {
         if (!error.isEmpty()) {
             done({}, error);
             return;

@@ -262,7 +262,7 @@ void OnlineSearch::search() {
               });
         return;
     }
-    withIndex(base, [this, generation, query](const edi::online::Index* index, const QString& error, bool unreachable) {
+    withIndex(sources_->urlsOf(source_id_), [this, generation, query](const edi::online::Index* index, const QString& error, bool unreachable) {
         if (generation != generation_) return;
         if (index == nullptr) {
             fail(error, unreachable);
@@ -290,17 +290,17 @@ void OnlineSearch::load(int row, QObject* project, QObject* target) {
     const QPointer<QObject> requestProject(project);
     const QPointer<QObject> requestTarget(target);
     const bool newTarget = target == nullptr;
-    const QString base = sources_->urlOf(source_id_);
-    const QUrl url = fileUrl(base, QString::fromStdString(entry->files.front().path));
+    const QStringList bases = sources_->urlsOf(source_id_);
+    const QString path = QString::fromStdString(entry->files.front().path);
     const OnlineEntry fields = entry_value(*entry);
     const QString kind = QString::fromStdString(entry->kind);
-    const QString name = QFileInfo(url.path()).fileName();
+    const QString name = QFileInfo(path).fileName();
     const int generation = generation_;
     const long long expectedBytes = entry->files.front().bytes;
     const QString digest = QString::fromStdString(entry->files.front().sha256);
     setBusy(true);
-    fetch(url, [this, generation, fields, kind, name, requestProject, requestTarget, newTarget, expectedBytes, digest](
-                   const QByteArray& bytes, const QString& error, bool unreachable) {
+    fetchFrom(bases, path, [this, generation, fields, kind, name, requestProject, requestTarget, newTarget, expectedBytes, digest](
+                               const QByteArray& bytes, const QString& error, bool unreachable) {
         if (generation != generation_) return;
         if (!error.isEmpty()) {
             fail(error, unreachable);
@@ -388,19 +388,20 @@ void OnlineSearch::setBusy(bool busy) {
 
 QUrl OnlineSearch::fileUrl(const QString& base, const QString& path) const { return joined_url(base, path); }
 
-void OnlineSearch::withIndex(const QString& url, const std::function<void(const edi::online::Index*, const QString&, bool)>& done) {
-    if (const auto cached = indexes_.value(url)) {
+void OnlineSearch::withIndex(const QStringList& bases, const std::function<void(const edi::online::Index*, const QString&, bool)>& done) {
+    const QString key = bases.join(u'\n');
+    if (const auto cached = indexes_.value(key)) {
         done(cached.get(), {}, false);
         return;
     }
-    fetch(fileUrl(url, QStringLiteral("index.json")), [this, url, done](const QByteArray& bytes, const QString& error, bool unreachable) {
+    fetchFrom(bases, QStringLiteral("index.json"), [this, key, done](const QByteArray& bytes, const QString& error, bool unreachable) {
         if (!error.isEmpty()) {
             done(nullptr, error, unreachable);
             return;
         }
         try {
             auto index = std::make_shared<edi::online::Index>(edi::online::parse_index(bytes.toStdString()));
-            indexes_.insert(url, index);
+            indexes_.insert(key, index);
             done(index.get(), {}, false);
         } catch (const std::exception& problem) {
             done(nullptr, QString::fromUtf8(problem.what()), false);
@@ -409,5 +410,6 @@ void OnlineSearch::withIndex(const QString& url, const std::function<void(const 
 }
 
 void OnlineSearch::fetch(const QUrl& url, Bytes done) { fetch_url(this, network_, url, std::move(done)); }
+void OnlineSearch::fetchFrom(const QStringList& bases, const QString& path, Bytes done) { fetch_from(this, network_, bases, path, std::move(done)); }
 
 }  // namespace edi_app
