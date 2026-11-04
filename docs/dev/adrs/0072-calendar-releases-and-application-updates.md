@@ -60,3 +60,16 @@ repository have passed the platform checks.
 - [Scipp versioning and deprecation policy](https://scipp.github.io/about/about.html)
 - [Diffraction-lib release drafting](https://github.com/easyscience/diffraction-lib/blob/master/.github/workflows/release-notes.yml)
 - [Qt Installer Framework package versions](https://doc.qt.io/qtinstallerframework/ifw-component-description.html)
+
+## Deterministic release planning
+
+`tools/release/plan.py` takes recorded merged PR metadata, an explicit included-commit set and the
+published version history. A PR contributes only when its merged commit is included. Existing scope
+labels group titles; automation does not silently invent a scope, edit a title or include an unmerged
+PR. Reject empty releases, duplicate identities, ambiguous labels and backwards calendar movement.
+A retry of an already published source commit reuses its original identity and notes, even in a later
+month. Numeric ordering applies to release sequences, including sequences above nine.
+
+The versioned history has schema `edi.releases/1`. Both GitHub Markdown notes and the application's
+release-range selection consume these recorded entries. Release preparation and publication remain
+separate: creating a plan does not tag, publish, merge or alter an online component repository.
