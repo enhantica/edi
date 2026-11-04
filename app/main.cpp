@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <QGuiApplication>
+#include <QDir>
+#include <QFile>
+#include <QUrl>
 #include <QQmlApplicationEngine>
 #include <QScreen>
 #include <QSettings>
@@ -19,6 +22,9 @@
 #include "engine_setup.hpp"
 #include "run_log.hpp"
 #include "test_observer.hpp"
+#ifndef __EMSCRIPTEN__
+void start_installer_smoke(QQuickWindow&, const QString&);
+#endif
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
@@ -36,6 +42,26 @@ int main(int argc, char* argv[]) {
     edi_app::use_design_font();
     edi_app::require_freetype_engine();
     const QStringList arguments = QGuiApplication::arguments();
+#ifndef __EMSCRIPTEN__
+    const auto smoke_flag = arguments.indexOf(QStringLiteral("--testmode"));
+    if (smoke_flag >= 0) {
+        if (smoke_flag + 1 >= arguments.size() || arguments.at(smoke_flag + 1).startsWith("--")) {
+            std::fprintf(stderr, "usage: edi_app --testmode <output-directory>\n");
+            return 2;
+        }
+        if (arguments.contains(QStringLiteral("--online-source")) ||
+            arguments.filter(QStringLiteral("--online-source=")).size() > 0) return 2;
+        edi_app::use_fresh_settings();
+        const auto catalogue = edi_app::fresh_settings_dir() + QStringLiteral("/catalogue");
+        if (!QDir().mkpath(catalogue)) return 2;
+        QFile index(catalogue + QStringLiteral("/index.json"));
+        const QByteArray content = R"({"schema":"edi-data-index/1","entries":[]})";
+        if (!index.open(QIODevice::WriteOnly) || index.write(content) != content.size()) return 2;
+        index.close();
+        const auto local = QUrl::fromLocalFile(catalogue + "/").toString();
+        qputenv("EDI_ONLINE_SOURCES", ("cod=" + local + ";easydiffraction=" + local).toUtf8());
+    }
+#endif
     // `--test-observer <action> ...`: a system test's observation of this app (test_observer.hpp).
     const qsizetype observer_flag = arguments.indexOf(QStringLiteral("--test-observer"));
     if (observer_flag >= 0) {
@@ -104,6 +130,13 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     edi_app::install_test_observer(engine);
+    #ifndef __EMSCRIPTEN__
+    if (smoke_flag >= 0) {
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+        if (!window) return 2;
+        start_installer_smoke(*window, arguments.at(smoke_flag + 1));
+    }
+#endif
     edi_app::install_web_page_hooks(engine);  // the web build's page hooks for the browser checks
     std::unique_ptr<edi_app::DemoDriver> driver;
     if (demo) {

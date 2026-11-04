@@ -1,0 +1,108 @@
+name: Desktop installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      crysta_commit:
+        description: Exact crysta source commit to build before edi
+        required: true
+        default: a28cc54448a4962268ca7b06e3dd3f4f711131f9
+        type: string
+  push:
+    paths:
+      - .github/workflows/installers.yml
+      - tools/installer/**
+      - cmake/assistant_runtime*
+      - app/src/installer_smoke.cpp
+
+permissions:
+  contents: read
+
+jobs:
+  installers:
+    name: installer · ${{ matrix.platform }}
+    environment: crysta-sdk
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux
+            runner: ubuntu-24.04
+          - platform: macOS
+            runner: macos-15
+          - platform: Windows
+            runner: windows-2022
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '4'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Install packaging tools
+        run: python -m pip install -r tools/installer/requirements.txt
+      - name: Mint a crysta installation token
+        id: crysta-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+      - name: Check out crysta source
+        uses: actions/checkout@v5
+        with:
+          repository: enhantica/crysta
+          ref: ${{ inputs.crysta_commit || 'a28cc54448a4962268ca7b06e3dd3f4f711131f9' }}
+          token: ${{ steps.crysta-token.outputs.token }}
+          path: .crysta
+          persist-credentials: false
+      - name: Set up the locked native environment
+        if: runner.os != 'Windows'
+        uses: ./.github/actions/setup-pixi
+      - name: Install the locked app toolchain
+        if: runner.os != 'Windows'
+        run: pixi install --frozen -e app
+      - name: Set up the Windows compiler
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build crysta, edi and its runtime bundle on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: pixi run -e app python tools/installer/build.py --crysta-source .crysta --work build/installer --patchelf "$(command -v patchelf)"
+      - name: Build crysta, edi and its runtime bundle on macOS
+        if: runner.os == 'macOS'
+        run: pixi run -e app python tools/installer/build.py --crysta-source .crysta --work build/installer
+      - name: Build crysta, edi and its runtime bundle on Windows
+        if: runner.os == 'Windows'
+        run: python tools/installer/build.py --crysta-source .crysta --work build/installer
+      - name: Acquire the pinned Qt Installer Framework
+        run: python tools/installer/package.py tools --output build/installer/ifw
+      - name: Create the offline qualification installer
+        run: python tools/installer/package.py package --stage build/installer/stage --tools build/installer/ifw/tools --output build/installer/package
+      - name: Install, launch, calculate, render and uninstall
+        shell: bash
+        run: |
+          installer=$(python -c 'import json; from pathlib import Path; p=Path("build/installer/package"); print(p/json.loads((p/"installer.json").read_text())["installer"])')
+          python tools/installer/package.py test --installer "$installer" --output build/installer/test
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.platform }}
+          path: build/installer/package/*.zip
+          if-no-files-found: error
+          compression-level: 0
+      - name: Upload installation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-check-${{ matrix.platform }}
+          path: |
+            build/installer/test/**
+            build/installer/package/installer.json
+          if-no-files-found: ignore

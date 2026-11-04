@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: BSD-3-Clause
+"""Offline boundary checks for the native installer tool."""
+
+import importlib.util
+import os
+import subprocess
+from pathlib import Path
+from unittest import mock
+
+import pytest
+
+SPEC = importlib.util.spec_from_file_location(
+    'installer_package', Path(__file__).resolve().parents[3] / 'tools/installer/package.py'
+)
+PACKAGE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(PACKAGE)
+
+
+def test_manifest_preserves_relative_links(tmp_path):
+    (tmp_path / 'real').write_bytes(b'library')
+    (tmp_path / 'link').symlink_to('real')
+    manifest = PACKAGE.payload_manifest(tmp_path)
+    assert manifest['link'] == {'link': 'real'}
+    assert manifest['real']['sha256'] == PACKAGE.sha256(tmp_path / 'real')
+
+
+@pytest.mark.parametrize('target', ['../elsewhere', '/etc/passwd', 'missing'])
+def test_manifest_refuses_escaping_or_broken_links(tmp_path, target):
+    (tmp_path / 'link').symlink_to(target)
+    with pytest.raises(RuntimeError, match='link'):
+        PACKAGE.payload_manifest(tmp_path)
+
+
+def test_manifest_refuses_empty_stage(tmp_path):
+    with pytest.raises(RuntimeError, match='empty'):
+        PACKAGE.payload_manifest(tmp_path)
+
+
+def test_clean_environment_removes_developer_paths(tmp_path):
+    with mock.patch.dict(
+        os.environ,
+        {
+            'LD_LIBRARY_PATH': '/developer/lib',
+            'DYLD_LIBRARY_PATH': '/developer/lib',
+            'QML_IMPORT_PATH': '/developer/qml',
+            'QT_PLUGIN_PATH': '/developer/plugins',
+            'EDI_CODEX_DEVELOPMENT_EXECUTABLE': '/developer/codex',
+            'PYTHONPATH': '/developer/python',
+            'CONDA_PREFIX': '/developer/env',
+            'PIXI_PROJECT_ROOT': '/developer/project',
+        },
+    ):
+        env = PACKAGE.clean_environment(tmp_path)
+    assert not any('/developer' in value for value in env.values())
+    assert env['CODEX_HOME'] == str(tmp_path / 'codex')
+    assert env['HOME'] == str(tmp_path)
+
+
+@pytest.mark.parametrize(
+    'output',
+    [
+        'libQt6Core.so.6 => /developer/env/lib/libQt6Core.so.6 (0x123)',
+        'libQt6Core.so.6 => not found',
+    ],
+)
+def test_dependency_check_refuses_missing_or_external_library(tmp_path, output):
+    (tmp_path / 'app').write_bytes(b'\x7fELFpayload')
+    result = subprocess.CompletedProcess([], 0, output, '')
+    with (
+        mock.patch.object(PACKAGE.subprocess, 'run', return_value=result),
+        pytest.raises(RuntimeError, match='dependency'),
+    ):
+        PACKAGE.check_linux_dependencies(tmp_path, {})
+
+
+def test_dependency_check_allows_packaged_and_system_libraries(tmp_path):
+    (tmp_path / 'app').write_bytes(b'\x7fELFpayload')
+    result = subprocess.CompletedProcess(
+        [],
+        0,
+        f'libQt6Core.so.6 => {tmp_path}/libQt6Core.so.6 (0x123)\n'
+        'libc.so.6 => /usr/lib/libc.so.6 (0x456)',
+        '',
+    )
+    with mock.patch.object(PACKAGE.subprocess, 'run', return_value=result):
+        assert 'app' in PACKAGE.check_linux_dependencies(tmp_path, {})

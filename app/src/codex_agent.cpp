@@ -374,13 +374,13 @@ QString CodexAgent::executable() {
     const auto metadata = parsed.object();
     if (metadata.value("layoutVersion") != 1 || metadata.value("version") != QString::fromLatin1(EDI_CODEX_RUNTIME_VERSION) ||
         metadata.value("target") != QString::fromUtf8(EDI_CODEX_RUNTIME_TARGET) ||
-        metadata.value("variant") != "codex-app-server" || metadata.value("entrypoint") != "bin/codex-app-server" ||
+        metadata.value("variant") != "codex-app-server" || metadata.value("entrypoint") != QString::fromUtf8(EDI_CODEX_RUNTIME_ENTRYPOINT) ||
         metadata.value("resourcesDir") != "codex-resources" || metadata.value("pathDir") != "codex-path") return {};
     if (!policyPatch().isEmpty() &&
         (metadata.value("ediPolicySchema")!="edi.runtime-policy/1" || metadata.value("ediFlavour")!="edi-app-server/1" ||
          metadata.value("upstreamCommit")!="092d3acd6bec3e3a14bdc7e7a2810ab628ab759d" ||
          metadata.value("sourcePatchSha256")!=policyPatch())) return {};
-    const auto executable = root + "/bin/codex-app-server";
+    const auto executable = root + "/" + QString::fromUtf8(EDI_CODEX_RUNTIME_ENTRYPOINT);
     if (!QFileInfo(executable).isFile() || !QFileInfo(executable).isExecutable()) return {};
     return executable;
 }
