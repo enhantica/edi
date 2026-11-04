@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 from decimal import Decimal
+from pathlib import Path
 
 import edi as api
 import numpy as np
@@ -64,6 +65,42 @@ def test_native_categories_survive_two_saves(tmp_path, show):
             'The project retains both moment-visibility settings'
         )
         model = api.Project.load(saved)
+
+    fixture = (
+        Path(__file__).resolve().parents[2] / 'fixtures/magnetic_form_factors/form-factor-ions.edi'
+    )
+    for mode in ('j0', 'dipole', 'beyond_dipole'):
+        text = (
+            fixture
+            .read_text()
+            .replace(
+                '_magnetic_form_factor.j2_coefficient\n',
+                '_magnetic_form_factor.j2_coefficient\n'
+                '_magnetic_form_factor.approximation\n'
+                '_magnetic_form_factor.j4_coefficient\n'
+                '_magnetic_form_factor.j6_coefficient\n',
+            )
+            .replace('Ho Ho3+ 0.25', f'Ho Ho3+ 0.25 {mode} -0.4 1.1')
+            .replace('Er Er3+ 0.1', f'Er Er3+ 0.1 {mode} 0.2 -0.3')
+        )
+        forms = load(tmp_path / mode, text, show=show)
+        for index in range(2):
+            destination = tmp_path / mode / f'roundtrip-{index}'
+            forms.save_as(destination)
+            actual = ref.columns((destination / 'structures/cosio.edi').read_text())
+            for name in (
+                'type_symbol',
+                'ion',
+                'approximation',
+                'j2_coefficient',
+                'j4_coefficient',
+                'j6_coefficient',
+            ):
+                tag = '_magnetic_form_factor.' + name
+                assert actual.get(tag) == ref.columns(text)[tag], (
+                    'All modes retain both ion rows and signed coefficients on both saves'
+                )
+            forms = api.Project.load(destination)
 
 
 def test_moment_symmetry_has_exactly_four_independent_components(tmp_path):

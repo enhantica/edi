@@ -676,17 +676,28 @@ TestCase {
         const j0 = entries.findIndex((text, index) => index !== beyond && index !== dipole && /j[0₀]/i.test(text));
         verify(new Set([j0, dipole, beyond]).size === 3 && Math.min(j0, dipole, beyond) >= 0,
                "The actual choices name j0, dipole and beyond dipole");
+        function press(control, button) {
+            Ui.scrollIntoView(control);
+            tryVerify(() => !Ui.moving(appWindow.contentItem) && Ui.exposed(control), 3000,
+                      "The real form-factor input is exposed after its viewports settle");
+            let delay = 0;
+            for (let parent = control.parent; parent; parent = parent.parent)
+                if (typeof parent.pressDelay === "number")
+                    delay = Math.max(delay, parent.pressDelay + 1);
+            const point = Ui.clickPoint(control);
+            mouseClick(control, point.x, point.y, button ?? Qt.LeftButton, undefined, delay);
+        }
         function select(index) {
             if (combo.currentIndex === index)
                 return;
             Ui.scrollIntoView(combo);
             tryVerify(() => Ui.exposed(combo), 2000, "The approximation control is exposed");
-            mouseClick(combo);
+            press(combo);
             tryCompare(combo.popup, "opened", true, 2000, "A real click opens the approximation choices");
             const list = combo.popup.contentItem;
             tryVerify(() => list.itemAtIndex(index) && Ui.exposed(list.itemAtIndex(index)), 2000,
                       "The named approximation can be clicked in the popup");
-            mouseClick(list.itemAtIndex(index));
+            press(list.itemAtIndex(index));
             tryCompare(combo, "currentIndex", index, 2000, "Choosing an approximation updates the ion row");
         }
         function editableCoefficients() {
@@ -717,16 +728,22 @@ TestCase {
             verify(cell?.item.fittable, "The active coefficient is fittable: C" + order);
             Ui.scrollIntoView(cell);
             tryVerify(() => Ui.exposed(cell), 2000, "The coefficient editor is reachable: C" + order);
-            mouseClick(cell);
+            press(cell);
             cell.selectAll();
             keyClick(Qt.Key_1);
             keyClick(Qt.Key_Return);
             tryCompare(cell.item, "value", 1, 3000, "A real edit updates the model coefficient: C" + order);
+            press(cell, Qt.RightButton);
+            tryVerify(() => cell.contextMenu !== null && cell.contextMenu.opened, 2000,
+                      "A real right click opens the coefficient's lazy parameter menu: C" + order);
             const fit = cell.fitCheckBox;
             verify(fit && fit.enabled && fit.visible, "The active coefficient has a usable Free control: C" + order);
             if (!cell.item.free)
-                mouseClick(fit);
+                press(fit);
             tryCompare(cell.item, "free", true, 3000, "The Free control publishes the fitting state: C" + order);
+            keyClick(Qt.Key_Escape);
+            tryCompare(cell.contextMenu, "opened", false, 2000,
+                       "The coefficient context menu closes before editing the next column");
         }
     }
     function test_magnetic_selector_and_scale_use_one_editing_surface() {
