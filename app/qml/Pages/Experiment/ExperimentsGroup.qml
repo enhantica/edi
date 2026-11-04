@@ -414,10 +414,14 @@ SideBarGroup {
         fileMode: FileDialog.OpenFiles
         onAccepted: {
             if (selectedFiles.length > 1 && dataDialog.experiment !== null && dataDialog.project === group.project) {
-                datasetsChoice.experiment = dataDialog.experiment;
-                datasetsChoice.files = selectedFiles;
+                const experiment = dataDialog.experiment;
+                const files = selectedFiles;
                 dataDialog.intent = null;
-                datasetsChoice.open();
+                datasetsLoader.active = true;
+                datasetsLoader.item.experiment = experiment;
+                datasetsLoader.item.files = files;
+                datasetsLoader.item.asScan = files.length > 5;
+                datasetsLoader.item.open();
                 return;
             }
             ApplicationInfo.acceptExperimentDataFile();
@@ -428,45 +432,54 @@ SideBarGroup {
     // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup
     // named after its file, or one experiment with a scan, the selected experiment its template and the files its
     // datasets. Up to five files default to separate experiments, more to a scan.
-    AppDialog {
-        id: datasetsChoice
-        objectName: "datasets.choice"
-        property var files: []
-        property ExperimentViewModel experiment: null
-        property bool asScan: false
-        parent: Overlay.overlay
-        title: qsTr("Load %1 datasets as").arg(files.length)
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: datasetsColumn.implicitHeight
-        onAboutToShow: asScan = files.length > 5
-        onAccepted: {
-            if (group.project !== null && datasetsChoice.experiment !== null)
-                group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan);
-        }
-
-        Column {
-            id: datasetsColumn
-            width: datasetsChoice.contentWidth
-            spacing: EaStyle.Sizes.fontPixelSize * 0.5
-
-            ChoiceRadioButton {
-                objectName: "datasets.separate"
-                text: qsTr("Separate experiments, one per file, set up as %1").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
-                checked: !datasetsChoice.asScan
-                onClicked: datasetsChoice.asScan = false
+    // Made only while it is asked: kept in the window, it held the scene from settling.
+    Loader {
+        id: datasetsLoader
+        active: false
+        sourceComponent: datasetsComponent
+    }
+    Component {
+        id: datasetsComponent
+        AppDialog {
+            id: datasetsChoice
+            objectName: "datasets.choice"
+            property var files: []
+            property ExperimentViewModel experiment: null
+            property bool asScan: false
+            parent: Overlay.overlay
+            title: qsTr("Load %1 datasets as").arg(files.length)
+            standardButtons: Dialog.Ok | Dialog.Cancel
+            contentWidth: AppSizes.messagesDialogContentWidth
+            contentHeight: datasetsColumn.implicitHeight
+            onClosed: Qt.callLater(() => datasetsLoader.active = false)
+            onAccepted: {
+                if (group.project !== null && datasetsChoice.experiment !== null)
+                    group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan);
             }
-            ChoiceRadioButton {
-                objectName: "datasets.scan"
-                text: qsTr("One experiment with a scan: %1 is the template, the files its datasets").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
-                checked: datasetsChoice.asScan
-                onClicked: datasetsChoice.asScan = true
-            }
-            EaElements.Label {
-                width: parent.width
-                wrapMode: Text.Wrap
-                color: EaStyle.Colors.themeForegroundMinor
-                text: datasetsChoice.asScan ? qsTr("The files are copied into the project's folder, where a scan reads them; the project must be saved and hold this one experiment.") : qsTr("Each experiment keeps its data in the project.")
+
+            Column {
+                id: datasetsColumn
+                width: datasetsChoice.contentWidth
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                ChoiceRadioButton {
+                    objectName: "datasets.separate"
+                    text: qsTr("Separate experiments, one per file, set up as %1").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
+                    checked: !datasetsChoice.asScan
+                    onClicked: datasetsChoice.asScan = false
+                }
+                ChoiceRadioButton {
+                    objectName: "datasets.scan"
+                    text: qsTr("One experiment with a scan: %1 is the template, the files its datasets").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
+                    checked: datasetsChoice.asScan
+                    onClicked: datasetsChoice.asScan = true
+                }
+                EaElements.Label {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: EaStyle.Colors.themeForegroundMinor
+                    text: datasetsChoice.asScan ? qsTr("The files are copied into the project's folder, where a scan reads them; the project must be saved and hold this one experiment.") : qsTr("Each experiment keeps its data in the project.")
+                }
             }
         }
     }
