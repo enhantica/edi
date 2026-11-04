@@ -410,7 +410,64 @@ SideBarGroup {
         property var project: null
         title: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? qsTr("Load measured reflections from FullProf's .int or a plain h k l F² su file (.hkl, .dat or any other)") : qsTr("Load measured data from a plain two- or three-column file")
         nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
-        onAccepted: ApplicationInfo.acceptExperimentDataFile()
+        // Several files at once (the owner, 2026-11-04): more than one asks how to load them.
+        fileMode: FileDialog.OpenFiles
+        onAccepted: {
+            if (selectedFiles.length > 1 && dataDialog.experiment !== null && dataDialog.project === group.project) {
+                datasetsChoice.experiment = dataDialog.experiment;
+                datasetsChoice.files = selectedFiles;
+                dataDialog.intent = null;
+                datasetsChoice.open();
+                return;
+            }
+            ApplicationInfo.acceptExperimentDataFile();
+        }
         onRejected: ApplicationInfo.rejectExperimentDataFile()
+    }
+
+    // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup
+    // named after its file, or one experiment with a scan, the selected experiment its template and the files its
+    // datasets. Up to five files default to separate experiments, more to a scan.
+    AppDialog {
+        id: datasetsChoice
+        objectName: "datasets.choice"
+        property var files: []
+        property ExperimentViewModel experiment: null
+        property bool asScan: false
+        parent: Overlay.overlay
+        title: qsTr("Load %1 datasets as").arg(files.length)
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: datasetsColumn.implicitHeight
+        onAboutToShow: asScan = files.length > 5
+        onAccepted: {
+            if (group.project !== null && datasetsChoice.experiment !== null)
+                group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan);
+        }
+
+        Column {
+            id: datasetsColumn
+            width: datasetsChoice.contentWidth
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+            ChoiceRadioButton {
+                objectName: "datasets.separate"
+                text: qsTr("Separate experiments, one per file, set up as %1").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
+                checked: !datasetsChoice.asScan
+                onClicked: datasetsChoice.asScan = false
+            }
+            ChoiceRadioButton {
+                objectName: "datasets.scan"
+                text: qsTr("One experiment with a scan: %1 is the template, the files its datasets").arg(datasetsChoice.experiment ? datasetsChoice.experiment.name : "")
+                checked: datasetsChoice.asScan
+                onClicked: datasetsChoice.asScan = true
+            }
+            EaElements.Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                color: EaStyle.Colors.themeForegroundMinor
+                text: datasetsChoice.asScan ? qsTr("The files are copied into the project's folder, where a scan reads them; the project must be saved and hold this one experiment.") : qsTr("Each experiment keeps its data in the project.")
+            }
+        }
     }
 }

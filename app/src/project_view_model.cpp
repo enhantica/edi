@@ -14,6 +14,7 @@
 #include <QQuickWindow>
 #include <QScopeGuard>
 #include <QTemporaryDir>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
@@ -26,6 +27,7 @@
 #include <cctype>
 #include <cmath>
 #include <map>
+#include <set>
 #include <fstream>
 #include <filesystem>
 
@@ -1164,6 +1166,113 @@ bool ProjectViewModel::loadExperimentWithStructures(const QUrl& file, const QLis
     if (project.structures.size() > structuresBefore) setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
     setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
     qCInfo(lcApp, "experiment loaded from the web with %d structure(s)", static_cast<int>(project.structures.size() - structuresBefore));
+    return true;
+}
+
+bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    if (retired_) return false;
+    const auto refuse = [&](const QString& message) {
+        setLastError(message);
+        if (self && !retired_) emit refused(message);
+        return false;
+    };
+    const int index = experiment_models_.indexOf(experiment);
+    if (index < 0) return refuse(tr("The experiment the data was chosen for is no longer in the project"));
+    if (files.isEmpty()) return false;
+    for (const QUrl& file : files)
+        if (!file.isLocalFile()) return refuse(QStringLiteral("not a local file: %1").arg(file.toString()));
+    if (scan_) return refuse(tr("This project is a scan already; its datasets come from the scan's folder"));
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refuse(refusal);
+    edi::Project& project = *project_;
+    const edi::BraggPdExperiment& source = *project.experiments[static_cast<std::size_t>(index)];
+    const auto fileName = [](const QUrl& url) { return QFileInfo(url.toLocalFile()).fileName(); };
+    if (!asScan) {
+        // One experiment per file, its setup the selected experiment's, its name the file's (unique in the project).
+        std::vector<edi::BraggPdExperiment> batch;
+        std::set<std::string> taken;
+        for (const auto& held : project.experiments) taken.insert(edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name));
+        for (const QUrl& file : files) {
+            edi::PlainDataLoad read;
+            try {
+                read = edi::experiment_with_plain_data(edi::experiment_copy(project, source), file.toLocalFile().toStdString(), true);
+            } catch (const std::exception& problem) {
+                return refuse(tr("%1 could not be loaded: %2").arg(fileName(file), QString::fromUtf8(problem.what())));
+            }
+            std::string name = read.experiment.name.value();
+            const std::string base = name;
+            for (int n = 2; taken.contains(edi::KeyTraits<edi::BraggPdExperiment>::canonical(name)); ++n) name = base + "_" + std::to_string(n);
+            taken.insert(edi::KeyTraits<edi::BraggPdExperiment>::canonical(name));
+            read.experiment.name = name;
+            batch.push_back(std::move(read.experiment));
+        }
+        const std::size_t before = project.experiments.size();
+        QString error;
+        try {
+            error = apply(edi::Edit::add_experiments(project, std::move(batch)), true);
+        } catch (const std::exception& problem) {
+            error = QString::fromUtf8(problem.what());
+        }
+        if (!self || retired_) return false;
+        if (!error.isEmpty()) return refuse(error);
+        syncLoadState();
+        noteAddedExperiments(before);
+        setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+        qCInfo(lcApp, "%d datasets loaded as experiments", static_cast<int>(files.size()));
+        return true;
+    }
+    // One experiment with a scan: the files go into the project's own folder, as crysta reads a scan's data from a
+    // folder inside the project.
+    if (project.path.empty() || !QFileInfo(QString::fromStdString(project.path)).isDir())
+        return refuse(tr("Save the project first: a scan's files are copied into the project's folder"));
+    if (project.experiments.size() != 1)
+        return refuse(tr("A scan fits one experiment; this project holds %1. Load the files as separate experiments, or "
+                         "keep only the template experiment").arg(project.experiments.size()));
+    const QDir root(QString::fromStdString(project.path));
+    QString folder = QStringLiteral("scans/") + QString::fromStdString(source.name.value());
+    for (int n = 2; root.exists(folder); ++n) folder = QStringLiteral("scans/%1_%2").arg(QString::fromStdString(source.name.value())).arg(n);
+    if (!root.mkpath(folder)) return refuse(tr("The folder %1 could not be made in the project").arg(folder));
+    const QString target = root.filePath(folder);
+    const auto discard = [&] { QDir(target).removeRecursively(); };
+    QStringList names;
+    for (const QUrl& file : files) {
+        const QString name = fileName(file);
+        if (names.contains(name)) {
+            discard();
+            return refuse(tr("Two of the files are named %1; a scan's files need distinct names").arg(name));
+        }
+        if (!QFile::copy(file.toLocalFile(), QDir(target).filePath(name))) {
+            discard();
+            return refuse(tr("%1 could not be copied into the project").arg(name));
+        }
+        names.append(name);
+    }
+    edi::Project next(project);
+    try {
+        // The template holds the first dataset's data; the scan lists every file of its folder, in name order.
+        auto read = edi::experiment_with_plain_data(source, QDir(target).filePath(names.front()).toStdString(), false);
+        std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held{std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment))};
+        next.experiments.assign(std::move(held));
+        next.adopt_experiments();
+        next.sequential_fit.data_dir = folder.toStdString();
+        next.sequential_fit.file_pattern = "*";
+        next.sequential_fit.reverse = false;
+        next.sequential_fit.template_file = names.front().toStdString();
+    } catch (const std::exception& problem) {
+        discard();
+        return refuse(tr("%1 could not be loaded: %2").arg(names.front(), QString::fromUtf8(problem.what())));
+    }
+    auto before = std::make_shared<const edi::Project>(project);
+    const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
+    if (!self || retired_) return false;
+    if (!error.isEmpty()) {
+        discard();
+        return refuse(error);
+    }
+    undo_history_.emplace_back(AppliedText{std::move(before)});
+    syncUndo();
+    qCInfo(lcApp, "%d datasets loaded as a scan in %s", static_cast<int>(files.size()), qPrintable(folder));
     return true;
 }
 

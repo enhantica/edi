@@ -449,6 +449,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Load data for the experiment a chooser was opened for, wherever its row is now: refused when that experiment
     // is no longer in the project (removed, or replaced by an Undo or a type change since).
     Q_INVOKABLE bool loadDataInto(edi_app::ExperimentViewModel* experiment, const QUrl& file);
+    /// Several measured data files at once (owner, 2026-11-04), as one undoable change. `asScan` false: one new
+    /// experiment per file, each a copy of `experiment`'s setup named after its file. `asScan` true: `experiment` becomes
+    /// a scan's template and the files its datasets, copied into `scans/<name>` in the saved project's folder (a scan's
+    /// data folder lies inside the project); the project must be saved and hold that one experiment.
+    Q_INVOKABLE bool loadDatasets(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan);
     /// Measured data into a new experiment, made only once the file has been read: the type is the pending one
     /// above unless a token is given; an impossible type or an unreadable file leaves the project untouched. One
     /// Undo entry.
