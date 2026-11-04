@@ -67,11 +67,21 @@ def test_low_temperature_fit_record_has_independent_moment_sanity_bounds():
         'The low-temperature correctness record identifies the independent FullProf engine'
     )
     folder = ROOT / 'knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k'
+    assert (path.parent / record['source']['artifact']).resolve() == folder / 'cosio.sum', (
+        'The reference record points to the independently authored FullProf summary'
+    )
     provenance = (folder / 'PROVENANCE.md').read_text()
     pins = re.findall(r'^\s+([0-9a-f]{64})\s+(\S+)\s*$', provenance, re.MULTILINE)
     assert len(pins) == 5, (
         'The FullProf rerun identifies all five independent input and output files'
     )
+    assert {filename for _, filename in pins} == {
+        'cosio.pcr',
+        'cosio.out',
+        'cosio.sum',
+        'cosio_1.prf',
+        'cosio1.mcif',
+    }, 'The authoring provenance covers the input, numeric output, profile and magnetic CIF'
     for digest, filename in pins:
         assert hashlib.sha256((folder / filename).read_bytes()).hexdigest() == digest, (
             'Each independent FullProf reference matches its committed authoring provenance'
@@ -144,6 +154,9 @@ def test_magnetic_examples_share_cobalt_displacements_and_exclude_only_dead_cell
     directory = CLI / name / 'project'
     assert directory.is_dir(), 'Each magnetic example delivers a loadable native project'
     model = edi.Project.load(directory)
+    assert '_minimizer.descent' not in reference.columns(
+        (directory / 'analysis/analysis.edi').read_text()
+    ), 'The magnetic examples select the default descent through their saved recipe'
     model.analysis.calculate()
     peak = model.experiment.peak
     sample, detector = peak.asym_fcj_1, peak.asym_fcj_2

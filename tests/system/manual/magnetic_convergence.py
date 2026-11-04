@@ -150,16 +150,28 @@ def fit_scan(cold_first):
         assert all(row['fit_result.success'].lower() == 'true' for row in rows), (
             'Every frame contributes a converged objective'
         )
-        return math.fsum(float(row['fit_result.reduced_chi_square']) for row in rows)
+        return {
+            Path(row['file_path']).name: float(row['fit_result.reduced_chi_square'])
+            for row in rows
+        }
 
 
 def check_scan():
     cold = fit_scan(cold_first=True)
     hot = fit_scan(cold_first=False)
-    print(f'213 frames in each direction. Summed reduced chi-square: {cold:.9f} / {hot:.9f}')
+    cold_sum = math.fsum(cold.values())
+    hot_sum = math.fsum(hot.values())
+    print(
+        f'213 frames in each direction. Summed reduced chi-square: {cold_sum:.9f} / {hot_sum:.9f}'
+    )
+    differences = sorted(
+        ((abs(cold[file] - hot[file]), file, cold[file], hot[file]) for file in cold),
+        reverse=True,
+    )
     # ADR-0111 reports a 0.007 difference at the shown precision.
-    assert abs(cold - hot) <= 0.02, (
-        'Both directions agree within 0.02 in summed reduced chi-square'
+    assert abs(cold_sum - hot_sum) <= 0.02, (
+        'Both directions agree within 0.02 in summed reduced chi-square. '
+        f'Largest frame differences (delta, file, cold, hot): {differences[:5]}'
     )
 
 
