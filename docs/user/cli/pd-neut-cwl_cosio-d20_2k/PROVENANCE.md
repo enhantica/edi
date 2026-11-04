@@ -20,7 +20,9 @@
 - **Profile:** the Thompson-Cox-Hastings pseudo-Voigt with Finger-Cox-Jephcoat asymmetry, which describes the
   low-angle flank of the first magnetic peak. S/L and D/L share one free value (the analysis constrains D/L to S/L),
   fitted from 0: the profile is symmetric under swapping them, so freed separately they trade off along a flat valley
-  and only their common value is determined. The fit gives 0.0619(9).
+  and only their common value is determined. The fit gives 0.0626(9).
+- **Descent:** the default. The fast descent, which this project declared before, reaches the same minimum from this
+  start (reduced χ² 6.7125 against 6.7130, every parameter within 0.2 s.u.) in 104 iterations instead of 42.
 - **Expected values:** `expected.json` holds FullProf's fit of the same pattern, background, profile and magnetic
   model (`knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/`, S/L and D/L held at crysta's fitted values): Rwp
   within 5 % of FullProf's 4.75 %, and the three well-determined moment components within 0.15 μB of FullProf's, about

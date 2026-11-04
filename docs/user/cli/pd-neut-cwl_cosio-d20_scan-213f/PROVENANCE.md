@@ -15,14 +15,14 @@
   μB), the Thompson-Cox-Hastings
   pseudo-Voigt profile with Finger-Cox-Jephcoat asymmetry, the sixteen-point background, and the excluded regions
   0–6°, 150–180° and 64.65–64.74°, the last holding only the dead D20 detector cell at 64.6953°. The asymmetry's S/L
-  and D/L are both held at 0.0619, the shared value the 2.3 K example fits: they describe the instrument, not the
-  sample, so they stay the same at every temperature.
+  and D/L are both held at 0.0619, the shared value the 2.3 K example fitted when this project was made (it now
+  fits 0.0626(9), within its s.u.): they describe the instrument, not the sample, so they stay the same at every
+  temperature.
 - **Analysis:** the 162-file scan's sequential settings (data directory, file pattern, temperature from each file's
   `TEMP` line, Co1 and Co2 sharing one displacement parameter) and the default descent, with
   `_sequential_fit.reverse true`: the fit runs from 2.344 K upwards, each file starting from the previous result, so
-  the first file is the 2.3 K pattern fitted with the displacement parameters free as well. The 2.3 K example's fast
-  descent is not used here: each file already starts near its minimum, and on this scan the fast descent took 31 %
-  longer for the same result. The moments stay free at every temperature; above the Néel temperature, about 50 K,
+  the first file is the 2.3 K pattern fitted with the displacement parameters free as well. Each file already
+  starts near its minimum, and on this scan the fast descent took 31 % longer for the same result. The moments stay free at every temperature; above the Néel temperature, about 50 K,
   most fit to exactly zero, with an s.u. that bounds their size.
 
 ## Expected values
