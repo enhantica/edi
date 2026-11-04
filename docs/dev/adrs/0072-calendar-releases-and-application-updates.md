@@ -73,3 +73,9 @@ month. Numeric ordering applies to release sequences, including sequences above 
 The versioned history has schema `edi.releases/1`. Both GitHub Markdown notes and the application's
 release-range selection consume these recorded entries. Release preparation and publication remain
 separate: creating a plan does not tag, publish, merge or alter an online component repository.
+
+Release builds supply `EDI_RELEASE_VERSION` to the existing C++ version generator; ordinary developer
+builds keep their git-derived identity. The installer source-build driver accepts the same version.
+Validate the calendar syntax before generating C++ and fail configuration on invalid input. Release
+preparation must pass its single selected identity to both the app build and component packaging;
+a GitHub tag alone does not override a reused build directory's explicit version selection.

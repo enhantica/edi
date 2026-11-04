@@ -107,7 +107,9 @@ def verify_assistant_payload(stage: Path, expected: Path) -> None:
         raise RuntimeError('Deployment or signing changed the verified assistant runtime')
 
 
-def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> None:
+def build(
+    crysta: Path, work: Path, qt: Path | None, patchelf: Path | None, version: str | None = None
+) -> None:
     crysta, work = crysta.resolve(), work.resolve()
     if not (crysta / 'include/crysta/model.hpp').is_file():
         raise RuntimeError('The crysta source checkout is missing')
@@ -145,6 +147,8 @@ def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> N
         '-DEDI_DEPLOY_APP=ON',
         f'-DCMAKE_PREFIX_PATH={prefix.as_posix()};{qt.as_posix()}',
     ]
+    if version:
+        options.append(f'-DEDI_RELEASE_VERSION={version}')
     run(['cmake', '-S', ROOT, '-B', app, *common, *options])
     run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4'])
     run(['cmake', '--install', app, '--component', 'desktop', '--prefix', stage])
@@ -195,8 +199,9 @@ def main() -> None:
     parser.add_argument('--work', type=Path, required=True)
     parser.add_argument('--qt-prefix', type=Path)
     parser.add_argument('--patchelf', type=Path)
+    parser.add_argument('--version', help='Calendar release version, also used by the installer')
     args = parser.parse_args()
-    build(args.crysta_source, args.work, args.qt_prefix, args.patchelf)
+    build(args.crysta_source, args.work, args.qt_prefix, args.patchelf, args.version)
 
 
 if __name__ == '__main__':

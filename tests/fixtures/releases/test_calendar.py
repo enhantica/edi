@@ -3,6 +3,7 @@
 
 import datetime
 import importlib.util
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -89,3 +90,40 @@ def test_calendar_regression_and_duplicate_published_identity_fail_closed():
     original = make_plan()
     with pytest.raises(ValueError, match='unique'):
         make_plan([original, original])
+
+
+@pytest.mark.parametrize('version', ['2026.11.0', '2026.11.10', '2027.01.0'])
+def test_cmake_embeds_the_selected_calendar_identity(tmp_path, version):
+    output = tmp_path / 'version.cpp'
+    subprocess.run(
+        [
+            'cmake',
+            f'-DSOURCE_DIR={tmp_path}',
+            f'-DOUT={output}',
+            f'-DRELEASE_VERSION={version}',
+            '-P',
+            str(Path(__file__).resolve().parents[3] / 'cmake/build_version.cmake'),
+        ],
+        check=True,
+    )
+    assert 'return "' + version + '";' in output.read_text()
+
+
+@pytest.mark.parametrize('version', ['2026.13.0', '2026.1.0', '2026.11.01', '0000.11.0', 'bad"version'])
+def test_invalid_release_identity_cannot_generate_cpp(tmp_path, version):
+    output = tmp_path / 'version.cpp'
+    result = subprocess.run(
+        [
+            'cmake',
+            f'-DSOURCE_DIR={tmp_path}',
+            f'-DOUT={output}',
+            f'-DRELEASE_VERSION={version}',
+            '-P',
+            str(Path(__file__).resolve().parents[3] / 'cmake/build_version.cmake'),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert not output.exists()

@@ -12,6 +12,16 @@ execute_process(
     OUTPUT_VARIABLE _date
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET)
+if(DEFINED RELEASE_VERSION AND NOT RELEASE_VERSION STREQUAL "")
+    if(NOT RELEASE_VERSION MATCHES "^[0-9][0-9][0-9][0-9]\\.(0[1-9]|1[0-2])\\.(0|[1-9][0-9]*)$")
+        message(FATAL_ERROR "Release version must use YYYY.MM.SEQUENCE")
+    endif()
+    string(SUBSTRING "${RELEASE_VERSION}" 0 4 _release_year)
+    if(_release_year LESS 2000)
+        message(FATAL_ERROR "Release year must be 2000 or later")
+    endif()
+    set(_version "${RELEASE_VERSION}")
+endif()
 if(_version STREQUAL "")
     set(_version "0.0.0+unknown")
 endif()

@@ -47,10 +47,11 @@ endif()
 
 # What the app tells its user about itself (ApplicationInfo). Its version and date come from git at every build, as the
 # commit does, so a reused build folder never shows an old one (cmake/build_version.cmake).
+set(EDI_RELEASE_VERSION "" CACHE STRING "Calendar version selected by release preparation")
 set(EDI_APP_BUILD_VERSION_CPP "${CMAKE_CURRENT_BINARY_DIR}/edi_app_build_version.cpp")
-set(EDI_APP_BUILD_VERSION_COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_VERSION_CPP}
+set(EDI_APP_BUILD_VERSION_COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_VERSION_CPP} -DRELEASE_VERSION=${EDI_RELEASE_VERSION}
                                   -P "${PROJECT_SOURCE_DIR}/cmake/build_version.cmake")
-execute_process(COMMAND ${EDI_APP_BUILD_VERSION_COMMAND})
+execute_process(COMMAND ${EDI_APP_BUILD_VERSION_COMMAND} COMMAND_ERROR_IS_FATAL ANY)
 add_custom_target(edi_app_build_version
     COMMAND ${EDI_APP_BUILD_VERSION_COMMAND}
     BYPRODUCTS "${EDI_APP_BUILD_VERSION_CPP}"
