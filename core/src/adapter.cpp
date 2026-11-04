@@ -6270,6 +6270,10 @@ void set_engine_threads(int count) noexcept { crysta::threading::set_thread_coun
 
 int engine_threads_setting() noexcept { return crysta::threading::thread_count_setting(); }
 
+void set_scan_workers(int count) noexcept { crysta::threading::set_scan_workers(count); }
+
+int scan_workers_setting() noexcept { return crysta::threading::scan_workers_setting(); }
+
 namespace {
 
 static_assert(kDefaultBackgroundTolerance == crysta::kDefaultBackgroundTolerance);

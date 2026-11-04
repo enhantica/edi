@@ -20,14 +20,22 @@ QtObject {
     id: preferences
 
     property bool dialogShown: false
+    // The tab the dialog shows when it next opens, by name ("performance"); empty keeps the last one.
+    property string dialogTab: ""
 
     property bool toolTips: true
     property bool autoCollapse: true
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
     property string sideBarSide: "Right"
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
-    // The engine's thread count for every fill (Develop): 0 is Auto, the engine's own policy.
+    // Threads per calculation (Performance): the engine's thread count for every fill, 0 is Auto, the engine's own
+    // policy. A machine's setting, never saved in a project.
     property int engineThreads: 0
+    // Parallel fits in a scan (Performance): how many files of a scan are fitted at once, 1 one after another. A
+    // machine's setting, never saved in a project (the owner, 2026-11-04).
+    property int scanWorkers: 1
+    // What the engine runs with: one file at a time where the app runs single-threaded.
+    readonly property int scanWorkersApplied: ApplicationInfo.engineThreadsSelectable ? Math.max(1, Math.min(scanWorkers, ApplicationInfo.scanWorkersMaximum)) : 1
     // The lowest level the run log writes (Develop; edi ADR-0062): "Debug", "Info", "Error" or "Disabled".
     property string loggingLevel: "Info"
     onLoggingLevelChanged: RunLog.level = loggingLevel
@@ -80,6 +88,7 @@ QtObject {
         preferences.autoCollapse = true;
         preferences.sideBarSide = "Right";
         preferences.engineThreads = 0;
+        preferences.scanWorkers = 1;
         preferences.loggingLevel = "Info";
         preferences.scanPatternUpdates = 2;
         preferences.analysisShowNotMeasured = true;
@@ -149,10 +158,13 @@ QtObject {
         property alias newReportLibraries: preferences.newReportLibraries
     }
 
+    // Also the Performance tab's two counts: the thread count was a Develop preference, and its key stays here so a
+    // saved count carries over.
     property Settings developSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "develop"
         property alias engineThreads: preferences.engineThreads
+        property alias scanWorkers: preferences.scanWorkers
         property alias loggingLevel: preferences.loggingLevel
         // Stored under a key no earlier build wrote: those saved an empty address, which would outrank the default.
         property alias feedbackAddress: preferences.feedbackEndpoint
@@ -315,6 +327,18 @@ QtObject {
     }
     // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
     // for the settings' own schedule when the window closes.
+    onScanWorkersAppliedChanged: ApplicationInfo.setScanWorkers(scanWorkersApplied)
+    // Saved at once, as the thread count is.
+    onScanWorkersChanged: {
+        developSettings.setValue("scanWorkers", scanWorkers);
+        developSettings.sync();
+        ApplicationInfo.storeSettings();
+    }
+    // Opens the dialog on its Performance tab: what the pages' read-only Performance lines do.
+    function openPerformance() {
+        preferences.dialogTab = "performance";
+        preferences.dialogShown = true;
+    }
     onChartIncludedOnlyChanged: {
         chartSettings.setValue("includedOnly", chartIncludedOnly);
         chartSettings.sync();
@@ -339,6 +363,7 @@ QtObject {
         EaGlobals.Vars.showToolTips = preferences.toolTips;
         EaGlobals.Vars.autoCollapseSideBarGroups = preferences.autoCollapse;
         ApplicationInfo.setEngineThreads(preferences.engineThreads);
+        ApplicationInfo.setScanWorkers(preferences.scanWorkersApplied);
         EaGlobals.Vars.checkUpdateOnAppStart = false;
         EaStyle.Sizes.defaultScale = 100;
     }

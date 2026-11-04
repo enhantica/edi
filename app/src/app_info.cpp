@@ -602,7 +602,8 @@ QString ApplicationInfo::diagnostics() const {
     const edi::EngineThreading engine = edi::engine_threading();
     add(QStringLiteral("Engine backend"), QString::fromLatin1(engine.backend));
     const int threads = edi::engine_threads_setting();
-    add(QStringLiteral("Engine threads (preference)"), threads > 0 ? QString::number(threads) : QStringLiteral("Auto"));
+    add(QStringLiteral("Threads per calculation (preference)"), threads > 0 ? QString::number(threads) : QStringLiteral("Auto"));
+    add(QStringLiteral("Parallel fits in a scan (preference)"), QString::number(edi::scan_workers_setting()));
     add(QStringLiteral("Engine workers"), QString::number(engine.workers));
     add(QStringLiteral("WebAssembly SIMD"), engine.wasm_simd ? QStringLiteral("on") : QStringLiteral("off"));
 #ifdef Q_OS_WASM
@@ -649,5 +650,9 @@ bool ApplicationInfo::engineThreadsSelectable() const {
 int ApplicationInfo::engineThreadsMaximum() const { return std::clamp(2 * QThread::idealThreadCount(), 16, 64); }
 
 void ApplicationInfo::setEngineThreads(int count) const { edi::set_engine_threads(count); }
+
+int ApplicationInfo::scanWorkersMaximum() const { return std::max(1, QThread::idealThreadCount()); }
+
+void ApplicationInfo::setScanWorkers(int count) const { edi::set_scan_workers(count); }
 
 void ApplicationInfo::storeSettings() const { edi_app::store_settings_now(); }

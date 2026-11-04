@@ -614,8 +614,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "2-updates", {"preferences.tab.updates"}});
             steps_.push_back({name + "3-appearance", {"preferences.tab.appearance"}});
             steps_.push_back({name + "4-projects", {"preferences.tab.projects"}});
-            steps_.push_back({name + "5-experimental", {"preferences.tab.experimental"}});
-            steps_.push_back({name + "6-develop", {"preferences.tab.develop"}});
+            steps_.push_back({name + "5-performance", {"preferences.tab.performance"}});
+            steps_.push_back({name + "6-experimental", {"preferences.tab.experimental"}});
+            steps_.push_back({name + "7-develop", {"preferences.tab.develop"}});
         }
     }
     // The Report page's sidebar, Main and Text, in both themes. Run only when asked (`--demo-only report-sidebar-`).

@@ -144,6 +144,14 @@ WorkflowPage {
             }
         }
     }
+    // How the page runs (edi ADR-0031 §2): the threads a calculation runs on, read-only, a Preferences setting.
+    settingsItem: Component {
+        EaComponents.SideBarColumn {
+            PerformanceGroup {
+                shows: "threads"
+            }
+        }
+    }
     textItem: Component {
         TextTab {
             source: page.experiment ? page.experiment.text : null

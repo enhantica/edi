@@ -424,8 +424,8 @@ one selected row, and the row's number in the first column, bold in the accent c
 ### 12. Preferences, and the sidebar's side
 
 - **edi shows its own Preferences dialog** (`Components/AppPreferencesDialog.qml`), rebuilt from the base's
-  pieces as the About dialog is, with the base's tabs and layout and one of edi's own: Prompts, Updates,
-  Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
+  pieces as the About dialog is, with the base's tabs and layout and two of edi's own: Prompts, Updates,
+  Appearance, Projects, Performance, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
 - **Appearance**: Theme; **Palette — Earth (the default), Classic, Soft, Natural or Colour-blind safe** (the
@@ -438,12 +438,23 @@ one selected row, and the row's number in the first column, bold in the accent c
   always 2 digits; a project's own rule is on its Project page's Extra tab) and new reports' libraries (online, the
   default, or embedded; a project's own is the Report page's Embed box).
 - **Updates and Experimental**: shown disabled (§4).
-- **Develop — Engine threads** (the owner, 2026-10-10): "Auto", the engine's own thread policy,
-  or a count from 1 to twice the cores the platform reports (at least 16, at most 64; a browser can report fewer
-  cores than the machine has), for every fit and calculation. It replaces `OMP_NUM_THREADS` and never changes a
-  result. It is saved per machine under `develop/engineThreads` (0 is Auto) and applied when the window is
-  complete and on every change; the diagnostics show the preference and the resulting engine workers. The
-  single-thread web build shows "1 (single-thread build)", disabled. How the engine applies it: ADR-0020 §10.
+- **Performance** (the owner, 2026-11-04): how the app runs on this machine, never saved in a project.
+  - **Threads per calculation** (the owner, 2026-10-10, then named Engine threads under Develop): "Auto", the
+    engine's own thread policy, or a count from 1 to twice the cores the platform reports (at least 16, at most 64;
+    a browser can report fewer cores than the machine has), for a single calculation, a single fit and the
+    Experiment page. It replaces `OMP_NUM_THREADS` and never changes a result. Saved under `develop/engineThreads`
+    (0 is Auto), the key it had under Develop, and applied when the window is complete and on every change; the
+    diagnostics show the preference and the resulting engine workers. How the engine applies it: ADR-0020 §10.
+  - **Parallel fits in a scan**: how many files of a sequential or independent scan are fitted at once, default 1.
+    The box lists 1 to 5 and also takes a typed whole number, taken at 1 and at the cores the platform reports when
+    past them (`RowNumberBox`, the dialog's box with typing). Each file of a group starts from where the previous
+    group ended, so the count can change a scan's results; 1 fits the files one after another. Saved under
+    `develop/scanWorkers` and handed to the engine with `edi::set_scan_workers`.
+  - While parallel fits is above 1 each scan fit runs on one thread, and the threads box says so after its value
+    ("Auto · 1 per scan fit").
+  - Where the app runs single-threaded (a browser without WebAssembly threads), both show 1, disabled, with a tooltip
+    saying why, and a scan fits one file at a time.
+  - The pages' Settings tabs show the count that applies there, read-only, linking here (ADR-0031 §2).
 - **Persistence**: tool tips, auto collapse and the sidebar's side persist in the app's settings file (the
   base's `Settings` mechanism and file, `EaGlobals.Vars.settingsFile`) under edi's own category
   `Edi.Preferences` (`Globals/Preferences.qml`); the theme and the logging level keep the base's own

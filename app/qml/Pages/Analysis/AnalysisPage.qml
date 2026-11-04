@@ -157,7 +157,8 @@ WorkflowPage {
             }
         }
     }
-    // The page's view options (edi ADR-0031 §2): which rows the parameter table shows, and how a followed scan redraws.
+    // The page's view options (edi ADR-0031 §2): which rows the parameter table shows, how a followed scan redraws,
+    // and, for a scan, how many of its files are fitted at once (read-only, a Preferences setting).
     // The chart's own choices are on the chart. Both are about fitting, so both are hidden while no experiment has
     // measured data (edi ADR-0046), as the table's free column is.
     settingsItem: Component {
@@ -168,6 +169,10 @@ WorkflowPage {
             }
             PatternUpdatesGroup {
                 visible: page.measured
+            }
+            PerformanceGroup {
+                visible: page.measured && page.scanMode
+                shows: "parallelFits"
             }
         }
     }

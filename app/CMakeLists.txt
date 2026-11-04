@@ -101,6 +101,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
         qml/Components/SideBarGroup.qml
+        qml/Components/PerformanceGroup.qml
         qml/Components/ComboCell.qml
         qml/Components/CrashDialog.qml
         qml/Components/DiagnosticsDialog.qml
