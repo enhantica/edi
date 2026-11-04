@@ -33,7 +33,7 @@ public:
     enum Role {
         IdRole = Qt::UserRole + 1, KindRole, NameRole, FormulaRole, SpaceGroupRole, HasCellRole,
         CellARole, CellBRole, CellCRole, CellAlphaRole, CellBetaRole, CellGammaRole,
-        RadiationRole, TechniqueRole, InstrumentRole, SourceRole
+        RadiationRole, TechniqueRole, InstrumentRole, SourceRole, ReferenceRole, ReferenceUrlRole
     };
     Q_ENUM(Role)
 

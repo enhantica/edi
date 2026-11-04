@@ -22,7 +22,7 @@ namespace {
 
 QString field_hint(const QString& key) {
     static const QHash<QString, QString> hints{
-        {QStringLiteral("formula"), QCoreApplication::translate("OnlineSearch", "Hill notation, for example B6 La")},
+        {QStringLiteral("formula"), QCoreApplication::translate("OnlineSearch", "any order and spacing, for example LaCoO3, La Co O3 or Co La O3")},
         {QStringLiteral("elements"), QCoreApplication::translate("OnlineSearch", "all of these, for example La Co")},
         {QStringLiteral("space_group"), QCoreApplication::translate("OnlineSearch", "Hermann-Mauguin, for example P m -3 m")},
         {QStringLiteral("radiation"), QCoreApplication::translate("OnlineSearch", "neutron or xray")},
@@ -85,6 +85,8 @@ QVariant OnlineResultsModel::data(const QModelIndex& index, int role) const {
         case TechniqueRole: return QString::fromStdString(e.technique);
         case InstrumentRole: return QString::fromStdString(e.instrument);
         case SourceRole: return QString::fromStdString(e.source);
+        case ReferenceRole: return QString::fromStdString(edi::online::short_reference(e));
+        case ReferenceUrlRole: return QString::fromStdString(edi::online::reference_url(e));
         default: return {};
     }
 }
@@ -93,7 +95,8 @@ QHash<int, QByteArray> OnlineResultsModel::roleNames() const {
     return {{IdRole, "id"},           {KindRole, "kind"},           {NameRole, "name"},           {FormulaRole, "formula"},
             {SpaceGroupRole, "spaceGroup"}, {HasCellRole, "hasCell"},   {CellARole, "cellA"},         {CellBRole, "cellB"},
             {CellCRole, "cellC"},         {CellAlphaRole, "cellAlpha"}, {CellBetaRole, "cellBeta"},   {CellGammaRole, "cellGamma"},
-            {RadiationRole, "radiation"}, {TechniqueRole, "technique"}, {InstrumentRole, "instrument"}, {SourceRole, "source"}};
+            {RadiationRole, "radiation"}, {TechniqueRole, "technique"}, {InstrumentRole, "instrument"}, {SourceRole, "source"},
+            {ReferenceRole, "reference"},   {ReferenceUrlRole, "referenceUrl"}};
 }
 
 void OnlineResultsModel::assign(std::vector<edi::online::Entry> entries) {
@@ -159,9 +162,9 @@ void OnlineSearch::refreshSources() {
 
 void OnlineSearch::refreshFields() {
     QStringList keys;
-    if (sources_ && sources_->isCod(source_id_)) keys = {QStringLiteral("id"), QStringLiteral("formula"), QStringLiteral("elements"), QStringLiteral("space_group")};
-    else if (kind_ == QStringLiteral("structure")) keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("formula"), QStringLiteral("space_group")};
-    else keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("radiation"), QStringLiteral("technique"), QStringLiteral("instrument")};
+    // Structures take the same fields from every source (the owner, 2026-11-04); for COD, Name is its free-text search.
+    if (kind_ == QStringLiteral("structure")) keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("formula"), QStringLiteral("elements"), QStringLiteral("space_group")};
+    else keys = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("formula"), QStringLiteral("elements"), QStringLiteral("radiation"), QStringLiteral("technique"), QStringLiteral("instrument")};
     QList<OnlineChoiceModel::Choice> choices;
     for (const QString& key : keys) choices.append({key, {}, field_hint(key)});
     fields_model_->assign(std::move(choices));
@@ -253,8 +256,12 @@ void OnlineSearch::search() {
                       edi::online::Index answered;
                       answered.schema = "edi-data-index/1";
                       answered.entries = edi::online::cod_entries(bytes.toStdString());
+                      // COD searched its metadata for the Name already (`text`); the other fields are checked here.
+                      edi::online::Query rest = query;
+                      rest.name.clear();
+                      rest.formula_exact = true;  // COD's own formula search is exact; the collection's is amount-free
                       std::vector<edi::online::Entry> found;
-                      for (const edi::online::Entry* e : edi::online::search(answered, kind_.toStdString(), query)) found.push_back(*e);
+                      for (const edi::online::Entry* e : edi::online::search(answered, kind_.toStdString(), rest)) found.push_back(*e);
                       finish(std::move(found));
                   } catch (const std::exception& problem) {
                       fail(QString::fromUtf8(problem.what()), false);

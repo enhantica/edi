@@ -830,6 +830,10 @@ static nb::dict collection_entry(const edi::online::Entry& e) {
     out["instrument"] = e.instrument;
     out["facility"] = e.facility;
     out["source"] = e.source;
+    for (const auto& [key, value] : {std::pair{"authors", &e.authors}, std::pair{"journal", &e.journal}, std::pair{"volume", &e.volume},
+                                     std::pair{"first_page", &e.first_page}, std::pair{"year", &e.year}, std::pair{"doi", &e.doi}})
+        out[key] = *value;
+    out["reference"] = edi::online::short_reference(e);
     nb::list files;
     for (const edi::online::File& f : e.files) {
         nb::dict file;

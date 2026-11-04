@@ -36,6 +36,13 @@
    "id": "lbco-hrpt",
    "kind": "experiment",
    "name": "La0.5Ba0.5CoO3 at HRPT",
+   "formula": "Ba0.5 Co La0.5 O3",
+   "elements": [
+    "Ba",
+    "Co",
+    "La",
+    "O"
+   ],
    "radiation": "neutron",
    "technique": "powder constant wavelength",
    "instrument": "HRPT",
@@ -54,6 +61,13 @@
    "id": "lbco-hrpt-xye",
    "kind": "data",
    "name": "La0.5Ba0.5CoO3 pattern from HRPT",
+   "formula": "Ba0.5 Co La0.5 O3",
+   "elements": [
+    "Ba",
+    "Co",
+    "La",
+    "O"
+   ],
    "radiation": "neutron",
    "technique": "powder constant wavelength",
    "instrument": "HRPT",
@@ -73,6 +87,13 @@
    "kind": "project",
    "name": "La₀.₅Ba₀.₅CoO₃ [Pm-3m]",
    "description": "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements",
+   "formula": "Ba0.5 Co La0.5 O3",
+   "elements": [
+    "Ba",
+    "Co",
+    "La",
+    "O"
+   ],
    "radiation": "neutron",
    "technique": "powder constant wavelength",
    "instrument": "HRPT",

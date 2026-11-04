@@ -11,9 +11,10 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// From web…: one popup for structures, full experiments and measured data (ADR-0068). A source selector at the
-// top, from the Preferences table; the fields of the chosen source, ID first; Search; a results table with a
-// Kind column and Load per row. Loading hands the downloaded file to the project's ordinary loaders.
+// From web…: one popup for structures, full experiments and measured data (ADR-0068), laid out as the app's other
+// dialogs: the source, the fields of the chosen source in a column, Search, and a results table of this kind only. A
+// click selects a row, Load at the bottom (or a double click) loads the selected entry through the project's ordinary
+// loaders (the owner, 2026-11-04).
 AppDialog {
     id: dialog
 
@@ -26,17 +27,22 @@ AppDialog {
     property var values: ({})
     // The source last used for each kind; a kind opens at its first source until one is chosen.
     property var lastSource: ({})
+    // The selected result, the table's own single selection, -1 for none; Load acts on it.
+    readonly property int selectedRow: results.selectedIndexes !== undefined && results.selectedIndexes.length === 1 ? results.selectedIndexes[0].row : -1
+    readonly property bool canLoad: selectedRow >= 0 && selectedRow < search.results.count && !search.busy && project !== null
 
     objectName: "onlineLoad"
     title: kind === "structure" ? qsTr("Load structure from web") : kind === "experiment" ? qsTr("Load experiment from web") : qsTr("Load measured data from web")
-    standardButtons: Dialog.Close
-    width: Math.min(parent ? parent.width - 2 * EaStyle.Sizes.fontPixelSize : 0, EaStyle.Sizes.fontPixelSize * 62)
+    // Wide enough for the results' columns, up to about nine tenths of the window.
+    contentWidth: Math.min(parent ? Math.floor(parent.width * 0.9) - 2 * EaStyle.Sizes.fontPixelSize : 0, EaStyle.Sizes.fontPixelSize * 96)
+    contentHeight: column.implicitHeight
 
     function openFor(kind, experiment) {
         dialog.kind = kind;
         dialog.targetExperiment = experiment ?? null;
         dialog.values = {};
         dialog.deliveryMessage = "";
+        results.clearSelection();
         search.kind = kind;
         const remembered = dialog.lastSource[kind];
         if (search.sources.count > 0)
@@ -46,11 +52,17 @@ AppDialog {
     }
 
     function runSearch() {
+        results.clearSelection();
         for (let row = 0; row < search.fields.count; ++row) {
             const key = search.fields.keyAt(row);
             search.setField(key, dialog.values[key] ?? "");
         }
         search.search();
+    }
+
+    function loadSelected() {
+        if (dialog.canLoad)
+            dialog.search.load(dialog.selectedRow, dialog.project, dialog.targetExperiment);
     }
 
     // A field's name: the dictionary's for an item it holds, the popup's own for the rest.
@@ -76,7 +88,7 @@ AppDialog {
         return key;
     }
 
-    // The cell as the bridge displays each length and angle.
+    // The cell as the bridge displays each length and angle, compact: "3.89 3.89 3.89 90 90 90".
     function cellText(row) {
         if (!row.hasCell)
             return "";
@@ -128,20 +140,24 @@ AppDialog {
                 dialog.deliveryMessage = dialog.project.lastError;
         }
     }
-
     contentItem: Column {
+        id: column
+        width: dialog.contentWidth
         spacing: EaStyle.Sizes.fontPixelSize
 
+        // The source: a row of its own, as a form's first line.
         Row {
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.Label {
+                width: column.labelWidth
                 anchors.verticalCenter: parent.verticalCenter
+                horizontalAlignment: Text.AlignRight
                 text: qsTr("Source") + ":"
             }
             EaElements.ComboBox {
                 id: sourceBox
                 objectName: "onlineLoad.source"
-                width: EaStyle.Sizes.fontPixelSize * 18
+                width: column.fieldWidth
                 textRole: "name"
                 valueRole: "key"
                 model: dialog.search.sources
@@ -149,6 +165,7 @@ AppDialog {
                 onActivated: index => {
                     dialog.values = {};
                     dialog.deliveryMessage = "";
+                    results.clearSelection();
                     dialog.search.sourceId = dialog.search.sources.keyAt(index);
                     const remembered = Object.assign({}, dialog.lastSource);
                     remembered[dialog.kind] = dialog.search.sourceId;
@@ -161,12 +178,13 @@ AppDialog {
                 }
             }
         }
+        readonly property real labelWidth: EaStyle.Sizes.fontPixelSize * 7
+        readonly property real fieldWidth: Math.min(EaStyle.Sizes.fontPixelSize * 28, dialog.contentWidth - labelWidth - EaStyle.Sizes.fontPixelSize)
 
-        // The fields of the chosen source, ID first.
+        // The fields of the chosen source, ID first, one per line.
         Column {
             id: fieldColumn
             spacing: EaStyle.Sizes.fontPixelSize * 0.5
-            readonly property real labelWidth: EaStyle.Sizes.fontPixelSize * 7
             Repeater {
                 model: dialog.search.fields
                 delegate: Row {
@@ -175,14 +193,14 @@ AppDialog {
                     required property string hint
                     spacing: EaStyle.Sizes.fontPixelSize
                     EaElements.Label {
-                        width: fieldColumn.labelWidth
+                        width: column.labelWidth
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignRight
                         text: dialog.fieldLabel(fieldRow.key) + ":"
                     }
                     EaElements.TextField {
                         objectName: "onlineLoad.field." + fieldRow.key
-                        width: EaStyle.Sizes.fontPixelSize * 24
+                        width: column.fieldWidth
                         horizontalAlignment: TextInput.AlignLeft
                         placeholderText: fieldRow.hint
                         text: dialog.values[fieldRow.key] ?? ""
@@ -201,9 +219,9 @@ AppDialog {
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.SideBarButton {
                 objectName: "onlineLoad.search"
-                width: EaStyle.Sizes.fontPixelSize * 10
+                width: EaStyle.Sizes.fontPixelSize * 12
                 fontIcon: "search"
-                text: dialog.search.busy ? qsTr("Searching…") : qsTr("Search")
+                text: dialog.search.busy && dialog.selectedRow < 0 ? qsTr("Searching…") : qsTr("Search")
                 enabled: !dialog.search.busy && dialog.search.sourceId !== ""
                 ToolTip.text: qsTr("Search the selected source with the fields above; empty fields do not filter")
                 onClicked: dialog.runSearch()
@@ -212,7 +230,7 @@ AppDialog {
                 id: messageLabel
                 objectName: "onlineLoad.message"
                 anchors.verticalCenter: parent.verticalCenter
-                width: dialog.width - EaStyle.Sizes.fontPixelSize * 14 - (alternative.visible ? alternative.width + parent.spacing : 0)
+                width: dialog.contentWidth - EaStyle.Sizes.fontPixelSize * 13 - (alternative.visible ? alternative.width + parent.spacing : 0)
                 visible: text !== ""
                 wrapMode: Text.Wrap
                 color: dialog.search.message !== "" || dialog.deliveryMessage !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForegroundMinor
@@ -240,20 +258,20 @@ AppDialog {
             }
         }
 
+        // The results, this kind only, fitted to the popup: the flexible column takes what the fixed ones leave.
         DataTable {
             id: results
             objectName: "onlineLoad.results"
-            width: dialog.width - 2 * EaStyle.Sizes.fontPixelSize
+            width: dialog.contentWidth
             maxRowCountShow: 8
             sourceModel: dialog.search.results
             defaultInfoText: dialog.search.searched ? qsTr("No entries") : qsTr("Search to list entries")
-            columns: [numberColumnWidth, AppSizes.dataColumnWidth, AppSizes.dataColumnWidth * 1.6, AppSizes.dataColumnWidth * 2.8, AppSizes.dataColumnWidth * 1.4, -1, AppSizes.iconColumnWidth]
+            readonly property bool structures: dialog.kind === "structure"
+            // Name and Reference share what the fixed columns leave; the cell shows six displayed values.
+            columns: structures ? [numberColumnWidth, AppSizes.dataColumnWidth * 1.3, -1, AppSizes.dataColumnWidth * 1.7, AppSizes.dataColumnWidth * 1.3, AppSizes.dataColumnWidth * 3.6, -1] : [numberColumnWidth, AppSizes.dataColumnWidth * 1.6, -1, AppSizes.dataColumnWidth * 1.6, AppSizes.dataColumnWidth * 2.2]
+            spreadColumns: structures ? [2, 6] : [2]
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {}
-                EaComponents.ListViewLabel {
-                    text: qsTr("Kind")
-                    horizontalAlignment: Text.AlignLeft
-                }
                 EaComponents.ListViewLabel {
                     text: qsTr("ID")
                     horizontalAlignment: Text.AlignLeft
@@ -263,19 +281,27 @@ AppDialog {
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
-                    text: dialog.kind === "structure" ? qsTr("Formula") : Session.categoryTitle("instrument")
+                    text: results.structures ? qsTr("Formula") : Session.categoryTitle("instrument")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
-                    text: dialog.kind === "structure" ? Session.categoryTitle("space_group") : qsTr("Technique")
+                    text: results.structures ? Session.categoryTitle("space_group") : qsTr("Technique")
                     horizontalAlignment: Text.AlignLeft
                 }
-                EaComponents.ListViewLabel {}
+                EaComponents.ListViewLabel {
+                    visible: results.structures
+                    text: Session.categoryTitle("cell")
+                    horizontalAlignment: Text.AlignLeft
+                }
+                EaComponents.ListViewLabel {
+                    visible: results.structures
+                    text: qsTr("Reference")
+                    horizontalAlignment: Text.AlignLeft
+                }
             }
             delegate: TableRow {
                 id: row
                 required property var model
-                required property string kind
                 required property string name
                 required property string formula
                 required property string spaceGroup
@@ -290,15 +316,24 @@ AppDialog {
                 required property string technique
                 required property string instrument
                 required property string source
+                required property string reference
+                required property string referenceUrl
                 objectName: `onlineLoad.row.${row.index}`
+                // A click selects the row through the table's own selection; a double click loads it. Beneath the
+                // cells, so the reference's link keeps its own click.
+                MouseArea {
+                    parent: row
+                    anchors.fill: parent
+                    z: -1
+                    onClicked: mouse => results.selectWithModifiers(row.index, mouse.modifiers)
+                    onDoubleClicked: {
+                        results.selectWithModifiers(row.index, Qt.NoModifier);
+                        dialog.loadSelected();
+                    }
+                }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
                     text: row.index + 1
-                }
-                EaComponents.ListViewLabel {
-                    objectName: `onlineLoad.kind.${row.index}`
-                    horizontalAlignment: Text.AlignLeft
-                    text: row.kind === "structure" ? qsTr("Structure") : row.kind === "experiment" ? qsTr("Experiment") : qsTr("Data")
                 }
                 EaComponents.ListViewLabel {
                     objectName: `onlineLoad.id.${row.index}`
@@ -311,26 +346,57 @@ AppDialog {
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
                     text: row.name
-                    ToolTip.text: row.hasCell ? Session.categoryTitle("cell") + ": " + dialog.cellText(row) : ""
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
-                    text: dialog.kind === "structure" ? row.formula : row.instrument
+                    text: results.structures ? row.formula : row.instrument
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
                     elide: Text.ElideRight
-                    text: dialog.kind === "structure" ? row.spaceGroup : [row.radiation, row.technique].filter(s => s !== "").join(", ")
+                    text: results.structures ? row.spaceGroup : [row.radiation, row.technique].filter(s => s !== "").join(", ")
                 }
-                EaComponents.ListViewButton {
-                    objectName: `onlineLoad.load.${row.index}`
-                    horizontalAlignment: Text.AlignHCenter
-                    fontIcon: "download"
-                    enabled: !dialog.search.busy && dialog.project !== null
-                    ToolTip.text: row.kind === "structure" ? qsTr("Load this structure into the project") : row.kind === "experiment" ? qsTr("Open this experiment in the project") : dialog.targetExperiment !== null ? qsTr("Load this data into %1").arg(dialog.targetExperiment.name) : qsTr("Load this data into a new experiment")
-                    onClicked: dialog.search.load(row.index, dialog.project, dialog.targetExperiment)
+                EaComponents.ListViewLabel {
+                    visible: results.structures
+                    horizontalAlignment: Text.AlignLeft
+                    elide: Text.ElideRight
+                    text: dialog.cellText(row)
                 }
+                EaComponents.ListViewLabel {
+                    id: referenceCell
+                    objectName: `onlineLoad.reference.${row.index}`
+                    visible: results.structures
+                    horizontalAlignment: Text.AlignLeft
+                    elide: Text.ElideRight
+                    text: row.reference
+                    color: row.referenceUrl !== "" ? EaStyle.Colors.themeForegroundHighlight : EaStyle.Colors.themeForeground
+                    // The DOI opens in the browser; a click elsewhere on the row selects it as any click does.
+                    TapHandler {
+                        enabled: row.referenceUrl !== ""
+                        acceptedButtons: Qt.LeftButton
+                        onTapped: Qt.openUrlExternally(row.referenceUrl)
+                    }
+                }
+            }
+        }
+
+        // Close and Load, as the app's dialogs place their actions.
+        Row {
+            id: actions
+            anchors.right: parent.right
+            spacing: EaStyle.Sizes.fontPixelSize
+            EaElements.Button {
+                objectName: "onlineLoad.close"
+                text: qsTr("Close")
+                onClicked: dialog.close()
+            }
+            EaElements.Button {
+                objectName: "onlineLoad.load"
+                enabled: dialog.canLoad
+                text: dialog.search.busy && dialog.selectedRow >= 0 ? qsTr("Loading…") : qsTr("Load")
+                ToolTip.text: dialog.kind === "structure" ? qsTr("Load the selected structure into the project") : dialog.kind === "experiment" ? qsTr("Open the selected experiment in the project") : dialog.targetExperiment !== null ? qsTr("Load the selected pattern into %1").arg(dialog.targetExperiment.name) : qsTr("Create an experiment from the selected data")
+                onClicked: dialog.loadSelected()
             }
         }
     }

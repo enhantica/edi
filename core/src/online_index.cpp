@@ -190,6 +190,12 @@ Index parse_index(const std::string& text) {
         entry.instrument = text_member(item, "instrument");
         entry.facility = text_member(item, "facility");
         entry.source = text_member(item, "source");
+        entry.authors = text_member(item, "authors");
+        entry.journal = text_member(item, "journal");
+        entry.volume = text_member(item, "volume");
+        entry.first_page = text_member(item, "first_page");
+        entry.year = text_member(item, "year");
+        entry.doi = text_member(item, "doi");
         const json::Value& cell = item.get("cell");
         if (!cell.is_null()) {
             for (const json::Value& number : cell.array("cell")) {
@@ -242,27 +248,36 @@ std::vector<std::string> formula_elements(const std::string& formula) {
 std::vector<const Entry*> search(const Index& index, const std::string& kind, const Query& query) {
     std::vector<const Entry*> found;
     const std::string wanted_formula = trimmed(query.formula).empty() ? std::string() : hill_formula(query.formula);
+    std::vector<std::string> formula_symbols;
+    if (!wanted_formula.empty()) formula_symbols = formula_elements(wanted_formula);
     std::vector<std::string> wanted_elements;
     if (!trimmed(query.elements).empty()) wanted_elements = formula_elements(element_words(query.elements));
+    const auto holds_all = [](const Entry& entry, const std::vector<std::string>& symbols) {
+        if (entry.elements.empty()) return false;
+        for (const std::string& symbol : symbols)
+            if (std::find(entry.elements.begin(), entry.elements.end(), symbol) == entry.elements.end()) return false;
+        return true;
+    };
+    std::vector<const Entry*> by_elements;  // formula matches by elements only, listed after the exact ones
     const std::string wanted_group = lower(without_spaces(query.space_group));
     const std::string wanted_id = lower(trimmed(query.id));
     for (const Entry& entry : index.entries) {
         if (entry.kind != kind) continue;
         if (!wanted_id.empty() && lower(entry.id) != wanted_id) continue;
         if (!contains_ci(entry.name, trimmed(query.name))) continue;
-        if (!wanted_formula.empty() && entry.formula != wanted_formula) continue;
-        if (!wanted_elements.empty()) {
-            bool all = !entry.elements.empty();
-            for (const std::string& symbol : wanted_elements)
-                all = all && std::find(entry.elements.begin(), entry.elements.end(), symbol) != entry.elements.end();
-            if (!all) continue;
+        bool exact_formula = true;
+        if (!wanted_formula.empty() && entry.formula != wanted_formula) {
+            if (query.formula_exact || !holds_all(entry, formula_symbols)) continue;
+            exact_formula = false;
         }
+        if (!wanted_elements.empty() && !holds_all(entry, wanted_elements)) continue;
         if (!wanted_group.empty() && lower(without_spaces(entry.space_group)) != wanted_group) continue;
         if (!contains_ci(entry.radiation, trimmed(query.radiation))) continue;
         if (!contains_ci(entry.technique, trimmed(query.technique))) continue;
         if (!contains_ci(entry.instrument, trimmed(query.instrument))) continue;
-        found.push_back(&entry);
+        (exact_formula ? found : by_elements).push_back(&entry);
     }
+    found.insert(found.end(), by_elements.begin(), by_elements.end());
     return found;
 }
 
@@ -290,7 +305,35 @@ std::string cod_search_url(const std::string& base, const Query& query) {
         }
     }
     if (!trimmed(query.space_group).empty()) url += "&spacegroup=" + percent_encoded(trimmed(query.space_group));
+    // The Name field is COD's free-text search (its documented `text`: bibliographic data, common and systematic
+    // names, the mineral), so the server applies it; the caller does not filter the answer's name again.
+    if (!trimmed(query.name).empty()) url += "&text=" + percent_encoded(trimmed(query.name));
     return url;
+}
+
+std::string short_reference(const Entry& entry) {
+    std::string out;
+    const std::string authors = trimmed(entry.authors);
+    if (!authors.empty()) {
+        // "Smith, J.; Doe, A." or "Smith, J. and Doe, A.": the first surname, "et al." when others follow.
+        const std::size_t end = authors.find_first_of(",;");
+        std::string first = trimmed(authors.substr(0, end));
+        const std::size_t and_at = first.find(" and ");
+        if (and_at != std::string::npos) first = trimmed(first.substr(0, and_at));
+        const bool several = authors.find(';') != std::string::npos || authors.find(" and ") != std::string::npos;
+        out = first + (several ? " et al." : "");
+    }
+    std::string where = trimmed(entry.journal);
+    if (!trimmed(entry.volume).empty()) where += (where.empty() ? "" : " ") + trimmed(entry.volume);
+    if (!trimmed(entry.first_page).empty()) where += (where.empty() ? "" : ", ") + trimmed(entry.first_page);
+    if (!where.empty()) out += (out.empty() ? "" : ", ") + where;
+    if (!trimmed(entry.year).empty()) out += (out.empty() ? "" : " ") + ("(" + trimmed(entry.year) + ")");
+    return out;
+}
+
+std::string reference_url(const Entry& entry) {
+    const std::string doi = trimmed(entry.doi);
+    return doi.empty() ? std::string() : "https://doi.org/" + doi;
 }
 
 std::vector<Entry> cod_entries(const std::string& text) {
@@ -340,6 +383,12 @@ std::vector<Entry> cod_entries(const std::string& text) {
             }
         }
         entry.source = "COD " + entry.id;
+        entry.authors = trimmed(cod_text(row, "authors"));
+        entry.journal = trimmed(cod_text(row, "journal"));
+        entry.volume = trimmed(cod_text(row, "volume"));
+        entry.first_page = trimmed(cod_text(row, "firstpage"));
+        entry.year = trimmed(cod_text(row, "year"));
+        entry.doi = trimmed(cod_text(row, "doi"));
         File file;
         file.path = entry.id + ".cif";
         file.format = "cif";

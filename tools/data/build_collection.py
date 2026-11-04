@@ -140,6 +140,9 @@ def structure_facts(text: str) -> dict:
                         symbols.append(match.group(0))
             if symbols:
                 facts['elements'] = hill(symbols).split()
+                # A file that states no formula gives its elements as one, without counts: enough
+                # for the amount-free search and an honest column.
+                facts.setdefault('formula', ' '.join(facts['elements']))
     return facts
 
 
@@ -166,6 +169,30 @@ def write_sidecar(path: Path, meta: dict) -> None:
     )
 
 
+def sample_facts(structure_texts: list[str]) -> dict:
+    """The sample's formula and elements from a project's structure files.
+
+    One structure gives its formula; several phases give the union of their elements as one
+    formula without counts, which is what the amount-free search needs. Empty when no file names
+    an element.
+    """
+    formulas = []
+    symbols: set[str] = set()
+    for text in structure_texts:
+        facts = structure_facts(text)
+        if facts.get('formula'):
+            formulas.append(facts['formula'])
+        symbols.update(facts.get('elements', []))
+    out: dict = {}
+    if symbols:
+        out['elements'] = hill(sorted(symbols)).split()
+    if len(formulas) == 1:
+        out['formula'] = formulas[0]
+    elif symbols:
+        out['formula'] = ' '.join(out['elements'])
+    return out
+
+
 def populate(output: Path) -> int:
     metadata = json.loads(METADATA.read_text())['examples']
     for folder in FOLDERS.values():
@@ -180,7 +207,11 @@ def populate(output: Path) -> int:
         def first(key: str, values: dict = values) -> str:
             return (values.get(key) or [''])[0]
 
+        structure_texts = [
+            f.read_text(errors='replace') for f in sorted((project / 'structures').glob('*.edi'))
+        ]
         common = {
+            **sample_facts(structure_texts),
             'name': ' / '.join(meta.get('samples', [])),
             'description': meta.get('detail', ''),
             'radiation': first('probe'),
@@ -217,12 +248,16 @@ def populate(output: Path) -> int:
             shutil.copyfile(experiment, target)
             write_sidecar(target, {'id': f'{example}-{experiment.stem}', **common})
             count += 1
-    # The tutorials' inputs: a structure CIF and a measured pattern.
+    # The tutorials' inputs: a structure CIF and a measured pattern, both of the CIF's sample.
+    tutorial_sample = sample_facts([
+        f.read_text(errors='replace') for f in sorted(TUTORIAL_FILES.glob('*.cif'))
+    ])
     for file in sorted(TUTORIAL_FILES.iterdir()):
         kind = 'structure' if file.suffix == '.cif' else 'data'
         target = output / FOLDERS[kind] / f'tutorial-{file.name}'
         shutil.copyfile(file, target)
         meta = {
+            **tutorial_sample,
             'id': f'tutorial-{file.stem}',
             'name': 'La0.5Ba0.5CoO3' + ('' if kind == 'structure' else ' pattern from HRPT'),
             'description': "The onboarding tutorials' input",
@@ -271,6 +306,12 @@ def entries_of(output: Path) -> list[dict]:
                 'instrument',
                 'facility',
                 'source',
+                'authors',
+                'journal',
+                'volume',
+                'first_page',
+                'year',
+                'doi',
             ):
                 value = meta.get(key, facts.get(key))
                 if value not in (None, '', []):
@@ -298,9 +339,33 @@ def index(output: Path) -> int:
     return 0
 
 
+def _defined_formula(output: Path, entry: dict) -> str:
+    """The formula the entry's own files define: a structure file's, or a project's structures'."""
+    files = entry.get('files') or []
+    if not files or not isinstance(files[0], dict):
+        return ''
+    path = output / str(files[0].get('path', ''))
+    if not path.is_file():
+        return ''
+    if entry.get('kind') == 'structure':
+        return structure_facts(path.read_text(errors='replace')).get('formula', '')
+    if entry.get('kind') == 'project' and path.suffix == '.zip':
+        with zipfile.ZipFile(path) as archive:
+            texts = [
+                archive.read(name).decode('utf-8', errors='replace')
+                for name in archive.namelist()
+                if '/structures/' in name and name.endswith(('.edi', '.cif'))
+            ]
+        return sample_facts(texts).get('formula', '')
+    return ''
+
+
 def _entry_problems(output: Path, entry: dict, seen: set) -> list[str]:
     where = f'entry {entry.get("id")!r}'
     problems = []
+    # Every entry carries its sample formula where its files define one (the owner, 2026-11-04).
+    if not entry.get('formula') and _defined_formula(output, entry):
+        problems.append(f'{where} has no formula although its files define one')
     if not entry.get('id'):
         problems.append('an entry has no id')
     elif entry['id'] in seen:

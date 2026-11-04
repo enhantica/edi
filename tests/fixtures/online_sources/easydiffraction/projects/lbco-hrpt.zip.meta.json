@@ -6,5 +6,12 @@
  "technique": "powder constant wavelength",
  "instrument": "HRPT",
  "facility": "PSI",
- "source": "EasyDiffraction"
+ "source": "EasyDiffraction",
+ "formula": "Ba0.5 Co La0.5 O3",
+ "elements": [
+  "Ba",
+  "Co",
+  "La",
+  "O"
+ ]
 }

@@ -32,8 +32,22 @@ struct Entry {
     std::string instrument;   ///< for example HRPT
     std::string facility;     ///< for example PSI
     std::string source;       ///< where the entry comes from, for the results table
+    std::string authors;      ///< "Smith, J.; Doe, A." as the publication lists them, may be empty
+    std::string journal;      ///< the journal's name, may be empty
+    std::string volume;       ///< may be empty
+    std::string first_page;   ///< may be empty
+    std::string year;         ///< may be empty
+    std::string doi;          ///< without a scheme, may be empty
     std::vector<File> files;  ///< at least one
 };
+
+/// A short reference to the entry's publication: "Smith et al., Phys. Rev. B 40, 34 (2026)" from the authors
+/// (the first author's surname, "et al." for more than one), journal, volume, first page and year, each omitted
+/// when empty; empty when the entry names no publication.
+std::string short_reference(const Entry& entry);
+
+/// Where the publication is read: `https://doi.org/<doi>` when the entry has a DOI, else empty.
+std::string reference_url(const Entry& entry);
 
 struct Index {
     std::string schema;  ///< edi-data-index/1
@@ -43,10 +57,13 @@ struct Index {
 /// Parse an `index.json`; refuses a malformed document with the reason.
 Index parse_index(const std::string& text);
 
-/// The search fields; an empty field does not filter. `id` matches whole, `formula` after Hill normalisation,
+/// The search fields; an empty field does not filter. `id` matches whole; `formula`, after Hill normalisation,
+/// matches an entry holding every one of its elements, amounts ignored, with the exact Hill matches listed first
+/// (owner, 2026-11-04), or only the exact ones when `formula_exact` is set (COD, which searched exactly already);
 /// `elements` as a set the entry's elements must contain, `space_group` without spaces, the rest as substrings.
 struct Query {
     std::string id, name, formula, elements, space_group, radiation, technique, instrument;
+    bool formula_exact = false;
 };
 
 /// The entries of `kind` that match `query`, in index order.
