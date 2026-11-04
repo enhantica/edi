@@ -93,6 +93,9 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0069](0069-linked-data.md) | Linked measured data | Accepted | 🟡 | High | several measured data files at once from file and web, as separate experiments or one experiment with a scan; a scan's files copied into the project or linked where they are (on up to 20 files and 50 MB); a missing linked folder shows Data not found with Locate folder… |
 | [0070](0070-magnetic-structures.md) | Magnetic structures in edi | Accepted | 🟡 | High | a structure holds its moments (`atom_site_moment`) and its magnetic description as written; crysta reads, checks and calculates them, edi shows them (Main: magnetic space group, propagation vectors, moments; Extra: operators, parent, form factors, moments in the cell) and the viewer draws crysta's moments in the cell as arrows, with show/hide on the toolbar and the length per Bohr magneton an app preference |
 
+| [0071](0071-desktop-installers.md) | Self-contained desktop installers | Accepted | 🟡 | High | build crysta first, deploy the C++ app and its dependencies with Qt, qualify offline installers, then publish online installers with per-platform component repositories |
+| [0072](0072-calendar-releases-and-application-updates.md) | Calendar releases and application updates | Accepted | 🟡 | High | calendar release versions; merged user-facing PR titles supply notes; the installed app shows a themed Update button independently of notification preferences and changes since its previous release |
+
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.

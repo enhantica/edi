@@ -36,3 +36,10 @@ after an update, and the app had nothing of its own to show. edi has no numbered
 |---|---|
 | A separate changelog for the app | Rejected: two lists drift apart; the owner asked for one file feeding both. |
 | Opening the site's page only | Rejected: it shows nothing until the user goes looking. |
+
+## Versioned release follow-up
+
+[ADR-0072](0072-calendar-releases-and-application-updates.md) replaces the handwritten date-based
+release source and date cursor with calendar release identities and notes from merged user-facing PR
+titles. Its implementation reuses this popup, manual access and accessible presentation. The existing
+dated implementation remains the prior art during that transition.
