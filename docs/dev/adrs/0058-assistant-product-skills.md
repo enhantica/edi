@@ -844,3 +844,15 @@ supersedes the earlier residual-only background trigger for this scope, without
 prescribing specimen values, a target statistic or a universal first-fit order.
 Actual autonomous runs, separate from prompted diagnostic continuations, assess
 model adherence; skill text alone is not proof that every model follows it.
+
+## Structural coverage after a rejected subset
+
+A fresh autonomous run fitted the required background but stopped after a failed
+Co/O displacement trial with the mixed-site displacement degree of freedom still
+untested. The full-fit contract now tracks coverage of each eligible scientific
+group, including independent structural sites. A failed subset does not assess
+omitted sites; an unresolved category makes the structural fit incomplete.
+The shared-site equality is established before its displacement trial by default,
+while explicit user scope, calibration, symmetry and justified distinct models
+remain binding. This gives the existing shared-site guidance an explicit point
+in the workflow instead of waiting for an anticorrelated fit to reveal it.

@@ -8,12 +8,22 @@ description: Choose and revise a fitting strategy from actual model, data, nativ
 Say fit, fitting and fitted to the user, never refine or refinement: these are Edi's words. The
 references below keep their own titles.
 
-Version: 1.6.8. Follow the user's goal, supplied constraints and actually offered
+Version: 1.6.9. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
 
 ## Core workflow
+
+For a delegated full powder structure fit, track which eligible groups have actually
+been fitted and assessed: background intensities/terms, phase scale, required
+alignment, requested profile coefficients, and independent structural coordinates
+and displacement parameters. Symmetry/dependency and explicit user/calibration
+constraints still apply. A temporary diagnostic freeze or a default fixed flag is
+not an instruction to leave a group out. Unassessed eligible atomic sites must not
+be left at their starting values and called a completed structural fit. A failed
+subset trial does not assess the remaining sites: diagnose the coupled model and
+finish that category, or explicitly report the structural fit incomplete.
 
 1. **Establish essentials, then wait if needed.** Inspect the current project and
    small attachment/header portions. Use the native reader for supported format,
@@ -205,15 +215,18 @@ never use another experiment's fitted value.
 ### Mixed sites and shared displacement models
 
 Establish actual same-phase co-occupancy and the user's scope first. Species
-sharing one crystallographic site normally share an isotropic displacement model.
-For example, tie Biso(La) = Biso(Ba) on a mixed La/Ba site through add_relations,
+sharing one crystallographic site use one shared isotropic displacement model by
+default. Establish that relation BEFORE the displacement trial, rather than wait
+for independent same-site values to become anticorrelated. For example, tie Biso(La) = Biso(Ba) on a mixed La/Ba site through add_relations,
 using actual returned unique names and ordinary aliases. Inspect existing
 relations first: reuse a matching equality instead of adding a duplicate or
 reverse relation. Refit and inspect the
 relation, current residuals and uncertainties. Near-perfect anticorrelation of
 independently free same-site ADPs calls for this shared model, not merely a warning
 that the fit is undetermined. Preserve occupancies and composition. Keep distinct
-ADPs only for an explicit user constraint or a stated physical justification. Distinct same-element sites in similar bonding environments may also justify
+ADPs only for an explicit user constraint or a stated physical justification. Leaving all same-site
+ADPs at zero or omitting the shared-site degree of freedom is not a substitute for
+fitting that model. Distinct same-element sites in similar bonding environments may also justify
 restorable sharing from weak identifiability/actual correlations: co-location is
 unnecessary, element alone insufficient. If unresolved, consider justified broader
 or overall isotropic groups OR state unavailable comparison/lost information.
