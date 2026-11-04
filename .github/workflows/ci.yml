@@ -743,6 +743,7 @@ jobs:
       - name: Check assistant edits, controls and runtime lifetime
         run: |
           pixi run -e app --skip-deps app-test-trial-lock
+          pixi run -e app --skip-deps app-test-assistant-groups
           pixi run -e app --skip-deps app-test-assistant-ui
           pixi run -e app --skip-deps app-test-skill-targets
           pixi run -e app --skip-deps app-test-assistant-lifetime

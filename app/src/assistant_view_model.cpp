@@ -5768,10 +5768,11 @@ struct AssistantViewModel::State {
             if(!widget_parameter_binding_current(expected))return false;
             members.push_back(expected.member);
         }
+        run->edit_scope=begin_own_edit();
         const auto input=target->prepareWidgetFreeGroup(std::move(members),entry->free);run->input=input;
         run->parameter_group=true;run->parameter_uncertain=true;
         if(!receiver || receiver->state_.get()!=this || !target || !popupCurrent() || !widget_entry_current(run,entry))return false;
-        run->edit_scope=begin_own_edit();native_call->may_have_written=true;
+        native_call->may_have_written=true;
         return popupCurrent();
     }
     void widget_apply_parameter(const std::shared_ptr<NativeWidget>& run,bool group,const QPointer<QObject>& menu={},
@@ -6478,14 +6479,14 @@ struct AssistantViewModel::State {
                 bool equal=names.size()==points.size();
                 for(std::size_t i=0;equal && i<points.size();++i)equal=names[i]==points[i]->id.value();
                 {
-                    const auto input=target->prepareWidgetBackgroundNames(*original.record->estimate_member);
-                    const auto finish=qScopeGuard([target,input]{if(target)target->finishWidgetBackground(input);});
                     if(!owns())return;
                     if(native_call->retiring || !native_estimate_target_current(original)) {
                         naming_message=QObject::tr("Estimate completed; the original Id from position owner changed before its edit");
                     } else {
                         const auto edit_scope=begin_own_edit();
                         const auto close=qScopeGuard([receiver,this,edit_scope]{if(receiver && receiver->state_.get()==this)end_own_edit(edit_scope);});
+                        const auto input=target->prepareWidgetBackgroundNames(*original.record->estimate_member);
+                        const auto finish=qScopeGuard([target,input]{if(target)target->finishWidgetBackground(input);});
                         if(owns() && !native_call->retiring && native_estimate_target_current(original)) {
                             const bool accepted=target->namePointsByPosition();
                             names_applied=input->outcome.applied;
@@ -6664,9 +6665,10 @@ struct AssistantViewModel::State {
         auto captured_prepareCommit=[this,run] {
             if(!widget_entry_current(run,nullptr) || !widget_page_selected(run) || !run->project->currentExperiment() || run->project->currentExperiment()->experiment()!=run->background_experiment)return false;
             const auto count=run->background_experiment->background.size();
+            run->edit_scope=begin_own_edit();
             run->background_input=run->project->prepareWidgetBackgroundNames(*run->background_experiment);
             if(!widget_entry_current(run,nullptr))return false;
-            run->edit_scope=begin_own_edit();native_call->may_have_written=true;return true;
+            native_call->may_have_written=true;return true;
         };
         auto captured_finishCommit=[this,run] {
             if(run->project)run->project->finishWidgetBackground(run->background_input);
@@ -10973,13 +10975,13 @@ struct AssistantViewModel::State {
         const auto receiver=run->receiver;
         if(experiment_action_equal(run)){native_finish(true,experiment_progress(run,true));return;}
         const auto action=experiment_action(run);
-        run->control_input=run->project->prepareWidgetCreation(action);run->control_input->bounded_result=true;
         const auto cleanup=qScopeGuard([this,run,receiver] {
             if(run->project)run->project->finishWidgetCreation(run->control_input);
             if(receiver && receiver->state_.get()==this && run->edit_scope){const auto scope=run->edit_scope;run->edit_scope=0;end_own_edit(scope);}
         });
         if(!create_widget_current(run))throw ActionRefusal("operation_superseded","experiment");
         run->edit_scope=begin_own_edit();
+        run->control_input=run->project->prepareWidgetCreation(action);run->control_input->bounded_result=true;
         const auto op=run->arguments.value("operation");const auto row=experiment_region_index(run);
         if(op=="peak_profile")run->operation_view->setPeakType(run->arguments.value("value").toString());
         else if(op=="absorption_type")run->operation_view->setAbsorptionType(run->arguments.value("value").toString());
@@ -11075,13 +11077,13 @@ struct AssistantViewModel::State {
         const auto receiver=run->receiver;
         if(structure_action_equal(run)) {native_finish(true,structure_progress(run,true));return;}
         const auto action=structure_action(run);
-        run->control_input=run->project->prepareWidgetCreation(action);run->control_input->bounded_result=true;
         const auto cleanup=qScopeGuard([this,run,receiver] {
             if(run->project)run->project->finishWidgetCreation(run->control_input);
             if(receiver && receiver->state_.get()==this && run->edit_scope){const auto scope=run->edit_scope;run->edit_scope=0;end_own_edit(scope);}
         });
         if(!create_widget_current(run))throw ActionRefusal("operation_superseded","structure");
         run->edit_scope=begin_own_edit();
+        run->control_input=run->project->prepareWidgetCreation(action);run->control_input->bounded_result=true;
         apply_structure_control(run,action);
         if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
         create_widget_capture_step(run);
@@ -11376,6 +11378,7 @@ struct AssistantViewModel::State {
                 const auto scope=run->edit_scope;run->edit_scope=0;end_own_edit(scope);
             }
         });
+        run->edit_scope=begin_own_edit();
         if(run->individual_tool=="load_structure")
             run->file_input=run->project->prepareWidgetStructureFile(run->structure_path,run->structure_source);
         else if(run->individual_tool=="load_data")
@@ -11393,7 +11396,6 @@ struct AssistantViewModel::State {
         if (run->control_input) run->control_input->bounded_result = true;
 
         if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
-        run->edit_scope=begin_own_edit();
         if(run->individual_tool=="load_structure")run->project->loadStructure(run->structure_path);
         else if(run->individual_tool=="load_data")run->project->loadDataInto(run->operation_view,run->measurement_path);
         else if(run->individual_tool=="create_experiment")run->project->createExperiment();
@@ -11910,16 +11912,18 @@ struct AssistantViewModel::State {
                 }
                 bool applied=false;
                 {
-                const auto input=measured?run->project->prepareWidgetMeasurementFile(run->measurement_path,run->measurement_source,targetExperiment)
-                    :run->project->prepareWidgetStructureFile(run->structure_path,run->structure_source);
-                run->file_input=input;
-                std::uint64_t editScope=0;
-                const auto cleanup=qScopeGuard([this,run,receiver,input,&editScope] {
-                    if(run->project)run->project->finishWidgetFile(input);
-                    if(receiver && receiver->state_.get()==this && editScope) {
+                const auto editScope=begin_own_edit();run->edit_scope=editScope;
+                const auto releaseEdit=qScopeGuard([this,run,receiver,editScope] {
+                    if(receiver && receiver->state_.get()==this) {
                         if(run->edit_scope==editScope)run->edit_scope=0;
                         end_own_edit(editScope);
                     }
+                });
+                const auto input=measured?run->project->prepareWidgetMeasurementFile(run->measurement_path,run->measurement_source,targetExperiment)
+                    :run->project->prepareWidgetStructureFile(run->structure_path,run->structure_source);
+                run->file_input=input;
+                const auto cleanup=qScopeGuard([run,input] {
+                    if(run->project)run->project->finishWidgetFile(input);
                 });
                 run->file_input->bounded_result=!run->individual_tool.isEmpty();
                 run->file_input->source_current=[origin] { return origin->content_current(); };
@@ -11929,7 +11933,6 @@ struct AssistantViewModel::State {
                 if(!receiver || receiver->state_.get()!=this)return;
                 const bool stillTarget=targetCurrent();
                 if(!receiver || receiver->state_.get()!=this || !stillTarget)return;
-                editScope=begin_own_edit();run->edit_scope=editScope;
                 applied=measured?run->project->loadDataInto(targetExperiment,run->measurement_path):run->project->loadStructure(run->structure_path);
                 }
                 if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
@@ -12200,17 +12203,19 @@ struct AssistantViewModel::State {
         else if (step.target == "peak.type") action = Action{Action::Kind::PeakProfile, experiment, {}, step.text};
         else if (step.target == "excludedRegions.append") action = Action{Action::Kind::ExclusionAppend, experiment};
         if (action) {
+            run->edit_scope = begin_own_edit();
             run->control_input = run->project->prepareWidgetCreation(*action);
             run->control_input->bounded_result = run->complete_setup || !run->individual_tool.isEmpty();
         }
         else if (step.kind == AssistantWidgetInput::Kind::Value) {
             run->control_parameter = qobject_cast<ParameterItem*>(target->property("item").value<QObject*>());
             if (!run->control_parameter) return false;
+            run->edit_scope = begin_own_edit();
             run->parameter_input = run->project->prepareWidgetValue(*run->control_parameter->parameter(), step.text.toDouble());
         } else return true;
 
         if (!create_widget_current(run)) return false;
-        run->edit_scope = begin_own_edit(); native_call->may_have_written = true; return true;
+        native_call->may_have_written = true; return true;
     }
     void create_widget_finish_control(const std::shared_ptr<NativeCreateWidget>& run) {
         if (run->project) { run->project->finishWidgetCreation(run->control_input); run->project->finishWidgetInput(run->parameter_input); }

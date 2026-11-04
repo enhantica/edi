@@ -2642,3 +2642,20 @@ Structure view changes and report export obey the same lock. Between turns they
 notify the ordinary project-edit owner, ending any candidate before changing saved
 view state or writing durable reports. A later Stop cannot undo that manual work
 or remove its report index while leaving its files behind.
+
+
+## Grouped follow-up admission
+
+The Free-column menu establishes the assistant edit identity before preparing
+its exact eligible group, just as individual parameter controls do. The identity
+lasts through the original menu commit and its finish callback. Checking the trial
+lock first would reject the assistant's own group after a fit while cold-open
+edits still passed. Both Free and Fixed use this ordering. Ordinary observers
+remain blocked by the publication fence; the group membership and original popup
+proofs still gate the actual write.
+
+Normal structure, experiment and file preparations, and position-derived
+background naming follow the same admission order. Their existing scope guards
+release the identity on refusal, exceptions and owner replacement. A recorded
+sequence retains the preceding fit and relation state, then frees, fits, fixes and
+saves the independent mixed-site displacement group in both display modes.
