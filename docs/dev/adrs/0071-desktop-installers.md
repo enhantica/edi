@@ -19,6 +19,10 @@ source revision before linking edi. Use Qt's CMake deployment support to collect
 plugins, Qt libraries and runtime dependencies into one staged application. Include the native assistant
 runtime, lifetime guard, licences and notices. No Python installation is required on the user's machine.
 
+The installer jobs use one locked Pixi workspace on all platforms. Its Qt and native compiler pins
+match the developer app workspace, with an offline gate preventing drift. Host SDKs provide the
+platform-specific compiler infrastructure; users of the installed app need no Pixi environment.
+
 Deployment is opt-in (`EDI_DEPLOY_APP`); ordinary developer and WebAssembly builds keep their existing
 layout. macOS gets an application bundle; Linux and Windows get a relocatable application directory.
 Use a user-writable default installation directory and do not require administrator access.

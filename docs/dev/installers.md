@@ -6,34 +6,31 @@ The installed application includes its native assistant runtime and lifetime gua
 
 The `Desktop installers` workflow runs each platform independently and attaches installers plus the
 installation logs, rendered application image and JSON check results. Its source input is an exact
-crysta commit. The Windows job uses the pinned official Qt 6.11.2 MSVC kit; Linux and macOS use the
-locked app environment. Native compilation uses at most four parallel jobs.
+crysta commit. All platform jobs use the locked workspace in `tools/installer/pixi.toml`. Its Qt and compiler pins
+match the app workspace and are checked by `installer-check`. Host SDKs supply MSVC/Windows SDK
+and Xcode; portable build/runtime libraries come from Pixi. Native compilation uses at most four jobs.
+
 
 ## Local Linux build
 
-Install the packaging tools into a separate Python environment:
+Install the locked toolchain, then build against a crysta checkout:
 
 ```sh
-python -m pip install -r tools/installer/requirements.txt
-```
-
-From the app environment, build against a crysta checkout:
-
-```sh
-pixi run -e app python tools/installer/build.py \
-  --crysta-source ../crysta --work build/installer \
-  --patchelf /absolute/path/to/patchelf
-python tools/installer/package.py tools --output build/installer/ifw
-python tools/installer/package.py package \
-  --stage build/installer/stage --tools build/installer/ifw/tools \
-  --output build/installer/package
+pixi install --frozen --manifest-path tools/installer/pixi.toml
+pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/build.py" \
+  --crysta-source "$PWD/../crysta" --work "$PWD/build/installer"
+pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/package.py" \
+  tools --output "$PWD/build/installer/ifw"
+pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/package.py" \
+  package --stage "$PWD/build/installer/stage" --tools "$PWD/build/installer/ifw/tools" \
+  --output "$PWD/build/installer/package"
 ```
 
 Choose a fresh work/output directory for another build. The package directory's `installer.json` names
 the generated installer and zip. Qualify it with:
 
 ```sh
-python tools/installer/package.py test \
+pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/package.py" test \
   --installer /absolute/path/to/the/installer.run --output build/installer/test
 ```
 

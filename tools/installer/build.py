@@ -8,78 +8,9 @@ import platform
 import shutil
 import subprocess
 import sys
-import tarfile
-import urllib.request
 from pathlib import Path
 
-import jinja2
-import py7zr
-import yaml
-from package import ROOT, SYSTEM, relocate_linux, run, sha256
-
-
-def download(url: str, digest: str, path: Path) -> None:
-    if not url.startswith(('https://download.qt.io/', 'https://github.com/openai/codex/')):
-        raise RuntimeError('Build input must use its pinned official HTTPS source')
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.is_file() or sha256(path) != digest:
-        with (
-            urllib.request.urlopen(url, timeout=30) as response,  # noqa: S310
-            path.open('wb') as stream,
-        ):
-            shutil.copyfileobj(response, stream)
-    if sha256(path) != digest:
-        raise RuntimeError(f'Build input checksum differs: {path.name}')
-
-
-def windows_inputs(work: Path) -> tuple[Path, Path]:
-    kit = json.loads((ROOT / 'tools/installer/windows-qt.json').read_text())
-    sdk = work / 'qt'
-    for index, archive in enumerate(kit['archives']):
-        path = work / 'downloads' / f'qt-{index}.7z'
-        download(archive['url'], archive['sha256'], path)
-        with py7zr.SevenZipFile(path) as compressed:
-            compressed.extractall(sdk)  # noqa: S202 - checksum-pinned 7z, not tarfile
-    qt = sdk
-    (qt / 'bin/qt.conf').write_text('[Paths]\nPrefix=..\n')
-    recipe = yaml.safe_load((ROOT / 'tools/deps/assistant-runtime/recipe.yaml').read_text())
-    template = jinja2.Environment(
-        variable_start_string='${{',
-        variable_end_string='}}',
-        undefined=jinja2.StrictUndefined,
-        autoescape=False,  # noqa: S701 - recipe expressions, not HTML
-    )
-    context = {'target_platform': 'win-64'}
-    for name, value in recipe['context'].items():
-        context[name] = template.from_string(str(value)).render(context)
-    source = recipe['source'][0]
-    url = template.from_string(source['url']).render(context)
-    digest = template.from_string(source['sha256']).render(context)
-    archive = work / 'downloads/assistant.tar.gz'
-    download(url, digest, archive)
-    unpacked = work / 'upstream-runtime'
-    unpacked.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(archive) as compressed:
-        compressed.extractall(unpacked, filter='data')
-    manifests = list(unpacked.rglob('codex-package.json'))
-    if len(manifests) != 1:
-        raise RuntimeError('Official assistant archive has no unique package root')
-    runtime = work / 'runtime-prefix'
-    run([
-        sys.executable,
-        ROOT / 'tools/deps/assistant-runtime/install.py',
-        '--source',
-        manifests[0].parent,
-        '--licenses',
-        ROOT / 'data/assistant/runtime',
-        '--prefix',
-        runtime,
-        '--target',
-        context['target'],
-        '--archive-sha256',
-        digest,
-    ])
-    return qt, runtime
+from package import ROOT, SYSTEM, relocate_linux, run
 
 
 def collect_notices(stage: Path, qt: Path, crysta: Path) -> None:
@@ -90,7 +21,7 @@ def collect_notices(stage: Path, qt: Path, crysta: Path) -> None:
     )
     notices.mkdir(parents=True, exist_ok=True)
     shutil.copy2(crysta / 'LICENSE', notices / 'crysta-LICENSE')
-    records = qt / 'conda-meta'
+    records = (qt.parent if SYSTEM == 'windows' else qt) / 'conda-meta'
     if records.is_dir():
         for record in records.glob('*.json'):
             metadata = json.loads(record.read_text())
@@ -109,15 +40,14 @@ def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> N
         raise RuntimeError('The crysta source checkout is missing')
     if (work / 'stage').exists():
         raise RuntimeError('Stage already exists; choose a fresh build directory')
-    runtime = None
-    if SYSTEM == 'windows':
-        qt, runtime = windows_inputs(work)
     if qt is None:
         value = os.environ.get('PIXI_ENVIRONMENT_PREFIX') or os.environ.get('CONDA_PREFIX')
         if not value:
             raise RuntimeError('Specify the installed Qt prefix')
         qt = Path(value)
     qt = qt.resolve()
+    if SYSTEM == 'windows':
+        qt /= 'Library'
     engine, prefix, app, stage = [work / name for name in ['crysta', 'prefix', 'app', 'stage']]
     common = [
         '-G',
@@ -130,10 +60,8 @@ def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> N
     if SYSTEM == 'windows':
         common.append('-DCMAKE_CXX_FLAGS=/utf-8')
         options.extend([
-            '-DCRYSTA_EIGEN_FETCH=ON',
-            '-DBUILD_TESTING=OFF',
-            '-DEIGEN_BUILD_TESTING=OFF',
-            '-DEIGEN_BUILD_DOC=OFF',
+            f'-DEigen3_DIR={qt.as_posix()}/share/eigen3/cmake',
+            f'-DCMAKE_PREFIX_PATH={qt.as_posix()}',
         ])
     run(['cmake', '-S', crysta, '-B', engine, *common, *options])
     run(['cmake', '--build', engine, '--target', 'crysta_core', 'crysta_cli', '--parallel', '4'])
@@ -142,16 +70,25 @@ def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> N
         '-DEDI_BUILD_APP=ON',
         '-DEDI_BUILD_BINDINGS=OFF',
         '-DEDI_DEPLOY_APP=ON',
-        f'-DCMAKE_PREFIX_PATH={prefix};{qt}',
+        f'-DCMAKE_PREFIX_PATH={prefix.as_posix()};{qt.as_posix()}',
     ]
-    if runtime:
-        options.append(f'-DEDI_ASSISTANT_RUNTIME_PREFIX={runtime}')
     run(['cmake', '-S', ROOT, '-B', app, *common, *options])
     run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4'])
     run(['cmake', '--install', app, '--component', 'desktop', '--prefix', stage])
+    if SYSTEM == 'windows':
+        run([
+            'cmake',
+            f'-DSTAGE={stage.as_posix()}',
+            f'-DPREFIX={qt.parent.as_posix()}',
+            '-P',
+            ROOT / 'tools/installer/windows-runtime.cmake',
+        ])
     if SYSTEM == 'linux':
         if not patchelf:
-            raise RuntimeError('Linux deployment requires the patchelf build tool')
+            found = shutil.which('patchelf')
+            if not found:
+                raise RuntimeError('Linux deployment requires the patchelf build tool')
+            patchelf = Path(found)
         relocate_linux(stage, patchelf, qt)
     collect_notices(stage, qt, crysta)
     if SYSTEM == 'macos':

@@ -7,6 +7,10 @@ description: >-
   skip the post-job cleanup. The launcher pin MUST agree with the `requires-pixi`
   declaration in pixi.toml — the hub's org-toolchain parity gate fails closed on a mismatch,
   and pixi itself refuses to run when the installed launcher violates `requires-pixi`.
+inputs:
+  manifest-path:
+    description: Pixi workspace manifest
+    default: pixi.toml
 runs:
   using: 'composite'
   steps:
@@ -23,5 +27,6 @@ runs:
         # always succeeds, is prepended to PATH for the job, and never clobbers the machine's
         # shared ~/.pixi/bin (which the hub VM also uses).
         pixi-bin-path: ${{ runner.temp }}/pinned-pixi/pixi
+        manifest-path: ${{ inputs.manifest-path }}
         frozen: true
         post-cleanup: false

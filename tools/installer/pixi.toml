@@ -1,0 +1,61 @@
+[workspace]
+name = "edi-installer"
+channels = ["conda-forge"]
+preview = ["pixi-build"]
+requires-pixi = "==0.76.2"
+platforms = [
+    { platform = "linux-64", glibc = "2.34" },
+    { platform = "osx-arm64", macos = "14.0" },
+    "win-64",
+]
+
+[dependencies]
+python = "3.14.*"
+cmake = ">=3.26"
+ninja = "*"
+nanobind = "==3.1.0"
+qt6-main = "6.11.2.*"
+qt6-graphs = "6.11.2.*"
+qt6-quick3d = "6.11.2.*"
+libvulkan-headers = "1.4.*"
+edi-assistant-runtime = { path = "../deps/assistant-runtime" }
+
+[pypi-dependencies]
+py7zr = "==1.1.3"
+
+[target.linux-64.dependencies]
+cxx-compiler = "1.11.*"
+gcc_impl_linux-64 = { version = "==14.3.0", build = "h235f0fe_19" }
+gxx_impl_linux-64 = { version = "==14.3.0", build = "h2185e75_19" }
+libgcc = { version = "==15.2.0", build = "he0feb66_19" }
+libgcc-devel_linux-64 = { version = "==14.3.0", build = "hf649bbc_119" }
+libstdcxx = { version = "==15.2.0", build = "h934c35e_19" }
+libstdcxx-devel_linux-64 = { version = "==14.3.0", build = "h9f08a49_119" }
+libgomp = { version = "==15.2.0", build = "he0feb66_19" }
+sysroot_linux-64 = { version = "==2.28", build = "h4ee821c_9" }
+eigen = { version = "==3.4.0", build = "h54a6638_2" }
+sleef = { version = "==3.9.0", build = "ha0421bc_0" }
+weston = "16.*"
+xwayland = "24.*"
+mesa-llvmpipe = "26.*"
+libgles-devel = "1.7.*"
+libglu = "9.0.*"
+patchelf = "==0.19.3"
+
+[target.osx-arm64.dependencies]
+tapi = { version = "==1600.0.11.8", build = "hb561403_4" }
+clang_osx-arm64 = "23.*"
+clangxx_osx-arm64 = "23.*"
+compiler-rt = "23.*"
+libcxx = { version = "==23.1.4", build = "h55c6f16_0" }
+libcxx-devel = { version = "==23.1.4", build = "h6dc3340_0" }
+llvm-openmp = { version = "==23.1.4", build = "hdb3d66b_0" }
+clang_impl_osx-arm64 = { version = "==23.1.3", build = "default_h79071a4_1" }
+clangxx_impl_osx-arm64 = { version = "==23.1.3", build = "default_ha944c1a_1" }
+eigen = { version = "==3.4.0", build = "h784d473_2" }
+sleef = { version = "==3.9.0", build = "hb028509_0" }
+
+[target.win-64.dependencies]
+eigen = "==3.4.0"
+sleef = "==3.9.0"
+cxx-compiler = "*"

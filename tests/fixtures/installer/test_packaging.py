@@ -4,6 +4,7 @@
 import importlib.util
 import os
 import subprocess
+import tomllib
 from pathlib import Path
 from unittest import mock
 
@@ -84,3 +85,14 @@ def test_dependency_check_allows_packaged_and_system_libraries(tmp_path):
     )
     with mock.patch.object(PACKAGE.subprocess, 'run', return_value=result):
         assert 'app' in PACKAGE.check_linux_dependencies(tmp_path, {})
+
+
+def test_installer_workspace_preserves_the_app_toolchain_pins():
+    root = Path(__file__).resolve().parents[3]
+    app = tomllib.loads((root / 'pixi.toml').read_text())['feature']['app']
+    installer = tomllib.loads((root / 'tools/installer/pixi.toml').read_text())
+    for module in ['qt6-main', 'qt6-graphs', 'qt6-quick3d', 'libvulkan-headers']:
+        assert installer['dependencies'][module] == app['dependencies'][module]
+    for platform in ['linux-64', 'osx-arm64']:
+        for name, specification in app['target'][platform]['dependencies'].items():
+            assert installer['target'][platform]['dependencies'][name] == specification
