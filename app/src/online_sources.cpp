@@ -17,10 +17,10 @@ const QStringList kAllKinds{QStringLiteral("structure"), QStringLiteral("experim
 
 QList<OnlineSourcesModel::Source> builtin_sources() {
     return {
-        {QStringLiteral("cod"), QStringLiteral("COD"), QStringLiteral("https://www.crystallography.net/cod"),
+        {QStringLiteral("cod"), QStringLiteral("Crystallography Open Database (COD)"), QStringLiteral("https://www.crystallography.net/cod"),
          {QStringLiteral("structure")}, true, true, {}},
-        // One EasyDiffraction source, two locations in order: GitHub, then the mirror (the owner, 2026-11-04).
-        {QStringLiteral("easydiffraction"), QStringLiteral("EasyDiffraction"),
+        // The names the owner chose (2026-11-04). One EasyDiffraction source, two locations in order: GitHub, then the mirror (the owner, 2026-11-04).
+        {QStringLiteral("easydiffraction"), QStringLiteral("EasyDiffraction Database"),
          QStringLiteral("https://raw.githubusercontent.com/enhantica/edi-data/main"), kAllKinds, true, true, {},
          {QStringLiteral("https://data.easydiffraction.org")}},
     };
