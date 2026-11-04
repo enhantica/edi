@@ -24,6 +24,6 @@
 - **Descent:** the default. The fast descent, which this project declared before, reaches the same minimum from this
   start (reduced χ² 6.7125 against 6.7130, every parameter within 0.2 s.u.) in 104 iterations instead of 42.
 - **Expected values:** `expected.json` holds FullProf's fit of the same pattern, background, profile and magnetic
-  model (`knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/`, S/L and D/L held at crysta's fitted values): Rwp
-  within 5 % of FullProf's 4.75 %, and the three well-determined moment components within 0.15 μB of FullProf's, about
+  model (`knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/`, S/L and D/L both held at 0.0619): Rwp within 5 % of
+  FullProf's 4.91 %, and the three well-determined moment components within 0.15 μB of FullProf's, about
   four of its standard deviations. Co1's Mz is not compared: powder data barely determine it.

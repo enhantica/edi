@@ -14,12 +14,12 @@
   "phases": [
     "cosio"
   ],
-  "r_wp": 0.0475,
+  "r_wp": 0.0491,
   "artifacts_sha256": {
-    "cosio.pcr": "50429c4ca42d94db0273972d37737116c6b85dbce7480395a4c2f8490bbe84f6",
-    "cosio.out": "339f0cb008186995060ecac29d96c42ebfaaf815a02145f8ddd23c2350ca2321",
-    "cosio.sum": "eaf1f7bdbc1d51fd74be3d35bfb3fd8855998700c2f607240839cd8f934fbae9",
-    "cosio_1.prf": "ecbf97a72434db543c879cbbff85ca73a3ce88133a1626c0a6b3fd34a7867d0c",
-    "cosio1.mcif": "4d38603134f6fe9fbae90b706a86fbe6626fc6f869cd5031c186ba90098ad75e"
+    "cosio.pcr": "5dab58e2d0606feb180e32a9ec6eb5fee1f20f33c2fefb176341ce9e082bc72f",
+    "cosio.out": "42dc2b6698ec194498cec241bd42152c1dccb5e28f73bccb455a70f9dc9f390e",
+    "cosio.sum": "de625674862887388ccb6955f266ddd654167ae640e785b56838ac9d7bec2565",
+    "cosio_1.prf": "b4b7c73f5b5b34e79d6833473287b99e49418cfe6f140e2e9c24a4c6717e73f4",
+    "cosio1.mcif": "4029da011d015b7a63a0eb6aab32fab9121743b739b4f9433fde097c351cc438"
   }
 }

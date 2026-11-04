@@ -5,14 +5,16 @@ at authoring time. Tests read these committed files and never run FullProf.
 
 The model is the magnetic structure in Pnma.1 (irrep mGM1+): Co1 on 4a with all three moment components free, Co2
 on 4c with My free. The cell, the free coordinates, the zero shift and the profile are fitted too: the
-Thompson-Cox-Hastings pseudo-Voigt (U, V, W, Y) with Finger-Cox-Jephcoat axial-divergence asymmetry, its S/L 0.08393
-and D/L 0.03529 held at the values crysta fits for the project, which FullProf cannot refine together. Co1 and Co2
+Thompson-Cox-Hastings pseudo-Voigt (U, V, W, Y) with Finger-Cox-Jephcoat axial-divergence asymmetry, its S/L and
+D/L both held at 0.0619, the shared value the project fits (FullProf cannot refine them together). Co1 and Co2
 share one Biso, held at 0.269 Å² from the 56.8 K pattern. The background has the project's sixteen points, none
 between 7.6° and 12.6° so that none sits under the first magnetic peak, and only 0–6° and the dead detector cell are
 excluded, as in `docs/user/cli/pd-neut-cwl_cosio-d20_2k`.
 
-FullProf's result: Rwp 4.75 % (`cosio.sum`); Co1 moment (1.00(4), 3.08(2), −0.15(37)) μB, |M| 3.24(8) μB; Co2 My
-2.73(4) μB. Co1's Mz is poorly determined by powder data.
+FullProf's result: Rwp 4.91 % (`cosio.sum`); cell 10.31593(14), 6.00680(9), 4.79115(7) Å, zero shift 0.3992(20)°;
+Co1 moment (0.98(4), 3.07(2), −0.05(88)) μB, |M| 3.23(18) μB; Co2 My 2.75(4) μB. Co1's Mz is poorly determined by
+powder data. The FCJ quadratures of FullProf and crysta differ, so the zero shift and the cell can differ by a few
+standard deviations.
 
 Rerun from this directory with the data file `cosio.dat` (the pattern above in FullProf's XY format):
 
@@ -21,8 +23,8 @@ Rerun from this directory with the data file `cosio.dat` (the pattern above in F
 Files: `cosio.pcr` (input), `cosio.out` and `cosio.sum` (output), `cosio_1.prf` (profile), `cosio1.mcif`
 (FullProf's magnetic CIF of the result). SHA-256:
 
-    50429c4ca42d94db0273972d37737116c6b85dbce7480395a4c2f8490bbe84f6  cosio.pcr
-    339f0cb008186995060ecac29d96c42ebfaaf815a02145f8ddd23c2350ca2321  cosio.out
-    eaf1f7bdbc1d51fd74be3d35bfb3fd8855998700c2f607240839cd8f934fbae9  cosio.sum
-    ecbf97a72434db543c879cbbff85ca73a3ce88133a1626c0a6b3fd34a7867d0c  cosio_1.prf
-    4d38603134f6fe9fbae90b706a86fbe6626fc6f869cd5031c186ba90098ad75e  cosio1.mcif
+    5dab58e2d0606feb180e32a9ec6eb5fee1f20f33c2fefb176341ce9e082bc72f  cosio.pcr
+    42dc2b6698ec194498cec241bd42152c1dccb5e28f73bccb455a70f9dc9f390e  cosio.out
+    de625674862887388ccb6955f266ddd654167ae640e785b56838ac9d7bec2565  cosio.sum
+    b4b7c73f5b5b34e79d6833473287b99e49418cfe6f140e2e9c24a4c6717e73f4  cosio_1.prf
+    4029da011d015b7a63a0eb6aab32fab9121743b739b4f9433fde097c351cc438  cosio1.mcif
