@@ -119,19 +119,21 @@ def test_magnetic_examples_share_cobalt_displacements_and_exclude_only_dead_cell
     directory = CLI / name / 'project'
     assert directory.is_dir(), 'Each magnetic example delivers a loadable native project'
     model = edi.Project.load(directory)
-    assert '_minimizer.descent' not in reference.columns(
-        (directory / 'analysis/analysis.edi').read_text()
-    ), 'The magnetic examples select the default descent through their saved recipe'
+    descent = reference.columns((directory / 'analysis/analysis.edi').read_text()).get(
+        '_minimizer.descent', []
+    )
     model.analysis.calculate()
     peak = model.experiment.peak
     sample, detector = peak.asym_fcj_1, peak.asym_fcj_2
     assert sample.value == detector.value, 'The cobalt example uses equal axial apertures'
     if name.endswith('_2k'):
+        assert descent == [], 'The single magnetic fit selects the default descent'
         assert sample.free and not detector.free, 'The single fit frees exactly one axial aperture'
         sample.value = 0.04
         model.analysis.calculate()
         assert detector.value == sample.value, 'The detector aperture follows the sample aperture'
     else:
+        assert descent == ['fast_descent'], 'The magnetic scan selects the recorded fast descent'
         assert not sample.free and not detector.free, 'The scan fixes both axial apertures'
         assert sample.value == pytest.approx(0.0619, abs=1e-12), (
             'The scan holds the common aperture used in the committed FullProf rerun'

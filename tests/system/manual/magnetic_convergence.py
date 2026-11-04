@@ -149,6 +149,20 @@ def check_moment_trend(rows):
     )
 
 
+def check_file_convergence(directory, rows):
+    with (directory / 'analysis/results-provenance.csv').open(newline='') as stream:
+        provenance = list(csv.DictReader(stream))
+    assert [row['file_path'] for row in provenance] == [row['file_path'] for row in rows], (
+        'Every result has its own termination record in the same file order'
+    )
+    stalled = [
+        (Path(row['file_path']).name, row['termination'])
+        for row in provenance
+        if row['termination'] != 'chi_converged'
+    ]
+    assert not stalled, f'Every file reaches chi_converged, observed {stalled}'
+
+
 def fit_scan(cold_first):
     with tempfile.TemporaryDirectory(prefix='magnetic-scan-') as scratch:
         directory = stage(MAGNETIC, scratch)
@@ -180,6 +194,7 @@ def fit_scan(cold_first):
         assert all(row['fit_result.success'].lower() == 'true' for row in rows), (
             'Every frame contributes a converged objective'
         )
+        check_file_convergence(directory, rows)
         check_moment_trend(rows)
         return {
             Path(row['file_path']).name: float(row['fit_result.reduced_chi_square'])
@@ -213,6 +228,9 @@ def nuclear_snapshot():
         assert not project.structure.atom_site_moment, 'The comparison is a nuclear-only project'
         result = project.analysis.fit()
         assert result.success, 'The nuclear control fit converges'
+        with (directory / 'analysis/results.csv').open(newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        check_file_convergence(directory, rows)
         outputs = sorted(directory.rglob('*.edi')) + sorted(directory.rglob('*.csv'))
         assert (directory / 'analysis/results.csv') in outputs, 'The control produces fit bytes'
         return {

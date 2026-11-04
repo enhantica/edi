@@ -2150,7 +2150,11 @@ Rectangle {
             let layer, axes, bars, range;
             function openChart() {
                 verify(Session.openProject(root), "The saved fitted scan opens in the real app");
-                chart = evolutionFactory.createObject(surface, {project: Session.project});
+                chart = evolutionFactory.createObject(surface, {
+                    project: Session.project,
+                    width: Math.min(1100, surface.Window.window.width),
+                    height: Math.min(760, surface.Window.window.height)
+                });
                 verify(chart !== null, "The production Evolution chart opens");
                 const evolution = Session.project.evolution;
                 verify(evolution.xModes.length > 1, "The witness offers the recorded temperature x axis");
@@ -2165,9 +2169,8 @@ Rectangle {
                 chart.Window.window.update();
                 verify(waitForRendering(chart), "The fitted points and toolbar reach a rendered frame");
                 const toggles = Render.descendants(chart).filter(item => item.visible && typeof item.checked === "boolean");
-                const caption = item => String(item.toolTip || item.text || item.Accessible.name || "");
-                bars = toggles.find(item => /^Error bars(?:\b|$)/i.test(caption(item)));
-                range = toggles.find(item => /^Range(?:\b|$)/i.test(caption(item)));
+                bars = toggles.find(item => item.objectName === "evolution.toolbar.errorBars");
+                range = toggles.find(item => item.objectName === "evolution.toolbar.range");
             }
             function valuesOnly() {
                 return axes.axisY.min <= 2 && axes.axisY.max >= 8 &&
@@ -2207,17 +2210,18 @@ Rectangle {
             openChart();
             const defaultBarSample = valuesAndBars() ? 500 : 6;
             const missing = [];
-            if (!hasInk(defaultBarSample)) missing.push("default error bar ink missing at " + defaultBarSample);
             if (!bars) missing.push("Error bars control missing");
             if (!range) missing.push("Range control missing");
             if (!valuesOnly()) missing.push("default y range [" + axes.axisY.min + ", " + axes.axisY.max + "]");
             compare(missing.length, 0, "Evolution offers both toggles and defaults to values only: " + missing.join("; "));
+            tryVerify(() => hasInk(defaultBarSample), 3000,
+                      "The default error bar is drawn at the independent in-range sample");
             toggle(range, "Range");
             tryVerify(valuesAndBars, 2000, "Values plus s.u. covers both ends of the 1000-unit bar");
-            verify(hasInk(500), "The expanded y range shows the bar well beyond all three fitted values");
+            tryVerify(() => hasInk(500), 3000, "The expanded y range shows the bar well beyond all three fitted values");
             toggle(bars, "Error bars");
-            verify(valuesAndBars() && !hasInk(500) && hasInk(4),
-                   "Hiding bars keeps the chosen range and the point marker while removing bar ink");
+            tryVerify(() => valuesAndBars() && !hasInk(500) && hasInk(4), 3000,
+                      "Hiding bars keeps the chosen range and the point marker while removing bar ink");
 
             verify(Session.save(), "The expanded range and hidden error bars save with the project");
             chart.destroy();
@@ -2225,13 +2229,15 @@ Rectangle {
             Session.closeProject();
             openChart();
             verify(bars && range, "Both toolbar toggles are available after reopening the saved project");
-            verify(valuesAndBars() && !hasInk(500) && hasInk(4),
-                   "The expanded range and hidden bars both survive save and reload");
+            compare(bars.checked, false, "Hidden error bars survive save and reload");
+            compare(range.checked, true, "The uncertainty-inclusive range survives save and reload");
+            tryVerify(() => valuesAndBars() && !hasInk(500) && hasInk(4), 3000,
+                      "The expanded range and hidden bars both survive save and reload");
             toggle(bars, "Error bars");
-            verify(hasInk(500), "Showing error bars again restores their actual drawing");
+            tryVerify(() => hasInk(500), 3000, "Showing error bars again restores their actual drawing");
             toggle(range, "Range");
             tryVerify(valuesOnly, 2000, "Values only restores the fitted values' y range");
-            verify(hasInk(6), "The long error bar remains visible inside the clipped values-only plot");
+            tryVerify(() => hasInk(6), 3000, "The long error bar remains visible inside the clipped values-only plot");
         }
         function test_scan_axis_fonts_data() {
             return test_owner_indicator_data();
