@@ -367,18 +367,24 @@ TestCase {
     }
     function test_zero_moment_modulus_uses_the_fitted_bound() {
         covarianceMomentWitness("fitted-zero");
-        const spherical = momentFormView("Spherical", false);
         // The fixture's component bounds are 0.1, 0.2 and 0.3 μB.
         // Square them to get sigma(u), then sum the variance of ux + uy + uz.
         const variance = .01 ** 2 + .04 ** 2 + .09 ** 2 +
             2 * (-.25 * .01 * .04 + .55 * .01 * .09 + .15 * .04 * .09);
         const bound = variance ** .25;
-        verify(matchesRoundedMomentUncertainty(spherical.editors[0].text, bound),
-               "The zero spherical magnitude shows its covariance bound: " + spherical.editors[0].text);
-        verifyUndeterminedAngles(spherical.editors, [1, 2]);
-        const crystal = momentFormView("Crystal axes", false);
-        verify(matchesRoundedMomentUncertainty(crystal.modulus.text, bound),
-               "The zero crystal-axis modulus shows the same covariance bound: " + crystal.modulus.text);
+        const failures = [];
+        for (const form of ["Spherical", "Crystal axes", "Cartesian"]) {
+            const {editors, modulus} = momentFormView(form, false);
+            const cell = form === "Spherical" ? editors[0] : modulus;
+            verify(cell && cell.visible, form + " displays the modulus cell");
+            compare(readMomentToken(cell.text).value, 0, form + " displays a fitted zero modulus");
+            if (!matchesRoundedMomentUncertainty(cell.text, bound))
+                failures.push(form + " shows " + cell.text);
+            if (form === "Spherical")
+                verifyUndeterminedAngles(editors, [1, 2]);
+        }
+        compare(failures.length, 0,
+                "Every form shows the fitted zero modulus bound " + bound.toFixed(9) + " μB: " + failures.join("; "));
     }
     function verifyUndeterminedAngles(editors, angles) {
         const errors = [];
