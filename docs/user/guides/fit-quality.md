@@ -66,7 +66,7 @@ counts are below 1, its factors carry that rounding.
 | [`pd-neut-cwl_cosio-d20`](../cli/pd-neut-cwl_cosio-d20/index.md) | edi | 1418 | 42 | 3.01 | 3.97 | 1.88 | 4.452 |
 |  | FullProf | 1418 | 42 | 3.02 | 4.02 | 1.88 | 4.56 |
 |  | diffraction-lib | 1418 | 42 | 5.57 | 7.87 | 1.88 | 17.52 |
-| [`pd-neut-cwl_cosio-d20_2k`](../cli/pd-neut-cwl_cosio-d20_2k/index.md) | edi | 1438 | 41 | 3.66 | 4.87 | 1.88 | 6.713 |
+| [`pd-neut-cwl_cosio-d20_2k`](../cli/pd-neut-cwl_cosio-d20_2k/index.md) | edi | 1438 | 41 | 3.66 | 4.87 | 1.88 | 6.712 |
 |  | FullProf | 1438 | 40 | 3.70 | 4.94 | 1.88 | 6.902 |
 |  | diffraction-lib | – | – | – | – | – | not compared¹ |
 | [`pd-neut-cwl_lmo-echidna`](../cli/pd-neut-cwl_lmo-echidna/index.md) | edi | 3002 | 24 | 3.91 | 5.00 | 3.23 | 2.394 |
@@ -141,7 +141,7 @@ Examples whose programs free different numbers of parameters:
 | `pd-neut-cwl_lbco-hrpt` | lbco | 3.890791(38) | 3.89079 | 3.890868(38) |
 | `pd-neut-cwl_hs-hrpt` | hs | 6.86399(47), 14.1417(11) | 6.86245, 14.13864 | – |
 | `pd-neut-cwl_cosio-d20` | cosio | 10.30873(25), 6.00379(15), 4.78665(12) | 10.30872, 6.00378, 4.78665 | 10.30844, 6.00358, 4.78671 |
-| `pd-neut-cwl_cosio-d20_2k` | cosio | 10.31519(34), 6.00633(20), 4.79084(16) | 10.31593, 6.00680, 4.79115 | – |
+| `pd-neut-cwl_cosio-d20_2k` | cosio | 10.31522(34), 6.00635(20), 4.79085(16) | 10.31593, 6.00680, 4.79115 | – |
 | `pd-neut-cwl_lmo-echidna` | lmo | 2.875137(62), 14.18322(37) | 2.87516, 14.18333 | 2.875718(17), 14.18651(15) |
 | `pd-neut-cwl_y2o3-spodi` | y2o3 | 10.604451(72) | 10.60445 | 10.604524(71) |
 | `pd-neut-cwl_yalo3-al2o3-spodi` | Al2O3 | 4.75840(43), 12.9668(22) | 4.75674, 12.97262 | – |
