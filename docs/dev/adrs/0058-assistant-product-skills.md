@@ -820,3 +820,27 @@ confirm a radiation type. Single-choice capability limits do not justify applyin
 that model to incompatible data. Numeric calibration remains an open question.
 This extends the existing prerequisite and question-card contract without a new
 selector widget or a second source of experiment-type options.
+
+## Estimated-background fitting in a delegated full powder fit
+
+The earlier conditional instruction to revisit background only when residuals
+implicate it let an assistant accept a fixed estimate from quiet-point summaries,
+then simplify profile terms that were confounded with that baseline. A separate
+session could choose the needed trial, so the same strategy did not produce
+consistent coverage. The default for delegated full powder fitting now requires
+an assessed fit of the actual eligible estimated-background group, retaining
+accepted work. It does not change anchor positions, type or measured data.
+
+An estimate is initialization and never an adequate finished background. A full
+powder fit requires fitted background intensities/terms and actual assessment.
+Explicit user scope/flags, independent fixed calibration and native ineligibility
+remain binding, but a restriction preventing fitting an estimate means the full
+fit is limited or incomplete. A rejected trial needs diagnosis and a supported
+alternative; Undo, default flags, quiet-point summaries and convergence cannot
+certify an unfitted estimate. Independently measured fixed calibration remains
+distinct from an estimate. Profile restrictions based
+on an earlier background are reassessed after that background changes. This
+supersedes the earlier residual-only background trigger for this scope, without
+prescribing specimen values, a target statistic or a universal first-fit order.
+Actual autonomous runs, separate from prompted diagnostic continuations, assess
+model adherence; skill text alone is not proof that every model follows it.

@@ -8,7 +8,7 @@ description: Choose and revise a fitting strategy from actual model, data, nativ
 Say fit, fitting and fitted to the user, never refine or refinement: these are Edi's words. The
 references below keep their own titles.
 
-Version: 1.6.7. Follow the user's goal, supplied constraints and actually offered
+Version: 1.6.8. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
@@ -24,9 +24,10 @@ planning; native eligibility and ownership still apply.
    establishes neutron powder diffraction. If required type choices or calibration
    are missing/conflicting, collect the missing choices together with selectable
    question-card options matching the app, without reasking established facts. Show
-   Assistant and use offered structured questions; wait for the actual answer.
-   Without that flow, issue a FINAL question and END the turn. Do no creation,
-   import, independent structure preparation, setup, fitting or Save meanwhile.
+   Assistant before asking and wait for the actual answer. If required facts are
+   missing and no question-card flow is offered, issue a FINAL question and END
+   the turn. Do no creation, import, setup, fitting or Save while awaiting those
+   facts. When they are established, proceed without a redundant question.
 
 2. **Find the dominant current mismatch efficiently.** Start broad numerical
    assessment with offered `inspect_data view=summary` and suitable explicit
@@ -42,9 +43,15 @@ planning; native eligibility and ownership still apply.
 
 3. **Introduce the implicated group; retain accepted work.** Resolve observed
    position mismatch with eligible cell/offset/scale and supplied wavelength
-   anchored before widths or ADPs absorb it. Assess baseline bias before ADPs;
-   Estimate alone is not validation. Establish baseline evidence before profile
-   interpretation.
+   anchored before widths or ADPs absorb it. In a delegated full fit, assess the
+   eligible phase scale rather than leave its initial fixed default unexamined;
+   profile and ADPs must not compensate for a wrong intensity normalization.
+   Preserve explicit user-fixed or independently calibrated scale. Assess baseline bias before ADPs;
+   Estimate alone is not validation. For delegated full powder fitting, fit the
+   eligible estimated background as its own assessed block, retaining accepted
+   work, before accepting profile/ADP interpretation. An estimate is only a
+   starting point, never a completed fitted background. If this required block
+   cannot be completed, report an incomplete fit; do not silently omit it.
    Keep accepted useful eligible free groups in the fit by default while adding
    ONE new unvalidated scientific block. Before EACH fit reconcile the COMPLETE
    actual free population with accepted groups plus that one new block. A group
@@ -66,8 +73,9 @@ planning; native eligibility and ownership still apply.
    accepted stages; do not add unrelated groups or restart everything all-free.
    Use one exact uniform eligible group request when justified. Read the COMPLETE
    actual free population: set_free changes listed flags only, not omitted flags.
-   No group-first order, all-free background stage or sharing rule is universal;
-   explicit user groups/subsets/order/flags and automatic-background ownership win.
+   The default full-powder background block does not prescribe the first fit or
+   override user groups/subsets/order/flags, fixed calibration, native eligibility
+   or automatic-background ownership.
 
 4. **Assess before spending the next Undo.** Reconcile actual prerequisite replies
    and settle calculation before fitting. Read returned status/adopted FIRST.
@@ -92,7 +100,12 @@ planning; native eligibility and ownership still apply.
    fit, so the work ends with fit results, R-factors and a report. Never finish with
    `fit_result_current` false after such an Undo. Restricted
    convergence or negative-ADP Undo alone is not a completed structure fit;
-   diagnose large reduced chi-square rather than force it to one. Save/Report may
+   diagnose large reduced chi-square rather than force it to one. Before declaring
+   a delegated full powder fit complete, verify an adopted estimated-background
+   trial and its assessment. If background fitting was excluded, blocked or
+   rejected without a successful supported alternative, report the limited or
+   incomplete scope; do not call the estimated background adequate or the full
+   fit complete. Unperformed work is incomplete even if the solver converged. Save/Report may
    preserve scientifically limited work. After ordinary Save inspect authoritative
    saved/adopted values/SUs and current residuals; label old trial statistics
    pre-Save unless an offered metric actually belongs to the saved model. Use
@@ -130,10 +143,34 @@ or proof of scientific adequacy.
 Import a supplied CIF unless manual entry is requested. Initial Estimate uses
 current saved type/mode/settings unless manual anchors are explicit. Inspect
 anchors/terms/eligibility without imposing anchors or bypassing automatic ownership.
-Revisit eligible background when residuals implicate it, not as universal all-free
-setup. Obey fittability; alternative starts/families need supported operations and
-restorable state. Revisit temporary freezes and formerly unstable groups when new
-evidence makes them identifiable; negative-ADP Undo does not finish that assessment.
+For delegated full powder fitting, an estimated background is an initial model,
+not a measured fixed calibration. Inspect its actual eligible intensity/term
+parameters, free that eligible background group and run an assessed trial while
+retaining accepted free groups. Keep anchor positions, type, measured data and
+unrelated flags unchanged. Assess residuals, uncertainty and confounding; reject
+an unacceptable trial with genuine Undo. Near-unit quiet-point RMS or a small
+mean does not establish the baseline beneath peaks and does not replace this trial.
+
+An estimated background is NEVER adequate as the finished background of a full
+powder fit. Fitting it is required, not conditional on residual RMS, mean, solver
+convergence or a target chi-square. A rejected background trial requires diagnosis
+and a supported alternative; Undo alone does not complete the background work.
+
+Preserve an explicit user-fixed background, a restricted task scope, genuine
+independent calibration and native ownership. Do not change mode or invent
+anchors to bypass eligibility. If these prevent fitting an estimated background,
+state the concrete restriction and report the full fit as incomplete or limited;
+never turn the restriction into a claim that the estimate is adequate. This rule
+concerns fitting eligible background intensities/terms, not freeing anchor positions
+or every background field. An independently measured fixed calibration is not an
+estimated background.
+
+After materially changing the background, reassess profile/ADP restrictions based
+on the earlier baseline. A previously correlated X/Y pair is not permanently
+unidentifiable: compare its eligible joint fit from the improved model when that
+was the reason for simplifying it. Preserve a genuine user/calibration restriction.
+Obey fittability; alternative starts/families need supported operations and
+restorable state. Negative-ADP Undo does not finish that assessment.
 
 ### Widths, identifiability and implicated-group recovery
 
