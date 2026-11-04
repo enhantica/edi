@@ -114,6 +114,7 @@ NOT_MODEL = {
     'BankMetric': 'a fit report',
     'FitResultBase': 'a fit report',
     'LeastSquaresFitResult': 'a fit report',
+    'MagneticDescription': "a structure's magnetic description held as written, one value crysta reads and writes",
 }
 # Members of a model class that are not model storage, each with its reason.
 NOT_STORAGE = {
@@ -124,6 +125,7 @@ NOT_STORAGE = {
     'Project::edits_': "the project's editor record",
     'Project::tail_': "the project's last member, which links its collections to its record",
     'FitResultRecord::scan_results': "a scan's results by file, shared, not saved (ADR-0034)",
+    'Structure::magnetic': "the magnetic description as written, crysta's to read, check and write (ADR-0068)",
 }
 # Member types that are a part of a table, not a cell of it.
 PARTS = {

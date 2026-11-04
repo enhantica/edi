@@ -2765,7 +2765,7 @@ struct AtomSiteMoment : std::enable_shared_from_this<AtomSiteMoment> {
     Parameter crystalaxis_x;
     Parameter crystalaxis_y;
     Parameter crystalaxis_z;
-    std::string symmform;
+    detail::WrittenText symmform;
 
     AtomSiteMoment();
 
@@ -2827,6 +2827,16 @@ struct RowSchema<edi::AtomSiteAniso> {
     static constexpr const char* name = "_atom_site_aniso";
     static constexpr auto fields = std::tuple{&edi::AtomSiteAniso::id, &edi::AtomSiteAniso::adp_11, &edi::AtomSiteAniso::adp_22, &edi::AtomSiteAniso::adp_33, &edi::AtomSiteAniso::adp_12, &edi::AtomSiteAniso::adp_13, &edi::AtomSiteAniso::adp_23};
     static constexpr std::array items{"id", "adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"};
+};
+
+// The columns of the `_atom_site_moment` table (ADR-0068).
+template <>
+struct RowSchema<edi::AtomSiteMoment> {
+    static constexpr const char* name = "_atom_site_moment";
+    static constexpr auto fields = std::tuple{&edi::AtomSiteMoment::id, &edi::AtomSiteMoment::crystalaxis_x,
+                                              &edi::AtomSiteMoment::crystalaxis_y, &edi::AtomSiteMoment::crystalaxis_z,
+                                              &edi::AtomSiteMoment::symmform};
+    static constexpr std::array items{"id", "crystalaxis_x", "crystalaxis_y", "crystalaxis_z", "symmform"};
 };
 }  // namespace crysta
 
@@ -5697,8 +5707,11 @@ static_assert(detail::one_entry_per_column(DataCategory::columns, DataCategory::
 // crysta's computed buffers, shared like the other computed columns.
 struct PdCalcCategory {
     static constexpr const char* name = "_pd_calc";
-    static constexpr auto columns = std::tuple{&PdDataBase::component_intensities_net};
-    static constexpr std::array items{"component_intensities_net"};
+    static constexpr auto columns = std::tuple{&PdDataBase::component_intensities_net,
+                                               &PdDataBase::component_intensities_magnetic,
+                                               &PdDataBase::component_intensities_nuclear};
+    static constexpr std::array items{"component_intensities_net", "component_intensities_magnetic",
+                                      "component_intensities_nuclear"};
 };
 static_assert(detail::one_entry_per_column(PdCalcCategory::columns, PdCalcCategory::items));
 struct PdCalcOverallCategory {
@@ -5731,6 +5744,36 @@ struct RenderingPlotCategory {
     static constexpr const char* derived =
         "the plot renderer a file declares: each host draws with its own, so the loader checks it and keeps nothing";
 };
+// A structure's magnetic description besides its moments, held as written in Structure::magnetic: crysta reads,
+// checks and writes it (ADR-0068).
+struct SpaceGroupMagnCategory {
+    static constexpr const char* name = "_space_group_magn";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
+struct ParentSpaceGroupCategory {
+    static constexpr const char* name = "_parent_space_group";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
+struct SpaceGroupSymopMagnOperationCategory {
+    static constexpr const char* name = "_space_group_symop_magn_operation";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
+struct SpaceGroupSymopMagnCenteringCategory {
+    static constexpr const char* name = "_space_group_symop_magn_centering";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
+struct ParentPropagationVectorCategory {
+    static constexpr const char* name = "_parent_propagation_vector";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
+struct SpaceGroupMagnTransformsCategory {
+    static constexpr const char* name = "_space_group_magn_transforms";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
+struct MagneticFormFactorCategory {
+    static constexpr const char* name = "_magnetic_form_factor";
+    static constexpr const char* derived = "held as written in the structure's magnetic description; crysta checks it";
+};
 
 // The computed categories: columns crysta published, shared and read-only here, with ordinal ids.
 struct SpaceGroupSymopCategory {
@@ -5746,6 +5789,16 @@ struct ExpandedAtomSiteCategory {
     static constexpr std::array items{"atom_site_id", "site_symmetry", "fract_x", "fract_y", "fract_z", "cartn_x", "cartn_y", "cartn_z", "occupancy", "u_iso", "cluster_id"};
 };
 static_assert(detail::one_entry_per_column(ExpandedAtomSiteCategory::columns, ExpandedAtomSiteCategory::items));
+
+struct ExpandedAtomSiteMomentCategory {
+    static constexpr const char* name = "_expanded_atom_site_moment";
+    static constexpr auto columns = std::tuple{&ExpandedAtomSiteMoments::atom_site_id, &ExpandedAtomSiteMoments::site_symmetry,
+                                               &ExpandedAtomSiteMoments::crystalaxis_x, &ExpandedAtomSiteMoments::crystalaxis_y,
+                                               &ExpandedAtomSiteMoments::crystalaxis_z};
+    static constexpr std::array items{"atom_site_id", "site_symmetry", "crystalaxis_x", "crystalaxis_y", "crystalaxis_z"};
+};
+static_assert(detail::one_entry_per_column(ExpandedAtomSiteMomentCategory::columns,
+                                           ExpandedAtomSiteMomentCategory::items));
 
 struct GeomBondCategory {
     static constexpr const char* name = "_geom_bond";

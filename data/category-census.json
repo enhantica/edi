@@ -220,6 +220,75 @@
       "row": "AtomSiteAniso"
     },
     {
+      "name": "_atom_site_moment",
+      "form": "loop",
+      "columns": [
+        {
+          "member": "AtomSiteMoment::id",
+          "type": "ItemKey",
+          "items": [
+            "id"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        },
+        {
+          "member": "AtomSiteMoment::crystalaxis_x",
+          "type": "Parameter",
+          "items": [
+            "crystalaxis_x"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "AtomSiteMoment::crystalaxis_y",
+          "type": "Parameter",
+          "items": [
+            "crystalaxis_y"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "AtomSiteMoment::crystalaxis_z",
+          "type": "Parameter",
+          "items": [
+            "crystalaxis_z"
+          ],
+          "storage": [
+            "value: crysta::Column<double>",
+            "uncertainty: crysta::Column<std::optional<double>>",
+            "free: crysta::Column<std::uint8_t>",
+            "start_value: crysta::Column<std::optional<double>>",
+            "start_uncertainty: crysta::Column<std::optional<double>>"
+          ]
+        },
+        {
+          "member": "AtomSiteMoment::symmform",
+          "type": "detail::WrittenText",
+          "items": [
+            "symmform"
+          ],
+          "storage": [
+            "crysta::Column<std::string>"
+          ]
+        }
+      ],
+      "row": "AtomSiteMoment"
+    },
+    {
       "name": "structure",
       "form": "loop",
       "columns": [
@@ -2223,6 +2292,20 @@
           "items": [
             "component_intensities_net"
           ]
+        },
+        {
+          "member": "PdDataBase::component_intensities_magnetic",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "component_intensities_magnetic"
+          ]
+        },
+        {
+          "member": "PdDataBase::component_intensities_nuclear",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "component_intensities_nuclear"
+          ]
         }
       ]
     },
@@ -2258,6 +2341,41 @@
       "name": "_rendering_plot",
       "form": "derived",
       "why": "the plot renderer a file declares: each host draws with its own, so the loader checks it and keeps nothing"
+    },
+    {
+      "name": "_space_group_magn",
+      "form": "derived",
+      "why": "held as written in the structure's magnetic description; crysta checks it"
+    },
+    {
+      "name": "_parent_space_group",
+      "form": "derived",
+      "why": "held as written in the structure's magnetic description; crysta checks it"
+    },
+    {
+      "name": "_space_group_symop_magn_operation",
+      "form": "derived",
+      "why": "held as written in the structure's magnetic description; crysta checks it"
+    },
+    {
+      "name": "_space_group_symop_magn_centering",
+      "form": "derived",
+      "why": "held as written in the structure's magnetic description; crysta checks it"
+    },
+    {
+      "name": "_parent_propagation_vector",
+      "form": "derived",
+      "why": "held as written in the structure's magnetic description; crysta checks it"
+    },
+    {
+      "name": "_space_group_magn_transforms",
+      "form": "derived",
+      "why": "held as written in the structure's magnetic description; crysta checks it"
+    },
+    {
+      "name": "_magnetic_form_factor",
+      "form": "derived",
+      "why": "held as written in the structure's magnetic description; crysta checks it"
     },
     {
       "name": "_space_group_symop",
@@ -2351,6 +2469,47 @@
           "type": "ComputedColumn<std::int32_t>",
           "items": [
             "cluster_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "_expanded_atom_site_moment",
+      "form": "columns",
+      "columns": [
+        {
+          "member": "ExpandedAtomSiteMoments::atom_site_id",
+          "type": "ComputedColumn<std::string>",
+          "items": [
+            "atom_site_id"
+          ]
+        },
+        {
+          "member": "ExpandedAtomSiteMoments::site_symmetry",
+          "type": "ComputedColumn<std::string>",
+          "items": [
+            "site_symmetry"
+          ]
+        },
+        {
+          "member": "ExpandedAtomSiteMoments::crystalaxis_x",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "crystalaxis_x"
+          ]
+        },
+        {
+          "member": "ExpandedAtomSiteMoments::crystalaxis_y",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "crystalaxis_y"
+          ]
+        },
+        {
+          "member": "ExpandedAtomSiteMoments::crystalaxis_z",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "crystalaxis_z"
           ]
         }
       ]
@@ -2496,6 +2655,20 @@
           "type": "ComputedColumn<double>",
           "items": [
             "f_squared_calc"
+          ]
+        },
+        {
+          "member": "PowderReflnDataBase::f_m_perp_squared_calc",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "f_m_perp_squared_calc"
+          ]
+        },
+        {
+          "member": "PowderReflnDataBase::f_squared_total_calc",
+          "type": "ComputedColumn<double>",
+          "items": [
+            "f_squared_total_calc"
           ]
         },
         {
@@ -3084,6 +3257,76 @@
       "part": "the row's identity as a calculation input"
     },
     {
+      "member": "AtomSiteMoment::id",
+      "type": "ItemKey",
+      "category": "_atom_site_moment"
+    },
+    {
+      "member": "AtomSiteMoment::crystalaxis_x",
+      "type": "Parameter",
+      "category": "_atom_site_moment"
+    },
+    {
+      "member": "AtomSiteMoment::crystalaxis_y",
+      "type": "Parameter",
+      "category": "_atom_site_moment"
+    },
+    {
+      "member": "AtomSiteMoment::crystalaxis_z",
+      "type": "Parameter",
+      "category": "_atom_site_moment"
+    },
+    {
+      "member": "AtomSiteMoment::symmform",
+      "type": "detail::WrittenText",
+      "category": "_atom_site_moment"
+    },
+    {
+      "member": "AtomSiteMoment::row",
+      "type": "detail::RowLink",
+      "part": "the row's link to its collection"
+    },
+    {
+      "member": "AtomSiteMoment::epoch",
+      "type": "detail::Epoch",
+      "part": "the row's identity as a calculation input"
+    },
+    {
+      "member": "MagneticDescription::group",
+      "type": "crysta::MagneticGroupName",
+      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
+    },
+    {
+      "member": "MagneticDescription::transforms",
+      "type": "std::vector<std::pair<std::string, crysta::MagneticTransform>>",
+      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
+    },
+    {
+      "member": "MagneticDescription::operations",
+      "type": "std::vector<std::pair<std::string, std::string>>",
+      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
+    },
+    {
+      "member": "MagneticDescription::centerings",
+      "type": "std::vector<std::pair<std::string, std::string>>",
+      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
+    },
+    {
+      "member": "MagneticDescription::parent",
+      "type": "crysta::ParentSpaceGroup",
+      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
+    },
+    {
+      "member": "MagneticDescription::propagation_vectors",
+      "type": "std::vector<std::pair<std::string, std::string>>",
+      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
+    },
+    {
+      "member": "MagneticDescription::form_factors",
+      "type": "std::map<std::string, crysta::MagneticIon>",
+      "not_storage": "a structure's magnetic description held as written, one value crysta reads and writes"
+    },
+    {
       "member": "SpaceGroup::name_h_m",
       "type": "detail::WrittenText",
       "category": "_space_group"
@@ -3239,6 +3482,31 @@
       "category": "_expanded_atom_site"
     },
     {
+      "member": "ExpandedAtomSiteMoments::atom_site_id",
+      "type": "ComputedColumn<std::string>",
+      "category": "_expanded_atom_site_moment"
+    },
+    {
+      "member": "ExpandedAtomSiteMoments::site_symmetry",
+      "type": "ComputedColumn<std::string>",
+      "category": "_expanded_atom_site_moment"
+    },
+    {
+      "member": "ExpandedAtomSiteMoments::crystalaxis_x",
+      "type": "ComputedColumn<double>",
+      "category": "_expanded_atom_site_moment"
+    },
+    {
+      "member": "ExpandedAtomSiteMoments::crystalaxis_y",
+      "type": "ComputedColumn<double>",
+      "category": "_expanded_atom_site_moment"
+    },
+    {
+      "member": "ExpandedAtomSiteMoments::crystalaxis_z",
+      "type": "ComputedColumn<double>",
+      "category": "_expanded_atom_site_moment"
+    },
+    {
       "member": "GeomBonds::expanded_atom_site_id_1",
       "type": "ComputedColumn<std::int32_t>",
       "category": "_geom_bond"
@@ -3294,6 +3562,11 @@
       "not_storage": "the computed structure categories, published whole"
     },
     {
+      "member": "StructureGeometry::expanded_atom_site_moments",
+      "type": "ExpandedAtomSiteMoments",
+      "not_storage": "the computed structure categories, published whole"
+    },
+    {
       "member": "StructureGeometry::geom_bond",
       "type": "GeomBonds",
       "not_storage": "the computed structure categories, published whole"
@@ -3342,6 +3615,18 @@
       ]
     },
     {
+      "member": "Structure::atom_site_moment",
+      "type": "ItemVec<AtomSiteMoment>",
+      "holds": [
+        "_atom_site_moment"
+      ]
+    },
+    {
+      "member": "Structure::magnetic",
+      "type": "detail::Written<MagneticDescription>",
+      "not_storage": "the magnetic description as written, crysta's to read, check and write (ADR-0068)"
+    },
+    {
       "member": "Structure::scattering_lengths_fm",
       "type": "detail::Written<std::map<std::string, double>>",
       "category": "_scattering_length"
@@ -3369,6 +3654,7 @@
       "holds": [
         "_space_group_symop",
         "_expanded_atom_site",
+        "_expanded_atom_site_moment",
         "_geom_bond",
         "_atom_sites_cartn_transform"
       ]
@@ -3565,6 +3851,16 @@
     },
     {
       "member": "PdDataBase::component_intensities_net",
+      "type": "ComputedColumn<double>",
+      "category": "_pd_calc"
+    },
+    {
+      "member": "PdDataBase::component_intensities_magnetic",
+      "type": "ComputedColumn<double>",
+      "category": "_pd_calc"
+    },
+    {
+      "member": "PdDataBase::component_intensities_nuclear",
       "type": "ComputedColumn<double>",
       "category": "_pd_calc"
     },
@@ -4134,6 +4430,16 @@
       "category": "_refln"
     },
     {
+      "member": "PowderReflnDataBase::f_m_perp_squared_calc",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
+      "member": "PowderReflnDataBase::f_squared_total_calc",
+      "type": "ComputedColumn<double>",
+      "category": "_refln"
+    },
+    {
       "member": "PowderReflnDataBase::position",
       "type": "ComputedColumn<double>",
       "category": "_refln"
@@ -4561,6 +4867,11 @@
     {
       "member": "FitPreamble::pre_fit",
       "type": "IterationRecord",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitPreamble::zero_starts",
+      "type": "std::vector<std::string>",
       "not_storage": "a fit report"
     },
     {
@@ -5259,6 +5570,9 @@
     "_atom_site_aniso": [
       "_atom_site_aniso"
     ],
+    "_atom_site_moment": [
+      "_atom_site_moment"
+    ],
     "_background": [
       "_background"
     ],
@@ -5349,11 +5663,20 @@
     "_linked_structure": [
       "_linked_structure"
     ],
+    "_magnetic_form_factor": [
+      "_magnetic_form_factor"
+    ],
     "_metadata": [
       "_metadata"
     ],
     "_minimizer": [
       "_minimizer"
+    ],
+    "_parent_propagation_vector": [
+      "_parent_propagation_vector"
+    ],
+    "_parent_space_group": [
+      "_parent_space_group"
     ],
     "_pattern_chart": [
       "_pattern_chart"
@@ -5411,6 +5734,18 @@
     ],
     "_space_group": [
       "_space_group"
+    ],
+    "_space_group_magn": [
+      "_space_group_magn"
+    ],
+    "_space_group_magn_transforms": [
+      "_space_group_magn_transforms"
+    ],
+    "_space_group_symop_magn_centering": [
+      "_space_group_symop_magn_centering"
+    ],
+    "_space_group_symop_magn_operation": [
+      "_space_group_symop_magn_operation"
     ],
     "_structure_view": [
       "_structure_view"
