@@ -462,21 +462,18 @@ SideBarGroup {
     // named after its file, or one experiment with a scan, the selected experiment its template and the files its
     // datasets. Up to five files default to separate experiments, more to a scan.
     function askDatasets(experiment, files) {
-        datasetsLoader.active = true;
-        datasetsLoader.item.experiment = experiment;
-        datasetsLoader.item.files = files;
-        datasetsLoader.item.asScan = files.length > 5;
         // Copied by default for a small set, linked above 20 files or 50 MB (the owner, 2026-11-04).
-        datasetsLoader.item.copy = files.length <= 20 && group.project.filesBytes(files) <= 50 * 1024 * 1024;
-        datasetsLoader.item.open();
+        const dialog = datasetsComponent.createObject(Overlay.overlay, {
+            experiment: experiment,
+            files: files,
+            asScan: files.length > 5,
+            copy: files.length <= 20 && group.project.filesBytes(files) <= 50 * 1024 * 1024
+        });
+        dialog.open();
     }
 
-    // Made only while it is asked: kept in the window, it held the scene from settling.
-    Loader {
-        id: datasetsLoader
-        active: false
-        sourceComponent: datasetsComponent
-    }
+    // Made only while it is asked and destroyed once closed. A Component is no item of the group: the group sizes to
+    // its one content column, and a second item (a Loader) left it an empty strip.
     Component {
         id: datasetsComponent
         AppDialog {
@@ -486,12 +483,11 @@ SideBarGroup {
             property ExperimentViewModel experiment: null
             property bool asScan: false
             property bool copy: true
-            parent: Overlay.overlay
             title: qsTr("Load %1 datasets as").arg(files.length)
             standardButtons: Dialog.Ok | Dialog.Cancel
             contentWidth: AppSizes.messagesDialogContentWidth
             contentHeight: datasetsColumn.implicitHeight
-            onClosed: Qt.callLater(() => datasetsLoader.active = false)
+            onClosed: destroy()
             onAccepted: {
                 if (group.project !== null && datasetsChoice.experiment !== null)
                     group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan, datasetsChoice.copy);
