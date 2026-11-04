@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: BSD-3-Clause
-"""Build or check an EasyDiffraction data collection: plain files and one index.json (ADR-0068).
+"""Build or check a data collection: plain files and one index.json (edi ADR-0068).
 
-    python tools/data/build_collection.py populate OUTPUT   # the bundled examples and the tutorial files
-    python tools/data/build_collection.py index OUTPUT      # (re)write OUTPUT/index.json from the files
-    python tools/data/build_collection.py check OUTPUT      # the index agrees with the files and the schema
+"""Build or check a data collection: plain files and one index.json (ADR-0068).
+    python tools/data/build_collection.py index OUTPUT      # (re)write OUTPUT/index.json
+    python tools/data/build_collection.py check OUTPUT      # index, files and schema agree
 
-A collection is `structures/`, `experiments/`, `data/` and `projects/` beside `index.json`. Each file may have a
-sidecar `<file>.meta.json` holding what the file does not say about itself (a name, a description, the facility);
-`populate` writes those from the examples' metadata, and `index` folds them into the entries with the file's
-sha256 and size. The schema is `edi-data-index/1`: entries with an id, a kind (structure, experiment, data or
-project), name, description, formula (Hill notation, when the file states one), elements (the symbols present,
-Hill order), space_group, cell, radiation, technique, instrument, facility, source and files, each file with
-path, format, sha256 and bytes.
+A collection (ADR-0068) is `structures/`, `experiments/`, `data/` and `projects/` beside
+`index.json`. Each
+file may have a sidecar `<file>.meta.json` holding what the file does not say about itself (a
+name, a description, the facility); `populate` writes those from the examples' metadata, and
+`index` folds them into the entries with the file's sha256 and size. The schema is
+`edi-data-index/1`: entries with an id, a kind (structure, experiment, data or project), name,
+description, formula (Hill notation, when the file states one), elements (the symbols present,
+Hill order), space_group, cell, radiation, technique, instrument, facility, source and files,
+each file with path, format, sha256 and bytes.
 """
 
 from __future__ import annotations
@@ -32,9 +34,24 @@ METADATA = ROOT / 'app/examples/metadata.json'
 TUTORIAL_FILES = ROOT / 'app/tutorials/files'
 SCHEMA = 'edi-data-index/1'
 KINDS = ('structure', 'experiment', 'data', 'project')
-FOLDERS = {'structure': 'structures', 'experiment': 'experiments', 'data': 'data', 'project': 'projects'}
-FORMATS = {'.cif': 'cif', '.edi': 'edi', '.xye': 'xye', '.xy': 'xy', '.dat': 'dat', '.txt': 'txt', '.csv': 'csv',
-           '.int': 'int', '.hkl': 'hkl', '.zip': 'zip'}
+FOLDERS = {
+    'structure': 'structures',
+    'experiment': 'experiments',
+    'data': 'data',
+    'project': 'projects',
+}
+FORMATS = {
+    '.cif': 'cif',
+    '.edi': 'edi',
+    '.xye': 'xye',
+    '.xy': 'xy',
+    '.dat': 'dat',
+    '.txt': 'txt',
+    '.csv': 'csv',
+    '.int': 'int',
+    '.hkl': 'hkl',
+    '.zip': 'zip',
+}
 ELEMENT = re.compile(r'^[A-Z][a-z]?')
 
 
@@ -47,7 +64,7 @@ def sha256_of(path: Path) -> str:
 
 
 def cif_value(text: str, tag: str) -> str:
-    match = re.search(r'^' + re.escape(tag) + r'[ \t]+(.+?)[ \t]*$', text, re.M)
+    match = re.search(r'^' + re.escape(tag) + r'[ \t]+(.+?)[ \t]*$', text, re.MULTILINE)
     if not match:
         return ''
     value = match.group(1).strip()
@@ -66,7 +83,9 @@ def number(text: str) -> float | None:
 def hill(symbols: list[str]) -> str:
     unique = sorted(set(symbols))
     if 'C' in unique:
-        unique = ['C'] + (['H'] if 'H' in unique else []) + [s for s in unique if s not in ('C', 'H')]
+        unique = (
+            ['C'] + (['H'] if 'H' in unique else []) + [s for s in unique if s not in {'C', 'H'}]
+        )
     return ' '.join(unique)
 
 
@@ -74,15 +93,29 @@ def structure_facts(text: str) -> dict:
     """What a structure file says about itself: space group, cell and the elements present."""
     facts = {}
     group = ''
-    for tag in ('_space_group.name_h_m', '_space_group.name_H-M_alt', '_space_group_name_H-M_alt', '_symmetry_space_group_name_H-M'):
+    for tag in (
+        '_space_group.name_h_m',
+        '_space_group.name_H-M_alt',
+        '_space_group_name_H-M_alt',
+        '_symmetry_space_group_name_H-M',
+    ):
         group = group or cif_value(text, tag)
     formula = cif_value(text, '_chemical_formula_sum') or cif_value(text, '_chemical_formula.sum')
     if formula:
         facts['formula'] = formula
     if group:
         facts['space_group'] = group
-    cell = [number(cif_value(text, tag)) for tag in ('_cell.length_a', '_cell.length_b', '_cell.length_c',
-                                                    '_cell.angle_alpha', '_cell.angle_beta', '_cell.angle_gamma')]
+    cell = [
+        number(cif_value(text, tag))
+        for tag in (
+            '_cell.length_a',
+            '_cell.length_b',
+            '_cell.length_c',
+            '_cell.angle_alpha',
+            '_cell.angle_beta',
+            '_cell.angle_gamma',
+        )
+    ]
     if all(v is not None for v in cell):
         facts['cell'] = cell
     loop = re.search(r'loop_\s*((?:_atom_site\.[A-Za-z_]+\s*)+)((?:.+\n)+?)(?:\n|loop_|$)', text)
@@ -123,7 +156,9 @@ def experiment_facts(text: str) -> dict:
 
 def write_sidecar(path: Path, meta: dict) -> None:
     meta = {k: v for k, v in meta.items() if v not in ('', None, [])}
-    path.with_name(path.name + '.meta.json').write_text(json.dumps(meta, ensure_ascii=False, indent=1) + '\n')
+    path.with_name(path.name + '.meta.json').write_text(
+        json.dumps(meta, ensure_ascii=False, indent=1) + '\n'
+    )
 
 
 def populate(output: Path) -> int:
@@ -136,12 +171,18 @@ def populate(output: Path) -> int:
         if not (project / 'project.edi').is_file():
             continue
         values = meta.get('values', {})
-        first = lambda key: (values.get(key) or [''])[0]  # noqa: E731 - a one-line accessor
+
+        def first(key: str, values: dict = values) -> str:
+            return (values.get(key) or [''])[0]
+
         common = {
-            'name': ' / '.join(meta.get('samples', [])) + (' at ' + meta['origin'] if meta.get('origin') else ''),
+            'name': ' / '.join(meta.get('samples', []))
+            + (' at ' + meta['origin'] if meta.get('origin') else ''),
             'description': meta.get('detail', ''),
             'radiation': first('probe'),
-            'technique': ' '.join(part for part in (first('sampleForm'), first('beamMode')) if part),
+            'technique': ' '.join(
+                part for part in (first('sampleForm'), first('beamMode')) if part
+            ),
             'instrument': first('instruments'),
             'facility': first('facilities'),
             'source': 'EasyDiffraction',
@@ -157,8 +198,15 @@ def populate(output: Path) -> int:
         for structure in sorted((project / 'structures').glob('*.edi')):
             target = output / 'structures' / f'{example}-{structure.stem}.edi'
             shutil.copyfile(structure, target)
-            write_sidecar(target, {'id': f'{example}-{structure.stem}', 'name': ' / '.join(meta.get('samples', [])),
-                                   'description': common['description'], 'source': 'EasyDiffraction'})
+            write_sidecar(
+                target,
+                {
+                    'id': f'{example}-{structure.stem}',
+                    'name': ' / '.join(meta.get('samples', [])),
+                    'description': common['description'],
+                    'source': 'EasyDiffraction',
+                },
+            )
             count += 1
         for experiment in sorted((project / 'experiments').glob('*.edi')):
             target = output / 'experiments' / f'{example}-{experiment.stem}.edi'
@@ -170,10 +218,19 @@ def populate(output: Path) -> int:
         kind = 'structure' if file.suffix == '.cif' else 'data'
         target = output / FOLDERS[kind] / f'tutorial-{file.name}'
         shutil.copyfile(file, target)
-        meta = {'id': f'tutorial-{file.stem}', 'name': 'La0.5Ba0.5CoO3' + ('' if kind == 'structure' else ' pattern from HRPT'),
-                'description': 'The onboarding tutorials\' input', 'source': 'EasyDiffraction'}
+        meta = {
+            'id': f'tutorial-{file.stem}',
+            'name': 'La0.5Ba0.5CoO3' + ('' if kind == 'structure' else ' pattern from HRPT'),
+            'description': "The onboarding tutorials' input",
+            'source': 'EasyDiffraction',
+        }
         if kind == 'data':
-            meta.update({'radiation': 'neutron', 'technique': 'powder constant wavelength', 'instrument': 'HRPT', 'facility': 'PSI'})
+            meta.update({
+                'radiation': 'neutron',
+                'technique': 'powder constant wavelength',
+                'instrument': 'HRPT',
+                'facility': 'PSI',
+            })
         write_sidecar(target, meta)
         count += 1
     print(f'populate: {count} files under {output}')
@@ -188,21 +245,40 @@ def entries_of(output: Path) -> list[dict]:
                 continue
             fmt = FORMATS.get(file.suffix.lower())
             if fmt is None:
-                raise SystemExit(f'build_collection: {file} has a format the collection does not hold')
+                raise SystemExit(
+                    f'build_collection: {file} has a format the collection does not hold'
+                )
             sidecar = file.with_name(file.name + '.meta.json')
             meta = json.loads(sidecar.read_text()) if sidecar.is_file() else {}
             facts = {}
-            if kind in ('structure', 'experiment') and fmt in ('cif', 'edi'):
+            if kind in {'structure', 'experiment'} and fmt in {'cif', 'edi'}:
                 text = file.read_text(errors='replace')
                 facts = structure_facts(text) if kind == 'structure' else experiment_facts(text)
             entry = {'id': meta.get('id', file.stem), 'kind': kind}
-            for key in ('name', 'description', 'formula', 'elements', 'space_group', 'cell', 'radiation', 'technique',
-                        'instrument', 'facility', 'source'):
+            for key in (
+                'name',
+                'description',
+                'formula',
+                'elements',
+                'space_group',
+                'cell',
+                'radiation',
+                'technique',
+                'instrument',
+                'facility',
+                'source',
+            ):
                 value = meta.get(key, facts.get(key))
                 if value not in (None, '', []):
                     entry[key] = value
-            entry['files'] = [{'path': f'{folder}/{file.name}', 'format': fmt, 'sha256': sha256_of(file),
-                               'bytes': file.stat().st_size}]
+            entry['files'] = [
+                {
+                    'path': f'{folder}/{file.name}',
+                    'format': fmt,
+                    'sha256': sha256_of(file),
+                    'bytes': file.stat().st_size,
+                }
+            ]
             entries.append(entry)
     return entries
 
@@ -218,6 +294,42 @@ def index(output: Path) -> int:
     return 0
 
 
+def _entry_problems(output: Path, entry: dict, seen: set) -> list[str]:
+    where = f'entry {entry.get("id")!r}'
+    problems = []
+    if not entry.get('id'):
+        problems.append('an entry has no id')
+    elif entry['id'] in seen:
+        problems.append(f'{where} appears twice')
+    seen.add(entry.get('id'))
+    if entry.get('kind') not in KINDS:
+        problems.append(f'{where} has the kind {entry.get("kind")!r}')
+    cell = entry.get('cell')
+    if cell is not None and (not isinstance(cell, list) or len(cell) != 6):
+        problems.append(f'{where} has a cell without six values')
+    files = entry.get('files') or []
+    if not files:
+        problems.append(f'{where} has no files')
+    for file in files:
+        problems.extend(_file_problems(output, where, file))
+    return problems
+
+
+def _file_problems(output: Path, where: str, file: dict) -> list[str]:
+    rel = file.get('path', '')
+    if rel.startswith('/') or '..' in rel.split('/') or '://' in rel:
+        return [f'{where}: {rel} is not a relative path']
+    on_disk = output / rel
+    if not on_disk.is_file():
+        return [f'{where}: {rel} is missing']
+    problems = []
+    if file.get('sha256') and file['sha256'] != sha256_of(on_disk):
+        problems.append(f'{where}: {rel} does not match its sha256')
+    if file.get('bytes') is not None and file['bytes'] != on_disk.stat().st_size:
+        problems.append(f'{where}: {rel} does not match its size')
+    return problems
+
+
 def check(output: Path) -> int:
     path = output / 'index.json'
     if not path.is_file():
@@ -227,39 +339,15 @@ def check(output: Path) -> int:
     problems = []
     if document.get('schema') != SCHEMA:
         problems.append(f'schema is {document.get("schema")!r}, not {SCHEMA}')
-    seen = set()
-    for entry in document.get('entries', []):
-        where = f'entry {entry.get("id")!r}'
-        if not entry.get('id'):
-            problems.append('an entry has no id')
-        elif entry['id'] in seen:
-            problems.append(f'{where} appears twice')
-        seen.add(entry.get('id'))
-        if entry.get('kind') not in KINDS:
-            problems.append(f'{where} has the kind {entry.get("kind")!r}')
-        cell = entry.get('cell')
-        if cell is not None and (not isinstance(cell, list) or len(cell) != 6):
-            problems.append(f'{where} has a cell without six values')
-        files = entry.get('files') or []
-        if not files:
-            problems.append(f'{where} has no files')
-        for file in files:
-            rel = file.get('path', '')
-            if rel.startswith('/') or '..' in rel.split('/') or '://' in rel:
-                problems.append(f'{where}: {rel} is not a relative path')
-                continue
-            on_disk = output / rel
-            if not on_disk.is_file():
-                problems.append(f'{where}: {rel} is missing')
-                continue
-            if file.get('sha256') and file['sha256'] != sha256_of(on_disk):
-                problems.append(f'{where}: {rel} does not match its sha256')
-            if file.get('bytes') is not None and file['bytes'] != on_disk.stat().st_size:
-                problems.append(f'{where}: {rel} does not match its size')
-    listed = {f['path'] for e in document.get('entries', []) for f in e.get('files', [])}
-    for kind, folder in FOLDERS.items():
+    seen: set = set()
+    entries = document.get('entries', [])
+    for entry in entries:
+        problems.extend(_entry_problems(output, entry, seen))
+    listed = {f['path'] for e in entries for f in e.get('files', [])}
+    for folder in FOLDERS.values():
         for file in sorted((output / folder).glob('*')):
-            if file.is_file() and not file.name.endswith('.meta.json') and f'{folder}/{file.name}' not in listed:
+            missing = file.is_file() and not file.name.endswith('.meta.json')
+            if missing and f'{folder}/{file.name}' not in listed:
                 problems.append(f'{folder}/{file.name} is not in the index')
     for problem in problems:
         print(f'check: {problem}', file=sys.stderr)
@@ -274,7 +362,9 @@ def main(argv: list[str] | None = None) -> int:
     for name in ('populate', 'index', 'check'):
         sub.add_parser(name).add_argument('output', type=Path)
     args = parser.parse_args(argv)
-    return {'populate': populate, 'index': index, 'check': check}[args.command](args.output.resolve())
+    return {'populate': populate, 'index': index, 'check': check}[args.command](
+        args.output.resolve()
+    )
 
 
 if __name__ == '__main__':

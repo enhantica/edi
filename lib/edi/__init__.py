@@ -148,6 +148,10 @@ if _importlib_util.find_spec('edi._edi') is None:
         '<build-dir>/python/edi directory that configuration emitted.'
     )
 
+from edi._collection import (  # noqa: E402 - after the __path__ resolution
+    Collection,
+    load_collection,
+)
 from edi._edi import (  # noqa: E402 - the __path__ resolution above must run first
     AbsorptionBase,
     AbsorptionFactory,
@@ -299,6 +303,7 @@ __all__ = [
     'BeamModeEnum',
     'BraggPdExperiment',
     'Cell',
+    'Collection',
     'Constraint',
     'Constraints',
     'CwlGaussian',
@@ -376,6 +381,7 @@ __all__ = [
     'WeightFraction',
     'error_report',
     'iteration_line',
+    'load_collection',
     'machine_report',
     'parameter_table',
     'progress_report',

@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import json
 import math
 import signal
 import sys
@@ -176,6 +177,29 @@ def build_parser() -> argparse.ArgumentParser:
         default='machine',
         help="which channel to print: 'machine' (the default) is the versioned key=value record "
         "byte-comparable with `crysta undo`; 'human' is the readable view",
+    )
+    collection = subcommands.add_parser(
+        'collection',
+        help="list, find or fetch entries of EasyDiffraction's data collection (edi ADR-0068)",
+    )
+    collection.add_argument(
+        '--source',
+        metavar='URL_OR_FOLDER',
+        default=None,
+        help='the collection: a base URL or a folder holding index.json (default: '
+        "EDI_COLLECTION, else EasyDiffraction's collection on GitHub)",
+    )
+    actions = collection.add_subparsers(dest='action', required=True)
+    listing = actions.add_parser('list', help='list the entries, one line each')
+    listing.add_argument(
+        '--kind', choices=('structure', 'experiment', 'data', 'project'), default=None
+    )
+    finding = actions.add_parser('find', help='print one entry as JSON')
+    finding.add_argument('id')
+    fetching = actions.add_parser('fetch', help="copy or download an entry's file into a folder")
+    fetching.add_argument('id')
+    fetching.add_argument(
+        '--into', metavar='DIR', default='.', help='the folder to write into (default: .)'
     )
     report = subcommands.add_parser(
         'report',
@@ -775,6 +799,34 @@ def run_undo(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_collection(args: argparse.Namespace) -> int:
+    collection = edi.load_collection(args.source)
+    if args.action == 'list':
+        for entry in collection.entries:
+            if args.kind and entry['kind'] != args.kind:
+                continue
+            columns = (
+                entry['id'],
+                entry['kind'],
+                entry.get('name', ''),
+                entry['files'][0]['path'],
+            )
+            print('\t'.join(columns))
+        return 0
+    entry = collection.find(args.id)
+    if entry is None:
+        print(
+            f'edi collection: no entry {args.id!r} in {collection.source or "the given index"}',
+            file=sys.stderr,
+        )
+        return 1
+    if args.action == 'find':
+        print(json.dumps(entry, ensure_ascii=False, indent=1))
+        return 0
+    print(collection.fetch(args.id, args.into))
+    return 0
+
+
 def run_report(args: argparse.Namespace) -> int:
     # The project's own report settings, a flag replacing one for this run only; nothing is
     # written to the project. Save report writes the ticked formats but the PDF, which is the
@@ -819,7 +871,7 @@ def main(argv: list[str] | None = None) -> int:
     # from a crash.
     args = build_parser().parse_args(argv)
     # The commands without a fit record: an error is one stderr line beside the non-zero exit.
-    plain = {'report': run_report, 'export': run_export}
+    plain = {'report': run_report, 'export': run_export, 'collection': run_collection}
     if args.command in plain:
         try:
             return plain[args.command](args)
