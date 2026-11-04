@@ -133,16 +133,19 @@ EaElements.ParamTextField {
     onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.ParameterFieldEditor)
     onEditTextChanged: refreshCleanText()
     function beginAssistantEdit() {
-        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterFieldEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterFieldEditor);
     }
     function allowAssistantCommit() {
-        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterFieldEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterFieldEditor);
     }
     function resetEditorText() {
         ApplicationInfo.parameterEditorReset();
     }
     function cancelAssistantEdit() {
-        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterFieldEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterFieldEditor);
     }
     Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.ParameterFieldEditor, event)
     // editingFinished owns Return as well as focus loss; accepted is the same

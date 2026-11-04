@@ -67,13 +67,14 @@ SideBarGroup {
     property var assistantCreate: null
     Component.onDestruction: createLife.alive = false
     function prepareAssistantCreate(id) {
-        return ApplicationInfo.prepareAssistantCreate(id);
+        return ApplicationInfo.assistantBuilt ? ApplicationInfo.prepareAssistantCreate(id) : null;
     }
     function assistantCreateDialog(id) {
-        return ApplicationInfo.assistantCreateDialog(id);
+        return ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantCreateDialog(id) : null;
     }
     function retireAssistantCreate(id, manual) {
-        ApplicationInfo.retireAssistantCreate(id, manual);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.retireAssistantCreate(id, manual);
     }
     // Native Create reuses this actual form's remembered parent/defaults. It does
     // not accept a dialog or synthesize a chooser selection.

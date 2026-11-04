@@ -201,16 +201,19 @@ EaComponents.ListViewParameter {
     onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.ParameterCellEditor)
     onEditTextChanged: refreshCleanText()
     function beginAssistantEdit() {
-        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterCellEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterCellEditor);
     }
     function allowAssistantCommit() {
-        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterCellEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterCellEditor);
     }
     function resetEditorText() {
         ApplicationInfo.parameterEditorReset();
     }
     function cancelAssistantEdit() {
-        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterCellEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterCellEditor);
     }
     Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.ParameterCellEditor, event)
     // editingFinished owns Return as well as focus loss; accepted is the same

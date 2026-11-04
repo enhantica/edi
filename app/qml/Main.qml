@@ -45,7 +45,7 @@ EaComponents.ApplicationWindow {
         return ApplicationInfo.showProjectReport(project);
     }
 
-    readonly property WorkflowPage assistantWorkflowPage: ApplicationInfo.assistantWorkflowPage()
+    readonly property WorkflowPage assistantWorkflowPage: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantWorkflowPage() : null
     readonly property Item activeAssistantHost: assistantWorkflowPage ? assistantWorkflowPage.assistantOverlayHost : assistantFallbackHost
     readonly property Item assistantCurrentPage: assistantWorkflowPage || homePage
     property Item assistantPreviousFocus: null
@@ -58,25 +58,32 @@ EaComponents.ApplicationWindow {
     property bool assistantManualPane: false
     readonly property bool assistantManualTakeover: assistantEmptyManualTakeover && Session.project === null || assistantManualTakeoverProject !== null && assistantManualTakeoverProject === Session.project
 
+    // The web build carries no assistant (ADR-0023 §6): its procedures are not there to call.
     function containsAssistantItem(ancestor, item) {
-        return ApplicationInfo.assistantContainsItem(ancestor, item);
+        return ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantContainsItem(ancestor, item) : false;
     }
     function rehostAssistant() {
-        ApplicationInfo.rehostAssistant();
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.rehostAssistant();
     }
     function focusAssistantOpener() {
-        ApplicationInfo.focusAssistantOpener();
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.focusAssistantOpener();
     }
     function retireAssistantFocus() {
-        ApplicationInfo.retireAssistantFocus();
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.retireAssistantFocus();
     }
     function restoreAssistantFocus() {
-        ApplicationInfo.restoreAssistantFocus();
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.restoreAssistantFocus();
     }
     // This binding observes the complete target/ancestor and strip geometry, including movement
     // without a focus change. A partly exposed control remains usable in its uncovered portion.
-    readonly property bool assistantHomeFocusCovered: ApplicationInfo.assistantHomeFocusCovered()
+    readonly property bool assistantHomeFocusCovered: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantHomeFocusCovered() : false
     function enforceAssistantHomeFocus() {
+        if (!ApplicationInfo.assistantBuilt)
+            return;
         ApplicationInfo.enforceAssistantHomeFocus();
     }
     onAssistantHomeFocusCoveredChanged: Qt.callLater(enforceAssistantHomeFocus)
@@ -136,9 +143,9 @@ EaComponents.ApplicationWindow {
     appBarRightButtons: [
         EaElements.ToolButton {
             id: assistantToggle
-            KeyNavigation.tab: assistantPanel.visible && assistantPanel.shown ? assistantPanel.firstFocusItem : null
+            KeyNavigation.tab: window.assistantPanelVisible && window.assistantPanelShown ? window.assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
-            readonly property bool assistantSelected: ApplicationInfo.assistantAvailable && assistantPanel.shown
+            readonly property bool assistantSelected: ApplicationInfo.assistantAvailable && window.assistantPanelShown
             fontIcon: assistantSelected ? "columns" : "robot"
             contentItem: Item {
                 implicitWidth: Math.max(assistantRobot.implicitWidth, assistantColumns.implicitWidth)
@@ -164,11 +171,12 @@ EaComponents.ApplicationWindow {
                     Accessible.ignored: true
                 }
             }
-            enabled: !ApplicationInfo.assistantAvailable || window.assistantWorkflowPage !== null
-            ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
-            Accessible.name: !ApplicationInfo.assistantAvailable ? qsTr("Desktop version required") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
-            Accessible.description: ApplicationInfo.assistantUnavailableReason
-            onClicked: ApplicationInfo.assistantToolbarActivated(window, assistantToggle, assistantPanel, Session, Preferences, assistantDesktopOnlyDialog)
+            // Without the assistant built in (the web, ADR-0023 §6) the button stays, and opens the note instead.
+            enabled: !ApplicationInfo.assistantBuilt || !ApplicationInfo.assistantAvailable || window.assistantWorkflowPage !== null
+            ToolTip.text: !ApplicationInfo.assistantBuilt ? qsTr("AI assistant: available in the desktop app") : !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
+            Accessible.name: !ApplicationInfo.assistantBuilt || !ApplicationInfo.assistantAvailable ? qsTr("Desktop version required") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
+            Accessible.description: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app")
+            onClicked: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantToolbarActivated(window, assistantToggle, window.assistantPanel, Session, Preferences, assistantDesktopOnlyDialog) : assistantDesktopOnlyDialog.open()
         },
         EaElements.ToolButton {
             objectName: "appBar.button.preferences"
@@ -320,7 +328,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ProjectPage {
                     current: projectLoader.SwipeView.isCurrentItem
-                    assistantCovered: assistantPanel.visible
+                    assistantCovered: window.assistantPanelVisible
                 }
             }
         },
@@ -333,7 +341,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
-                    assistantCovered: assistantPanel.visible
+                    assistantCovered: window.assistantPanelVisible
                 }
             }
         },
@@ -346,7 +354,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
-                    assistantCovered: assistantPanel.visible
+                    assistantCovered: window.assistantPanelVisible
                 }
             }
         },
@@ -359,7 +367,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
-                    assistantCovered: assistantPanel.visible
+                    assistantCovered: window.assistantPanelVisible
                 }
             }
         },
@@ -378,7 +386,7 @@ EaComponents.ApplicationWindow {
     ]
 
     statusBar: StatusBar {
-        assistantChatShown: assistantPanel.visible && assistantPanel.shown
+        assistantChatShown: window.assistantPanelVisible && window.assistantPanelShown
         assistantManualTakeover: window.assistantManualTakeover
         objectName: "statusBar"
         pagesBuilt: window.pagesBuilt
@@ -402,7 +410,7 @@ EaComponents.ApplicationWindow {
         z: 20
     }
     Binding {
-        target: Session.assistant
+        target: ApplicationInfo.assistantBuilt ? Session.assistant : null
         property: "actionWindow"
         value: window
     }
@@ -420,7 +428,7 @@ EaComponents.ApplicationWindow {
         Accessible.ignored: true
     }
     Connections {
-        target: Session.assistant
+        target: ApplicationInfo.assistantBuilt ? Session.assistant : null
         function onActionPageRequested(page, extra) {
             ApplicationInfo.windowAssistantAction(0, page, extra);
         }
@@ -454,30 +462,62 @@ EaComponents.ApplicationWindow {
         id: assistantDesktopOnlyDialog
         objectName: "assistant.desktopOnly"
         parent: Overlay.overlay
-        title: qsTr("Desktop version required")
-        standardButtons: Dialog.Ok
+        title: ApplicationInfo.assistantBuilt ? qsTr("Desktop version required") : qsTr("AI assistant")
+        standardButtons: ApplicationInfo.assistantBuilt ? Dialog.Ok : Dialog.Close
         enterAccepts: true
         contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: assistantDesktopOnlyText.implicitHeight
+        contentHeight: assistantDesktopOnlyColumn.implicitHeight
 
-        EaElements.Label {
-            id: assistantDesktopOnlyText
-            objectName: "assistant.desktopOnly.message"
+        Column {
+            id: assistantDesktopOnlyColumn
             width: assistantDesktopOnlyDialog.contentWidth
-            wrapMode: Text.Wrap
-            text: ApplicationInfo.assistantUnavailableReason
+            spacing: AppSizes.unit
+            EaElements.Label {
+                id: assistantDesktopOnlyText
+                objectName: "assistant.desktopOnly.message"
+                width: parent.width
+                wrapMode: Text.Wrap
+                // The web build's note (the owner, 2026-11-04): what the desktop app offers and how it signs in.
+                text: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your ChatGPT account. It signs in through OpenAI's official app server; your plan's usage limits apply.")
+            }
+            EaElements.Label {
+                objectName: "assistant.desktopOnly.download"
+                visible: !ApplicationInfo.assistantBuilt
+                width: parent.width
+                textFormat: Text.RichText
+                text: "<a href=\"https://enhantica.github.io/edi/application/desktop/\">" + qsTr("Download the desktop app") + "</a>"
+                onLinkActivated: link => Qt.openUrlExternally(link)
+            }
         }
     }
 
-    AssistantPanel {
-        id: assistantPanel
-        parent: assistantFallbackHost
-        assistant: Session.assistant
-        shown: (Session.assistant.chatRevealRequested || Preferences.assistantShown && (!Session.assistant.showingActions || window.assistantManualPane) && !window.assistantManualTakeover) && window.assistantWorkflowPage !== null
-        toggleControl: assistantToggle
-        onAboutToHide: window.retireAssistantFocus()
-        onOpened: focusComposer()
-        onClosed: window.restoreAssistantFocus()
+    // The assistant's panel, only in a build that carries the assistant (ADR-0023 §6): loaded by file name with its
+    // required properties, so a build without the component still loads this window. `assistantPanel` keeps the name
+    // the procedures resolve, as a var: null without the assistant.
+    readonly property var assistantPanel: assistantPanelLoader.item
+    readonly property bool assistantPanelVisible: assistantPanel ? assistantPanel.visible : false
+    readonly property bool assistantPanelShown: assistantPanel ? assistantPanel.shown : false
+    Loader {
+        id: assistantPanelLoader
+        Component.onCompleted: {
+            if (ApplicationInfo.assistantBuilt)
+                setSource("Components/AssistantPanel.qml", {
+                    assistant: Session.assistant,
+                    toggleControl: assistantToggle
+                });
+        }
+        onLoaded: {
+            const panel = window.assistantPanel;
+            panel.parent = assistantFallbackHost;
+            panel.shown = Qt.binding(() => (Session.assistant.chatRevealRequested || Preferences.assistantShown && (!Session.assistant.showingActions || window.assistantManualPane) && !window.assistantManualTakeover) && window.assistantWorkflowPage !== null);
+            panel.aboutToHide.connect(window.retireAssistantFocus);
+            // `opened` is the popup's state as well as its signal: watch the state.
+            panel.openedChanged.connect(() => {
+                if (panel.opened)
+                    panel.focusComposer();
+            });
+            panel.closed.connect(window.restoreAssistantFocus);
+        }
     }
 
     Repeater {
@@ -485,7 +525,7 @@ EaComponents.ApplicationWindow {
         delegate: Rectangle {
             required property bool modelData
             parent: window.contentItem
-            visible: assistantPanel.visible && window.assistantWorkflowPage !== null
+            visible: window.assistantPanelVisible && window.assistantWorkflowPage !== null
             x: Preferences.sideBarOnLeft ? 0 : window.contentItem.width - width
             y: modelData ? window.contentItem.height - EaStyle.Sizes.statusBarHeight : EaStyle.Sizes.appBarHeight - height
             width: window.activeAssistantHost ? window.activeAssistantHost.width : 0

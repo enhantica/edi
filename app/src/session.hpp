@@ -17,13 +17,23 @@
 #include <vector>
 
 #include "assistant_values.hpp"
+#include "assistant_work_report.hpp"
 #include "example_list_model.hpp"
 #include "online_search.hpp"
 #include "online_sources.hpp"
 #include "collection_examples.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
+// The assistant, in a build that carries it (EDI_APP_ASSISTANT, ADR-0023 §6); its reset inputs type is named here
+// so the replacement contract reads the same either way.
+#if EDI_APP_ASSISTANT
 #include "assistant_view_model.hpp"
+#else
+namespace edi_app {
+class AssistantViewModel;
+struct SessionResetInputs;  // never made in a build without the assistant
+}
+#endif
 
 class QQmlEngine;
 class QJSEngine;
@@ -85,9 +95,15 @@ class WarningListModel : public RowTableModel {
 // in `lastError`.
 class Session : public QObject {
     Q_OBJECT
+#if EDI_APP_ASSISTANT
+    // The assistant's project reset inputs, named by the replacement contract either way.
+    using SessionResetInputs = AssistantViewModel::ProjectResetInputs;
+#endif
     QML_ELEMENT
     QML_SINGLETON
+#if EDI_APP_ASSISTANT
     Q_PROPERTY(edi_app::AssistantViewModel* assistant READ assistant CONSTANT)
+#endif
     Q_PROPERTY(bool assistantWorkReportsAutomatic READ assistantWorkReportsAutomatic CONSTANT)
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
@@ -127,9 +143,11 @@ class Session : public QObject {
    public:
     explicit Session(QObject* parent, AssistantWorkReportOptions options = {});
     static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
+#if EDI_APP_ASSISTANT
     AssistantViewModel* assistant() const { return assistant_; }
+#endif
     bool assistantWorkReportsAutomatic() const { return work_report_options_.automatic; }
-#ifndef __EMSCRIPTEN__
+#if EDI_APP_ASSISTANT && !defined(__EMSCRIPTEN__)
     Session(edi::assistant::native::NativeDependencies, QObject* parent=nullptr, AssistantWorkReportOptions options={});
 #endif
     ~Session() override;
@@ -301,7 +319,7 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source,const QString& target,const QString& example,const std::function<bool()>& afterOpen = {});
-    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={}, const std::shared_ptr<AssistantViewModel::ProjectResetInputs>& resetInputs={});
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={}, const std::shared_ptr<SessionResetInputs>& resetInputs={});
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
     bool saveInto(const QString& folder);
@@ -337,7 +355,11 @@ class Session : public QObject {
         std::function<bool()>, std::function<bool(const QUrl&,bool,bool)>, std::function<void()>);
     friend void configure_engine(QQmlEngine&, std::unique_ptr<Session>);
     bool engine_bound_ = false;
-    AssistantViewModel* assistant_ = nullptr;
+    AssistantViewModel* assistant_ = nullptr;  // null in a build without the assistant
+    // The assistant's say in a project's lifetime; without the assistant each answers as if it had none.
+    bool assistantRetainsProject(ProjectViewModel*) const;
+    bool assistantPrepareRestore(ProjectViewModel*, const QString& source, const std::function<bool()>& commit);
+    bool assistantSaveNotified(ProjectViewModel*) const;
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
     ExampleListModel* examples_;

@@ -8,4 +8,3 @@ preview = ["pixi-build"]
 
 [dependencies]
 edi-assistant-runtime = { path = "../assistant-runtime" }
-edi-assistant-math-source = { path = "../assistant-math" }

@@ -817,6 +817,8 @@ jobs:
           pixi run crysta-sdk
           pixi run -e app wasm-toolchain
           pixi run -e app --skip-deps wasm-build multithread
+          # The linked web app holds no assistant code, QML or resources (ADR-0023 §6).
+          bash tools/ci/wasm-assistant-check.sh build/wasm/multithread/app
         env:
           EDI_WASM_OWED: ${{ needs.changes.outputs.wasm_build }}
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}

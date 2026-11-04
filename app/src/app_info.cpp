@@ -2,7 +2,9 @@
 #include "app_info.hpp"
 #include "assistant_message_presentation.hpp"
 #include "assistant_panel_presentation.hpp"
+#if EDI_APP_ASSISTANT
 #include "assistant_view_model.hpp"
+#endif
 #include "web_files.hpp"
 
 #include <QMap>
@@ -191,6 +193,7 @@ ApplicationInfo::ApplicationInfo(QObject* parent)
 }
 
 bool ApplicationInfo::assistantAvailable() const { return assistant_available_; }
+bool ApplicationInfo::assistantBuilt() const { return EDI_APP_ASSISTANT != 0; }
 
 QString ApplicationInfo::assistantUnavailableReason() const {
     return assistant_available_ ? QString() : tr("AI assistance is only available in the desktop version.");
@@ -784,6 +787,7 @@ QJSValue messageScriptArray(const QPointer<QJSEngine>& engine, const QJSValue& v
     if (!messageScriptReady(engine)) return {};
     return messageScriptCall(engine, predicate, array, {value});
 }
+#if EDI_APP_ASSISTANT
 std::optional<QString> messageNativeCaption(const QPointer<QJSEngine>& engine, const QJSValue& payload,
                                             const QPointer<edi_app::AssistantViewModel>& original) {
     if (!messageScriptReady(engine)) return std::nullopt;
@@ -810,8 +814,10 @@ std::optional<QString> messageNativeCaption(const QPointer<QJSEngine>& engine, c
     // Nullable owner fallback stays in the ONE original value formatter/dictionary.
     return edi_app::assistant_presentation::presentActivity({}).nativeCaption;
 }
+#endif  // EDI_APP_ASSISTANT
 }  // namespace
 
+#if EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::assistantHistoryInputFiles(const QString& kind, const QJSValue& payload) const {
     const QPointer<QJSEngine> engine(qjsEngine(this));
     if (!messageScriptReady(engine) || QThread::currentThread() != engine->thread()) return {};
@@ -908,7 +914,9 @@ QJSValue ApplicationInfo::assistantHistoryInputFiles(const QString& kind, const 
     }
     return result;
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 edi_app::assistant_presentation::ActivityPresentation ApplicationInfo::assistantActivityPresentation(
     const QString& kind, const QString& status, const QJSValue& payload, QObject* assistant) const {
     const QPointer<QJSEngine> engine(qjsEngine(this));
@@ -983,7 +991,9 @@ edi_app::assistant_presentation::ActivityPresentation ApplicationInfo::assistant
     if (!messageScriptReady(engine)) return {};
     return shown;
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 QString ApplicationInfo::assistantNativeActivityCaption(const QJSValue& payload, QObject* assistant) const {
     const QPointer<QJSEngine> engine(qjsEngine(this));
     if (!messageScriptReady(engine)) return {};
@@ -993,6 +1003,7 @@ QString ApplicationInfo::assistantNativeActivityCaption(const QJSValue& payload,
     const auto caption = messageNativeCaption(engine, payload, original);
     return messageScriptReady(engine) && caption ? *caption : QString();
 }
+#endif  // EDI_APP_ASSISTANT
 
 namespace {
 bool panelUsageTruth(const QJSValue& value) {
@@ -1843,6 +1854,7 @@ QJSValue accountPlanWord(QJSEngine* actualEngine, const QJSValue& word) {
 }
 } // namespace edi_app::assistant_panel_presentation
 
+#if EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::assistantUsageData(QObject* panel) const {
     const auto engine = panelUsageEngine(this);
     if (!panelUsageReady(engine)) return {};
@@ -2058,6 +2070,7 @@ void ApplicationInfo::assistantAccountConnectionChanged(QObject* panel, QObject*
     const auto target = panelUsageView(engine, dialog);
     panelUsageMemberCall(engine, target, "close");
 }
+#endif  // EDI_APP_ASSISTANT
 
 
  // namespace
@@ -2109,6 +2122,7 @@ void ApplicationInfo::composerAcknowledgeVisiblePrompt() const {
     const auto editor = panelUsageContextRead(frame, "editor");
     panelUsageMemberCall(frame, editor, "clear");
 }
+#if EDI_APP_ASSISTANT
 bool ApplicationInfo::assistantContainsItem(const QJSValue& ancestor, const QJSValue& item) const {
     return assistantContains(panelUsageEngine(this), ancestor, item);
 }
@@ -2213,6 +2227,7 @@ void ApplicationInfo::enforceAssistantHomeFocus() const {
         panelUsageMemberCall(frame, panel, "focusComposer");
     } else panelUsageGlobalCall(frame, "focusAssistantOpener", {});
 }
+#endif  // EDI_APP_ASSISTANT
 
  // namespace
 
@@ -2765,6 +2780,7 @@ namespace edi_app::assistant_panel_presentation {
 QJSValue usageWindowLabel(QJSEngine*, const QJSValue&, const QJSValue&) { return QJSValue(QString()); }
 QJSValue accountPlanWord(QJSEngine*, const QJSValue&) { return QJSValue(QString()); }
 }
+#if EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::assistantUsageData(QObject*) const {
     const auto frame = panelUsageEngine(this);
     if (!panelUsageReady(frame)) return {};
@@ -2793,7 +2809,9 @@ QJSValue ApplicationInfo::assistantUsageResetLabel(const QJSValue&, const QJSVal
 QJSValue ApplicationInfo::assistantUsageNow() const { return QJSValue(0); }
 void ApplicationInfo::refreshAssistantUsageClock(QObject*) const {}
 void ApplicationInfo::assistantAccountConnectionChanged(QObject*, QObject*) const {}
+#endif  // EDI_APP_ASSISTANT
 void ApplicationInfo::composerAcknowledgeVisiblePrompt() const {}
+#if EDI_APP_ASSISTANT
 bool ApplicationInfo::assistantContainsItem(const QJSValue&, const QJSValue&) const { return false; }
 QJSValue ApplicationInfo::assistantWorkflowPage() const { return QJSValue(QJSValue::NullValue); }
 void ApplicationInfo::rehostAssistant() const {}
@@ -2802,6 +2820,7 @@ void ApplicationInfo::retireAssistantFocus() const {}
 void ApplicationInfo::restoreAssistantFocus() const {}
 bool ApplicationInfo::assistantHomeFocusCovered() const { return false; }
 void ApplicationInfo::enforceAssistantHomeFocus() const {}
+#endif  // EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::composerCaptureConsentDraft() const { return QJSValue(QJSValue::NullValue); }
 bool ApplicationInfo::composerOwnsConsentDraft(const QJSValue&) const { return false; }
 QJSValue ApplicationInfo::composerSubmitApprovedDraft(const QJSValue&) const { return QJSValue(QJSValue::NullValue); }
@@ -3526,6 +3545,7 @@ void ApplicationInfo::editorRememberDraft(EditorKind kind) const {
     if (!editorOriginal(f, life, original, context)) return;
     panelUsageContextWrite(f, "assistantEditing", QJSValue(false));
 }
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::editorBeginAssistantEdit(EditorKind kind) const {
     const auto f = panelUsageEngine(this);
     if (!editorNull(f, "commitInProgress") || !editorNull(f, "draft") || editorFlag(f, "assistantManualDraft") || !panelUsageReady(f)) return;
@@ -3557,6 +3577,7 @@ void ApplicationInfo::editorAllowAssistantCommit(EditorKind kind) const {
     if (!assistantSameName(f, currentOwner, "ownerToken")) return;
     panelUsageContextWrite(f, "assistantEditing", QJSValue(false));
 }
+#endif  // EDI_APP_ASSISTANT
 void ApplicationInfo::parameterEditorReset() const {
     const auto f = panelUsageEngine(this);
     if (!editorNull(f, "commitInProgress") || editorFlag(f, "inputMethodComposing") || !panelUsageReady(f)) return;
@@ -3571,6 +3592,7 @@ void ApplicationInfo::parameterEditorReset() const {
     if (!editorOriginal(f, life, original, context)) return;
     panelUsageContextWrite(f, "draft", consentNull());
 }
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::editorCancelAssistantEdit(EditorKind kind) const {
     const auto f = panelUsageEngine(this);
     const auto shape = editorShape(kind);
@@ -3596,6 +3618,7 @@ void ApplicationInfo::editorCancelAssistantEdit(EditorKind kind) const {
     if (!current()) return;
     panelUsageContextWrite(f, "draft", consentNull());
 }
+#endif  // EDI_APP_ASSISTANT
 void ApplicationInfo::listTextInputEscape(const QJSValue& control, const QJSValue& event) const {
     const auto f = panelUsageEngine(this);
     assistantMemberWrite(f, control, "focus", QJSValue(false));
@@ -5143,6 +5166,7 @@ void choiceDeferredFocus(const PanelUsageFrame& f, const QJSValue& table, const 
 }
 } // namespace
 
+#if EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::assistantEffortRank(const QJSValue& value) const {
     const auto f = panelUsageEngine(this);
     QJSValueList values;
@@ -5401,6 +5425,7 @@ void ApplicationInfo::assistantChoiceEffortNavigate(const QJSValue& row, bool fo
     }
     assistantMemberWrite(f, event, "accepted", QJSValue(true));
 }
+#endif  // EDI_APP_ASSISTANT
 void ApplicationInfo::composerReturnPressed(const QJSValue& event) const {
     const auto f = panelUsageEngine(this);
     const auto modifiers = panelUsageRead(f, event, "modifiers"); const auto shift = assistantContextField(f, "Qt", "ShiftModifier");
@@ -5413,6 +5438,7 @@ void ApplicationInfo::composerReturnPressed(const QJSValue& event) const {
     if (result->toBoolean()) assistantMemberWrite(f, event, "accepted", QJSValue(false));
     else { projectInvoke(f, "composer", "submit"); assistantMemberWrite(f, event, "accepted", QJSValue(true)); }
 }
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantChoicesKey(const QJSValue& event, bool released) const {
     const auto f = panelUsageEngine(this);
     auto key = panelUsageRead(f, event, "key");
@@ -5421,6 +5447,7 @@ void ApplicationInfo::assistantChoicesKey(const QJSValue& event, bool released) 
     assistantMemberWrite(f, event, "accepted", QJSValue(enter));
     if (!released && enter && !panelUsageTruth(panelUsageRead(f, event, "isAutoRepeat"))) projectInvoke(f, "composer", "openChoices");
 }
+#endif  // EDI_APP_ASSISTANT
 
 namespace {
 QJSValue panelMessages(const PanelUsageFrame& f) {
@@ -5797,6 +5824,7 @@ void ApplicationInfo::conversationScrollChanged(bool position) const {
         panelUsageMemberCall(f, qt, "callLater", {projectGuardedClosure(f, 92)});
     }
 }
+#if EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::assistantMessageTableTone(const QJSValue& lift) const {
     const auto f = panelUsageEngine(this);
     const auto base = panelUsageContextRead(f, "chatBackgroundColor");
@@ -5853,6 +5881,7 @@ void ApplicationInfo::assistantMessageCopyKey(const QJSValue& event) const {
     const auto literal = panelUsageMemberCall(f, markdown, "selectedSource", {actualStart, actualEnd});
     panelUsageMemberCall(f, info, "copyText", {literal}); assistantMemberWrite(f, event, "accepted", QJSValue(true));
 }
+#endif  // EDI_APP_ASSISTANT
 
 namespace {
 QJSValue tableCallback(const PanelUsageFrame& f, uint operation, const QJSValueList& values, int arity) {
@@ -7477,11 +7506,13 @@ void ApplicationInfo::preferencesClosed() const {
             projectInvoke(f, "sourcesFolder", "reject");
     }
 }
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::preferenceAssistantChanged() const {
     const auto f = panelUsageEngine(this); panelUsageContextWrite(f, "copyError", QJSValue(QStringLiteral("")));
     if (panelUsageTruth(panelUsageContextRead(f, "copyWorkReport"))) projectWrite(f, "copyWorkReport", "copied", QJSValue(false));
     if (panelUsageTruth(panelUsageContextRead(f, "copyConnection"))) projectWrite(f, "copyConnection", "copied", QJSValue(false));
 }
+#endif  // EDI_APP_ASSISTANT
 void ApplicationInfo::preferenceCopyDiagnostics(const QJSValue& button, const QJSValue& report) const {
     const auto f = panelUsageEngine(this); const auto page = panelUsageContextRead(f, "aiPage");
     const auto owner = assistantContextField(f, "Session", "assistant"), project = assistantContextField(f, "Session", "project");
@@ -10319,6 +10350,7 @@ void ApplicationInfo::parameterFieldMouse(const QJSValue& mouse, bool hold) cons
     const auto f = panelUsageEngine(this); const auto actual = panelUsageRead(f, mouse, hold ? "source" : "button"), wanted = assistantContextField(f, "Qt", hold ? "MouseEventNotSynthesized" : "RightButton");
     if (actual.strictlyEquals(wanted)) { const auto control = panelUsageContextRead(f, "control"); panelUsageDeferredMemberCall(f, control, "openContextMenu", [&] { return QJSValueList{panelUsageContextRead(f, "menuArea")}; }); }
 }
+#if EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::assistantPlanDescription() const {
     const auto f = panelUsageEngine(this); const auto plan = assistantContextField(f, "card", "assistant"); const auto actual = panelUsageRead(f, plan, "pendingPlan");
     if (!panelUsageTruth(panelUsageRead(f, panelUsageRead(f, actual, "budget"), "defined"))) return QJSValue(QStringLiteral(""));
@@ -10348,6 +10380,7 @@ void ApplicationInfo::assistantSkillClicked() const {
     if (panelUsageRead(f, panelUsageRead(f, assistantContextField(f, "dialog", "assistant"), "selectedSkill"), "length").strictlyEquals(QJSValue(0))) projectWrite(f, "dialog", "inspectedIndex", panelUsageContextRead(f, "index"));
     else { const auto assistant = assistantContextField(f, "dialog", "assistant"); panelUsageDeferredMemberCall(f, assistant, "selectSkill", [&] { return QJSValueList{assistantContextField(f, "model", "id")}; }); }
 }
+#endif  // EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::nativeListProjection(int kind) const {
     const auto f = panelUsageEngine(this);
     if (kind == 0) { const auto initial = assistantGeometryArray(f, {panelUsageContextRead(f, "numberColumnWidth")}); const auto names = assistantContextField(f, "categoryData", "names"); return presentationColumns(f, initial, names); }
@@ -10470,6 +10503,7 @@ QJSValue ApplicationInfo::workflowPreparingTab() const {
         if (panelUsageTruth(panelUsageRead(f, tab, "preparing")) && panelUsageTruth(panelUsageMemberCall(f, tab, "contains", {point}))) { found = tab; return false; } return panelUsageReady(f);
     }); return found;
 }
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::windowAssistantAction(int kind, const QJSValue& page, const QJSValue& extra) const {
     const auto f = panelUsageEngine(this);
     if (kind == 0) {
@@ -10487,6 +10521,7 @@ void ApplicationInfo::windowAssistantAction(int kind, const QJSValue& page, cons
     if (kind == 2) { if (!panelUsageRead(f, assistantContextField(f, "Session", "assistant"), "state").strictlyEquals(QJSValue(QStringLiteral("agent_active")))) projectInvoke(f, "assistantPointer", "hide"); return; }
     projectWrite(f, "window", "assistantManualTakeoverProject", assistantContextField(f, "Session", "project")); projectWrite(f, "window", "assistantEmptyManualTakeover", QJSValue(assistantContextField(f, "Session", "project").isNull()));
 }
+#endif  // EDI_APP_ASSISTANT
 void ApplicationInfo::windowWebSaved(const QJSValue& kind) const {
     const auto f = panelUsageEngine(this); if (!kind.strictlyEquals(QJSValue(QStringLiteral("browser")))) return;
     if (!assistantContextField(f, "browserSaved", "warnedFor").strictlyEquals(assistantContextField(f, "Session", "project"))) {
@@ -10523,6 +10558,7 @@ void ApplicationInfo::resetPatternProjectView() const {
     projectWrite(f, "AppState", "patternViewAxis", QJSValue(QStringLiteral(""))); projectWrite(f, "AppState", "scanZoom", panelUsageComplete(f, panelUsageLiteral(f)));
 }
 
+#if EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::prepareAssistantCreate(const QJSValue& id) const {
     const auto f = panelUsageEngine(this);
     if (panelUsageRead(f, id, "length").strictlyEquals(QJSValue(0)) || !panelUsageContextRead(f, "createIntent").isNull() || !panelUsageContextRead(f, "assistantCreate").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible")) || !panelUsageTruth(panelUsageMemberCall(f, assistantContextField(f, "Session", "assistant"), "nativeProjectCreateCurrent", {id}))) return QJSValue(false);
@@ -10541,6 +10577,7 @@ void ApplicationInfo::retireAssistantCreate(const QJSValue& id, bool manual) con
     if (panelUsageContextRead(f, "assistantCreate").strictlyEquals(original)) panelUsageContextWrite(f, "assistantCreate", consentNull());
     if (!manual && panelUsageContextRead(f, "createIntent").strictlyEquals(pending) && !pending.isNull() && panelUsageRead(f, pending, "assistant").strictlyEquals(original)) projectInvoke(f, "createDialog", "close");
 }
+#endif  // EDI_APP_ASSISTANT
 QJSValue ApplicationInfo::createProjectNameError(const QJSValue& name) const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(projectInvoke(f, "createDialog", "acceptsProjectName", {name}))) return QJSValue(QStringLiteral(""));
     return mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed."));
@@ -10660,10 +10697,13 @@ void ApplicationInfo::workflowTextItemChanged() const {
     assistantMemberWrite(f, page, "textDirty", QJSValue(dirty));
 }
 
+#if EDI_APP_ASSISTANT
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
     return value.isString() ? edi_app::assistant_presentation::singleLineText(value.toString()) : QString();
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 QString ApplicationInfo::assistantWebSearchCaption(const QJSValue& payload) const {
     using namespace edi_app::assistant_presentation;
     const QPointer<QJSEngine> engine(qjsEngine(this));
@@ -10762,6 +10802,7 @@ QString ApplicationInfo::assistantWebSearchCaption(const QJSValue& payload) cons
     const QString caption = presentWebSearch(input);
     return messageScriptReady(engine) ? caption : QString();
 }
+#endif  // EDI_APP_ASSISTANT
 
 namespace {
 void messageScriptWrite(const QPointer<QJSEngine>& engine, const QJSValue& source,
@@ -10774,6 +10815,7 @@ void messageScriptWrite(const QPointer<QJSEngine>& engine, const QJSValue& sourc
     }
     target.setProperty(name, value);
 }
+#if EDI_APP_ASSISTANT
 struct MessageView {
     QPointer<QJSEngine> engine;
     QPointer<QQuickItem> item;
@@ -10799,6 +10841,7 @@ struct MessageView {
         return lifetime() && originalOwner.strictlyEquals(ownerValue);
     }
 };
+#if EDI_APP_ASSISTANT
 std::optional<MessageView> captureMessageView(const QPointer<QJSEngine>& engine, const QJSValue& component) {
     if (!messageScriptReady(engine) || QThread::currentThread() != engine->thread()) return std::nullopt;
     MessageView view;
@@ -10820,6 +10863,7 @@ std::optional<MessageView> captureMessageView(const QPointer<QJSEngine>& engine,
     if (!view.lifetime()) return std::nullopt;
     return view.current() ? std::optional<MessageView>(view) : std::nullopt;
 }
+#endif  // EDI_APP_ASSISTANT
 QJSValue messageChild(const MessageView& view, const char* alias) {
     if (!view.current()) return {};
     const auto child = messageScriptProperty(view.engine, view.component, QString::fromLatin1(alias));
@@ -10871,6 +10915,7 @@ void copyMessageLiteral(const QPointer<const ApplicationInfo>& actor, const Mess
         messageScriptWrite(view.engine, view.component, QStringLiteral("technicalCopied"), QJSValue(false));
 }
 using HumanSnapshot = edi_app::assistant_presentation::HumanActivitySnapshot;
+#if EDI_APP_ASSISTANT
 HumanSnapshot snapshotFrom(const edi_app::AssistantViewModel::PreparedActivityRead& detail) {
     return {detail.payload, detail.text.toString(), detail.provenance, detail.rowId, detail.kind, detail.status};
 }
@@ -10901,6 +10946,7 @@ std::optional<edi_app::assistant_presentation::HumanActivityInput> prepareHumanP
         input.nativeErrorDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QStringLiteral("project_required"));
     return messageScriptReady(engine) ? std::optional<HumanActivityInput>(std::move(input)) : std::nullopt;
 }
+#endif  // EDI_APP_ASSISTANT
 void clearHumanSnapshot(const MessageView& view) {
     if (view.current()) messageScriptWrite(view.engine, view.component,
         QStringLiteral("humanDetailsSnapshot"), QJSValue(QJSValue::NullValue));
@@ -10925,8 +10971,10 @@ void refreshExpandedHumanSnapshot(const MessageView& view) {
     const auto checked = messageScriptProperty(view.engine, disclosure, QStringLiteral("checked"));
     if (view.current() && checked.toBool()) refreshHumanSnapshot(view);
 }
+#endif  // EDI_APP_ASSISTANT
 } // namespace
 
+#if EDI_APP_ASSISTANT
 QString ApplicationInfo::assistantActivityDescription(const QJSValue& snapshot, const QString& kind,
     const QJSValue& compact, const QJSValue& payload, QObject* assistant) const {
     using namespace edi_app::assistant_presentation;
@@ -10944,7 +10992,9 @@ QString ApplicationInfo::assistantActivityDescription(const QJSValue& snapshot, 
         return input ? fullHumanDescription(*input, humanDescriptionLines(*input)) : unavailable();
     } catch (...) { return unavailable(); }
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantCopyActivity(const QJSValue& component, bool includeTechnical, bool offered) const {
     if (!offered) return;
     const QPointer<const ApplicationInfo> actor(this);
@@ -10969,7 +11019,9 @@ void ApplicationInfo::assistantCopyActivity(const QJSValue& component, bool incl
         copyMessageLiteral(actor, *view, literal);
     } catch (...) {}
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantCopyUserText(const QJSValue& component, bool offered) const {
     if (!offered) return;
     const QPointer<const ApplicationInfo> actor(this);
@@ -10980,7 +11032,9 @@ void ApplicationInfo::assistantCopyUserText(const QJSValue& component, bool offe
         copyMessageLiteral(actor, *view, view->text);
     } catch (...) {}
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantMessageChanged(const QJSValue& component, const QString& cause) const {
     try {
         const auto view = captureMessageView(qjsEngine(this), component);
@@ -11000,7 +11054,9 @@ void ApplicationInfo::assistantMessageChanged(const QJSValue& component, const Q
         if (view->current()) refreshExpandedHumanSnapshot(*view);
     } catch (...) {}
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantMessageDisclosureChanged(const QJSValue& component, bool checked) const {
     try {
         const auto view = captureMessageView(qjsEngine(this), component);
@@ -11009,14 +11065,18 @@ void ApplicationInfo::assistantMessageDisclosureChanged(const QJSValue& componen
         else clearHumanSnapshot(*view);
     } catch (...) {}
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantMessageClearFeedback(const QJSValue& component, bool stopTimer) const {
     try {
         const auto view = captureMessageView(qjsEngine(this), component);
         if (view) clearMessageFeedback(*view, stopTimer);
     } catch (...) {}
 }
+#endif  // EDI_APP_ASSISTANT
 
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantMessageReset(const QJSValue& component) const {
     try {
         const auto view = captureMessageView(qjsEngine(this), component);
@@ -11041,6 +11101,7 @@ void ApplicationInfo::assistantMessageReset(const QJSValue& component) const {
         }
     } catch (...) {}
 }
+#endif  // EDI_APP_ASSISTANT
 
 void ApplicationInfo::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }
 namespace {
@@ -11483,6 +11544,7 @@ void ApplicationInfo::setEngineThreads(int count) const { edi::set_engine_thread
 
 void ApplicationInfo::storeSettings() const { edi_app::store_settings_now(); }
 
+#if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantToolbarActivated(const QJSValue& window, const QJSValue& toggle,
                                                 const QJSValue& panel, const QJSValue& session,
                                                 const QJSValue& preferences, const QJSValue& desktopOnlyDialog) const {
@@ -11547,3 +11609,4 @@ void ApplicationInfo::assistantToolbarActivated(const QJSValue& window, const QJ
     if (!write(window, "assistantManualPane", QJSValue(manualPane))) return;
     write(preferences, "assistantShown", QJSValue(show));
 }
+#endif  // EDI_APP_ASSISTANT

@@ -91,7 +91,8 @@ AppDialog {
     objectName: "preferences"
     visible: Preferences.dialogShown
     onClosed: ApplicationInfo.preferencesClosed()
-    onOpened: Session.assistant.refreshSkillSources()
+    onOpened: if (ApplicationInfo.assistantBuilt)
+        Session.assistant.refreshSkillSources()
 
     title: qsTr("Preferences")
     standardButtons: Dialog.Ok
@@ -488,9 +489,10 @@ AppDialog {
         ScrollView {
             id: aiPage
             implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height - bar.implicitHeight - AppSizes.unit * 8))
-            readonly property var original: Session.assistant
+            readonly property var original: ApplicationInfo.assistantBuilt ? Session.assistant : null
             property string copyError: ""
-            onOriginalChanged: ApplicationInfo.preferenceAssistantChanged()
+            onOriginalChanged: if (ApplicationInfo.assistantBuilt)
+                ApplicationInfo.preferenceAssistantChanged()
             function copyDiagnostics(button, report) {
                 ApplicationInfo.preferenceCopyDiagnostics(button, report);
             }
@@ -593,21 +595,21 @@ AppDialog {
                         width: (parent.width - parent.spacing) / 2
                         text: qsTr("Add skill source")
                         fontIcon: "plus-circle"
-                        enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel && !Session.assistant.skillSourceImporting
+                        enabled: ApplicationInfo.assistantAvailable && !(aiPage.original ? aiPage.original.canCancel : false) && !(aiPage.original ? aiPage.original.skillSourceImporting : false)
                         onClicked: ApplicationInfo.preferenceBeginSourceSelection(false)
                     }
                     EaElements.SideBarButton {
                         objectName: "preferences.ai.sources.web"
                         width: (parent.width - parent.spacing) / 2
-                        text: Session.assistant.skillSourceImporting ? qsTr("Cancel web import") : qsTr("Add skills from web")
-                        fontIcon: Session.assistant.skillSourceImporting ? "times-circle" : "globe"
-                        enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
+                        text: (aiPage.original ? aiPage.original.skillSourceImporting : false) ? qsTr("Cancel web import") : qsTr("Add skills from web")
+                        fontIcon: (aiPage.original ? aiPage.original.skillSourceImporting : false) ? "times-circle" : "globe"
+                        enabled: ApplicationInfo.assistantAvailable && !(aiPage.original ? aiPage.original.canCancel : false)
                         onClicked: ApplicationInfo.preferenceBeginSourceSelection(true)
                     }
                 }
                 EaElements.Label {
                     width: parent.width
-                    text: Session.assistant.skillSourceError
+                    text: (aiPage.original ? aiPage.original.skillSourceError : "")
                     visible: text.length > 0
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
@@ -710,15 +712,16 @@ AppDialog {
                 EaElements.SideBarButton {
                     objectName: "preferences.ai.clearCachedHistory"
                     width: parent.width
-                    text: Session.assistant.cachedHistoryClearing ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
+                    text: (aiPage.original ? aiPage.original.cachedHistoryClearing : false) ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
                     fontIcon: "eraser"
-                    enabled: !Session.assistant.canCancel && !Session.assistant.cachedHistoryClearing
+                    enabled: !(aiPage.original ? aiPage.original.canCancel : false) && !(aiPage.original ? aiPage.original.cachedHistoryClearing : false)
                     ToolTip.text: qsTr("Clear the app's saved chat display only. Projects, reports, runtime sessions and sign-in are kept.")
-                    onClicked: Session.assistant.clearCachedHistory()
+                    onClicked: if (aiPage.original)
+                        aiPage.original.clearCachedHistory()
                 }
                 EaElements.Label {
                     width: parent.width
-                    text: Session.assistant.cachedHistoryError
+                    text: (aiPage.original ? aiPage.original.cachedHistoryError : "")
                     visible: text.length > 0
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere

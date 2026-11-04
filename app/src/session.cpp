@@ -195,10 +195,12 @@ Session::Session(QObject* parent, AssistantWorkReportOptions options)
             [this] { examples_->replaceItems(collection_examples_->items()); });
     examples_->replaceItems(collection_examples_->items());
     connect(collection_examples_, &CollectionExamples::noticeChanged, this, &Session::examplesNoticeChanged);
+#if EDI_APP_ASSISTANT
     assistant_ = new AssistantViewModel(this, options);
+#endif
     initializeSession();
 }
-#ifndef __EMSCRIPTEN__
+#if EDI_APP_ASSISTANT && !defined(__EMSCRIPTEN__)
 Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject* parent,AssistantWorkReportOptions options)
     : QObject(parent),work_report_options_(options),examples_(new ExampleListModel(this)),warnings_(new WarningListModel(this)) {
     online_sources_ = new OnlineSourcesModel(this);
@@ -214,8 +216,10 @@ Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject
 }
 #endif
 void Session::initializeSession() {
+#if EDI_APP_ASSISTANT
     connect(assistant_, &AssistantViewModel::conversationRetired, this, &Session::retireAssistantIntent);
     connect(this, &Session::projectDirectoryUsed, assistant_, &AssistantViewModel::projectSaved);
+#endif
     // crysta's warnings reach Messages, never only the terminal (the owner, 2026-10-23).
     edi::collect_engine_warnings();
     // What a crash left in the temporary directory (edi ADR-0052).
@@ -230,8 +234,22 @@ void Session::initializeSession() {
     }
     // Commit the shared history lease only after this actual owner finished
     // every fallible initialization step (ADR-0057).
+#if EDI_APP_ASSISTANT
     assistant_->finishHistoryInitialization();
+#endif
 }
+
+#if EDI_APP_ASSISTANT
+bool Session::assistantRetainsProject(ProjectViewModel* project) const { return assistant_->retainsSessionProject(project); }
+bool Session::assistantPrepareRestore(ProjectViewModel* project, const QString& source, const std::function<bool()>& commit) {
+    return assistantPrepareRestore(project, source, commit);
+}
+bool Session::assistantSaveNotified(ProjectViewModel* project) const { return assistant_->ordinarySaveNotification(project); }
+#else
+bool Session::assistantRetainsProject(ProjectViewModel*) const { return false; }
+bool Session::assistantPrepareRestore(ProjectViewModel*, const QString&, const std::function<bool()>&) { return true; }
+bool Session::assistantSaveNotified(ProjectViewModel*) const { return false; }
+#endif
 
 Session::~Session() {
     delete assistant_;assistant_=nullptr;
@@ -351,7 +369,9 @@ bool Session::openProject(const QUrl& location) {
         qCInfo(lcApp, "project opened");
         return true;
     }
+#if EDI_APP_ASSISTANT
     if(receiver && assistant_->sessionProjectRestorePending())return false;
+#endif
     // A stale outer Open neither reports its successor's error as its own nor
     // decorates that successor. False does not imply no partial adoption.
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
@@ -1073,7 +1093,9 @@ edi_app::ProjectCreationResult Session::createProjectWithOutcome(const QString& 
     result.success = success; result.current = current; result.error = outcome.error; result.saved = outcome.saved;
     result.path = outcome.path; result.owner = outcome.owner.data(); result.has_owner = outcome.has_owner;
     result.replacement = QString::number(outcome.replacement);
+#if EDI_APP_ASSISTANT
     assistant_->finishOrdinaryProjectCreationOutcome(assistantIntent,result);
+#endif
     return result;
 }
 bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outcome) const {
@@ -1106,6 +1128,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     }
     const QPointer<ProjectViewModel> originalCreated(created);
     const bool assistantCreation = !assistantIntent.isEmpty();
+#if EDI_APP_ASSISTANT
     try {
         if (assistantCreation && !assistant_->prepareOrdinaryProjectCreation(created, assistantIntent, location)) {
             if (originalCreated) originalCreated->deleteLater();
@@ -1118,6 +1141,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
         if (originalCreated) originalCreated->deleteLater();
         return false;
     }
+#endif
     if (!receiver || !originalCreated) return false;
     bool committed = false;
     quint64 committedReplacement = 0;
@@ -1125,7 +1149,9 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     if (outcome && committed) {
         outcome->owner = originalCreated; outcome->has_owner = true; outcome->replacement = committedReplacement;
     }
+#if EDI_APP_ASSISTANT
     if (receiver && assistantCreation) assistant_->finishOrdinaryProjectCreation(originalCreated, assistantIntent, committed);
+#endif
     const auto current = [&] { return receiver && originalCreated && project_ == originalCreated &&
         committed && replacement_generation_ == committedReplacement; };
     if (!presented || !current()) return false;
@@ -1154,8 +1180,13 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
 void Session::closeProject() {
     const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> original(project_);
     const auto binding=replacement_generation_;
+#if EDI_APP_ASSISTANT
     auto pending=assistant_->prepareProjectResetInputs();
     if(!receiver || !pending || project_!=original || replacement_generation_!=binding)return;
+#else
+    const std::shared_ptr<SessionResetInputs> pending;
+    if(!receiver || project_!=original || replacement_generation_!=binding)return;
+#endif
     replaceProject(nullptr, {}, {}, false, nullptr, nullptr, false, {}, pending);
 }
 
@@ -1329,7 +1360,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
         return false;
     }
     const auto cleanup=qScopeGuard([&] {
-        if(!*adopted && receiver && opened && project_!=opened && !assistant_->retainsSessionProject(opened))opened->deleteLater();
+        if(!*adopted && receiver && opened && project_!=opened && !assistantRetainsProject(opened))opened->deleteLater();
     });
     retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
     connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
@@ -1340,7 +1371,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
         if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
         return !afterOpen || afterOpen();
     };
-    if(!assistant_->prepareSessionProjectRestore(opened,directory,commit))return false;
+    if(!assistantPrepareRestore(opened,directory,commit))return false;
     return commit();
 }
 
@@ -1396,7 +1427,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
         return false;
     }
     const auto cleanup=qScopeGuard([&] {
-        if(!*adopted && receiver && opened && project_!=opened && !assistant_->retainsSessionProject(opened))opened->deleteLater();
+        if(!*adopted && receiver && opened && project_!=opened && !assistantRetainsProject(opened))opened->deleteLater();
     });
     retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
     connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
@@ -1407,7 +1438,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
         if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
         return !afterOpen || afterOpen();
     };
-    if(!assistant_->prepareSessionProjectRestore(opened,source,commit))return false;
+    if(!assistantPrepareRestore(opened,source,commit))return false;
     return commit();
 }
 
@@ -1429,7 +1460,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<AssistantViewModel::ProjectResetInputs>& resetInputs) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<SessionResetInputs>& resetInputs) {
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     const QPointer<ProjectViewModel> previous(project_);
@@ -1482,14 +1513,18 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     }
     if(!current())return false;
     if(!nativePrepared){emit projectAboutToChange();if(!current())return false;}
+#if EDI_APP_ASSISTANT
     if(nativePrepared && !assistant_->commitNativeProject(target))return false;
+#endif
     if(target)connect(target,&ProjectViewModel::pathChanged,this,[this,target] {
         if(target && project_==target && path_generation_!=UINT64_MAX)++path_generation_;
     });
     project_ = target;
     if(committed)*committed=true;
     if(committedReplacement)*committedReplacement=replacement;
+#if EDI_APP_ASSISTANT
     if(!nativePrepared && !assistant_->attachProject(target,false,ordinaryEmptyCreate && previous==nullptr,resetInputs))return false;
+#endif
     if(!current() || project_!=target)return false;
     opened_example_ = example;
     warnings_->setMessages(warnings);
@@ -1497,7 +1532,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if (project_ != nullptr) {
         connect(project_, &ProjectViewModel::projectEdited, this, [this] {
             auto* source=qobject_cast<ProjectViewModel*>(sender());
-            if(source!=project_ || assistant_->ordinarySaveNotification(source))return;
+            if(source!=project_ || assistantSaveNotified(source))return;
             retireAssistantIntent();
         });
         connect(project_, &ProjectViewModel::refused, this, &Session::setLastError);
