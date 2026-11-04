@@ -242,7 +242,7 @@ void Session::initializeSession() {
 #if EDI_APP_ASSISTANT
 bool Session::assistantRetainsProject(ProjectViewModel* project) const { return assistant_->retainsSessionProject(project); }
 bool Session::assistantPrepareRestore(ProjectViewModel* project, const QString& source, const std::function<bool()>& commit) {
-    return assistantPrepareRestore(project, source, commit);
+    return assistant_->prepareSessionProjectRestore(project, source, commit);
 }
 bool Session::assistantSaveNotified(ProjectViewModel* project) const { return assistant_->ordinarySaveNotification(project); }
 #else
@@ -375,7 +375,7 @@ bool Session::openProject(const QUrl& location) {
     // A stale outer Open neither reports its successor's error as its own nor
     // decorates that successor. False does not imply no partial adoption.
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
-    const auto message=last_error_.isEmpty()?tr("The project could not be opened"):last_error_;
+    const auto message=last_error_.isEmpty()?tr("The project at %1 could not be opened").arg(location.toLocalFile().isEmpty()?location.toString():location.toLocalFile()):last_error_;
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
     emit loadFailed(message);
     return false;
@@ -392,13 +392,13 @@ bool Session::openExample(const QString& exampleId) {
     // A stale outer Open neither reports its successor's error as its own nor
     // decorates that successor. False does not imply no partial adoption.
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
-    const auto message=last_error_.isEmpty()?tr("The project could not be opened"):last_error_;
+    const auto message=last_error_.isEmpty()?tr("The example %1 could not be opened").arg(exampleId):last_error_;
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
     emit loadFailed(message);
     return false;
 }
 
-bool Session::openProjectAt(const QUrl& location) {
+bool Session::openProjectAt(const QUrl& location, const QString& example) {
     if (!location.isLocalFile()) {
         setLastError(QStringLiteral("cannot open %1: only local projects (file: URLs) can be opened")
                          .arg(location.toString()));
@@ -412,7 +412,7 @@ bool Session::openProjectAt(const QUrl& location) {
     if (given.isFile() && given.fileName() == QStringLiteral("project.edi")) {
         source = given.absolutePath();
     } else if (given.isFile() && edi::is_project_archive(source.toStdString())) {
-        return open(source,{},[this,given] {
+        return open(source,example,[this,given] {
         const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
         const auto binding=replacement_generation_;auto pathBinding=path_generation_;
         const auto current=[&]{return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
@@ -963,6 +963,7 @@ bool Session::openExampleNamed(const QString& exampleId) {
                 return;
             }
             if (!error.isEmpty()) {
+                qCWarning(lcApp, "example %s not fetched: %s", qPrintable(exampleId), qPrintable(error));
                 finish(false, error);
                 return;
             }
@@ -971,10 +972,13 @@ bool Session::openExampleNamed(const QString& exampleId) {
                 return;
             }
             receiver->aside_next_ = aside;
-            const bool opened = receiver->openProjectAt(archive);
+            const bool opened = receiver->openProjectAt(archive, exampleId);
             receiver->aside_next_ = false;
             if (opened) qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
-            finish(opened, opened ? QString() : receiver->last_error_.isEmpty() ? tr("The project could not be opened") : receiver->last_error_);
+            else qCWarning(lcApp, "example %s: %s could not be opened: %s", qPrintable(exampleId), qPrintable(archive.toLocalFile()), qPrintable(receiver->last_error_));
+            finish(opened, opened ? QString()
+                   : tr("The example %1, downloaded to %2, could not be opened%3")
+                         .arg(exampleId, archive.toLocalFile(), receiver->last_error_.isEmpty() ? QString() : QStringLiteral(": ") + receiver->last_error_));
         });
     });
     return true;

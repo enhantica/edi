@@ -68,7 +68,7 @@ QVariant OnlineSourcesModel::data(const QModelIndex& index, int role) const {
     switch (role) {
         case IdRole: return s.id;
         case NameRole: return s.name;
-        case UrlRole: return locations(s).join(QStringLiteral(" · "));
+        case UrlRole: return locations(s).join(QStringLiteral(", "));
         case KindsRole: return s.kinds;
         case BuiltinRole: return s.builtin;
         case EnabledRole: return s.enabled;

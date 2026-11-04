@@ -4,13 +4,16 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QFile>
+#include <QLoggingCategory>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QNetworkProxyFactory>
 #include <QNetworkRequest>
 #include <QTimer>
 
 namespace edi_app {
 namespace {
+Q_LOGGING_CATEGORY(lcOnline, "edi.online")
 
 // Whether a failed reply means the source could not be reached, as opposed to answering with a refusal: by error
 // class, not by a list. Qt numbers transport errors 1 to 99, proxy errors 101 to 199, server errors 401 to 499;
@@ -74,7 +77,13 @@ void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
         });
         return;
     }
-    if (manager == nullptr) manager = new QNetworkAccessManager(owner);
+    if (manager == nullptr) {
+        // The system's proxy (on Linux the http_proxy environment) and a transfer timeout, so a request behind a proxy
+        // neither bypasses it nor hangs without a word.
+        QNetworkProxyFactory::setUseSystemConfiguration(true);
+        manager = new QNetworkAccessManager(owner);
+        manager->setTransferTimeout(30000);
+    }
     QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(30000);
@@ -84,7 +93,8 @@ void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
         if (reply->error() != QNetworkReply::NoError) {
             const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             const QString what = status > 0 ? QCoreApplication::translate("OnlineSearch", "%1 answered %2").arg(url.toString()).arg(status)
-                                            : reply->errorString();
+                                            : QCoreApplication::translate("OnlineSearch", "%1: %2").arg(url.toString(), reply->errorString());
+            qCWarning(lcOnline, "%s", qPrintable(what));
             done({}, what, unreachable_error(reply->error(), status));
             return;
         }

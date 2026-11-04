@@ -313,7 +313,9 @@ class Session : public QObject {
     void webSaveFinished(bool saved);
 
    private:
-    bool openProjectAt(const QUrl& directory);
+    /// Opens a project folder, a project.edi or a project archive; `example` names the catalogue example a downloaded
+    /// archive is, so it is not taken for a project of the user's own (no recent entry, Save asks where).
+    bool openProjectAt(const QUrl& directory, const QString& example = QString());
     bool openExampleNamed(const QString& exampleId);
     bool open(const QString& directory,const QString& example,const std::function<bool()>& afterOpen = {});
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
