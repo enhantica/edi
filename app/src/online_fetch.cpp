@@ -2,6 +2,7 @@
 #include "online_fetch.hpp"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -21,6 +22,16 @@ bool unreachable_error(QNetworkReply::NetworkError error, int status) {
 }
 
 }  // namespace
+
+QString content_problem(const QByteArray& bytes, long long expected_bytes, const QString& sha256, const QString& name) {
+    if (expected_bytes >= 0 && bytes.size() != expected_bytes)
+        return QCoreApplication::translate("OnlineSearch", "%1 has %2 bytes, not the %3 the index records")
+            .arg(name).arg(bytes.size()).arg(expected_bytes);
+    if (!sha256.isEmpty() &&
+        QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()).compare(sha256, Qt::CaseInsensitive) != 0)
+        return QCoreApplication::translate("OnlineSearch", "%1 does not match the digest the index records").arg(name);
+    return {};
+}
 
 QUrl joined_url(const QString& base, const QString& path) {
     QString root = base;

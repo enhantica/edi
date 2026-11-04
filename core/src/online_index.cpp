@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cmath>
 #include <map>
+#include <regex>
 #include <sstream>
 #include <stdexcept>
 
@@ -48,13 +49,24 @@ bool known_kind(const std::string& kind) {
     return std::find(std::begin(kKinds), std::end(kKinds), kind) != std::end(kKinds);
 }
 
+// A file path inside a collection: segments of letters, digits, '.', '_', '~' and '-', each starting with a letter
+// or digit, joined by single slashes. That excludes a leading slash, a drive or scheme (no ':'), backslashes,
+// percent-encoding, '.' and '..' segments and hidden files, on every platform the path may be joined on.
 bool relative_path(const std::string& path) {
-    if (path.empty() || path.front() == '/' || path.find("://") != std::string::npos) return false;
-    std::stringstream parts(path);
-    std::string part;
-    while (std::getline(parts, part, '/'))
-        if (part.empty() || part == "..") return false;
-    return true;
+    if (path.empty()) return false;
+    bool start = true;
+    for (const char ch : path) {
+        const auto c = static_cast<unsigned char>(ch);
+        if (ch == '/') {
+            if (start) return false;  // a leading, doubled or trailing slash
+            start = true;
+            continue;
+        }
+        const bool word = std::isalnum(c) != 0;
+        if (start ? !word : !(word || ch == '.' || ch == '_' || ch == '~' || ch == '-')) return false;
+        start = false;
+    }
+    return !start;
 }
 
 // A formula's elements with their counts, summed when an element repeats.
@@ -75,6 +87,9 @@ std::map<std::string, double> counted_elements(const std::string& formula) {
         while (i < text.size() && (std::isdigit(static_cast<unsigned char>(text[i])) || text[i] == '.')) number += text[i++];
         double count = 1.0;
         if (!number.empty()) {
+            // Digits, optionally one dot and digits: "1.2.3" or "1." is refused, never cut down to a prefix.
+            static const std::regex whole("[0-9]+(\\.[0-9]+)?");
+            if (!std::regex_match(number, whole)) throw std::invalid_argument("not a chemical formula: " + formula);
             try {
                 count = std::stod(number);
             } catch (const std::exception&) {

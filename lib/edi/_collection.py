@@ -82,14 +82,18 @@ class Collection:
     def fetch(self, entry_id: str, into: str | _os.PathLike) -> _Path:
         """Copy or download the entry's first file into the folder ``into``.
 
-        Returns the written path; a recorded sha256 is checked.
+        Returns the written path; the size and sha256 the index records are checked.
         """
         entry = self.find(entry_id)
         if entry is None:
             raise ValueError(f'no entry {entry_id!r} in {self._source}')
         file = entry['files'][0]
         data = _read(_join(self._source, file['path']))
-        if file.get('sha256') and hashlib.sha256(data).hexdigest() != file['sha256']:
+        if file.get('bytes') is not None and len(data) != file['bytes']:
+            raise ValueError(
+                f'{file["path"]} has {len(data)} bytes, not the {file["bytes"]} the index records'
+            )
+        if file.get('sha256') and hashlib.sha256(data).hexdigest() != file['sha256'].lower():
             raise ValueError(f'{file["path"]} does not match its recorded sha256')
         target = _Path(into) / _Path(file['path']).name
         target.parent.mkdir(parents=True, exist_ok=True)

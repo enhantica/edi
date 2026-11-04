@@ -296,11 +296,19 @@ void OnlineSearch::load(int row, QObject* project, QObject* target) {
     const QString kind = QString::fromStdString(entry->kind);
     const QString name = QFileInfo(url.path()).fileName();
     const int generation = generation_;
+    const long long expectedBytes = entry->files.front().bytes;
+    const QString digest = QString::fromStdString(entry->files.front().sha256);
     setBusy(true);
-    fetch(url, [this, generation, fields, kind, name, requestProject, requestTarget, newTarget](const QByteArray& bytes, const QString& error, bool unreachable) {
+    fetch(url, [this, generation, fields, kind, name, requestProject, requestTarget, newTarget, expectedBytes, digest](
+                   const QByteArray& bytes, const QString& error, bool unreachable) {
         if (generation != generation_) return;
         if (!error.isEmpty()) {
             fail(error, unreachable);
+            return;
+        }
+        // The index's size and digest, when it states them, before the file reaches a loader.
+        if (const QString problem = content_problem(bytes, expectedBytes, digest, name); !problem.isEmpty()) {
+            fail(problem, false);
             return;
         }
         if (!downloads_) downloads_ = std::make_unique<QTemporaryDir>();

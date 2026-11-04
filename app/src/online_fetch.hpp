@@ -24,4 +24,8 @@ void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
 /// `base` joined with a relative `path`: a URL stays a URL, a bare folder becomes a file URL.
 QUrl joined_url(const QString& base, const QString& path);
 
+/// Why `bytes` is not the file the index describes: a size other than `expected_bytes` (when not negative) or a
+/// SHA-256 other than `sha256` (when given). Empty when the content agrees or the index states neither.
+QString content_problem(const QByteArray& bytes, long long expected_bytes, const QString& sha256, const QString& name);
+
 }  // namespace edi_app

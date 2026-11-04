@@ -32,6 +32,11 @@ ROOT = Path(__file__).resolve().parents[2]
 EXAMPLES = ROOT / 'docs/user/cli'
 METADATA = ROOT / 'app/examples/metadata.json'
 TUTORIAL_FILES = ROOT / 'app/tutorials/files'
+try:
+    import edi  # the core reader, for `check`; `populate` and `index` need no build
+except ImportError:  # pragma: no cover - the environment decides
+    edi = None
+
 SCHEMA = 'edi-data-index/1'
 KINDS = ('structure', 'experiment', 'data', 'project')
 FOLDERS = {
@@ -306,18 +311,28 @@ def _entry_problems(output: Path, entry: dict, seen: set) -> list[str]:
     cell = entry.get('cell')
     if cell is not None and (not isinstance(cell, list) or len(cell) != 6):
         problems.append(f'{where} has a cell without six values')
-    files = entry.get('files') or []
-    if not files:
+    files = entry.get('files')
+    if not isinstance(files, list) or not files:
         problems.append(f'{where} has no files')
+        files = []
     for file in files:
+        if not isinstance(file, dict):
+            problems.append(f'{where} has a file that is not an object')
+            continue
         problems.extend(_file_problems(output, where, file))
     return problems
 
 
+# The reader's grammar for a file path inside a collection: segments of letters, digits, '.', '_',
+# '~' and '-', each starting with a letter or digit, joined by single slashes; no drive, scheme,
+# backslash, percent-encoding, '.' or '..'.
+RELATIVE_PATH = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._~-]*(/[A-Za-z0-9][A-Za-z0-9._~-]*)*$')
+
+
 def _file_problems(output: Path, where: str, file: dict) -> list[str]:
     rel = file.get('path', '')
-    if rel.startswith('/') or '..' in rel.split('/') or '://' in rel:
-        return [f'{where}: {rel} is not a relative path']
+    if not isinstance(rel, str) or not RELATIVE_PATH.match(rel):
+        return [f'{where}: {rel!r} is not a relative path inside the collection']
     on_disk = output / rel
     if not on_disk.is_file():
         return [f'{where}: {rel} is missing']
@@ -329,20 +344,57 @@ def _file_problems(output: Path, where: str, file: dict) -> list[str]:
     return problems
 
 
+def _reader_problem(output: Path) -> str:
+    """What the core reader, the one parser every interface uses, refuses in the index.
+
+    Empty if nothing. The check never accepts an index the app, the CLI or Python would
+    refuse, so it asks that reader rather than restating its rules.
+    """
+    if edi is None:
+        raise SystemExit(
+            'check: the edi package (the core reader) is not importable; run the check in the'
+            ' project environment'
+        )
+    try:
+        edi.load_collection(str(output))
+    except Exception as problem:  # noqa: BLE001 - the reader's message is the finding
+        return str(problem)
+    return ''
+
+
+def _index_document(path: Path) -> tuple[dict, list[dict], list[str]]:
+    """The index as JSON, its entries array and what is wrong with their shape."""
+    problems: list[str] = []
+    try:
+        document = json.loads(path.read_text(encoding='utf-8'))
+    except json.JSONDecodeError as problem:
+        return {}, [], [f'index.json is not JSON: {problem}']
+    if not isinstance(document, dict):
+        return {}, [], ['index.json is not an object']
+    if document.get('schema') != SCHEMA:
+        problems.append(f'schema is {document.get("schema")!r}, not {SCHEMA}')
+    entries = document.get('entries')
+    if not isinstance(entries, list):
+        problems.append('the index has no entries array')
+        entries = []
+    shaped = [e for e in entries if isinstance(e, dict)]
+    unshaped = [e for e in entries if not isinstance(e, dict)]
+    problems.extend(f'an entry is not an object: {e!r}' for e in unshaped)
+    return document, shaped, problems
+
+
 def check(output: Path) -> int:
     path = output / 'index.json'
     if not path.is_file():
         print(f'check: {path} is missing', file=sys.stderr)
         return 1
-    document = json.loads(path.read_text())
-    problems = []
-    if document.get('schema') != SCHEMA:
-        problems.append(f'schema is {document.get("schema")!r}, not {SCHEMA}')
+    _, entries, problems = _index_document(path)
+    if reader := _reader_problem(output):
+        problems.append(f'the core reader refuses the index: {reader}')
     seen: set = set()
-    entries = document.get('entries', [])
     for entry in entries:
         problems.extend(_entry_problems(output, entry, seen))
-    listed = {f['path'] for e in entries for f in e.get('files', [])}
+    listed = {f.get('path') for e in entries for f in e.get('files') or [] if isinstance(f, dict)}
     for folder in FOLDERS.values():
         for file in sorted((output / folder).glob('*')):
             missing = file.is_file() and not file.name.endswith('.meta.json')
