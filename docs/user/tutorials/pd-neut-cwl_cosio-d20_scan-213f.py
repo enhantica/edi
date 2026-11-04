@@ -3,9 +3,9 @@
 # # Sequential magnetic fit: Co₂SiO₄, D20 scan from 2.3 K
 #
 # Fit the olivine Co₂SiO₄ with its magnetic structure to the whole D20 cooling scan, 213 patterns
-# from 497.4 K down to 2.3 K, one after another and from the lowest temperature up: the first fit is
-# the 2.3 K example's, and each later one starts from the previous result. The cobalt moments stay
-# free at every temperature and fall towards zero near the Néel temperature, about 50 K.
+# from 497.4 K down to 2.3 K, one after another and from the lowest temperature up: the first fit
+# is the 2.3 K example's, and each later one starts from the previous result. The cobalt moments
+# stay free at every temperature and fall towards zero near the Néel temperature, about 50 K.
 #
 # The project is the catalogue case `pd-neut-cwl_cosio-d20_scan-213f`: the files the command line
 # fits with `python -m edi fit docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project` and the app
@@ -55,7 +55,8 @@ project.save_as('pd-neut-cwl_cosio-d20_scan-213f')
 # %% [markdown]
 # ## Fit the lowest temperatures, then stop
 #
-# The fit can stop between patterns. Here it stops after five, all below 3 K; the rows it wrote stay.
+# The fit can stop between patterns. Here it stops after five, all below 3 K; the rows it wrote
+# stay.
 
 # %%
 fitted = []

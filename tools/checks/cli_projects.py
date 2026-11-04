@@ -287,7 +287,11 @@ def form_factor_j0(project: Path) -> None:
                 continue
             column = header.index('_magnetic_form_factor.approximation')
             coefficients = [k for k, name in enumerate(header) if name.endswith('_coefficient')]
-            while index < len(lines) and lines[index].strip() and not lines[index].startswith(('_', 'loop_')):
+            while (
+                index < len(lines)
+                and lines[index].strip()
+                and not lines[index].startswith(('_', 'loop_'))
+            ):
                 cells = lines[index].split()
                 cells[column] = 'j0'
                 # A coefficient <j0> does not use cannot be free.
