@@ -68,10 +68,9 @@ namespace {
 // shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer, and a
 // structure's saved view (`_structure_view`) in Extra's Appearance group.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
-    // The magnetic form factors are chosen per site in the Magnetic moments group, and the parent group shows in
-    // the Magnetic space group group when it differs from the space group (edi ADR-0068).
-    static const char* const kShownElsewhere[] = {"experiment_type", "structure_view", "magnetic_form_factor",
-                                                  "parent_space_group"};
+    // The parent group shows in the Magnetic space group group when it differs from the space group (edi
+    // ADR-0068).
+    static const char* const kShownElsewhere[] = {"experiment_type", "structure_view", "parent_space_group"};
     std::vector<const edi::Category*> ordered;
     for (const edi::Category& category : categories) {
         if (std::find(std::begin(kShownElsewhere), std::end(kShownElsewhere), category.id) == std::end(kShownElsewhere)) {
@@ -122,8 +121,9 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
     // transform, the calculator (there is one), the curves' presentation order, the block list or the correlations,
     // which the Correlations tab shows. The bond settings get a designed group of their own later, and the type is
     // shown elsewhere.
-    // Nor what another group shows: a structure's saved view (Appearance), its magnetic form factors (Magnetic
-    // moments) and its parent group (Magnetic space group, when it differs from the space group).
+    // Nor what another group shows: a structure's saved view (Appearance) and its parent group (Magnetic space
+    // group, when it differs from the space group). The magnetic form factors have their own group, which the core
+    // lists for a magnetic structure.
     static const char* const kNotGenerated[] = {"geom",     "experiment_type",           "edi",
                                                 "calculator", "atom_sites_cartn_transform", "pd_calc_overall",
                                                 "pd_block", "fit_parameter_correlation", "structure_view",

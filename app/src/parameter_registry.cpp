@@ -123,6 +123,12 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
                 }
             }
         }
+        // A form factor's coefficients take the colour of the atom type they belong to.
+        for (const auto& row : structure->magnetic_form_factors) {
+            for (const edi::Parameter* parameter : row->parameters()) {
+                element.emplace(parameter, row->id.value());
+            }
+        }
     }
     // An ADP's label and units for its site's declared type, from the dictionary's variants.
     const std::unordered_map<const edi::Parameter*, std::string> variants = edi::parameter_variants(project);

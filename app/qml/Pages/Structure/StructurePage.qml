@@ -24,6 +24,7 @@ WorkflowPage {
             "atom_site": atomSitesContent,
             "atom_site_aniso": atomSiteAdpContent,
             "atom_site_moment": atomSiteMomentContent,
+            "magnetic_form_factor": magneticFormFactorsContent,
             "space_group_magn": magneticSpaceGroupContent,
             "parent_propagation_vector": propagationVectorsContent,
             "scattering_length": scatteringLengthsContent
@@ -168,6 +169,12 @@ WorkflowPage {
         AtomSiteMomentGroup {
             structure: page.structure
             options: page.project ? page.project.structureViewOptions : null
+        }
+    }
+    Component {
+        id: magneticFormFactorsContent
+        MagneticFormFactorsGroup {
+            structure: page.structure
         }
     }
     Component {

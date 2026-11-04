@@ -17,7 +17,8 @@ without computing any of them itself.
 ## Decision
 
 - **Core ownership.** A structure holds its moments as a keyed loop of rows (`atom_site_moment`, one per magnetic
-  site, three parameters each) and the rest of the magnetic description as one value, held as written. crysta reads,
+  site, three parameters each), its form factors as another (`magnetic_form_factor`, one per declared type, three
+  coefficients each) and the rest of the magnetic description as one value, held as written. crysta reads,
   checks, calculates and writes all of it: the ties a site's symmetry imposes on its moment, the moments in the cell
   and the magnetic intensity come from crysta through the adapter, never from edi code.
 - **Structure page.** Main holds the magnetic space group, the propagation vectors and the moments; Extra holds the
@@ -36,6 +37,13 @@ without computing any of them itself.
   derived value with its s.u. After a fit the s.u. come from the fit's covariance (correlations, and the cell where it
   was fitted, included); before one they are propagated as if the components were uncorrelated, and the tooltip says
   which. An angle the moment does not fix shows a dash, with the reason in its tooltip.
+- **Form factors** (the owner, 2026-11-03). The moments table chooses each site's ion, shared by its atom type. The
+  Magnetic form factors group on Extra has one row per magnetic atom type: the type and its ion, read only; the
+  approximation, ⟨j0⟩ alone, the dipole ⟨j0⟩ + C₂⟨j2⟩ or beyond the dipole up to ⟨j6⟩; and the coefficients it uses,
+  edited and fitted like any other parameter. A coefficient the approximation does not use, or whose term the ion's
+  table lacks, is greyed out. C₂'s tooltip gives the Landé g it stands for, C₂ = 2/g − 1. The core holds a type's
+  form factor as a keyed row (`magnetic_form_factor`) only once an edit or a file declares it; a row back at the
+  defaults (its own ion, ⟨j0⟩, every coefficient 0 and fixed) is removed, so the file says nothing it does not need.
 - **Identity.** The magnetic description and the moments are inputs of the structure's geometry and of every
   calculation it takes part in; a structure without them keeps its identity and its saved bytes.
 

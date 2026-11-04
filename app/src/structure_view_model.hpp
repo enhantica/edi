@@ -221,6 +221,33 @@ class AtomSiteMomentListModel : public RowTableModel {
     int revision_ = 0;
 };
 
+// The Magnetic form factors group (the owner, 2026-11-03): one row per magnetic atom type, keyed by the first site
+// of the type that carries a moment. The type and its ion, read only (the ion is chosen in the moments table); the
+// approximation; and the coefficients C2, C4, C6 it uses, editable and fittable. A type takes the defaults (its own
+// ion, <j0>) until an edit gives it a form-factor row.
+class MagneticFormFactorListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    Q_PROPERTY(QStringList approximations READ approximations CONSTANT)
+
+   public:
+    MagneticFormFactorListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
+                                QObject* parent);
+    void sync();
+    // The approximation tokens, in the dictionary's order.
+    QStringList approximations() const;
+    // Whether the row's ion's table carries the term of coefficient `n` (0: <j2>, 1: <j4>, 2: <j6>).
+    Q_INVOKABLE bool hasTerm(int row, int n) const;
+    // Sets the row's approximation; the type gets a form-factor row when it has none.
+    Q_INVOKABLE void setApproximation(int row, const QString& approximation);
+
+   private:
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+};
+
 // The Propagation vectors group (edi ADR-0068; the owner, 2026-11-03): the structure's commensurate k vectors, each
 // added, edited and removed through crysta's rule, so a vector the cell and the signed group cannot carry, or a
 // second spelling of one already there, is refused with its reason and the rows stay as they were. The last row
@@ -296,6 +323,7 @@ class StructureViewModel : public QObject {
     Q_PROPERTY(edi_app::AtomSiteListModel* atomSites READ atomSites CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteAdpListModel* atomSiteAdps READ atomSiteAdps CONSTANT)
     Q_PROPERTY(edi_app::AtomSiteMomentListModel* atomSiteMoments READ atomSiteMoments CONSTANT)
+    Q_PROPERTY(edi_app::MagneticFormFactorListModel* magneticFormFactors READ magneticFormFactors CONSTANT)
     Q_PROPERTY(edi_app::PropagationVectorListModel* propagationVectors READ propagationVectors CONSTANT)
     Q_PROPERTY(edi_app::ScatteringLengthListModel* scatteringLengths READ scatteringLengths CONSTANT)
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
@@ -318,6 +346,7 @@ class StructureViewModel : public QObject {
     AtomSiteListModel* atomSites() const { return atom_sites_; }
     AtomSiteAdpListModel* atomSiteAdps() const { return atom_site_adps_; }
     AtomSiteMomentListModel* atomSiteMoments() const { return atom_site_moments_; }
+    MagneticFormFactorListModel* magneticFormFactors() const { return magnetic_form_factors_; }
     PropagationVectorListModel* propagationVectors() const { return propagation_vectors_; }
     ScatteringLengthListModel* scatteringLengths() const { return scattering_lengths_; }
     CategoryListModel* categories() const { return categories_; }
@@ -352,6 +381,7 @@ class StructureViewModel : public QObject {
     AtomSiteListModel* atom_sites_;
     AtomSiteAdpListModel* atom_site_adps_;
     AtomSiteMomentListModel* atom_site_moments_;
+    MagneticFormFactorListModel* magnetic_form_factors_;
     PropagationVectorListModel* propagation_vectors_;
     ScatteringLengthListModel* scattering_lengths_;
     CategoryListModel* categories_;

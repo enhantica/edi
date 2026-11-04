@@ -4,6 +4,7 @@
 #include <QRegularExpression>
 #include <QSet>
 #include <algorithm>
+#include <set>
 #include <array>
 #include <cmath>
 #include <limits>
@@ -385,7 +386,6 @@ AtomSiteMomentListModel::AtomSiteMomentListModel(edi::Structure& structure, Proj
 }
 
 void AtomSiteMomentListModel::sync() {
-    const edi::MagneticDescription& magnetic = structure_.magnetic;
     QList<Row> rows;
     for (const auto& site : structure_.atom_sites) {
         const edi::AtomSiteMoment* moment = nullptr;
@@ -396,10 +396,14 @@ void AtomSiteMomentListModel::sync() {
         }
         QString ion = QStringLiteral("none");
         if (moment != nullptr) {
-            const auto declared = magnetic.form_factors.find(site->type_symbol.value());
-            ion = declared != magnetic.form_factors.end() && !declared->second.ion.empty()
-                      ? QString::fromStdString(declared->second.ion)
-                      : QString::fromStdString(crysta::magnetic_type_ion(site->type_symbol.value()));
+            std::string declared;
+            for (const auto& row : structure_.magnetic_form_factors) {
+                if (row->id.value() == site->type_symbol.value()) {
+                    declared = row->ion.value();
+                }
+            }
+            ion = !declared.empty() ? QString::fromStdString(declared)
+                                    : QString::fromStdString(crysta::magnetic_type_ion(site->type_symbol.value()));
         }
         QList<QVariant> values{QString::fromStdString(site->id), ion};
         if (moment != nullptr) {
@@ -438,8 +442,83 @@ void AtomSiteMomentListModel::setIon(int row, const QString& ion) {
     // The moment row comes or goes: the parameter set changes.
     editor_.apply(edi::Edit::moment_site(structure, *site, magnetic), true);
     if (magnetic) {
-        editor_.apply(edi::Edit::magnetic_ion(structure, site->type_symbol.value(), ion.toStdString()), false);
+        // The type's form-factor row may come or go with its ion: the parameter set changes.
+        editor_.apply(edi::Edit::magnetic_ion(structure, site->type_symbol.value(), ion.toStdString()), true);
     }
+}
+
+MagneticFormFactorListModel::MagneticFormFactorListModel(edi::Structure& structure, ProjectEditor& editor,
+                                                         ParameterRegistry& registry, QObject* parent)
+    : RowTableModel({"type", "ion", "approximation", "c2", "c4", "c6"}, parent),
+      structure_(structure),
+      editor_(editor),
+      registry_(registry) {
+    sync();
+}
+
+namespace {
+// The structure's form-factor row of an atom type, or null.
+const edi::MagneticFormFactor* form_factor_of(const edi::Structure& structure, const std::string& type_symbol) {
+    for (const auto& row : structure.magnetic_form_factors) {
+        if (row->id.value() == type_symbol) {
+            return row.get();
+        }
+    }
+    return nullptr;
+}
+}  // namespace
+
+void MagneticFormFactorListModel::sync() {
+    QList<Row> rows;
+    std::set<std::string> seen;
+    for (const auto& site : structure_.atom_sites) {
+        const std::string type = site->type_symbol.value();
+        const bool magnetic = std::any_of(structure_.atom_site_moment.begin(), structure_.atom_site_moment.end(),
+                                          [&site](const auto& moment) { return moment->id.value() == site->id.value(); });
+        if (!magnetic || !seen.insert(type).second) {
+            continue;
+        }
+        const edi::MagneticFormFactor* declared = form_factor_of(structure_, type);
+        const std::string ion = declared != nullptr && !declared->ion.value().empty() ? declared->ion.value()
+                                                                                      : crysta::magnetic_type_ion(type);
+        QList<QVariant> values{QString::fromStdString(type), QString::fromStdString(ion),
+                               QString::fromStdString(declared != nullptr ? declared->approximation.value() : "j0")};
+        if (declared != nullptr) {
+            for (const edi::Parameter* coefficient : const_cast<edi::MagneticFormFactor*>(declared)->parameters()) {
+                values.append(parameter_role(registry_, coefficient));
+            }
+        } else {
+            values << QVariant() << QVariant() << QVariant();
+        }
+        rows.append({site.get(), values});
+    }
+    setTableRows(rows);
+}
+
+QStringList MagneticFormFactorListModel::approximations() const {
+    return {QStringLiteral("j0"), QStringLiteral("dipole"), QStringLiteral("beyond_dipole")};
+}
+
+bool MagneticFormFactorListModel::hasTerm(int row, int n) const {
+    const std::string ion = text(row, QStringLiteral("ion")).toStdString();
+    if (ion.empty() || n < 0 || n > 2) {
+        return false;
+    }
+    try {
+        return crysta::magnetic_ion_table(ion).has[static_cast<std::size_t>(n)];
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+void MagneticFormFactorListModel::setApproximation(int row, const QString& approximation) {
+    const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
+    if (site == nullptr || approximation == text(row, QStringLiteral("approximation"))) {
+        return;
+    }
+    // A form-factor row may come or go: the parameter set changes.
+    editor_.apply(edi::Edit::magnetic_approximation(structure_, site->type_symbol.value(), approximation.toStdString()),
+                  true);
 }
 
 namespace {
@@ -826,6 +905,7 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
       atom_sites_(new AtomSiteListModel(structure, editor, registry, this)),
       atom_site_adps_(new AtomSiteAdpListModel(structure, editor, registry, this)),
       atom_site_moments_(new AtomSiteMomentListModel(structure, editor, registry, this)),
+      magnetic_form_factors_(new MagneticFormFactorListModel(structure, editor, registry, this)),
       propagation_vectors_(new PropagationVectorListModel(structure, editor, this)),
       scattering_lengths_(new ScatteringLengthListModel(structure, editor, this)),
       categories_(new CategoryListModel(this)),
@@ -892,6 +972,7 @@ void StructureViewModel::sync() {
     atom_sites_->sync();
     atom_site_adps_->sync();
     atom_site_moments_->sync();
+    magnetic_form_factors_->sync();
     propagation_vectors_->sync();
     scattering_lengths_->sync();
     emit magneticChanged();
