@@ -647,6 +647,7 @@ void ExperimentViewModel::sync() {
     };
     sync_description();
     update(name_, QString::fromStdString(experiment_.name), &ExperimentViewModel::nameChanged);
+    update(calculation_only_, static_cast<bool>(experiment_.calculation_only), &ExperimentViewModel::calculationOnlyChanged);
     const std::string default_profile = edi::default_peak_profile(experiment_.effective_beam_mode());
     update(peak_type_, QString::fromStdString(experiment_.peak.type.value_or(default_profile)),
            &ExperimentViewModel::peakTypeChanged);

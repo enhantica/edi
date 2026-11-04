@@ -1301,6 +1301,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
             next.experiments.assign(std::move(kept));
             next.adopt_experiments();
             next.sequential_fit.data_dir = declared_folder(project.path, parent).toStdString();
+            next.fitting_mode = "single";  // a single fit until the user switches (the owner, 2026-11-04)
             next.sequential_fit.file_pattern = pattern.toStdString();
             next.sequential_fit.reverse = false;
             next.sequential_fit.template_file = names.front().toStdString();
@@ -1346,6 +1347,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         next.experiments.assign(std::move(held));
         next.adopt_experiments();
         next.sequential_fit.data_dir = folder.toStdString();
+        next.fitting_mode = "single";  // a single fit until the user switches (the owner, 2026-11-04)
         next.sequential_fit.file_pattern = "*";
         next.sequential_fit.reverse = false;
         next.sequential_fit.template_file = names.front().toStdString();

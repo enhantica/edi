@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QFile>
+#include <QDir>
 #include <QFileInfo>
 #include <QJSEngine>
 #include <QJsonDocument>
@@ -314,6 +315,20 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
         if (!session || !session->project() || !QFileInfo(file).isFile() ||
             !session->project()->loadData(0, QUrl::fromLocalFile(file))) {
             fail("cannot load the tutorial measured data: " + file);
+            return false;
+        }
+        return true;
+    }
+    // A folder's data files loaded at once into the first experiment as a scan (Load N datasets as), copied into the
+    // project: `import-scan:<folder>`.
+    if (action.startsWith("import-scan:")) {
+        auto* session = session_for(window_);
+        const QDir folder(action.mid(12));
+        QList<QUrl> files;
+        for (const QString& name : folder.entryList(QDir::Files, QDir::Name)) files.append(QUrl::fromLocalFile(folder.filePath(name)));
+        if (!session || !session->project() || session->project()->experimentModels().isEmpty() || files.size() < 2 ||
+            !session->project()->loadDatasets(session->project()->experimentModels().front(), files, true, true)) {
+            fail("cannot load the scan's files from " + folder.path());
             return false;
         }
         return true;

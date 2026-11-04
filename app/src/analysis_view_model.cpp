@@ -353,7 +353,10 @@ void AnalysisViewModel::sync() {
             [this] {
                 const std::vector<std::string> now = edi::applicable_fitting_modes(project_);
                 if (std::find(now.begin(), now.end(), edi::effective_fitting_mode(project_)) == now.end()) {
-                    setFittingMode(QString::fromStdString(now.front()));
+                    // Single when it applies: a scan stays a single fit until the user switches (the owner,
+                    // 2026-11-04); otherwise the one mode that does.
+                    const bool single = std::find(now.begin(), now.end(), "single") != now.end();
+                    setFittingMode(QString::fromStdString(single ? std::string("single") : now.front()));
                 }
             },
             Qt::QueuedConnection);
