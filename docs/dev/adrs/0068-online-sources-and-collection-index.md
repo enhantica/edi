@@ -38,11 +38,15 @@ no database server.
 - **The index.** A collection is plain files in a git repository behind one base URL, with one generated
   `index.json` at its root; any static mirror serves it unchanged. The index is
   `{"schema": "edi-data-index/1", "entries": [...]}`; an entry has `id` (stable within the collection), `kind`
-  (`structure`, `experiment` or `data`), optional `name`, `formula` (stored in Hill notation), `space_group`, `cell`
-  (six numbers), `radiation`, `technique`, `instrument` and `source`, and `files`, at least one `{path, format}` with
-  the path relative to the base URL. The reader in core, `edi/online_index.hpp`, refuses another schema, an unknown
-  kind, a repeated id, a non-relative path or an entry without files, and searches an index by the fields above. The
-  same reader will serve the CLI and Python.
+  (`structure`, `experiment`, `data` or `project`), optional `name`, `description`, `formula` (stored in Hill
+  notation, when known), `elements` (the symbols present, Hill order; read from the formula when absent), `space_group`, `cell` (six numbers), `radiation`, `technique`, `instrument`, `facility` and `source`,
+  and `files`, at least one `{path, format, sha256, bytes}` with the path relative to the base URL and the digest
+  and size optional but checked when present. The reader in core, `edi/online_index.hpp`, refuses another schema,
+  an unknown kind, a repeated id, a non-relative path, a malformed digest or size, or an entry without files, and
+  searches an index by the fields above or finds an entry by id. The same reader serves the CLI and Python.
+  `tools/data/build_collection.py` populates a collection folder from the bundled examples and the tutorial files,
+  writes the index with the hashes, and checks a folder's index against its files; until the data repository
+  exists the generated collection lives in `build/collection`, outside the repository.
 - **COD through its own service.** A COD search calls `result?format=json` with `id`, `formula`, `el1`…`el8` and `sg`,
   and maps each answer row to an entry whose file is `<id>.cif`. Formula fields are normalised to Hill notation
   before they are sent or compared.

@@ -13,19 +13,24 @@ namespace edi::online {
 struct File {
     std::string path;    ///< relative path, no leading slash, no `..`
     std::string format;  ///< cif, edi, xye, xy, dat, txt, csv, int, hkl, zip
+    std::string sha256;  ///< the file's digest, hex, when the index records it
+    long long bytes = -1;  ///< the file's size, when the index records it
 };
 
-/// One searchable item: a structure, a full experiment or a measured data set.
+/// One item: a structure, a full experiment, a measured data set or a whole project.
 struct Entry {
     std::string id;           ///< stable within the collection
-    std::string kind;         ///< structure, experiment or data
+    std::string kind;         ///< structure, experiment, data or project
     std::string name;         ///< a short title, may be empty
+    std::string description;  ///< a sentence more, may be empty
     std::string formula;      ///< Hill notation, may be empty
+    std::vector<std::string> elements;  ///< the elements present, Hill order; from the formula when it is given
     std::string space_group;  ///< Hermann-Mauguin, may be empty
     std::vector<double> cell; ///< a, b, c, alpha, beta, gamma, or empty
     std::string radiation;    ///< neutron or xray, experiments and data
     std::string technique;    ///< powder or single crystal, with constant wavelength or time-of-flight
     std::string instrument;   ///< for example HRPT
+    std::string facility;     ///< for example PSI
     std::string source;       ///< where the entry comes from, for the results table
     std::vector<File> files;  ///< at least one
 };
@@ -39,13 +44,16 @@ struct Index {
 Index parse_index(const std::string& text);
 
 /// The search fields; an empty field does not filter. `id` matches whole, `formula` after Hill normalisation,
-/// `elements` as a set the entry's formula must contain, `space_group` without spaces, the rest as substrings.
+/// `elements` as a set the entry's elements must contain, `space_group` without spaces, the rest as substrings.
 struct Query {
     std::string id, name, formula, elements, space_group, radiation, technique, instrument;
 };
 
 /// The entries of `kind` that match `query`, in index order.
 std::vector<const Entry*> search(const Index& index, const std::string& kind, const Query& query);
+
+/// The entry with `id`, or null.
+const Entry* find(const Index& index, const std::string& id);
 
 /// A chemical formula in Hill notation: carbon first, hydrogen second, the other elements alphabetically; without
 /// carbon every element alphabetically. Counts of one are omitted. Refuses text that is not a formula.

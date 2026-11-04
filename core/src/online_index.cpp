@@ -42,7 +42,7 @@ std::string text_member(const json::Value& object, const char* key) {
     return value.string(key);
 }
 
-const char* kKinds[] = {"structure", "experiment", "data"};
+const char* kKinds[] = {"structure", "experiment", "data", "project"};
 
 bool known_kind(const std::string& kind) {
     return std::find(std::begin(kKinds), std::end(kKinds), kind) != std::end(kKinds);
@@ -150,12 +150,22 @@ Index parse_index(const std::string& text) {
         if (seen[entry.id]) throw std::invalid_argument("entry " + entry.id + " appears twice");
         seen[entry.id] = true;
         entry.name = text_member(item, "name");
+        entry.description = text_member(item, "description");
         entry.formula = text_member(item, "formula");
         if (!entry.formula.empty()) entry.formula = hill_formula(entry.formula);
+        const json::Value& elements = item.get("elements");
+        if (!elements.is_null()) {
+            std::string symbols;
+            for (const json::Value& symbol : elements.array("elements")) symbols += symbol.string("elements") + ' ';
+            entry.elements = formula_elements(symbols);
+        } else if (!entry.formula.empty()) {
+            entry.elements = formula_elements(entry.formula);
+        }
         entry.space_group = text_member(item, "space_group");
         entry.radiation = text_member(item, "radiation");
         entry.technique = text_member(item, "technique");
         entry.instrument = text_member(item, "instrument");
+        entry.facility = text_member(item, "facility");
         entry.source = text_member(item, "source");
         const json::Value& cell = item.get("cell");
         if (!cell.is_null()) {
@@ -163,9 +173,20 @@ Index parse_index(const std::string& text) {
             if (entry.cell.size() != 6) throw std::invalid_argument("entry " + entry.id + " has a cell without six values");
         }
         for (const json::Value& file : item.at("files").array("files")) {
-            File f{text_member(file, "path"), text_member(file, "format")};
+            File f;
+            f.path = text_member(file, "path");
+            f.format = text_member(file, "format");
+            f.sha256 = text_member(file, "sha256");
             if (!relative_path(f.path)) throw std::invalid_argument("entry " + entry.id + " has a file path that is not relative: " + f.path);
             if (f.format.empty()) throw std::invalid_argument("entry " + entry.id + " has a file without a format: " + f.path);
+            if (!f.sha256.empty() && (f.sha256.size() != 64 || f.sha256.find_first_not_of("0123456789abcdef") != std::string::npos))
+                throw std::invalid_argument("entry " + entry.id + " has a sha256 that is not 64 hex digits: " + f.path);
+            const json::Value& bytes = file.get("bytes");
+            if (!bytes.is_null()) {
+                const double n = bytes.number("bytes");
+                if (n < 0 || n != std::floor(n)) throw std::invalid_argument("entry " + entry.id + " has a size that is not a whole number: " + f.path);
+                f.bytes = static_cast<long long>(n);
+            }
             entry.files.push_back(std::move(f));
         }
         if (entry.files.empty()) throw std::invalid_argument("entry " + entry.id + " has no files");
@@ -205,11 +226,9 @@ std::vector<const Entry*> search(const Index& index, const std::string& kind, co
         if (!contains_ci(entry.name, trimmed(query.name))) continue;
         if (!wanted_formula.empty() && entry.formula != wanted_formula) continue;
         if (!wanted_elements.empty()) {
-            if (entry.formula.empty()) continue;
-            const auto have = formula_elements(entry.formula);
-            bool all = true;
+            bool all = !entry.elements.empty();
             for (const std::string& symbol : wanted_elements)
-                all = all && std::find(have.begin(), have.end(), symbol) != have.end();
+                all = all && std::find(entry.elements.begin(), entry.elements.end(), symbol) != entry.elements.end();
             if (!all) continue;
         }
         if (!wanted_group.empty() && lower(without_spaces(entry.space_group)) != wanted_group) continue;
@@ -219,6 +238,12 @@ std::vector<const Entry*> search(const Index& index, const std::string& kind, co
         found.push_back(&entry);
     }
     return found;
+}
+
+const Entry* find(const Index& index, const std::string& id) {
+    for (const Entry& entry : index.entries)
+        if (entry.id == id) return &entry;
+    return nullptr;
 }
 
 std::string cod_search_url(const std::string& base, const Query& query) {
@@ -278,8 +303,17 @@ std::vector<Entry> cod_entries(const std::string& text) {
             }
         }
         if (!cell) entry.cell.clear();
+        if (!entry.formula.empty()) {
+            try {
+                entry.elements = formula_elements(entry.formula);
+            } catch (const std::invalid_argument&) {
+            }
+        }
         entry.source = "COD " + entry.id;
-        entry.files.push_back({entry.id + ".cif", "cif"});
+        File file;
+        file.path = entry.id + ".cif";
+        file.format = "cif";
+        entry.files.push_back(std::move(file));
         entries.push_back(std::move(entry));
     }
     return entries;
