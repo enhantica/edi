@@ -2238,7 +2238,33 @@ Rectangle {
             toggle(range, "Range");
             tryVerify(valuesOnly, 2000, "Values only restores the fitted values' y range");
             tryVerify(() => hasInk(6), 3000, "The long error bar remains visible inside the clipped values-only plot");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
+            const runningRoot = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project"));
+            verify(Session.openProject(runningRoot), "The real 213-file scan supplies a running-fit interval");
+            chart = evolutionFactory.createObject(surface, {project: Session.project,
+                width: Math.min(1100, surface.Window.window.width), height: Math.min(760, surface.Window.window.height)});
+            const liveBars = findChild(chart, "evolution.toolbar.errorBars");
+            const liveRange = findChild(chart, "evolution.toolbar.range");
+            verify(liveBars && liveRange, "Both live-fit controls belong to the actual Evolution chart");
+            Session.project.fit.start();
+            tryCompare(Session.project.fit, "running", true, 3000, "The actual scan starts before changing chart settings");
+            verify(liveBars.enabled && liveRange.enabled, "Both Evolution toggles remain enabled during a real fit");
+            toggle(liveBars, "Live Error bars");
+            compare(Session.project.evolutionErrorBars, liveBars.checked,
+                    "The live error-bar click changes the project view setting immediately");
+            toggle(liveRange, "Live Range");
+            compare(Session.project.evolutionRangeWithSu, liveRange.checked,
+                    "The live range click changes the project view setting immediately");
+            verify(Session.project.fit.running, "The view changes are complete while the scan is still running");
+            Session.project.fit.cancel();
+            tryCompare(Session.project.fit, "running", false, 15000, "The real scan stops cleanly after the live-control checks");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
         }
+
         function test_scan_axis_fonts_data() {
             return test_owner_indicator_data();
         }
