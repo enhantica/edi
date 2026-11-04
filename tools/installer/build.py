@@ -123,10 +123,12 @@ def build(crysta: Path, work: Path, qt: Path | None, patchelf: Path | None) -> N
         '-G',
         'Ninja',
         '-DCMAKE_BUILD_TYPE=Release',
+        f'-DPython_EXECUTABLE={sys.executable}',
         '-DCMAKE_OSX_DEPLOYMENT_TARGET=' + os.environ.get('MACOSX_DEPLOYMENT_TARGET', '14.0'),
     ]
     options = ['-DCRYSTA_CXX_PACKAGE=ON', '-DCRYSTA_LTO=OFF']
     if SYSTEM == 'windows':
+        common.append('-DCMAKE_CXX_FLAGS=/utf-8')
         options.append('-DCRYSTA_EIGEN_FETCH=ON')
     run(['cmake', '-S', crysta, '-B', engine, *common, *options])
     run(['cmake', '--build', engine, '--target', 'crysta_core', 'crysta_cli', '--parallel', '4'])

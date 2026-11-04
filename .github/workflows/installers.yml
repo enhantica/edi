@@ -37,9 +37,33 @@ jobs:
     env:
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
     steps:
+      - name: Enable long source paths on Windows
+        if: runner.os == 'Windows'
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v5
+        if: runner.os != 'Windows'
         with:
           fetch-depth: 0
+      - name: Check out Windows-compatible source paths
+        if: runner.os == 'Windows'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !**/[aA][uU][xX]
+            !**/[aA][uU][xX].*
+            !**/[cC][oO][nN]
+            !**/[cC][oO][nN].*
+            !**/[pP][rR][nN]
+            !**/[pP][rR][nN].*
+            !**/[nN][uU][lL]
+            !**/[nN][uU][lL].*
+            !**/[cC][oO][mM][1-9]
+            !**/[cC][oO][mM][1-9].*
+            !**/[lL][pP][tT][1-9]
+            !**/[lL][pP][tT][1-9].*
       - uses: actions/setup-python@v6
         with:
           python-version: '3.14'
