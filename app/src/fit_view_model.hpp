@@ -284,8 +284,8 @@ class FitViewModel : public QObject {
     // its pending acceptance or a stopped rollback is outstanding. The project refuses every other edit and every
     // save meanwhile (ProjectViewModel::criticalEditRefusal, saveRefusal).
     bool trialOpen() const noexcept {
-        return accepted_fit_ &&
-               ((candidate_ && assistant_busy_) || stop_rollback_ || pending_accept_ || static_cast<bool>(native_completion_));
+        return presenting_ || static_cast<bool>(native_completion_) ||
+               (accepted_fit_ && ((candidate_ && assistant_busy_) || stop_rollback_ || pending_accept_));
     }
     // Whether the assistant is working a turn: the lock holds a candidate only then. Between turns the user may act,
     // and a manual edit ends the trial for good (dropCandidate), a Save makes the saved state the baseline (saved).
@@ -366,7 +366,7 @@ class FitViewModel : public QObject {
     bool candidate_ = false, stop_rollback_ = false, manual_since_accepted_ = false, restoring_ = false;
     int fit_writing_ = 0;
     bool assistant_busy_ = false;
-    quint64 candidate_owner_ = 0;
+    quint64 candidate_owner_ = 0, stop_owner_ = 0;
     // The project's Undo depth when the accepted fit was taken: a whole-project restore drops the trial's own Undo
     // entries above it, so a later ordinary Undo cannot bring back a fragment of the trial.
     std::size_t accepted_history_depth_ = 0;
@@ -375,6 +375,7 @@ class FitViewModel : public QObject {
     void dropTrialHistory() noexcept;
     bool presenting_ = false, submitted_single_joint_ = false;
     friend class AssistantViewModel;
+    friend class TrialLockTests;
     std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);
     void discardNativePreparation(std::uint64_t token) noexcept;
     std::uint64_t native_completion_serial_ = 0;

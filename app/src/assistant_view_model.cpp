@@ -1425,21 +1425,30 @@ struct AssistantViewModel::State {
     bool attached_to(ProjectViewModel* target) const noexcept {
         return controller && controller_attached && controller_project == target && project == target;
     }
-    struct OwnEdit { std::uint64_t id, generation; QPointer<ProjectViewModel> project; bool notification_only=false; };
+    struct OwnEdit {
+        std::uint64_t id, generation;
+        QPointer<ProjectViewModel> project;
+        bool notification_only;
+        ProjectViewModel::AssistantEditScope authorization;
+        OwnEdit(std::uint64_t serial, std::uint64_t binding, ProjectViewModel* target, bool notification)
+            : id(serial), generation(binding), project(target), notification_only(notification), authorization(target, serial) {}
+    };
     std::optional<OwnEdit> own_edit;
     std::uint64_t own_edit_serial = 0;
     std::uint64_t begin_own_edit(bool notification_only=false) {
         if (own_edit_serial == UINT64_MAX) throw std::length_error("Native edit identity is exhausted");
+        clear_own_edit();
         const auto id = ++own_edit_serial;
-        own_edit = OwnEdit{id, generation, project, notification_only};
-        if (project) project->assistant_edit_ = id;  // the trial lock admits this edit
+        own_edit.emplace(id, generation, project, notification_only);
         return id;
     }
     void end_own_edit(std::uint64_t id) noexcept {
         if (own_edit && own_edit->id == id) {
-            if (own_edit->project && own_edit->project->assistant_edit_ == id) own_edit->project->assistant_edit_ = 0;
             own_edit.reset();
         }
+    }
+    void clear_own_edit() noexcept {
+        if (own_edit) end_own_edit(own_edit->id);
     }
     bool applying_own_edit() const noexcept {
         return own_edit && own_edit->generation == generation && own_edit->project == project &&
@@ -4901,6 +4910,7 @@ struct AssistantViewModel::State {
         if (!widget_entry_current(run,entry)) throw std::runtime_error("The visible native request or exact live parameter binding is no longer current");
         if(run->tool!="run_fit" && (run->tool!="edit_relation" || run->relation_visible) && !widget_page_selected(run))
             throw std::runtime_error("The original workflow page is no longer current; no control edit was prepared");
+        if (run->tool != "run_fit") run->edit_scope = begin_own_edit();
         if (run->tool == "edit_background") {
             run->background_input.reset(); run->input.reset(); run->step_counted = false;
             auto* point = widget_background_point(run);
@@ -4923,7 +4933,6 @@ struct AssistantViewModel::State {
                 run->input = run->background_step == 3 ? run->project->prepareWidgetValue(point->intensity, run->background_request.intensity)
                     : run->project->prepareWidgetFree(point->intensity, run->background_request.free);
             } else throw std::runtime_error("No scientific background control is prepared at this step");
-             run->edit_scope = begin_own_edit();
         } else if (run->tool == "add_relations" || run->tool == "edit_relation") {
             const auto receiver=run->receiver;const QPointer<ProjectViewModel> target(run->project);
             const auto input=target->prepareWidgetRelations(run->relation_action);
@@ -4932,7 +4941,6 @@ struct AssistantViewModel::State {
             if(!receiver || receiver->state_.get()!=this || !target || !widget_owned(run) || run->relation_input!=input) {
                 if(target)target->finishWidgetRelations(input);return;
             }
-            run->edit_scope = begin_own_edit();
         } else if (run->tool == "run_fit") {
             auto* fit = run->project->fit();
             auto callback = native_fit_callback(fit, run->call);
@@ -4942,7 +4950,6 @@ struct AssistantViewModel::State {
             run->input = run->tool == "set_parameters"
                 ? run->project->prepareWidgetValue(*run->parameter->parameter(), run->value)
                 : run->project->prepareWidgetFree(*run->parameter->parameter(), run->free);
-            run->edit_scope = begin_own_edit();
         }
         if(!run->parameter_entries.empty())run->parameter_uncertain=true;
         native_call->may_have_written = true; // Immediately before the genuine final event, not during typing.
@@ -8226,7 +8233,7 @@ struct AssistantViewModel::State {
         if (!receiver || generation != binding || native_serial != serial || usage_epoch != account ||
             native_receipt != receipt || (native_call ? native_call->record : nullptr) != record ||
             native_records.size() != entries || native_widget || action_window != window || project != target || widget_input.get() != helper) return;
-        own_edit.reset(); // No original call may suppress a later owner's manual edit.
+        clear_own_edit();
         if (native_receipt) native_receipt->retired = true;
         native_receipt.reset(); native_pending.clear();
         for (auto& record : native_records) {
@@ -10195,10 +10202,6 @@ struct AssistantViewModel::State {
             if(target.exists() || target.isSymLink()) {
                 native_save_refused(task,"The suggested Save As destination already exists; it was not overwritten. Supply a fresh name through save_project.");return false;
             }
-        }
-        // The trial lock refuses every Save, with its own reason, before anything is written (edi ADR-0055).
-        if(task->project) if(const auto lock=task->project->trialLockRefusal().toUtf8();!lock.isEmpty()) {
-            native_save_refused(task,lock.constData());return false;
         }
         const auto replacement=session->replacement_generation_;const auto own=begin_own_edit(true);
         const auto release=qScopeGuard([this,receiver,own]{if(receiver && receiver->state_.get()==this)end_own_edit(own);});
@@ -16915,7 +16918,7 @@ struct AssistantViewModel::State {
         if(!preserveSetup){approved_scope.reset();backend_scope.reset();bootstrap_scope.reset();}
         disclosure_cache.reset();generic_context_reuse=false;
 #endif
-        own_edit.reset();
+        clear_own_edit();
         const auto current = [&] { return receiver && receiver->state_.get() == this && generation == binding && (!has_target || target)
 #ifndef __EMSCRIPTEN__
             && (!resetInputs || (usage_epoch==resetAccount && action_window==resetWindow && file_epoch==resetFiles))
@@ -17327,7 +17330,7 @@ bool AssistantViewModel::commitNativeProject(ProjectViewModel* target) noexcept 
     if(s.genuine_objective_generation==s.generation && s.genuine_objective_account==s.usage_epoch &&
         (a->creation->ordinary_project?s.genuine_objective_project==a->creation->original_project:!s.genuine_objective_project))
         s.genuine_objective_project=target; // Exact original committed owner handoff, not a pathname guess.
-    s.own_edit.reset(); // No previous-owner suppression survives the native commit.
+    s.clear_own_edit();
     {
         a->creation->receipt->project = target;
         a->creation->receipt->stamps.emplace(std::move(a->stamps));

@@ -496,7 +496,7 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
     }
     // A chosen dataset still being read: the model still shows the one before, which is not the one to fit. A scan
     // runs from the template, whatever is shown.
-    if (const QString pending = owner_.pendingRefusal();
+    if (const QString pending = owner_.editReadinessRefusal(false, static_cast<bool>(native_completion_));
         !pending.isEmpty() && !edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_))) {
         emit refused(pending);
         if (owner_.retired_) return;
@@ -606,6 +606,7 @@ bool FitViewModel::undo() {
                 : input ? edi::Edit::undo_fit_to(project, target.before, nullptr) : edi::Edit::undo_fit(project);
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
+    const auto restoration = qScopeGuard([self] { if (self) self->restoring_ = false; });
     const bool undone = owner_.applyUndo(std::move(edit), whole).isEmpty();
     if (!self) return undone;
     restoring_ = false;
@@ -635,6 +636,7 @@ bool FitViewModel::restoreAccepted(quint64 owner) {
     const auto accepted = accepted_fit_;
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
+    const auto restoration = qScopeGuard([self] { if (self) self->restoring_ = false; });
     const QString refusal = owner_.restoreProject(*accepted);
     if (!self) return false;
     restoring_ = false;
@@ -663,7 +665,9 @@ void FitViewModel::dropTrialHistory() noexcept {
 }
 
 void FitViewModel::restoreAcceptedOnStop(quint64 owner) {
-    if (running_) stop_rollback_ = candidate_ && candidate_owner_ == owner;
+    if (running_ || presenting_) {
+        if (candidate_ && candidate_owner_ == owner) { stop_rollback_ = true; stop_owner_ = owner; }
+    }
     else (void)restoreAccepted(owner);
 }
 
@@ -1130,19 +1134,20 @@ void FitViewModel::ended(const edi::FitReport& report) {
     presenting_ = previous_presentation;
     // The adopted fit becomes the accepted state only once its presentation has completed; until then the trial it
     // ends is still open and a failed presentation settles like any other unaccepted ending.
-    if (auto accepted = std::exchange(pending_accept_, nullptr); accepted && !failure && visible && !owner_.retired_) {
+    if (auto accepted = std::exchange(pending_accept_, nullptr); accepted && !failure && !stop_rollback_ && visible && !owner_.retired_) {
         accepted_fit_ = std::make_shared<const edi::Project>(project_);
         accepted_history_depth_ = owner_.undo_history_.size();
         candidate_ = stop_rollback_ = manual_since_accepted_ = false;
     }
     const bool stopped = std::exchange(stop_rollback_, false);
+    const auto stopped_owner = stop_owner_;
     // Even a presentation failure has a real completed optimizer/publication
     // report. Contain the internal callback independently of ordinary Qt signals.
     if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
     // A Stop or disconnect armed during this fit: if its call (retired by then, or not) did not settle the trial, the
     // accepted state comes back now. The attempt's own facts were already reported or are in its report.
-    if (stopped && candidate_ && visible && !owner_.retired_ && (!report.adopted() || report.status == edi::FitStatus::CANCELLED || failure))
-        try { (void)restoreAccepted(candidate_owner_); } catch (...) {}
+    if (stopped && candidate_ && latest_attempt_ == attempt && visible && !owner_.retired_)
+        try { (void)restoreAccepted(stopped_owner); } catch (...) {}
     if (failure) std::rethrow_exception(failure); // Existing FitJob retains its report; no fake UI success.
 }
 

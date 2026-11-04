@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "report_view_model.hpp"
+#include <QScopeGuard>
 
 #include <QByteArray>
 #include <QDateTime>
@@ -353,6 +354,13 @@ void ReportViewModel::setFigure(const QString& name, const QImage& image) {
 }
 
 void ReportViewModel::saveReport(const QString& fontFamily) {
+    const ProjectViewModel::PublicationScope publication(project_);
+    if (const auto refusal = project_.criticalEditRefusal(); !refusal.isEmpty()) { emit saveFailed(refusal); return; }
+    if (const auto refusal = project_.saveRefusal(); !refusal.isEmpty()) { emit saveFailed(refusal); return; }
+    project_.editing_ = true;
+    const auto release = qScopeGuard([this] { project_.editing_ = false; });
+    project_.notifyProjectEdited();
+    if (project_.retired_) return;
     // The figures belong to this save only, whatever it ends in.
     const QHash<QString, QImage> images = std::exchange(figures_, {});
     ensureBuilt();

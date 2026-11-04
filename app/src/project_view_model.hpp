@@ -658,7 +658,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void setLastError(const QString& error);
     friend class Session;
     friend class FitViewModel;
+    friend class ReportViewModel;
     friend class AssistantViewModel;
+    friend class TrialLockTests;
     // One-shot ordinary Save entry origin and stack-local emitted origin.
     // Manual edits/Save carry zero, including nested and early-error callbacks.
     std::uint64_t assistant_save_origin_=0, project_edit_origin_=0;
@@ -770,6 +772,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString trialLockRefusal() const;
     // The assistant edit in progress (its own-edit identity), which the trial lock admits.
     std::uint64_t assistant_edit_ = 0;
+    struct AssistantEditScope {
+        QPointer<ProjectViewModel> project;
+        std::uint64_t id;
+        AssistantEditScope(ProjectViewModel* value, std::uint64_t serial) : project(value), id(serial) {
+            if (project) project->assistant_edit_ = id;
+        }
+        ~AssistantEditScope() {
+            if (project && project->assistant_edit_ == id) project->assistant_edit_ = 0;
+        }
+        AssistantEditScope(const AssistantEditScope&) = delete;
+        AssistantEditScope& operator=(const AssistantEditScope&) = delete;
+    };
+    bool edit_notification_ = false;
     QString applyUndo(const edi::Edit& change, bool structural);
     void holdPublicationFailure(const QString& warning) noexcept;
     void setModified(bool modified);
@@ -1034,7 +1049,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     EditOutcome estimateBackgroundFor(const edi::ExperimentBase* expected,EditOutcome* receipt);
     EditOutcome* estimate_receipt_ = nullptr;
     EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
-    QString editReadinessRefusal(bool restoring) const;
+    QString editReadinessRefusal(bool restoring, bool trial = false) const;
     bool calculating_ = false;
     bool adjusting_ = false;
     bool adjusted_ = false;  // a drag step left the full publish for the release

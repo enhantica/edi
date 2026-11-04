@@ -568,6 +568,7 @@ void ProjectViewModel::setReportFormat(const QString& format, bool on) {
 }
 
 void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
+    if (const auto refusal = saveRefusal(); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
     edi::Project& project = *project_;
     // The open project's rows change with reports/report.edi, or not at all.
     const edi::ItemVec<edi::ReportFile> before = project.report_files;
@@ -2606,7 +2607,9 @@ QString ProjectViewModel::criticalEditRefusal(bool restoring, bool trial) const 
     if (retired_) return tr("This project owner has been replaced or closed");
     // While an assistant trial is open only the trial itself edits: its own edits, its visible controls, its fit
     // and the rollback. Manual edits, Undo and Clear wait until it ends (edi ADR-0055).
-    if (!trial && fit_ != nullptr && !fit_->restoring() && !fit_->fitWriting() && assistant_edit_ == 0 && !widget_input_executing_)
+    if (edit_notification_ || (fit_ && fit_->presenting_))
+        return tr("The current project change is still being published");
+    if (!trial && !(restoring && fit_ && fit_->restoring()) && assistant_edit_ == 0 && !widget_input_executing_)
         if (const QString lock = trialLockRefusal(); !lock.isEmpty()) return lock;
     if (editing_) return tr("The current project edit is still being published");
     if (fit_undo_invoking_ && (!fit_undo_input_ || fit_undo_input_->started))
@@ -2618,8 +2621,8 @@ QString ProjectViewModel::criticalEditRefusal(bool restoring, bool trial) const 
     return {};
 }
 
-QString ProjectViewModel::editReadinessRefusal(bool restoring) const {
-    if (const QString critical = criticalEditRefusal(restoring); !critical.isEmpty()) return critical;
+QString ProjectViewModel::editReadinessRefusal(bool restoring, bool trial) const {
+    if (const QString critical = criticalEditRefusal(restoring, trial); !critical.isEmpty()) return critical;
     // The model must hold the chosen dataset: not while its read is in flight, nor after a read that failed (the
     // model still holds the one before, whatever the selection says).
     if (view_applied_ != view_request_) {
@@ -4442,12 +4445,22 @@ void ProjectViewModel::showStructureView() {
 }
 
 void ProjectViewModel::keepStructureView() {
+    const PublicationScope publication(*this);
     if (showing_view_ || current_structure_ < 0 || static_cast<std::size_t>(current_structure_) >= project_->structures.size()) {
+        return;
+    }
+    if (const auto refusal = criticalEditRefusal(); !refusal.isEmpty()) {
+        showStructureView();
+        setLastError(refusal);
         return;
     }
     edi::Structure& shown = *project_->structures[static_cast<std::size_t>(current_structure_)];
     std::map<std::string, std::string> view = structure_view_options_->toView();
     if (view != shown.view.get()) {
+        editing_ = true;
+        const auto release = qScopeGuard([this] { editing_ = false; });
+        notifyProjectEdited();
+        if (retired_) return;
         shown.view = std::move(view);
         saved_files_.reset();
         discovered_files_.reset();
@@ -4544,14 +4557,15 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
 
 QString ProjectViewModel::restoreProject(const edi::Project& accepted) {
     const PublicationScope publication(*this);
-    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) return pending;
+    if (const QString pending = editReadinessRefusal(true); !pending.isEmpty()) return pending;
     auto before = std::make_shared<const edi::Project>(*project_);
     // Where the project is saved, and what its last Save recorded, stay as they are: a restore is scientific state.
     edi::Project restored(accepted);
     restored.path = project_->path;
     restored.metadata = project_->metadata;
     restored.scan_data_root = project_->scan_data_root;
-    const QString error = apply(edi::Edit::replace_project(*project_, std::move(restored)), true);
+    const auto result = applyEdit(edi::Edit::replace_project(*project_, std::move(restored)), true, true);
+    const QString error = result.applied ? QString{} : result.message;
     if (!error.isEmpty()) return error;
     undo_history_.emplace_back(AppliedText{std::move(before)});
     syncUndo();
@@ -4602,8 +4616,10 @@ QString ProjectViewModel::trialLockRefusal() const {
 }
 
 QString ProjectViewModel::saveRefusal() const {
-    // Nothing is saved while an assistant trial is open, by anyone: a save ends no trial halfway (edi ADR-0055).
-    if (const QString lock = trialLockRefusal(); !lock.isEmpty()) return lock;
+    if (edit_notification_ || (fit_ && fit_->presenting_))
+        return tr("The current project change is still being published");
+    if (assistant_edit_ == 0)
+        if (const QString lock = trialLockRefusal(); !lock.isEmpty()) return lock;
     // A running fit owns the project's output (a scan appends its results there): nothing is saved under it.
     if (fit_ != nullptr && fit_->running()) {
         return tr("The project cannot be saved while a fit is running");
@@ -4614,7 +4630,8 @@ QString ProjectViewModel::saveRefusal() const {
 void ProjectViewModel::notifyProjectEdited(std::uint64_t origin) {
     const QPointer<ProjectViewModel> receiver(this);
     const auto previous=project_edit_origin_;project_edit_origin_=origin;
-    const auto scope=qScopeGuard([receiver,previous]{if(receiver)receiver->project_edit_origin_=previous;});
+    const auto notifying=edit_notification_;edit_notification_=true;
+    const auto scope=qScopeGuard([receiver,previous,notifying]{if(receiver){receiver->project_edit_origin_=previous;receiver->edit_notification_=notifying;}});
     emit projectEdited();
 }
 
