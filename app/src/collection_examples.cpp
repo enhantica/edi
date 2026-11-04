@@ -34,29 +34,38 @@ void CollectionExamples::refresh() {
     const int generation = ++generation_;
     items_.clear();
     known_.clear();
+    failed_.clear();
+    answered_ = false;
     emit itemsChanged();
-    if (!sources_) return;
-    for (const OnlineSourcesModel::Source& source : sources_->sourcesFor(QStringLiteral("project"))) {
+    const QList<OnlineSourcesModel::Source> sources =
+        sources_ ? sources_->sourcesFor(QStringLiteral("project")) : QList<OnlineSourcesModel::Source>{};
+    pending_ = static_cast<int>(sources.size());
+    updateNotice();
+    for (const OnlineSourcesModel::Source& source : sources) {
         const QString base = sources_->urlOf(source.id);
-        const QString sourceId = source.id, sourceName = source.name;
+        const QString sourceName = source.name;
         fetch_url(this, network_, joined_url(base, QStringLiteral("index.json")),
-                  [this, generation, base, sourceId, sourceName](const QByteArray& bytes, const QString& error, bool) {
+                  [this, generation, base, sourceName](const QByteArray& bytes, const QString& error, bool) {
                       if (generation != generation_) return;
-                      if (!error.isEmpty()) {
-                          qCInfo(lcCollection, "examples from %s not read: %s", qPrintable(sourceName), qPrintable(error));
-                          return;
-                      }
+                      --pending_;
                       edi::online::Index index;
                       try {
+                          if (!error.isEmpty()) throw std::runtime_error(error.toStdString());
                           index = edi::online::parse_index(bytes.toStdString());
                       } catch (const std::exception& problem) {
                           qCInfo(lcCollection, "examples from %s not read: %s", qPrintable(sourceName), problem.what());
+                          failed_.append(sourceName + QStringLiteral(": ") + QString::fromUtf8(problem.what()));
+                          updateNotice();
                           return;
                       }
+                      answered_ = true;
+                      const QStringList bundled = ExampleListModel::bundledIds();
                       for (const edi::online::Entry& entry : index.entries) {
                           if (entry.kind != "project" || entry.files.empty()) continue;
+                          const QString id = QString::fromStdString(entry.id);
+                          if (known_.contains(id)) continue;  // the first source holding an id serves it
                           ExampleListModel::Item item;
-                          item.id = QStringLiteral("collection/") + sourceId + u'/' + QString::fromStdString(entry.id);
+                          item.id = id;
                           item.title = QString::fromStdString(entry.name.empty() ? entry.id : entry.name);
                           // The origin column as the bundled rows show it, instrument @ facility; the source when
                           // the entry names neither.
@@ -74,12 +83,24 @@ void CollectionExamples::refresh() {
                                                   tag("facilities", entry.facility), tag("instruments", entry.instrument)})
                               if (!t.isEmpty()) item.tags.append(t);
                           item.tags.append(QStringLiteral("source:") + sourceName);
-                          known_.insert(item.id, {base, QString::fromStdString(entry.files.front().path), item.title});
-                          items_.append(item);
+                          known_.insert(id, {base, QString::fromStdString(entry.files.front().path), item.title});
+                          if (!bundled.contains(id)) items_.append(item);  // a catalogue row already stands for it
                       }
+                      updateNotice();
                       emit itemsChanged();
                   });
     }
+}
+
+void CollectionExamples::updateNotice() {
+    QString notice;
+    if (!answered_ && pending_ == 0)
+        notice = failed_.isEmpty()
+                     ? tr("No online source holds example projects; enable or add one in Preferences")
+                     : tr("The example projects can't be downloaded. %1").arg(failed_.join(QStringLiteral("; ")));
+    if (notice == notice_) return;
+    notice_ = notice;
+    emit noticeChanged();
 }
 
 void CollectionExamples::fetchProject(const QString& id, ProjectDone done) {

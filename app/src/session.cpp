@@ -68,7 +68,6 @@ ResultDefinition result_definition(edi::Project& project) {
 }
 
 
-const QString kExamples = QStringLiteral(":/edi/examples");
 
 // A folder name for a project named `name`: no separators, never empty.
 QString folderNameFor(const QString& name) {
@@ -188,11 +187,12 @@ Session::Session(QObject* parent, AssistantWorkReportOptions options)
     : QObject(parent), work_report_options_(options), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
     online_sources_ = new OnlineSourcesModel(this);
     online_search_ = new OnlineSearch(online_sources_, this);
-    // The Examples list adds the collections' projects to the bundled examples (ADR-0068).
+    // The example projects come from the collections (ADR-0068); the bundled catalogue only lists them.
     collection_examples_ = new CollectionExamples(online_sources_, this);
     connect(collection_examples_, &CollectionExamples::itemsChanged, this,
-            [this] { examples_->replaceItems(QStringLiteral("collection/"), collection_examples_->items()); });
-    examples_->replaceItems(QStringLiteral("collection/"), collection_examples_->items());
+            [this] { examples_->replaceItems(collection_examples_->items()); });
+    examples_->replaceItems(collection_examples_->items());
+    connect(collection_examples_, &CollectionExamples::noticeChanged, this, &Session::examplesNoticeChanged);
     assistant_ = new AssistantViewModel(this, options);
     initializeSession();
 }
@@ -201,11 +201,12 @@ Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject
     : QObject(parent),work_report_options_(options),examples_(new ExampleListModel(this)),warnings_(new WarningListModel(this)) {
     online_sources_ = new OnlineSourcesModel(this);
     online_search_ = new OnlineSearch(online_sources_, this);
-    // The Examples list adds the collections' projects to the bundled examples (ADR-0068).
+    // The example projects come from the collections (ADR-0068); the bundled catalogue only lists them.
     collection_examples_ = new CollectionExamples(online_sources_, this);
     connect(collection_examples_, &CollectionExamples::itemsChanged, this,
-            [this] { examples_->replaceItems(QStringLiteral("collection/"), collection_examples_->items()); });
-    examples_->replaceItems(QStringLiteral("collection/"), collection_examples_->items());
+            [this] { examples_->replaceItems(collection_examples_->items()); });
+    examples_->replaceItems(collection_examples_->items());
+    connect(collection_examples_, &CollectionExamples::noticeChanged, this, &Session::examplesNoticeChanged);
     assistant_=new AssistantViewModel(std::move(dependencies),this,options);
     initializeSession();
 }
@@ -886,51 +887,39 @@ bool Session::saveCopy(const QString& target, bool zip) {
     return true;
 }
 
+QString Session::examplesNotice() const { return collection_examples_->notice(); }
+
 bool Session::openExampleNamed(const QString& exampleId) {
-    // A collection example: its zipped project is downloaded, then opened as any archive; the open follows the
-    // download, so a failure is reported through loadFailed rather than a return value.
-    if (CollectionExamples::isCollectionId(exampleId)) {
-        const QPointer<Session> receiver(this);
-        opening_example_ = true;
-        emit openingExampleChanged();
-        collection_examples_->fetchProject(exampleId, [receiver, exampleId](const QUrl& archive, const QString& error) {
-            if (!receiver) return;
-            receiver->opening_example_ = false;
-            emit receiver->openingExampleChanged();
-            if (!error.isEmpty()) {
-                receiver->setLastError(error);
-                emit receiver->loadFailed(error);
-                return;
-            }
-            if (receiver->openProjectAt(archive)) qCInfo(lcApp, "collection example opened: %s", qPrintable(exampleId));
-            else emit receiver->loadFailed(receiver->last_error_.isEmpty() ? tr("The project could not be opened") : receiver->last_error_);
-        });
-        return true;
-    }
-    const QString source = kExamples + QLatin1Char('/') + exampleId + QStringLiteral("/project");
-    if (!ExampleListModel::bundledIds().contains(exampleId) || !QFileInfo(source).isDir()) {
-        setLastError(QStringLiteral("no bundled example named '%1'").arg(exampleId));
-        return false;
-    }
-    QString copyRoot;
-    try { copyRoot=prepareCopyRoot("example"); }
-    catch(const std::exception& error) { setLastError(QString::fromUtf8(error.what()));return false; }
-    const QPointer<Session> copyOwner(this);
-    const auto cleanup=qScopeGuard([copyOwner,copyRoot]{if(copyOwner)copyOwner->releaseTemporaryRoots({copyRoot});});
-    // Resource files are copied into an independent native folder for each Open.
-    const QString target=QDir(copyRoot).filePath(exampleId+QStringLiteral("/project"));
-    QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
-    while (files.hasNext()) {
-        const QString file = files.next();
-        const QString destination = target + file.mid(source.size());
-        QDir().mkpath(QFileInfo(destination).absolutePath());
-        if (!QFile::copy(file, destination)) {
-            setLastError(QStringLiteral("cannot extract the example '%1'").arg(exampleId));
+    // An example's project comes from the collections (ADR-0068): its zip is downloaded, then opened as any
+    // archive; the open follows the download, so a failure is reported through loadFailed rather than a return
+    // value. A catalogue example no answering source holds fails at once, with the reason the sources gave.
+    if (!collection_examples_->knows(exampleId)) {
+        if (!ExampleListModel::bundledIds().contains(exampleId)) {
+            setLastError(QStringLiteral("no example named '%1'").arg(exampleId));
             return false;
         }
-        QFile::setPermissions(destination, QFile::ReadOwner | QFile::WriteOwner);
+        const QString notice = collection_examples_->notice();
+        setLastError(!notice.isEmpty()                 ? notice
+                     : collection_examples_->loading() ? tr("The online sources are still being read; try again in a moment")
+                                                       : tr("No online source that answered holds the example '%1'").arg(exampleId));
+        return false;
     }
-    return open(target, exampleId);
+    const QPointer<Session> receiver(this);
+    opening_example_ = true;
+    emit openingExampleChanged();
+    collection_examples_->fetchProject(exampleId, [receiver, exampleId](const QUrl& archive, const QString& error) {
+        if (!receiver) return;
+        receiver->opening_example_ = false;
+        emit receiver->openingExampleChanged();
+        if (!error.isEmpty()) {
+            receiver->setLastError(error);
+            emit receiver->loadFailed(error);
+            return;
+        }
+        if (receiver->openProjectAt(archive)) qCInfo(lcApp, "collection example opened: %s", qPrintable(exampleId));
+        else emit receiver->loadFailed(receiver->last_error_.isEmpty() ? tr("The project could not be opened") : receiver->last_error_);
+    });
+    return true;
 }
 
 struct Session::ProjectCreationOutcome {

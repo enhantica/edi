@@ -125,9 +125,15 @@ void ExampleListModel::addItem(const Item& item) {
     entry.search = normalize(entry.search + " " + entry.tags.join(' '));
     entries_.append(entry);
 }
-void ExampleListModel::replaceItems(const QString& prefix, const QList<Item>& items) {
-    entries_.removeIf([&prefix](const Entry& entry) { return entry.id.startsWith(prefix); });
-    for (const Item& item : items) addItem(item);
+void ExampleListModel::replaceItems(const QList<Item>& items) {
+    entries_.removeIf([this](const Entry& entry) { return added_ids_.contains(entry.id); });
+    added_ids_.clear();
+    for (const Item& item : items) {
+        const bool present = std::any_of(entries_.cbegin(), entries_.cend(), [&item](const Entry& entry) { return entry.id == item.id; });
+        if (present) continue;
+        addItem(item);
+        added_ids_.insert(item.id);
+    }
     refresh();
 }
 ExampleListModel::ExampleListModel(QObject* parent)

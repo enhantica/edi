@@ -345,13 +345,8 @@ foreach(id IN LISTS EDI_APP_EXAMPLE_IDS)
         message(FATAL_ERROR "Example '${id}' has purpose '${_purpose}', not refinement or simulation")
     endif()
 endforeach()
-function(edi_app_bundle_examples root)
-    foreach(id IN LISTS ARGN)
-        file(GLOB_RECURSE files CONFIGURE_DEPENDS ${root}/${id}/project/*)
-        qt_add_resources(edi_app_module "edi_example_${id}" PREFIX "/edi/examples" BASE ${root} FILES ${files})
-    endforeach()
-endfunction()
-edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
+# The example projects themselves are not bundled: the app downloads them from the data collections (ADR-0068);
+# only the catalogue (metadata, tags, the id list) is.
 qt_add_resources(edi_app_module "edi_tutorials" PREFIX "/edi/tutorials"
                  BASE ${CMAKE_CURRENT_SOURCE_DIR}/tutorials FILES tutorials/manifest.json tutorials/tour.json
                  tutorials/files/lbco.cif tutorials/files/hrpt.xye)
@@ -475,7 +470,7 @@ add_dependencies(edi_app edi_app_build_marker)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest Qt6::QmlPrivate)
 # The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).
-set_source_files_properties(src/demo_driver.cpp PROPERTIES
+set_source_files_properties(src/demo_driver.cpp src/demo_documentation.cpp PROPERTIES
                             COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")
 target_compile_definitions(edi_app_tests PRIVATE
     QUICK_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}/tests/unit/app")

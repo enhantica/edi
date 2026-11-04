@@ -3,8 +3,9 @@
 - **Status:** Accepted
 - **Date:** 2026-11-04
 - **Implementation:** 🟡 Partially implemented — the app's Load ▾ From web… popup, the sources table, the index
-  reader, the index generator, the CLI and Python readers and the Examples list from the collections; the collection
-  repository and its mirror, and moving the bundled examples into it, wait for the owner
+  reader, the index generator, the CLI and Python readers, the Examples list from the collections and the example
+  projects downloaded instead of bundled; the mirror `data.easydiffraction.org` and the tutorials' two input files,
+  still bundled, remain
 - **Priority:** High
 
 ## Context
@@ -61,7 +62,11 @@ no database server.
 - Online loading reuses the file loaders, so a format the app reads from disk it reads from the web, and nothing else.
 - The web app searches and loads through the browser's fetch; a source that forbids cross-origin requests shows as
   unreachable there and the popup offers the collection instead.
-- The Examples list adds every enabled source's `project` entries to the bundled examples, each opened by
-  downloading its archive; `edi.load_collection` and `edi collection list|find|fetch` read the same index.
-- The collection repository, its mirror and moving the bundled examples into it follow once the repository exists;
-  until then the two EasyDiffraction rows answer "cannot be reached" and the Examples list shows the bundled set.
+- The app bundles the examples' catalogue (their metadata and tags), not their projects: an example opens by
+  downloading its zip from the first enabled source whose index holds the id, so the desktop and the web app ship
+  the same binary and the same data repository serves both. A source's other `project` entries join the list as
+  rows of their own; `edi.load_collection` and `edi collection list|find|fetch` read the same index.
+- When no source holding projects can be read, the Examples list says so above the rows and opening an example
+  fails with the sources' errors; nothing is cached, so the next read tries again.
+- The collection is `enhantica/edi-data` (GitHub raw as the built-in source, `data.easydiffraction.org` as the
+  mirror); `tools/data/build_collection.py populate` writes its content from the examples and the tutorial files.

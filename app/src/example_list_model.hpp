@@ -3,6 +3,7 @@
 #define EDI_APP_EXAMPLE_LIST_MODEL_HPP
 
 #include <QHash>
+#include <QSet>
 
 #include "row_table_model.hpp"
 
@@ -44,8 +45,9 @@ class ExampleListModel : public RowTableModel {
     // Other items, filtered as the examples are.
     ExampleListModel(const QList<Item>& items, QObject* parent);
     static QStringList bundledIds();
-    /// Replace every row whose id starts with `prefix` by `items`, built as the items constructor builds them.
-    void replaceItems(const QString& prefix, const QList<Item>& items);
+    /// Replace the rows an earlier call added by `items`, built as the items constructor builds them; an item
+    /// whose id a row already carries is not added twice.
+    void replaceItems(const QList<Item>& items);
     // A bundled example's title, its sample and origin as the list shows them; empty for an unknown id.
     QString titleOf(const QString& id) const;
     QString searchText() const { return search_text_; }
@@ -75,6 +77,7 @@ class ExampleListModel : public RowTableModel {
     void refresh();
     void addItem(const Item& item);
     QList<Entry> entries_;
+    QSet<QString> added_ids_;
     ExampleOptions properties_, options_;
     QString search_text_, filter_property_ = QStringLiteral("purpose"), filter_value_;
 };

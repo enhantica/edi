@@ -83,7 +83,8 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
     const auto values = metadata.value("values").toObject();
     if (values.value("purpose").toArray().first().toString() != "refinement")
         return refuse("the refinement walkthrough requires an example with measured data");
-    const auto base = ":/edi/examples/" + example + "/project";
+    // The example's files from the source tree: the app bundles the catalogue, not the projects (ADR-0068).
+    const auto base = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/" + example + "/project";
     const auto structures = QDir(base + "/structures").entryList({"*.edi"}, QDir::Files);
     const auto experiments = QDir(base + "/experiments").entryList({"*.edi"}, QDir::Files);
     if (structures.isEmpty() || experiments.isEmpty() ||

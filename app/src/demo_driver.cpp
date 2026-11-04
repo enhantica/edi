@@ -599,7 +599,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // fixture collections under tests/fixtures/online_sources.
     if (only.startsWith(QLatin1String("collection-"))) {
         steps_.push_back({"collection-1-list", start + QStringList{"appBar.tab.project", basic, "examples.search", "type:HRPT"}});
-        steps_.push_back({"collection-2-opened", {"examples.open.collection/easydiffraction/lbco-hrpt-project"}});
+        steps_.push_back({"collection-2-opened", {"examples.open.lbco-hrpt-project"}});
     }
     // The Report page's sidebar, Main and Text, in both themes. Run only when asked (`--demo-only report-sidebar-`).
     if (only.startsWith(QLatin1String("report-sidebar-"))) {
@@ -1679,9 +1679,9 @@ bool DemoDriver::perform(const QString& action) {
         const QStringList parts = action.mid(17).split(QLatin1Char('|'));
         for (const QString& resource : parts.first().split(QLatin1Char(','))) {
             const QString target = loaded_files_.filePath(resource.section(QLatin1Char('/'), -1));
-            QFile source(QStringLiteral(":/edi/examples/") + resource);
+            QFile source(QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + u'/' + resource);
             if (!source.open(QIODevice::ReadOnly)) {
-                fail(QStringLiteral("step %1: no bundled file %2").arg(steps_[current_].image, resource));
+                fail(QStringLiteral("step %1: no example file %2").arg(steps_[current_].image, resource));
                 return false;
             }
             QString content = QString::fromUtf8(source.readAll());

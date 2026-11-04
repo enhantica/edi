@@ -91,6 +91,8 @@ class Session : public QObject {
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
     /// An example from an online collection is being fetched; its project opens, or loadFailed fires, when this clears.
     Q_PROPERTY(bool openingExample READ openingExample NOTIFY openingExampleChanged)
+    /// Why no example project can be opened: every online source holding projects failed. Empty otherwise.
+    Q_PROPERTY(QString examplesNotice READ examplesNotice NOTIFY examplesNoticeChanged)
     // A project set aside while a tutorial works in its own (edi ADR-0064), and whether it has unsaved changes.
     Q_PROPERTY(bool hasProjectSetAside READ hasProjectSetAside NOTIFY projectSetAsideChanged)
     Q_PROPERTY(bool projectSetAsideModified READ projectSetAsideModified NOTIFY projectSetAsideModifiedChanged)
@@ -133,6 +135,7 @@ class Session : public QObject {
     ProjectViewModel* project() const { return project_; }
     bool hasProject() const { return project_ != nullptr; }
     bool openingExample() const { return opening_example_; }
+    QString examplesNotice() const;
     QString lastError() const { return last_error_; }
     ExampleListModel* examples() const { return examples_; }
     OnlineSourcesModel* onlineSources() const { return online_sources_; }
@@ -252,6 +255,7 @@ class Session : public QObject {
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
     void openingExampleChanged();
+    void examplesNoticeChanged();
     void projectSetAsideChanged();
     void projectSetAsideNameChanged();
     void projectSetAsideModifiedChanged();
