@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T12:59:21Z
+# measured_utc = 2026-11-04T00:24:57Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 166283 banked, 0 stale row(s) dropped)
-# Collected tests: 211405; with a reported duration: 70529
+# Recorded from: measured test run (2 node(s) measured once, 166289 banked, 0 stale row(s) dropped)
+# Collected tests: 211407; with a reported duration: 70531
 # Module-scoped fixture costs recorded: 111
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 211405
+# inventory_python = 211407
 # inventory_cpp = 396
-# inventory_measured = 166289
+# inventory_measured = 166291
 # inventory_unmeasured = 45512
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 67980
+# inventory_pr_python = 67982
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -150920,6 +150920,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Soft]
 0.011	tests/system/py/test_approved_palettes.py::test_exact_catalogue_order_and_natural_default
 0.000	tests/system/py/test_approved_palettes.py::test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls
+0.170	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_runs_wasm_compiler_task[app/src/assistant_view_model.cpp]
+0.150	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_runs_wasm_compiler_task[app/src/assistant_work_report.hpp]
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[all-used-next-free]
 0.013	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[prefer-unused-rounded]
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[redraw-rounded-special]
