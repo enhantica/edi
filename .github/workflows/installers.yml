@@ -11,7 +11,7 @@ on:
       crysta_commit:
         description: Exact crysta source commit to build before edi
         required: true
-        default: a28cc54448a4962268ca7b06e3dd3f4f711131f9
+        default: 143470244bc907b0ceee7a1bface2550c62ba762
         type: string
   push:
     paths:
@@ -93,7 +93,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: enhantica/crysta
-          ref: ${{ inputs.crysta_commit || 'a28cc54448a4962268ca7b06e3dd3f4f711131f9' }}
+          ref: ${{ inputs.crysta_commit || '143470244bc907b0ceee7a1bface2550c62ba762' }}
           token: ${{ steps.crysta-token.outputs.token }}
           path: .crysta
           persist-credentials: false
