@@ -173,6 +173,8 @@ class Session : public QObject {
     // The folder holding `path` when it exists, else empty: the folder of the last project opened, where a new project
     // goes unless one was chosen.
     Q_INVOKABLE QString existingParentFolder(const QString& path) const;
+    /// Whether a file, folder or link already sits at `path` (a new project's location, before it is written).
+    Q_INVOKABLE bool locationExists(const QString& path) const;
     QString projectLocation() const;
     bool needsSaveAs() const;
     QString colourScheme() const { return colour_scheme_; }
@@ -189,10 +191,13 @@ class Session : public QObject {
     // and authors go into `_metadata` as the Project page writes them; an empty title keeps the default one.
     // `reportLibraries` is the preference for whether its saved HTML reports embed their chart libraries, written into
     // the new project's `_report.html_offline` (ADR-0036 §7); no other project takes the preference.
+    /// `replace` writes the new project over a project folder already at `location`, through the ordinary save
+    /// (the user confirmed the prompt); without it an existing location is refused.
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
                                    const QString& suRule = QStringLiteral("iucr_99"), const QString& title = QString(),
-                                   const QString& authors = QString(), bool reportLibraries = false, const QString& assistantIntent = QString());
-    Q_INVOKABLE edi_app::ProjectCreationResult createProjectWithOutcome(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&);
+                                   const QString& authors = QString(), bool reportLibraries = false, const QString& assistantIntent = QString(),
+                                   bool replace = false);
+    Q_INVOKABLE edi_app::ProjectCreationResult createProjectWithOutcome(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,bool replace = false);
     Q_INVOKABLE bool creationOutcomeCurrent(const edi_app::ProjectCreationResult&) const;
     Q_INVOKABLE void closeProject();
     // A tutorial's project (edi ADR-0064): the open project, unsaved changes and all, is set aside rather than closed
@@ -333,7 +338,7 @@ class Session : public QObject {
     const AssistantWorkReportOptions work_report_options_;
     void initializeSession();
     struct ProjectCreationOutcome;
-    bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*);
+    bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*,bool replace = false);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
     bool assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept;

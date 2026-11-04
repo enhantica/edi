@@ -111,6 +111,41 @@ SideBarGroup {
         // reset here, not only when the dialog has closed: this page goes before its closing ends, and the new page's
         // dialog would open again on a flag still set.
         onAccepted: ApplicationInfo.createProjectDialogEvent(3)
+        onReplaceAsked: (name, folder) => {
+            replaceProject.projectName = name;
+            replaceProject.folder = folder;
+            replaceProject.open();
+        }
+    }
+
+    // A project already at the chosen location (the owner, 2026-11-04): Replace writes the new one over it through
+    // the ordinary save, so a refused write leaves the old project; Cancel returns to the form as typed.
+    AppDialog {
+        id: replaceProject
+        objectName: "createProject.replace"
+        property string projectName: ""
+        property string folder: ""
+        parent: Overlay.overlay
+        title: qsTr("Replace project?")
+        standardButtons: Dialog.Yes | Dialog.Cancel
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: replaceText.implicitHeight
+        onAboutToShow: {
+            const yes = standardButton(Dialog.Yes);
+            yes.text = qsTr("Replace");
+            yes.objectName = "createProject.replace.accept";
+        }
+        onAccepted: {
+            createDialog.replaceExisting = true;
+            createDialog.accept();
+        }
+
+        EaElements.Label {
+            id: replaceText
+            width: replaceProject.contentWidth
+            wrapMode: Text.Wrap
+            text: qsTr("A project named %1 already exists in %2. Replace it?").arg(replaceProject.projectName).arg(replaceProject.folder)
+        }
     }
 
     // Open project (edi ADR-0052 §3, §9; owner, 2026-10-25): the same small dialog on every platform, Folder or Zip

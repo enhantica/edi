@@ -510,6 +510,12 @@ QString Session::projectLocation() const {
     return location;
 }
 
+bool Session::locationExists(const QString& path) const {
+    if (path.isEmpty()) return false;
+    const QFileInfo info(QDir::cleanPath(path));
+    return info.exists() || info.isSymLink();
+}
+
 QString Session::existingParentFolder(const QString& path) const {
     if (path.isEmpty()) return {};
     const QFileInfo parent(QFileInfo(path).absolutePath());
@@ -1080,16 +1086,16 @@ struct Session::ProjectCreationOutcome {
 };
 bool Session::createProject(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries, const QString& assistantIntent) {
-    return createProjectWithOutcome(name,description,location,suRule,title,authors,reportLibraries,assistantIntent).success;
+                            bool reportLibraries, const QString& assistantIntent, bool replace) {
+    return createProjectWithOutcome(name,description,location,suRule,title,authors,reportLibraries,assistantIntent,replace).success;
 }
 edi_app::ProjectCreationResult Session::createProjectWithOutcome(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries, const QString& assistantIntent) {
+                            bool reportLibraries, const QString& assistantIntent, bool replace) {
     const QPointer<Session> receiver(this);
     ProjectCreationOutcome outcome;
     const bool success = createProjectImpl(name, description, location, suRule, title, authors,
-                                          reportLibraries, assistantIntent, &outcome);
+                                          reportLibraries, assistantIntent, &outcome, replace);
     if (!receiver) return {};
     const bool current = (!outcome.has_owner || outcome.owner) && project_ == outcome.owner &&
         replacement_generation_ == outcome.replacement;
@@ -1109,7 +1115,7 @@ bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outco
 }
 bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome) {
+                            bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome, bool replace) {
     const QPointer<Session> receiver(this);
     if (outcome) { outcome->owner = project_; outcome->has_owner = project_ != nullptr; outcome->replacement = replacement_generation_; }
     ProjectViewModel* created = nullptr;
@@ -1163,7 +1169,19 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     if (location.isEmpty()) {
         return true;
     }
-    const bool saved=saveProjectAsFresh(QUrl::fromLocalFile(location),false,false,false);
+    // Over a project folder already at the location, once the user chose Replace: the ordinary save writes into
+    // it, so a refused write leaves the old project as it was (the owner, 2026-11-04).
+    const QFileInfo existing(location);
+    const bool replacing = replace && (existing.exists() || existing.isSymLink());
+    bool saved = false;
+    if (!replacing) saved = saveProjectAsFresh(QUrl::fromLocalFile(location),false,false,false);
+    else if (!existing.isDir() || !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi")))
+        setLastError(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
+    else {
+        saved = saveInto(existing.absoluteFilePath());
+        if (saved) { archive_location_.clear(); leaveTemporaryOrigin(); releaseTemporaryFolder(); }
+        else if (current()) setLastError(tr("The project %1 could not be replaced: %2").arg(existing.fileName(), last_error_));
+    }
     const QString error=current()?(saved?QString{}:last_error_):QStringLiteral("The original Create save owner changed");
     if (outcome) { outcome->error = error; outcome->saved = error.isEmpty(); outcome->path = originalCreated ? originalCreated->path() : QString{}; }
     if (!current()) return false;
