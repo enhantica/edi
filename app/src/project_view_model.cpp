@@ -534,7 +534,8 @@ bool ProjectViewModel::evolutionErrorBars() const { return project_->evolution_e
 
 void ProjectViewModel::setEvolutionErrorBars(bool on) {
     if (on != evolutionErrorBars()) {
-        apply_report_setting(edi::Edit::assign(project_->evolution_error_bars, std::optional<bool>(on)));
+        // The chart redraws at once, during a fit too (the owner, 2026-11-04).
+        apply_report_setting(edi::Edit::assign(project_->evolution_error_bars, std::optional<bool>(on)), true);
     }
 }
 
@@ -545,7 +546,8 @@ bool ProjectViewModel::evolutionRangeWithSu() const {
 void ProjectViewModel::setEvolutionRangeWithSu(bool on) {
     if (on != evolutionRangeWithSu()) {
         apply_report_setting(edi::Edit::assign(project_->evolution_range,
-                                               std::optional<std::string>(on ? "values_su" : "values")));
+                                               std::optional<std::string>(on ? "values_su" : "values")),
+                             true);
     }
 }
 
@@ -1303,6 +1305,9 @@ void ProjectViewModel::makeScanSession() {
         for (int index = first; index <= last; ++index) {
             syncDataset(index);
         }
+        // The template's own point waits for its dataset's extracted value.
+        evolution_->setTemplate(&scanTemplateOrModel());
+        evolution_->syncParameters();
     });
 }
 
@@ -1328,6 +1333,7 @@ void ProjectViewModel::followScanDeclaration() {
     if (!project_->sequential_fit.declared()) {
         forgetProjection();
         if (scan_session_ != nullptr) {
+            evolution_->setTemplate(nullptr);
             evolution_->setScan(nullptr, project_.get(), {});
             scan_views_->setScan(nullptr, project_.get(), {});
             scan_session_->deleteLater();
@@ -2011,6 +2017,7 @@ void ProjectViewModel::reloadScanResults() {
 
 void ProjectViewModel::showScanResults() {
     syncDatasets();
+    evolution_->setTemplate(&scanTemplateOrModel());
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     scan_views_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     const ScanSession::Run& provenance = scan_session_->run();
@@ -2615,9 +2622,9 @@ QString ProjectViewModel::apply_background_edit(const edi::ExperimentBase& exper
     return apply(change, structural);
 }
 
-QString ProjectViewModel::apply_report_setting(const edi::Edit& change) {
+QString ProjectViewModel::apply_report_setting(const edi::Edit& change, bool during_fit) {
     edi::ReportSettingsState before = edi::report_settings_state(*project_);
-    const QString refusal = write_report_settings(change);
+    const QString refusal = write_report_settings(change, during_fit);
     if (refusal.isEmpty() && edi::report_settings_state(*project_) != before) {
         undo_history_.emplace_back(std::move(before));
         syncUndo();
@@ -2625,10 +2632,10 @@ QString ProjectViewModel::apply_report_setting(const edi::Edit& change) {
     return refusal;
 }
 
-QString ProjectViewModel::write_report_settings(const edi::Edit& change) {
+QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool during_fit) {
     // No calculation reads a report setting: the patterns, the structures and the saved reports' digests stay current
     // (no recalculation is asked for), and a scan's template takes the setting too.
-    if (fit_ != nullptr && fit_->running()) {
+    if (!during_fit && fit_ != nullptr && fit_->running()) {
         const QString message = tr("The project cannot be edited while a fit is running");
         setLastError(message);
         return message;
@@ -3234,6 +3241,7 @@ void ProjectViewModel::publish(bool structural) {
         syncDatasets();
     }
     analysis_->sync();
+    evolution_->setTemplate(&scanTemplateOrModel());
     evolution_->syncParameters();
     syncCorrelations();
     syncParameterTable(false);  // the report is refreshed below, once everything it reads is published

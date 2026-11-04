@@ -1054,16 +1054,19 @@ refuses to write its bank rows into it.
   the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
   uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
   datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, lists every free
-  parameter, then any other one `analysis/results.csv` records, already before a dataset is fitted. Until one is, the
-  chart has no axes and shows "No fitted results yet" as the other empty views show theirs; the points appear as the
-  datasets are fitted. x is the first extract rule's
+  parameter, then any other one `analysis/results.csv` records, already before a dataset is fitted. Until one is, a
+  fitted template experiment is plotted as one point, its current value and s.u. at its dataset's x, so a parameter
+  can be chosen before the scan starts, its range padded to show its error bar; the scan's first fitted dataset
+  replaces it (owner, 2026-11-04). With neither, the chart has no axes and shows "No fitted results yet" as the other
+  empty views show theirs; the points appear as the datasets are fitted. x is the first extract rule's
   value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
   pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
   dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06), drawn as a 2 px line edged by
   1 px of half-transparent colour on each side (owner, 2026-10-22; the Stacked and Map tabs draw the same look as an
   open rectangle, ADR-0041 §8). Two buttons at the toolbar's right end, as on the pattern chart's toolbar, are the
-  project's `_evolution_chart` view settings, saved and undone with the other chart settings (owner, 2026-11-03): *Error
-  bars* (shown unless hidden) and *Range*, which fits the y range to the values with their error bars instead of the
+  project's `_evolution_chart` view settings, saved and undone with the other chart settings (owner, 2026-11-03), and
+  the only project settings that change while a fit runs, so the chart answers them during a scan (owner,
+  2026-11-04): *Error bars* (shown unless hidden) and *Range*, which fits the y range to the values with their error bars instead of the
   values only, so that by default a much longer bar, such as a moment's above the ordering temperature, is clipped at
   the plot's edge instead of flattening every point. The pointer zooms as on the
   pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click

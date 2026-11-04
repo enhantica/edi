@@ -494,9 +494,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
                                   bool structural) override;
     // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
-    QString apply_report_setting(const edi::Edit& change);
+    // `during_fit`: a setting only a chart reads (the Evolution chart's error bars and range), which may change while
+    // a fit runs; every other setting waits for the fit to end.
+    QString apply_report_setting(const edi::Edit& change, bool during_fit = false);
     // Writes report settings through the preview's settings door and publishes what they change.
-    QString write_report_settings(const edi::Edit& change);
+    QString write_report_settings(const edi::Edit& change, bool during_fit = false);
     // The scan's results (null outside a scan project).
     const ScanSession* scanSession() const { return scan_session_; }
 
