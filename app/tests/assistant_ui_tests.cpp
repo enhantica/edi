@@ -9,6 +9,11 @@
 #include <QStandardItemModel>
 #include <QDir>
 #include <QFile>
+#include <QTemporaryDir>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QCryptographicHash>
 #include "edi/io.hpp"
 #include "fit_view_model.hpp"
 #include <QtQml/qqmlextensionplugin.h>
@@ -188,6 +193,92 @@ private slots:
         QTest::mouseMove(&window, link->mapToScene(QPointF(link->width() / 2, link->height() / 2)).toPoint());
         QTRY_VERIFY2(root->property("linkHovered").toBool(), qPrintable(QString("size=%1x%2 visible=%3 enabled=%4 hover=%5 active=%6").arg(link->width()).arg(link->height()).arg(link->isVisible()).arg(link->isEnabled()).arg(link->property("hoverEnabled").toBool()).arg(window.isActive())));
         QTRY_VERIFY(root->property("linkColor") != normal);
+    }
+    void exampleOpeningCoversDownloadAndPageBuild() {
+        QTemporaryDir source;
+        QVERIFY(source.isValid());
+        const QString archive = source.filePath("project.zip");
+        QVERIFY(QFile::copy(QString::fromUtf8(EDI_SOURCE_DIR)
+            + "/tests/fixtures/project_archive/pd-neut-cwl_cosio-d20_scan-3f.zip", archive));
+        QFile bytesFile(archive);
+        QVERIFY(bytesFile.open(QIODevice::ReadOnly));
+        const auto bytes = bytesFile.readAll();
+        bytesFile.close();
+        const QJsonObject file{{"path", "project.zip"}, {"format", "zip"},
+            {"bytes", bytes.size()}, {"sha256", QString::fromLatin1(
+                QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())}};
+        const QJsonObject entry{{"id", "scan-example"}, {"kind", "project"},
+            {"name", "A scan example"}, {"files", QJsonArray{file}}};
+        QFile index(source.filePath("index.json"));
+        QVERIFY(index.open(QIODevice::WriteOnly));
+        index.write(QJsonDocument(QJsonObject{{"schema", "edi-data-index/1"},
+            {"entries", QJsonArray{entry}}}).toJson());
+        index.close();
+        const QByteArray oldSources = qgetenv("EDI_ONLINE_SOURCES");
+        const auto restoreSources = qScopeGuard([&] { qputenv("EDI_ONLINE_SOURCES", oldSources); });
+        const auto cod = QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR)
+            + "/tests/fixtures/online_sources/cod/").toString();
+        qputenv("EDI_ONLINE_SOURCES", ("cod=" + cod + ";easydiffraction="
+            + QUrl::fromLocalFile(source.path()).toString() + "/").toUtf8());
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 1400; height: 900; visible: true
+                footer: StatusBar { id: bar; objectName: "openingStatusBar" }
+                Connections {
+                    target: Session
+                    function onProjectChanged() {
+                        bar.pagesWanted = Session.hasProject ? 5 : 0;
+                        bar.pagesBuilt = 0;
+                    }
+                }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        auto* bar = root->findChild<QObject*>("openingStatusBar");
+        auto* opening = root->findChild<QObject*>("statusBar.opening");
+        auto* fitting = root->findChild<QObject*>("statusBar.fit.progress");
+        QVERIFY(bar && opening && fitting);
+        QSignalSpy finished(session, &edi_app::Session::exampleOpenFinished);
+        QSignalSpy transferred(session, &edi_app::Session::exampleDownloadProgressChanged);
+        QVERIFY(session->openExample("scan-example"));
+        QVERIFY(bar->property("opening").toBool());
+        QVERIFY(opening->property("indeterminate").toBool());
+        QVERIFY(opening->property("text").toString().contains("Loading"));
+        QCOMPARE(opening->property("height"), fitting->property("height"));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 10000);
+        QVERIFY(finished.at(0).at(1).toBool());
+        QVERIFY(session->hasProject());
+        QVERIFY(transferred.count() >= 3);
+        QCOMPARE(session->exampleDownloadReceived(), bytes.size());
+        QCOMPARE(session->exampleDownloadTotal(), bytes.size());
+        QVERIFY(!opening->property("indeterminate").toBool());
+        QTRY_VERIFY(qAbs(opening->property("fraction").toDouble() - 1.0 / 3.0) < 0.001);
+        QVERIFY(opening->property("text").toString().contains("Opening"));
+        QVERIFY(bar->setProperty("pagesBuilt", 2));
+        QTRY_VERIFY(qAbs(opening->property("fraction").toDouble() - 0.6) < 0.001);
+        QVERIFY(bar->setProperty("pagesBuilt", 5));
+        QTRY_VERIFY(!opening->property("visible").toBool());
+        QVERIFY(QFile::remove(archive));
+        QVERIFY(session->openExample("scan-example"));
+        QVERIFY(bar->property("opening").toBool());
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 2, 10000);
+        QVERIFY(!finished.at(1).at(1).toBool());
+        QTRY_VERIFY(!opening->property("visible").toBool());
+        QVERIFY(session->openExample("scan-example"));
+        session->closeProject();
+        QVERIFY(!session->openingExample());
+        QTest::qWait(50);
+        QVERIFY(!session->hasProject());
+        QVERIFY(!bar->property("opening").toBool());
     }
     void archiveScanRunsWithoutSave_data() {
         QTest::addColumn<bool>("unsaved");

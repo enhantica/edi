@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "example_list_model.hpp"
+#include "online_fetch.hpp"
 
 class QNetworkAccessManager;
 
@@ -50,9 +51,9 @@ public:
     /// one is under way, else after a fresh read, so an outage at start-up is retried by the next request.
     void whenRead(const QString& id, std::function<void()> then);
     /// Download (or copy) the entry's file, checked against the index; `done` gets the bytes or an error.
-    void fetchBytes(const QString& id, BytesDone done);
+    void fetchBytes(const QString& id, BytesDone done, FetchProgress progress = {});
     /// The entry's zip in a temporary folder; `done` gets the archive or an error.
-    void fetchProject(const QString& id, ProjectDone done);
+    void fetchProject(const QString& id, ProjectDone done, FetchProgress progress = {});
     /// The file name the entry's path ends with; empty for an unknown entry.
     QString fileName(const QString& id) const;
 

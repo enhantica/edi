@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "online_fetch.hpp"
 
+#include <QPointer>
+
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QFile>
@@ -44,26 +46,26 @@ QUrl joined_url(const QString& base, const QString& path) {
     return url;
 }
 
-void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, FetchDone done) {
+void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, FetchDone done, FetchProgress progress) {
     if (bases.isEmpty()) {
         done({}, QCoreApplication::translate("OnlineSearch", "No location to read %1 from").arg(path), true);
         return;
     }
     const QStringList rest = bases.mid(1);
     fetch_url(owner, manager, joined_url(bases.constFirst(), path),
-              [owner, &manager, rest, path, done](const QByteArray& bytes, const QString& error, bool unreachable) {
+              [owner, &manager, rest, path, done, progress](const QByteArray& bytes, const QString& error, bool unreachable) {
                   if (!error.isEmpty() && unreachable && !rest.isEmpty()) {
-                      fetch_from(owner, manager, rest, path, done);
+                      fetch_from(owner, manager, rest, path, done, progress);
                       return;
                   }
                   done(bytes, error, unreachable);
-              });
+              }, progress);
 }
 
-void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done) {
+void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done, FetchProgress progress) {
     if (url.isLocalFile() || url.scheme().isEmpty()) {
         const QString path = url.isLocalFile() ? url.toLocalFile() : url.toString();
-        QTimer::singleShot(0, owner, [path, done] {
+        QTimer::singleShot(0, owner, [path, done, progress, receiver = QPointer<QObject>(owner)] {
             QFile file(path);
             if (!file.exists()) {
                 done({}, QCoreApplication::translate("OnlineSearch", "%1 does not exist").arg(path), true);
@@ -73,7 +75,9 @@ void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
                 done({}, QCoreApplication::translate("OnlineSearch", "%1 cannot be read").arg(path), false);
                 return;
             }
-            done(file.readAll(), {}, false);
+            const auto bytes = file.readAll();
+            if (progress) progress(bytes.size(), bytes.size());
+            if (receiver) done(bytes, {}, false);
         });
         return;
     }
@@ -88,7 +92,8 @@ void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(30000);
     QNetworkReply* reply = manager->get(request);
-    QObject::connect(reply, &QNetworkReply::finished, owner, [reply, done, url] {
+    if (progress) QObject::connect(reply, &QNetworkReply::downloadProgress, owner, progress);
+    QObject::connect(reply, &QNetworkReply::finished, owner, [reply, done, url, progress, receiver = QPointer<QObject>(owner)] {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
             const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
@@ -98,7 +103,9 @@ void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
             done({}, what, unreachable_error(reply->error(), status));
             return;
         }
-        done(reply->readAll(), {}, false);
+        const auto bytes = reply->readAll();
+        if (progress) progress(bytes.size(), bytes.size());
+        if (receiver) done(bytes, {}, false);
     });
 }
 

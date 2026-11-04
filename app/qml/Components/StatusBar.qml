@@ -31,7 +31,7 @@ EaElements.StatusBar {
     // opening's progress in the fit area's place.
     property int pagesBuilt: 0
     property int pagesWanted: 0
-    readonly property bool opening: pagesWanted > 0 && pagesBuilt < pagesWanted
+    readonly property bool opening: Session.openingExample || pagesWanted > 0 && pagesBuilt < pagesWanted
     // The running tutorial (edi ADR-0064), whose strip sits at the bar's right end.
     property TutorialPanel tutorial: null
     readonly property bool tutorialShown: tutorial !== null && tutorial.tutorial !== null
@@ -482,10 +482,11 @@ EaElements.StatusBar {
         anchors.rightMargin: tutorialStrip.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         visible: bar.opening
-        width: Math.ceil(openingProgress.textWidth + 2 * openingProgress.height)
-        height: Math.round(EaStyle.Sizes.fontPixelSize * 1.3)
-        fraction: bar.pagesWanted > 0 ? bar.pagesBuilt / bar.pagesWanted : 0
-        text: qsTr("Opening project… %1 of %2 pages").arg(bar.pagesBuilt).arg(bar.pagesWanted)
+        width: Math.max(EaStyle.Sizes.fontPixelSize * 20, Math.ceil(openingProgress.textWidth + 2 * openingProgress.height))
+        height: statusItem.frameHeight
+        indeterminate: Session.openingExample && Session.exampleDownloadTotal <= 0
+        fraction: Session.openingExample ? (Session.exampleDownloadTotal > 0 ? Math.min(1, Session.exampleDownloadReceived / Session.exampleDownloadTotal) / 3 : 0) : (Session.openedExample !== "" ? 1 / 3 : 0) + (Session.openedExample !== "" ? 2 / 3 : 1) * (bar.pagesWanted > 0 ? bar.pagesBuilt / bar.pagesWanted : 0)
+        text: Session.openingExample ? (Session.exampleDownloadTotal <= 0 ? qsTr("Loading project…") : Session.exampleDownloadReceived < Session.exampleDownloadTotal ? qsTr("Downloading… %1 of %2 KB").arg((Session.exampleDownloadReceived / 1024).toFixed(1)).arg((Session.exampleDownloadTotal / 1024).toFixed(1)) : qsTr("Opening project…")) : qsTr("Opening project… %1 of %2 pages").arg(bar.pagesBuilt).arg(bar.pagesWanted)
     }
 
     WarningsDialog {

@@ -109,6 +109,9 @@ class Session : public QObject {
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
     /// An example from an online collection is being fetched; its project opens, or loadFailed fires, when this clears.
     Q_PROPERTY(bool openingExample READ openingExample NOTIFY openingExampleChanged)
+    /// Bytes transferred for the current example request; a negative total means unknown.
+    Q_PROPERTY(qint64 exampleDownloadReceived READ exampleDownloadReceived NOTIFY exampleDownloadProgressChanged)
+    Q_PROPERTY(qint64 exampleDownloadTotal READ exampleDownloadTotal NOTIFY exampleDownloadProgressChanged)
     /// Why no example project can be opened: every online source holding projects failed. Empty otherwise.
     Q_PROPERTY(QString examplesNotice READ examplesNotice NOTIFY examplesNoticeChanged)
     // A project set aside while a tutorial works in its own (edi ADR-0064), and whether it has unsaved changes.
@@ -155,6 +158,8 @@ class Session : public QObject {
     ProjectViewModel* project() const { return project_; }
     bool hasProject() const { return project_ != nullptr; }
     bool openingExample() const { return opening_example_; }
+    qint64 exampleDownloadReceived() const { return example_download_received_; }
+    qint64 exampleDownloadTotal() const { return example_download_total_; }
     QString examplesNotice() const;
     /// The tutorials' files (lbco.cif, hrpt.xye) from the collection into a temporary folder of their own, for Next on
     /// a step that loads one; tutorialFilesStaged brings the folder, tutorialFilesFailed the reason.
@@ -288,6 +293,7 @@ class Session : public QObject {
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
     void openingExampleChanged();
+    void exampleDownloadProgressChanged();
     void examplesNoticeChanged();
     /// An example requested through openExample or openExampleAside has opened, or not; loadFailed names why.
     void exampleOpenFinished(const QString& exampleId, bool opened);
@@ -376,6 +382,8 @@ class Session : public QObject {
     OnlineSearch* online_search_ = nullptr;
     CollectionExamples* collection_examples_ = nullptr;
     bool opening_example_ = false;
+    qint64 example_download_received_ = 0;
+    qint64 example_download_total_ = -1;
     quint64 example_request_ = 0;
     void fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done);
     WarningListModel* warnings_;

@@ -934,13 +934,22 @@ bool Session::openExampleNamed(const QString& exampleId) {
     const auto binding = replacement_generation_;
     const QPointer<ProjectViewModel> before(project_);
     opening_example_ = true;
+    example_download_received_ = 0;
+    example_download_total_ = -1;
     emit openingExampleChanged();
-    const auto finish = [receiver, exampleId](bool opened, const QString& message) {
+    if (!receiver || receiver->example_request_ != request) return true;
+    emit exampleDownloadProgressChanged();
+    if (!receiver || receiver->example_request_ != request) return true;
+    const auto finish = [receiver, exampleId, request](bool opened, const QString& message) {
+        if (!receiver || receiver->example_request_ != request || !receiver->opening_example_) return;
         receiver->opening_example_ = false;
         emit receiver->openingExampleChanged();
+        if (!receiver || receiver->example_request_ != request) return;
         if (!opened && !message.isEmpty()) {
             receiver->setLastError(message);
+            if (!receiver || receiver->example_request_ != request) return;
             emit receiver->loadFailed(message);
+            if (!receiver || receiver->example_request_ != request) return;
         }
         emit receiver->exampleOpenFinished(exampleId, opened);
     };
@@ -986,6 +995,11 @@ bool Session::openExampleNamed(const QString& exampleId) {
             finish(opened, opened ? QString()
                    : tr("The example %1, downloaded to %2, could not be opened%3")
                          .arg(exampleId, archive.toLocalFile(), receiver->last_error_.isEmpty() ? QString() : QStringLiteral(": ") + receiver->last_error_));
+        }, [receiver, request, current](qint64 received, qint64 total) {
+            if (!receiver || receiver->example_request_ != request || !current()) return;
+            receiver->example_download_received_ = std::max<qint64>(0, received);
+            receiver->example_download_total_ = total;
+            emit receiver->exampleDownloadProgressChanged();
         });
     });
     return true;
@@ -1550,6 +1564,11 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
 #endif
     if(!current() || project_!=target)return false;
     opened_example_ = example;
+    if (example.isEmpty() && opening_example_) {
+        opening_example_ = false;
+        emit openingExampleChanged();
+        if (!current() || project_ != target) return false;
+    }
     warnings_->setMessages(warnings);
     if(!current() || project_!=target)return false;
     if (project_ != nullptr) {

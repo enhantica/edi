@@ -349,3 +349,15 @@ The scan's final dataset refresh runs after FitViewModel releases its presentati
 fence. It uses the ordinary projection/edit path at that point, so a legitimate
 internal refresh cannot trigger the same refusal used to block reentrant external
 writers while results are being published. The publication fences remain unchanged.
+
+## Opening progress across online Examples
+
+The same status-bar indicator starts when an Example is requested, including
+catalogue lookup. Unknown transfer size shows moving stripes and Loading project.
+The collection's declared size and the transport's received/total bytes drive the
+download label and the first third of the bar. Existing page-building progress
+fills the remaining two thirds; local opens keep their ordinary page fraction.
+The bar matches the fitting indicator's height. Completion, failure and project
+replacement retire the request, and stale byte callbacks cannot update a successor.
+Size/digest checks and ordinary project-open ownership remain unchanged. Local
+fixture reads use the same optional progress callback as HTTP and browser fetches.

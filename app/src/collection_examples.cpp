@@ -138,13 +138,16 @@ QString CollectionExamples::fileName(const QString& id) const {
     return it == known_.constEnd() ? QString() : QFileInfo(it->path).fileName();
 }
 
-void CollectionExamples::fetchBytes(const QString& id, BytesDone done) {
+void CollectionExamples::fetchBytes(const QString& id, BytesDone done, FetchProgress progress) {
     const auto it = known_.constFind(id);
     if (it == known_.constEnd()) {
         done({}, tr("No online source that answered holds '%1'").arg(id));
         return;
     }
     const Known known = *it;
+    const QPointer<CollectionExamples> receiver(this);
+    if (progress) progress(0, known.bytes);
+    if (!receiver) return;
     fetch_from(this, network_, known.sources, known.path, [known, done](const QByteArray& bytes, const QString& error, bool) {
         if (!error.isEmpty()) {
             done({}, error);
@@ -157,10 +160,12 @@ void CollectionExamples::fetchBytes(const QString& id, BytesDone done) {
             return;
         }
         done(bytes, {});
+    }, [progress, expected = known.bytes](qint64 received, qint64 total) {
+        if (progress) progress(received, total > 0 ? total : expected);
     });
 }
 
-void CollectionExamples::fetchProject(const QString& id, ProjectDone done) {
+void CollectionExamples::fetchProject(const QString& id, ProjectDone done, FetchProgress progress) {
     const QString name = fileName(id);
     fetchBytes(id, [this, name, done](const QByteArray& bytes, const QString& error) {
         if (!error.isEmpty()) {
@@ -185,7 +190,7 @@ void CollectionExamples::fetchProject(const QString& id, ProjectDone done) {
         }
         out.close();
         done(QUrl::fromLocalFile(path), {});
-    });
+    }, std::move(progress));
 }
 
 }  // namespace edi_app
