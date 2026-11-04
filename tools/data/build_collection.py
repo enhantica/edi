@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Build or check a data collection: plain files and one index.json (edi ADR-0068).
 
-    python tools/data/build_collection.py populate OUTPUT   # the bundled examples and tutorial files
+    python tools/data/build_collection.py populate OUTPUT   # the examples and tutorial files
     python tools/data/build_collection.py index OUTPUT      # (re)write OUTPUT/index.json
     python tools/data/build_collection.py check OUTPUT      # index, files and schema agree
 
