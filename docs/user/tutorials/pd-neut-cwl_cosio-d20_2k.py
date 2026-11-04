@@ -36,8 +36,13 @@ print('Experiments:', ', '.join(experiment.name for experiment in project.experi
 
 # %%
 for moment in project.structures['cosio'].atom_site_moment:
-    print(moment.id, moment.symmform, moment.crystalaxis_x.value, moment.crystalaxis_y.value,
-          moment.crystalaxis_z.value)
+    print(
+        moment.id,
+        moment.symmform,
+        moment.crystalaxis_x.value,
+        moment.crystalaxis_y.value,
+        moment.crystalaxis_z.value,
+    )
 
 # %% [markdown]
 # ## Fit
