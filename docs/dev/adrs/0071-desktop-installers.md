@@ -24,7 +24,7 @@ platform-specific compiler infrastructure; users of the installed app need no Pi
 
 Deployment is opt-in (`EDI_DEPLOY_APP`); ordinary developer and WebAssembly builds keep their existing
 layout. macOS gets an application bundle; Linux and Windows get a relocatable application directory.
-Use a user-writable default installation directory and do not require administrator access.
+Use a home-directory default on Linux and Windows, and suggest `/Applications/EasyDiffraction` on macOS. The framework handles authorization when the chosen location requires it.
 After offline qualification, publish only the online installer. Initial component repositories use
 GitHub Pages under `/repository/testing/<platform>/`. Installers are development artifacts,
 without a signing identity or public release step. The Preferences update controls use the installed
@@ -329,3 +329,14 @@ version identity from the stable release history and cannot qualify a stable rel
 The Windows dependency scan can resolve one DLL through both the staging directory and the
 locked Qt prefix. Coalesce these paths only when the files have equal SHA-256 hashes and prefer
 the staged copy. A same-name DLL with different bytes fails staging.
+
+
+The Modern wizard uses the EasyDiffraction mark and a blue primary action. The previous
+EasyDiffraction app supplies the ICNS and ICO artwork, and the branding repository supplies
+the PNG. The app embeds the Windows and macOS icon and sets its Qt window icon on desktop.
+Same-location updates go through Maintenance Tool. The protocol test upgrades the existing
+installation and checks that an unrelated project file keeps its bytes.
+
+- [EasyDiffractionBeta desktop icon sources](https://github.com/easyscience/EasyDiffractionBeta/tree/master/easyDiffractionApp/Gui/Resources/Logo)
+- [EasyDiffraction branding](https://github.com/easyscience/assets-branding/tree/master/easydiffraction/icons)
+- [Qt Installer Framework wizard configuration](https://doc.qt.io/qtinstallerframework/ifw-globalconfig.html)

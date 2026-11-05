@@ -43,77 +43,93 @@ def check(tools: Path, output: Path) -> None:
     marker.write_text('second marker\n')
     repository = (output / 'online/repository').as_uri() + '/'
     online = package_app(stage, tools, output / 'online', '2026.11.1', repository)
-    home = output / 'isolated home'
-    home.mkdir()
+    (output / 'isolated home').mkdir()
     for kind, bootstrap in [('offline', offline), ('online', online)]:
-        env = clean_environment(home / kind)
-        executable = installer_command(
-            unpack_installer(bootstrap.with_suffix('.zip'), output / kind / 'unzipped')
+        exercise(
+            kind, bootstrap, output, marker.relative_to(stage), assistant_marker.relative_to(stage)
         )
-        target = output / (kind + ' installed app')
-        maintenance = target / (
-            'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
-            if SYSTEM == 'macos'
-            else 'MaintenanceTool' + SUFFIX
-        )
-        with (output / (kind + '.log')).open('w') as log:
-            options = {'env': env, 'stdout': log, 'stderr': -2, 'timeout': 60}
-            run(
-                [
-                    executable,
-                    '--root',
-                    target,
-                    '--accept-licenses',
-                    '--default-answer',
-                    '--confirm-command',
-                    'install',
-                ],
-                **options,
-            )
-            installed = target / marker.relative_to(stage)
-            try:
-                expected = 'first marker\n' if kind == 'offline' else 'second marker\n'
-                if installed.read_text() != expected:
-                    raise RuntimeError('Installer did not install the expected component')
-                installed_assistant = target / assistant_marker.relative_to(stage)
-                if installed_assistant.exists():
-                    raise RuntimeError('Default installation selected the optional component')
-                if kind == 'offline':
-                    run(
-                        [maintenance, '--set-temp-repository', repository, 'check-updates'],
-                        **options,
-                    )
-                    run(
-                        [
-                            maintenance,
-                            '--set-temp-repository',
-                            repository,
-                            '--accept-licenses',
-                            '--default-answer',
-                            '--confirm-command',
-                            'update',
-                        ],
-                        **options,
-                    )
-                    if installed.read_text() != 'second marker\n':
-                        raise RuntimeError('Maintenance tool did not apply the component update')
-                maintenance_args = [
-                    maintenance, '--set-temp-repository', repository, '--accept-licenses',
-                    '--default-answer', '--confirm-command',
-                ]
-                run([*maintenance_args, 'install', ASSISTANT_COMPONENT], **options)
-                if installed_assistant.read_text() != 'optional assistant marker\n':
-                    raise RuntimeError('Maintenance tool did not install the assistant')
-                run([*maintenance_args, 'remove', ASSISTANT_COMPONENT], **options)
-                if installed_assistant.exists() or installed.read_text() != 'second marker\n':
-                    raise RuntimeError('Removing the assistant changed the required application')
-            finally:
-                run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
-            if installed.exists():
-                raise RuntimeError('Maintenance tool left the component installed')
     (output / 'passed.json').write_text(
         json.dumps({'passed': True, 'transport': 'file', 'application_test': False}) + '\n'
     )
+
+
+def exercise(
+    kind: str, bootstrap: Path, output: Path, marker: Path, assistant_marker: Path
+) -> None:
+    repository = (output / 'online/repository').as_uri() + '/'
+    env = clean_environment(output / 'isolated home' / kind)
+    executable = installer_command(
+        unpack_installer(bootstrap.with_suffix('.zip'), output / kind / 'unzipped')
+    )
+    target = output / (kind + ' installed app')
+    maintenance = target / (
+        'MaintenanceTool.app/Contents/MacOS/MaintenanceTool'
+        if SYSTEM == 'macos'
+        else 'MaintenanceTool' + SUFFIX
+    )
+    with (output / (kind + '.log')).open('w') as log:
+        options = {'env': env, 'stdout': log, 'stderr': -2, 'timeout': 60}
+        run(
+            [
+                executable,
+                '--root',
+                target,
+                '--accept-licenses',
+                '--default-answer',
+                '--confirm-command',
+                'install',
+            ],
+            **options,
+        )
+        installed = target / marker
+        try:
+            expected = 'first marker\n' if kind == 'offline' else 'second marker\n'
+            if installed.read_text() != expected:
+                raise RuntimeError('Installer did not install the expected component')
+            installed_assistant = target / assistant_marker
+            if installed_assistant.exists():
+                raise RuntimeError('Default installation selected the optional component')
+            if kind == 'offline':
+                user_file = target / 'user-project.edi'
+                user_file.write_text('keep the project\n')
+                run(
+                    [maintenance, '--set-temp-repository', repository, 'check-updates'],
+                    **options,
+                )
+                run(
+                    [
+                        maintenance,
+                        '--set-temp-repository',
+                        repository,
+                        '--accept-licenses',
+                        '--default-answer',
+                        '--confirm-command',
+                        'update',
+                    ],
+                    **options,
+                )
+                if installed.read_text() != 'second marker\n':
+                    raise RuntimeError('Maintenance tool did not apply the component update')
+                if user_file.read_text() != 'keep the project\n':
+                    raise RuntimeError('In-place update changed an unrelated user file')
+            maintenance_args = [
+                maintenance,
+                '--set-temp-repository',
+                repository,
+                '--accept-licenses',
+                '--default-answer',
+                '--confirm-command',
+            ]
+            run([*maintenance_args, 'install', ASSISTANT_COMPONENT], **options)
+            if installed_assistant.read_text() != 'optional assistant marker\n':
+                raise RuntimeError('Maintenance tool did not install the assistant')
+            run([*maintenance_args, 'remove', ASSISTANT_COMPONENT], **options)
+            if installed_assistant.exists() or installed.read_text() != 'second marker\n':
+                raise RuntimeError('Removing the assistant changed the required application')
+        finally:
+            run([maintenance, '--default-answer', '--confirm-command', 'purge'], **options)
+        if installed.exists():
+            raise RuntimeError('Maintenance tool left the component installed')
 
 
 def main() -> None:

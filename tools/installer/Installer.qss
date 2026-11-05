@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+QWizard QPushButton {
+    min-width: 6em;
+    padding: .35em .85em;
+}
+
+QWizard QPushButton:default {
+    background-color: #0079b7;
+    color: white;
+    border: 1px solid #006a9e;
+    border-radius: 5px;
+}
+
+QWizard QPushButton:default:hover {
+    background-color: #006a9e;
+}
+
+QWizard QPushButton:default:disabled {
+    background-color: palette(button);
+    color: palette(mid);
+    border-color: palette(midlight);
+}

@@ -163,15 +163,29 @@ def write_metadata(
             'Title': 'EasyDiffraction installer',
             'Publisher': 'EasyScience',
             'ProductUrl': 'https://enhantica.github.io/edi/',
-            'TargetDir': '@HomeDir@/Applications/EasyDiffraction'
+            'TargetDir': '/Applications/EasyDiffraction'
             if SYSTEM == 'macos'
             else '@HomeDir@/EasyDiffraction',
             'MaintenanceToolName': 'MaintenanceTool',
             'AllowNonAsciiCharacters': 'true',
             'AllowSpaceInPath': 'true',
             'WizardStyle': 'Modern',
+            'WizardDefaultWidth': '48em',
+            'WizardDefaultHeight': '29em',
+            'Logo': 'InstallerLogo.png',
+            'StyleSheet': 'Installer.qss',
         },
     )
+    icons = ROOT / 'app/resources/logo'
+    shutil.copy2(ROOT / 'tools/installer/InstallerLogo.png', config / 'InstallerLogo.png')
+    shutil.copy2(ROOT / 'tools/installer/Installer.qss', config / 'Installer.qss')
+    if SYSTEM in {'macos', 'windows'}:
+        icon = 'App.icns' if SYSTEM == 'macos' else 'App.ico'
+        shutil.copy2(icons / icon, config / icon)
+        ET.SubElement(configuration.getroot(), 'InstallerApplicationIcon').text = 'App'
+    if SYSTEM in {'linux', 'windows'}:
+        shutil.copy2(icons / 'App.png', config / 'App.png')
+        ET.SubElement(configuration.getroot(), 'InstallerWindowIcon').text = 'App.png'
     if repository_url:
         if not repository_url.startswith(('https://', 'file://')):
             raise RuntimeError('Online repositories require HTTPS or a local fixture URL')
@@ -184,8 +198,8 @@ def write_metadata(
             ET.SubElement(mirror, 'Url').text = mirror_url
             ET.SubElement(mirror, 'Enabled').text = '0'
             ET.SubElement(mirror, 'DisplayName').text = 'EasyDiffraction mirror'
-        ET.indent(configuration)
-        configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
+    ET.indent(configuration)
+    configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
     root = xml_file(
         meta / 'package.xml',
         'Package',
@@ -471,6 +485,7 @@ def prepare_installer_source(
     version: str,
     repository_url: str | None,
     mirrors: tuple[str, ...],
+    channel: str,
 ) -> tuple:
     """Prepare the payload and platform bootstrap runtime before framework packaging."""
     source = output / 'source'
@@ -501,6 +516,7 @@ def prepare_installer_source(
         shutil.copytree(runtime, data / runtime.name)
     elif SYSTEM == 'macos':
         template_args = ['-t', macos_installer_template(tools, output)]
+    (data / 'update-channel.txt').write_text(channel + '\n', encoding='utf-8')
     (data / 'payload-manifest.json').write_text(
         json.dumps(payload_manifest(data), indent=2) + '\n'
     )
@@ -536,8 +552,9 @@ def package_app(
     if inputs.get('release_version') and inputs['release_version'] != version:
         raise RuntimeError('Application and installer release versions disagree')
     output.mkdir(parents=True, exist_ok=True)
+    channel = 'stable' if inputs.get('release_history_sha256') else 'testing'
     source, template_args, tool_environment, runtime = prepare_installer_source(
-        stage, tools, output, version, repository_url, mirrors
+        stage, tools, output, version, repository_url, mirrors, channel
     )
     if repository_url:
         run(

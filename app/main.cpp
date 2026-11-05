@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <QGuiApplication>
+#include <QIcon>
 #include <QDir>
 #include <QFile>
 #include <QUrl>
@@ -37,6 +38,9 @@ int main(int argc, char* argv[]) {
     }
     edi_app::select_freetype_engine(argc, argv);  // before the QGuiApplication reads the platform
     QGuiApplication app(argc, argv);
+#ifndef __EMSCRIPTEN__
+    app.setWindowIcon(QIcon(QStringLiteral(":/qt/qml/edi/app/resources/logo/App.svg")));
+#endif
     QGuiApplication::setOrganizationName(QStringLiteral("EasyScience"));
     QGuiApplication::setApplicationName(QStringLiteral("EasyDiffraction"));
     edi_app::use_design_font();

@@ -427,6 +427,12 @@ endif()
 qt_add_executable(edi_app main.cpp)
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
+if(WIN32)
+    enable_language(RC)
+    file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/edi-app-icon.rc"
+        CONTENT "1 ICON \"${CMAKE_CURRENT_SOURCE_DIR}/resources/logo/App.ico\"\n")
+    target_sources(edi_app PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/edi-app-icon.rc")
+endif()
 # ADR-0023: the browser build's stacks. A fit runs crysta on the calculation worker's thread, which Emscripten sizes
 # at 64 KiB by default, or, in the single-thread build, on the main thread, which Qt sizes at 5 MiB; both get 8 MiB.
 # Qt's own STACK_SIZE is an interface link option, placed after the target's, and Emscripten takes the last value:
@@ -512,6 +518,10 @@ set_target_properties(edi_app_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE
 include(GNUInstallDirs)
 option(EDI_DEPLOY_APP "Install a self-contained desktop application" OFF)
 if(EDI_DEPLOY_APP AND APPLE)
+    set(app_icon resources/logo/App.icns)
+    target_sources(edi_app PRIVATE "${app_icon}")
+    set_source_files_properties("${app_icon}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE_ICON_FILE App.icns)
     set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE TRUE OUTPUT_NAME EasyDiffraction
         MACOSX_BUNDLE_GUI_IDENTIFIER org.easyscience.easydiffraction
         MACOSX_BUNDLE_BUNDLE_NAME EasyDiffraction)
