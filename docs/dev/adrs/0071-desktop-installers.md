@@ -278,3 +278,8 @@ level 5. A comparison on the same Linux staging tree reduced its component
 archives from 169.27 MB to 144.92 MB. The producer took about five minutes
 instead of one minute on that machine. The internal offline installer retains
 fast compression so its qualification build remains short.
+
+The executable retains its generated build identity as bytes through native
+linker elimination. ELF and Mach-O retain their compiler attributes, while
+MSVC exports the marker from the executable. An early fixture generates and
+links the real marker in a release build and reads it from the resulting binary.

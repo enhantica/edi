@@ -27,10 +27,11 @@ elseif(MARK_DIRTY)
 endif()
 if(MARKER)
     # The commit as bytes in the executable, which a reader finds without running it and without
-    # trusting a caller's tag; kept through the linker's garbage collection (`retain` on ELF,
-    # `used` on Mach-O).
+    # trusting a caller's tag; kept through the linker's garbage collection on every target.
     set(_content "// The commit this executable was built from (cmake/build_commit.cmake, MARKER).
-#if defined(__ELF__)
+#if defined(_MSC_VER)
+#define EDI_KEEP __declspec(dllexport)
+#elif defined(__ELF__)
 #define EDI_KEEP __attribute__((used, retain))
 #else
 #define EDI_KEEP __attribute__((used))

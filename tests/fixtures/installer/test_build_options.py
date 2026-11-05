@@ -86,3 +86,49 @@ def test_product_windows_headers_use_the_shared_sdk_boundary():
             and direct.search(path.read_text(encoding='utf-8'))
         )
     assert actual == ['core/src/windows_sdk.hpp']
+
+
+def test_linked_executable_keeps_the_generated_build_marker(tmp_path):
+    marker = tmp_path / 'marker.cpp'
+    commit = subprocess.check_output(
+        ['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True
+    ).strip()
+    subprocess.run(
+        [
+            'cmake',
+            f'-DSOURCE_DIR={ROOT}',
+            f'-DOUT={marker}',
+            '-DMARKER=ON',
+            '-P',
+            str(ROOT / 'cmake/build_commit.cmake'),
+        ],
+        check=True,
+        timeout=15,
+    )
+    (tmp_path / 'main.cpp').write_text('int main() { return 0; }\n', encoding='utf-8')
+    (tmp_path / 'CMakeLists.txt').write_text(
+        'cmake_minimum_required(VERSION 3.26)\nproject(marker LANGUAGES CXX)\n'
+        'add_executable(probe main.cpp marker.cpp)\n'
+        'if(MSVC)\n  target_link_options(probe PRIVATE /OPT:REF)\n'
+        'elseif(APPLE)\n  target_link_options(probe PRIVATE -Wl,-dead_strip)\n'
+        'else()\n  target_link_options(probe PRIVATE -Wl,--gc-sections)\nendif()\n',
+        encoding='utf-8',
+    )
+    output = tmp_path / 'build'
+    subprocess.run(
+        [
+            'cmake',
+            '-G',
+            'Ninja',
+            '-DCMAKE_BUILD_TYPE=Release',
+            '-S',
+            str(tmp_path),
+            '-B',
+            str(output),
+        ],
+        check=True,
+        timeout=30,
+    )
+    subprocess.run(['cmake', '--build', str(output), '--parallel', '4'], check=True, timeout=30)
+    binary = output / ('probe.exe' if os.name == 'nt' else 'probe')
+    assert f'edi-build-commit:{commit}\n'.encode() in binary.read_bytes()
