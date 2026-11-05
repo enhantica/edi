@@ -320,10 +320,9 @@ as its minimum because the bundled assistant shell declares that deployment targ
 
 
 Calendar-versioned previews build macOS and Linux together and publish only to testing.
-The first two fields come from the UTC year and month. The last field combines the CI run
-number and attempt so a rebuilt preview has a new archive identity. The app and installer
-carry the same version and the installed smoke test compares them. A preview uses a separate
-version identity from the stable release history and cannot qualify a stable release.
+They allocate versions from the same monthly sequence as stable releases. A published
+preview reserves its version tag. The app and installer carry the same version and the
+installed smoke test compares them. Preview history remains separate from stable history.
 
 
 The Windows dependency scan can resolve one DLL through both the staging directory and the

@@ -82,7 +82,7 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
                 '--target',
                 release['commit'],
                 '--title',
-                'EasyDiffraction ' + release['version'],
+                'edi ' + release['version'],
                 '--notes-file',
                 str(folder / 'notes.md'),
             ],

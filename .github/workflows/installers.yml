@@ -42,12 +42,42 @@ permissions:
   actions: read
 
 concurrency:
-  group: desktop-installers-${{ github.event_name == 'push' && github.ref || github.run_id }}
+  group: desktop-installers-${{ github.event_name == 'push' && github.ref || inputs.calendar_preview && format('calendar-{0}', github.ref) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
+  preview-version:
+    if: inputs.calendar_preview && inputs.preview_run == ''
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.select.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Select the next calendar version
+        id: select
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: tools/release
+        run: |
+          python - <<'PYTHON'
+          import datetime
+          import os
+          from pathlib import Path
+          from plan import next_calendar_version
+          from prepare import calendar_tags
+          version = next_calendar_version(calendar_tags(os.environ['GITHUB_REPOSITORY']), datetime.datetime.now(datetime.UTC).date())
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+              output.write(f'version={version}\n')
+          PYTHON
+
   installers:
-    if: inputs.preview_run == ''
+    needs: preview-version
+    if: >-
+      ${{ !cancelled() && inputs.preview_run == ''
+      && (needs.preview-version.result == 'success' || needs.preview-version.result == 'skipped') }}
     name: installer · ${{ matrix.platform }}
     environment: crysta-sdk
     runs-on: ${{ matrix.runner }}
@@ -68,13 +98,14 @@ jobs:
         env:
           RELEASE_PLAN_RUN: ${{ inputs.release_plan_run }}
           WINDOWS_ONLY: ${{ inputs.windows_only }}
+          PREVIEW_VERSION: ${{ needs.preview-version.outputs.version }}
         run: |
           if [[ -n "$RELEASE_PLAN_RUN" || "$WINDOWS_ONLY" == true ]]; then
             echo "A calendar preview is separate from stable qualification and Windows diagnostics."
             exit 1
           fi
-          version="$(date -u +%Y.%m).$((GITHUB_RUN_NUMBER * 1000 + GITHUB_RUN_ATTEMPT))"
-          printf 'EDI_INSTALLER_VERSION=%s\nEDI_INSTALLER_PREVIEW_VERSION=%s\n' "$version" "$version" >> "$GITHUB_ENV"
+          [[ -n "$PREVIEW_VERSION" ]]
+          printf 'EDI_INSTALLER_VERSION=%s\nEDI_INSTALLER_PREVIEW_VERSION=%s\n' "$PREVIEW_VERSION" "$PREVIEW_VERSION" >> "$GITHUB_ENV"
       - name: Reject publication inputs for a Windows diagnostic
         if: inputs.windows_only && (inputs.publish_components || inputs.release_plan_run != '')
         shell: bash

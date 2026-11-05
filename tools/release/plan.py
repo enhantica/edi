@@ -87,12 +87,23 @@ def validate_history(history: dict) -> None:
                     )
 
 
+def next_calendar_version(versions: list[str], today: datetime.date) -> str:
+    known = [version_key(version) for version in versions]
+    current = today.year, today.month
+    if known and max(known)[:2] > current:
+        raise ValueError('The release calendar cannot move backwards')
+    sequence = max((key[2] for key in known if key[:2] == current), default=-1) + 1
+    return f'{today.year:04d}.{today.month:02d}.{sequence}'
+
+
 def release_plan(
     pull_requests: list[dict],
     releases: list[dict],
     commit: str,
     included_commits: set[str],
     today: datetime.date,
+    *,
+    reserved_versions: tuple[str, ...] = (),
 ) -> dict:
     """Choose a retry-stable identity and group only PRs included in this release."""
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
@@ -108,10 +119,9 @@ def release_plan(
         if len(repeated) != 1:
             raise ValueError('A source commit has conflicting published release identities')
         return repeated[0]
-    current = today.year, today.month
-    if known and max(known)[:2] > current:
-        raise ValueError('The release calendar cannot move backwards')
-    sequence = max((key[2] for key in known if key[:2] == current), default=-1) + 1
+    version = next_calendar_version(
+        [*[release['version'] for release in releases], *reserved_versions], today
+    )
     notes = {group: [] for group in ['Added', 'Fixed', 'Changed']}
     seen = set()
     for request in sorted(pull_requests, key=itemgetter('number')):
@@ -136,7 +146,7 @@ def release_plan(
     if not any(notes.values()):
         raise ValueError('No user-facing merged changes are included in this release')
     return {
-        'version': f'{today.year:04d}.{today.month:02d}.{sequence}',
+        'version': version,
         'date': today.isoformat(),
         'commit': commit,
         'notes': notes,

@@ -158,14 +158,17 @@ def overlay_testing_feed(site: Path, feed: Path) -> None:
     target = site / 'releases/testing.json'
     if target.is_file():
         previous = json.loads(target.read_text(encoding='utf-8'))
-        version = current['releases'][0]['version']
-        if tuple(map(int, version.split('.'))) < tuple(
-            map(int, previous['releases'][0]['version'].split('.'))
-        ):
-            raise RuntimeError('Testing update feed cannot move backwards')
-        current['releases'].extend(
-            entry for entry in previous['releases'][:19] if entry['version'] != version
-        )
+        if previous.get('sequence') == current.get('sequence'):
+            version = current['releases'][0]['version']
+            if tuple(map(int, version.split('.'))) < tuple(
+                map(int, previous['releases'][0]['version'].split('.'))
+            ):
+                raise RuntimeError('Testing update feed cannot move backwards')
+            current['releases'].extend(
+                entry for entry in previous['releases'][:19] if entry['version'] != version
+            )
+        elif current.get('sequence') != 'calendar':
+            raise RuntimeError('Testing update feed must use the calendar sequence')
     target.parent.mkdir(exist_ok=True)
     target.write_text(json.dumps(current, indent=2) + '\n', encoding='utf-8')
 
@@ -178,9 +181,10 @@ def show_desktop_version(site: Path) -> None:
         feed = site / 'releases' / (channel + '.json')
         if not feed.is_file():
             continue
-        versions = [
-            item['version'] for item in json.loads(feed.read_text(encoding='utf-8'))['releases']
-        ]
+        history = json.loads(feed.read_text(encoding='utf-8'))
+        if channel == 'testing' and history.get('sequence') != 'calendar':
+            continue
+        versions = [item['version'] for item in history['releases']]
         versions = [
             value
             for value in versions

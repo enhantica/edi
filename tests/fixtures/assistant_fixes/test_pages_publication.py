@@ -279,7 +279,9 @@ def test_desktop_download_version_prefers_stable_and_labels_preview(tmp_path):
     page.write_text('<p class="ed-desktop-version" hidden></p>')
     feeds = tmp_path / 'releases'
     feeds.mkdir()
-    (feeds / 'testing.json').write_text(json.dumps({'releases': [{'version': '2026.11.10'}]}))
+    (feeds / 'testing.json').write_text(
+        json.dumps({'sequence': 'calendar', 'releases': [{'version': '2026.11.10'}]})
+    )
     MODULE.show_desktop_version(tmp_path)
     assert 'Testing preview 2026.11.10' in page.read_text()
     (feeds / 'stable.json').write_text(json.dumps({'releases': [{'version': '2026.11.1'}]}))

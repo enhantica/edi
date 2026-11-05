@@ -56,6 +56,22 @@ def merged_requests(repo: str) -> list[dict]:
     return [json.loads(line) for line in content.splitlines()]
 
 
+def calendar_tags(repo: str) -> list[str]:
+    content = subprocess.check_output([
+        'gh',
+        'api',
+        '--paginate',
+        '--slurp',
+        f'repos/{repo}/git/matching-refs/tags/v',
+    ])
+    tags = [
+        item['ref'].removeprefix('refs/tags/v') for page in json.loads(content) for item in page
+    ]
+    return [
+        tag for tag in tags if re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', tag)
+    ]
+
+
 def prepare(repo: str, source: str, output: Path, today: datetime.date) -> dict:
     """Choose one identity from published history and the exact included source commits."""
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo):
@@ -73,7 +89,14 @@ def prepare(repo: str, source: str, output: Path, today: datetime.date) -> dict:
         raise ValueError('Release history requires the complete baseline commit')
     subprocess.run(['git', 'merge-base', '--is-ancestor', baseline, commit], cwd=ROOT, check=True)
     included = set(git('rev-list', baseline + '..' + commit).splitlines())
-    release = release_plan(merged_requests(repo), releases, commit, included, today)
+    release = release_plan(
+        merged_requests(repo),
+        releases,
+        commit,
+        included,
+        today,
+        reserved_versions=tuple(calendar_tags(repo)),
+    )
     reused = any(item['version'] == release['version'] for item in releases)
     if not reused:
         history = {**history, 'releases': [*releases, release]}

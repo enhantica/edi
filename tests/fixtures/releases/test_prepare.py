@@ -68,6 +68,7 @@ def test_preparation_uses_actual_ancestry_and_retry_identity(repository):
         mock.patch.object(PREPARE, 'ROOT', root),
         mock.patch.object(PREPARE, 'published_history', return_value=history),
         mock.patch.object(PREPARE, 'merged_requests', return_value=[request]),
+        mock.patch.object(PREPARE, 'calendar_tags', return_value=['2026.11.0']),
     ):
         first = PREPARE.prepare('enhantica/edi', head, root / 'first', datetime.date(2026, 11, 5))
     download_spec = importlib.util.spec_from_file_location(
@@ -83,13 +84,14 @@ def test_preparation_uses_actual_ancestry_and_retry_identity(repository):
     assert (root / 'downloaded/notes.md').read_bytes() == (root / 'first/notes.md').read_bytes()
     recorded = json.loads((root / 'first/release-history.json').read_text())
     PLAN.validate_history(recorded)
-    assert first['release']['version'] == '2026.11.0'
+    assert first['release']['version'] == '2026.11.1'
     assert first['release']['commit'] == head
     assert first['release']['notes']['Fixed'][0]['title'] == request['title']
     with (
         mock.patch.object(PREPARE, 'ROOT', root),
         mock.patch.object(PREPARE, 'published_history', return_value=recorded),
         mock.patch.object(PREPARE, 'merged_requests', return_value=[]),
+        mock.patch.object(PREPARE, 'calendar_tags', return_value=['2026.11.0', '2026.11.1']),
     ):
         retry = PREPARE.prepare('enhantica/edi', head, root / 'retry', datetime.date(2026, 12, 1))
     assert retry['reused']

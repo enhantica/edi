@@ -228,6 +228,7 @@ def write_preview_history(work: Path, version: str, commit: str) -> Path:
         json.dumps(
             {
                 'schema': 'edi.preview-releases/1',
+                'sequence': 'calendar',
                 'releases': [
                     {
                         'version': version,
