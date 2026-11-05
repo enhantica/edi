@@ -1,11 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-QWizard, QWizardPage, QWidget#SideWidget, QListWidget#PageListWidget {
+QWizard, QWizardPage, QWidget#SideWidget, QListWidget#PageListWidget,
+QWizard > QWidget > QWidget[autoFillBackground="true"] {
     background-color: palette(window);
-}
-
-QLabel#PageListPixmapLabel {
-    qproperty-alignment: AlignLeft;
-    margin: 12px 0 12px 10px;
 }
 
 QWizard QPushButton, QWizard QLineEdit, QWizard QComboBox {
@@ -58,4 +54,11 @@ QWizard QLineEdit#SearchLineEdit {
 
 QWizard #ComponentSelectionPage #SpaceItem {
     min-width: 28em;
+}
+
+QWizard QLineEdit#TargetDirectoryLineEdit,
+QWizard QPushButton#BrowseDirectoryButton {
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0 9px;
 }

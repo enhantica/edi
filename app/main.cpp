@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     }
     edi_app::select_freetype_engine(argc, argv);  // before the QGuiApplication reads the platform
     QGuiApplication app(argc, argv);
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(Q_OS_MACOS)
     app.setWindowIcon(QIcon(QStringLiteral(":/qt/qml/edi/app/resources/logo/App.svg")));
 #endif
     QGuiApplication::setOrganizationName(QStringLiteral("EasyScience"));

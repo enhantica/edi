@@ -346,13 +346,13 @@ installation and checks that an unrelated project file keeps its bytes.
 
 ## Installer appearance
 
-The Modern wizard keeps its step list and puts the EasyDiffraction wordmark
-above it. Installer page callbacks suppress duplicate headings and restore
-the localized strings when leaving each page so Qt can reuse them in the
-step list. Controls and page surfaces use the platform palette, with blue
-for the primary action. The official light wordmark sits on a small light
-background so its text stays legible in both appearances. The component
-page reserves room for the search field and both disk-space figures.
+The Modern wizard displays a transparent high-resolution wordmark in its
+header. A blank subtitle preserves the header on every installer step and
+keeps Qt from switching the page background. Leaving a page restores its
+localized heading for the step list. The installer uses the platform window
+palette and gives the folder field and Browse button the same height.
 
 The macOS application and bootstrap use the same padded ICNS asset. The
 transparent canvas keeps the blue mark clear of the Dock's running indicator.
+
+The running macOS application uses its bundle icon for the Dock.

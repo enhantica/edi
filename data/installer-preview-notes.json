@@ -2,18 +2,13 @@
   "Added": [],
   "Fixed": [
     {
-      "title": "Keep Update beside Close in the release notes dialog.",
+      "title": "Show a sharp, transparent wordmark in the installer header and align the folder field with Browse.",
       "interfaces": ["desktop"]
     },
     {
-      "title": "Align the status-bar Update button with the other pills and soften its red outline.",
+      "title": "Use the same macOS Dock icon before and after opening EasyDiffraction.",
       "interfaces": ["desktop"]
     }
   ],
-  "Changed": [
-    {
-      "title": "Use the full repository URLs in installer settings.",
-      "interfaces": ["desktop"]
-    }
-  ]
+  "Changed": []
 }

@@ -2,6 +2,21 @@
 
 function Controller() {}
 
+var wordmark = "";
+
+function headerWordmark() {
+    if (wordmark === "") {
+        var image = "@WORDMARK@";
+        if (systemInfo.kernelType === "darwin") {
+            var appearance = installer.execute("/usr/bin/defaults", ["read", "-g", "AppleInterfaceStyle"]);
+            if (appearance[1] === 0 && appearance[0].trim() === "Dark")
+                image = "@DARK_WORDMARK@";
+        }
+        wordmark = '<img src="data:image/png;base64,' + image + '" width="140" height="44">';
+    }
+    return wordmark;
+}
+
 [
     "Introduction", "TargetDirectory", "ComponentSelection", "LicenseAgreement",
     "StartMenuDirectory", "ReadyForInstallation", "PerformInstallation", "Finished"
@@ -23,7 +38,7 @@ function Controller() {}
 
         // Preserve the step list's localized titles when navigating.
         page.left.connect(restoreHeading);
-        page.title = "";
-        page.subTitle = "";
+        page.title = headerWordmark();
+        page.subTitle = " ";
     };
 });

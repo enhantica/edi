@@ -2,6 +2,7 @@
 """Build, package and exercise native offline installers (ADR-0071)."""
 
 import argparse
+import base64
 import datetime
 import hashlib
 import json
@@ -175,14 +176,21 @@ def write_metadata(
             'WizardDefaultWidth': '56em',
             'WizardDefaultHeight': '29em',
             'WizardShowPageList': 'true',
-            'PageListPixmap': 'InstallerLogo.png',
             'ControlScript': 'Installer.qs',
             'StyleSheet': 'Installer.qss',
         },
     )
     icons = ROOT / 'app/resources/logo'
-    for asset in ('InstallerLogo.png', 'Installer.qss', 'Installer.qs'):
-        shutil.copy2(ROOT / 'tools/installer' / asset, config / asset)
+    style = ROOT / 'tools/installer'
+    shutil.copy2(style / 'Installer.qss', config / 'Installer.qss')
+    controller = (style / 'Installer.qs').read_text(encoding='utf-8')
+    for marker, filename in (
+        ('@WORDMARK@', 'InstallerLogo.png'),
+        ('@DARK_WORDMARK@', 'InstallerLogoDark.png'),
+    ):
+        image = base64.b64encode((style / filename).read_bytes()).decode('ascii')
+        controller = controller.replace(marker, image)
+    (config / 'Installer.qs').write_text(controller, encoding='utf-8')
     if SYSTEM in {'macos', 'windows'}:
         icon = 'App.icns' if SYSTEM == 'macos' else 'App.ico'
         shutil.copy2(icons / icon, config / icon)
