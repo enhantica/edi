@@ -261,3 +261,12 @@ ordinary offline and online installer checks with the smaller stage.
 
 Installer CI can run Windows alone for diagnostics. The default matrix still runs all platforms,
 and a Windows-only run cannot publish testing components or qualify a release.
+
+## Apple Silicon installer template
+
+The macOS distribution already targets arm64. When Qt Installer Framework
+ships a universal template, select its arm64 slice with lipo before passing
+the template to binarycreator. This keeps the downloaded Qt tools intact
+and lets binarycreator attach its metadata to the smaller executable.
+The archive step signs the final bundle, and the protocol and installed
+application checks exercise installation, updating and removal.

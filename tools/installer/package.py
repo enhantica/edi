@@ -415,6 +415,20 @@ def linux_installer_runtime(tools: Path, output: Path) -> tuple[Path, Path, dict
     return template, libraries.parent, env
 
 
+def macos_installer_template(tools: Path, output: Path) -> Path:
+    """Select the arm64 installer template before IFW attaches its payload."""
+    template = tools / 'bin/installerbase'
+    architectures = subprocess.check_output(['lipo', '-archs', template], text=True).split()
+    if architectures == ['arm64']:
+        return template
+    if 'arm64' not in architectures:
+        raise RuntimeError('The macOS installer template has no arm64 slice')
+    thin = output / 'installerbase-arm64'
+    run(['lipo', template, '-thin', 'arm64', '-output', thin])
+    thin.chmod(template.stat().st_mode & 0o777)
+    return thin
+
+
 def archive_installer(installer: Path, runtime: Path | None) -> Path:
     """Archive the complete bootstrap including its portable runtime libraries."""
     archive = installer.with_suffix('.zip')
@@ -455,6 +469,8 @@ def prepare_installer_source(
         template, runtime, tool_environment = linux_installer_runtime(tools, output)
         template_args = ['-t', template]
         shutil.copytree(runtime, data / runtime.name)
+    elif SYSTEM == 'macos':
+        template_args = ['-t', macos_installer_template(tools, output)]
     (data / 'payload-manifest.json').write_text(
         json.dumps(payload_manifest(data), indent=2) + '\n'
     )
