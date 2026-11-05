@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       installer_run:
-        description: Successful main installer run qualified with prepared release inputs
+        description: Desktop installers run ID qualified on main with release_plan_run
         required: true
         type: string
 

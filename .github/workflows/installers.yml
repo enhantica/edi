@@ -3,32 +3,29 @@ name: Desktop installers
 on:
   workflow_dispatch:
     inputs:
-      windows_only:
-        description: Run a Windows diagnostic without publishing or qualifying a release
+      prepare_preview_release:
+        description: Build and test all three installers for a new prerelease draft
         default: false
         type: boolean
       publish_components:
-        description: Publish tested components to the Pages testing repository
-        required: true
-        default: false
-        type: boolean
-      calendar_preview:
-        description: Build a calendar-versioned testing preview and prepare a release draft
+        description: Deploy qualified online installer components to the public testing repository
         default: false
         type: boolean
       preview_run:
-        description: Completed installer run with qualified artifacts to publish without rebuilding
-        required: false
+        description: Installer run ID to deploy with publish_components, without rebuilding
         type: string
       release_plan_run:
-        description: Successful Prepare calendar release run at this exact source (empty for testing)
-        required: false
+        description: Prepare calendar release run ID for stable qualification at the same commit
         type: string
       crysta_commit:
-        description: Exact crysta source commit to build before edi
+        description: Full crysta commit SHA to build with edi
         required: true
         default: 122f77fa46e1143749a4039f65b24438006bb482
         type: string
+      windows_only:
+        description: Build and test Windows only for diagnosis
+        default: false
+        type: boolean
   push:
     branches: ['**']
     paths:
@@ -43,12 +40,12 @@ permissions:
   actions: read
 
 concurrency:
-  group: desktop-installers-${{ github.event_name == 'push' && github.ref || inputs.calendar_preview && format('calendar-{0}', github.ref) || github.run_id }}
+  group: desktop-installers-${{ github.event_name == 'push' && github.ref || inputs.prepare_preview_release && format('calendar-{0}', github.ref) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   preview-version:
-    if: inputs.calendar_preview && inputs.preview_run == ''
+    if: inputs.prepare_preview_release && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -98,8 +95,8 @@ jobs:
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
     steps:
-      - name: Select a unique testing calendar version
-        if: inputs.calendar_preview
+      - name: Apply the prerelease version
+        if: inputs.prepare_preview_release
         shell: bash
         env:
           RELEASE_PLAN_RUN: ${{ inputs.release_plan_run }}
@@ -315,7 +312,7 @@ jobs:
   qualify-release:
     name: record qualified release inputs
     needs: installers
-    if: inputs.release_plan_run != '' && !inputs.windows_only && !inputs.calendar_preview && inputs.preview_run == ''
+    if: inputs.release_plan_run != '' && !inputs.windows_only && !inputs.prepare_preview_release && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -335,9 +332,9 @@ jobs:
           retention-days: 90
 
   draft-preview-release:
-    name: prepare testing release draft
+    name: Create or update the prerelease draft
     needs: installers
-    if: github.event_name == 'workflow_dispatch' && inputs.calendar_preview && inputs.preview_run == ''
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_preview_release && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -375,7 +372,7 @@ jobs:
             --commit "$GITHUB_SHA" preview-delivery/installer-{Linux,macOS,Windows}-"$selected"
 
   publish-installers:
-    name: publish tested installer components
+    name: Deploy testing installer components
     needs: installers
     if: >-
       ${{ !cancelled() && github.event_name == 'workflow_dispatch' && !inputs.windows_only
@@ -425,13 +422,13 @@ jobs:
                   raise RuntimeError('Platform repository metadata is missing')
           PYTHON
       - name: Download installed calendar preview identities
-        if: inputs.calendar_preview && inputs.preview_run == ''
+        if: inputs.prepare_preview_release && inputs.preview_run == ''
         uses: actions/download-artifact@v4
         with:
           pattern: installer-{Linux,macOS,Windows}-${{ github.run_attempt }}
           path: preview-delivery
       - name: Prepare the testing update feed
-        if: inputs.calendar_preview && inputs.preview_run == ''
+        if: inputs.prepare_preview_release && inputs.preview_run == ''
         run: |
           python3 - <<'PYTHON'
           import json

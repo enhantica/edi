@@ -61,11 +61,17 @@ its ZIP against a local file repository. The final installer artifacts contain o
 Development component versions use `0.0.RUN.ATTEMPT`; published calendar releases use their single
 release-plan identity instead. Offline candidates remain local qualification inputs.
 
-The manual workflow's `publish_components` input enables initial GitHub Pages publication after every
-platform passes. This writes only `repository/testing/<platform>/`, preserving the docs, web app,
-other platform repositories and previous immutable component archives. It does not publish a stable
-GitHub release. The future download-domain mirror remains disabled until it is populated.
+For a testing prerelease, manually run **Desktop installers** with
+`prepare_preview_release` enabled. CI selects the next version, qualifies all three
+installers, and attaches the online ZIPs to a GitHub prerelease draft. A
+maintainer reviews and publishes the draft.
 
+Enable `publish_components` to deploy the qualified component repositories
+under `repository/testing/<platform>/` and refresh the testing update feed.
+This can run alongside draft creation. To deploy later, run **Desktop
+installers** with `publish_components` enabled and set `preview_run` to the
+calendar preview's installer run ID. CI reuses the qualified files. Publish
+the draft after the matching components are available.
 
 ## Calendar release and update notes
 
