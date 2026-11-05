@@ -709,7 +709,11 @@ def exercise_installer(installer: Path, output: Path, repository: str | None = N
             or receipt.get('release_history_sha256') != metadata['release_history_sha256']
         ):
             raise RuntimeError('Installed release identity or bundled history differs')
-        if not receipt.get('passed') or not (output / 'smoke/window.png').is_file():
+        if (
+            not receipt.get('passed')
+            or not receipt.get('svg_images')
+            or not (output / 'smoke/window.png').is_file()
+        ):
             raise RuntimeError('Installed application smoke check failed')
         if SYSTEM == 'linux':
             dependencies = check_linux_dependencies(target, env)
