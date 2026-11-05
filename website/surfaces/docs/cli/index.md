@@ -6,9 +6,7 @@ hide:
 
 # Command Line
 
-Run saved projects from a terminal or shell script. One command-line interface, two ways to install and run it.
-
-Both options use the same commands and arguments. You can run either from a terminal without writing Python scripts.
+Run saved projects from a terminal or shell script. The standalone executable supports refinement with `edi fit`. The Python package also supports calculation, export, undo, collections, reports, and live fit progress. Both run directly from a terminal.
 
 === ":lucide-square-terminal: Standalone executable"
 

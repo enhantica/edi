@@ -19,8 +19,9 @@ Run `edi` without installing Python or setting up a Python environment.
 Extract the ZIP and run `./edi` from that folder, or `.\edi.exe` in Windows
 PowerShell. Add the folder to your PATH to use `edi` from other directories.
 
-The standalone executable supports project refinement with `edi fit`. The
-[Python package route](python.md) also provides calculation and report commands.
+The standalone executable supports project refinement with `edi fit` and prints a
+final report. Use the [Python package route](python.md) for live progress or
+for calculation, export, undo, collections, and reports.
 
 ## Run a project
 

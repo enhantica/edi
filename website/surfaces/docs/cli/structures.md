@@ -10,17 +10,9 @@ The command-line interface does not provide a separate structure editor. Its `fi
 
 ## Check a calculation
 
-=== "Standalone executable"
-
-    ```console
-    edi calc path/to/project --dry
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi calc path/to/project --dry
-    ```
+```console
+python -m edi calc path/to/project --dry
+```
 
 This evaluates the saved model without writing changes. Inspect the output and any errors before starting a refinement. See [calculate a pattern](calculate.md) for output options.
 

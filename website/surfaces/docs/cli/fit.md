@@ -34,7 +34,7 @@ For a folder or its `project.edi`, this command refines **and saves** the projec
     python -m edi fit path/to/project --dry
     ```
 
-`--output DIR` keeps the result in another folder. `--dry` still performs the refinement; it leaves the input project's files unchanged and keeps no scan progress. When `--dry` is set, it also prevents output writes requested with `--output`.
+`--output DIR` keeps the result in another folder. With the standalone executable, choose a new folder and use either `--output` or `--dry`. A dry run still performs the refinement and leaves the input files unchanged. It keeps no scan progress.
 
 For an archive:
 
@@ -66,23 +66,15 @@ Without an output folder, `fit` leaves the input archive unchanged and warns tha
     python -m edi fit path/to/project --verbosity full
     ```
 
-Full output includes per-bank agreement factors and the refined parameter table.
+Full output includes the refined parameter table. The Python CLI also reports per-bank agreement factors for a joint fit.
 
 ## Follow progress
 
-The human channel reports progress during a single fit. A scan reports progress per measured file; full verbosity adds its iteration detail. To request live progress records on the machine channel for a single or joint fit:
+Live progress is available in the Python CLI. Its human channel reports progress during a single fit. A scan reports progress per measured file; full verbosity adds its iteration detail. To request live progress records on the machine channel for a single or joint fit:
 
-=== "Standalone executable"
-
-    ```console
-    edi fit path/to/project --report machine --stream
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi fit path/to/project --report machine --stream
-    ```
+```console
+python -m edi fit path/to/project --report machine --stream
+```
 
 Machine streaming is not emitted for scans, whose independent per-file iterations are a different progression.
 
@@ -110,23 +102,14 @@ The project declares `single`, `joint`, `sequential` or `independent` mode. Its 
 
 ## Stop and resume
 
-Ctrl+C requests a clean cancellation. The command exits with status `130`. A cancelled single or joint fit leaves the project unchanged; a scan retains completed file results so running the same command can resume. A dry run retains no scan progress. A second Ctrl+C terminates immediately.
+In the Python CLI, Ctrl+C requests a clean cancellation. The command exits with status `130`. A cancelled single or joint fit leaves the project unchanged; a scan retains completed file results so running the same command can resume. A dry run retains no scan progress. A second Ctrl+C terminates immediately.
 
 ## Prepare a report
 
-=== "Standalone executable"
-
-    ```console
-    edi report path/to/project
-    edi report path/to/project --check
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi report path/to/project
-    python -m edi report path/to/project --check
-    ```
+```console
+python -m edi report path/to/project
+python -m edi report path/to/project --check
+```
 
 The first command writes the selected report formats except PDF. The second checks whether saved reports are current without writing them.
 

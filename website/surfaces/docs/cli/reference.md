@@ -1,6 +1,6 @@
 # Command reference
 
-The supported entry point documented here is `python -m edi` in a configured edi environment. Use the installed version's help to confirm the options available to that build:
+The standalone executable supports `fit`. The Python CLI supports `fit`, `calc`, `report`, `export`, `undo`, and `collection`. Use your installed version's help to see its options.
 
 === "Standalone executable"
 
@@ -17,6 +17,15 @@ The supported entry point documented here is `python -m edi` in a configured edi
     ```
 
 ## Fit
+
+The standalone executable accepts:
+
+```text
+edi fit PROJECT [--dry | --output DIRECTORY]
+    [--verbosity off|compact|full] [--report human|machine]
+```
+
+The Python CLI accepts:
 
 ```text
 python -m edi fit PROJECT [--output DIR] [--dry]
@@ -55,19 +64,10 @@ python -m edi export PROJECT --output FILE.zip
 
 ## Undo the last saved fit
 
-=== "Standalone executable"
-
-    ```console
-    edi undo path/to/project --dry
-    edi undo path/to/project --report human
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi undo path/to/project --dry
-    python -m edi undo path/to/project --report human
-    ```
+```console
+python -m edi undo path/to/project --dry
+python -m edi undo path/to/project --report human
+```
 
 The first command previews what would be restored. The second restores the persisted pre-fit state and saves it back when a snapshot exists. `undo --dry` is a preview, unlike `fit --dry` and `calc --dry`, which run their computations.
 
@@ -75,4 +75,4 @@ Undo supports `--verbosity off|compact|full` and `--report machine|human`; it de
 
 ## Output and exit status
 
-For fit, calc and undo, the selected report is stdout, while warnings and errors are stderr. A failed run exits nonzero. A cancelled fit uses status `130`. Report freshness checking uses status `1` when a listed saved report is not current.
+For fit, calc and undo, the selected report is stdout, while warnings and errors are stderr. A failed run exits nonzero. A clean cancellation in the Python CLI uses status `130`. Report freshness checking uses status `1` when a listed saved report is not current.

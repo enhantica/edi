@@ -59,18 +59,9 @@ Check the process exit status and retain stderr. A machine report is a versioned
 
 ## Save reports after fitting
 
-=== "Standalone executable"
-
-    ```console
-    edi report runs/sample-a
-    edi report runs/sample-a --check
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi report runs/sample-a
-    python -m edi report runs/sample-a --check
-    ```
+```console
+python -m edi report runs/sample-a
+python -m edi report runs/sample-a --check
+```
 
 Use the [report guide](reports.md) to choose contents and check freshness.

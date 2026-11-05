@@ -42,17 +42,9 @@ The zip rule differs from Python: `Project.save()` can rewrite an archive opened
 
 ## Export a project archive
 
-=== "Standalone executable"
-
-    ```console
-    edi export path/to/project --output shared-project.zip
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi export path/to/project --output shared-project.zip
-    ```
+```console
+python -m edi export path/to/project --output shared-project.zip
+```
 
 The short spelling is `-o`. Export packages the project folder as last saved; it is not a refinement or a substitute for saving in-memory Python edits. The archive can be opened by another edi interface.
 

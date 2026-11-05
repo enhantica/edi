@@ -6,17 +6,9 @@ The shared [Report](../user-guide/analysis-workflow/report.md) chapter explains 
 
 ## Save the selected formats
 
-=== "Standalone executable"
-
-    ```console
-    edi report path/to/project
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi report path/to/project
-    ```
+```console
+python -m edi report path/to/project
+```
 
 This writes the formats selected by the project into its `reports/` folder, for the available writers. HTML and CIF reports are written. The application writes PDF; the command leaves an existing PDF and its record as they are.
 
@@ -24,37 +16,19 @@ Saving a project does not automatically save its report. A report can become out
 
 ## Write an HTML file elsewhere
 
-=== "Standalone executable"
-
-    ```console
-    edi report path/to/project --output refinement.html --offline
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi report path/to/project --output refinement.html --offline
-    ```
+```console
+python -m edi report path/to/project --output refinement.html --offline
+```
 
 `--output PATH` writes one HTML report without changing the project's saved-report list. `--offline` embeds chart libraries; `--online` makes the HTML load them from the web. Both are overrides for this run.
 
 ## Choose the contents
 
-=== "Standalone executable"
-
-    ```console
-    edi report path/to/project --x-axis d_spacing --exclude data
-    edi report path/to/project --exclude reflections --exclude correlations
-    edi report path/to/project --include-all
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi report path/to/project --x-axis d_spacing --exclude data
-    python -m edi report path/to/project --exclude reflections --exclude correlations
-    python -m edi report path/to/project --include-all
-    ```
+```console
+python -m edi report path/to/project --x-axis d_spacing --exclude data
+python -m edi report path/to/project --exclude reflections --exclude correlations
+python -m edi report path/to/project --include-all
+```
 
 Optional group keys are `charts`, `correlations`, `reflections`, `data` and `evolution`. Repeat `--exclude` for several groups, or use `--include-all`. These two choices are mutually exclusive.
 
@@ -71,16 +45,8 @@ These switches affect the generated report for that run; they do not replace the
 
 ## Check saved reports
 
-=== "Standalone executable"
-
-    ```console
-    edi report path/to/project --check
-    ```
-
-=== "Python package"
-
-    ```console
-    python -m edi report path/to/project --check
-    ```
+```console
+python -m edi report path/to/project --check
+```
 
 The command lists each saved report as `current`, `out of date` or `missing`, writing nothing. It exits with status `1` when a listed report is not current. It checks the saved list; it does not require that a project has already saved a report.
