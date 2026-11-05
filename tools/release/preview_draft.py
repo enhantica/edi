@@ -15,7 +15,6 @@ PLATFORMS = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
 
 
 def prepare(
-    repo: str,
     commit: str,
     deliveries: list[Path],
     *,
@@ -73,21 +72,12 @@ def prepare(
         )
     ):
         raise ValueError('Release history differs from the qualified installers')
-    version = release['version']
-    notes = ['## Online installers', '']
-    for platform, (path, _) in sorted(archives.items()):
-        url = f'https://github.com/{repo}/releases/download/v{version}/{path.name}'
-        notes.append(f'- [{platform}]({url})')
-    notes += [
-        '',
-        (
-            'See the [desktop installation guide]'
-            '(https://enhantica.github.io/edi/application/desktop/) for setup instructions.'
-        ),
-    ]
+    notes = []
     for group, entries in release['notes'].items():
         if entries:
-            notes.extend(['', f'## {group}', ''])
+            if notes:
+                notes.append('')
+            notes.extend([f'## {group}', ''])
             notes.extend('- ' + entry['title'] for entry in entries)
     return release, '\n'.join(notes) + '\n', list(archives.values())
 

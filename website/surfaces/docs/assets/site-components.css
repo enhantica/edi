@@ -97,3 +97,12 @@
 .md-footer-meta {
   display: none;
 }
+
+.md-typeset .ed-release-interface {
+  display: inline-block;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.45rem;
+  padding: 0 0.35rem;
+  font-size: 0.72em;
+  white-space: nowrap;
+}

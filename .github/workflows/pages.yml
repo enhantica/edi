@@ -9,6 +9,8 @@ name: Pages
 on:
   push:
     branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       component:
@@ -28,9 +30,20 @@ env:
   CMAKE_BUILD_PARALLEL_LEVEL: 4
 
 jobs:
+  refresh-release-notes:
+    if: github.repository == 'enhantica/edi' && github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f component=docs
+
   docs:
     name: build documentation
-    if: github.repository == 'enhantica/edi' && (github.event_name != 'workflow_dispatch' || inputs.component != 'wasm')
+    if: github.repository == 'enhantica/edi' && github.event_name != 'release' && (github.event_name != 'workflow_dispatch' || inputs.component != 'wasm')
     environment: crysta-sdk
     runs-on: &linux ubuntu-24.04
     steps:
@@ -68,8 +81,12 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Strict contributor docs build  # mkdocs.yml writes site/dev
         run: pixi run docs-build
-      - name: Build the public site  # website/, Zensical, strict, its links checked
-        run: pixi run site-build --base-url https://enhantica.github.io/edi/
+      - name: Build the public site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/edi-releases.json"
+          pixi run site-build --base-url https://enhantica.github.io/edi/ --github-releases "$RUNNER_TEMP/edi-releases.json"
       - name: Place the public site at the root
         run: |
           for path in dev webapp; do
@@ -86,7 +103,7 @@ jobs:
 
   wasm:
     name: build WebAssembly
-    if: github.repository == 'enhantica/edi' && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
+    if: github.repository == 'enhantica/edi' && github.event_name != 'release' && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
     environment: crysta-sdk
     runs-on: *linux
     steps:

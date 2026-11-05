@@ -10,8 +10,8 @@ Run saved projects from a terminal or shell script. One command-line interface, 
 
 | Choose | Requires | Run |
 | --- | --- | --- |
-| [Standalone executable](standalone.md#download) | A download for your operating system; no Python installation | `edi …` |
-| [Python package](python.md) | A Python environment with `edi` installed | `python -m edi …` |
+| :lucide-square-terminal: [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Standalone executable</span>](standalone.md#download){ .ed-icon-label .ed-interface-link } | A download for your operating system; no Python installation | `edi …` |
+| :simple-python: [Python package](python.md) | A Python environment with `edi` installed | `python -m edi …` |
 
 Both routes use terminal commands; neither requires writing Python scripts. Choose one installation route.
 

@@ -180,3 +180,17 @@ Testing components are published separately to the public Pages repository
 under `/edi/repository/testing/<platform>/`. The application update feed is at
 `/edi/releases/testing.json`. Publish the matching component repositories
 before making the corresponding installer draft public.
+
+## Public release notes
+
+The public documentation renders published GitHub release descriptions at
+build time, newest first, with a prerelease label when applicable. Publishing
+a GitHub release requests a docs-only deployment from the default branch.
+Draft descriptions are excluded.
+
+A note can declare one or more affected interfaces with a hidden Markdown
+comment before the note text, for example
+`- <!-- interfaces: desktop,web --> Improve plot zoom.`. Use `desktop`,
+`web`, `python`, `cli-python` and `cli-standalone`. Omit the marker for
+general notes. The site renders these identifiers as labelled icons and
+GitHub renders the note text. Scripts and notebooks share the Python API.

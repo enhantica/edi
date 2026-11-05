@@ -213,7 +213,7 @@ These groups are read-only. Assess the [agreement factors](../physics/reliabilit
 
 Save the updated project if you want to keep working from its refined values. Use the **Report** page to prepare a separate document containing the selected model, results and figures.
 
-The same project can be opened in [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/fit.md){ .ed-interface-link .ed-icon-label } or run with [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">the Command Line</span>](../cli/fit.md){ .ed-interface-link .ed-icon-label }.
+The same project can be opened in [<span class="ed-interface-icons" aria-hidden="true">:simple-python: :simple-jupyter:</span> <span class="ed-icon-text">Python</span>](../python/fit.md){ .ed-interface-link .ed-icon-label } or run with [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal: :simple-python:</span> <span class="ed-icon-text">the Command Line</span>](../cli/fit.md){ .ed-interface-link .ed-icon-label }.
 
 <!-- gui-guide:save-the-project-and-report -->
 <div class="gui-viewer" markdown="1">

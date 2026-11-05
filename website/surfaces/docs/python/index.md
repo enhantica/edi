@@ -17,7 +17,10 @@ Work with Python objects in scripts and notebooks, with direct access to paramet
 </figure>
 <!-- /interface-preview -->
 
-In a notebook, run individual cells and keep the code, plots and results together. In a script, combine `edi` with your own data preparation and analysis tools.
+Both approaches use the same Python API.
+
+- :simple-python: **Python scripts** combine `edi` with your own data preparation and analysis tools.
+- :simple-jupyter: **Jupyter notebooks** run code one cell at a time and keep plots and results alongside it.
 
 [Python API reference](reference.md){ .md-button }
 [Download the example notebook](../assets/interfaces/refinement.ipynb){ .md-button }

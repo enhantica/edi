@@ -27,6 +27,7 @@ from render_interfaces import render as render_interfaces
 from render_learning import render as render_learning
 from render_parameter_reference import anchor
 from render_parameter_reference import render as render_parameter_reference
+from render_release_notes import render as render_release_notes
 from render_workflow import render as render_workflow
 
 ROOT = Path(__file__).resolve().parent
@@ -350,6 +351,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('concept', choices=[*CONCEPTS, 'all'], nargs='?', default='all')
     parser.add_argument('--base-url', help='Public site root, including the repository URL prefix')
+    parser.add_argument('--github-releases', type=Path, help='Paginated GitHub release JSON')
     args = parser.parse_args()
     shared_controls = ROOT / 'surfaces/docs/assets/site-components.css'
     _render_sources()
@@ -365,8 +367,19 @@ def main() -> None:
     output = ROOT / '_build'
     if args.concept == 'all' and output.exists():
         shutil.rmtree(output)
-    for name in names:
-        _build_concept(name, shared_controls, args.base_url, output)
+    changelog = ROOT / 'surfaces/docs/changelog.md'
+    original = changelog.read_bytes()
+    try:
+        if args.github_releases:
+            changelog.write_text(
+                render_release_notes(json.loads(args.github_releases.read_bytes())),
+                encoding='utf-8',
+            )
+        for name in names:
+            _build_concept(name, shared_controls, args.base_url, output)
+    finally:
+        if args.github_releases:
+            changelog.write_bytes(original)
     _check_links(output.resolve(), args.base_url)
     command = f'python -m http.server 8873 --bind 127.0.0.1 --directory {output}'
     print(f'Preview: {command}', flush=True)

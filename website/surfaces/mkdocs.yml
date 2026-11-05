@@ -34,7 +34,7 @@ theme:
 extra_css:
   - assets/brand-colors.css?v=1
   - assets/wordmark.css?v=header-2
-  - assets/site-components.css?v=footer-credits-3
+  - assets/site-components.css?v=release-notes-1
   - assets/experiment-tags.css?v=2
   - assets/parameter-reference.css?v=3
 extra_javascript:
@@ -46,8 +46,12 @@ extra:
     Web app: [lucide/globe]
     Desktop application: [lucide/monitor]
     Desktop app: [lucide/monitor]
-    Python: [simple/python]
-    Command Line: [lucide/square-terminal]
+    Python: [simple/python, simple/jupyter]
+    Command Line: [lucide/square-terminal, simple/python]
+    Standalone executable: [lucide/square-terminal]
+    CLI from Python package: [simple/python]
+    Python scripts: [simple/python]
+    Jupyter notebooks: [simple/jupyter]
   section_icons:
     Foundations: book-open-variant
     Analysis workflow: routes
@@ -143,7 +147,7 @@ nav:
   - cli/index.md
   - Start here:
     - Standalone executable: cli/standalone.md
-    - Python package: cli/python.md
+    - CLI from Python package: cli/python.md
     - Example refinement: cli/examples.md
   - Project:
     - Inputs and output files: cli/files.md

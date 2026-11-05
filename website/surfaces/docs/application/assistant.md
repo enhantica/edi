@@ -1,7 +1,12 @@
 # AI assistant
 
 The AI assistant in EasyDiffraction can explain a refinement, suggest which parameters to fit next,
-and carry out supported actions in your open project. It is available as an optional desktop component.
+and carry out supported actions in your open project.
+
+| Interface | Availability |
+| --- | --- |
+| :lucide-monitor: Desktop app | Select the optional **AI assistant** component during installation. |
+| :lucide-globe: Web app | The assistant is unavailable in the browser. The toolbar button opens information about the desktop app. |
 
 ## Install and connect
 
