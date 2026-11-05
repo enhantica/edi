@@ -54,8 +54,9 @@ def _exercise(tmp_path: Path, *, retire: bool, streaming: bool = False) -> None:
     pid_file = tmp_path / 'pids'
     ready = tmp_path / 'ready'
     suffix = '.exe' if os.name == 'nt' else ''
-    host = ROOT / f'build/app/app/edi_assistant_lifetime_host{suffix}'
-    fixture = ROOT / f'build/app/app/edi_assistant_lifetime_fixture{suffix}'
+    binaries = Path(os.environ.get('EDI_LIFETIME_BIN_DIR', str(ROOT / 'build/app/app')))
+    host = binaries / f'edi_assistant_lifetime_host{suffix}'
+    fixture = binaries / f'edi_assistant_lifetime_fixture{suffix}'
     environment = dict(os.environ, EDI_LIFETIME_PID_FILE=str(pid_file))
     if streaming:
         environment['EDI_LIFETIME_STREAM'] = '1'

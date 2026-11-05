@@ -180,3 +180,9 @@ of using the host locale. Native Windows boundary checks run before tools are ac
 The ordinary installer-check task delegates to the locked packaging workspace, so it needs no
 unrecorded Python package in the app development environment. Compiler failures retain real native
 stdout/stderr in pytest diagnostics instead of hiding them behind a subprocess exit code.
+
+Each native installer job also builds the existing assistant lifetime host and executes the recorded
+process-family shutdown fixtures against that exact build directory. Sudden owner death, ordinary
+retirement and active-stream shutdown must end the guard, runtime child and descendant processes.
+The test uses recorded transport, isolated fixture state and no login or network. The ordinary app
+test keeps its default build directory; the installer check selects its own real binaries explicitly.

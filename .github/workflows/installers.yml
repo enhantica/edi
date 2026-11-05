@@ -131,6 +131,15 @@ jobs:
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
       - name: Build crysta, edi and its runtime bundle
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
+      - name: Check assistant process-family shutdown on this platform
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_assistant_lifetime_host --parallel 4
+          pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/assistant_fixes/test_process_lifetime.py" --noconftest -o addopts= -q --junitxml=build/installer/assistant-lifetime.xml
+        env:
+          EDI_LIFETIME_BIN_DIR: ${{ github.workspace }}/build/installer/app/app
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
       - name: Create the offline qualification installer
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package"
       - name: Install, launch, calculate, render and uninstall
@@ -195,6 +204,7 @@ jobs:
         with:
           name: installer-check-${{ matrix.platform }}-${{ github.run_attempt }}
           path: |
+            build/installer/assistant-lifetime.xml
             build/installer/test/*.log
             build/installer/test/*.json
             build/installer/test/smoke/**
