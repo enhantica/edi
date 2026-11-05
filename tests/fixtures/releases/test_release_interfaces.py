@@ -94,6 +94,7 @@ def test_desktop_downloads_link_only_published_platform_assets():
         base = f'https://github.com/enhantica/edi/releases/download/v{version}'
         return {
             'tag_name': f'v{version}',
+            'published_at': '2026-11-05T11:30:00Z',
             'draft': draft,
             'prerelease': prerelease,
             'assets': [
@@ -109,10 +110,10 @@ def test_desktop_downloads_link_only_published_platform_assets():
     draft = release('2026.11.1', draft=True)
     assert downloads.render(source, [[draft]]) == source
     page = downloads.render(source, [[preview, draft]])
-    assert 'Testing preview 2026.11.0' in page
+    assert 'Latest version 2026.11.0 (5 Nov 2026)' in page
     assert 'macos-arm64-online.zip' in page and 'linux-x86_64-online.zip' in page
     assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page
     stable = release('2026.10.2')
     page = downloads.render(source, [[preview, draft, stable]])
-    assert 'Latest release 2026.10.2' in page
+    assert 'Latest version 2026.10.2 (5 Nov 2026)' in page
     assert 'EasyDiffraction-2026.10.2-windows-x86_64-online.zip' in page

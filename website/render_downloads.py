@@ -2,6 +2,7 @@
 """Link desktop download cards to public GitHub release assets."""
 
 import re
+from datetime import date
 from operator import itemgetter
 
 PLATFORMS = ('macos-arm64', 'windows-x86_64', 'linux-x86_64')
@@ -32,13 +33,15 @@ def render(page: str, pages: list[list[dict]]) -> str:
                 installers[platform] = url
         if installers:
             rank = not release['prerelease'], tuple(map(int, match.groups()))
-            candidates.append((rank, version, installers))
+            candidates.append((rank, version, installers, release['published_at']))
     if not candidates:
         return page
-    (stable, _), version, installers = max(candidates, key=itemgetter(0))
-    label = 'Latest release' if stable else 'Testing preview'
+    _, version, installers, published = max(candidates, key=itemgetter(0))
+    day = date.fromisoformat(published[:10])
+    display_date = f'{day.day} {day:%b %Y}'
     page = page.replace(
-        'Desktop installers will appear here when published.', f'{label} {version}'
+        'Desktop installers will appear here when published.',
+        f'Latest version {version} ({display_date})',
     )
     for platform, url in installers.items():
         page = page.replace(
