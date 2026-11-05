@@ -12,6 +12,10 @@ on:
         required: true
         default: false
         type: boolean
+      preview_run:
+        description: Completed installer run with qualified macOS and Linux artifacts for a testing prerelease
+        required: false
+        type: string
       release_plan_run:
         description: Successful Prepare calendar release run at this exact source (empty for testing)
         required: false
@@ -35,6 +39,7 @@ permissions:
 
 jobs:
   installers:
+    if: inputs.preview_run == ''
     name: installer · ${{ matrix.platform }}
     environment: crysta-sdk
     runs-on: ${{ matrix.runner }}
@@ -249,7 +254,7 @@ jobs:
   qualify-release:
     name: record qualified release inputs
     needs: installers
-    if: inputs.release_plan_run != '' && !inputs.windows_only
+    if: inputs.release_plan_run != '' && !inputs.windows_only && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -271,7 +276,10 @@ jobs:
   publish-installers:
     name: publish tested installer components
     needs: installers
-    if: github.event_name == 'workflow_dispatch' && !inputs.windows_only && inputs.publish_components && inputs.release_plan_run == '' && github.event.repository.private == false
+    if: >-
+      ${{ !cancelled() && github.event_name == 'workflow_dispatch' && !inputs.windows_only
+      && inputs.publish_components && inputs.release_plan_run == '' && !github.event.repository.private
+      && (needs.installers.result == 'success' || (inputs.preview_run != '' && needs.installers.result == 'skipped')) }}
     runs-on: ubuntu-24.04
     concurrency:
       group: pages-publication
@@ -287,12 +295,23 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Download tested platform repositories
+        if: inputs.preview_run == ''
         uses: actions/download-artifact@v4
         with:
           pattern: installer-components-*-${{ github.run_attempt }}
           merge-multiple: true
           path: components
+      - name: Recover qualified macOS and Linux preview repositories
+        if: inputs.preview_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_RUN: ${{ inputs.preview_run }}
+        run: |
+          python3 tools/release/preview.py --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" \
+            --run "$PREVIEW_RUN" --output preview
+          mv preview/components components
       - name: Require every platform from this successful attempt
+        if: inputs.preview_run == ''
         run: |
           python3 - <<'PYTHON'
           from pathlib import Path

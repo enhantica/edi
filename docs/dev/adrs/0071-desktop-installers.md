@@ -302,3 +302,13 @@ offer its download page.
 The local IFW protocol test adds and removes the optional component without disturbing the
 required application. Online qualification installs the actual application both ways and checks
 that the selected runtime starts, alongside the usual calculation and rendering checks.
+
+
+## Two-platform installer preview
+
+An explicit preview publication can reuse already qualified Linux and macOS artifacts from
+one completed installer attempt on the publishing branch. It verifies both platform jobs and
+their testing repository and installer identities, then deploys those repositories through the
+shared Pages publisher. A GitHub prerelease may attach those unchanged online installer ZIPs
+after Pages is serving their components. The stable calendar release still requires one fully
+qualified attempt on the default branch, including Windows.

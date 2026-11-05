@@ -143,14 +143,18 @@ def validate_delivery(folder: Path, release: dict, history_hash: str, platform: 
     return archive
 
 
-def validate_repository(folder: Path, version: str) -> None:
+def validate_repository(
+    folder: Path,
+    version: str,
+    *,
+    expected: frozenset[str] = frozenset({'org.easyscience.edi', 'org.easyscience.edi.assistant'}),
+) -> None:
     """Require matching component identity and the framework's original archive checksums."""
     content = (folder / 'Updates.xml').read_bytes()
     if len(content) > 1024 * 1024 or b'<!' in content:
         raise ValueError('Component metadata must be bounded without declarations')
     root = ET.fromstring(content)  # noqa: S314 - declarations rejected above
     packages = root.findall('PackageUpdate')
-    expected = {'org.easyscience.edi', 'org.easyscience.edi.assistant'}
     if len(packages) != len(expected) or {p.findtext('Name') for p in packages} != expected:
         raise ValueError('Component repository does not match the qualified release')
     for package in packages:
