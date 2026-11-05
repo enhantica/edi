@@ -171,3 +171,8 @@ retains every allocated section's bytes, address, flags and size, and passes the
 and window smoke after stripping. Qt deployment and the complete verified assistant runtime remain
 untouched; the existing final runtime byte/membership gate and actual installed-app checks still
 apply. Other platforms keep their existing deployment behavior until separately measured.
+
+Byte-pinned upstream notices and vendored report JavaScript are marked binary for Git checkout
+purposes, so Windows automatic newline conversion cannot invalidate their checksums. Keep upstream
+licence bytes unchanged. Installer metadata and its offline fixtures explicitly decode UTF-8 instead
+of using the host locale. Native Windows boundary checks run before tools are acquired or builds start.

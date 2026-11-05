@@ -100,8 +100,8 @@ def test_dependency_check_allows_packaged_and_system_libraries(tmp_path):
 
 def test_installer_workspace_preserves_the_app_toolchain_pins():
     root = Path(__file__).resolve().parents[3]
-    app = tomllib.loads((root / 'pixi.toml').read_text())['feature']['app']
-    installer = tomllib.loads((root / 'tools/installer/pixi.toml').read_text())
+    app = tomllib.loads((root / 'pixi.toml').read_text(encoding='utf-8'))['feature']['app']
+    installer = tomllib.loads((root / 'tools/installer/pixi.toml').read_text(encoding='utf-8'))
     for module in ['qt6-main', 'qt6-graphs', 'qt6-quick3d', 'libvulkan-headers']:
         assert installer['dependencies'][module] == app['dependencies'][module]
     for platform in ['linux-64', 'osx-arm64']:
@@ -256,7 +256,7 @@ def test_packaging_uses_acquired_licenses_when_the_original_cache_is_absent(tmp_
         (acquired / 'portable').mkdir(parents=True)
         (acquired / 'portable/LICENSE').write_text('portable licence')
         PACKAGE.installer_runtime_notices({'portable.so': str(source)}, prefix, notices, acquired)
-        assert (notices / 'portable/LICENSE').read_text() == 'portable licence'
+        assert (notices / 'portable/LICENSE').read_text(encoding='utf-8') == 'portable licence'
     else:
         with pytest.raises(RuntimeError, match='No dependency licence'):
             PACKAGE.installer_runtime_notices(
@@ -294,7 +294,7 @@ def test_windows_clean_environment_accepts_uppercase_systemroot(tmp_path):
 @pytest.mark.parametrize('name', ['libgcc', 'libstdcxx', 'libgomp', 'libfreetype6'])
 def test_split_runtime_packages_retain_the_exact_upstream_licenses(tmp_path, name):
     policy = PACKAGE.json.loads(
-        (PACKAGE.ROOT / 'tools/installer/licenses/manifest.json').read_text()
+        (PACKAGE.ROOT / 'tools/installer/licenses/manifest.json').read_text(encoding='utf-8')
     )
     package = policy['packages'][name]
     metadata = {'name': name, 'version': package['version'], 'license': package['license']}

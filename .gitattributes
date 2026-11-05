@@ -1,0 +1,5 @@
+# Preserve upstream bytes used by checksums and offline reports on every checkout.
+/COPYING -text
+/LICENSE -text
+/tools/installer/licenses/* -text
+/data/report/vendor/*.js -text

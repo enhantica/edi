@@ -61,7 +61,7 @@ def read_release_plan(directory: Path, source_commit: str | None = None) -> dict
 
 def repository_urls(channel: str) -> tuple[str, ...]:
     """Return the primary repository and configured mirrors for this build platform."""
-    policy = json.loads((ROOT / 'data/distribution.json').read_text())
+    policy = json.loads((ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
     tail = policy['repository_path'].format(channel=channel, platform=PLATFORM_ID)
     return tuple(
         base.rstrip('/') + '/' + tail for base in [policy['primary_base'], *policy['mirror_bases']]
@@ -79,7 +79,9 @@ def sha256(path: Path) -> str:
 
 
 def fetch_tools(destination: Path) -> Path:
-    pin = json.loads((ROOT / 'tools/installer/ifw.json').read_text())['platforms'][SYSTEM]
+    pin = json.loads((ROOT / 'tools/installer/ifw.json').read_text(encoding='utf-8'))['platforms'][
+        SYSTEM
+    ]
     destination.mkdir(parents=True, exist_ok=True)
     archive = destination / 'ifw.7z'
     if not archive.exists() or sha256(archive) != pin['sha256']:
@@ -218,7 +220,7 @@ def acquire_installer_licenses(tools: Path, destination: Path) -> None:
         tools / 'bin/installerbase', probe, prefix, shutil.which('patchelf'), env
     )
     for record in (prefix / 'conda-meta').glob('*.json'):
-        metadata = json.loads(record.read_text())
+        metadata = json.loads(record.read_text(encoding='utf-8'))
         files = set(metadata.get('files', []))
         if not any(
             Path(source).is_relative_to(prefix)
@@ -310,7 +312,7 @@ def installer_runtime_notices(
         if prefix and source.is_relative_to(prefix.resolve()):
             found = False
             for record in (prefix / 'conda-meta').glob('*.json'):
-                metadata = json.loads(record.read_text())
+                metadata = json.loads(record.read_text(encoding='utf-8'))
                 if source.relative_to(prefix.resolve()).as_posix() in metadata.get('files', []):
                     licenses = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
                     if not licenses.is_dir():
@@ -678,7 +680,7 @@ def exercise_installer(installer: Path, output: Path, repository: str | None = N
         else 'bin/edi_app' + SUFFIX
     )
     try:
-        manifest = json.loads((target / 'payload-manifest.json').read_text())
+        manifest = json.loads((target / 'payload-manifest.json').read_text(encoding='utf-8'))
         for name, expected in manifest.items():
             path = target / name
             if 'sha256' in expected and (not path.is_file() or sha256(path) != expected['sha256']):
@@ -701,7 +703,7 @@ def exercise_installer(installer: Path, output: Path, repository: str | None = N
                 stderr=subprocess.STDOUT,
                 timeout=45,
             )
-        receipt = json.loads((output / 'smoke/result.json').read_text())
+        receipt = json.loads((output / 'smoke/result.json').read_text(encoding='utf-8'))
         if metadata.get('release_history_sha256') and (
             receipt.get('app_version') != metadata['version']
             or receipt.get('release_history_sha256') != metadata['release_history_sha256']
