@@ -29,40 +29,31 @@ inline bool install(QObject& receiver, Receive receive, Closed closed = {}) {
     const HANDLE pipe = GetStdHandle(STD_INPUT_HANDLE);
     if (pipe == nullptr || pipe == INVALID_HANDLE_VALUE || GetFileType(pipe) != FILE_TYPE_PIPE)
         return false;
-    DWORD previous_mode = 0;
-    if (!GetNamedPipeHandleStateW(pipe, &previous_mode, nullptr, nullptr, nullptr, nullptr, 0) ||
-        (previous_mode & PIPE_READMODE_MESSAGE))
-        return false;
     auto* input = new QTimer(&receiver);
-    DWORD mode = previous_mode | PIPE_NOWAIT;
-    if (!SetNamedPipeHandleState(pipe, &mode, nullptr, nullptr)) {
-        delete input;
-        return false;
-    }
-    QObject::connect(input, &QObject::destroyed, [pipe, previous_mode] {
-        DWORD restore = previous_mode;
-        if (GetStdHandle(STD_INPUT_HANDLE) == pipe)
-            SetNamedPipeHandleState(pipe, &restore, nullptr, nullptr);
-    });
     input->setInterval(25);
     const auto stop = [input, closed = std::move(closed)] {
         input->stop();
         if (closed) closed();
     };
-    QObject::connect(
-        input, &QTimer::timeout, &receiver, [pipe, receive = std::move(receive), stop] {
-            char buffer[4096];
-            DWORD got = 0;
-            if (!ReadFile(pipe, buffer, static_cast<DWORD>(sizeof buffer), &got, nullptr)) {
-                if (GetLastError() != ERROR_NO_DATA) stop();
-                return;
-            }
-            if (got == 0) {
-                stop();
-                return;
-            }
-            receive(QByteArray(buffer, static_cast<qsizetype>(got)));
-        });
+    QObject::connect(input, &QTimer::timeout, &receiver,
+                     [pipe, receive = std::move(receive), stop] {
+                         DWORD available = 0;
+                         if (!PeekNamedPipe(pipe, nullptr, 0, nullptr, &available, nullptr)) {
+                             stop();
+                             return;
+                         }
+                         if (available == 0) return;
+                         char buffer[4096];
+                         const auto capacity = static_cast<DWORD>(sizeof buffer);
+                         DWORD got = 0;
+                         if (!ReadFile(pipe, buffer, available < capacity ? available : capacity,
+                                       &got, nullptr) ||
+                             got == 0) {
+                             stop();
+                             return;
+                         }
+                         receive(QByteArray(buffer, static_cast<qsizetype>(got)));
+                     });
     input->start();
 #else
     struct stat status{};

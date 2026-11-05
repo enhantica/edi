@@ -25,11 +25,6 @@ int main(int argc, char** argv) {
     QByteArray received;
     int ended = 0;
     bool active_at_end = false;
-#ifdef Q_OS_WIN
-    const HANDLE pipe = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD original_mode = 0;
-    GetNamedPipeHandleStateW(pipe, &original_mode, nullptr, nullptr, nullptr, nullptr, 0);
-#endif
     const bool installed = edi_app::observer_input::install(*owner,
         [&](const QByteArray& bytes) { received += bytes; }, [&] {
             ++ended;
@@ -55,14 +50,10 @@ int main(int argc, char** argv) {
         QPointer<QObject> input(owner->children().at(0));
         owner.reset();
         retired = input.isNull();
-#ifdef Q_OS_WIN
-        DWORD restored = 0;
-        if (!GetNamedPipeHandleStateW(pipe, &restored, nullptr, nullptr, nullptr, nullptr, 0) ||
-            restored != original_mode) return 4;
-#endif
-        QTimer::singleShot(0, &app, &QCoreApplication::quit);
+        QCoreApplication::processEvents();
+    } else {
+        app.exec();
     }
-    app.exec();
     const auto report = QJsonDocument(QJsonObject{
         {"bytes", QString::fromLatin1(received.toHex())}, {"closed", ended},
         {"active_at_end", active_at_end}, {"retired", retired}}).toJson(QJsonDocument::Compact);
