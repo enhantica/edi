@@ -425,7 +425,7 @@ if(NOT EMSCRIPTEN)
 endif()
 
 qt_add_executable(edi_app main.cpp)
-target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
+target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
 # ADR-0023: the browser build's stacks. A fit runs crysta on the calculation worker's thread, which Emscripten sizes
 # at 64 KiB by default, or, in the single-thread build, on the main thread, which Qt sizes at 5 MiB; both get 8 MiB.

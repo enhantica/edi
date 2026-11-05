@@ -203,3 +203,11 @@ extended object format applies to ordinary native builds and installers alike; s
 adapter or changing engine/structural behavior to satisfy a file-format limit is unnecessary.
 The original C1128 failure is retained and the full Windows build is the validation boundary.
 See [Microsoft's object-format option](https://learn.microsoft.com/en-us/cpp/build/reference/bigobj-increase-number-of-sections-in-dot-obj-file).
+
+
+The installed smoke decodes the real logo and assistant-spinner SVG resources through both the SVG
+renderer and the image-reader plugin. A nonempty window alone did not prove the image decoder was
+bundled: the original macOS capture lacked its logo and logged unsupported image formats. Declare
+Qt Svg as a direct app dependency so deployment sees the required module before plugin selection.
+Keep that original capture and failure; the all-platform installed checks and visual review must
+qualify the correction. The additional module is required by existing user-visible assets.

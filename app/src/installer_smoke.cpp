@@ -6,6 +6,8 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QImageReader>
+#include <QSvgRenderer>
 #include <QProcess>
 #include <QQuickWindow>
 #include <QRegularExpression>
@@ -36,6 +38,14 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
                     throw std::runtime_error("Bundled release history does not contain this application release");
                 report.insert("release_history_sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()));
             }
+            for (const auto& name : {QStringLiteral("App.svg"), QStringLiteral("AssistantSpinner.svg")}) {
+                const auto path = QStringLiteral(":/qt/qml/edi/app/resources/logo/") + name;
+                QSvgRenderer vector(path);
+                QImageReader reader(path);
+                if (!vector.isValid() || reader.read().isNull())
+                    throw std::runtime_error((QStringLiteral("Bundled SVG image cannot be decoded: ") + name + QStringLiteral(": ") + reader.errorString()).toStdString());
+            }
+            report.insert("svg_images", true);
             QTemporaryDir project_dir;
             if (!project_dir.isValid()) throw std::runtime_error("Cannot create smoke project directory");
             const QString resource = QStringLiteral(":/edi/installer-smoke/");

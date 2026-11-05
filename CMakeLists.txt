@@ -49,7 +49,7 @@ if(EDI_BUILD_APP)
     # version exactly (ADR-0023 §5), so the warning is off.
     set(QT_NO_PRIVATE_MODULE_WARNING ON)
     find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick QuickControls2 QuickTest Graphs Quick3D ShaderTools CorePrivate
-                 QuickPrivate QmlModelsPrivate Concurrent Network)
+                 QuickPrivate QmlModelsPrivate Concurrent Network Svg)
     if(EMSCRIPTEN)
         find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
     endif()
