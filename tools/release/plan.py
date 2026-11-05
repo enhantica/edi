@@ -14,6 +14,7 @@ INTERFACES = json.loads(
     )
 )
 INTERFACE_LABEL_PREFIX = '[interface] '
+INTERFACE_IDS = {short: key for key, (_, _, short) in INTERFACES.items()}
 
 GROUPS = {
     '[scope] significant': 'Added',
@@ -160,12 +161,13 @@ def release_plan(
         if len(scopes) != 1:
             raise ValueError(f'Pull request {number} needs exactly one release scope label')
         entry = {'title': check_title(request['title']), 'pull_request': number}
+        interface_labels = {
+            label.removeprefix(INTERFACE_LABEL_PREFIX)
+            for label in labels
+            if label.startswith(INTERFACE_LABEL_PREFIX)
+        }
         interfaces = note_interfaces({
-            'interfaces': [
-                label.removeprefix(INTERFACE_LABEL_PREFIX)
-                for label in labels
-                if label.startswith(INTERFACE_LABEL_PREFIX)
-            ],
+            'interfaces': list({INTERFACE_IDS.get(label, label) for label in interface_labels}),
         })
         if not interfaces:
             raise ValueError(f'Pull request {number} needs at least one release interface label')
@@ -203,7 +205,7 @@ def markdown_note(entry: dict) -> str:
         title += f' ([#{number}](https://github.com/enhantica/edi/pull/{number}))'
     interfaces = note_interfaces(entry)
     if interfaces:
-        labels = ' '.join(f'`{INTERFACES[key][1]}`' for key in interfaces)
+        labels = ' '.join(f'`{INTERFACES[key][2]}`' for key in interfaces)
         title += f' {labels} <!-- interfaces: {",".join(interfaces)} -->'
     return '- ' + title
 

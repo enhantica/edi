@@ -43,7 +43,7 @@ def test_interface_labels_render_once():
     assert release['notes']['Fixed'][0]['interfaces'] == ['desktop', 'web']
     github = PLAN.markdown_notes(release)
     assert 'Improve plot zoom' in github
-    assert github.rstrip().endswith('`Desktop app` `Web app` <!-- interfaces: desktop,web -->')
+    assert github.rstrip().endswith('`desktop` `web` <!-- interfaces: desktop,web -->')
     published = {
         'draft': False,
         'prerelease': True,
@@ -56,7 +56,7 @@ def test_interface_labels_render_once():
     assert page.count('.ed-release-interface') == 2
     assert ':lucide-monitor: Desktop app' in page
     assert ':lucide-globe: Web app' in page
-    assert '`Desktop app`' not in page
+    assert '`desktop`' not in page
     assert 'Private draft' not in page
     assert page.index('Improve plot zoom') < page.index(':lucide-monitor: Desktop app')
 
@@ -77,5 +77,7 @@ def test_new_notes_require_at_least_one_interface():
 
 def test_one_note_can_affect_every_interface():
     interfaces = list(PLAN.INTERFACES)
-    release = plan_with_labels(*(f'[interface] {key}' for key in reversed(interfaces)))
+    release = plan_with_labels(
+        *(f'[interface] {PLAN.INTERFACES[key][2]}' for key in reversed(interfaces))
+    )
     assert release['notes']['Fixed'][0]['interfaces'] == interfaces

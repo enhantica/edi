@@ -191,12 +191,12 @@ a GitHub release requests a docs-only deployment from the default branch.
 Draft descriptions are excluded.
 
 Each new note declares at least one affected interface. Set one or more
-`[interface] desktop`, `[interface] web`, `[interface] python`,
-`[interface] cli-python`, and `[interface] cli-standalone` labels on its
+`[interface] desktop`, `[interface] web`, `[interface] py`,
+`[interface] cli-py`, and `[interface] cli` labels on its
 PR. A note can carry all five when the change affects every interface.
 This is independent of the scope label that selects Added, Fixed or Changed.
 The release plan copies the interface identifiers to history and renders them
-as inline badges on GitHub. A hidden Markdown marker lets the docs replace
+as short inline-code badges after each note on GitHub. A hidden Markdown marker lets the docs replace
 those badges with matching icon pills. Older notes without interface metadata
 remain readable. Scripts and notebooks share the Python API. Preview notes
 carry the same identifiers in their source JSON.

@@ -19,14 +19,17 @@ LEGACY_NOTE = re.compile(r'^(- )<!-- interfaces: ([a-z,-]+) --> (.+)$', re.MULTI
 def _pills(interfaces: list[str]) -> str:
     return ' '.join(
         f'**:{icon}: {label}**{{ .ed-release-interface }}'
-        for icon, label in (INTERFACES[interface] for interface in interfaces)
+        for icon, label, _ in (INTERFACES[interface] for interface in interfaces)
     )
 
 
 def _label_note(match: re.Match[str]) -> str:
     interfaces = match[2].split(',')
-    labels = ' '.join(f'`{INTERFACES[interface][1]}`' for interface in interfaces)
-    return match[1].removesuffix(' ' + labels) + ' ' + _pills(interfaces)
+    text = match[1]
+    for interface in reversed(interfaces):
+        _, label, short = INTERFACES[interface]
+        text = text.removesuffix(f' `{short}`').removesuffix(f' `{label}`')
+    return text + ' ' + _pills(interfaces)
 
 
 def _label_legacy_note(match: re.Match[str]) -> str:

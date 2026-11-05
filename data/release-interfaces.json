@@ -1,22 +1,27 @@
 {
   "desktop": [
     "lucide-monitor",
-    "Desktop app"
+    "Desktop app",
+    "desktop"
   ],
   "web": [
     "lucide-globe",
-    "Web app"
+    "Web app",
+    "web"
   ],
   "python": [
     "simple-python",
-    "Python API"
+    "Python API",
+    "py"
   ],
   "cli-python": [
     "simple-python",
-    "CLI from Python package"
+    "CLI from Python package",
+    "cli-py"
   ],
   "cli-standalone": [
     "lucide-square-terminal",
-    "Standalone CLI"
+    "Standalone CLI",
+    "cli"
   ]
 }
