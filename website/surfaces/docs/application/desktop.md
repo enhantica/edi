@@ -55,14 +55,13 @@ installers are distributed without a trusted platform signature.
 
     3. Follow setup to choose the installation folder.
 
-To update an existing installation in the same location, open **MaintenanceTool** from the
-installation folder and choose **Update components**.
+EasyDiffraction checks for updates at startup and hourly while it is open. To check on demand,
+open **Preferences → Updates** and select **Check now**.
 
-The application checks for updates at startup and hourly while it is open. **Notify about updates**
-opens a release-notes dialog when a newer release is found. You can also use **Check now** in Preferences.
-The red **Update** button appears at the bottom left whenever an update is available. Save your changes
-when prompted, then follow the maintenance tool. On the next launch, **What's new** shows the changes
-since your previous version.
+When a newer release is available, select the red **Update** button at the bottom left to
+review the release notes and start the update. **Notify about updates** also opens the notes
+automatically when a new version is found. The updater installs into your existing location.
+On the next launch, **What's new** shows the changes since your previous version.
 
 ## Open local projects
 
