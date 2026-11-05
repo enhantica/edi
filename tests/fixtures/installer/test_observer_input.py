@@ -17,9 +17,10 @@ SOURCE = r"""
 #include <QPointer>
 #include <QTimer>
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
 
-int probe(int argc, char** argv) {
+int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
     auto owner = std::make_unique<QObject>();
     QByteArray received;
@@ -67,14 +68,11 @@ int probe(int argc, char** argv) {
         {"active_at_end", active_at_end}, {"retired", retired}}).toJson(QJsonDocument::Compact);
     std::fwrite(report.constData(), 1, static_cast<std::size_t>(report.size()), stdout);
     std::fflush(stdout);
+    // The scan-cycle observer exits after emitting its final receipt.
+    if (argc > 1) std::_Exit(0);
     return 0;
 }
 
-int main(int argc, char** argv) {
-    const auto result = probe(argc, argv);
-    std::fputs("Qt application destroyed\n", stderr);
-    return result;
-}
 """
 
 
