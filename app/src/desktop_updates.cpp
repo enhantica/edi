@@ -119,7 +119,13 @@ QVariantList release_changes(const QByteArray& content, const QString& current, 
             text += QLatin1Char('\n');
         }
         if (text.isEmpty()) return {};
-        if (!upper || *key <= *upper) result.append(QVariantMap{{QStringLiteral("version"), version}, {QStringLiteral("date"), date}, {QStringLiteral("text"), text.trimmed()}});
+        if (!upper || *key <= *upper) {
+            QVariantMap entry{{QStringLiteral("version"), version},
+                              {QStringLiteral("date"), date},
+                              {QStringLiteral("text"), text.trimmed()}};
+            if (preview) entry.insert(QStringLiteral("preview"), true);
+            result.append(entry);
+        }
     }
     std::sort(result.begin(), result.end(), [](const QVariant& a, const QVariant& b) {
         return calendar_version(a.toMap().value(QStringLiteral("version")).toString()) >

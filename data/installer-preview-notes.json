@@ -1,13 +1,12 @@
 {
   "Added": [
-    "Choose whether to install the AI assistant.",
-    "See the release notes before starting an update."
+    "Read how to install and connect the AI assistant in the user guide."
   ],
   "Fixed": [
-    "Show the EasyDiffraction icon in the desktop app and installer."
+    "Keep the Linux installer commands inside the numbered setup instructions."
   ],
   "Changed": [
-    "Check for updates hourly and show available updates at the bottom left.",
-    "Suggest the system Applications folder on macOS."
+    "Track preview and stable What's New notices separately.",
+    "Use the in-app update flow in the desktop installation guide."
   ]
 }

@@ -26,6 +26,8 @@ AppDialog {
     property string seen: ""
     property bool showAll: false
     readonly property bool releaseHistory: days.length > 0 && !!days[0].version
+    readonly property bool previewHistory: releaseHistory && !!days[0].preview
+    readonly property string lastSeen: previewHistory ? Preferences.whatsNewPreviewSeen : releaseHistory ? Preferences.whatsNewReleaseSeen : Preferences.whatsNewSeen
     // The new days, or the newest one when nothing is new, so the dialog never opens empty.
     readonly property var newDays: {
         const unseen = days.filter(day => releaseHistory ? (seen === "" || DesktopUpdates.newerVersion(day.version, seen)) : day.date > seen);
@@ -36,8 +38,13 @@ AppDialog {
     // Keeps the newest date as seen, written to the settings file at once.
     function markSeen(date) {
         if (releaseHistory) {
-            Preferences.whatsNewReleaseSeen = date;
-            Preferences.whatsNewSettings.setValue("releaseSeen", date);
+            if (previewHistory) {
+                Preferences.whatsNewPreviewSeen = date;
+                Preferences.whatsNewSettings.setValue("previewSeen", date);
+            } else {
+                Preferences.whatsNewReleaseSeen = date;
+                Preferences.whatsNewSettings.setValue("releaseSeen", date);
+            }
             Preferences.whatsNewSettings.sync();
             return;
         }
@@ -54,9 +61,9 @@ AppDialog {
             return;
         days = all;
         const latest = releaseHistory ? all[0].version : all[0].date;
-        const previous = releaseHistory ? Preferences.whatsNewReleaseSeen : Preferences.whatsNewSeen;
+        const previous = lastSeen;
         if (previous === "") {
-            if (releaseHistory && Preferences.whatsNewSeen !== "")
+            if (releaseHistory && (Preferences.whatsNewSeen !== "" || previewHistory && Preferences.whatsNewReleaseSeen !== ""))
                 dialog.open();
             else
                 dialog.markSeen(latest);
@@ -92,7 +99,7 @@ AppDialog {
 
     onAboutToShow: {
         days = updateMode ? DesktopUpdates.availableChanges : ApplicationInfo.changes();
-        seen = releaseHistory ? Preferences.whatsNewReleaseSeen : Preferences.whatsNewSeen;
+        seen = lastSeen;
         showAll = false;
     }
     // As soon as closing starts, which a close before the opening has finished also does.

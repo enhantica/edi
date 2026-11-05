@@ -52,6 +52,7 @@ QtObject {
     // The newest changelog date the user has seen in What's new (edi ADR-0067), empty before the first start.
     property string whatsNewSeen: ""
     property string whatsNewReleaseSeen: ""
+    property string whatsNewPreviewSeen: ""
     property bool updateNotifications: true
     Component.onCompleted: RunLog.level = loggingLevel
     // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
@@ -113,6 +114,7 @@ QtObject {
         category: "WhatsNew"
         property alias seen: preferences.whatsNewSeen
         property alias releaseSeen: preferences.whatsNewReleaseSeen
+        property alias previewSeen: preferences.whatsNewPreviewSeen
     }
 
     // ADR-0031: the Appearance tab's colour scheme, and the Projects tab's defaults for new projects.
