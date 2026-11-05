@@ -15,7 +15,9 @@ own earlier compiler boundary already demonstrated the need for a shared text se
 ## Decision
 
 All product resource families use one CMake byte serializer. Generate constant, NUL-terminated char
-arrays from explicit hexadecimal byte escapes with bounded source lines. Every stored byte is
+arrays from explicit hexadecimal byte escapes with bounded source lines. File resources are read
+as HEX directly from disk: CMake text reads normalize CRLF before a subsequent string conversion.
+Only validated in-memory identity/hash metadata uses the TEXT mode. Every stored byte is
 independent of source encoding, raw-string delimiters and single/concatenated string-literal limits.
 Keep the original pointer-based interfaces and explicit byte lengths for string views. Storage is
 immutable with static lifetime and constant initialization; no runtime joining, allocation or file
@@ -28,7 +30,7 @@ full product build exists. Existing assistant consumers continue through their o
 The early installer check invokes the actual production CMake generator with large UTF-8 inputs
 for every resource family, compiles all generated translation units, checks bounded source tokens
 and lines, and compares every exposed byte against the original input. Include quotes, backslashes,
-newlines and multibyte characters. The Windows runner uses its real compiler; output uses binary
+mixed LF/CRLF/bare-CR bytes, raw-string delimiter text and multibyte characters. The Windows runner uses its real compiler; output uses binary
 mode so newline conversion cannot disguise a serializer defect. Keep the observed old compiler
 failure and the expected-red lexical boundary. New generated families join the same compile sweep.
 

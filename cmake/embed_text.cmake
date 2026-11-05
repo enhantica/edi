@@ -1,10 +1,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Byte-preserving product text without compiler-sized string literals (ADR-0074).
-function(edi_embed_text name contents)
-    if(NOT name MATCHES "^[A-Za-z_][A-Za-z0-9_]*$")
-        message(FATAL_ERROR "Invalid embedded text storage name")
+function(edi_embed_text name mode input)
+    if(NOT name MATCHES "^[A-Za-z_][A-Za-z0-9_]*$" OR NOT mode MATCHES "^(FILE|TEXT)$")
+        message(FATAL_ERROR "Invalid embedded text declaration")
     endif()
-    string(HEX "${contents}" bytes)
+    if(mode STREQUAL "FILE")
+        file(READ "${input}" bytes HEX)
+    else()
+        string(HEX "${input}" bytes)
+    endif()
     string(LENGTH "${bytes}" hex_length)
     math(EXPR length "${hex_length} / 2")
     set(declaration "static const char ${name}[] = {\n")

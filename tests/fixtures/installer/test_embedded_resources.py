@@ -13,7 +13,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 PALETTES = ['earth', 'classic', 'soft', 'natural', 'colour-blind-safe']
 MAPS = ['viridis', 'batlow', 'inferno', 'lapaz', 'greys']
-PAYLOAD = ('Å測定; quotes " and backslash \\; newline\n' * 1800).encode()
+PAYLOAD = ('Å測定; quotes " and backslash \\; newline\npaired\r\nbare\r' * 1800).encode()
 
 
 @pytest.fixture(scope='module')
@@ -28,7 +28,7 @@ def generated(tmp_path_factory):
         shutil.copy2(path, templates / path.name)
     inputs = {
         'data/elements/element-styles.tsv': PAYLOAD + b'elements',
-        'data/report/report.js': PAYLOAD + b'report',
+        'data/report/report.js': PAYLOAD + b'report )edi_report_js"',
         'data/assistant/openai-capabilities.json': PAYLOAD + b'capabilities',
         **{f'data/palettes/{name}.tsv': PAYLOAD + name.encode() for name in PALETTES},
         **{f'data/colormaps/{name}.tsv': PAYLOAD + name.encode() for name in MAPS},
