@@ -6,7 +6,6 @@ import hashlib
 import json
 import re
 import subprocess
-import tempfile
 from pathlib import Path
 
 from plan import markdown_note, note_interfaces
@@ -116,29 +115,21 @@ def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str
     if existing is None:
         if optional_api(repo, f'git/ref/tags/{tag}') is not None:
             raise ValueError('Release tag already exists')
-        with tempfile.TemporaryDirectory() as temporary:
-            notes_file = Path(temporary) / 'notes.md'
-            notes_file.write_text(notes, encoding='utf-8')
-            subprocess.run(
-                [
-                    *command,
-                    'create',
-                    tag,
-                    '--repo',
-                    repo,
-                    '--draft',
-                    '--prerelease',
-                    '--latest=false',
-                    '--target',
-                    release['commit'],
-                    '--title',
-                    title,
-                    '--notes-file',
-                    str(notes_file),
-                ],
-                check=True,
+        payload = {
+            'tag_name': tag,
+            'target_commitish': release['commit'],
+            'name': title,
+            'body': notes,
+            'draft': True,
+            'prerelease': True,
+            'make_latest': 'false',
+        }
+        existing = json.loads(
+            subprocess.check_output(
+                ['gh', 'api', '--method', 'POST', f'repos/{repo}/releases', '--input', '-'],
+                input=json.dumps(payload).encode(),
             )
-        existing = read_release()
+        )
     assets = {path.name: digest for path, digest in archives}
 
     def verified_assets(metadata, *, replace_draft_assets=False):
@@ -156,7 +147,7 @@ def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str
             if path.name in existing_names:
                 upload.append('--clobber')
             subprocess.run(upload, check=True)
-    verified = read_release()
+    verified = optional_api(repo, f'releases/{existing["id"]}')
     if verified_assets(verified) != set(assets):
         raise RuntimeError('Uploaded release assets could not be verified')
     print(verified['html_url'])
