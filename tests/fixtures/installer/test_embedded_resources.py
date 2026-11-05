@@ -35,15 +35,21 @@ def generated(tmp_path_factory):
     }
     skill = PAYLOAD + b'skill'
     digest = hashlib.sha256(skill).hexdigest()
+    extra = PAYLOAD + b'another skill'
+    extra_digest = hashlib.sha256(extra).hexdigest()
     index = json.dumps(
         {
             'padding': PAYLOAD.decode(),
-            'skills': [{'id': 'fixture', 'path': 'fixture/SKILL.md', 'sha256': digest}],
+            'skills': [
+                {'id': 'fixture', 'path': 'fixture/SKILL.md', 'sha256': digest},
+                {'id': 'extra-fixture', 'path': 'extra-fixture/SKILL.md', 'sha256': extra_digest},
+            ],
         },
         ensure_ascii=False,
     ).encode()
     inputs['data/assistant/skills/index.json'] = index
     inputs['data/assistant/skills/fixture/SKILL.md'] = skill
+    inputs['data/assistant/skills/extra-fixture/SKILL.md'] = extra
     for name, data in inputs.items():
         path = source / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -58,6 +64,9 @@ def generated(tmp_path_factory):
         'edi::assistant::detail::skill_resource_data()[0].id',
         'edi::assistant::detail::skill_resource_data()[0].sha256',
         'edi::assistant::detail::skill_resource_data()[0].content',
+        'edi::assistant::detail::skill_resource_data()[1].id',
+        'edi::assistant::detail::skill_resource_data()[1].sha256',
+        'edi::assistant::detail::skill_resource_data()[1].content',
     ]
     expected = [
         inputs['data/elements/element-styles.tsv'],
@@ -69,6 +78,9 @@ def generated(tmp_path_factory):
         b'fixture',
         digest.encode(),
         skill,
+        b'extra-fixture',
+        extra_digest.encode(),
+        extra,
     ]
     cases = '\n'.join(f'case {i}: value = {value}; break;' for i, value in enumerate(expressions))
     (source / 'main.cpp').write_text(
@@ -80,7 +92,7 @@ def generated(tmp_path_factory):
         'namespace edi::assistant::detail { std::string_view openai_capabilities_data(); }\n'
         'int main(int argc, char** argv) {\n'
         '#ifdef _WIN32\n_setmode(_fileno(stdout), _O_BINARY);\n#endif\n'
-        'if(argc != 2) return 1;\n'
+        'if(argc != 2 || edi::assistant::detail::skill_resource_data().size() != 2) return 1;\n'
         'if(edi::assistant::detail::skill_resource_data().data() != '
         'edi::assistant::detail::skill_resource_data().data()) return 2;\n'
         'std::string_view value;\nswitch(std::atoi(argv[1])) {\n'
