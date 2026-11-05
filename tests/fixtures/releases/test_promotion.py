@@ -49,6 +49,16 @@ def test_cli_delivery_requires_the_executed_identity_and_unchanged_zip(tmp_path)
         PROMOTE.validate_cli(tmp_path, version, commit, platform)
 
 
+def test_preview_notes_use_canonical_interfaces_and_recover_early_cli_drafts():
+    notes = json.loads((ROOT / 'data/installer-preview-notes.json').read_text(encoding='utf-8'))
+    assert all(PLAN.note_interfaces(entry) for entries in notes.values() for entry in entries)
+    expected = PREVIEW._preview_notes({'notes': notes})
+    cli = next(entry for entry in notes['Added'] if entry['interfaces'] == ['cli-standalone'])
+    cli['interfaces'] = ['cli']
+    assert PREVIEW._preview_notes({'notes': notes}) == expected
+    assert cli['interfaces'] == ['cli']
+
+
 @pytest.mark.parametrize('damage', ['none', 'branch', 'workflow', 'job', 'attempt', 'expired'])
 def test_promotion_requires_every_platform_from_one_successful_main_attempt(damage):
     run = {

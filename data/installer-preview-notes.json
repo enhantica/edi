@@ -2,7 +2,7 @@
   "Added": [
     {
       "title": "Refine projects with a standalone edi command for macOS, Windows and Linux.",
-      "interfaces": ["cli"]
+      "interfaces": ["cli-standalone"]
     }
   ],
   "Fixed": [

@@ -88,7 +88,11 @@ def _preview_notes(release: dict) -> str:
             if notes:
                 notes.append('')
             notes.extend([f'## {group}', ''])
-            for entry in entries:
+            for recorded_entry in entries:
+                entry = recorded_entry
+                # Early CLI previews embedded the display label instead of the identifier.
+                if entry.get('interfaces') == ['cli']:
+                    entry = {**entry, 'interfaces': ['cli-standalone']}
                 if not note_interfaces(entry):
                     raise ValueError('Every preview release note needs an interface')
                 notes.append(markdown_note(entry))
