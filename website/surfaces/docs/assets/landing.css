@@ -16,6 +16,7 @@
 .ed-landing {
   display: grid;
   grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
+  --ed-hero-copy-gap: 1.4rem;
   --ed-hero-gap: clamp(1.5rem, 3.2vw, 3.2rem);
   box-sizing: border-box;
   width: calc(100% + max(0px, (100vw - 61rem) / 2 - 1rem));
@@ -53,7 +54,7 @@
 }
 .ed-landing .ed-landing__intro {
   max-width: 27em;
-  margin-block: 1.4rem 0;
+  margin-block: var(--ed-hero-copy-gap) 0;
   color: var(--md-default-fg-color--light);
   font-size: .95rem;
   line-height: 1.7;
@@ -68,28 +69,33 @@
   margin: 0;
 }
 .ed-landing__interfaces {
-  margin: 0 0 1.15rem;
+  margin: 0 0 var(--ed-hero-copy-gap);
 }
 .ed-landing__interfaces p {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: .65rem .65rem;
+  gap: .36rem;
   margin: 0;
 }
-.ed-landing__interfaces a {
+.md-typeset .ed-landing__interfaces a {
   display: inline-flex;
   align-items: center;
   gap: .3em;
-  color: var(--md-default-fg-color--light);
+  padding: .24rem .51rem;
+  border-radius: 999px;
+  background: var(--md-default-fg-color);
+  color: var(--md-default-bg-color);
   font-size: .65rem;
+  line-height: 1.25;
   font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
 }
-.ed-landing__interfaces a:hover,
-.ed-landing__interfaces a:focus-visible {
-  color: var(--md-primary-fg-color);
+.md-typeset .ed-landing__interfaces a:hover,
+.md-typeset .ed-landing__interfaces a:focus-visible {
+  background: var(--md-primary-fg-color);
+  color: var(--md-default-bg-color);
   text-decoration: none;
 }
 .ed-landing__interfaces .twemoji {
@@ -146,6 +152,7 @@
 }
 @media (max-width: 30rem) {
   .ed-landing {
+    --ed-hero-copy-gap: 1.1rem;
     gap: 2rem;
     padding-block: 2.2rem;
   }
@@ -153,7 +160,6 @@
     font-size: clamp(1.8rem, 8.4vw, 2.2rem);
   }
   .ed-landing .ed-landing__intro {
-    margin-top: 1.1rem;
     font-size: .85rem;
     line-height: 1.65;
   }
@@ -163,7 +169,7 @@
   .ed-landing__actions .md-button {
     flex: 1 1 8rem;
   }
-  .ed-landing__interfaces a {
+  .md-typeset .ed-landing__interfaces a {
     font-size: .75rem;
   }
 }

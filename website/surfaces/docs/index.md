@@ -24,14 +24,14 @@ hide:
 
 # Making <span class="ed-landing__accent">diffraction</span><br>data analysis and<br>modelling <span class="ed-landing__accent">easy</span> { #landing-heading }
 
-<p class="ed-landing__intro">Calculate diffraction patterns, refine your structural model and understand your results. Try it directly in your browser.</p>
+<p class="ed-landing__intro">Calculate diffraction patterns, refine your structural model and understand your results. The desktop app also offers an optional AI assistant to guide refinements.</p>
 
 </div>
 
 <div class="ed-landing__actions" markdown>
 
 [Try the web app](https://enhantica.github.io/edi/webapp/){ .md-button .md-button--primary }
-[Get started](user-guide/index.md){ .md-button }
+[Learn more](user-guide/index.md){ .md-button }
 
 </div>
 
