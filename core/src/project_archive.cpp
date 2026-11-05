@@ -23,10 +23,7 @@
 
 #if defined(_WIN32)
 #include <process.h>
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
+#include "windows_sdk.hpp"
 #else
 #include <unistd.h>
 #include <fcntl.h>

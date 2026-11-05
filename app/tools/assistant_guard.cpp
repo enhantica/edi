@@ -12,10 +12,7 @@
 #include <mutex>
 #include <thread>
 #ifdef Q_OS_WIN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
+#include "../../core/src/windows_sdk.hpp"
 #include <tlhelp32.h>
 #include <io.h>
 #include <fcntl.h>

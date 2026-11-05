@@ -43,10 +43,7 @@
 #include <stdio.h>
 #endif
 #elif defined(Q_OS_WIN)
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
+#include "../../core/src/windows_sdk.hpp"
 #include <io.h>
 #endif
 

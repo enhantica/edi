@@ -223,3 +223,11 @@ An early native probe includes the actual SDK after standard headers and compile
 numeric limits and chrono maximum calls under the production policy. On Windows, a deliberate
 unguarded-SDK control must fail compilation. This uses no engine, GUI, service or network and runs
 before the expensive build. The resource compiler fixture consumes that same policy.
+
+
+The private Windows SDK include boundary also removes GDI's object-like ERROR macro before
+product declarations or fit-status uses. Every direct SDK include in core, app and the process
+guard uses that boundary; the early compiler check consumes the real status enum with both header
+orders. Its declaration moves unchanged into an engine-independent public header, still included
+by the original model header, so this check runs before acquiring the engine. This extends the shared native compiler policy rather than renaming the product status
+or applying a platform-specific fitting result.
