@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SOURCE = r"""
 #include "test_observer_input.hpp"
 #include <QCoreApplication>
+#include <QEvent>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
@@ -47,10 +48,15 @@ int main(int argc, char** argv) {
 #endif
     bool retired = false;
     if (argc > 1) {
+        std::fputs("retiring receiver\n", stderr);
         QPointer<QObject> input(owner->children().at(0));
+        bool delivered = false;
+        QMetaObject::invokeMethod(input, [&] { delivered = true; }, Qt::QueuedConnection);
         owner.reset();
-        retired = input.isNull();
-        QCoreApplication::processEvents();
+        std::fputs("receiver destroyed\n", stderr);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
+        retired = input.isNull() && !delivered;
+        std::fputs("queued delivery checked\n", stderr);
     } else {
         app.exec();
     }
@@ -100,18 +106,20 @@ def test_pipe_preserves_every_byte_and_stops_at_eof(binary):
 
 
 def test_retired_receiver_cannot_consume_input_or_eof(binary):
-    read_fd, write_fd = os.pipe()
-    try:
+    with subprocess.Popen(
+        [str(binary), 'retire'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ) as process:
         try:
-            os.write(write_fd, b'late command\n')
-        finally:
-            os.close(write_fd)
-        result = subprocess.run(
-            [str(binary), 'retire'], stdin=read_fd, capture_output=True, check=True, timeout=10
-        )
-    finally:
-        os.close(read_fd)
-    assert json.loads(result.stdout) == {
+            stdout, stderr = process.communicate(timeout=10)
+        except subprocess.TimeoutExpired as error:
+            process.kill()
+            _, stderr = process.communicate()
+            pytest.fail(f'Retirement probe timed out: {stderr!r} ({error})')
+        assert process.returncode == 0, stderr
+    assert json.loads(stdout) == {
         'bytes': '',
         'closed': 0,
         'active_at_end': False,
