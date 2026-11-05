@@ -1,13 +1,13 @@
 # Native reference and browser invocation
 
-`native.json` and `native-report.txt` were captured by `generate.py` on 2026-10-04 using the native
-`python -m edi fit ... --dry --report machine --verbosity full`. The input is the committed
-`docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project`; its ordered path/content SHA-256 binds the input.
-The fixture records the native extension's actual embedded build commit and binary SHA-256. The native
-artifact was reused from the installed Linux edi environment with the Python package from its embedded
-build commit, copied into isolated scratch, and never rebuilt or overwritten. This is a native-versus-wasm oracle, not a claim about CI or the current GUI build.
-The new capture updates the input hash after edits to its README and metadata title. Fitted parameters
-and reduced chi-square are unchanged; only elapsed times differ in the report.
+`native.json` and `native-report.txt` were refreshed by `generate.py` using
+`python -m edi fit ... --dry --report machine --verbosity full` after the example
+adopted the Shift/s.u. stopping rule. The input is the committed
+`docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project`. Its ordered path/content
+SHA-256 binds every file. The fixture records the native extension's embedded
+build commit and binary SHA-256. The previous reference remains in Git history
+with the input it measured. This reference comes from the native CLI and serves
+both ordinary and size-optimized WebAssembly comparisons.
 The reference report's numeric formatting has ten significant digits; the declared relative comparison
 bound is 1e-9, with a 1e-11 absolute floor. Every free fitted parameter, terminal status, convergence and
 reduced chi-square belongs to the comparison; elapsed times and exact iteration histories do not.
