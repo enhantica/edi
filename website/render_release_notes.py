@@ -12,17 +12,29 @@ INTERFACES = json.loads(
         encoding='utf-8'
     )
 )
-NOTE = re.compile(r'^(- )<!-- interfaces: ([a-z,-]+) --> (.+)$', re.MULTILINE)
+NOTE = re.compile(r'^(- .+?) <!-- interfaces: ([a-z,-]+) -->[ \t]*$', re.MULTILINE)
+LEGACY_NOTE = re.compile(r'^(- )<!-- interfaces: ([a-z,-]+) --> (.+)$', re.MULTILINE)
+
+
+def _pills(interfaces: list[str]) -> str:
+    return ' '.join(
+        f'**:{icon}: {label}**{{ .ed-release-interface }}'
+        for icon, label in (INTERFACES[interface] for interface in interfaces)
+    )
 
 
 def _label_note(match: re.Match[str]) -> str:
-    labels = []
+    interfaces = match[2].split(',')
+    labels = ' '.join(f'`{INTERFACES[interface][1]}`' for interface in interfaces)
+    return match[1].removesuffix(' ' + labels) + ' ' + _pills(interfaces)
+
+
+def _label_legacy_note(match: re.Match[str]) -> str:
+    interfaces = match[2].split(',')
     text = match[3]
-    for interface in match[2].split(','):
-        icon, label = INTERFACES[interface]
-        text = text.removeprefix(f'`{label}` ')
-        labels.append(f'**:{icon}: {label}**{{ .ed-release-interface }}')
-    return match[1] + ' '.join(labels) + ' ' + text
+    for interface in interfaces:
+        text = text.removeprefix(f'`{INTERFACES[interface][1]}` ')
+    return match[1] + text + ' ' + _pills(interfaces)
 
 
 def render(pages: list[list[dict]]) -> str:
@@ -40,7 +52,8 @@ def render(pages: list[list[dict]]) -> str:
         title = escape(release['name'] or release['tag_name'])
         date = release['published_at'][:10]
         channel = 'Prerelease' if release['prerelease'] else 'Stable'
-        body = NOTE.sub(_label_note, release['body'] or '').strip()
+        body = NOTE.sub(_label_note, release['body'] or '')
+        body = LEGACY_NOTE.sub(_label_legacy_note, body).strip()
         # Keep release headings subordinate to the version heading in the page outline.
         body = re.sub(r'^#{1,2}(?= )', '###', body, flags=re.MULTILINE)
         sections.extend([
@@ -50,5 +63,11 @@ def render(pages: list[list[dict]]) -> str:
             '---',
         ])
     if not releases:
-        sections.append('No releases have been published yet.')
+        sections.extend([
+            'No releases have been published yet.',
+            '## Release note example',
+            'These example notes show how affected interfaces will appear.',
+            '- Improve plot zoom. ' + _pills(['desktop', 'web']) + '\n'
+            '- Read project metadata from a script or notebook. ' + _pills(['python']),
+        ])
     return '\n\n'.join(sections).removesuffix('\n\n---') + '\n'

@@ -42,7 +42,8 @@ def test_interface_labels_render_once():
     release = plan_with_labels('[interface] web', '[interface] desktop')
     assert release['notes']['Fixed'][0]['interfaces'] == ['desktop', 'web']
     github = PLAN.markdown_notes(release)
-    assert '`Desktop app` `Web app` Improve plot zoom' in github
+    assert 'Improve plot zoom' in github
+    assert github.rstrip().endswith('`Desktop app` `Web app` <!-- interfaces: desktop,web -->')
     published = {
         'draft': False,
         'prerelease': True,
@@ -57,6 +58,7 @@ def test_interface_labels_render_once():
     assert ':lucide-globe: Web app' in page
     assert '`Desktop app`' not in page
     assert 'Private draft' not in page
+    assert page.index('Improve plot zoom') < page.index(':lucide-monitor: Desktop app')
 
 
 def test_notes_without_interfaces_keep_their_existing_text():

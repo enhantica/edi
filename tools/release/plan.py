@@ -198,13 +198,13 @@ def markdown_note(entry: dict) -> str:
     title = entry['title']
     for character in ['\\', '`', '*', '_', '[', ']', '<', '>']:
         title = title.replace(character, '\\' + character)
-    interfaces = note_interfaces(entry)
-    if interfaces:
-        labels = ' '.join(f'`{INTERFACES[key][1]}`' for key in interfaces)
-        title = f'<!-- interfaces: {",".join(interfaces)} --> {labels} {title}'
     if 'pull_request' in entry:
         number = entry['pull_request']
         title += f' ([#{number}](https://github.com/enhantica/edi/pull/{number}))'
+    interfaces = note_interfaces(entry)
+    if interfaces:
+        labels = ' '.join(f'`{INTERFACES[key][1]}`' for key in interfaces)
+        title += f' {labels} <!-- interfaces: {",".join(interfaces)} -->'
     return '- ' + title
 
 
