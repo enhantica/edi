@@ -49,12 +49,11 @@ def merged_requests(repo: str) -> list[dict]:
         'gh',
         'api',
         '--paginate',
-        '--slurp',
         f'repos/{repo}/pulls?state=closed&per_page=100',
         '--jq',
-        '[.[][] | {number,title,merged_at,merge_commit_sha,labels:[.labels[].name]}]',
+        '.[] | {number,title,merged_at,merge_commit_sha,labels:[.labels[].name]}',
     ])
-    return json.loads(content)
+    return [json.loads(line) for line in content.splitlines()]
 
 
 def prepare(repo: str, source: str, output: Path, today: datetime.date) -> dict:

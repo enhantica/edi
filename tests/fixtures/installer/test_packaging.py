@@ -179,11 +179,7 @@ def test_deployment_gate_rejects_runtime_byte_or_membership_changes(tmp_path, da
     build = importlib.util.module_from_spec(spec)
     with mock.patch.dict(sys.modules, {'package': PACKAGE, 'audit': AUDIT}):
         spec.loader.exec_module(build)
-    root = tmp_path / (
-        'EasyDiffraction.app/Contents/libexec/edi/codex'
-        if PACKAGE.SYSTEM == 'macos'
-        else 'libexec/edi/codex'
-    )
+    root = tmp_path / 'libexec/edi/codex'
     root.mkdir(parents=True)
     member = root / 'helper'
     member.write_bytes(b'upstream bytes')
