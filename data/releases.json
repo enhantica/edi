@@ -1,4 +1,5 @@
 {
   "schema": "edi.releases/1",
+  "baseline_commit": "150bd94009ff788f1eb4fd5a62af00223d46b86f",
   "releases": []
 }

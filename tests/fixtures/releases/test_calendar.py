@@ -109,7 +109,9 @@ def test_cmake_embeds_the_selected_calendar_identity(tmp_path, version):
     assert 'return "' + version + '";' in output.read_text()
 
 
-@pytest.mark.parametrize('version', ['2026.13.0', '2026.1.0', '2026.11.01', '0000.11.0', 'bad"version'])
+@pytest.mark.parametrize(
+    'version', ['2026.13.0', '2026.1.0', '2026.11.01', '0000.11.0', 'bad"version']
+)
 def test_invalid_release_identity_cannot_generate_cpp(tmp_path, version):
     output = tmp_path / 'version.cpp'
     result = subprocess.run(
@@ -127,3 +129,16 @@ def test_invalid_release_identity_cannot_generate_cpp(tmp_path, version):
     )
     assert result.returncode != 0
     assert not output.exists()
+
+
+def test_persisted_history_validates_note_groups_dates_and_identities():
+    release = make_plan()
+    history = {'schema': 'edi.releases/1', 'baseline_commit': 'b' * 40, 'releases': [release]}
+    PLAN.validate_history(history)
+    for changed in [
+        {**release, 'date': '2026-02-31'},
+        {**release, 'commit': 'unknown'},
+        {**release, 'notes': {'Fixed': []}},
+    ]:
+        with pytest.raises(ValueError, match=r'date|format|identities|groups'):
+            PLAN.validate_history({**history, 'releases': [changed]})

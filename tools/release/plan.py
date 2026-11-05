@@ -42,6 +42,51 @@ def check_title(title: str) -> str:
     return title
 
 
+def validate_history(history: dict) -> None:
+    """Validate persisted release identities and note entries before building a distribution."""
+    if (
+        not isinstance(history, dict)
+        or history.get('schema') != 'edi.releases/1'
+        or not isinstance(history.get('releases'), list)
+    ):
+        raise ValueError('Unknown release-history schema')
+    if not re.fullmatch(r'[0-9a-f]{40}', history.get('baseline_commit', '')):
+        raise ValueError('Release history requires the complete baseline commit')
+    versions, commits = set(), set()
+    for release in history['releases']:
+        version = version_key(release['version'])
+        commit = release['commit']
+        if not re.fullmatch(r'[0-9a-f]{40}', commit) or version in versions or commit in commits:
+            raise ValueError('Release identities must be unique and source-bound')
+        versions.add(version)
+        commits.add(commit)
+        try:
+            date = datetime.date.fromisoformat(release['date'])
+        except ValueError as error:
+            raise ValueError('Release date is invalid') from error
+        if date.isoformat() != release['date']:
+            raise ValueError('Release dates must use ISO format')
+        notes = release['notes']
+        if (
+            not isinstance(notes, dict)
+            or set(notes) != {'Added', 'Fixed', 'Changed'}
+            or not any(notes.values())
+        ):
+            raise ValueError('Release notes require the declared user-facing groups')
+        for entries in notes.values():
+            if not isinstance(entries, list):
+                raise TypeError('Release-note groups must contain entries')
+            for entry in entries:
+                if (
+                    len(check_title(entry['title'])) > 512
+                    or type(entry['pull_request']) is not int
+                    or entry['pull_request'] <= 0
+                ):
+                    raise ValueError(
+                        'Release-note entries require a title and pull request number'
+                    )
+
+
 def release_plan(
     pull_requests: list[dict],
     releases: list[dict],
@@ -138,8 +183,7 @@ def main() -> None:
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     history = json.loads(args.history.read_text(encoding='utf-8'))
-    if history['schema'] != 'edi.releases/1':
-        raise ValueError('Unknown release-history schema')
+    validate_history(history)
     release = release_plan(
         json.loads(args.pull_requests.read_text(encoding='utf-8')),
         history['releases'],

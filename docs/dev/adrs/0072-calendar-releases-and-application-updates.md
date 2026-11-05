@@ -100,3 +100,11 @@ builds, and includes skipped releases through the running version. The first num
 legacy dated installation shows numbered history; a fresh install records its current release without
 an automatic popup. Manual access and Show all changes remain available. Release titles are escaped
 before Markdown display.
+
+The read-only Prepare calendar release workflow collects the latest published history asset and only
+merged PR metadata whose merge commit is in the candidate's ancestry range. The first calendar history
+starts at the existing main commit recorded in `data/releases.json`; older dated notes remain available
+in legacy builds. Authentication/server errors do not become an empty first-release history. Prepared
+artifacts contain the chosen release, complete history and Markdown notes; no tag or release is created.
+Installer jobs run these offline release-policy fixtures and the engine's small native portability
+fixtures before the full source build.

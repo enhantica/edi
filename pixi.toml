@@ -240,7 +240,7 @@ CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
 [feature.app.tasks]
 app-test-updates = { cmd = "cmake --build build/app --target edi_desktop_update_tests -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_desktop_update_tests", depends-on = ["app-build"] }
-release-check = "python -m pytest tests/fixtures/releases/test_calendar.py --noconftest -o addopts= -q"
+release-check = "python -m pytest tests/fixtures/releases --noconftest -o addopts= -q"
 installer-check = "python -m pytest tests/fixtures/installer/test_packaging.py --noconftest -o addopts= -q"
 # Build the app host into build/app (crysta first, through the same build-crysta.sh the core uses). Each app
 # step below builds first when run on its own (an incremental build, every time); a full sequence builds once

@@ -1,0 +1,30 @@
+name: Prepare calendar release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Prepare the source-bound identity and user notes
+        run: python tools/release/prepare.py --repo "$GITHUB_REPOSITORY" --output release-plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload the release inputs for review and qualification
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-plan
+          path: release-plan
+          if-no-files-found: error
+          retention-days: 90

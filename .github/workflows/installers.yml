@@ -11,7 +11,7 @@ on:
       crysta_commit:
         description: Exact crysta source commit to build before edi
         required: true
-        default: 143470244bc907b0ceee7a1bface2550c62ba762
+        default: b86c9796b70b79802d37e92ca94b491dbc56d043
         type: string
   push:
     paths:
@@ -76,6 +76,8 @@ jobs:
         uses: ./.github/actions/setup-pixi
         with:
           manifest-path: tools/installer/pixi.toml
+      - name: Validate calendar release policy offline
+        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/releases" --noconftest -o addopts= -q
       - name: Acquire the pinned Qt Installer Framework
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
       - name: Check installer transport before building the application
@@ -93,13 +95,15 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: enhantica/crysta
-          ref: ${{ inputs.crysta_commit || '143470244bc907b0ceee7a1bface2550c62ba762' }}
+          ref: ${{ inputs.crysta_commit || 'b86c9796b70b79802d37e92ca94b491dbc56d043' }}
           token: ${{ steps.crysta-token.outputs.token }}
           path: .crysta
           persist-credentials: false
       - name: Set up the Windows compiler
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+      - name: Check engine compiler portability before the full build
+        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/.crysta/tests/fixtures/embedded_text" "${{ github.workspace }}/.crysta/tests/fixtures/space_group_swap" --noconftest -o addopts= -q
       - name: Build crysta, edi and its runtime bundle
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
       - name: Create the offline qualification installer
