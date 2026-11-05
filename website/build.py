@@ -370,12 +370,16 @@ def main() -> None:
         shutil.rmtree(output)
     changelog = ROOT / 'surfaces/docs/changelog.md'
     desktop = ROOT / 'surfaces/docs/application/desktop.md'
-    originals = {path: path.read_text(encoding='utf-8') for path in (changelog, desktop)}
+    cli = ROOT / 'surfaces/docs/cli/standalone.md'
+    originals = {path: path.read_text(encoding='utf-8') for path in (changelog, desktop, cli)}
     try:
         if args.github_releases:
             releases = json.loads(args.github_releases.read_bytes())
             changelog.write_text(render_release_notes(releases), encoding='utf-8')
             desktop.write_text(render_downloads(originals[desktop], releases), encoding='utf-8')
+            cli.write_text(
+                render_downloads(originals[cli], releases, kind='cli'), encoding='utf-8'
+            )
         for name in names:
             _build_concept(name, shared_controls, args.base_url, output)
     finally:

@@ -25,8 +25,28 @@ with mock.patch.dict(sys.modules, {'plan': PLAN}):
     PREPARE = module('prepare')
     with mock.patch.dict(sys.modules, {'prepare': PREPARE}):
         PUBLISH = module('publish_assets')
-    with mock.patch.dict(sys.modules, {'publish_assets': PUBLISH}):
+    with mock.patch.dict(sys.modules, {'publish_assets': PUBLISH, 'promote': PROMOTE}):
         PREVIEW = module('preview_draft')
+
+
+def test_cli_delivery_requires_the_executed_identity_and_unchanged_zip(tmp_path):
+    version, commit, platform = '2026.11.4', 'a' * 40, 'linux-x86_64'
+    assert PROMOTE.validate_cli(tmp_path, version, commit, platform) is None
+    archive = tmp_path / f'EasyDiffraction-{version}-{platform}-cli.zip'
+    archive.write_bytes(b'qualified zip')
+    evidence = {
+        'passed': True,
+        'version': version,
+        'commit': commit,
+        'platform': platform,
+        'zip': archive.name,
+        'sha256': PROMOTE.digest(archive),
+    }
+    (tmp_path / 'cli-qualification.json').write_text(json.dumps(evidence), encoding='utf-8')
+    assert PROMOTE.validate_cli(tmp_path, version, commit, platform) == archive
+    archive.write_bytes(b'different zip')
+    with pytest.raises(ValueError, match='CLI identity or ZIP bytes differ'):
+        PROMOTE.validate_cli(tmp_path, version, commit, platform)
 
 
 @pytest.mark.parametrize('damage', ['none', 'branch', 'workflow', 'job', 'attempt', 'expired'])

@@ -100,7 +100,9 @@ def test_desktop_downloads_link_only_published_platform_assets():
             'assets': [
                 {
                     'state': 'uploaded',
-                    'browser_download_url': f'{base}/EasyDiffraction-{version}-{platform}-online.zip',
+                    'browser_download_url': (
+                        f'{base}/EasyDiffraction-{version}-{platform}-online.zip'
+                    ),
                 }
                 for platform in platforms
             ],
@@ -117,3 +119,29 @@ def test_desktop_downloads_link_only_published_platform_assets():
     page = downloads.render(source, [[preview, draft, stable]])
     assert 'Latest version 2026.10.2 (5 Nov 2026)' in page
     assert 'EasyDiffraction-2026.10.2-windows-x86_64-online.zip' in page
+
+
+def test_standalone_downloads_select_only_published_cli_zips():
+    downloads = load('website/render_downloads.py')
+    root = Path(__file__).resolve().parents[3]
+    source = (root / 'website/surfaces/docs/cli/standalone.md').read_text(encoding='utf-8')
+    base = 'https://github.com/enhantica/edi/releases/download/v2026.11.4/'
+    release = {
+        'tag_name': 'v2026.11.4',
+        'published_at': '2026-11-05T11:30:00Z',
+        'draft': True,
+        'prerelease': True,
+        'assets': [
+            {'state': 'uploaded', 'browser_download_url': base + name}
+            for name in (
+                'EasyDiffraction-2026.11.4-linux-x86_64-cli.zip',
+                'EasyDiffraction-2026.11.4-windows-x86_64-online.zip',
+            )
+        ],
+    }
+    assert downloads.render(source, [[release]], kind='cli') == source
+    release['draft'] = False
+    page = downloads.render(source, [[release]], kind='cli')
+    assert 'Latest version 2026.11.4 (5 Nov 2026)' in page
+    assert base + 'EasyDiffraction-2026.11.4-linux-x86_64-cli.zip' in page
+    assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page

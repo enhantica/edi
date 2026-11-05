@@ -18,19 +18,5 @@
       "requirements": "Ubuntu 24.04+ · x86-64",
       "artifact_platform": "linux-x86_64"
     }
-  ],
-  "command-line": [
-    {
-      "platform": "macOS",
-      "url": null
-    },
-    {
-      "platform": "Windows",
-      "url": null
-    },
-    {
-      "platform": "Linux",
-      "url": null
-    }
   ]
 }

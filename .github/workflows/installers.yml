@@ -83,7 +83,7 @@ jobs:
     name: installer · ${{ matrix.platform }}
     environment: crysta-sdk
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -193,7 +193,7 @@ jobs:
           persist-credentials: false
       - name: Check engine compiler portability before the full build
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
-      - name: Build crysta, edi and its runtime bundle
+      - name: Build crysta, desktop bundle and release CLI
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
       - name: Check assistant process-family shutdown on this platform
         shell: bash
@@ -267,11 +267,16 @@ jobs:
           shutil.copy2(package / 'installer.json', delivery / 'installer.json')
           shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
           shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
+          cli_receipt = Path('build/installer/cli-qualification.json')
+          if cli_receipt.is_file():
+              cli = json.loads(cli_receipt.read_text())
+              shutil.copy2(cli_receipt, delivery / cli_receipt.name)
+              os.link(cli_receipt.parent / cli['zip'], delivery / cli['zip'])
           preview_history = Path('build/installer/preview-history.json')
           if preview_history.is_file():
               shutil.copy2(preview_history, delivery / 'preview-history.json')
           PYTHON
-      - name: Upload online installer
+      - name: Upload qualified release files
         uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform }}-${{ github.run_attempt }}

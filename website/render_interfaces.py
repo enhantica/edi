@@ -10,7 +10,6 @@ import re
 import struct
 from importlib.metadata import distribution
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import yaml
 from defusedxml import ElementTree
@@ -185,34 +184,18 @@ def render() -> None:
         if not source.exists():
             continue
         buttons = []
-        for entry in releases[family]:
+        for entry in releases['desktop']:
             label = html.escape(entry['platform'], quote=True)
-            if family == 'desktop':
-                requirements = html.escape(entry['requirements'], quote=True)
-                platform = html.escape(entry['artifact_platform'], quote=True)
-                icon = platform_icon(entry['icon'])
-                buttons.append(
-                    f'<a class="md-button" data-download-platform="{platform}" '
-                    'aria-disabled="true" '
-                    f'aria-label="Download for {label}, {requirements}">{icon}'
-                    f'<span class="ed-download-label">{label}<small>{requirements}</small>'
-                    '</span></a>'
-                )
-                continue
-            url = entry['url']
-            if url is None:
-                buttons.append(
-                    f'<button class="md-button" type="button" disabled aria-label="{label} '
-                    f'download not available yet">{label}</button>'
-                )
-            else:
-                parsed = urlsplit(url)
-                if parsed.scheme != 'https' or not parsed.netloc:
-                    raise ValueError(f'Invalid {family} download URL: {url}')
-                buttons.append(
-                    f'<a class="md-button" href="{html.escape(url, quote=True)}" '
-                    f'aria-label="Download for {label}">{label}</a>'
-                )
+            requirements = html.escape(entry['requirements'], quote=True)
+            platform = html.escape(entry['artifact_platform'], quote=True)
+            icon = platform_icon(entry['icon'])
+            buttons.append(
+                f'<a class="md-button" data-download-platform="{platform}" '
+                'aria-disabled="true" '
+                f'aria-label="Download for {label}, {requirements}">{icon}'
+                f'<span class="ed-download-label">{label}<small>{requirements}</small>'
+                '</span></a>'
+            )
         replace_marker(
             source,
             'distribution',

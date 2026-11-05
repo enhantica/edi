@@ -6,7 +6,10 @@ add_executable(easydiffraction
     main.cpp
 )
 target_link_libraries(easydiffraction PRIVATE edi::core)
-target_compile_features(easydiffraction PRIVATE cxx_std_17)
+target_compile_features(easydiffraction PRIVATE cxx_std_20)
+if(EDI_RELEASE_VERSION)
+    target_compile_definitions(easydiffraction PRIVATE EDI_CLI_VERSION="${EDI_RELEASE_VERSION}")
+endif()
 
 # The CLI carries edi's licence and the notice of each third-party component it ships, as DEPENDENCIES.md lists for
 # it (cli/licence-files.txt, written by tools/licences/sync.py): beside the executable after every build, and installed

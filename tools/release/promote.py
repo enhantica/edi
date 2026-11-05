@@ -143,6 +143,42 @@ def validate_delivery(folder: Path, release: dict, history_hash: str, platform: 
     return archive
 
 
+def validate_cli(folder: Path, version: str, commit: str, platform: str) -> Path | None:
+    """Read optional CLI evidence from a platform delivery, preserving older releases."""
+    name = f'EasyDiffraction-{version}-{platform}-cli.zip'
+    receipt = folder / 'cli-qualification.json'
+    archive = folder / name
+    if not receipt.exists() and not archive.exists():
+        return None
+    evidence = json.loads(receipt.read_text(encoding='utf-8'))
+    expected = {'version': version, 'commit': commit, 'platform': platform, 'zip': name}
+    if evidence.get('passed') is not True or any(
+        evidence.get(key) != value for key, value in expected.items()
+    ):
+        raise ValueError('Qualified CLI identity or ZIP bytes differ')
+    if archive.is_symlink() or digest(archive) != evidence.get('sha256'):
+        raise ValueError('Qualified CLI identity or ZIP bytes differ')
+    return archive
+
+
+def stage_cli_assets(output: Path, assets: Path, attempt: int, release: dict) -> None:
+    """Add the complete set of standalone archives when the build provides them."""
+    archives = [
+        validate_cli(
+            output / f'installer-{platform}-{attempt}',
+            release['version'],
+            release['commit'],
+            target,
+        )
+        for platform, target in PLATFORMS.items()
+    ]
+    qualified = [archive for archive in archives if archive is not None]
+    if qualified and len(qualified) != len(PLATFORMS):
+        raise ValueError('The release must carry CLI ZIPs for all platforms together')
+    for archive in qualified:
+        shutil.copy2(archive, assets / archive.name)
+
+
 def validate_repository(
     folder: Path,
     version: str,
@@ -248,6 +284,7 @@ def stage(repo: str, identity: int, output: Path) -> None:
             raise ValueError('Qualified components must contain exactly their stable platform')
         validate_repository(components / 'stable' / target, release['version'])
         shutil.copytree(components / 'stable' / target, incoming / 'repository/stable' / target)
+    stage_cli_assets(output, assets, attempt, release)
     if len(engine_sources) != 1 or not re.fullmatch(r'[0-9a-f]{40}', next(iter(engine_sources))):
         raise ValueError('All qualified platforms must build the same exact engine source')
     for name in ['release.json', 'release-history.json']:

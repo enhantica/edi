@@ -14,6 +14,7 @@ from pathlib import Path
 
 from audit import audit_bundle
 from package import (
+    PLATFORM_ID,
     ROOT,
     SYSTEM,
     acquire_package_licenses,
@@ -285,6 +286,10 @@ def build(
     run(['cmake', '-S', crysta, '-B', engine, *common, *options])
     run(['cmake', '--build', engine, '--target', 'crysta_core', 'crysta_cli', '--parallel', '4'])
     run(['cmake', '--install', engine, '--prefix', prefix])
+    if version:
+        from standalone_cli import build_cli  # noqa: PLC0415 - versioned packaging only
+
+        build_cli(crysta, work, common, options, version, identity['commit'], PLATFORM_ID)
     options = [
         '-DEDI_BUILD_APP=ON',
         '-DEDI_BUILD_BINDINGS=OFF',

@@ -131,7 +131,12 @@ Math.abs(ratio-.012)<.00001;
         browser.goto(base + 'cli/standalone/#download')
         require(
             browser.execute(
-                "return document.querySelectorAll('.ed-downloads button:disabled').length === 3;"
+                "return document.querySelectorAll('.ed-downloads a[data-download-platform]')"
+                '.length === 3 && '
+                "[...document.querySelectorAll('.ed-downloads a')].every(link => "
+                "(link.getAttribute('aria-disabled') === 'true' ? !link.hasAttribute('href') : "
+                "link.href.startsWith('https://github.com/enhantica/edi/releases/download/') && "
+                "link.href.endsWith(link.dataset.downloadPlatform + '-cli.zip')));"
             )
         )
     for page in (ROOT / 'surfaces/docs/cli').glob('*.md'):

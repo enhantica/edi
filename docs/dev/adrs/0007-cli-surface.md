@@ -69,3 +69,18 @@ here drives the user-facing API and is what end users script.
 | Reuse crysta's `crysta fit` as the product CLI | That is the engine's CLI over `.edi` dirs, not the product API surface. Complementary, not a replacement. |
 | Both CLIs as co-equal products | Two behaviours to keep in parity for no user gain; the optional `python -m edi` shim covers pip users later. Rejected for v1. |
 | No CLI (app + lib only) | The owner explicitly wants a CLI surface. Rejected. |
+
+## Standalone release archives
+
+The standalone executable exposes `edi fit` through the same core fitting
+and report functions as the Python entry point. Its version is the prepared
+release version. The Windows, macOS and Linux ZIPs each contain the executable
+and its license notices, with separate online installer assets for the GUI.
+
+Release builds use a static crysta core with the standard thread pool and
+scalar math. That keeps the CLI usable without OpenMP or a vector math
+runtime. Linux links the compiler runtimes statically and keeps the system
+C library as the platform boundary. Windows uses the static compiler runtime.
+Qualification runs the extracted executable and checks its dependencies,
+version and fit against a saved project. The public download page exposes
+only CLI ZIPs present in published GitHub releases.

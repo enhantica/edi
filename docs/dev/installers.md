@@ -73,6 +73,19 @@ installers** with `publish_components` enabled and set `preview_run` to the
 calendar preview's installer run ID. CI reuses the qualified files. Publish
 the draft after the matching components are available.
 
+## Standalone CLI archives
+
+Versioned desktop qualification also builds `edi` for each platform from the
+same source and engine commit. This separate build links the static engine and
+uses the engine's standard thread pool and scalar math to avoid shipping
+OpenMP or vector math libraries. On Windows it uses the static C++ runtime.
+It excludes Qt, Python bindings and the assistant.
+
+CI unpacks each CLI ZIP, verifies its platform dependencies and embedded
+release version, and refines a fixture project with the extracted executable.
+Release promotion checks the ZIP checksum and qualification receipt. The
+CLI ZIPs are separate GitHub assets and require no Pages component repository.
+
 ## Calendar release and update notes
 
 The version is `YYYY.MM.SEQUENCE`, starting at zero each month. Merged PR titles describe the user

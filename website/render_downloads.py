@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Link desktop download cards to public GitHub release assets."""
+"""Link download cards to public GitHub release assets."""
 
 import re
 from datetime import date
@@ -9,8 +9,8 @@ PLATFORMS = ('macos-arm64', 'windows-x86_64', 'linux-x86_64')
 TAG = re.compile(r'v([0-9]{4})\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)')
 
 
-def render(page: str, pages: list[list[dict]]) -> str:
-    """Prefer stable installers, and leave missing platform cards unavailable."""
+def render(page: str, pages: list[list[dict]], *, kind: str = 'online') -> str:
+    """Prefer stable releases, and leave missing platform cards unavailable."""
     candidates = []
     for release in (item for page in pages for item in page):
         tag = release['tag_name']
@@ -27,7 +27,7 @@ def render(page: str, pages: list[list[dict]]) -> str:
         for platform in PLATFORMS:
             url = (
                 f'https://github.com/enhantica/edi/releases/download/{tag}/'
-                f'EasyDiffraction-{version}-{platform}-online.zip'
+                f'EasyDiffraction-{version}-{platform}-{kind}.zip'
             )
             if url in links:
                 installers[platform] = url
@@ -40,7 +40,10 @@ def render(page: str, pages: list[list[dict]]) -> str:
     day = date.fromisoformat(published[:10])
     display_date = f'{day.day} {day:%b %Y}'
     page = page.replace(
-        'Desktop installers will appear here when published.',
+        {
+            'online': 'Desktop installers will appear here when published.',
+            'cli': 'CLI downloads will appear here when published.',
+        }[kind],
         f'Latest version {version} ({display_date})',
     )
     for platform, url in installers.items():
