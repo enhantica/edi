@@ -48,10 +48,10 @@ installers are distributed without a trusted platform signature.
     1. Keep the extracted `.run` file beside the `installer-runtime` folder.
     2. In a terminal opened in that folder, make the installer executable and run it.
 
-       ```bash
-       chmod +x ./EasyDiffraction-*-linux-x86_64-online.run
-       ./EasyDiffraction-*-linux-x86_64-online.run
-       ```
+        ```bash
+        chmod +x ./EasyDiffraction-*-linux-x86_64-online.run
+        ./EasyDiffraction-*-linux-x86_64-online.run
+        ```
 
     3. Follow setup to choose the installation folder.
 
