@@ -15,7 +15,7 @@ on:
       crysta_commit:
         description: Exact crysta source commit to build before edi
         required: true
-        default: d3975c72a26f78c29d5ce93f30c1db6710463e83
+        default: 2d2adcd72ed12b8cfad4ab8516a8795e2b48e9b2
         type: string
   push:
     paths:
@@ -46,7 +46,7 @@ jobs:
           - platform: Windows
             runner: windows-2022
     env:
-      CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || 'd3975c72a26f78c29d5ce93f30c1db6710463e83' }}
+      CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || '2d2adcd72ed12b8cfad4ab8516a8795e2b48e9b2' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
@@ -126,7 +126,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
       - name: Check engine compiler portability before the full build
-        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/.crysta/tests/fixtures/embedded_text" "${{ github.workspace }}/.crysta/tests/fixtures/space_group_swap" "${{ github.workspace }}/.crysta/tests/fixtures/star_timestamp" --noconftest -o addopts= -q
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
       - name: Build crysta, edi and its runtime bundle
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
       - name: Create the offline qualification installer

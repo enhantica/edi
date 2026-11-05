@@ -151,3 +151,8 @@ Dependency licence ownership uses the longest matching suffix of the deployed pa
 package inventory, refusing ties. A compiler's private copy of a runtime library must not claim the
 flat deployed runtime merely because their filenames agree. The existing pinned licence extraction
 and missing-notice failures still apply to each selected owner.
+
+The public consumer invokes the engine's exported CMake compiler-check interface with the locked
+packaging interpreter and compiler environment. The engine owns its fixture inventory; the consumer
+workflow does not cite private source or fixture paths. A missing interface or failed check refuses
+the full build.

@@ -269,8 +269,27 @@ def build(
     )
 
 
+def check_compiler(crysta: Path, work: Path) -> None:
+    """Run the engine's exported compiler checks with the exact packaging interpreter."""
+    source, target = crysta.resolve() / 'compiler-checks', work.resolve() / 'compiler-checks'
+    if not (source / 'CMakeLists.txt').is_file():
+        raise RuntimeError('The engine checkout does not expose its compiler check interface')
+    run([
+        'cmake',
+        '-G',
+        'Ninja',
+        '-S',
+        source,
+        '-B',
+        target,
+        f'-DPython_EXECUTABLE={sys.executable}',
+    ])
+    run(['cmake', '--build', target, '--target', 'check', '--parallel', '4'])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check-compiler', action='store_true')
     parser.add_argument('--crysta-source', type=Path, required=True)
     parser.add_argument('--work', type=Path, required=True)
     parser.add_argument('--qt-prefix', type=Path)
@@ -280,6 +299,9 @@ def main() -> None:
         '--release-plan', type=Path, default=os.environ.get('EDI_RELEASE_PLAN') or None
     )
     args = parser.parse_args()
+    if args.check_compiler:
+        check_compiler(args.crysta_source, args.work)
+        return
     build(
         args.crysta_source,
         args.work,
