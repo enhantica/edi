@@ -18,7 +18,8 @@ def verify_dependencies(binary: Path) -> None:
     if SYSTEM == 'linux':
         output = subprocess.check_output(['readelf', '-d', binary], text=True)
         libraries = re.findall(r'\(NEEDED\).*?\[([^\]]+)\]', output)
-        allowed = {'libc.so.6', 'libm.so.6', 'libpthread.so.0', 'libdl.so.2', 'librt.so.1'}
+        allowed = {'ld-linux-x86-64.so.2',
+            'libc.so.6', 'libm.so.6', 'libpthread.so.0', 'libdl.so.2', 'librt.so.1'}
         external = set(libraries) - allowed
     elif SYSTEM == 'macos':
         output = subprocess.check_output(['otool', '-L', binary], text=True)
