@@ -685,6 +685,34 @@ def unpack_installer(archive: Path, output: Path) -> Path:
     return candidates[0]
 
 
+def verify_installed_payload(target: Path, *, with_assistant: bool) -> None:
+    manifest = json.loads((target / 'payload-manifest.json').read_text(encoding='utf-8'))
+    optional_manifest = target / 'assistant-payload-manifest.json'
+    if with_assistant:
+        manifest.update(json.loads(optional_manifest.read_text(encoding='utf-8')))
+    elif optional_manifest.exists() or (target / ASSISTANT_RUNTIME).exists():
+        raise RuntimeError('The default installation includes the optional assistant')
+    for name, expected in manifest.items():
+        path = target / name
+        if 'sha256' in expected and (not path.is_file() or sha256(path) != expected['sha256']):
+            raise RuntimeError(f'Installed bytes differ: {name}')
+        if 'link' in expected and (
+            not path.is_symlink() or str(path.readlink()) != expected['link']
+        ):
+            raise RuntimeError(f'Installed link differs: {name}')
+
+
+def verify_installed_identity(metadata: dict, receipt: dict) -> None:
+    version = metadata.get('version', '')
+    if re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', version) and (
+        receipt.get('app_version') != version
+    ):
+        raise RuntimeError('Installed application and installer calendar versions differ')
+    history = metadata.get('release_history_sha256')
+    if history and receipt.get('release_history_sha256') != history:
+        raise RuntimeError('Installed release history differs')
+
+
 def exercise_installer(
     installer: Path, output: Path, repository: str | None = None, *, with_assistant: bool = False
 ) -> None:
@@ -729,20 +757,7 @@ def exercise_installer(
         else 'bin/edi_app' + SUFFIX
     )
     try:
-        manifest = json.loads((target / 'payload-manifest.json').read_text(encoding='utf-8'))
-        optional_manifest = target / 'assistant-payload-manifest.json'
-        if with_assistant:
-            manifest.update(json.loads(optional_manifest.read_text(encoding='utf-8')))
-        elif optional_manifest.exists() or (target / ASSISTANT_RUNTIME).exists():
-            raise RuntimeError('The default installation includes the optional assistant')
-        for name, expected in manifest.items():
-            path = target / name
-            if 'sha256' in expected and (not path.is_file() or sha256(path) != expected['sha256']):
-                raise RuntimeError(f'Installed bytes differ: {name}')
-            if 'link' in expected and (
-                not path.is_symlink() or str(path.readlink()) != expected['link']
-            ):
-                raise RuntimeError(f'Installed link differs: {name}')
+        verify_installed_payload(target, with_assistant=with_assistant)
         app = target / (
             'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
             if SYSTEM == 'macos'
@@ -758,11 +773,7 @@ def exercise_installer(
                 timeout=45,
             )
         receipt = json.loads((output / 'smoke/result.json').read_text(encoding='utf-8'))
-        if metadata.get('release_history_sha256') and (
-            receipt.get('app_version') != metadata['version']
-            or receipt.get('release_history_sha256') != metadata['release_history_sha256']
-        ):
-            raise RuntimeError('Installed release identity or bundled history differs')
+        verify_installed_identity(metadata, receipt)
         if (
             not receipt.get('passed')
             or receipt.get('assistant_available') is not with_assistant

@@ -32,7 +32,7 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
             report.insert("app_version", version);
             static const QRegularExpression calendar(
                 QStringLiteral(R"(\A[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)\z)"));
-            if (calendar.match(version).hasMatch()) {
+            if (!EDI_INSTALLER_CALENDAR_PREVIEW && calendar.match(version).hasMatch()) {
                 QFile history(QStringLiteral(":/edi/releases.json"));
                 if (!history.open(QIODevice::ReadOnly))
                     throw std::runtime_error("Bundled release history is missing");

@@ -525,6 +525,8 @@ endif()
 install(TARGETS edi_app BUNDLE DESTINATION . COMPONENT desktop RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         COMPONENT desktop)
 if(NOT EMSCRIPTEN)
+    option(EDI_INSTALLER_CALENDAR_PREVIEW "Build an installer preview without stable release history" OFF)
+    target_compile_definitions(edi_app PRIVATE EDI_INSTALLER_CALENDAR_PREVIEW=$<BOOL:${EDI_INSTALLER_CALENDAR_PREVIEW}>)
     target_sources(edi_app PRIVATE src/installer_smoke.cpp)
     set(smoke_project "${PROJECT_SOURCE_DIR}/docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project")
     file(GLOB_RECURSE smoke_files CONFIGURE_DEPENDS "${smoke_project}/*")

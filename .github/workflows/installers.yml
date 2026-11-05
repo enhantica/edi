@@ -12,6 +12,10 @@ on:
         required: true
         default: false
         type: boolean
+      calendar_preview:
+        description: Build a calendar-versioned macOS and Linux testing preview
+        default: false
+        type: boolean
       preview_run:
         description: Completed installer run with qualified macOS and Linux artifacts for a testing prerelease
         required: false
@@ -47,13 +51,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.windows_only && '[{"platform":"Windows","runner":"windows-2022"}]' || '[{"platform":"Linux","runner":"ubuntu-24.04"},{"platform":"macOS","runner":"macos-15"},{"platform":"Windows","runner":"windows-2022"}]') }}
+        include: ${{ fromJSON(inputs.windows_only && '[{"platform":"Windows","runner":"windows-2022"}]' || (inputs.calendar_preview && '[{"platform":"Linux","runner":"ubuntu-24.04"},{"platform":"macOS","runner":"macos-15"}]') || '[{"platform":"Linux","runner":"ubuntu-24.04"},{"platform":"macOS","runner":"macos-15"},{"platform":"Windows","runner":"windows-2022"}]') }}
     env:
       CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || '122f77fa46e1143749a4039f65b24438006bb482' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
     steps:
+      - name: Select a unique testing calendar version
+        if: inputs.calendar_preview
+        shell: bash
+        env:
+          RELEASE_PLAN_RUN: ${{ inputs.release_plan_run }}
+          WINDOWS_ONLY: ${{ inputs.windows_only }}
+        run: |
+          if [[ -n "$RELEASE_PLAN_RUN" || "$WINDOWS_ONLY" == true ]]; then
+            echo "A calendar preview is separate from stable qualification and Windows diagnostics."
+            exit 1
+          fi
+          version="$(date -u +%Y.%m).$((GITHUB_RUN_NUMBER * 1000 + GITHUB_RUN_ATTEMPT))"
+          printf 'EDI_INSTALLER_VERSION=%s\nEDI_INSTALLER_PREVIEW_VERSION=%s\n' "$version" "$version" >> "$GITHUB_ENV"
       - name: Reject publication inputs for a Windows diagnostic
         if: inputs.windows_only && (inputs.publish_components || inputs.release_plan_run != '')
         shell: bash
@@ -254,7 +271,7 @@ jobs:
   qualify-release:
     name: record qualified release inputs
     needs: installers
-    if: inputs.release_plan_run != '' && !inputs.windows_only && inputs.preview_run == ''
+    if: inputs.release_plan_run != '' && !inputs.windows_only && !inputs.calendar_preview && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -310,13 +327,18 @@ jobs:
           python3 tools/release/preview.py --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" \
             --run "$PREVIEW_RUN" --output preview
           mv preview/components components
-      - name: Require every platform from this successful attempt
+      - name: Require the selected platforms from this successful attempt
         if: inputs.preview_run == ''
+        env:
+          CALENDAR_PREVIEW: ${{ inputs.calendar_preview }}
         run: |
           python3 - <<'PYTHON'
+          import os
           from pathlib import Path
           root = Path('components/testing')
-          expected = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
+          expected = {'linux-x86_64', 'macos-arm64'}
+          if os.environ['CALENDAR_PREVIEW'] != 'true':
+              expected.add('windows-x86_64')
           if not root.is_dir() or {item.name for item in root.iterdir()} != expected:
               raise RuntimeError('Publish requires all platforms from one complete successful attempt; rerun all jobs')
           for platform in expected:

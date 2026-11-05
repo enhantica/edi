@@ -265,6 +265,7 @@ def build(
     )
     options.extend([
         f'-DEDI_RELEASE_VERSION={version or ""}',
+        f'-DEDI_INSTALLER_CALENDAR_PREVIEW={"ON" if version and not release_plan else "OFF"}',
         f'-DEDI_RELEASE_HISTORY={history.as_posix()}',
     ])
     run(['cmake', '-S', ROOT, '-B', app, *common, *options])
@@ -360,7 +361,11 @@ def main() -> None:
     parser.add_argument('--work', type=Path, required=True)
     parser.add_argument('--qt-prefix', type=Path)
     parser.add_argument('--patchelf', type=Path)
-    parser.add_argument('--version', help='Calendar release version, also used by the installer')
+    parser.add_argument(
+        '--version',
+        default=os.environ.get('EDI_INSTALLER_PREVIEW_VERSION') or None,
+        help='Calendar version used by the app and installer',
+    )
     parser.add_argument(
         '--release-plan', type=Path, default=os.environ.get('EDI_RELEASE_PLAN') or None
     )

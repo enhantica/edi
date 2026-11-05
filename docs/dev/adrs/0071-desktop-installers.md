@@ -317,3 +317,10 @@ The desktop download page labels each installer with its platform icon, supporte
 system and processor architecture. The initial targets are macOS 15 or later on Apple Silicon,
 Windows 11 on x86-64, and Ubuntu 24.04 or later on x86-64. The macOS preview uses macOS 15
 as its minimum because the bundled assistant shell declares that deployment target.
+
+
+Calendar-versioned previews build macOS and Linux together and publish only to testing.
+The first two fields come from the UTC year and month. The last field combines the CI run
+number and attempt so a rebuilt preview has a new archive identity. The app and installer
+carry the same version and the installed smoke test compares them. A preview uses a separate
+version identity from the stable release history and cannot qualify a stable release.
