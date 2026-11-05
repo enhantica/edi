@@ -345,14 +345,27 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4
         with:
-          pattern: installer-{Linux,macOS,Windows}-${{ github.run_attempt }}
+          pattern: installer-{Linux,macOS,Windows}-*
           path: preview-delivery
       - name: Attach qualified online installers to the draft
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # A retry of this job can reuse the last complete set from this run.
+          selected=0
+          for linux in preview-delivery/installer-Linux-*; do
+            attempt=${linux##*-}
+            if [[ "$attempt" =~ ^[1-9][0-9]*$ && -d "preview-delivery/installer-macOS-$attempt" &&
+                  -d "preview-delivery/installer-Windows-$attempt" ]] && (( attempt > selected )); then
+              selected=$attempt
+            fi
+          done
+          if (( selected == 0 )); then
+            echo "No complete set of qualified installers is available."
+            exit 1
+          fi
           python3 tools/release/preview_draft.py --repo "$GITHUB_REPOSITORY" \
-            --commit "$GITHUB_SHA" preview-delivery/installer-*
+            --commit "$GITHUB_SHA" preview-delivery/installer-{Linux,macOS,Windows}-"$selected"
 
   publish-installers:
     name: publish tested installer components

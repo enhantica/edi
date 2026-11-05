@@ -25,6 +25,8 @@ with mock.patch.dict(sys.modules, {'plan': PLAN}):
     PREPARE = module('prepare')
     with mock.patch.dict(sys.modules, {'prepare': PREPARE}):
         PUBLISH = module('publish_assets')
+    with mock.patch.dict(sys.modules, {'publish_assets': PUBLISH}):
+        PREVIEW = module('preview_draft')
 
 
 @pytest.mark.parametrize('damage', ['none', 'branch', 'workflow', 'job', 'attempt', 'expired'])
@@ -151,6 +153,49 @@ def test_release_retry_never_overwrites_an_existing_identity(damage):
     else:
         with pytest.raises(ValueError, match=r'different|cannot'):
             PUBLISH.check_existing(existing, release, 'User notes', {'installer.zip': 'b' * 64})
+
+
+def test_draft_cli_passes_the_commit_and_deliveries_to_qualification():
+    args = ['preview_draft.py', '--repo', 'enhantica/edi', '--commit', 'a' * 40, 'delivery']
+    qualified = ({'version': '2026.11.0'}, 'Release notes', [])
+    with (
+        mock.patch.object(sys, 'argv', args),
+        mock.patch.object(PREVIEW, 'prepare', autospec=True, return_value=qualified) as prepare,
+        mock.patch.object(PREVIEW, 'publish') as publish,
+    ):
+        PREVIEW.main()
+    prepare.assert_called_once_with('a' * 40, [Path('delivery')], mac_linux_only=False)
+    publish.assert_called_once_with('enhantica/edi', *qualified)
+
+
+def test_only_preview_drafts_can_replace_a_known_installer():
+    release = {'commit': 'a' * 40}
+    existing = {
+        'target_commitish': release['commit'],
+        'body': 'User notes',
+        'draft': True,
+        'assets': [{'name': 'installer.zip', 'digest': 'sha256:' + 'b' * 64}],
+    }
+    replacement = {'installer.zip': 'c' * 64}
+    assert (
+        PUBLISH.check_existing(
+            existing,
+            release,
+            'User notes',
+            replacement,
+            replace_draft_assets=True,
+        )
+        == set()
+    )
+    for change in ({'draft': False}, {'target_commitish': 'd' * 40}, {'body': 'Edited notes'}):
+        with pytest.raises(ValueError, match='different'):
+            PUBLISH.check_existing(
+                {**existing, **change},
+                release,
+                'User notes',
+                replacement,
+                replace_draft_assets=True,
+            )
 
 
 @pytest.mark.parametrize('damage', ['none', 'stale', 'missing'])

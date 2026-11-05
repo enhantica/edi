@@ -34,16 +34,26 @@ def check_progression(history: dict, previous: dict, release: dict) -> None:
         raise ValueError('Release is missing from the qualified history')
 
 
-def check_existing(existing: dict, release: dict, notes: str, assets: dict[str, str]) -> set[str]:
-    """Keep retries immutable: only missing assets may be added to a matching draft."""
+def check_existing(
+    existing: dict,
+    release: dict,
+    notes: str,
+    assets: dict[str, str],
+    *,
+    replace_draft_assets: bool = False,
+) -> set[str]:
+    """Find matching assets and optionally allow replacements in a matching draft."""
     if existing['target_commitish'] != release['commit'] or existing['body'] != notes:
         raise ValueError('Release tag already names different source or notes')
     found = set()
     for asset in existing['assets']:
         name = asset['name']
-        if name not in assets or asset.get('digest') != 'sha256:' + assets[name]:
+        if name not in assets:
             raise ValueError('An existing release asset has a different identity')
-        found.add(name)
+        if asset.get('digest') == 'sha256:' + assets[name]:
+            found.add(name)
+        elif not (replace_draft_assets and existing['draft']):
+            raise ValueError('An existing release asset has a different identity')
     if not existing['draft'] and found != set(assets):
         raise ValueError('Published releases cannot be repaired with unqualified assets')
     return found

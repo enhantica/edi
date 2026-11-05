@@ -141,22 +141,29 @@ def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str
         existing = read_release()
     assets = {path.name: digest for path, digest in archives}
 
-    def verified_assets(metadata):
+    def verified_assets(metadata, *, replace_draft_assets=False):
         if metadata is None or not metadata['prerelease'] or metadata['name'] != title:
             raise ValueError('Expected the matching testing prerelease')
-        return check_existing(metadata, release, notes, assets)
+        return check_existing(
+            metadata, release, notes, assets, replace_draft_assets=replace_draft_assets
+        )
 
-    found = verified_assets(existing)
+    found = verified_assets(existing, replace_draft_assets=True)
+    existing_names = {asset['name'] for asset in existing['assets']}
     for path, _ in archives:
         if path.name not in found:
-            subprocess.run([*command, 'upload', tag, str(path), '--repo', repo], check=True)
+            upload = [*command, 'upload', tag, str(path), '--repo', repo]
+            if path.name in existing_names:
+                upload.append('--clobber')
+            subprocess.run(upload, check=True)
     verified = read_release()
     if verified_assets(verified) != set(assets):
         raise RuntimeError('Uploaded release assets could not be verified')
     print(verified['html_url'])
 
 
-if __name__ == '__main__':
+def main() -> None:
+    """Validate the qualified delivery before touching GitHub."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', required=True)
     parser.add_argument('--commit', required=True)
@@ -165,10 +172,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     publish(
         args.repo,
-        *prepare(
-            args.repo,
-            args.commit,
-            args.deliveries,
-            mac_linux_only=args.mac_linux_only,
-        ),
+        *prepare(args.commit, args.deliveries, mac_linux_only=args.mac_linux_only),
     )
+
+
+if __name__ == '__main__':
+    main()

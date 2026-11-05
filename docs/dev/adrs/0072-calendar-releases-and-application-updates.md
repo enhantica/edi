@@ -173,7 +173,9 @@ source-bound history generated from merged pull requests and the stable feed.
 A calendar preview builds the online installers for Linux, macOS and Windows.
 After qualification, CI creates a GitHub draft marked as a prerelease, reserves
 the calendar tag and attaches the verified installers. The draft uses the
-release notes embedded in the installers. A maintainer publishes the draft after
+release notes embedded in the installers. A retry of the same version, source
+and notes can replace an installer in the draft after qualification. Published
+releases keep their verified assets. A maintainer publishes the draft after
 review. GitHub generates the source archive links from the tag upon publication.
 
 Testing components are published separately to the public Pages repository
