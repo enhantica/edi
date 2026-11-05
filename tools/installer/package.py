@@ -170,15 +170,17 @@ def write_metadata(
             'AllowNonAsciiCharacters': 'true',
             'AllowSpaceInPath': 'true',
             'WizardStyle': 'Modern',
-            'WizardDefaultWidth': '48em',
+            'WizardDefaultWidth': '56em',
             'WizardDefaultHeight': '29em',
-            'Logo': 'InstallerLogo.png',
+            'WizardShowPageList': 'true',
+            'PageListPixmap': 'InstallerLogo.png',
+            'ControlScript': 'Installer.qs',
             'StyleSheet': 'Installer.qss',
         },
     )
     icons = ROOT / 'app/resources/logo'
-    shutil.copy2(ROOT / 'tools/installer/InstallerLogo.png', config / 'InstallerLogo.png')
-    shutil.copy2(ROOT / 'tools/installer/Installer.qss', config / 'Installer.qss')
+    for asset in ('InstallerLogo.png', 'Installer.qss', 'Installer.qs'):
+        shutil.copy2(ROOT / 'tools/installer' / asset, config / asset)
     if SYSTEM in {'macos', 'windows'}:
         icon = 'App.icns' if SYSTEM == 'macos' else 'App.ico'
         shutil.copy2(icons / icon, config / icon)
@@ -475,6 +477,8 @@ def archive_installer(installer: Path, runtime: Path | None) -> Path:
                 for path in sorted(runtime.rglob('*')):
                     if path.is_file():
                         zipped.write(path, path.relative_to(installer.parent))
+    with zipfile.ZipFile(archive, 'a', compression=zipfile.ZIP_DEFLATED) as zipped:
+        zipped.write(ROOT / 'website/BRANDING-LICENSE', 'BRANDING-LICENSE.txt')
     return archive
 
 

@@ -1,22 +1,61 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
+QWizard, QWizardPage, QWidget#SideWidget, QListWidget#PageListWidget {
+    background-color: palette(window);
+}
+
+QLabel#PageListPixmapLabel {
+    qproperty-alignment: AlignLeft;
+    margin: 12px 0 12px 10px;
+}
+
+QWizard QPushButton, QWizard QLineEdit, QWizard QComboBox {
+    color: palette(window-text);
+    background-color: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 5px;
+    min-height: 22px;
+    padding: 3px 9px;
+}
+
 QWizard QPushButton {
-    min-width: 6em;
-    padding: .35em .85em;
+    min-width: 70px;
+}
+
+QWizard QPushButton:hover {
+    background-color: palette(button);
+    border-color: palette(highlight);
+}
+
+QWizard QPushButton:focus, QWizard QLineEdit:focus, QWizard QComboBox:focus {
+    border-color: palette(highlight);
 }
 
 QWizard QPushButton:default {
     background-color: #0079b7;
     color: white;
-    border: 1px solid #006a9e;
-    border-radius: 5px;
+    border-color: #006a9e;
 }
 
-QWizard QPushButton:default:hover {
+QWizard QPushButton:default:hover, QWizard QPushButton:default:focus {
     background-color: #006a9e;
+    border-color: palette(highlight);
 }
 
-QWizard QPushButton:default:disabled {
-    background-color: palette(button);
+QWizard QPushButton:pressed {
+    background-color: palette(midlight);
+    color: palette(window-text);
+}
+
+QWizard QPushButton:disabled {
+    background-color: palette(window);
     color: palette(mid);
     border-color: palette(midlight);
+}
+
+QWizard QLineEdit#SearchLineEdit {
+    min-width: 95px;
+}
+
+QWizard #ComponentSelectionPage #SpaceItem {
+    min-width: 28em;
 }
