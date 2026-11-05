@@ -231,3 +231,17 @@ guard uses that boundary; the early compiler check consumes the real status enum
 orders. Its declaration moves unchanged into an engine-independent public header, still included
 by the original model header, so this check runs before acquiring the engine. This extends the shared native compiler policy rather than renaming the product status
 or applying a platform-specific fitting result.
+
+
+## System observer pipe transport
+
+The FIRST scan-cycle observer keeps its existing newline framing, commands and Qt-thread callback
+order. Its input adapter requires a real stdin pipe on every platform and is owned by the existing
+observer receiver. POSIX uses socket notification. Windows sets the dedicated byte pipe to
+[nonblocking mode](https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-setnamedpipehandlestate)
+before polling it with bounded ReadFile calls; an empty open pipe is not EOF. No detached reader
+thread is needed. EOF stops notifications; destroying the receiver removes them and restores the
+original Windows wait mode. This test-only transport is independent of the
+installed application's --testmode qualification and does not change ordinary fitting controls.
+A standalone real-Qt gate checks exact binary input across multiple chunks, EOF, invalid input,
+receiver retirement and a still-open empty Windows pipe before building the full engine and app.

@@ -17,7 +17,6 @@
 #include <QQmlContext>
 #include <QQuickItem>
 #include <QQuickWindow>
-#include <QSocketNotifier>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QUrl>
@@ -34,7 +33,7 @@
 #include <string>
 #include <vector>
 
-#include <unistd.h>
+#include "test_observer_input.hpp"
 
 #include "analysis_view_model.hpp"
 #include "demo_driver.hpp"
@@ -668,7 +667,6 @@ void cycle_command(const QByteArray& line) {
 
 void install_cycle(QQmlApplicationEngine& engine) {
     static SignalTap tap;
-    static QSocketNotifier* input = nullptr;
     static QByteArray pending;
     cycle.clock.start();
     auto* session = engine.singletonInstance<Session*>("edi.app", "Session");
@@ -701,21 +699,18 @@ void install_cycle(QQmlApplicationEngine& engine) {
         };
         edi::set_scan_file_start_observer(&cycle_inner_fit);
         edi::set_worker_file_observer(&cycle_file_fitted);
-        input = new QSocketNotifier(STDIN_FILENO, QSocketNotifier::Read, &tap);
-        QObject::connect(input, &QSocketNotifier::activated, &tap, [] {
-            char buffer[4096];
-            const ssize_t got = ::read(STDIN_FILENO, buffer, sizeof buffer);
-            if (got <= 0) {
-                input->setEnabled(false);
-                return;
-            }
-            pending.append(buffer, static_cast<qsizetype>(got));
+        const bool input_installed = observer_input::install(tap, [](const QByteArray& bytes) {
+            pending.append(bytes);
             for (qsizetype end = pending.indexOf('\n'); end >= 0; end = pending.indexOf('\n')) {
                 const QByteArray line = pending.left(end).trimmed();
                 pending.remove(0, end + 1);
                 if (!line.isEmpty()) cycle_command(line);
             }
         });
+        if (!input_installed) {
+            cycle_emit({{"event", "error"}, {"error", QStringLiteral("The observer requires a stdin pipe")}});
+            std::_Exit(1);
+        }
         // Ready once opening has settled: no calculation running and, for a finished scan, its last row shown.
         auto* settle = new QTimer(&tap);
         settle->setInterval(25);
