@@ -18,8 +18,14 @@ def verify_dependencies(binary: Path) -> None:
     if SYSTEM == 'linux':
         output = subprocess.check_output(['readelf', '-d', binary], text=True)
         libraries = re.findall(r'\(NEEDED\).*?\[([^\]]+)\]', output)
-        allowed = {'ld-linux-x86-64.so.2',
-            'libc.so.6', 'libm.so.6', 'libpthread.so.0', 'libdl.so.2', 'librt.so.1'}
+        allowed = {
+            'ld-linux-x86-64.so.2',
+            'libc.so.6',
+            'libm.so.6',
+            'libpthread.so.0',
+            'libdl.so.2',
+            'librt.so.1',
+        }
         external = set(libraries) - allowed
     elif SYSTEM == 'macos':
         output = subprocess.check_output(['otool', '-L', binary], text=True)
@@ -91,6 +97,8 @@ def build_cli(
     ]
     if SYSTEM == 'linux':
         options.append('-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc')
+    if SYSTEM == 'macos':
+        options.append('-DCMAKE_EXE_LINKER_FLAGS=-Wl,-headerpad_max_install_names')
     run(['cmake', '-S', ROOT, '-B', cli, *flags, *options])
     run(['cmake', '--build', cli, '--target', 'easydiffraction', '--parallel', '4'])
 
@@ -100,6 +108,17 @@ def build_cli(
     binary = source / ('easydiffraction' + suffix)
     if SYSTEM == 'linux':
         run(['strip', '--strip-unneeded', binary])
+    elif SYSTEM == 'macos':
+        # The packaging toolchain records its own libc++ install name. Use the
+        # OS runtime and refresh the ad hoc signature before testing the ZIP.
+        run([
+            '/usr/bin/install_name_tool',
+            '-change',
+            '@rpath/libc++.1.dylib',
+            '/usr/lib/libc++.1.dylib',
+            binary,
+        ])
+        run(['/usr/bin/codesign', '--force', '--sign', '-', binary])
     asset = work / f'EasyDiffraction-{version}-{platform}-cli.zip'
     with zipfile.ZipFile(asset, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(binary, executable)
