@@ -340,18 +340,24 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.calendar_preview && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: read
       actions: read
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           pattern: installer-{Linux,macOS,Windows}-*
           path: preview-delivery
       - name: Attach qualified online installers to the draft
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_API_PERSONAL_ACCESS_TOKEN }}
         run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::Draft creation needs the release token with permission to modify workflows."
+            exit 1
+          fi
           # A retry of this job can reuse the last complete set from this run.
           selected=0
           for linux in preview-delivery/installer-Linux-*; do

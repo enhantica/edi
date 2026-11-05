@@ -170,6 +170,11 @@ source-bound history generated from merged pull requests and the stable feed.
 
 ## Testing release drafts
 
+The draft job uses the configured release credential because GitHub requires
+workflow write access when the qualified commit changes workflow files. Scope
+the credential to contents and workflows write on edi when using a fine-grained
+token. The checkout and artifact download use the read-only workflow token.
+
 A calendar preview builds the online installers for Linux, macOS and Windows.
 After qualification, CI creates a GitHub draft marked as a prerelease, reserves
 the calendar tag and attaches the verified installers. The draft uses the
