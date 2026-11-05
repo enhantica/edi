@@ -123,40 +123,6 @@ TestCase {
         compare(OnboardingProbe.urls().length, 0, "Opening feedback does not open an external destination");
     }
 
-    function test_about_feedback_stays_in_app() {
-        stubFeedback();
-        click(button("About " + ApplicationInfo.name));
-        const about = Probe.objectsWithProperty(app, "objectName").find(item => item.objectName === "about");
-        verify(about !== undefined, "The actual About popup exists");
-        tryCompare(about, "opened", true, 2000, "About finishes opening before the feedback link receives input");
-        const link = Probe.objectsWithProperty(about, "objectName").find(item => item.objectName === "about.tellUs");
-        verify(link !== undefined && Ui.rendered(link), "About exposes its visible If you like it, tell us link");
-        verify(waitForPolish(link), "The feedback text is laid out before its link receives mouse input");
-        let point = {
-            x: link.width / 2,
-            y: link.height / 2
-        };
-        if (typeof link.linkAt === "function") {
-            let found = false;
-            for (let y = 1; y < link.height && !found; y += 2)
-                for (let x = 1; x < link.width; x += 2)
-                    if (link.linkAt(x, y)) {
-                        point = {
-                            x: x,
-                            y: y
-                        };
-                        found = true;
-                        break;
-                    }
-            verify(found, "The styled feedback link has an actual clickable text span");
-        }
-        mouseClick(link, point.x, point.y);
-        const form = Probe.objectsWithProperty(app, "objectName").find(item => item.objectName === "feedback.form");
-        verify(form !== undefined, "General feedback opens the same in-app Help and feedback form");
-        tryCompare(form, "visible", true, 2000, "Clicking feedback opens Help and feedback inside the app");
-        compare(form.kind, "feedback", "The About appreciation link selects the supported general feedback wire kind");
-        compare(OnboardingProbe.urls().length, 0, "The feedback link must not also hand a relative feedback resource URL to the system handler");
-    }
     function test_internal_actions_never_dispatch_resource_urls_data() {
         return [
             {

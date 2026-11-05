@@ -15,7 +15,7 @@ message: `POST /feedback` with `kind` (`feedback`, `question`, `problem` or `ide
 
 ## Decision
 
-- One form, Help and feedback, opened from Home, from About ("If you like it, tell us", on Share feedback) and from the
+- One form, Help and feedback, opened from Home and from the
   crash popup (ADR-0062). About 560 pt wide, so the note on what is sent takes two lines (narrower in a narrower app
   window), it opens scrolled to the top with the cursor in the message. In order: a one-line invitation, then the kind,
   a box of Share feedback (praise, complaint or both; the first entry and the default), Ask a question, Report a problem
@@ -46,8 +46,7 @@ message: `POST /feedback` with `kind` (`feedback`, `question`, `problem` or `ide
   keeps its own root slash. The user name is replaced only as a whole word, and an escape next to it counts as the
   character it stands for (the `F` of `%2F` is a slash, not a letter). The kind is one of the four fixed values and is
   never rewritten.
-- About's "If you like it, tell us" is an in-app link with an icon (`IconLink`) that opens the form on Say what works
-  well. No in-app action goes through the system's URL handler: only web (http or https) addresses open outside the app.
+- Home opens the feedback form directly inside the app. Only web (http or https) addresses open outside the app.
 - The feedback service's address is the `develop/feedbackAddress` setting, shown in Preferences. By default it is
   `https://edi-feedback.savanna-animas-0g.workers.dev/feedback`, so Send works out of the box. A user may change it or
   clear it; while it is empty, Send is off and the form says why. Earlier builds kept an empty address under

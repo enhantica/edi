@@ -90,17 +90,6 @@ AppDialog {
                 text: descriptionLabel.text
             }
         }
-        // Praise through Help and feedback (edi ADR-0063): an in-app link, so nothing goes to the system.
-        IconLink {
-            objectName: "about.tellUs"
-            anchors.horizontalCenter: parent.horizontalCenter
-            fontIcon: "comments"
-            text: qsTr("If you like it, tell us")
-            onClicked: {
-                EaGlobals.Vars.showAppAboutDialog = false;
-                AppState.feedbackRequested("feedback", "");
-            }
-        }
         // The licence links, light links with the licence icon as Home's are: edi's own licences side by side, the
         // third-party licences under them.
         Column {
