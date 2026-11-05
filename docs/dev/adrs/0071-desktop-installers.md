@@ -245,6 +245,10 @@ destroying the receiver removes them. This test-only transport is independent of
 installed application's --testmode qualification and does not change ordinary fitting controls.
 A standalone real-Qt gate checks exact binary input across multiple chunks, EOF, invalid input,
 receiver retirement and a still-open empty Windows pipe before building the full engine and app.
+The retirement probe checks that Qt destroys the receiver's child and drops its queued delivery.
+It writes the result and exits through the same boundary as the scan-cycle observer. The ordinary
+application launch and shutdown checks remain part of installer qualification.
+
 
 ## Linux C++ runtime debug sections
 
@@ -253,3 +257,7 @@ packaging toolchain. It keeps the deployed filename and symbolic links, and
 replaces the staged file only after the strip succeeds. The executable ABI and
 the existing license collection remain the same. Qualification uses the
 ordinary offline and online installer checks with the smaller stage.
+
+
+Installer CI can run Windows alone for diagnostics. The default matrix still runs all platforms,
+and a Windows-only run cannot publish testing components or qualify a release.
