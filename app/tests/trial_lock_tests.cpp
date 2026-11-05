@@ -170,6 +170,7 @@ private slots:
             adopted = report.adopted() && presented;
         }, 0);
         QTRY_VERIFY_WITH_TIMEOUT(fitted, 30000);
+        QVERIFY(!project.fit()->native_completion_);
         QVERIFY(adopted);
         QTemporaryDir target;
         {

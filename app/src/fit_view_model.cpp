@@ -1123,7 +1123,7 @@ void FitViewModel::ended(const edi::FitReport& report) {
     if (attempt == latest_attempt_) undo_attempt_ = adopted ? attempt : 0;
     // Take the callback before any presentation/receiver can throw or replace the
     // model. FitJob owns this report through the entire completion invocation.
-    auto completion = std::move(native_completion_);
+    auto completion = std::exchange(native_completion_, {});
     // This completed fit owns its origin even if presentation starts another fit.
     const bool automatic_results = !completion;
     std::exception_ptr failure;

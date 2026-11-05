@@ -2659,3 +2659,13 @@ background naming follow the same admission order. Their existing scope guards
 release the identity on refusal, exceptions and owner replacement. A recorded
 sequence retains the preceding fit and relation state, then frees, fits, fixes and
 saves the independent mixed-site displacement group in both display modes.
+
+
+## Completed callback ownership
+
+Taking a native fit completion explicitly exchanges the stored std::function with an empty one.
+Moving alone leaves the source in a valid unspecified state and can retain a small callable on
+libc++; the outstanding-completion trial lock must become false before invoking the taken callback.
+The real follow-up/free/fit/Save test checks both callback ownership and the released trial. This
+preserves the original presentation ordering and does not grant observers write authority.
+The contract follows [the function move constructor](https://eel.is/c++draft/func.wrap.func.con).
