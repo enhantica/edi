@@ -8,6 +8,7 @@ import html
 import json
 import re
 import struct
+from importlib.metadata import distribution
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -75,6 +76,21 @@ def replace_marker(source: Path, kind: str, key: str, content: str) -> None:
     if count != 1:
         raise ValueError(f'Expected one {kind} marker in {source}')
     source.write_text(text, encoding='utf-8')
+
+
+def platform_icon(name: str) -> str:
+    if name not in {'apple', 'windows', 'linux'}:
+        raise ValueError(f'Unknown download platform icon: {name}')
+    relative = f'zensical/templates/.icons/fontawesome/brands/{name}.svg'
+    source = distribution('zensical').locate_file(relative)
+    root = ElementTree.fromstring(source.read_bytes())
+    paths = ''.join(
+        '<path d="' + html.escape(path.attrib['d'], quote=True) + '"/>'
+        for path in root
+        if path.tag.endswith('path')
+    )
+    view_box = html.escape(root.attrib['viewBox'], quote=True)
+    return f'<svg viewBox="{view_box}" aria-hidden="true" focusable="false">{paths}</svg>'
 
 
 def render_interface_links() -> None:
@@ -181,9 +197,19 @@ def render() -> None:
                 parsed = urlsplit(url)
                 if parsed.scheme != 'https' or not parsed.netloc:
                     raise ValueError(f'Invalid {family} download URL: {url}')
+                description = label
+                content = label
+                if family == 'desktop':
+                    requirements = html.escape(entry['requirements'], quote=True)
+                    description = f'{label}, {requirements}'
+                    icon = platform_icon(entry['icon'])
+                    content = (
+                        f'{icon}<span class="ed-download-label">{label}'
+                        f'<small>{requirements}</small></span>'
+                    )
                 buttons.append(
                     f'<a class="md-button" href="{html.escape(url, quote=True)}" '
-                    f'aria-label="Download for {label}">{label}</a>'
+                    f'aria-label="Download for {description}">{content}</a>'
                 )
         replace_marker(
             source,

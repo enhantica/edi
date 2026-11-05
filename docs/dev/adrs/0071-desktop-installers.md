@@ -312,3 +312,8 @@ their testing repository and installer identities, then deploys those repositori
 shared Pages publisher. A GitHub prerelease may attach those unchanged online installer ZIPs
 after Pages is serving their components. The stable calendar release still requires one fully
 qualified attempt on the default branch, including Windows.
+
+The desktop download page labels each installer with its platform icon, supported operating
+system and processor architecture. The initial targets are macOS 15 or later on Apple Silicon,
+Windows 11 on x86-64, and Ubuntu 24.04 or later on x86-64. The macOS preview uses macOS 15
+as its minimum because the bundled assistant shell declares that deployment target.

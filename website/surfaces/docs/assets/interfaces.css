@@ -2,3 +2,15 @@
 .ed-downloads { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1rem 0; }
 .md-typeset .ed-downloads .md-button { gap: .45em; }
 .ed-downloads svg { width: 1.1em; height: 1.1em; fill: currentColor; }
+.md-typeset .ed-downloads a:has(.ed-download-label) {
+  justify-content: flex-start;
+  gap: .65em;
+  text-align: start;
+}
+.ed-downloads svg { flex: none; }
+.ed-download-label { display: grid; gap: .12em; }
+.ed-download-label small {
+  color: var(--md-default-fg-color--light);
+  font-size: .82em;
+  font-weight: 400;
+}

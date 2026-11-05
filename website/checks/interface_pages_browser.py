@@ -120,7 +120,9 @@ Math.abs(ratio-.012)<.00001;
             browser.execute(
                 "return document.querySelectorAll('.ed-downloads a.md-button').length === 3 && "
                 "[...document.querySelectorAll('.ed-downloads a.md-button')].every(link => "
-                "link.href === 'https://github.com/enhantica/edi/releases');"
+                "link.href === 'https://github.com/enhantica/edi/releases' && "
+                "link.querySelector('svg[aria-hidden=true] path') && "
+                "link.querySelector('.ed-download-label small').textContent.trim());"
             )
         )
         require(not browser.execute('return document.documentElement.scrollWidth > innerWidth;'))
