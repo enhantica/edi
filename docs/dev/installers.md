@@ -17,10 +17,14 @@ Install the locked toolchain, then build against a crysta checkout:
 
 ```sh
 pixi install --frozen --manifest-path tools/installer/pixi.toml
-pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/build.py" \
-  --crysta-source "$PWD/../crysta" --work "$PWD/build/installer"
 pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/package.py" \
   tools --output "$PWD/build/installer/ifw"
+pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/protocol_check.py" \
+  --tools "$PWD/build/installer/ifw/tools" --output "$PWD/build/installer/protocol"
+pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/build.py" \
+  --check-compiler --crysta-source "$PWD/../crysta" --work "$PWD/build/installer"
+pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/build.py" \
+  --crysta-source "$PWD/../crysta" --work "$PWD/build/installer"
 pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/package.py" \
   package --stage "$PWD/build/installer/stage" --tools "$PWD/build/installer/ifw/tools" \
   --output "$PWD/build/installer/package"
@@ -31,7 +35,7 @@ the generated installer and zip. Qualify it with:
 
 ```sh
 pixi run --manifest-path tools/installer/pixi.toml python "$PWD/tools/installer/package.py" test \
-  --installer /absolute/path/to/the/installer.run --output build/installer/test
+  --installer /absolute/path/to/the/installer.zip --output build/installer/test
 ```
 
 This installs into a path with spaces, removes development library paths, verifies installed bytes,
@@ -44,8 +48,8 @@ remains a failed qualification even if the application itself starts.
 
 These are development installers, without a signing identity or public release step. macOS uses an
 ad-hoc signature and targets arm64; Windows targets x86-64. Linux targets x86-64 and is qualified on
-Ubuntu 24.04. The original bundled assistant package's `zsh` helper requires glibc 2.38; an older host
-can run the app but cannot qualify that complete upstream runtime. The installer does not replace the
+Ubuntu 24.04. The original bundled assistant package's `zsh` helper requires glibc 2.38; an app-only smoke on an older host
+does not qualify that complete upstream runtime. The installer does not replace the
 system C library or graphics drivers.
 
 See [ADR-0071](adrs/0071-desktop-installers.md) for the deployment and qualification contract.
@@ -61,3 +65,32 @@ The manual workflow's `publish_components` input enables initial GitHub Pages pu
 platform passes. This writes only `repository/testing/<platform>/`, preserving the docs, web app,
 other platform repositories and previous immutable component archives. It does not publish a stable
 GitHub release. The future download-domain mirror remains disabled until it is populated.
+
+
+## Calendar release and update notes
+
+The version is `YYYY.MM.SEQUENCE`, starting at zero each month. Merged PR titles describe the user
+outcome and become the release notes. Exactly one existing scope label groups a PR into Added,
+Fixed or Changed; the label does not select a semantic-version increment.
+
+Use these workflows after the release source has merged to main:
+
+1. Run **Prepare calendar release** on main. Inspect its prepared version, complete history and notes.
+2. Run **Desktop installers** at that same source with `release_plan_run` set to the preparation run
+   ID and `crysta_commit` set to the complete engine source commit. Leave `publish_components` off.
+   All platforms must finish their offline/online installation, calculation, rendering, dependency
+   and assistant-lifetime checks. Downloadable artifacts are online ZIPs; offline packages are
+   qualification inputs.
+3. Run **Publish qualified calendar release** on main with `installer_run` set to that successful
+   qualification run. It promotes the exact artifact IDs without rebuilding, stages a matching GitHub
+   draft, deploys component repositories and their history feed, then publishes the verified assets.
+
+The installed app and its notes must match the prepared source/version/history. A failed job, expired
+artifact, mixed retry attempt, changed archive or stale release plan stops promotion. Rerun all native
+jobs for a new qualification attempt; retain earlier diagnostics. A publication retry reuses the same
+qualified files and matching draft, without replacing a published identity.
+
+The history feed and bundled notes share one source. Managed calendar installations check availability
+independently of optional update notifications. The red Update button follows the existing unsaved-work
+guard and starts the maintenance tool. On the updated app's next launch, What's new includes every
+release since the user's previous version. Ordinary developer builds retain their git version.
