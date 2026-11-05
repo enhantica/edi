@@ -245,3 +245,11 @@ destroying the receiver removes them. This test-only transport is independent of
 installed application's --testmode qualification and does not change ordinary fitting controls.
 A standalone real-Qt gate checks exact binary input across multiple chunks, EOF, invalid input,
 receiver retirement and a still-open empty Windows pipe before building the full engine and app.
+
+## Linux C++ runtime debug sections
+
+The Linux installer strips debug sections from the staged libstdc++ with the
+packaging toolchain. It keeps the deployed filename and symbolic links, and
+replaces the staged file only after the strip succeeds. The executable ABI and
+the existing license collection remain the same. Qualification uses the
+ordinary offline and online installer checks with the smaller stage.

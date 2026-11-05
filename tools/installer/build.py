@@ -8,6 +8,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from audit import audit_bundle
@@ -126,6 +127,23 @@ def copy_windows_compiler_runtime(prefix: Path, stage: Path) -> None:
         remaining.remove(record['name'])
     if remaining:
         raise RuntimeError('Locked Windows compiler runtime packages are missing')
+
+
+def strip_linux_cpp_debug(stage: Path, strip: Path) -> None:
+    """Remove debug sections from the staged C++ runtime while retaining its ELF ABI."""
+    library_dir = (stage / 'lib').resolve()
+    runtime = (library_dir / 'libstdc++.so.6').resolve(strict=True)
+    if runtime.parent != library_dir or not runtime.is_file():
+        raise RuntimeError('The staged C++ runtime resolves outside the library directory')
+    with runtime.open('rb') as stream:
+        if stream.read(4) != b'\x7fELF':
+            raise RuntimeError('The staged C++ runtime is not ELF')
+    with tempfile.TemporaryDirectory(dir=library_dir) as directory:
+        candidate = Path(directory) / runtime.name
+        shutil.copy2(runtime, candidate)
+        run([strip, '--strip-debug', candidate])
+        if candidate.stat().st_size < runtime.stat().st_size:
+            candidate.replace(runtime)
 
 
 def sign_macos_app(bundle: Path) -> None:
@@ -283,6 +301,7 @@ def build(
                 raise RuntimeError('Linux deployment requires the patchelf build tool')
             patchelf = Path(found)
         relocate_linux(stage, patchelf, qt)
+        strip_linux_cpp_debug(stage, qt / 'bin/strip')
     collect_notices(stage, qt, crysta, work / 'licence-inputs')
     if SYSTEM == 'macos':
         sign_macos_app(stage / 'EasyDiffraction.app')
