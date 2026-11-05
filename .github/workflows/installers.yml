@@ -165,9 +165,9 @@ jobs:
         shell: bash
         run: |
           pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_assistant_lifetime_host --parallel 4
+          export EDI_LIFETIME_BIN_DIR="$(cat build/installer/app/edi-assistant-lifetime-directory.txt)"
           pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/assistant_fixes/test_process_lifetime.py" --noconftest -o addopts= -q --junitxml=build/installer/assistant-lifetime.xml
         env:
-          EDI_LIFETIME_BIN_DIR: ${{ github.workspace }}/build/installer/app/app
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
       - name: Check retired project ownership before packaging
@@ -175,9 +175,9 @@ jobs:
         run: |
           pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_trial_lock_tests --parallel 4
           pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
-          import os, subprocess
+          import subprocess
           from pathlib import Path
-          binary = Path('build/installer/app/app') / ('edi_trial_lock_tests.exe' if os.name == 'nt' else 'edi_trial_lock_tests')
+          binary = Path(Path('build/installer/app/edi-trial-lock-executable.txt').read_text().strip())
           subprocess.run([str(binary.resolve()), '-o', 'build/installer/project-retirement.xml,junitxml'], check=True)
           PYTHON
         env:

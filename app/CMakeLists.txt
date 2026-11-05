@@ -588,6 +588,11 @@ if(TARGET edi_assistant_native)
     target_link_libraries(edi_assistant_ui_tests PRIVATE edi_assistant_native)
 endif()
 
+if(EDI_DEPLOY_APP)
+    file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/edi-trial-lock-executable.txt"
+        CONTENT "$<TARGET_FILE:edi_trial_lock_tests>\n")
+endif()
+
 if(NOT EMSCRIPTEN)
     qt_add_executable(edi_assistant_guard tools/assistant_guard.cpp)
     target_link_libraries(edi_assistant_guard PRIVATE Qt6::Core)
@@ -601,6 +606,10 @@ if(NOT EMSCRIPTEN)
         target_link_libraries(edi_assistant_lifetime_host PRIVATE edi_assistant_native)
     endif()
     qt_add_executable(edi_assistant_lifetime_fixture tests/fixtures/assistant_lifetime_server.cpp)
+    if(EDI_DEPLOY_APP)
+        file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/edi-assistant-lifetime-directory.txt"
+            CONTENT "$<TARGET_FILE_DIR:edi_assistant_lifetime_host>\n")
+    endif()
     target_link_libraries(edi_assistant_lifetime_fixture PRIVATE Qt6::Core)
     target_sources(edi_assistant_lifetime_host PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
     add_dependencies(edi_assistant_lifetime_host edi_app_build_commit)
