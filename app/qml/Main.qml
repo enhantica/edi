@@ -227,7 +227,7 @@ EaComponents.ApplicationWindow {
             // Without the assistant built in (the web, ADR-0023 §6) the button stays, and opens the note instead.
             enabled: !ApplicationInfo.assistantBuilt || !ApplicationInfo.assistantAvailable || window.assistantWorkflowPage !== null
             ToolTip.text: !ApplicationInfo.assistantBuilt ? qsTr("AI assistant: available in the desktop app") : !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
-            Accessible.name: !ApplicationInfo.assistantBuilt || !ApplicationInfo.assistantAvailable ? qsTr("Desktop version required") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
+            Accessible.name: !ApplicationInfo.assistantAvailable ? qsTr("AI assistant unavailable") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
             Accessible.description: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app")
             onClicked: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantToolbarActivated(window, assistantToggle, window.assistantPanel, Session, Preferences, assistantDesktopOnlyDialog) : assistantDesktopOnlyDialog.open()
         },
@@ -515,7 +515,7 @@ EaComponents.ApplicationWindow {
         id: assistantDesktopOnlyDialog
         objectName: "assistant.desktopOnly"
         parent: Overlay.overlay
-        title: ApplicationInfo.assistantBuilt ? qsTr("Desktop version required") : qsTr("AI assistant")
+        title: qsTr("AI assistant")
         standardButtons: ApplicationInfo.assistantBuilt ? Dialog.Ok : Dialog.Close
         enterAccepts: true
         contentWidth: AppSizes.messagesDialogContentWidth

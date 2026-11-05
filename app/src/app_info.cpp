@@ -5,6 +5,7 @@
 #include "assistant_panel_presentation.hpp"
 #if EDI_APP_ASSISTANT
 #include "assistant_view_model.hpp"
+#include "codex_agent.hpp"
 #endif
 #include "web_files.hpp"
 
@@ -62,6 +63,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string_view>
 
 #include <private/qjsengine_p.h>
@@ -180,10 +182,14 @@ QString read_resource(const QString& path) {
 
 namespace {
 bool assistant_device_available() {
-#ifdef Q_OS_WASM
-    return false;
+#if EDI_APP_ASSISTANT
+    try {
+        return !edi_app::CodexAgent::executable().isEmpty();
+    } catch (const std::runtime_error&) {
+        return false;
+    }
 #else
-    return true;
+    return false;
 #endif
 }
 }  // namespace
@@ -197,7 +203,10 @@ bool ApplicationInfo::assistantAvailable() const { return assistant_available_; 
 bool ApplicationInfo::assistantBuilt() const { return EDI_APP_ASSISTANT != 0; }
 
 QString ApplicationInfo::assistantUnavailableReason() const {
-    return assistant_available_ ? QString() : tr("AI assistance is only available in the desktop version.");
+    if (assistant_available_) return {};
+    return assistantBuilt()
+        ? tr("The AI assistant component is not installed or is unavailable. You can add it using the EasyDiffraction Maintenance Tool.")
+        : tr("AI assistance is only available in the desktop version.");
 }
 
 void ApplicationInfo::useDemoIdentity() { g_demo_identity = true; }

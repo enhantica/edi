@@ -150,32 +150,32 @@ def validate_repository(folder: Path, version: str) -> None:
         raise ValueError('Component metadata must be bounded without declarations')
     root = ET.fromstring(content)  # noqa: S314 - declarations rejected above
     packages = root.findall('PackageUpdate')
-    if (
-        len(packages) != 1
-        or packages[0].findtext('Name') != 'org.easyscience.edi'
-        or packages[0].findtext('Version') != version
-    ):
+    expected = {'org.easyscience.edi', 'org.easyscience.edi.assistant'}
+    if len(packages) != len(expected) or {p.findtext('Name') for p in packages} != expected:
         raise ValueError('Component repository does not match the qualified release')
-    component = folder / 'org.easyscience.edi'
-    archives = packages[0].findtext('DownloadableArchives', '').split(',')
-    if not archives or any(
-        not name
-        or Path(name).name != name
-        or '\\' in name
-        or ':' in name
-        or not name.endswith('.7z')
-        for name in archives
-    ):
-        raise ValueError('Component archive names are invalid')
-    for name in archives:
-        path = component / (version + name)
-        with path.open('rb') as stream:
-            actual = hashlib.file_digest(stream, 'sha1').hexdigest()
-        if actual != path.with_suffix(path.suffix + '.sha1').read_text().strip():
-            raise ValueError('Component archive checksum differs')
-    with (component / (version + 'meta.7z')).open('rb') as stream:
-        if hashlib.file_digest(stream, 'sha1').hexdigest() != packages[0].findtext('SHA1'):
-            raise ValueError('Component metadata archive checksum differs')
+    for package in packages:
+        if package.findtext('Version') != version:
+            raise ValueError('Component repository does not match the qualified release')
+        component = folder / package.findtext('Name')
+        archives = package.findtext('DownloadableArchives', '').split(',')
+        if not archives or any(
+            not name
+            or Path(name).name != name
+            or '\\' in name
+            or ':' in name
+            or not name.endswith('.7z')
+            for name in archives
+        ):
+            raise ValueError('Component archive names are invalid')
+        for name in archives:
+            path = component / (version + name)
+            with path.open('rb') as stream:
+                actual = hashlib.file_digest(stream, 'sha1').hexdigest()
+            if actual != path.with_suffix(path.suffix + '.sha1').read_text().strip():
+                raise ValueError('Component archive checksum differs')
+        with (component / (version + 'meta.7z')).open('rb') as stream:
+            if hashlib.file_digest(stream, 'sha1').hexdigest() != package.findtext('SHA1'):
+                raise ValueError('Component metadata archive checksum differs')
 
 
 def stage(repo: str, identity: int, output: Path) -> None:

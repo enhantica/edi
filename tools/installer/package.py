@@ -20,6 +20,9 @@ import py7zr
 
 ROOT = Path(__file__).resolve().parents[2]
 SYSTEM = {'Linux': 'linux', 'Darwin': 'macos', 'Windows': 'windows'}[platform.system()]
+APP_COMPONENT = 'org.easyscience.edi'
+ASSISTANT_COMPONENT = 'org.easyscience.edi.assistant'
+ASSISTANT_RUNTIME = Path('libexec/edi/codex')
 SUFFIX = '.exe' if SYSTEM == 'windows' else ''
 PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'windows-x86_64'}[
     SYSTEM
@@ -188,7 +191,7 @@ def write_metadata(
         'Package',
         {
             'DisplayName': 'EasyDiffraction',
-            'Description': 'Diffraction analysis with crysta, Qt and the assistant runtime.',
+            'Description': 'Diffraction analysis with crysta and Qt.',
             'Version': version,
             'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
             'Default': 'true',
@@ -204,6 +207,22 @@ def write_metadata(
     )
     ET.indent(root)
     root.write(meta / 'package.xml', encoding='utf-8', xml_declaration=True)
+
+
+def write_assistant_metadata(meta: Path, version: str) -> None:
+    xml_file(
+        meta / 'package.xml',
+        'Package',
+        {
+            'DisplayName': 'AI assistant',
+            'Description': 'Optional runtime for the ChatGPT assistant in EasyDiffraction.',
+            'Version': version,
+            'ReleaseDate': datetime.datetime.now(datetime.UTC).date().isoformat(),
+            'Dependencies': APP_COMPONENT,
+            'Default': 'false',
+            'RequiresAdminRights': 'false',
+        },
+    )
 
 
 def acquire_installer_licenses(tools: Path, destination: Path) -> None:
@@ -458,11 +477,22 @@ def prepare_installer_source(
     if source.exists():
         raise RuntimeError('Installer source already exists; choose a fresh output directory')
     config = source / 'config'
-    meta = source / 'packages/org.easyscience.edi/meta'
+    packages = source / 'packages'
+    meta = packages / APP_COMPONENT / 'meta'
     data = meta.parent / 'data'
+    assistant_meta = packages / ASSISTANT_COMPONENT / 'meta'
+    assistant_data = assistant_meta.parent / 'data'
     config.mkdir(parents=True)
     meta.mkdir(parents=True)
     shutil.copytree(stage, data, symlinks=True)
+    assistant_meta.mkdir(parents=True)
+    optional_runtime = assistant_data / ASSISTANT_RUNTIME
+    optional_runtime.parent.mkdir(parents=True)
+    shutil.move(data / ASSISTANT_RUNTIME, optional_runtime)
+    (assistant_data / 'assistant-payload-manifest.json').write_text(
+        json.dumps(payload_manifest(assistant_data), indent=2) + '\n'
+    )
+    write_assistant_metadata(assistant_meta, version)
     template_args, tool_environment = [], None
     runtime = None
     if SYSTEM == 'linux':
@@ -655,7 +685,9 @@ def unpack_installer(archive: Path, output: Path) -> Path:
     return candidates[0]
 
 
-def exercise_installer(installer: Path, output: Path, repository: str | None = None) -> None:
+def exercise_installer(
+    installer: Path, output: Path, repository: str | None = None, *, with_assistant: bool = False
+) -> None:
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     metadata_path = installer.parent / 'installer.json'
@@ -684,6 +716,7 @@ def exercise_installer(installer: Path, output: Path, repository: str | None = N
                 '--default-answer',
                 '--confirm-command',
                 'install',
+                *([ASSISTANT_COMPONENT] if with_assistant else []),
             ],
             env=env,
             stdout=log,
@@ -697,6 +730,11 @@ def exercise_installer(installer: Path, output: Path, repository: str | None = N
     )
     try:
         manifest = json.loads((target / 'payload-manifest.json').read_text(encoding='utf-8'))
+        optional_manifest = target / 'assistant-payload-manifest.json'
+        if with_assistant:
+            manifest.update(json.loads(optional_manifest.read_text(encoding='utf-8')))
+        elif optional_manifest.exists() or (target / ASSISTANT_RUNTIME).exists():
+            raise RuntimeError('The default installation includes the optional assistant')
         for name, expected in manifest.items():
             path = target / name
             if 'sha256' in expected and (not path.is_file() or sha256(path) != expected['sha256']):
@@ -727,6 +765,7 @@ def exercise_installer(installer: Path, output: Path, repository: str | None = N
             raise RuntimeError('Installed release identity or bundled history differs')
         if (
             not receipt.get('passed')
+            or receipt.get('assistant_available') is not with_assistant
             or not receipt.get('svg_images')
             or not (output / 'smoke/window.png').is_file()
         ):
@@ -801,6 +840,7 @@ def main() -> None:
     test.add_argument('--installer', type=Path, required=True)
     test.add_argument('--output', type=Path, required=True)
     test.add_argument('--repository')
+    test.add_argument('--with-assistant', action='store_true')
     args = parser.parse_args()
     if args.command == 'relocate-linux':
         relocate_linux(args.stage, args.patchelf, args.qt_prefix)
@@ -828,7 +868,9 @@ def main() -> None:
             urls[1:] if args.kind == 'online' else (),
         )
     else:
-        exercise_installer(args.installer, args.output, args.repository)
+        exercise_installer(
+            args.installer, args.output, args.repository, with_assistant=args.with_assistant
+        )
 
 
 if __name__ == '__main__':

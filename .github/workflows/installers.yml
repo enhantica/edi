@@ -181,6 +181,13 @@ jobs:
               '--repository', (package / 'repository').as_uri() + '/',
               '--output', str(root / 'build/installer/online-test'),
           ], check=True)
+          subprocess.run([
+              'python', str(root / 'tools/installer/package.py'), 'test',
+              '--installer', str(package / metadata['zip']),
+              '--repository', (package / 'repository').as_uri() + '/',
+              '--output', str(root / 'build/installer/online-assistant-test'),
+              '--with-assistant',
+          ], check=True)
           PYTHON
       - name: Prepare the tested platform repository
         shell: bash
@@ -229,6 +236,9 @@ jobs:
             build/installer/online-test/*.log
             build/installer/online-test/*.json
             build/installer/online-test/smoke/**
+            build/installer/online-assistant-test/*.log
+            build/installer/online-assistant-test/*.json
+            build/installer/online-assistant-test/smoke/**
             build/installer/online/installer.json
             build/installer/stage/bundle-audit.json
             build/installer/protocol/*.log

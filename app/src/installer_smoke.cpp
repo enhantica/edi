@@ -89,15 +89,29 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
             if (!(sum > 0)) throw std::runtime_error("Engine returned a zero pattern");
             report.insert("calculated_points", static_cast<qint64>(values.size()));
             const auto helper = edi_app::CodexAgent::executable();
-            if (helper.isEmpty())
-                throw std::runtime_error("Bundled assistant runtime is unavailable");
-            QProcess process;
-            process.start(helper, {QStringLiteral("--version")});
-            if (!process.waitForStarted(5000) || !process.waitForFinished(10000) ||
-                process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
-                throw std::runtime_error("Bundled assistant runtime did not start");
-            report.insert("assistant",
-                          QString::fromUtf8(process.readAllStandardOutput()).trimmed());
+            const bool assistantAvailable = !helper.isEmpty();
+            const auto* aiTab = window.findChild<QObject*>("preferences.tab.aiAssistance");
+            if (!aiTab || aiTab->property("enabled").toBool() != assistantAvailable)
+                throw std::runtime_error("AI preferences do not match the installed components");
+            if (!assistantAvailable) {
+                auto* robot = window.findChild<QObject*>("assistant.toggle");
+                auto* dialog = window.findChild<QObject*>("assistant.desktopOnly");
+                if (!robot || !robot->property("enabled").toBool() || !dialog ||
+                    !QMetaObject::invokeMethod(robot, "clicked") ||
+                    !dialog->property("visible").toBool())
+                    throw std::runtime_error("The assistant button did not explain the missing component");
+                QMetaObject::invokeMethod(dialog, "close");
+            }
+            report.insert("assistant_available", assistantAvailable);
+            if (!helper.isEmpty()) {
+                QProcess process;
+                process.start(helper, {QStringLiteral("--version")});
+                if (!process.waitForStarted(5000) || !process.waitForFinished(10000) ||
+                    process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+                    throw std::runtime_error("Bundled assistant runtime did not start");
+                report.insert("assistant",
+                              QString::fromUtf8(process.readAllStandardOutput()).trimmed());
+            }
             const auto image = window.grabWindow();
             if (image.isNull() || !image.save(QDir(output).filePath("window.png")))
                 throw std::runtime_error("Application did not render a window");

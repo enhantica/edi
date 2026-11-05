@@ -16,6 +16,8 @@ Use native file dialogs and work directly with projects on your computer.
 
 Open GitHub Releases and choose the online installer for your system. It downloads the application and its required components. Linux builds initially target Ubuntu 24.04 or newer. You can also use the [web app](browser.md).
 
+Select **AI assistant** during setup if you want to use the ChatGPT assistant. You can add or remove it later with the **EasyDiffraction Maintenance Tool**. Restart EasyDiffraction after changing the installed components.
+
 ## Install and update
 
 Download the ZIP for your platform and extract the whole archive before opening the installer.

@@ -16,8 +16,7 @@ online update repository do not apply to the C++ application.
 Use Qt Installer Framework 4.11.0, the latest published release at implementation time, to produce
 offline qualification installers, followed by online-only distribution installers. Pin the official tools and their hashes. Build crysta from an explicit
 source revision before linking edi. Use Qt's CMake deployment support to collect QML imports, platform
-plugins, Qt libraries and runtime dependencies into one staged application. Include the native assistant
-runtime, lifetime guard, licences and notices. No Python installation is required on the user's machine.
+plugins, Qt libraries and runtime dependencies into one staged application. Stage the native assistant runtime, lifetime guard, licences and notices. No Python installation is required on the user's machine.
 
 The installer jobs use one locked Pixi workspace on all platforms. Its Qt and native compiler pins
 match the developer app workspace, with an offline gate preventing drift. Host SDKs provide the
@@ -41,7 +40,7 @@ tests do not silently prune components still referenced by an older client.
 
 The installed application has a bounded `--testmode <output-directory>` check. It uses fresh settings,
 loads an embedded public example into a temporary directory, calculates a finite nonzero pattern with
-crysta, starts the bundled assistant executable for its version only, renders the real application
+crysta, starts the assistant executable for its version when installed, renders the real application
 window, writes a screenshot and JSON receipt, and exits. It never logs in or sends a model request.
 The packaging check runs with development library paths removed, installs into an isolated path with
 spaces, launches the installed application, and uninstalls it. CI uploads zipped installers and the test
@@ -53,7 +52,7 @@ receipts for Linux x86-64, Windows x86-64 and macOS arm64 independently.
 - No runtime dependency resolves into a checkout or build environment; operating-system libraries and
   graphics drivers remain platform prerequisites rather than copied system components.
 - Each platform job builds crysta first, deploys edi, creates its installer and exercises the installed app.
-- A missing runtime file, failed installation, missing screenshot or failed calculation fails packaging.
+- A missing selected component file, failed installation, missing screenshot or failed calculation fails packaging.
 - Packaging tests use local fixtures; acquisition of pinned build inputs is separate from those tests.
 
 ## Sources
@@ -101,10 +100,10 @@ dependencies, and removes the installation. No test reaches a public component s
 
 ## Preserve upstream runtime bytes through deployment
 
-Qt's application deployment finishes before the verified assistant files are installed. On macOS,
-sign owned Mach-O files and bundle containers explicitly, excluding the upstream assistant subtree;
-do not recursively re-sign that subtree. Verify the final bundle signature, then require every
-assistant member and hash to match the manifest produced from the already verified build input.
+Qt's application deployment finishes before the verified assistant files are staged. On macOS,
+stage them outside the application bundle and sign the application independently. Verify the bundle
+signature, then require every assistant member and hash to match the manifest produced from the
+already verified build input.
 Apply the same post-deployment membership and hash gate on all native platforms. A re-signed,
 removed, extra or linked helper fails packaging even if it still launches.
 
@@ -283,3 +282,23 @@ The executable retains its generated build identity as bytes through native
 linker elimination. ELF and Mach-O retain their compiler attributes, while
 MSVC exports the marker from the executable. An early fixture generates and
 links the real marker in a release build and reads it from the resulting binary.
+
+
+## Optional assistant component
+
+The required EasyDiffraction component contains the application, Qt, crysta and the small process
+lifetime guard. The separate AI assistant component contains the complete verified Codex runtime
+under `libexec/edi/codex`, including on macOS where it sits beside the signed application bundle.
+The component is unchecked by default and depends on EasyDiffraction. Users can select it during
+installation or add and remove it with Maintenance Tool. The two components have independent
+payload manifests and share the release version. Publication verifies the archives for both.
+
+At startup, the desktop app uses its existing runtime manifest and executable checks to determine
+assistant availability. When the component is unavailable, Preferences disables AI assistance and
+the toolbar robot opens a message about installing it through Maintenance Tool. Restart the app
+after changing the installed components. The web toolbar continues to describe the desktop app and
+offer its download page.
+
+The local IFW protocol test adds and removes the optional component without disturbing the
+required application. Online qualification installs the actual application both ways and checks
+that the selected runtime starts, alongside the usual calculation and rendering checks.

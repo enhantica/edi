@@ -147,8 +147,7 @@ def strip_linux_cpp_debug(stage: Path, strip: Path) -> None:
 
 
 def sign_macos_app(bundle: Path) -> None:
-    """Sign owned application code without rewriting the verified upstream runtime."""
-    runtime = bundle / 'Contents/libexec/edi/codex'
+    """Sign the application bundle. The upstream runtime is staged outside it."""
     signatures = {
         b'\xfe\xed\xfa\xce',
         b'\xfe\xed\xfa\xcf',
@@ -161,7 +160,7 @@ def sign_macos_app(bundle: Path) -> None:
     }
     paths = sorted(bundle.rglob('*'), key=lambda path: len(path.parts), reverse=True)
     for path in paths:
-        if path.is_symlink() or path.is_relative_to(runtime) or not path.is_file():
+        if path.is_symlink() or not path.is_file():
             continue
         with path.open('rb') as stream:
             if stream.read(4) not in signatures:
@@ -171,7 +170,6 @@ def sign_macos_app(bundle: Path) -> None:
         if (
             path.is_dir()
             and not path.is_symlink()
-            and not path.is_relative_to(runtime)
             and path.suffix in {'.framework', '.app', '.bundle', '.xpc'}
         ):
             run(['codesign', '--force', '--sign', '-', path])
@@ -181,11 +179,7 @@ def sign_macos_app(bundle: Path) -> None:
 
 def verify_assistant_payload(stage: Path, expected: Path) -> None:
     """Require the exact verified runtime membership and bytes after deployment/signing."""
-    root = stage / (
-        'EasyDiffraction.app/Contents/libexec/edi/codex'
-        if SYSTEM == 'macos'
-        else 'libexec/edi/codex'
-    )
+    root = stage / 'libexec/edi/codex'
     actual = payload_manifest(root)
     wanted = json.loads(expected.read_text(encoding='utf-8'))
     if set(actual) != set(wanted) or any(
