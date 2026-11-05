@@ -242,3 +242,8 @@ until the complete checks pass. Static Qt control-style imports are another cand
 Qt's [compile-time style selection](https://doc.qt.io/qt-6.11/qtquickcontrols-styles.html#compile-time-style-selection)
 can avoid runtime style deployment, but the current common controls and Material tooltip must keep
 their appearance and behavior. No style is removed merely because its archive appears in a link line.
+
+The packer accepts `EDI_WASM_OPTIMIZE_SIZE=1` for qualification builds. It processes
+copies of the linked modules, requires each copy to shrink, checks imports against
+its JavaScript loader, and hashes the final bytes for delivery. The default remains
+the ordinary build pending the full scientific and timing checks.

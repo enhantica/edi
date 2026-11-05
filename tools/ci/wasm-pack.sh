@@ -16,12 +16,23 @@ cd "$ROOT"
 . "$ROOT/tools/ci/wasm-env.sh"
 OUT="$ROOT/build/wasm"
 SITE="$OUT/site"
+SIZE_MODE="${EDI_WASM_OPTIMIZE_SIZE:-0}"
+case "$SIZE_MODE" in
+  0|1) ;;
+  *) echo "wasm-pack: EDI_WASM_OPTIMIZE_SIZE must be 0 or 1" >&2; exit 2 ;;
+esac
+OPT="$EDI_WASM_TOOLCHAIN/emsdk-$EDI_WASM_EMSDK/upstream/bin/wasm-opt"
+if [ "$SIZE_MODE" = 1 ] && [ ! -x "$OPT" ]; then
+  echo "wasm-pack: the pinned wasm-opt is missing" >&2
+  exit 1
+fi
 rm -rf "$SITE" "$OUT/edi-webapp.zip"
 mkdir -p "$SITE"
 {
   echo "EasyDiffraction web app"
   echo "edi: $(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
   echo "Qt: $EDI_WASM_QT (wasm_multithread, wasm_singlethread); Emscripten: $EDI_WASM_EMSDK"
+  echo "Size optimization: $SIZE_MODE"
 } >"$SITE/BUILD-INFO.txt"
 NODE="$(ls "$EDI_WASM_TOOLCHAIN/emsdk-$EDI_WASM_EMSDK"/node/*/bin/node 2>/dev/null | head -n 1)"
 [ -x "$NODE" ] || { echo "wasm-pack: no Node.js in the Emscripten toolchain — run: pixi run -e app wasm-toolchain" >&2; exit 1; }
@@ -30,14 +41,30 @@ for build in multithread singlethread; do
   for file in edi_app.js edi_app.wasm qtloader.js CRYSTA_SOURCE_SHA; do
     [ -f "$app/$file" ] || { echo "wasm-pack: $app/$file is missing — run: pixi run -e app wasm-build $build" >&2; exit 1; }
   done
-  "$NODE" tools/ci/wasm_import_check.mjs "$app"
-  hash="$(cat "$app/edi_app.js" "$app/edi_app.wasm" "$app/qtloader.js" | sha256sum | cut -c1-12)"
+  stage="$SITE/$build"
+  mkdir -p "$stage"
+  cp "$app/edi_app.js" "$app/qtloader.js" "$stage/"
+  if [ "$SIZE_MODE" = 1 ]; then
+    flags=()
+    if [ "$build" = multithread ]; then flags+=(--enable-threads); fi
+    BINARYEN_CORES="${BINARYEN_CORES:-4}" "$OPT" "$app/edi_app.wasm" -Oz \
+      --mvp-features --enable-mutable-globals --enable-nontrapping-float-to-int \
+      --enable-sign-ext --enable-simd --enable-bulk-memory --enable-bulk-memory-opt \
+      --enable-reference-types --enable-multivalue "${flags[@]}" -o "$stage/edi_app.wasm"
+    if [ "$(wc -c <"$stage/edi_app.wasm")" -ge "$(wc -c <"$app/edi_app.wasm")" ]; then
+      echo "wasm-pack: size optimization did not shrink $build" >&2
+      exit 1
+    fi
+  else
+    cp "$app/edi_app.wasm" "$stage/"
+  fi
+  "$NODE" tools/ci/wasm_import_check.mjs "$stage"
+  hash="$(cat "$stage/edi_app.js" "$stage/edi_app.wasm" "$stage/qtloader.js" | sha256sum | cut -c1-12)"
   folder="$build-$hash"
-  mkdir -p "$SITE/$folder"
-  cp "$app/edi_app.js" "$app/edi_app.wasm" "$app/qtloader.js" "$SITE/$folder/"
+  mv "$stage" "$SITE/$folder"
   printf -v "folder_$build" '%s' "$folder"
-  raw=$(wc -c <"$app/edi_app.wasm")
-  gz=$(gzip -9 -c "$app/edi_app.wasm" | wc -c)
+  raw=$(wc -c <"$SITE/$folder/edi_app.wasm")
+  gz=$(gzip -9 -c "$SITE/$folder/edi_app.wasm" | wc -c)
   echo "$build ($folder/): crysta $(cat "$app/CRYSTA_SOURCE_SHA"); edi_app.wasm $raw bytes ($gz gzip -9)" >>"$SITE/BUILD-INFO.txt"
 done
 printf '{"multithread": "%s", "singlethread": "%s"}\n' "$folder_multithread" "$folder_singlethread" >"$SITE/build.json"
