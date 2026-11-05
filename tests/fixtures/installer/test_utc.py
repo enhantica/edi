@@ -55,13 +55,11 @@ int main() {
     subprocess.run(
         [cmake, '-G', 'Ninja', '-S', str(tmp_path), '-B', str(build)],
         check=True,
-        capture_output=True,
         timeout=30,
     )
     subprocess.run(
         [cmake, '--build', str(build), '--parallel', '4'],
         check=True,
-        capture_output=True,
         timeout=30,
     )
     executable = build / ('utc.exe' if os.name == 'nt' else 'utc')

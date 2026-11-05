@@ -176,3 +176,7 @@ Byte-pinned upstream notices and vendored report JavaScript are marked binary fo
 purposes, so Windows automatic newline conversion cannot invalidate their checksums. Keep upstream
 licence bytes unchanged. Installer metadata and its offline fixtures explicitly decode UTF-8 instead
 of using the host locale. Native Windows boundary checks run before tools are acquired or builds start.
+
+The ordinary installer-check task delegates to the locked packaging workspace, so it needs no
+unrecorded Python package in the app development environment. Compiler failures retain real native
+stdout/stderr in pytest diagnostics instead of hiding them behind a subprocess exit code.

@@ -15,7 +15,7 @@ on:
       crysta_commit:
         description: Exact crysta source commit to build before edi
         required: true
-        default: 63438e2b08f430ab505024084e7f855388f43fa6
+        default: c8be97888601006bfde1063c320b8e246cccaae2
         type: string
   push:
     paths:
@@ -46,7 +46,7 @@ jobs:
           - platform: Windows
             runner: windows-2022
     env:
-      CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || '63438e2b08f430ab505024084e7f855388f43fa6' }}
+      CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || 'c8be97888601006bfde1063c320b8e246cccaae2' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
