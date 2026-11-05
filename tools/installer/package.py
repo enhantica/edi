@@ -516,7 +516,7 @@ def package_app(
                 '--verbose',
                 '--component-metadata',
                 '--compression',
-                '1',
+                '5',
                 '-p',
                 source / 'packages',
                 output / 'repository',

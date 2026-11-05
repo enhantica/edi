@@ -270,3 +270,11 @@ the template to binarycreator. This keeps the downloaded Qt tools intact
 and lets binarycreator attach its metadata to the smaller executable.
 The archive step signs the final bundle, and the protocol and installed
 application checks exercise installation, updating and removal.
+
+## Downloadable component compression
+
+The online component repository uses Qt Installer Framework's normal compression
+level 5. A comparison on the same Linux staging tree reduced its component
+archives from 169.27 MB to 144.92 MB. The producer took about five minutes
+instead of one minute on that machine. The internal offline installer retains
+fast compression so its qualification build remains short.
