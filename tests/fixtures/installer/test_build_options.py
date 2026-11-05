@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
+# CMake probes the MSVC toolchain on each fresh configure.
+CONFIGURE_TIMEOUT = 120 if os.name == 'nt' else 30
 
 
 @pytest.fixture(scope='module')
@@ -46,7 +48,9 @@ def build(tmp_path_factory):
     )
     output = source / 'build'
     subprocess.run(
-        ['cmake', '-G', 'Ninja', '-S', str(source), '-B', str(output)], check=True, timeout=30
+        ['cmake', '-G', 'Ninja', '-S', str(source), '-B', str(output)],
+        check=True,
+        timeout=CONFIGURE_TIMEOUT,
     )
     return output
 
@@ -127,7 +131,7 @@ def test_linked_executable_keeps_the_generated_build_marker(tmp_path):
             str(output),
         ],
         check=True,
-        timeout=30,
+        timeout=CONFIGURE_TIMEOUT,
     )
     subprocess.run(['cmake', '--build', str(output), '--parallel', '4'], check=True, timeout=30)
     binary = output / ('probe.exe' if os.name == 'nt' else 'probe')
