@@ -172,9 +172,11 @@ and window smoke after stripping. Qt deployment and the complete verified assist
 untouched; the existing final runtime byte/membership gate and actual installed-app checks still
 apply. Other platforms keep their existing deployment behavior until separately measured.
 
-Byte-pinned upstream notices and vendored report JavaScript are marked binary for Git checkout
-purposes, so Windows automatic newline conversion cannot invalidate their checksums. Keep upstream
-licence bytes unchanged. Installer metadata and its offline fixtures explicitly decode UTF-8 instead
+Every committed file keeps its exact bytes on checkout (`* -text`), including skills, notices,
+vendored scripts and raw data fixtures. Windows automatic newline conversion must not invalidate
+checksums or silently alter independent inputs. A real local Git clone with autocrlf enabled checks
+an otherwise unlisted future skill, mixed-line-ending data and binary content. Keep upstream licence
+bytes unchanged. Installer metadata and its offline fixtures explicitly decode UTF-8 instead
 of using the host locale. Native Windows boundary checks run before tools are acquired or builds start.
 
 The ordinary installer-check task delegates to the locked packaging workspace, so it needs no
