@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
-#include "assistant_skills.hpp"
+#include "assistant_skill_resources.hpp"
 #include <array>
 namespace edi::assistant::detail {
-std::string_view skill_index_data() { return R"edi_skill(@EDI_SKILL_INDEX@)edi_skill"; }
+@edi_skill_index_declaration@
+@EDI_SKILL_DECLARATIONS@
+std::string_view skill_index_data() { return {edi_skill_index, @edi_skill_index_size@}; }
 std::span<const SkillResource> skill_resource_data() {
     static constexpr SkillResource resources[] = {
 @EDI_SKILL_RESOURCES@    };

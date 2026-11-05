@@ -4,6 +4,7 @@
 #include <cstddef>
 
 namespace edi::detail {
+@EDI_PALETTE_DECLARATIONS@
 extern const char* const kPaletteTsv[];
 extern const std::size_t kPaletteTsvCount;
 const char* const kPaletteTsv[] = {

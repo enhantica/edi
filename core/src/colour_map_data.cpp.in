@@ -5,6 +5,7 @@
 #include <cstddef>
 
 namespace edi::detail {
+@EDI_COLOUR_MAP_DECLARATIONS@
 extern const std::size_t kColourMapCount;
 extern const char* const kColourMapNames[];
 extern const char* const kColourMapTsvs[];
