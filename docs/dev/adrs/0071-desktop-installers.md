@@ -195,3 +195,11 @@ could silently borrow a runner's redistributable. Use the workspace's exact C++/
 including the version required by its Qt build, without replacing any verified assistant files.
 Missing packages, missing DLLs and escaping inventory paths refuse deployment. The existing notices
 collector includes the selected runtime packages.
+
+
+MSVC builds use `/bigobj` for edi's targets. The actual Windows build exceeds the standard COFF
+object section limit in the template-heavy adapter after the engine has compiled. Selecting the
+extended object format applies to ordinary native builds and installers alike; splitting the
+adapter or changing engine/structural behavior to satisfy a file-format limit is unnecessary.
+The original C1128 failure is retained and the full Windows build is the validation boundary.
+See [Microsoft's object-format option](https://learn.microsoft.com/en-us/cpp/build/reference/bigobj-increase-number-of-sections-in-dot-obj-file).
