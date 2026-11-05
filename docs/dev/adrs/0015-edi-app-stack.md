@@ -104,8 +104,10 @@ The page → view-model contract is the packet's §3; its rules:
   core value changed; list models change by single-row inserts, removals and moves and one `dataChanged` per
   changed row — never a reset, except when a project is opened, created or closed. Every edit is a
   request to the calculation worker (ADR-0020): the calculation runs off the GUI thread, and its dependents
-  (the pattern, a shown Text tab, the report) update once, when it is published. A replaced project's pages
-  are freed before the open returns. *Closes:* the whole-list cascade of §Context.
+  (the pattern, a shown Text tab, the report) update once, when it is published. A replaced project's model
+  graph is freed before the open returns. Released QML items follow their normal event-loop deletion;
+  opening a project does not globally drain unrelated deferred objects, whose callbacks may still be
+  executing (ADR-0052). *Closes:* the whole-list cascade of §Context.
 - **Writes through the core.** A value write is `edi::assign_value` — the Python setter's range rule and
   message; a refused write changes nothing and sets `lastError`.
 
