@@ -15,9 +15,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(MSVC)
-    add_compile_options(/bigobj)
-endif()
+include(cmake/edi_build_options.cmake)
 
 add_subdirectory(core)
 add_subdirectory(cli)

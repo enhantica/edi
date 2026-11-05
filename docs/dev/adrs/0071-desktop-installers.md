@@ -211,3 +211,15 @@ bundled: the original macOS capture lacked its logo and logged unsupported image
 Qt Svg as a direct app dependency so deployment sees the required module before plugin selection.
 Keep that original capture and failure; the all-platform installed checks and visual review must
 qualify the correction. The additional module is required by existing user-visible assets.
+
+
+The shared root compiler policy disables Windows SDK min/max macros before any dependency headers.
+The real provider build exposed the macros through a transitive include, breaking std::min and
+chrono duration::max despite correct C++ calls. The same policy supplies MSVC UTF-8, exceptions,
+standard conditional operators and extended object format to ordinary builds and installers.
+Standalone Win32 source guards remain guarded for independent compilation.
+
+An early native probe includes the actual SDK after standard headers and compiles/runs min/max,
+numeric limits and chrono maximum calls under the production policy. On Windows, a deliberate
+unguarded-SDK control must fail compilation. This uses no engine, GUI, service or network and runs
+before the expensive build. The resource compiler fixture consumes that same policy.

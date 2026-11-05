@@ -102,12 +102,12 @@ def generated(tmp_path_factory):
     )
     (source / 'CMakeLists.txt').write_text(
         'cmake_minimum_required(VERSION 3.26)\nproject(resources LANGUAGES CXX)\n'
+        'include(cmake/edi_build_options.cmake)\n'
         'include(cmake/edi_core_sources.cmake)\nedi_core_sources("${CMAKE_SOURCE_DIR}" sources)\n'
         'file(GLOB EDI_EMBEDDED_FILES "${CMAKE_BINARY_DIR}/*_data.cpp")\n'
         'add_executable(runner main.cpp ${EDI_EMBEDDED_FILES})\n'
         'target_compile_features(runner PRIVATE cxx_std_20)\n'
-        'target_include_directories(runner PRIVATE core/src)\n'
-        'if(MSVC)\ntarget_compile_options(runner PRIVATE /utf-8 /EHsc /bigobj)\nendif()\n',
+        'target_include_directories(runner PRIVATE core/src)\n',
         encoding='utf-8',
     )
     build = source / 'build'
