@@ -12,7 +12,6 @@ ROOT = Path(__file__).resolve().parents[3]
 SOURCE = r"""
 #include "test_observer_input.hpp"
 #include <QCoreApplication>
-#include <QEvent>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
@@ -47,23 +46,27 @@ int main(int argc, char** argv) {
     }
 #endif
     bool retired = false;
+    bool delivered = false;
+    QPointer<QObject> input;
     if (argc > 1) {
-        std::fputs("retiring receiver\n", stderr);
-        QPointer<QObject> input(owner->children().at(0));
-        bool delivered = false;
-        QMetaObject::invokeMethod(input, [&] { delivered = true; }, Qt::QueuedConnection);
-        owner.reset();
-        std::fputs("receiver destroyed\n", stderr);
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
-        retired = input.isNull() && !delivered;
-        std::fputs("queued delivery checked\n", stderr);
-    } else {
-        app.exec();
+        QTimer::singleShot(0, &app, [&] {
+            input = owner->children().at(0);
+            QMetaObject::invokeMethod(input, [&] { delivered = true; }, Qt::QueuedConnection);
+            owner.reset();
+            std::fputs("receiver destroyed\n", stderr);
+            QMetaObject::invokeMethod(&app, [&] {
+                retired = input.isNull() && !delivered;
+                std::fputs("queued delivery checked\n", stderr);
+                app.quit();
+            }, Qt::QueuedConnection);
+        });
     }
+    app.exec();
     const auto report = QJsonDocument(QJsonObject{
         {"bytes", QString::fromLatin1(received.toHex())}, {"closed", ended},
         {"active_at_end", active_at_end}, {"retired", retired}}).toJson(QJsonDocument::Compact);
     std::fwrite(report.constData(), 1, static_cast<std::size_t>(report.size()), stdout);
+    std::fflush(stdout);
     return 0;
 }
 """
@@ -113,12 +116,16 @@ def test_retired_receiver_cannot_consume_input_or_eof(binary):
         stderr=subprocess.PIPE,
     ) as process:
         try:
-            stdout, stderr = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired as error:
+            returncode = process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
             process.kill()
-            _, stderr = process.communicate()
-            pytest.fail(f'Retirement probe timed out: {stderr!r} ({error})')
-        assert process.returncode == 0, stderr
+            process.wait(timeout=5)
+            pytest.fail(
+                f'Retirement probe timed out: {process.stderr.read()!r}; '
+                f'report: {process.stdout.read()!r}'
+            )
+        stdout = process.stdout.read()
+        assert returncode == 0, process.stderr.read()
     assert json.loads(stdout) == {
         'bytes': '',
         'closed': 0,
