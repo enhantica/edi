@@ -3,6 +3,10 @@ name: Desktop installers
 on:
   workflow_dispatch:
     inputs:
+      windows_only:
+        description: Run a Windows diagnostic without publishing or qualifying a release
+        default: false
+        type: boolean
       publish_components:
         description: Publish tested components to the Pages testing repository
         required: true
@@ -38,19 +42,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: Linux
-            runner: ubuntu-24.04
-          - platform: macOS
-            runner: macos-15
-          - platform: Windows
-            runner: windows-2022
+        include: ${{ fromJSON(inputs.windows_only && '[{"platform":"Windows","runner":"windows-2022"}]' || '[{"platform":"Linux","runner":"ubuntu-24.04"},{"platform":"macOS","runner":"macos-15"},{"platform":"Windows","runner":"windows-2022"}]') }}
     env:
       CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || '122f77fa46e1143749a4039f65b24438006bb482' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
     steps:
+      - name: Reject publication inputs for a Windows diagnostic
+        if: inputs.windows_only && (inputs.publish_components || inputs.release_plan_run != '')
+        shell: bash
+        run: |
+          echo "Windows diagnostics cannot publish or qualify a release."
+          exit 1
       - name: Enable long source paths on Windows
         if: runner.os == 'Windows'
         run: |
@@ -235,7 +239,7 @@ jobs:
   qualify-release:
     name: record qualified release inputs
     needs: installers
-    if: inputs.release_plan_run != ''
+    if: inputs.release_plan_run != '' && !inputs.windows_only
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -257,7 +261,7 @@ jobs:
   publish-installers:
     name: publish tested installer components
     needs: installers
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_components && inputs.release_plan_run == '' && github.event.repository.private == false
+    if: github.event_name == 'workflow_dispatch' && !inputs.windows_only && inputs.publish_components && inputs.release_plan_run == '' && github.event.repository.private == false
     runs-on: ubuntu-24.04
     concurrency:
       group: pages-publication

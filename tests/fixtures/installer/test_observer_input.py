@@ -100,13 +100,17 @@ def test_pipe_preserves_every_byte_and_stops_at_eof(binary):
 
 
 def test_retired_receiver_cannot_consume_input_or_eof(binary):
-    result = subprocess.run(
-        [str(binary), 'retire'],
-        input=b'late command\n',
-        capture_output=True,
-        check=True,
-        timeout=10,
-    )
+    read_fd, write_fd = os.pipe()
+    try:
+        try:
+            os.write(write_fd, b'late command\n')
+        finally:
+            os.close(write_fd)
+        result = subprocess.run(
+            [str(binary), 'retire'], stdin=read_fd, capture_output=True, check=True, timeout=10
+        )
+    finally:
+        os.close(read_fd)
     assert json.loads(result.stdout) == {
         'bytes': '',
         'closed': 0,
