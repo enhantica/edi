@@ -105,6 +105,7 @@ nav:
           - dev/adrs/0070-magnetic-structures.md
           - dev/adrs/0071-desktop-installers.md
           - dev/adrs/0072-calendar-releases-and-application-updates.md
+          - dev/adrs/0073-portable-utc-timestamps.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
