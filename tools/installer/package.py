@@ -769,10 +769,12 @@ def main() -> None:
     package.add_argument('--tools', type=Path, required=True)
     package.add_argument('--output', type=Path, required=True)
     package.add_argument('--version')
-    package.add_argument('--release-plan', type=Path)
+    package.add_argument(
+        '--release-plan', type=Path, default=os.environ.get('EDI_RELEASE_PLAN') or None
+    )
     package.add_argument('--kind', choices=['offline', 'online'], default='offline')
     package.add_argument('--repository-url')
-    package.add_argument('--channel', choices=['testing', 'stable'], default='testing')
+    package.add_argument('--channel', choices=['testing', 'stable'])
     test = commands.add_parser('test')
     test.add_argument('--installer', type=Path, required=True)
     test.add_argument('--output', type=Path, required=True)
@@ -783,8 +785,8 @@ def main() -> None:
     elif args.command == 'tools':
         fetch_tools(args.output)
     elif args.command == 'package':
-        urls = repository_urls(args.channel)
-        version = args.version or '0.0.0'
+        urls = repository_urls(args.channel or ('stable' if args.release_plan else 'testing'))
+        version = args.version or os.environ.get('EDI_INSTALLER_VERSION') or '0.0.0'
         if args.release_plan:
             release = read_release_plan(args.release_plan)
             if args.version and args.version != release['version']:

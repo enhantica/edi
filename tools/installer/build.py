@@ -276,7 +276,9 @@ def main() -> None:
     parser.add_argument('--qt-prefix', type=Path)
     parser.add_argument('--patchelf', type=Path)
     parser.add_argument('--version', help='Calendar release version, also used by the installer')
-    parser.add_argument('--release-plan', type=Path)
+    parser.add_argument(
+        '--release-plan', type=Path, default=os.environ.get('EDI_RELEASE_PLAN') or None
+    )
     args = parser.parse_args()
     build(
         args.crysta_source,

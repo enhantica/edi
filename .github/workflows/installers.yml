@@ -8,6 +8,10 @@ on:
         required: true
         default: false
         type: boolean
+      release_plan_run:
+        description: Successful Prepare calendar release run at this exact source (empty for testing)
+        required: false
+        type: string
       crysta_commit:
         description: Exact crysta source commit to build before edi
         required: true
@@ -23,6 +27,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   installers:
@@ -42,6 +47,8 @@ jobs:
             runner: windows-2022
     env:
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
+      EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
+      EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
     steps:
       - name: Enable long source paths on Windows
         if: runner.os == 'Windows'
@@ -76,6 +83,13 @@ jobs:
         uses: ./.github/actions/setup-pixi
         with:
           manifest-path: tools/installer/pixi.toml
+      - name: Acquire source-bound release inputs
+        if: inputs.release_plan_run != ''
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/release/download_plan.py" --repo "$GITHUB_REPOSITORY" --run "$PREPARE_RUN" --output "$EDI_RELEASE_PLAN"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREPARE_RUN: ${{ inputs.release_plan_run }}
       - name: Validate calendar release policy offline
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/releases" --noconftest -o addopts= -q
       - name: Acquire the pinned Qt Installer Framework
@@ -114,7 +128,7 @@ jobs:
           installer=$(cat build/installer/package/installer.json | sed -n 's/.*"zip": "\([^"]*\)".*/\1/p')
           pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
       - name: Create the online distribution installer
-        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --version "0.0.${{ github.run_number }}.${{ github.run_attempt }}" --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online"
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online"
       - name: Qualify the online ZIP with local component transport
         shell: bash
         run: |
@@ -139,20 +153,22 @@ jobs:
           from pathlib import Path
           package = Path('build/installer/online')
           metadata = json.loads((package / 'installer.json').read_text())
-          target = Path('build/installer/components/testing') / metadata['platform']
+          import os
+          channel = 'stable' if os.environ.get('EDI_RELEASE_PLAN') else 'testing'
+          target = Path('build/installer/components') / channel / metadata['platform']
           shutil.copytree(package / 'repository', target)
           PYTHON
       - name: Upload online installer
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ matrix.platform }}
+          name: installer-${{ matrix.platform }}-${{ github.run_attempt }}
           path: build/installer/online/*.zip
           if-no-files-found: error
           compression-level: 0
       - name: Upload tested components
         uses: actions/upload-artifact@v4
         with:
-          name: installer-components-${{ matrix.platform }}
+          name: installer-components-${{ matrix.platform }}-${{ github.run_attempt }}
           path: build/installer/components
           if-no-files-found: error
           compression-level: 0
@@ -160,7 +176,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: installer-check-${{ matrix.platform }}
+          name: installer-check-${{ matrix.platform }}-${{ github.run_attempt }}
           path: |
             build/installer/test/*.log
             build/installer/test/*.json
@@ -175,10 +191,32 @@ jobs:
             build/installer/package/installer.json
           if-no-files-found: ignore
 
+  qualify-release:
+    name: record qualified release inputs
+    needs: installers
+    if: inputs.release_plan_run != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Recover the exact prepared inputs
+        run: python tools/release/download_plan.py --repo "$GITHUB_REPOSITORY" --run "$PREPARE_RUN" --output release-plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREPARE_RUN: ${{ inputs.release_plan_run }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qualified-release-plan-${{ github.run_attempt }}
+          path: release-plan
+          if-no-files-found: error
+          retention-days: 90
+
   publish-installers:
     name: publish tested installer components
     needs: installers
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_components && github.event.repository.private == false
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_components && inputs.release_plan_run == '' && github.event.repository.private == false
     runs-on: ubuntu-24.04
     concurrency:
       group: pages-publication
@@ -196,9 +234,21 @@ jobs:
       - name: Download tested platform repositories
         uses: actions/download-artifact@v4
         with:
-          pattern: installer-components-*
+          pattern: installer-components-*-${{ github.run_attempt }}
           merge-multiple: true
           path: components
+      - name: Require every platform from this successful attempt
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          root = Path('components/testing')
+          expected = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
+          if not root.is_dir() or {item.name for item in root.iterdir()} != expected:
+              raise RuntimeError('Publish requires all platforms from one complete successful attempt; rerun all jobs')
+          for platform in expected:
+              if not (root / platform / 'Updates.xml').is_file():
+                  raise RuntimeError('Platform repository metadata is missing')
+          PYTHON
       - name: Preserve documentation, web app and previous components
         run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site
         env:

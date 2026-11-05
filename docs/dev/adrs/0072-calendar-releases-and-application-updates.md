@@ -114,3 +114,14 @@ compilation. Application and installer packaging share these inputs; packaging r
 staged metadata. Installed application qualification records the actual compiled version and SHA-256
 of its bundled history, which must match the prepared inputs. This checks what was installed rather
 than relying only on filenames or workflow environment variables.
+
+Native qualification can consume the successful preparation run only when its workflow identity and
+source commit match the current build. Download the immutable artifact ID after checking attempt,
+expiry, size and exact bounded regular members. Version/history inputs are then shared by the app,
+offline qualification and final online component repository. A prepared candidate uses stable URLs
+but is not automatically published. Ordinary development jobs use testing URLs and unique test versions.
+
+Artifacts include the workflow attempt in their names, so retries retain previous evidence. Testing
+publication requires all platform repositories from the same attempt; rerunning only failed jobs
+cannot silently combine different qualified sets. After all native jobs pass, a separate job retains
+the exact prepared inputs for later promotion. Production publication remains a separate operation.

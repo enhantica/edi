@@ -24,7 +24,7 @@ jobs:
       - name: Upload the release inputs for review and qualification
         uses: actions/upload-artifact@v4
         with:
-          name: release-plan
+          name: release-plan-${{ github.run_attempt }}
           path: release-plan
           if-no-files-found: error
           retention-days: 90
