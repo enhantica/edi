@@ -220,3 +220,25 @@ Site artifacts are retained for 90 days. If no deployed artifact remains, public
 refuses rather than erase the counterpart; a complete-site bootstrap is then needed.
 Extraction uses the safe tar filter. Assembly remains disposable until deployment.
 This supersedes the earlier combined-deployment design.
+
+
+## Size qualification
+
+Keep the two-kit build and complete feature surface while reducing delivery size. Measure an
+immutable source pair with the same Qt/Emscripten kits, browser, fixture inputs and compression
+command before changing a build option. Input-archive section totals describe code available to the
+linker; they are not attribution of the final module after elimination and optimization. Record raw
+module bytes, compressed transfer bytes and actual startup, fitting and slider measurements separately.
+
+Try one change at a time on disposable copies. A smaller module alone does not admit a production
+change: both kits must build, independent numerical/browser checks must pass, and matched timings
+must support the agreed performance limit. Startup-only checks and exploratory GUI fits remain
+separate evidence. Do not regenerate an independent reference to make a candidate pass, remove a
+feature, substitute success labels or discard warnings from the captured logs.
+
+The first candidate is the pinned Binaryen tool's size optimization with explicit enabled features
+matching the linked module, including threads only for the multithread kit. It remains experimental
+until the complete checks pass. Static Qt control-style imports are another candidate to measure;
+Qt's [compile-time style selection](https://doc.qt.io/qt-6.11/qtquickcontrols-styles.html#compile-time-style-selection)
+can avoid runtime style deployment, but the current common controls and Material tooltip must keep
+their appearance and behavior. No style is removed merely because its archive appears in a link line.
