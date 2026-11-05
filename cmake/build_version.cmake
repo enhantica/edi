@@ -12,6 +12,7 @@ execute_process(
     OUTPUT_VARIABLE _date
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET)
+string(REGEX REPLACE "^0" "" _date "${_date}")
 if(DEFINED RELEASE_VERSION AND NOT RELEASE_VERSION STREQUAL "")
     if(NOT RELEASE_VERSION MATCHES "^[0-9][0-9][0-9][0-9]\\.(0[1-9]|1[0-2])\\.(0|[1-9][0-9]*)$")
         message(FATAL_ERROR "Release version must use YYYY.MM.SEQUENCE")
