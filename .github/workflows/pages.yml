@@ -37,9 +37,15 @@ jobs:
       actions: write
     env:
       GH_TOKEN: ${{ github.token }}
-      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      PAGES_REF: ${{ github.event.release.prerelease && vars.EDI_PREVIEW_PAGES_REF || github.event.repository.default_branch }}
+      PREVIEW_CRYSTA_COMMIT: ${{ github.event.release.prerelease && vars.EDI_PREVIEW_CRYSTA_COMMIT || '' }}
     steps:
-      - run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f component=docs
+      - run: |
+          args=(-f component=docs)
+          if [[ -n "$PREVIEW_CRYSTA_COMMIT" ]]; then
+            args+=(-f "crysta_commit=$PREVIEW_CRYSTA_COMMIT")
+          fi
+          gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref "$PAGES_REF" "${args[@]}"
 
   docs:
     name: build documentation

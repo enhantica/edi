@@ -30,6 +30,7 @@ on:
         default: 122f77fa46e1143749a4039f65b24438006bb482
         type: string
   push:
+    branches: ['**']
     paths:
       - .github/workflows/installers.yml
       - .github/actions/setup-pixi/action.yml

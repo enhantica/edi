@@ -187,7 +187,9 @@ before making the corresponding installer draft public.
 
 The public documentation renders published GitHub release descriptions at
 build time, newest first, with a prerelease label when applicable. Publishing
-a GitHub release requests a docs-only deployment from the default branch.
+a GitHub release requests a docs-only deployment. A prerelease can use the
+repository's configured preview docs branch and crysta commit. Stable
+releases refresh the default branch.
 Draft descriptions are excluded.
 
 Each new note declares at least one affected interface. Set one or more
