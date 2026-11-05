@@ -22,14 +22,41 @@ after changing the installed components.
 
 ## Install and update
 
-Download the ZIP for your platform and extract the whole archive before opening the installer.
-Keep the extracted files together: the Linux installer needs the accompanying `installer-runtime`
-folder. Choose an installation folder and follow the installer steps. An internet connection is
-required to download the application and its dependencies.
+EasyDiffraction comes with all required application dependencies. Download and extract the
+whole ZIP for your platform. The online installer needs an internet connection. Preview
+installers are distributed without a trusted platform signature.
 
-You do not need to install Python or Qt separately. On macOS, setup suggests
-`/Applications/EasyDiffraction`. To update an existing installation in the same location,
-open **MaintenanceTool** from that folder and choose **Update components**.
+=== "macOS"
+
+    1. Open the extracted installer app.
+    2. If macOS blocks it, click **Done**. In **System Settings → Privacy & Security**,
+       scroll to **Security**, select **Open Anyway**, and confirm. This applies to the
+       installer you just opened. [Apple’s instructions](https://support.apple.com/en-gb/102445)
+    3. Follow setup. The suggested folder is `/Applications/EasyDiffraction`.
+
+=== "Windows"
+
+    1. Right-click the ZIP and select **Extract All**, then open the installer `.exe`.
+    2. If Microsoft Defender SmartScreen warns about the installer, use **More info → Run
+       anyway** if Windows offers it and you downloaded the installer using the links above.
+       Smart App Control can block unsigned apps without offering a per-app exception.
+       [Microsoft’s Smart App Control guide](https://support.microsoft.com/en-gb/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)
+    3. Follow setup to choose the installation folder.
+
+=== "Linux"
+
+    1. Keep the extracted `.run` file beside the `installer-runtime` folder.
+    2. In a terminal opened in that folder, make the installer executable and run it.
+
+       ```bash
+       chmod +x ./EasyDiffraction-*-linux-x86_64-online.run
+       ./EasyDiffraction-*-linux-x86_64-online.run
+       ```
+
+    3. Follow setup to choose the installation folder.
+
+To update an existing installation in the same location, open **MaintenanceTool** from the
+installation folder and choose **Update components**.
 
 The application checks for updates at startup and hourly while it is open. **Notify about updates**
 opens a release-notes dialog when a newer release is found. You can also use **Check now** in Preferences.
