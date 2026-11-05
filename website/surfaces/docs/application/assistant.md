@@ -12,8 +12,8 @@ and carry out supported actions in your open project. It is available as an opti
    an internet connection and a ChatGPT account with access to a compatible Codex model.
 
 The assistant uses your ChatGPT plan’s Codex allowance. Model access and usage limits depend on the
-plan and workspace settings. OpenAI offers limited Codex access on some free accounts. Check that
-your account has access before choosing a paid subscription. [OpenAI plans and usage limits](https://learn.chatgpt.com/docs/pricing)
+plan and workspace settings. OpenAI offers limited Codex access on some free accounts. Your account’s
+model access determines whether you need a paid subscription. [OpenAI plans and usage limits](https://learn.chatgpt.com/docs/pricing)
 
 ## Work with your project
 
@@ -26,4 +26,4 @@ selection before continuing. **Show actions** lets you follow what the assistant
 Use **Stop** to interrupt ongoing work.
 
 Inspect the resulting pattern and fitted parameters before relying on the result. The
-[fit quality guide](../user-guide/analysis-workflow/fit-quality.md) explains how to assess a refinement.
+[fit quality guide](../user-guide/fit-quality.md) explains how to assess a refinement.
