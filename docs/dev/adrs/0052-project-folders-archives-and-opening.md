@@ -361,3 +361,26 @@ The bar matches the fitting indicator's height. Completion, failure and project
 replacement retire the request, and stale byte callbacks cannot update a successor.
 Size/digest checks and ordinary project-open ownership remain unchanged. Local
 fixture reads use the same optional progress callback as HTTP and browser fetches.
+
+
+## Retired-project cleanup owns only that project
+
+The original replacement path drained every posted DeferredDelete event to free old model/page
+objects between synchronous opens. When replacement is called from a completed web download, that
+can destroy the active network reply before its transport callback returns. The multithread web
+build stalls while opening another example; unrelated queued objects can be destroyed too.
+
+Flush only the retired ProjectViewModel's own deferred deletion. Its model graph still disappears
+before replacement returns, preserving bounded ownership for repeated opens. Other objects and
+released QML items follow their normal event-loop lifetime. Keep publication-depth and edit guards,
+request identity and temporary-root retention intact. Apply this shared Session rule to desktop and
+both web kits rather than changing calculation threads or one download route.
+
+The regression exercises actual Session replacement with another owner's queued deletion: the old
+project must be destroyed immediately and the unrelated object must survive until its own event is
+processed. Use local recorded catalogues; no service request or replacement scientific reference.
+The existing trial-lock suite runs this check on every native installer platform. Browser repeated
+Open remains a separate real-flow qualification.
+
+- [Qt posted-event receiver scope](https://doc.qt.io/qt-6.11/qcoreapplication.html#sendPostedEvents)
+- [Qt network reply completion lifetime](https://doc.qt.io/qt-6.11/qnetworkreply.html#finished)

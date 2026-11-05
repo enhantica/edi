@@ -1614,10 +1614,9 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         emit projectSetAsideModifiedChanged();
     } else if (previous != nullptr && previous_idle) {
         previous->deleteLater();
-        // Free the replaced project's view-models, and the page items the views released for them,
-        // now rather than at the next event-loop turn: projects opened back to back (a script, a
-        // test) must hold one project's pages, not every one opened so far.
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        // Release this retired model graph now; unrelated deferred objects may still be inside
+        // their own callbacks and must wait for their event-loop turn (ADR-0052).
+        QCoreApplication::sendPostedEvents(previous.data(), QEvent::DeferredDelete);
     }
     if(!current() || project_!=target)return false;
     releaseTemporaryRoots({previous_folder,previous_web_copy},openedFrom);

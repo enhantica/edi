@@ -140,6 +140,19 @@ jobs:
           EDI_LIFETIME_BIN_DIR: ${{ github.workspace }}/build/installer/app/app
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
+      - name: Check retired project ownership before packaging
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_trial_lock_tests --parallel 4
+          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
+          import os, subprocess
+          from pathlib import Path
+          binary = Path('build/installer/app/app') / ('edi_trial_lock_tests.exe' if os.name == 'nt' else 'edi_trial_lock_tests')
+          subprocess.run([str(binary.resolve()), '-o', 'build/installer/project-retirement.xml,junitxml'], check=True)
+          PYTHON
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
       - name: Create the offline qualification installer
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package"
       - name: Install, launch, calculate, render and uninstall
@@ -205,6 +218,7 @@ jobs:
           name: installer-check-${{ matrix.platform }}-${{ github.run_attempt }}
           path: |
             build/installer/assistant-lifetime.xml
+            build/installer/project-retirement.xml
             build/installer/test/*.log
             build/installer/test/*.json
             build/installer/test/smoke/**

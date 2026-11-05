@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
-#include <QtTest/QtTest>
-#include <QTemporaryDir>
+#include <QCoreApplication>
 #include <QDir>
-#include "project_view_model.hpp"
-#include "fit_view_model.hpp"
+#include <QEvent>
+#include <QPointer>
+#include <QTemporaryDir>
+#include <QtTest/QtTest>
+
 #include "assistant_view_model.hpp"
 #include "edi/io.hpp"
 #include "engine_setup.hpp"
+#include "fit_view_model.hpp"
+#include "project_view_model.hpp"
 #include "session.hpp"
 
 namespace edi_app {
@@ -28,7 +32,28 @@ class TrialLockTests : public QObject {
         fit->setAssistantBusy(true);
     }
 private slots:
-    void initTestCase() { use_fresh_settings(); }
+ void initTestCase() {
+     use_fresh_settings();
+     qunsetenv("EDI_ONLINE_SOURCES_FILE");
+     const auto root = QString::fromUtf8(EDI_SOURCE_DIR);
+     const auto cod = QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/cod/").toString();
+     const auto edb =
+         QUrl::fromLocalFile(root + "/tests/fixtures/online_sources/easydiffraction/").toString();
+     qputenv("EDI_ONLINE_SOURCES", ("cod=" + cod + ";easydiffraction=" + edb).toUtf8());
+ }
+ void replacementOnlyDeletesItsOwnRetiredProject() {
+     Session session(nullptr);
+     QVERIFY(session.createProject(QStringLiteral("first"), {}));
+     const QPointer<ProjectViewModel> previous(session.project());
+     QVERIFY(previous);
+     const QPointer<QObject> unrelated(new QObject(&session));
+     unrelated->deleteLater();
+     QVERIFY(session.createProject(QStringLiteral("second"), {}));
+     QVERIFY(previous.isNull());
+     QVERIFY(!unrelated.isNull());
+     QCoreApplication::sendPostedEvents(unrelated, QEvent::DeferredDelete);
+     QVERIFY(unrelated.isNull());
+ }
     void settlementObservers_data() {
         QTest::addColumn<bool>("accepted");
         QTest::newRow("first-fit") << false;
