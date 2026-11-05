@@ -8,6 +8,13 @@ import re
 from operator import itemgetter
 from pathlib import Path
 
+INTERFACES = json.loads(
+    (Path(__file__).resolve().parents[2] / 'data/release-interfaces.json').read_text(
+        encoding='utf-8'
+    )
+)
+INTERFACE_LABEL_PREFIX = '[interface] '
+
 GROUPS = {
     '[scope] significant': 'Added',
     '[scope] enhancement': 'Added',
@@ -85,6 +92,19 @@ def validate_history(history: dict) -> None:
                     raise ValueError(
                         'Release-note entries require a title and pull request number'
                     )
+                note_interfaces(entry)
+
+
+def note_interfaces(entry: dict) -> list[str]:
+    """Read optional interface identifiers in a stable display order."""
+    values = entry.get('interfaces', [])
+    if (
+        not isinstance(values, list)
+        or any(not isinstance(value, str) or value not in INTERFACES for value in values)
+        or len(set(values)) != len(values)
+    ):
+        raise ValueError('Release note interfaces must be unique known identifiers')
+    return [key for key in INTERFACES if key in values]
 
 
 def next_calendar_version(versions: list[str], today: datetime.date) -> str:
@@ -139,10 +159,18 @@ def release_plan(
         scopes = labels.intersection(GROUPS)
         if len(scopes) != 1:
             raise ValueError(f'Pull request {number} needs exactly one release scope label')
-        notes[GROUPS[scopes.pop()]].append({
-            'title': check_title(request['title']),
-            'pull_request': number,
+        entry = {'title': check_title(request['title']), 'pull_request': number}
+        interfaces = note_interfaces({
+            'interfaces': [
+                label.removeprefix(INTERFACE_LABEL_PREFIX)
+                for label in labels
+                if label.startswith(INTERFACE_LABEL_PREFIX)
+            ],
         })
+        if not interfaces:
+            raise ValueError(f'Pull request {number} needs at least one release interface label')
+        entry['interfaces'] = interfaces
+        notes[GROUPS[scopes.pop()]].append(entry)
     if not any(notes.values()):
         raise ValueError('No user-facing merged changes are included in this release')
     return {
@@ -165,20 +193,28 @@ def notes_since(releases: list[dict], previous: str, current: str) -> list[dict]
     )
 
 
+def markdown_note(entry: dict) -> str:
+    """Render interface names in GitHub Markdown and preserve the docs metadata."""
+    title = entry['title']
+    for character in ['\\', '`', '*', '_', '[', ']', '<', '>']:
+        title = title.replace(character, '\\' + character)
+    interfaces = note_interfaces(entry)
+    if interfaces:
+        labels = ' '.join(f'`{INTERFACES[key][1]}`' for key in interfaces)
+        title = f'<!-- interfaces: {",".join(interfaces)} --> {labels} {title}'
+    if 'pull_request' in entry:
+        number = entry['pull_request']
+        title += f' ([#{number}](https://github.com/enhantica/edi/pull/{number}))'
+    return '- ' + title
+
+
 def markdown_notes(release: dict) -> str:
     """Render the same recorded titles for GitHub and application release history."""
     lines = [f'# EasyDiffraction {release["version"]}', '']
     for group, entries in release['notes'].items():
         if entries:
             lines.extend([f'## {group}', ''])
-            for entry in entries:
-                number = entry['pull_request']
-                title = entry['title']
-                for character in ['\\', '`', '*', '_', '[', ']', '<', '>']:
-                    title = title.replace(character, '\\' + character)
-                lines.append(
-                    f'- {title} ([#{number}](https://github.com/enhantica/edi/pull/{number}))'
-                )
+            lines.extend(map(markdown_note, entries))
             lines.append('')
     return '\n'.join(lines)
 

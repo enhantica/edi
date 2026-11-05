@@ -22,7 +22,7 @@ def request(**changes):
         'title': 'Refine backgrounds in full powder fits',
         'merged_at': '2026-11-04T12:00:00Z',
         'merge_commit_sha': HEAD,
-        'labels': [{'name': '[scope] bug'}],
+        'labels': [{'name': '[scope] bug'}, {'name': '[interface] desktop'}],
         **changes,
     }
 
@@ -54,7 +54,7 @@ def test_retry_on_another_day_reuses_the_published_identity_and_notes():
 
 def test_labels_group_notes_without_changing_the_version_rule():
     for label, group in PLAN.GROUPS.items():
-        result = make_plan(requests=[request(labels=[label])])
+        result = make_plan(requests=[request(labels=[label, '[interface] desktop'])])
         assert result['version'] == '2026.11.0'
         assert result['notes'][group][0]['title'] == request()['title']
 
@@ -68,7 +68,7 @@ def test_unmerged_unincluded_and_bot_requests_are_not_release_changes(changes):
         make_plan(requests=[request(**changes)])
 
 
-@pytest.mark.parametrize('title', ['fix: better fitting', '', 'First\nSecond'])
+@pytest.mark.parametrize('title', ['fix: refine backgrounds', '', 'First\nSecond'])
 def test_internal_or_unusable_titles_must_be_rewritten_before_release(title):
     with pytest.raises(ValueError, match=r'title|line|outcome'):
         make_plan(requests=[request(title=title)])

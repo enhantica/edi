@@ -62,7 +62,7 @@ def test_preparation_uses_actual_ancestry_and_retry_identity(repository):
         'title': 'Refine backgrounds in full powder fits',
         'merged_at': '2026-11-05',
         'merge_commit_sha': head,
-        'labels': ['[scope] bug'],
+        'labels': ['[scope] bug', '[interface] desktop'],
     }
     with (
         mock.patch.object(PREPARE, 'ROOT', root),

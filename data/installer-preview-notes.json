@@ -1,15 +1,51 @@
 {
   "Added": [
-    "Install EasyDiffraction on Windows with the online installer.",
-    "Open the Maintenance Tool from Preferences to add the optional AI assistant."
+    {
+      "title": "Install EasyDiffraction on Windows with the online installer.",
+      "interfaces": [
+        "desktop"
+      ]
+    },
+    {
+      "title": "Open the Maintenance Tool from Preferences to add the optional AI assistant.",
+      "interfaces": [
+        "desktop"
+      ]
+    }
   ],
   "Fixed": [
-    "Keep installer controls readable in light and dark mode and give component details more room.",
-    "Give the EasyDiffraction icon more breathing room in the macOS Dock.",
-    "Show the installed version after checking for updates."
+    {
+      "title": "Keep installer controls readable in light and dark mode and give component details more room.",
+      "interfaces": [
+        "desktop"
+      ]
+    },
+    {
+      "title": "Give the EasyDiffraction icon more breathing room in the macOS Dock.",
+      "interfaces": [
+        "desktop"
+      ]
+    },
+    {
+      "title": "Show the installed version after checking for updates.",
+      "interfaces": [
+        "desktop"
+      ]
+    }
   ],
   "Changed": [
-    "Move the EasyDiffraction wordmark above the installer steps.",
-    "Make release notes easier to scan with consistent headings, spacing and shorter dates."
+    {
+      "title": "Move the EasyDiffraction wordmark above the installer steps.",
+      "interfaces": [
+        "desktop"
+      ]
+    },
+    {
+      "title": "Make release notes easier to scan with consistent headings, spacing and shorter dates.",
+      "interfaces": [
+        "desktop",
+        "web"
+      ]
+    }
   ]
 }

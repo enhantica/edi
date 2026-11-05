@@ -238,10 +238,7 @@ def write_preview_history(work: Path, version: str, commit: str) -> Path:
                         'version': version,
                         'date': date,
                         'commit': commit,
-                        'notes': {
-                            group: [{'title': title} for title in titles]
-                            for group, titles in notes.items()
-                        },
+                        'notes': notes,
                     }
                 ],
             },

@@ -1,26 +1,28 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Render published GitHub release notes for the user documentation."""
 
+import json
 import re
 from html import escape
 from operator import itemgetter
+from pathlib import Path
 
-INTERFACES = {
-    'desktop': ('lucide-monitor', 'Desktop app'),
-    'web': ('lucide-globe', 'Web app'),
-    'python': ('simple-python', 'Python API'),
-    'cli-python': ('simple-python', 'CLI from Python package'),
-    'cli-standalone': ('lucide-square-terminal', 'Standalone CLI'),
-}
+INTERFACES = json.loads(
+    (Path(__file__).resolve().parents[1] / 'data/release-interfaces.json').read_text(
+        encoding='utf-8'
+    )
+)
 NOTE = re.compile(r'^(- )<!-- interfaces: ([a-z,-]+) --> (.+)$', re.MULTILINE)
 
 
 def _label_note(match: re.Match[str]) -> str:
     labels = []
+    text = match[3]
     for interface in match[2].split(','):
         icon, label = INTERFACES[interface]
+        text = text.removeprefix(f'`{label}` ')
         labels.append(f'**:{icon}: {label}**{{ .ed-release-interface }}')
-    return match[1] + ' '.join(labels) + ' ' + match[3]
+    return match[1] + ' '.join(labels) + ' ' + text
 
 
 def render(pages: list[list[dict]]) -> str:

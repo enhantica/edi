@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from plan import markdown_note, note_interfaces
 from publish_assets import check_existing, optional_api
 
 PLATFORMS = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
@@ -72,14 +73,21 @@ def prepare(
         )
     ):
         raise ValueError('Release history differs from the qualified installers')
+    return release, _preview_notes(release), list(archives.values())
+
+
+def _preview_notes(release: dict) -> str:
     notes = []
     for group, entries in release['notes'].items():
         if entries:
             if notes:
                 notes.append('')
             notes.extend([f'## {group}', ''])
-            notes.extend('- ' + entry['title'] for entry in entries)
-    return release, '\n'.join(notes) + '\n', list(archives.values())
+            for entry in entries:
+                if not note_interfaces(entry):
+                    raise ValueError('Every preview release note needs an interface')
+                notes.append(markdown_note(entry))
+    return '\n'.join(notes) + '\n'
 
 
 def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str]]) -> None:
