@@ -179,27 +179,35 @@ def test_release_history_progression_refuses_stale_candidates(damage):
             PUBLISH.check_progression(history, previous, release)
 
 
-@pytest.mark.parametrize('damage', ['none', 'archive', 'version', 'declaration'])
+@pytest.mark.parametrize(
+    'damage', ['none', 'archive', 'assistant_archive', 'version', 'missing', 'declaration']
+)
 def test_component_identity_and_original_checksums_are_verified(tmp_path, damage):
-    component = tmp_path / 'org.easyscience.edi'
-    component.mkdir()
-    archive = component / '2026.11.0content.7z'
-    archive.write_bytes(b'qualified component bytes')
-    metadata = component / '2026.11.0meta.7z'
-    metadata.write_bytes(b'qualified component metadata')
-    for path in [archive, metadata]:
-        with path.open('rb') as stream:
-            checksum = PROMOTE.hashlib.file_digest(stream, 'sha1').hexdigest()
-        path.with_suffix(path.suffix + '.sha1').write_text(checksum)
-    version = '2026.11.1' if damage == 'version' else '2026.11.0'
-    content = (
-        '<Updates><PackageUpdate><Name>org.easyscience.edi</Name>'
-        f'<Version>{version}</Version><DownloadableArchives>content.7z</DownloadableArchives>'
-        f'<SHA1>{metadata.with_suffix(".7z.sha1").read_text()}</SHA1></PackageUpdate></Updates>'
-    )
-    if damage == 'archive':
-        archive.write_bytes(b'rebuilt component')
-    elif damage == 'declaration':
+    content = '<Updates>'
+    for name in ['org.easyscience.edi', 'org.easyscience.edi.assistant']:
+        optional = name.endswith('.assistant')
+        if optional and damage == 'missing':
+            continue
+        component = tmp_path / name
+        component.mkdir()
+        archive = component / '2026.11.0content.7z'
+        archive.write_bytes(b'qualified component bytes')
+        metadata = component / '2026.11.0meta.7z'
+        metadata.write_bytes(b'qualified component metadata')
+        for path in [archive, metadata]:
+            with path.open('rb') as stream:
+                checksum = PROMOTE.hashlib.file_digest(stream, 'sha1').hexdigest()
+            path.with_suffix(path.suffix + '.sha1').write_text(checksum)
+        version = '2026.11.1' if optional and damage == 'version' else '2026.11.0'
+        content += (
+            f'<PackageUpdate><Name>{name}</Name>'
+            f'<Version>{version}</Version><DownloadableArchives>content.7z</DownloadableArchives>'
+            f'<SHA1>{metadata.with_suffix(".7z.sha1").read_text()}</SHA1></PackageUpdate>'
+        )
+        if damage == ('assistant_archive' if optional else 'archive'):
+            archive.write_bytes(b'rebuilt component')
+    content += '</Updates>'
+    if damage == 'declaration':
         content = '<!DOCTYPE Updates>' + content
     (tmp_path / 'Updates.xml').write_text(content)
     if damage == 'none':
