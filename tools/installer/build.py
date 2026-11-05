@@ -100,6 +100,34 @@ def collect_notices(stage: Path, qt: Path, crysta: Path, inputs: Path) -> None:
         shutil.copytree(licenses, notices / metadata['name'])
 
 
+def copy_windows_compiler_runtime(prefix: Path, stage: Path) -> None:
+    """Stage the locked C++ and OpenMP runtime before Windows resolves system DLLs."""
+    prefix = prefix.resolve()
+    remaining = {'vc14_runtime', 'vcomp14'}
+    for path in (prefix / 'conda-meta').glob('*.json'):
+        record = json.loads(path.read_text(encoding='utf-8'))
+        if record['name'] not in remaining:
+            continue
+        libraries = [name for name in record.get('files', []) if name.lower().endswith('.dll')]
+        if not libraries:
+            raise RuntimeError('Locked Windows runtime contains no DLLs')
+        for name in libraries:
+            relative = Path(name)
+            source = prefix / relative
+            if (
+                relative.is_absolute()
+                or '..' in relative.parts
+                or not source.resolve().is_relative_to(prefix)
+            ):
+                raise RuntimeError('Windows runtime inventory escapes its package prefix')
+            if not source.is_file():
+                raise RuntimeError('Locked Windows runtime DLL is missing')
+            shutil.copy2(source, stage / 'bin' / relative.name)
+        remaining.remove(record['name'])
+    if remaining:
+        raise RuntimeError('Locked Windows compiler runtime packages are missing')
+
+
 def sign_macos_app(bundle: Path) -> None:
     """Sign owned application code without rewriting the verified upstream runtime."""
     runtime = bundle / 'Contents/libexec/edi/codex'
@@ -240,6 +268,7 @@ def build(
         *(['--strip'] if SYSTEM == 'linux' else []),
     ])
     if SYSTEM == 'windows':
+        copy_windows_compiler_runtime(qt.parent, stage)
         run([
             'cmake',
             f'-DSTAGE={stage.as_posix()}',

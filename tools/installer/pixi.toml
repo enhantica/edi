@@ -63,3 +63,5 @@ sleef = { version = "==3.9.0", build = "hb028509_0" }
 eigen = "==3.4.0"
 sleef = "==3.9.0"
 cxx-compiler = "*"
+vc14_runtime = { version = "==14.51.36247", build = "habf1de7_42" }
+vcomp14 = { version = "==14.51.36247", build = "habf1de7_42" }

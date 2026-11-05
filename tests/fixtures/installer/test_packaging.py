@@ -3,6 +3,7 @@
 
 import importlib.util
 import io
+import json
 import os
 import subprocess
 import sys
@@ -372,3 +373,52 @@ def test_deployed_licenses_follow_runtime_paths_instead_of_compiler_copies():
     records.append({'name': 'conflict', 'files': ['lib/libgcc_s.so.1']})
     with pytest.raises(RuntimeError, match='Ambiguous'):
         build.deployed_package_names([Path('lib/libgcc_s.so.1')], records)
+
+
+@pytest.mark.parametrize('damage', ['none', 'package', 'empty', 'missing', 'escape'])
+def test_windows_runtime_uses_locked_dlls_and_refuses_invalid_inventory(tmp_path, damage):
+    spec = importlib.util.spec_from_file_location(
+        'installer_build', PACKAGE.ROOT / 'tools/installer/build.py'
+    )
+    build = importlib.util.module_from_spec(spec)
+    with mock.patch.dict(sys.modules, {'package': PACKAGE, 'audit': AUDIT}):
+        spec.loader.exec_module(build)
+    prefix = tmp_path / 'prefix'
+    metadata = prefix / 'conda-meta'
+    metadata.mkdir(parents=True)
+    stage = tmp_path / 'stage'
+    (stage / 'bin').mkdir(parents=True)
+    assistant = stage / 'libexec/edi/codex/helper.dll'
+    assistant.parent.mkdir(parents=True)
+    assistant.write_bytes(b'official helper')
+    for package, dll in [('vc14_runtime', 'msvcp140.dll'), ('vcomp14', 'vcomp140.dll')]:
+        member = 'Library/bin/' + dll
+        source = prefix / member
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_bytes(package.encode())
+        (stage / 'bin' / dll).write_bytes(b'older runtime')
+        inventory = [member, 'Library/include/header.h']
+        if package == 'vcomp14':
+            if damage == 'package':
+                continue
+            if damage == 'empty':
+                inventory = []
+            elif damage == 'missing':
+                source.unlink()
+            elif damage == 'escape':
+                inventory = ['../escape.dll']
+        (metadata / (package + '.json')).write_text(
+            json.dumps({'name': package, 'files': inventory}), encoding='utf-8'
+        )
+    if damage == 'none':
+        build.copy_windows_compiler_runtime(prefix, stage)
+        assert (stage / 'bin/msvcp140.dll').read_bytes() == b'vc14_runtime'
+        assert (stage / 'bin/vcomp140.dll').read_bytes() == b'vcomp14'
+        assert sorted(path.name for path in (stage / 'bin').iterdir()) == [
+            'msvcp140.dll',
+            'vcomp140.dll',
+        ]
+    else:
+        with pytest.raises(RuntimeError, match='runtime'):
+            build.copy_windows_compiler_runtime(prefix, stage)
+    assert assistant.read_bytes() == b'official helper'

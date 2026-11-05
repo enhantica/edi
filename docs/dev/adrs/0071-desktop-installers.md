@@ -188,3 +188,10 @@ process-family shutdown fixtures against that exact build directory. Sudden owne
 retirement and active-stream shutdown must end the guard, runtime child and descendant processes.
 The test uses recorded transport, isolated fixture state and no login or network. The ordinary app
 test keeps its default build directory; the installer check selects its own real binaries explicitly.
+
+Windows stages the locked vc14_runtime and vcomp14 package DLLs beside the app before dependency
+resolution. CMake searches System32 before extra search directories, so excluding system paths alone
+could silently borrow a runner's redistributable. Use the workspace's exact C++/OpenMP runtime family,
+including the version required by its Qt build, without replacing any verified assistant files.
+Missing packages, missing DLLs and escaping inventory paths refuse deployment. The existing notices
+collector includes the selected runtime packages.
