@@ -162,3 +162,12 @@ standard conditional-operator flags (`/utf-8 /EHsc /Zc:ternary`). MSVC's legacy 
 tries to move an explicitly immovable owner selected between same-type prvalues. A small native
 language probe checks both branches and copy counts before the full build; the ownership rule
 and calculation code remain intact. [Microsoft conditional-operator conformance](https://learn.microsoft.com/en-us/cpp/build/reference/zc-ternary).
+
+## Native symbol size
+
+Use CMake's Linux install-time stripping for owned executable targets. The development build keeps
+its symbols; only the distributed copies lose non-runtime symbols. The measured app executable
+retains every allocated section's bytes, address, flags and size, and passes the real calculation
+and window smoke after stripping. Qt deployment and the complete verified assistant runtime remain
+untouched; the existing final runtime byte/membership gate and actual installed-app checks still
+apply. Other platforms keep their existing deployment behavior until separately measured.

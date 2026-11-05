@@ -229,7 +229,16 @@ def build(
     ])
     run(['cmake', '-S', ROOT, '-B', app, *common, *options])
     run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4'])
-    run(['cmake', '--install', app, '--component', 'desktop', '--prefix', stage])
+    run([
+        'cmake',
+        '--install',
+        app,
+        '--component',
+        'desktop',
+        '--prefix',
+        stage,
+        *(['--strip'] if SYSTEM == 'linux' else []),
+    ])
     if SYSTEM == 'windows':
         run([
             'cmake',
