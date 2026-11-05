@@ -273,23 +273,6 @@ def test_testing_feed_keeps_stable_and_rejects_stale_preview(tmp_path):
         MODULE.overlay_component(site, incoming, 'installers')
 
 
-def test_desktop_download_version_prefers_stable_and_labels_preview(tmp_path):
-    page = tmp_path / 'application/desktop/index.html'
-    page.parent.mkdir(parents=True)
-    page.write_text('<p class="ed-desktop-version" hidden></p>')
-    feeds = tmp_path / 'releases'
-    feeds.mkdir()
-    (feeds / 'testing.json').write_text(
-        json.dumps({'sequence': 'calendar', 'releases': [{'version': '2026.11.10'}]})
-    )
-    MODULE.show_desktop_version(tmp_path)
-    assert 'Testing preview 2026.11.10' in page.read_text()
-    (feeds / 'stable.json').write_text(json.dumps({'releases': [{'version': '2026.11.1'}]}))
-    MODULE.show_desktop_version(tmp_path)
-    assert 'Latest release 2026.11.1' in page.read_text()
-    assert 'Testing preview' not in page.read_text()
-
-
 def test_testing_retention_keeps_two_versions_and_preserves_stable(tmp_path):
     site = tmp_path / 'site'
     releases = site / 'releases'

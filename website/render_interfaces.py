@@ -187,6 +187,18 @@ def render() -> None:
         buttons = []
         for entry in releases[family]:
             label = html.escape(entry['platform'], quote=True)
+            if family == 'desktop':
+                requirements = html.escape(entry['requirements'], quote=True)
+                platform = html.escape(entry['artifact_platform'], quote=True)
+                icon = platform_icon(entry['icon'])
+                buttons.append(
+                    f'<a class="md-button" data-download-platform="{platform}" '
+                    'aria-disabled="true" '
+                    f'aria-label="Download for {label}, {requirements}">{icon}'
+                    f'<span class="ed-download-label">{label}<small>{requirements}</small>'
+                    '</span></a>'
+                )
+                continue
             url = entry['url']
             if url is None:
                 buttons.append(
@@ -197,19 +209,9 @@ def render() -> None:
                 parsed = urlsplit(url)
                 if parsed.scheme != 'https' or not parsed.netloc:
                     raise ValueError(f'Invalid {family} download URL: {url}')
-                description = label
-                content = label
-                if family == 'desktop':
-                    requirements = html.escape(entry['requirements'], quote=True)
-                    description = f'{label}, {requirements}'
-                    icon = platform_icon(entry['icon'])
-                    content = (
-                        f'{icon}<span class="ed-download-label">{label}'
-                        f'<small>{requirements}</small></span>'
-                    )
                 buttons.append(
                     f'<a class="md-button" href="{html.escape(url, quote=True)}" '
-                    f'aria-label="Download for {description}">{content}</a>'
+                    f'aria-label="Download for {label}">{label}</a>'
                 )
         replace_marker(
             source,

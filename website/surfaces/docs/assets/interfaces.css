@@ -20,3 +20,5 @@
   font-size: .78rem;
   font-weight: 600;
 }
+
+.md-typeset .ed-downloads [aria-disabled="true"] { opacity: .55; pointer-events: none; }

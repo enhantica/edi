@@ -22,6 +22,7 @@ from urllib.parse import unquote, urlsplit
 import yaml
 from checks.gui_capture import validate_bundle
 from checks.gui_topics import validate_topics
+from render_downloads import render as render_downloads
 from render_experiments import render as render_experiments
 from render_interfaces import render as render_interfaces
 from render_learning import render as render_learning
@@ -368,18 +369,19 @@ def main() -> None:
     if args.concept == 'all' and output.exists():
         shutil.rmtree(output)
     changelog = ROOT / 'surfaces/docs/changelog.md'
-    original = changelog.read_bytes()
+    desktop = ROOT / 'surfaces/docs/application/desktop.md'
+    originals = {path: path.read_text(encoding='utf-8') for path in (changelog, desktop)}
     try:
         if args.github_releases:
-            changelog.write_text(
-                render_release_notes(json.loads(args.github_releases.read_bytes())),
-                encoding='utf-8',
-            )
+            releases = json.loads(args.github_releases.read_bytes())
+            changelog.write_text(render_release_notes(releases), encoding='utf-8')
+            desktop.write_text(render_downloads(originals[desktop], releases), encoding='utf-8')
         for name in names:
             _build_concept(name, shared_controls, args.base_url, output)
     finally:
         if args.github_releases:
-            changelog.write_bytes(original)
+            for path, original in originals.items():
+                path.write_text(original, encoding='utf-8')
     _check_links(output.resolve(), args.base_url)
     command = f'python -m http.server 8873 --bind 127.0.0.1 --directory {output}'
     print(f'Preview: {command}', flush=True)

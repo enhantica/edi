@@ -2,21 +2,21 @@
   "desktop": [
     {
       "platform": "macOS",
-      "url": "https://github.com/enhantica/edi/releases",
       "icon": "apple",
-      "requirements": "macOS 15+ · Apple Silicon"
+      "requirements": "macOS 15+ · Apple Silicon",
+      "artifact_platform": "macos-arm64"
     },
     {
       "platform": "Windows",
-      "url": "https://github.com/enhantica/edi/releases",
       "icon": "windows",
-      "requirements": "Windows 11 · x86-64"
+      "requirements": "Windows 11 · x86-64",
+      "artifact_platform": "windows-x86_64"
     },
     {
       "platform": "Linux",
-      "url": "https://github.com/enhantica/edi/releases",
       "icon": "linux",
-      "requirements": "Ubuntu 24.04+ · x86-64"
+      "requirements": "Ubuntu 24.04+ · x86-64",
+      "artifact_platform": "linux-x86_64"
     }
   ],
   "command-line": [

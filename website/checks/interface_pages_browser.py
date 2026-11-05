@@ -110,17 +110,19 @@ Math.abs(ratio-.012)<.00001;
             browser.shot(output / f'{browser.kind}-{width}-{route.strip("/")}.png')
             checks.append({'width': width, 'route': route, 'hero': 'PASS'})
         browser.goto(base)
-        desktop = browser.execute(
-            """return document.querySelector('.ed-landing__interfaces a[href*="desktop"]')"""
-            ".getAttribute('href');"
+        application = browser.execute(
+            """return document.querySelector('.ed-landing__interfaces a[href*="application"]')
+            .getAttribute('href');"""
         )
-        require(desktop.endswith('application/desktop/#download'), desktop)
+        require(application.endswith('application/'), application)
         browser.goto(base + 'application/desktop/#download')
         require(
             browser.execute(
                 "return document.querySelectorAll('.ed-downloads a.md-button').length === 3 && "
                 "[...document.querySelectorAll('.ed-downloads a.md-button')].every(link => "
-                "link.href === 'https://github.com/enhantica/edi/releases' && "
+                "(link.getAttribute('aria-disabled') === 'true' ? !link.hasAttribute('href') : "
+                "link.href.startsWith('https://github.com/enhantica/edi/releases/download/') && "
+                "link.href.endsWith(link.dataset.downloadPlatform + '-online.zip')) && "
                 "link.querySelector('svg[aria-hidden=true] path') && "
                 "link.querySelector('.ed-download-label small').textContent.trim());"
             )

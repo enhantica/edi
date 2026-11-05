@@ -81,3 +81,38 @@ def test_one_note_can_affect_every_interface():
         *(f'[interface] {PLAN.INTERFACES[key][2]}' for key in reversed(interfaces))
     )
     assert release['notes']['Fixed'][0]['interfaces'] == interfaces
+
+
+def test_desktop_downloads_link_only_published_platform_assets():
+    downloads = load('website/render_downloads.py')
+    source = '<p>Desktop installers will appear here when published.</p>' + ''.join(
+        f'<a data-download-platform="{platform}" aria-disabled="true"></a>'
+        for platform in downloads.PLATFORMS
+    )
+
+    def release(version, *, draft=False, prerelease=False, platforms=downloads.PLATFORMS):
+        base = f'https://github.com/enhantica/edi/releases/download/v{version}'
+        return {
+            'tag_name': f'v{version}',
+            'draft': draft,
+            'prerelease': prerelease,
+            'assets': [
+                {
+                    'state': 'uploaded',
+                    'browser_download_url': f'{base}/EasyDiffraction-{version}-{platform}-online.zip',
+                }
+                for platform in platforms
+            ],
+        }
+
+    preview = release('2026.11.0', prerelease=True, platforms=('macos-arm64', 'linux-x86_64'))
+    draft = release('2026.11.1', draft=True)
+    assert downloads.render(source, [[draft]]) == source
+    page = downloads.render(source, [[preview, draft]])
+    assert 'Testing preview 2026.11.0' in page
+    assert 'macos-arm64-online.zip' in page and 'linux-x86_64-online.zip' in page
+    assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page
+    stable = release('2026.10.2')
+    page = downloads.render(source, [[preview, draft, stable]])
+    assert 'Latest release 2026.10.2' in page
+    assert 'EasyDiffraction-2026.10.2-windows-x86_64-online.zip' in page
