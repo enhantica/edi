@@ -91,6 +91,7 @@ nav:
   - Start here:
     - In your browser: application/browser.md
     - On your desktop: application/desktop.md
+    - AI assistant: application/assistant.md
     - Application layout: application/workspace.md
     - Example refinement: application/first-refinement.md
     - Example projects: application/examples.md
