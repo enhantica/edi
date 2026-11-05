@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import xml.etree.ElementTree as ET  # noqa: S405 - qualified Pages artifacts
 from operator import itemgetter
 from pathlib import Path
 
@@ -199,8 +200,19 @@ def trim_testing_archives(repository: Path, keep: set[str]) -> None:
 
 
 def check_site_size(site: Path, limit: int = 1_000_000_000) -> int:
-    """Refuse a site larger than GitHub Pages' documented one-GB limit."""
-    size = sum(path.stat().st_size for path in site.rglob('*') if path.is_file())
+    """Keep the deployed site within the Pages size limit."""
+
+    def measure():
+        return sum(path.stat().st_size for path in site.rglob('*') if path.is_file())
+
+    size = measure()
+    if size > limit:
+        for metadata in (site / 'repository/testing').glob('*/Updates.xml'):
+            document = ET.parse(metadata)  # noqa: S314 - qualified Pages artifact
+            versions = {item.findtext('Version') for item in document.findall('PackageUpdate')}
+            if versions and None not in versions:
+                trim_testing_archives(metadata.parent, versions)
+        size = measure()
     if size > limit:
         raise RuntimeError(f'Assembled Pages site is too large: {size} bytes (limit {limit})')
     print(f'Assembled Pages site: {size} bytes')

@@ -332,3 +332,20 @@ def test_production_components_use_the_public_platform_path(tmp_path):
     public = site / 'repository/macos-arm64/Updates.xml'
     assert public.read_text() == 'qualified metadata'
     assert not (site / 'repository/stable').exists()
+
+
+def test_pages_budget_prunes_only_unreferenced_preview_archives(tmp_path):
+    platform = tmp_path / 'repository/testing/macos-arm64'
+    package = platform / 'org.easyscience.edi'
+    package.mkdir(parents=True)
+    metadata = platform / 'Updates.xml'
+    metadata.write_text(
+        '<Updates><PackageUpdate><Version>2026.11.2</Version></PackageUpdate></Updates>'
+    )
+    old = package / '2026.11.1bin.7z'
+    old.write_bytes(b'older archive')
+    live = package / '2026.11.2bin.7z'
+    live.write_bytes(b'live archive')
+    budget = metadata.stat().st_size + live.stat().st_size
+    assert MODULE.check_site_size(tmp_path, limit=budget) == budget
+    assert live.is_file() and not old.exists()

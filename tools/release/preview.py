@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Recover the tested macOS and Linux pair for a Pages testing prerelease."""
+"""Recover qualified desktop components for Pages publication."""
 
 import argparse
 import json
@@ -21,13 +21,18 @@ def stage(repo: str, branch: str, run_id: int, output: Path) -> None:
     ):
         raise ValueError('Preview requires a completed desktop installer run on this branch')
     attempt = run['run_attempt']
-    version = f'0.0.{run["run_number"]}.{attempt}'
     jobs = api(repo, f'actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100')['jobs']
     artifacts = api(repo, f'actions/runs/{run_id}/artifacts?per_page=100')['artifacts']
+    calendar = any(
+        job['name'] == 'preview-version' and job['conclusion'] == 'success' for job in jobs
+    )
+    platforms = tuple(PLATFORMS) if calendar else ('Linux', 'macOS')
+    version = f'0.0.{run["run_number"]}.{attempt}'
+    history = None
     output.mkdir(parents=True)
     with tempfile.TemporaryDirectory(prefix='edi-installer-preview-') as temporary:
         scratch = Path(temporary)
-        for platform in ('Linux', 'macOS'):
+        for platform in platforms:
             if [job['conclusion'] for job in jobs if job['name'] == f'installer · {platform}'] != [
                 'success'
             ]:
@@ -38,9 +43,21 @@ def stage(repo: str, branch: str, run_id: int, output: Path) -> None:
             components = recover_artifact(
                 repo, artifacts, f'installer-components-{platform}-{attempt}', scratch
             )
+            if calendar:
+                payload = (delivery / 'preview-history.json').read_bytes()
+                if history is not None and payload != history:
+                    raise ValueError('Preview release histories differ')
+                history = payload
+                record = json.loads(payload)
+                (release,) = record['releases']
+                if record['sequence'] != 'calendar' or release['commit'] != run['head_sha']:
+                    raise ValueError('Preview history differs from the qualified source')
+                version = release['version']
             copy_preview(
                 delivery, components, output, PLATFORMS[platform], version, run['head_sha']
             )
+    if history is not None:
+        (output / 'components/testing/feed.json').write_bytes(history)
     print(f'Qualified preview {version} from {run["head_sha"]}')
 
 

@@ -17,7 +17,7 @@ on:
         default: false
         type: boolean
       preview_run:
-        description: Completed installer run with qualified macOS and Linux artifacts for a testing prerelease
+        description: Completed installer run with qualified artifacts to publish without rebuilding
         required: false
         type: string
       release_plan_run:
@@ -395,7 +395,7 @@ jobs:
           pattern: installer-components-*-${{ github.run_attempt }}
           merge-multiple: true
           path: components
-      - name: Recover qualified macOS and Linux preview repositories
+      - name: Recover qualified preview repositories
         if: inputs.preview_run != ''
         env:
           GH_TOKEN: ${{ github.token }}
