@@ -204,6 +204,40 @@ private slots:
         QVERIFY(dialog->setProperty("seen", ""));
         QCOMPARE(dialog->property("newDays").value<QJSValue>().toVariant().toList().size(), 3);
     }
+    void updateAndCloseAreAdjacent() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 1000; height: 700; visible: true
+                WhatsNewDialog { updateMode: true; Component.onCompleted: open() }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> window(component.create());
+        QVERIFY2(window, qPrintable(component.errorString()));
+        auto* dialog = window->findChild<QObject*>("whatsNew");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        auto* update = dialog->findChild<QQuickItem*>("whatsNew.update");
+        QVERIFY(update && update->isVisible());
+        auto* footer = dialog->property("footer").value<QQuickItem*>();
+        QVERIFY(footer);
+        QQuickItem* close = nullptr;
+        for (auto* item : footer->findChildren<QQuickItem*>()) {
+            if (item->property("text").toString() == "Close" && item->property("down").isValid()) {
+                close = item;
+                break;
+            }
+        }
+        QVERIFY(close && close->isVisible());
+        const auto gap = close->mapToScene({0, 0}).x() - update->mapToScene({update->width(), 0}).x();
+        QVERIFY(gap >= 0);
+        QVERIFY(gap <= footer->property("spacing").toReal() + 1);
+    }
     void redButtonWithNotificationsDisabled_data() {
         QTest::addColumn<bool>("dark");
         QTest::newRow("light") << false;
@@ -226,7 +260,7 @@ private slots:
             import edi.app
             import EasyApplication.Gui.Style as EaStyle
             UpdateButton {
-                updates: recordedUpdates; width: 120; height: 36
+                updates: recordedUpdates
                 Component.onCompleted: EaStyle.Colors.theme = darkTestTheme ? EaStyle.Colors.DarkTheme : EaStyle.Colors.LightTheme
             }
         )", QUrl());
@@ -246,6 +280,10 @@ private slots:
         const auto ink = button->property("ink").value<QColor>();
         QVERIFY(ink.red() > ink.green());
         QVERIFY(ink.red() > ink.blue());
+        QCOMPARE(button->property("keyIcon").toString(), "");
+        const auto padding = button->property("leftPadding").toReal();
+        QVERIFY(padding > 0);
+        QCOMPARE(padding, button->property("rightPadding").toReal());
     }
 };
 

@@ -70,24 +70,22 @@ AppDialog {
     objectName: "whatsNew"
     title: updateMode ? qsTr("EasyDiffraction %1 is available").arg(DesktopUpdates.availableVersion) : qsTr("What's new")
     standardButtons: Dialog.Close
-    // Always in sight, beside Close (the owner, 2026-11-02); off once every day is shown.
     footer: EaElements.DialogButtonBox {
+        buttonLayout: DialogButtonBox.WinLayout
+
         EaElements.Button {
-            visible: dialog.updateMode
-            text: qsTr("Update")
+            objectName: dialog.updateMode ? "whatsNew.update" : "whatsNew.showAll"
+            enabled: dialog.updateMode || !dialog.showAll && dialog.days.length > dialog.newDays.length
+            text: dialog.updateMode ? qsTr("Update") : qsTr("Show all changes")
             DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
             onClicked: {
-                dialog.close();
-                dialog.updateRequested();
+                if (dialog.updateMode) {
+                    dialog.close();
+                    dialog.updateRequested();
+                } else {
+                    dialog.showAll = true;
+                }
             }
-        }
-        EaElements.Button {
-            visible: !dialog.updateMode
-            objectName: "whatsNew.showAll"
-            enabled: !dialog.showAll && dialog.days.length > dialog.newDays.length
-            text: qsTr("Show all changes")
-            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-            onClicked: dialog.showAll = true
         }
     }
     contentWidth: AppSizes.messagesDialogContentWidth

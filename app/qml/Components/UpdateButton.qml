@@ -3,30 +3,24 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
-EaElements.Button {
+FitStatusItem {
     id: button
+
     property var updates: DesktopUpdates
-    objectName: "statusBar.button.update"
-    visible: updates.available
-    enabled: updates.managed
-    text: qsTr("Update")
-    ToolTip.text: qsTr("Update to EasyDiffraction %1").arg(updates.availableVersion)
-    Accessible.name: ToolTip.text
     readonly property color ink: EaStyle.Colors.isDarkPalette ? "#ff9b9b" : "#b52a2a"
-    contentItem: EaElements.Label {
-        text: button.text
-        font: button.font
-        color: button.ink
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-    }
-    background: Rectangle {
-        radius: height / 2
-        color: EaStyle.Colors.isDarkPalette ? (button.hovered ? "#633333" : "#492c2c") : (button.hovered ? "#fbd6d6" : "#fde9e9")
-        border.color: EaStyle.Colors.isDarkPalette ? "#c86666" : "#d95555"
-        border.width: button.visualFocus ? 2 : 1
-    }
+
+    objectName: "statusBar.button.update"
+    shown: updates.available
+    clickable: updates.managed
+    framed: true
+    showKey: false
+    valueText: qsTr("Update")
+    valueColor: ink
+    tintsOnHover: false
+    frameColor: EaStyle.Colors.isDarkPalette ? "#492c2c" : "#fde9e9"
+    frameHoverColor: EaStyle.Colors.isDarkPalette ? "#633333" : "#fbd6d6"
+    frameBorderColor: EaStyle.Colors.isDarkPalette ? "#684747" : "#e9cbcb"
+    ToolTip.text: qsTr("Update to EasyDiffraction %1").arg(updates.availableVersion)
 }

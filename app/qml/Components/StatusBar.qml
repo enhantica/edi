@@ -37,7 +37,7 @@ EaElements.StatusBar {
     readonly property bool tutorialShown: tutorial !== null && tutorial.tutorial !== null
     readonly property real stripRoom: tutorialStrip.visible ? tutorialStrip.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0
 
-    signal updateRequested()
+    signal updateRequested
     readonly property real updateRoom: updateGroup.visible ? updateGroup.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0
 
     visible: DesktopUpdates.available || EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded || AppState.tutorialRunning
@@ -55,11 +55,10 @@ EaElements.StatusBar {
     Row {
         id: updateGroup
         visible: DesktopUpdates.available
-        spacing: EaStyle.Sizes.fontPixelSize * 0.6
+        height: bar.height
+        spacing: fitArea.spacing
 
         UpdateButton {
-            height: Math.round(EaStyle.Sizes.fontPixelSize * 1.8)
-            anchors.verticalCenter: parent.verticalCenter
             onClicked: bar.updateRequested()
         }
         Rectangle {

@@ -53,9 +53,11 @@ Control {
     readonly property real afterWordPadding: Math.round(font.pixelSize * 0.65)
     // The item's width with its key shown, whether or not it is, and with its icon and value only: what the bar
     // measures. A framed item has no key; its word goes in the compact width unless it drops it, when it is a circle.
+    readonly property real framedIconWidth: keyIcon === "" ? 0 : iconLabel.implicitWidth + contentRow.spacing
+    readonly property real framedLeftPadding: keyIcon === "" ? afterWordPadding : sidePadding
     readonly property real valueWidth: framed ? word.implicitWidth : value.implicitWidth
-    readonly property real labelledWidth: framed ? iconLabel.implicitWidth + contentRow.spacing + word.implicitWidth + sidePadding + afterWordPadding : iconLabel.implicitWidth + keyLabel.implicitWidth + valueWidth + 2 * contentRow.spacing + leftPadding + rightPadding
-    readonly property real compactWidth: !framed ? iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + rightPadding : dropsWord ? frameHeight : iconLabel.implicitWidth + valueWidth + contentRow.spacing + sidePadding + afterWordPadding
+    readonly property real labelledWidth: framed ? framedIconWidth + word.implicitWidth + framedLeftPadding + afterWordPadding : iconLabel.implicitWidth + keyLabel.implicitWidth + valueWidth + 2 * contentRow.spacing + leftPadding + rightPadding
+    readonly property real compactWidth: !framed ? iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + rightPadding : dropsWord ? frameHeight : framedIconWidth + valueWidth + framedLeftPadding + afterWordPadding
     signal clicked
 
     // Accessibility follows effective availability without disabling hover/tooltips.
@@ -101,7 +103,7 @@ Control {
     // less space between its icon and word and more after the word, so the three look even, and with its icon alone it
     // is as wide as it is tall, the icon centred (the owner, 2026-10-26).
     // An icon alone is centred by what it draws, not its advance: a chevron's ink sits off its advance's middle.
-    leftPadding: iconOnly ? frameHeight / 2 - ink.tightBoundingRect.x - ink.tightBoundingRect.width / 2 : clickable || framed ? sidePadding : 0
+    leftPadding: iconOnly ? frameHeight / 2 - ink.tightBoundingRect.x - ink.tightBoundingRect.width / 2 : framed ? framedLeftPadding : clickable ? sidePadding : 0
     rightPadding: iconOnly ? frameHeight - iconLabel.implicitWidth - leftPadding : wordShown ? afterWordPadding : leftPadding
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
@@ -118,6 +120,7 @@ Control {
 
         EaElements.Label {
             id: iconLabel
+            visible: control.keyIcon !== ""
             Accessible.ignored: control.accessibleAction
             anchors.verticalCenter: parent.verticalCenter
             height: font.pixelSize
