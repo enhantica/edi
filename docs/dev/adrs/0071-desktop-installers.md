@@ -76,8 +76,9 @@ stay separate.
 `data/distribution.json` declares the primary Pages base and `https://downloads.easydiffraction.org/`
 as the future mirror. Both use identical relative paths and immutable archive bytes. Settings
 shows both full URLs. Qt stores the repositories in a set, so the row order can vary.
-The mirror is preconfigured but disabled until its content is available, so an empty
-mirror cannot block installation. Native update metadata can try the mirror after the primary fails.
+Production installers enable the mirror by default. Preview installers list it unchecked.
+Qt Installer Framework can continue from the primary when the mirror has no metadata.
+Native update metadata can try the mirror after the primary fails.
 The mirror host itself is populated by the owner; no DNS or hosting change is implied.
 
 Keep versioned third-party report libraries under `third-party/`, separate from application repositories.

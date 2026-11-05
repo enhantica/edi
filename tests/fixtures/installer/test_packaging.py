@@ -118,14 +118,14 @@ def test_invalid_version_cannot_escape_installer_output(tmp_path, version):
 
 
 @pytest.mark.parametrize(('channel', 'prefix'), [('stable', ''), ('testing', 'testing/')])
-def test_future_mirror_is_configured_without_enabling_an_empty_repository(
-    tmp_path, channel, prefix
-):
+def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     config, meta = tmp_path / 'config', tmp_path / 'meta'
     config.mkdir()
     meta.mkdir()
     urls = PACKAGE.repository_urls(channel)
-    PACKAGE.write_metadata(config, meta, '2026.11.0', urls[0], urls[1:])
+    PACKAGE.write_metadata(
+        config, meta, '2026.11.0', urls[0], urls[1:], enable_mirrors=channel == 'stable'
+    )
     xml = ElementTree.parse(config / 'config.xml')
     repositories = xml.findall('RemoteRepositories/Repository')
     assert repositories[0].findtext('Enabled') == '1'
@@ -133,7 +133,7 @@ def test_future_mirror_is_configured_without_enabling_an_empty_repository(
     assert repositories[0].findtext('Url') == f'https://enhantica.github.io/edi/{tail}'
     assert repositories[1].findtext('Url') == f'https://downloads.easydiffraction.org/{tail}'
     assert repositories[1].find('DisplayName') is None
-    assert repositories[1].findtext('Enabled') == '0'
+    assert repositories[1].findtext('Enabled') == ('1' if channel == 'stable' else '0')
 
 
 def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):

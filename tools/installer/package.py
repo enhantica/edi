@@ -150,6 +150,8 @@ def write_metadata(
     version: str,
     repository_url: str | None,
     mirrors: tuple[str, ...] = (),
+    *,
+    enable_mirrors: bool = False,
 ) -> None:
     """Write the installer configuration and component metadata for either transport."""
     shutil.copy2(ROOT / 'LICENSE', meta / 'LICENSE')
@@ -198,7 +200,7 @@ def write_metadata(
         for mirror_url in mirrors:
             mirror = ET.SubElement(remote, 'Repository')
             ET.SubElement(mirror, 'Url').text = mirror_url
-            ET.SubElement(mirror, 'Enabled').text = '0'
+            ET.SubElement(mirror, 'Enabled').text = '1' if enable_mirrors else '0'
     ET.indent(configuration)
     configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
     root = xml_file(
@@ -523,7 +525,9 @@ def prepare_installer_source(
     (data / 'payload-manifest.json').write_text(
         json.dumps(payload_manifest(data), indent=2) + '\n'
     )
-    write_metadata(config, meta, version, repository_url, mirrors)
+    write_metadata(
+        config, meta, version, repository_url, mirrors, enable_mirrors=channel == 'stable'
+    )
     return source, template_args, tool_environment, runtime
 
 
