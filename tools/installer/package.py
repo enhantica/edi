@@ -26,6 +26,39 @@ PLATFORM_ID = {'linux': 'linux-x86_64', 'macos': 'macos-arm64', 'windows': 'wind
 ]
 
 
+def read_release_plan(directory: Path, source_commit: str | None = None) -> dict:
+    """Require one immutable identity shared by prepared metadata and source."""
+    documents = {}
+    for name in ['plan.json', 'release.json', 'release-history.json']:
+        path = directory / name
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 1024 * 1024:
+            raise RuntimeError('Release inputs must be bounded regular metadata files')
+        documents[name] = json.loads(path.read_text(encoding='utf-8'))
+    plan, release, history = (
+        documents[name] for name in ['plan.json', 'release.json', 'release-history.json']
+    )
+    version = plan['version']
+    if (
+        not re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', version)
+        or int(version[:4]) < 2000
+    ):
+        raise RuntimeError('Prepared release requires a calendar identity')
+    if plan.get('reused'):
+        raise RuntimeError('This release already exists; reuse its published artifacts')
+    if (
+        not re.fullmatch(r'[0-9a-f]{40}', plan['commit'])
+        or release['version'] != version
+        or release['commit'] != plan['commit']
+    ):
+        raise RuntimeError('Prepared release identities disagree')
+    if source_commit is not None and plan['commit'] != source_commit:
+        raise RuntimeError('Prepared release does not match this source commit')
+    matches = [item for item in history['releases'] if item['version'] == version]
+    if history['schema'] != 'edi.releases/1' or matches != [release]:
+        raise RuntimeError('Prepared release is not uniquely recorded in its history')
+    return release
+
+
 def repository_urls(channel: str) -> tuple[str, ...]:
     """Return the primary repository and configured mirrors for this build platform."""
     policy = json.loads((ROOT / 'data/distribution.json').read_text())
@@ -396,6 +429,37 @@ def archive_installer(installer: Path, runtime: Path | None) -> Path:
     return archive
 
 
+def prepare_installer_source(
+    stage: Path,
+    tools: Path,
+    output: Path,
+    version: str,
+    repository_url: str | None,
+    mirrors: tuple[str, ...],
+) -> tuple:
+    """Prepare the payload and platform bootstrap runtime before framework packaging."""
+    source = output / 'source'
+    if source.exists():
+        raise RuntimeError('Installer source already exists; choose a fresh output directory')
+    config = source / 'config'
+    meta = source / 'packages/org.easyscience.edi/meta'
+    data = meta.parent / 'data'
+    config.mkdir(parents=True)
+    meta.mkdir(parents=True)
+    shutil.copytree(stage, data, symlinks=True)
+    template_args, tool_environment = [], None
+    runtime = None
+    if SYSTEM == 'linux':
+        template, runtime, tool_environment = linux_installer_runtime(tools, output)
+        template_args = ['-t', template]
+        shutil.copytree(runtime, data / runtime.name)
+    (data / 'payload-manifest.json').write_text(
+        json.dumps(payload_manifest(data), indent=2) + '\n'
+    )
+    write_metadata(config, meta, version, repository_url, mirrors)
+    return source, template_args, tool_environment, runtime
+
+
 def package_app(
     stage: Path,
     tools: Path,
@@ -419,26 +483,14 @@ def package_app(
     if output.is_relative_to(stage):
         raise RuntimeError('Installer output must be outside the application stage')
     payload_manifest(stage)
+    inputs_path = stage / 'build-inputs.json'
+    inputs = json.loads(inputs_path.read_text(encoding='utf-8')) if inputs_path.is_file() else {}
+    if inputs.get('release_version') and inputs['release_version'] != version:
+        raise RuntimeError('Application and installer release versions disagree')
     output.mkdir(parents=True, exist_ok=True)
-    source = output / 'source'
-    if source.exists():
-        raise RuntimeError('Installer source already exists; choose a fresh output directory')
-    config = source / 'config'
-    meta = source / 'packages/org.easyscience.edi/meta'
-    data = meta.parent / 'data'
-    config.mkdir(parents=True)
-    meta.mkdir(parents=True)
-    shutil.copytree(stage, data, symlinks=True)
-    template_args, tool_environment = [], None
-    runtime = None
-    if SYSTEM == 'linux':
-        template, runtime, tool_environment = linux_installer_runtime(tools, output)
-        template_args = ['-t', template]
-        shutil.copytree(runtime, data / runtime.name)
-    (data / 'payload-manifest.json').write_text(
-        json.dumps(payload_manifest(data), indent=2) + '\n'
+    source, template_args, tool_environment, runtime = prepare_installer_source(
+        stage, tools, output, version, repository_url, mirrors
     )
-    write_metadata(config, meta, version, repository_url, mirrors)
     if repository_url:
         run(
             [
@@ -467,7 +519,7 @@ def package_app(
             '1',
             '--online-only' if repository_url else '--offline-only',
             '-c',
-            config / 'config.xml',
+            source / 'config/config.xml',
             '-p',
             source / 'packages',
             installer,
@@ -486,6 +538,8 @@ def package_app(
                 'version': version,
                 'kind': kind,
                 'repository_url': repository_url,
+                'edi_commit': inputs.get('edi_commit'),
+                'release_history_sha256': inputs.get('release_history_sha256'),
             },
             indent=2,
         )
@@ -586,6 +640,10 @@ def unpack_installer(archive: Path, output: Path) -> Path:
 def exercise_installer(installer: Path, output: Path, repository: str | None = None) -> None:
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
+    metadata_path = installer.parent / 'installer.json'
+    metadata = (
+        json.loads(metadata_path.read_text(encoding='utf-8')) if metadata_path.is_file() else {}
+    )
     if installer.suffix == '.zip':
         installer = unpack_installer(installer, output / 'downloaded installer')
     home, target = output / 'isolated home', output / 'installed app'
@@ -644,6 +702,11 @@ def exercise_installer(installer: Path, output: Path, repository: str | None = N
                 timeout=45,
             )
         receipt = json.loads((output / 'smoke/result.json').read_text())
+        if metadata.get('release_history_sha256') and (
+            receipt.get('app_version') != metadata['version']
+            or receipt.get('release_history_sha256') != metadata['release_history_sha256']
+        ):
+            raise RuntimeError('Installed release identity or bundled history differs')
         if not receipt.get('passed') or not (output / 'smoke/window.png').is_file():
             raise RuntimeError('Installed application smoke check failed')
         if SYSTEM == 'linux':
@@ -705,7 +768,8 @@ def main() -> None:
     package.add_argument('--stage', type=Path, required=True)
     package.add_argument('--tools', type=Path, required=True)
     package.add_argument('--output', type=Path, required=True)
-    package.add_argument('--version', default='0.0.0')
+    package.add_argument('--version')
+    package.add_argument('--release-plan', type=Path)
     package.add_argument('--kind', choices=['offline', 'online'], default='offline')
     package.add_argument('--repository-url')
     package.add_argument('--channel', choices=['testing', 'stable'], default='testing')
@@ -720,11 +784,22 @@ def main() -> None:
         fetch_tools(args.output)
     elif args.command == 'package':
         urls = repository_urls(args.channel)
+        version = args.version or '0.0.0'
+        if args.release_plan:
+            release = read_release_plan(args.release_plan)
+            if args.version and args.version != release['version']:
+                raise RuntimeError('Explicit version disagrees with the prepared release')
+            version = release['version']
+            inputs = json.loads((args.stage / 'build-inputs.json').read_text(encoding='utf-8'))
+            if inputs.get('edi_commit') != release['commit'] or inputs.get(
+                'release_history_sha256'
+            ) != sha256(args.release_plan / 'release-history.json'):
+                raise RuntimeError('Staged application does not match the prepared release')
         package_app(
             args.stage,
             args.tools,
             args.output,
-            args.version,
+            version,
             (args.repository_url or urls[0]) if args.kind == 'online' else None,
             urls[1:] if args.kind == 'online' else (),
         )

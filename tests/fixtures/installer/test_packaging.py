@@ -315,3 +315,60 @@ def test_installation_lifecycles_have_distinct_real_temp_directories(tmp_path):
     for env in [offline, online]:
         assert env['TEMP'] == env['TMP'] == env['TMPDIR']
         assert Path(env['TEMP']).is_dir()
+
+
+@pytest.mark.parametrize('damage', ['none', 'source', 'history', 'version', 'reused'])
+def test_prepared_release_inputs_share_one_identity(tmp_path, damage):
+    release = {
+        'version': '2026.11.0',
+        'commit': 'a' * 40,
+        'date': '2026-11-05',
+        'notes': {
+            'Added': [],
+            'Fixed': [{'title': 'Improve fitting', 'pull_request': 1}],
+            'Changed': [],
+        },
+    }
+    plan = {
+        'version': release['version'],
+        'commit': release['commit'],
+        'reused': damage == 'reused',
+    }
+    if damage == 'version':
+        plan['version'] = '2026.11.1'
+    history = {
+        'schema': 'edi.releases/1',
+        'baseline_commit': 'b' * 40,
+        'releases': [] if damage == 'history' else [release],
+    }
+    for name, value in [
+        ('plan.json', plan),
+        ('release.json', release),
+        ('release-history.json', history),
+    ]:
+        (tmp_path / name).write_text(PACKAGE.json.dumps(value))
+    if damage == 'none':
+        assert PACKAGE.read_release_plan(tmp_path, 'a' * 40) == release
+    else:
+        with pytest.raises(RuntimeError, match=r'match|uniquely|disagree|already exists'):
+            PACKAGE.read_release_plan(tmp_path, 'c' * 40 if damage == 'source' else 'a' * 40)
+
+
+def test_deployed_licenses_follow_runtime_paths_instead_of_compiler_copies():
+    spec = importlib.util.spec_from_file_location(
+        'installer_build', PACKAGE.ROOT / 'tools/installer/build.py'
+    )
+    build = importlib.util.module_from_spec(spec)
+    with mock.patch.dict(sys.modules, {'package': PACKAGE, 'audit': AUDIT}):
+        spec.loader.exec_module(build)
+    records = [
+        {'name': 'runtime', 'files': ['lib/libgcc_s.so.1']},
+        {'name': 'compiler', 'files': ['lib/gcc/target/14/libgcc_s.so.1']},
+        {'name': 'windows', 'files': ['Library/bin/Qt6Core.dll']},
+    ]
+    assert build.deployed_package_names(
+        [Path('lib/libgcc_s.so.1'), Path('bin/Qt6Core.dll')], records
+    ) == {'runtime', 'windows'}
+    records.append({'name': 'conflict', 'files': ['lib/libgcc_s.so.1']})
+    with pytest.raises(RuntimeError, match='Ambiguous'):
+        build.deployed_package_names([Path('lib/libgcc_s.so.1')], records)

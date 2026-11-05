@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
@@ -7,11 +8,14 @@
 #include <QJsonObject>
 #include <QProcess>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <cmath>
 #include <stdexcept>
+#include "build_version.hpp"
 #include "codex_agent.hpp"
+#include "desktop_updates.hpp"
 #include "edi/io.hpp"
 
 void start_installer_smoke(QQuickWindow& window, const QString& output) {
@@ -19,6 +23,19 @@ void start_installer_smoke(QQuickWindow& window, const QString& output) {
         QJsonObject report{{"schema", "edi.installer-smoke/1"}, {"qt", qVersion()}, {"passed", false}};
         try {
             if (!QDir().mkpath(output)) throw std::runtime_error("Cannot create smoke output directory");
+            const auto version = QString::fromUtf8(edi_app::app_version());
+            report.insert("app_version", version);
+            static const QRegularExpression calendar(QStringLiteral(R"(\A[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)\z)"));
+            if (calendar.match(version).hasMatch()) {
+                QFile history(QStringLiteral(":/edi/releases.json"));
+                if (!history.open(QIODevice::ReadOnly)) throw std::runtime_error("Bundled release history is missing");
+                const auto bytes = history.readAll();
+                bool valid = false;
+                const auto entries = edi_app::release_changes(bytes, version, &valid);
+                if (!valid || entries.isEmpty() || entries.first().toMap().value("version").toString() != version)
+                    throw std::runtime_error("Bundled release history does not contain this application release");
+                report.insert("release_history_sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()));
+            }
             QTemporaryDir project_dir;
             if (!project_dir.isValid()) throw std::runtime_error("Cannot create smoke project directory");
             const QString resource = QStringLiteral(":/edi/installer-smoke/");

@@ -146,3 +146,8 @@ Windows self-removal helper uses a fixed `uninstall.vbs` name in the process tem
 sharing that directory between independent fixture installations can collide while the earlier
 helper is still finishing ([upstream implementation](https://github.com/qtproject/installer-framework/blob/4.11/src/libs/installer/packagemanagercore_p.cpp)). Isolation also prevents the online-install check from borrowing warmed
 component caches from the earlier update test.
+
+Dependency licence ownership uses the longest matching suffix of the deployed path and the locked
+package inventory, refusing ties. A compiler's private copy of a runtime library must not claim the
+flat deployed runtime merely because their filenames agree. The existing pinned licence extraction
+and missing-notice failures still apply to each selected owner.

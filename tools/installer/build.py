@@ -11,7 +11,43 @@ import sys
 from pathlib import Path
 
 from audit import audit_bundle
-from package import ROOT, SYSTEM, acquire_package_licenses, payload_manifest, relocate_linux, run
+from package import (
+    ROOT,
+    SYSTEM,
+    acquire_package_licenses,
+    payload_manifest,
+    read_release_plan,
+    relocate_linux,
+    run,
+    sha256,
+)
+
+
+def deployed_package_names(files: list[Path], records: list[dict]) -> set[str]:
+    """Resolve deployed paths to their nearest package path, refusing ambiguous ownership."""
+    candidates = {}
+    for record in records:
+        for name in record.get('files', []):
+            path = Path(name)
+            candidates.setdefault(path.name, []).append((path.parts, record['name']))
+    owners = set()
+    for path in files:
+        matches = {}
+        for parts, owner in candidates.get(path.name, []):
+            score = 0
+            for left, right in zip(reversed(path.parts), reversed(parts), strict=False):
+                if left != right:
+                    break
+                score += 1
+            matches[owner] = max(matches.get(owner, 0), score)
+        if not matches:
+            continue
+        best = max(matches.values())
+        selected = [owner for owner, score in matches.items() if score == best]
+        if len(selected) != 1:
+            raise RuntimeError(f'Ambiguous deployed dependency ownership: {path}')
+        owners.add(selected[0])
+    return owners
 
 
 def collect_notices(stage: Path, qt: Path, crysta: Path, inputs: Path) -> None:
@@ -28,7 +64,7 @@ def collect_notices(stage: Path, qt: Path, crysta: Path, inputs: Path) -> None:
         raise RuntimeError(
             'Packaging requires the locked dependency records for its licence inventory'
         )
-    deployed_names = set()
+    deployed_files = []
     for path in stage.rglob('*'):
         if path.is_file() and not path.is_symlink():
             with path.open('rb') as stream:
@@ -43,11 +79,14 @@ def collect_notices(stage: Path, qt: Path, crysta: Path, inputs: Path) -> None:
                     b'\xbf\xba',
                 }:
                     continue
-            deployed_names.add(path.name)
+            deployed_files.append(path.relative_to(stage))
+    metadata_records = [
+        json.loads(record.read_text(encoding='utf-8')) for record in records.glob('*.json')
+    ]
+    owners = deployed_package_names(deployed_files, metadata_records)
     inputs.mkdir(parents=True, exist_ok=True)
-    for record in records.glob('*.json'):
-        metadata = json.loads(record.read_text(encoding='utf-8'))
-        if not any(Path(name).name in deployed_names for name in metadata.get('files', [])):
+    for metadata in metadata_records:
+        if metadata['name'] not in owners:
             continue
         licenses = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
         if not licenses.is_dir():
@@ -107,22 +146,54 @@ def verify_assistant_payload(stage: Path, expected: Path) -> None:
         raise RuntimeError('Deployment or signing changed the verified assistant runtime')
 
 
-def build(
-    crysta: Path, work: Path, qt: Path | None, patchelf: Path | None, version: str | None = None
-) -> None:
-    crysta, work = crysta.resolve(), work.resolve()
-    if not (crysta / 'include/crysta/model.hpp').is_file():
-        raise RuntimeError('The crysta source checkout is missing')
-    if (work / 'stage').exists():
-        raise RuntimeError('Stage already exists; choose a fresh build directory')
+def release_identity(version: str | None, release_plan: Path | None) -> dict:
+    """Resolve prepared metadata against the current source before starting any compilation."""
+    source_commit = subprocess.check_output(
+        ['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True
+    ).strip()
+    history_hash = None
+    if release_plan:
+        release_plan = release_plan.resolve()
+        release = read_release_plan(release_plan, source_commit)
+        if version and version != release['version']:
+            raise RuntimeError('Explicit version disagrees with the prepared release')
+        version = release['version']
+        history_hash = sha256(release_plan / 'release-history.json')
+    return {
+        'commit': source_commit,
+        'version': version,
+        'history_hash': history_hash,
+        'plan': release_plan,
+    }
+
+
+def resolve_qt_prefix(qt: Path | None) -> Path:
+    """Resolve the native Qt installation from the locked packaging environment."""
     if qt is None:
         value = os.environ.get('PIXI_ENVIRONMENT_PREFIX') or os.environ.get('CONDA_PREFIX')
         if not value:
             raise RuntimeError('Specify the installed Qt prefix')
         qt = Path(value)
     qt = qt.resolve()
-    if SYSTEM == 'windows':
-        qt /= 'Library'
+    return qt / 'Library' if SYSTEM == 'windows' else qt
+
+
+def build(
+    crysta: Path,
+    work: Path,
+    qt: Path | None,
+    patchelf: Path | None,
+    version: str | None = None,
+    release_plan: Path | None = None,
+) -> None:
+    identity = release_identity(version, release_plan)
+    version, release_plan = identity['version'], identity['plan']
+    crysta, work = crysta.resolve(), work.resolve()
+    if not (crysta / 'include/crysta/model.hpp').is_file():
+        raise RuntimeError('The crysta source checkout is missing')
+    if (work / 'stage').exists():
+        raise RuntimeError('Stage already exists; choose a fresh build directory')
+    qt = resolve_qt_prefix(qt)
     engine, prefix, app, stage = [work / name for name in ['crysta', 'prefix', 'app', 'stage']]
     common = [
         '-G',
@@ -149,6 +220,10 @@ def build(
     ]
     if version:
         options.append(f'-DEDI_RELEASE_VERSION={version}')
+    if release_plan:
+        options.append(
+            f'-DEDI_RELEASE_HISTORY={(release_plan / "release-history.json").as_posix()}'
+        )
     run(['cmake', '-S', ROOT, '-B', app, *common, *options])
     run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4'])
     run(['cmake', '--install', app, '--component', 'desktop', '--prefix', stage])
@@ -174,18 +249,19 @@ def build(
     (stage / 'bundle-audit.json').write_text(
         json.dumps(audit_bundle(stage), indent=2) + '\n', encoding='utf-8'
     )
-    commit = subprocess.check_output(
-        ['git', '-C', str(crysta), 'rev-parse', 'HEAD'], text=True
-    ).strip()
+    if release_plan and sha256(release_plan / 'release-history.json') != identity['history_hash']:
+        raise RuntimeError('Release history changed while the application was built')
     (stage / 'build-inputs.json').write_text(
         json.dumps(
             {
-                'crysta_commit': commit,
+                'crysta_commit': subprocess.check_output(
+                    ['git', '-C', str(crysta), 'rev-parse', 'HEAD'], text=True
+                ).strip(),
                 'platform': SYSTEM,
                 'architecture': platform.machine(),
-                'edi_commit': subprocess.check_output(
-                    ['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True
-                ).strip(),
+                'edi_commit': identity['commit'],
+                'release_version': version,
+                'release_history_sha256': identity['history_hash'],
             },
             indent=2,
         )
@@ -200,8 +276,16 @@ def main() -> None:
     parser.add_argument('--qt-prefix', type=Path)
     parser.add_argument('--patchelf', type=Path)
     parser.add_argument('--version', help='Calendar release version, also used by the installer')
+    parser.add_argument('--release-plan', type=Path)
     args = parser.parse_args()
-    build(args.crysta_source, args.work, args.qt_prefix, args.patchelf, args.version)
+    build(
+        args.crysta_source,
+        args.work,
+        args.qt_prefix,
+        args.patchelf,
+        args.version,
+        args.release_plan,
+    )
 
 
 if __name__ == '__main__':

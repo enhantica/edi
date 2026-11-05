@@ -108,3 +108,9 @@ in legacy builds. Authentication/server errors do not become an empty first-rele
 artifacts contain the chosen release, complete history and Markdown notes; no tag or release is created.
 Installer jobs run these offline release-policy fixtures and the engine's small native portability
 fixtures before the full source build.
+
+Prepared release metadata must agree on source commit, calendar identity and complete history before
+compilation. Application and installer packaging share these inputs; packaging refuses mismatched
+staged metadata. Installed application qualification records the actual compiled version and SHA-256
+of its bundled history, which must match the prepared inputs. This checks what was installed rather
+than relying only on filenames or workflow environment variables.
