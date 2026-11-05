@@ -182,7 +182,11 @@ def write_metadata(
     )
     icons = ROOT / 'app/resources/logo'
     style = ROOT / 'tools/installer'
-    shutil.copy2(style / 'Installer.qss', config / 'Installer.qss')
+    stylesheet = (style / 'Installer.qss').read_text(encoding='utf-8')
+    step_list_inset = '23' if SYSTEM == 'macos' else '9'
+    (config / 'Installer.qss').write_text(
+        stylesheet.replace('@STEP_LIST_INSET@', step_list_inset), encoding='utf-8'
+    )
     controller = (style / 'Installer.qs').read_text(encoding='utf-8')
     for marker, filename in (
         ('@WORDMARK@', 'InstallerLogo.png'),

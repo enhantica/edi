@@ -350,7 +350,10 @@ The Modern wizard displays a transparent high-resolution wordmark in its
 header. A blank subtitle preserves the header on every installer step and
 keeps Qt from switching the page background. Leaving a page restores its
 localized heading for the step list. The installer uses the platform window
-palette and gives the folder field and Browse button the same height.
+palette for both dividers and aligns the wordmark with the step list. The
+welcome page describes the application and links to its website. The folder
+field and Browse button have the same visible height, with a macOS inset to
+compensate for the native control offset.
 
 The macOS application and bootstrap use the same padded ICNS asset. The
 transparent canvas keeps the blue mark clear of the Dock's running indicator.

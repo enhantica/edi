@@ -1,7 +1,20 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 QWizard, QWizardPage, QWidget#SideWidget, QListWidget#PageListWidget,
-QWizard > QWidget > QWidget[autoFillBackground="true"] {
+QWizard > QWidget > QWidget {
     background-color: palette(window);
+}
+
+/* The empty subtitle keeps the Modern header visible without adding text height. */
+QWizard > QWidget > QWidget > QLabel[wordWrap="true"] {
+    font-size: 5px;
+}
+
+QWizard #IntroductionPage QLabel#MessageLabel {
+    min-height: 190px;
+}
+
+QListWidget#PageListWidget::item {
+    padding-left: @STEP_LIST_INSET@px;
 }
 
 QWizard QPushButton, QWizard QLineEdit, QWizard QComboBox {

@@ -28,6 +28,20 @@ function headerWordmark() {
         if (!page)
             return;
 
+        if (name === "Introduction") {
+            var welcome = gui.findChild(page, "MessageLabel");
+            welcome.openExternalLinks = true;
+            welcome.text = "<p>Welcome to EasyDiffraction Setup.</p>"
+                + "<p>EasyDiffraction calculates diffraction patterns from a structural model "
+                + "and refines its parameters against experimental data.</p>"
+                + '<p>Learn more at <a href="https://easydiffraction.org">easydiffraction.org</a>.</p>';
+        }
+
+        if (name === "TargetDirectory" && systemInfo.kernelType === "darwin") {
+            var directory = gui.findChild(page, "TargetDirectoryLineEdit");
+            directory.styleSheet = "margin-top: 4px;";
+        }
+
         var title = page.title;
         var subtitle = page.subTitle;
         function restoreHeading() {
