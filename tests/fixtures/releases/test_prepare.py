@@ -3,9 +3,11 @@
 
 import datetime
 import importlib.util
+import io
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -68,6 +70,17 @@ def test_preparation_uses_actual_ancestry_and_retry_identity(repository):
         mock.patch.object(PREPARE, 'merged_requests', return_value=[request]),
     ):
         first = PREPARE.prepare('enhantica/edi', head, root / 'first', datetime.date(2026, 11, 5))
+    download_spec = importlib.util.spec_from_file_location(
+        'download_release_inputs', ROOT / 'tools/release/download_plan.py'
+    )
+    download = importlib.util.module_from_spec(download_spec)
+    download_spec.loader.exec_module(download)
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, 'w') as stream:
+        for path in (root / 'first').iterdir():
+            stream.write(path, path.name)
+    download.unpack_plan(archive.getvalue(), root / 'downloaded')
+    assert (root / 'downloaded/notes.md').read_bytes() == (root / 'first/notes.md').read_bytes()
     recorded = json.loads((root / 'first/release-history.json').read_text())
     PLAN.validate_history(recorded)
     assert first['release']['version'] == '2026.11.0'

@@ -32,7 +32,7 @@ def select_plan(run: dict, artifacts: list[dict], commit: str) -> int:
 
 def unpack_plan(content: bytes, output: Path) -> None:
     """Extract only bounded regular release metadata into a fresh directory."""
-    expected = {'plan.json', 'release.json', 'release-history.json', 'release-notes.md'}
+    expected = {'plan.json', 'release.json', 'release-history.json', 'notes.md'}
     with zipfile.ZipFile(io.BytesIO(content)) as archive:
         members = archive.infolist()
         if {item.filename for item in members} != expected or len(members) != len(expected):

@@ -39,7 +39,7 @@ def test_prepared_artifact_is_bound_to_source_and_successful_attempt(damage):
     if damage == 'none':
         assert DOWNLOAD.select_plan(run, artifacts, 'a' * 40) == 19
     else:
-        with pytest.raises(ValueError, match='preparation|artifact'):
+        with pytest.raises(ValueError, match=r'preparation|artifact'):
             DOWNLOAD.select_plan(run, artifacts, 'a' * 40)
 
 
@@ -47,7 +47,7 @@ def test_prepared_artifact_is_bound_to_source_and_successful_attempt(damage):
 def test_prepared_archive_is_bounded_and_contains_only_regular_metadata(tmp_path, damage):
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
-        for name in ['plan.json', 'release.json', 'release-history.json', 'release-notes.md']:
+        for name in ['plan.json', 'release.json', 'release-history.json', 'notes.md']:
             info = zipfile.ZipInfo(
                 '../plan.json' if damage == 'traversal' and name == 'plan.json' else name
             )
