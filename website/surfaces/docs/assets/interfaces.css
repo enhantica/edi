@@ -14,3 +14,9 @@
   font-size: .82em;
   font-weight: 400;
 }
+.md-typeset .ed-desktop-version {
+  margin: 0 0 -.25rem;
+  color: var(--md-default-fg-color--light);
+  font-size: .78rem;
+  font-weight: 600;
+}

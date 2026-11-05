@@ -170,6 +170,36 @@ def overlay_testing_feed(site: Path, feed: Path) -> None:
     target.write_text(json.dumps(current, indent=2) + '\n', encoding='utf-8')
 
 
+def show_desktop_version(site: Path) -> None:
+    page = site / 'application/desktop/index.html'
+    if not page.is_file():
+        return
+    for channel, label in [('stable', 'Latest release'), ('testing', 'Testing preview')]:
+        feed = site / 'releases' / (channel + '.json')
+        if not feed.is_file():
+            continue
+        versions = [
+            item['version'] for item in json.loads(feed.read_text(encoding='utf-8'))['releases']
+        ]
+        versions = [
+            value
+            for value in versions
+            if re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.[0-9]+', value)
+        ]
+        if not versions:
+            continue
+        version = max(versions, key=lambda value: tuple(map(int, value.split('.'))))
+        text = page.read_text(encoding='utf-8')
+        text = re.sub(
+            r'<p class="ed-desktop-version"(?: hidden(?:="")?)?>[^<]*</p>',
+            f'<p class="ed-desktop-version">{label} {version}</p>',
+            text,
+            count=1,
+        )
+        page.write_text(text, encoding='utf-8')
+        return
+
+
 def check_site_size(site: Path, limit: int = 1_000_000_000) -> int:
     """Refuse a site larger than GitHub Pages' documented one-GB limit."""
     size = sum(path.stat().st_size for path in site.rglob('*') if path.is_file())
@@ -241,6 +271,7 @@ def main() -> None:
         with tarfile.open(Path(folder) / 'artifact.tar') as archive:
             archive.extractall(args.site, filter='data')
     overlay_component(args.site, args.incoming, args.component)
+    show_desktop_version(args.site)
     check_site_size(args.site)
 
 
