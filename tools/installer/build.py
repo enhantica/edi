@@ -218,12 +218,13 @@ def build(
         '-DEDI_DEPLOY_APP=ON',
         f'-DCMAKE_PREFIX_PATH={prefix.as_posix()};{qt.as_posix()}',
     ]
-    if version:
-        options.append(f'-DEDI_RELEASE_VERSION={version}')
-    if release_plan:
-        options.append(
-            f'-DEDI_RELEASE_HISTORY={(release_plan / "release-history.json").as_posix()}'
-        )
+    history = (
+        release_plan / 'release-history.json' if release_plan else ROOT / 'data/releases.json'
+    )
+    options.extend([
+        f'-DEDI_RELEASE_VERSION={version or ""}',
+        f'-DEDI_RELEASE_HISTORY={history.as_posix()}',
+    ])
     run(['cmake', '-S', ROOT, '-B', app, *common, *options])
     run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4'])
     run(['cmake', '--install', app, '--component', 'desktop', '--prefix', stage])

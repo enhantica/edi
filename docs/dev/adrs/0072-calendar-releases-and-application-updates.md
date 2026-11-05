@@ -145,3 +145,8 @@ roots. No production release is dispatched from an unmerged feature branch.
 References: [GitHub artifact downloads](https://docs.github.com/en/rest/actions/artifacts#download-an-artifact),
 [release creation](https://cli.github.com/manual/gh_release_create),
 [asset upload without clobber](https://cli.github.com/manual/gh_release_upload).
+
+Both the ordinary developer app builder and the installer builder explicitly declare their selected
+version and history on every configure, including the empty developer version. These values join the
+ordinary build identity. Reusing a cache after a failed or manually numbered build cannot silently
+retain a previous release version or a different bundled history.

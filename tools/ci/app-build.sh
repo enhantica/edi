@@ -51,6 +51,7 @@ else
 fi
 args=(-S . -B build/app -G Ninja -DCMAKE_BUILD_TYPE=Release
       -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF
+      -DEDI_RELEASE_VERSION= -DEDI_RELEASE_HISTORY="$ROOT/data/releases.json"
       -DCMAKE_PREFIX_PATH="$CRYSTA_PREFIX;${CONDA_PREFIX:?run this in the app pixi environment}"
       -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}")
 if [ -n "${EDI_GUI_COMPONENTS_SRC:-}" ]; then
