@@ -154,3 +154,16 @@ retain a previous release version or a different bundled history.
 The ordinary incremental web builder also declares its empty developer version and default history
 on every configure, matching the ordinary native builder. It cannot inherit a manually selected
 numbered release or another history file from an earlier CMake cache.
+
+
+## Notifications and preview updates
+
+An installed app checks at startup and hourly while open. The notification preference controls
+automatic prompts. The red Update control at the bottom left remains available whenever the
+app knows about a newer release. It opens the same release-notes dialog as a manual check or
+an automatic prompt. The existing unsaved-work guard still owns the transition to Maintenance Tool.
+
+Calendar previews install a testing channel marker. They read a separate release feed published
+atomically with the tested component repositories. Their notes describe the candidate, and their
+bundled copy supplies What's New after installation. Stable releases continue to use the
+source-bound history generated from merged pull requests and the stable feed.

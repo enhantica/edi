@@ -265,6 +265,7 @@ AppDialog {
             RowCheckBox {
                 objectName: "preferences.checkUpdateOnStart"
                 enabled: DesktopUpdates.managed
+                ToolTip.text: qsTr("Show release notes when a new version is found. The app checks at startup and hourly.")
                 checked: Preferences.updateNotifications
                 onToggled: Preferences.updateNotifications = checked
             }
@@ -277,7 +278,7 @@ AppDialog {
                 enabled: DesktopUpdates.managed && !DesktopUpdates.checking
                 highlighted: true
                 text: DesktopUpdates.checking ? qsTr("Checking…") : qsTr("Check now")
-                onClicked: DesktopUpdates.checkNow()
+                onClicked: DesktopUpdates.checkNow(true)
             }
             Item {
                 width: dialog.labelWidth

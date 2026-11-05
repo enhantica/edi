@@ -41,6 +41,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: desktop-installers-${{ github.event_name == 'push' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
 jobs:
   installers:
     if: inputs.preview_run == ''
@@ -229,6 +233,9 @@ jobs:
           shutil.copy2(package / 'installer.json', delivery / 'installer.json')
           shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
           shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
+          preview_history = Path('build/installer/preview-history.json')
+          if preview_history.is_file():
+              shutil.copy2(preview_history, delivery / 'preview-history.json')
           PYTHON
       - name: Upload online installer
         uses: actions/upload-artifact@v4
@@ -344,6 +351,31 @@ jobs:
           for platform in expected:
               if not (root / platform / 'Updates.xml').is_file():
                   raise RuntimeError('Platform repository metadata is missing')
+          PYTHON
+      - name: Download installed calendar preview identities
+        if: inputs.calendar_preview && inputs.preview_run == ''
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*-${{ github.run_attempt }}
+          path: preview-delivery
+      - name: Prepare the testing update feed
+        if: inputs.calendar_preview && inputs.preview_run == ''
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          root = Path('components/testing')
+          histories = sorted(Path('preview-delivery').glob('installer-*/preview-history.json'))
+          if len(histories) != 2 or histories[0].read_bytes() != histories[1].read_bytes():
+              raise RuntimeError('Preview release histories differ')
+          payload = histories[0].read_bytes()
+          version = json.loads(payload)['releases'][0]['version']
+          for metadata in root.glob('*/Updates.xml'):
+              versions = {item.findtext('Version') for item in ET.parse(metadata).findall('PackageUpdate')}
+              if versions != {version}:
+                  raise RuntimeError('Testing repositories do not match the preview feed')
+          (root / 'feed.json').write_bytes(payload)
           PYTHON
       - name: Preserve documentation, web app and previous components
         run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site

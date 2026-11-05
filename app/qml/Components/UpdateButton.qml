@@ -9,7 +9,7 @@ import edi.app
 EaElements.Button {
     id: button
     property var updates: DesktopUpdates
-    objectName: "appBar.button.update"
+    objectName: "statusBar.button.update"
     visible: updates.available
     enabled: updates.managed
     text: qsTr("Update")

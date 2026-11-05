@@ -19,6 +19,7 @@ class DesktopUpdates : public QObject {
     Q_PROPERTY(bool checking READ checking NOTIFY changed)
     Q_PROPERTY(bool available READ available NOTIFY changed)
     Q_PROPERTY(QString availableVersion READ availableVersion NOTIFY changed)
+    Q_PROPERTY(QVariantList availableChanges READ availableChanges NOTIFY changed)
     Q_PROPERTY(QString status READ status NOTIFY changed)
 
 public:
@@ -36,9 +37,10 @@ public:
     /// The validated available calendar identity, or an empty string.
     QString availableVersion() const { return available_version_; }
     /// The latest human-readable check or launch result.
+    QVariantList availableChanges() const { return available_changes_; }
     QString status() const { return status_; }
     /// Check metadata independently of optional notification preferences; ignore overlapping requests.
-    Q_INVOKABLE void checkNow();
+    Q_INVOKABLE void checkNow(bool manual = false);
     /// Launch the fixed installed updater; call only after the existing unsaved-work guard succeeds.
     Q_INVOKABLE bool startUpdate();
     /// Compare validated calendar versions numerically; invalid identities are never newer.
@@ -48,6 +50,7 @@ public:
 
 signals:
     void changed();
+    void checkFinished(bool manual);
 
 private:
     void fetchNext();
@@ -58,11 +61,14 @@ private:
     qsizetype next_feed_ = 0;
     bool managed_ = false;
     bool checking_ = false;
+    bool manual_ = false;
+    QVariantList available_changes_;
     QString available_version_;
     QString status_;
 };
 
 /// Read validated notes through current, or all releases when current is empty; invalid input sets validity false.
-QVariantList release_changes(const QByteArray& content, const QString& current, bool* valid = nullptr);
+QVariantList release_changes(const QByteArray& content, const QString& current, bool* valid = nullptr,
+                             bool allow_preview = false);
 
 }  // namespace edi_app

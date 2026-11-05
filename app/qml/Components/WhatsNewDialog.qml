@@ -17,6 +17,9 @@ import edi.app
 AppDialog {
     id: dialog
 
+    property bool updateMode: false
+    signal updateRequested()
+
     // Every day of changes, newest first, read as the dialog opens.
     property var days: []
     // The last date the user saw when the dialog opened; the days after it are new.
@@ -28,7 +31,7 @@ AppDialog {
         const unseen = days.filter(day => releaseHistory ? (seen === "" || DesktopUpdates.newerVersion(day.version, seen)) : day.date > seen);
         return unseen.length > 0 ? unseen : days.slice(0, 1);
     }
-    readonly property var shownDays: showAll ? days : newDays
+    readonly property var shownDays: updateMode || showAll ? days : newDays
 
     // Keeps the newest date as seen, written to the settings file at once.
     function markSeen(date) {
@@ -62,11 +65,21 @@ AppDialog {
     }
 
     objectName: "whatsNew"
-    title: qsTr("What's new")
+    title: updateMode ? qsTr("EasyDiffraction %1 is available").arg(DesktopUpdates.availableVersion) : qsTr("What's new")
     standardButtons: Dialog.Close
     // Always in sight, beside Close (the owner, 2026-11-02); off once every day is shown.
     footer: EaElements.DialogButtonBox {
         EaElements.Button {
+            visible: dialog.updateMode
+            text: qsTr("Update")
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: {
+                dialog.close();
+                dialog.updateRequested();
+            }
+        }
+        EaElements.Button {
+            visible: !dialog.updateMode
             objectName: "whatsNew.showAll"
             enabled: !dialog.showAll && dialog.days.length > dialog.newDays.length
             text: qsTr("Show all changes")
@@ -78,13 +91,13 @@ AppDialog {
     contentHeight: Math.min(column.implicitHeight, EaStyle.Sizes.fontPixelSize * 30)
 
     onAboutToShow: {
-        days = ApplicationInfo.changes();
+        days = updateMode ? DesktopUpdates.availableChanges : ApplicationInfo.changes();
         seen = releaseHistory ? Preferences.whatsNewReleaseSeen : Preferences.whatsNewSeen;
         showAll = false;
     }
     // As soon as closing starts, which a close before the opening has finished also does.
     onAboutToHide: {
-        if (days.length > 0)
+        if (!updateMode && days.length > 0)
             dialog.markSeen(releaseHistory ? days[0].version : days[0].date);
     }
 

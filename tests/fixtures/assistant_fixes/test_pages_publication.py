@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -236,3 +237,37 @@ def test_documentation_refresh_preserves_the_installed_app_release_feed(tmp_path
     (incoming / 'index.html').write_text('new docs')
     MODULE.overlay_component(site, incoming, 'docs')
     assert (site / 'releases/stable.json').read_bytes() == b'qualified release feed'
+
+
+def test_testing_feed_keeps_stable_and_rejects_stale_preview(tmp_path):
+    site, incoming = tmp_path / 'site', tmp_path / 'incoming'
+    stable = site / 'releases/stable.json'
+    stable.parent.mkdir(parents=True)
+    stable.write_text('stable history')
+    (site / 'index.html').write_text('documentation')
+    (site / 'webapp').mkdir()
+    (site / 'webapp/index.html').write_text('web app')
+    target = incoming / 'testing/macos-arm64'
+    target.mkdir(parents=True)
+    (target / 'Updates.xml').write_text('qualified metadata')
+    feed = target.parent / 'feed.json'
+
+    for version in ['2026.11.1', '2026.11.2']:
+        feed.write_text(
+            json.dumps({
+                'schema': 'edi.preview-releases/1',
+                'releases': [{'version': version}],
+            })
+        )
+        MODULE.overlay_component(site, incoming, 'installers')
+    actual = json.loads((stable.parent / 'testing.json').read_text())
+    assert [entry['version'] for entry in actual['releases']] == ['2026.11.2', '2026.11.1']
+    assert stable.read_text() == 'stable history'
+    feed.write_text(
+        json.dumps({
+            'schema': 'edi.preview-releases/1',
+            'releases': [{'version': '2026.11.1'}],
+        })
+    )
+    with pytest.raises(RuntimeError, match='cannot move backwards'):
+        MODULE.overlay_component(site, incoming, 'installers')

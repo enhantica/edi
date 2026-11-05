@@ -2,6 +2,7 @@
 """Source-build crysta before deploying the native edi application."""
 
 import argparse
+import datetime
 import json
 import os
 import platform
@@ -220,6 +221,33 @@ def resolve_qt_prefix(qt: Path | None) -> Path:
     return qt / 'Library' if SYSTEM == 'windows' else qt
 
 
+def write_preview_history(work: Path, version: str, commit: str) -> Path:
+    history = work / 'preview-history.json'
+    notes = json.loads((ROOT / 'data/installer-preview-notes.json').read_text(encoding='utf-8'))
+    history.write_text(
+        json.dumps(
+            {
+                'schema': 'edi.preview-releases/1',
+                'releases': [
+                    {
+                        'version': version,
+                        'date': datetime.datetime.now(datetime.UTC).date().isoformat(),
+                        'commit': commit,
+                        'notes': {
+                            group: [{'title': title} for title in titles]
+                            for group, titles in notes.items()
+                        },
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + '\n',
+        encoding='utf-8',
+    )
+    return history
+
+
 def build(
     crysta: Path,
     work: Path,
@@ -263,6 +291,8 @@ def build(
     history = (
         release_plan / 'release-history.json' if release_plan else ROOT / 'data/releases.json'
     )
+    if version and not release_plan:
+        history = write_preview_history(work, version, identity['commit'])
     options.extend([
         f'-DEDI_RELEASE_VERSION={version or ""}',
         f'-DEDI_INSTALLER_CALENDAR_PREVIEW={"ON" if version and not release_plan else "OFF"}',

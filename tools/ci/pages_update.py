@@ -111,7 +111,11 @@ def overlay_installers(site: Path, incoming: Path) -> None:
             or channel.is_symlink()
         ):
             raise RuntimeError('Installer input has an unknown publication channel')
-        parts = list(channel.iterdir())
+        parts = [
+            part
+            for part in channel.iterdir()
+            if not (channel.name == 'testing' and part.name == 'feed.json')
+        ]
         if not parts or any(
             part.name not in allowed or not part.is_dir() or part.is_symlink() for part in parts
         ):
@@ -140,6 +144,30 @@ def overlay_installers(site: Path, incoming: Path) -> None:
                         raise RuntimeError(f'Installer archive identity was reused: {relative}')
     for part, target in repositories:
         shutil.copytree(part, target, dirs_exist_ok=True)
+    overlay_testing_feed(site, incoming / 'testing/feed.json')
+
+
+def overlay_testing_feed(site: Path, feed: Path) -> None:
+    if not feed.exists():
+        return
+    if feed.is_symlink() or not feed.is_file() or feed.stat().st_size > 1024 * 1024:
+        raise RuntimeError('Testing update feed must be a bounded regular file')
+    current = json.loads(feed.read_text(encoding='utf-8'))
+    if current.get('schema') != 'edi.preview-releases/1' or len(current['releases']) != 1:
+        raise RuntimeError('Expected one testing release in the incoming feed')
+    target = site / 'releases/testing.json'
+    if target.is_file():
+        previous = json.loads(target.read_text(encoding='utf-8'))
+        version = current['releases'][0]['version']
+        if tuple(map(int, version.split('.'))) < tuple(
+            map(int, previous['releases'][0]['version'].split('.'))
+        ):
+            raise RuntimeError('Testing update feed cannot move backwards')
+        current['releases'].extend(
+            entry for entry in previous['releases'][:19] if entry['version'] != version
+        )
+    target.parent.mkdir(exist_ok=True)
+    target.write_text(json.dumps(current, indent=2) + '\n', encoding='utf-8')
 
 
 def check_site_size(site: Path, limit: int = 1_000_000_000) -> int:

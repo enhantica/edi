@@ -54,6 +54,14 @@ QString maintenance_path() {
 #endif
 }
 QList<QUrl> feed_urls() {
+    const QDir installation(QFileInfo(maintenance_path()).absoluteDir());
+#ifdef Q_OS_MACOS
+    const auto channelPath = installation.absoluteFilePath(QStringLiteral("../../../update-channel.txt"));
+#else
+    const auto channelPath = installation.absoluteFilePath(QStringLiteral("update-channel.txt"));
+#endif
+    QFile channelFile(channelPath);
+    const bool testing = channelFile.open(QIODevice::ReadOnly) && channelFile.read(32).trimmed() == "testing";
     QFile policy(QStringLiteral(":/edi/distribution.json"));
     if (!policy.open(QIODevice::ReadOnly)) return {};
     const auto object = QJsonDocument::fromJson(policy.readAll()).object();
@@ -61,7 +69,7 @@ QList<QUrl> feed_urls() {
     QStringList bases{object.value(QStringLiteral("primary_base")).toString()};
     for (const auto& mirror : object.value(QStringLiteral("mirror_bases")).toArray()) bases.append(mirror.toString());
     for (const auto& base : bases) {
-        const QUrl url = QUrl(base).resolved(QUrl(QStringLiteral("releases/stable.json")));
+        const QUrl url = QUrl(base).resolved(QUrl(testing ? QStringLiteral("releases/testing.json") : QStringLiteral("releases/stable.json")));
         if (url.scheme() == QLatin1String("https") && !url.host().isEmpty()) result.append(url);
     }
     return result;
@@ -73,13 +81,15 @@ QString markdown_title(QString text) {
 }
 }  // namespace
 
-QVariantList release_changes(const QByteArray& content, const QString& current, bool* valid) {
+QVariantList release_changes(const QByteArray& content, const QString& current, bool* valid, bool allow_preview) {
     if (valid) *valid = false;
     const auto upper = calendar_version(current);
     if ((!current.isEmpty() && !upper) || content.size() > 1024 * 1024) return {};
     const auto document = QJsonDocument::fromJson(content);
     const auto object = document.object();
-    if (object.value(QStringLiteral("schema")).toString() != QLatin1String("edi.releases/1") ||
+    const auto schema = object.value(QStringLiteral("schema")).toString();
+    const bool preview = allow_preview && schema == QLatin1String("edi.preview-releases/1");
+    if ((!preview && schema != QLatin1String("edi.releases/1")) ||
         !object.value(QStringLiteral("releases")).isArray()) return {};
     QVariantList result;
     QSet<QString> seen;
@@ -103,7 +113,7 @@ QVariantList release_changes(const QByteArray& content, const QString& current, 
                 const auto item = entry.toObject();
                 const auto title = item.value(QStringLiteral("title")).toString();
                 const auto number = item.value(QStringLiteral("pull_request")).toInteger();
-                if (title.trimmed().isEmpty() || title.size() > 512 || title.contains('\n') || title.contains('\r') || number <= 0) return {};
+                if (title.trimmed().isEmpty() || title.size() > 512 || title.contains('\n') || title.contains('\r') || (!preview && number <= 0)) return {};
                 text += QStringLiteral("- ") + markdown_title(title) + QStringLiteral("\n");
             }
             text += QLatin1Char('\n');
@@ -129,10 +139,10 @@ DesktopUpdates::DesktopUpdates(QString version, QString maintenance, QList<QUrl>
     status_ = managed_ ? tr("Updates have not been checked yet.") : tr("Updates are available for installed desktop releases.");
     if (managed_ && automatic && !QCoreApplication::arguments().contains(QStringLiteral("--testmode")) &&
         !QCoreApplication::arguments().contains(QStringLiteral("--test-observer"))) {
-        QTimer::singleShot(2000, this, &DesktopUpdates::checkNow);
+        QTimer::singleShot(2000, this, [this] { checkNow(); });
         auto* timer = new QTimer(this);
-        timer->setInterval(6 * 60 * 60 * 1000);
-        connect(timer, &QTimer::timeout, this, &DesktopUpdates::checkNow);
+        timer->setInterval(60 * 60 * 1000);
+        connect(timer, &QTimer::timeout, this, [this] { checkNow(); });
         timer->start();
     }
 }
@@ -142,11 +152,12 @@ bool DesktopUpdates::newerVersion(const QString& candidate, const QString& previ
 }
 QVariantList DesktopUpdates::releaseChanges() const {
     QFile history(QStringLiteral(":/edi/releases.json"));
-    return history.open(QIODevice::ReadOnly) ? release_changes(history.readAll(), version_) : QVariantList{};
+    return history.open(QIODevice::ReadOnly) ? release_changes(history.readAll(), version_, nullptr, true) : QVariantList{};
 }
-void DesktopUpdates::checkNow() {
+void DesktopUpdates::checkNow(bool manual) {
     if (!managed_ || checking_) return;
     checking_ = true;
+    manual_ = manual;
     next_feed_ = 0;
     status_ = tr("Checking for updates…");
     emit changed();
@@ -173,20 +184,30 @@ void DesktopUpdates::fetchNext() {
     connect(reply, &QNetworkReply::finished, this, [this, reply, bytes, read] {
         read();
         bool valid = false;
-        const auto history = release_changes(*bytes, QString{}, &valid);
+        const bool preview = reply->request().url().path().endsWith(QStringLiteral("/releases/testing.json"));
+        const auto history = release_changes(*bytes, QString{}, &valid, preview);
         const bool success = reply->error() == QNetworkReply::NoError && valid;
         reply->deleteLater();
         if (!success) { fetchNext(); return; }
         available_version_.clear();
+        available_changes_.clear();
         if (!history.isEmpty()) {
             const auto latest = history.first().toMap().value(QStringLiteral("version")).toString();
-            if (newerVersion(latest, version_)) available_version_ = latest;
+            if (newerVersion(latest, version_)) {
+                available_version_ = latest;
+                for (const auto& change : history) {
+                    if (newerVersion(change.toMap().value(QStringLiteral("version")).toString(), version_))
+                        available_changes_.append(change);
+                }
+            }
         }
         checking_ = false;
         status_ = history.isEmpty() ? tr("No published releases are available.") :
                   available() ? tr("EasyDiffraction %1 is available.").arg(available_version_) :
                                 tr("You are using the latest release.");
+        const bool manual = manual_;
         emit changed();
+        emit checkFinished(manual);
     });
 }
 bool DesktopUpdates::startUpdate() {

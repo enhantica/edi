@@ -353,7 +353,7 @@ QList<ChangeDay> ApplicationInfo::changes() const {
     if (given.isEmpty()) {
         QFile history(QStringLiteral(":/edi/releases.json"));
         if (history.open(QIODevice::ReadOnly)) {
-            const auto releases = edi_app::release_changes(history.readAll(), QString::fromUtf8(edi_app::app_version()));
+            const auto releases = edi_app::release_changes(history.readAll(), QString::fromUtf8(edi_app::app_version()), nullptr, true);
             for (const auto& release : releases) {
                 const auto item = release.toMap();
                 days.append(ChangeDay{item.value(QStringLiteral("date")).toString(),
@@ -7454,7 +7454,7 @@ QJSValue ApplicationInfo::statusKeysFit() const {
     const auto first = panelUsageAdd(f, panelUsageAdd(f, width, spaces), fitWidth); QJSValue assistantWidth(0);
     if (panelUsageTruth(assistantContextField(f, "assistantGroup", "visible"))) assistantWidth = panelUsageAdd(f, assistantContextField(f, "assistantGroup", "width"), spacing);
     // The tutorial strip, when it shows, takes its room at the far right (stripRoom).
-    const auto total = panelUsageAdd(f, panelUsageAdd(f, first, assistantWidth), assistantContextField(f, "bar", "stripRoom"));
+    const auto total = panelUsageAdd(f, panelUsageAdd(f, first, assistantWidth), panelUsageAdd(f, assistantContextField(f, "bar", "stripRoom"), assistantContextField(f, "bar", "updateRoom")));
     const auto barWidth = assistantContextField(f, "bar", "width");
     const auto margin = viewArithmetic(f, QJSValue(2), controlStylePixel(f), 1);
     return QJSValue(assistantRelation(f, total, viewArithmetic(f, barWidth, margin, 0), 3));
@@ -7469,7 +7469,8 @@ QJSValue ApplicationInfo::statusRoomFor() const {
     available = viewArithmetic(f, available, assistantContextField(f, "bar", "stripRoom"), 0); QJSValue fitWidth(0);
     if (panelUsageTruth(assistantContextField(f, "fitArea", "visible"))) fitWidth = panelUsageAdd(f, assistantContextField(f, "fitArea", "compactWidth"), spacing);
     else if (panelUsageTruth(assistantContextField(f, "openingProgress", "visible"))) fitWidth = panelUsageAdd(f, assistantContextField(f, "openingProgress", "width"), spacing);
-    available = viewArithmetic(f, available, fitWidth, 0); QJSValue width(0);
+    available = viewArithmetic(f, available, fitWidth, 0);
+    available = viewArithmetic(f, available, assistantContextField(f, "bar", "updateRoom"), 0); QJSValue width(0);
     for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, panelUsageContextRead(f, "items"), "length"), 0); ++i) {
         if (!panelUsageTruth(panelUsageRead(f, textIndex(f, panelUsageContextRead(f, "items"), QJSValue(i)), "shown"))) continue;
         const auto gap = assistantRelation(f, width, QJSValue(0), 1) ? spacing : QJSValue(0);

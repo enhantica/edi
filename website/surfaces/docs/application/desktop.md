@@ -25,9 +25,13 @@ Keep the extracted files together: the Linux installer needs the accompanying `i
 folder. Choose an installation folder and follow the installer steps. An internet connection is
 required to download the application and its dependencies.
 
-You do not need to install Python or Qt separately.
+You do not need to install Python or Qt separately. On macOS, setup suggests
+`/Applications/EasyDiffraction`. To update an existing installation in the same location,
+open **MaintenanceTool** from that folder and choose **Update components**.
 
-When a newer release is available, the application shows a red **Update** button. Save your changes
+The application checks for updates at startup and hourly while it is open. **Notify about updates**
+opens a release-notes dialog when a newer release is found. You can also use **Check now** in Preferences.
+The red **Update** button appears at the bottom left whenever an update is available. Save your changes
 when prompted, then follow the maintenance tool. On the next launch, **What's new** shows the changes
 since your previous version.
 

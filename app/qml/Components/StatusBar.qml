@@ -37,7 +37,10 @@ EaElements.StatusBar {
     readonly property bool tutorialShown: tutorial !== null && tutorial.tutorial !== null
     readonly property real stripRoom: tutorialStrip.visible ? tutorialStrip.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0
 
-    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded || AppState.tutorialRunning
+    signal updateRequested()
+    readonly property real updateRoom: updateGroup.visible ? updateGroup.width + EaStyle.Sizes.fontPixelSize * 1.2 : 0
+
+    visible: DesktopUpdates.available || EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded || AppState.tutorialRunning
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
@@ -48,6 +51,24 @@ EaElements.StatusBar {
     // How many of the items, in their order, fit beside the fit area with their icons and values only: the
     // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
     readonly property int roomFor: ApplicationInfo.statusRoomFor()
+
+    Row {
+        id: updateGroup
+        visible: DesktopUpdates.available
+        spacing: EaStyle.Sizes.fontPixelSize * 0.6
+
+        UpdateButton {
+            height: Math.round(EaStyle.Sizes.fontPixelSize * 1.8)
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: bar.updateRequested()
+        }
+        Rectangle {
+            width: rule.width
+            height: rule.height
+            color: rule.color
+            anchors.verticalCenter: parent.verticalCenter
+        }
+    }
 
     StatusBarItem {
         id: warningsItem

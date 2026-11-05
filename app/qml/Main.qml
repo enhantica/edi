@@ -168,32 +168,21 @@ EaComponents.ApplicationWindow {
     property string updateNotifiedVersion: ""
     Connections {
         target: DesktopUpdates
-        function onChanged() {
-            if (DesktopUpdates.available && Preferences.updateNotifications && window.updateNotifiedVersion !== DesktopUpdates.availableVersion) {
+        function onCheckFinished(manual) {
+            if (DesktopUpdates.available && (manual || Preferences.updateNotifications && window.updateNotifiedVersion !== DesktopUpdates.availableVersion)) {
                 window.updateNotifiedVersion = DesktopUpdates.availableVersion;
                 updateAvailableNotice.open();
             }
         }
     }
-    AppDialog {
+    WhatsNewDialog {
         id: updateAvailableNotice
         objectName: "update.availableNotice"
-        title: qsTr("An update is available")
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: updateNoticeText.implicitHeight
-        standardButtons: Dialog.Close
-        EaElements.Label {
-            id: updateNoticeText
-            text: qsTr("EasyDiffraction %1 is available. Use Update when you are ready.").arg(DesktopUpdates.availableVersion)
-            wrapMode: Text.Wrap
-            width: AppSizes.messagesDialogContentWidth
-        }
+        updateMode: true
+        onUpdateRequested: window.updateApplication()
     }
 
     appBarRightButtons: [
-        UpdateButton {
-            onClicked: window.updateApplication()
-        },
         EaElements.ToolButton {
             id: assistantToggle
             KeyNavigation.tab: window.assistantPanelVisible && window.assistantPanelShown ? window.assistantPanel.firstFocusItem : null
@@ -445,6 +434,7 @@ EaComponents.ApplicationWindow {
         pagesBuilt: window.pagesBuilt
         pagesWanted: window.pagesWanted
         tutorial: tutorialPanel
+        onUpdateRequested: updateAvailableNotice.open()
     }
 
     AppPreferencesDialog {}

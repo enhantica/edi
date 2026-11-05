@@ -1,0 +1,13 @@
+{
+  "Added": [
+    "Choose whether to install the AI assistant.",
+    "See the release notes before starting an update."
+  ],
+  "Fixed": [
+    "Show the EasyDiffraction icon in the desktop app and installer."
+  ],
+  "Changed": [
+    "Check for updates hourly and show available updates at the bottom left.",
+    "Suggest the system Applications folder on macOS."
+  ]
+}
