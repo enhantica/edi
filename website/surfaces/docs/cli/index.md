@@ -8,12 +8,19 @@ hide:
 
 Run saved projects from a terminal or shell script. One command-line interface, two ways to install and run it.
 
-| Choose | Requires | Run |
-| --- | --- | --- |
-| :lucide-square-terminal: [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Standalone executable</span>](standalone.md#download){ .ed-icon-label .ed-interface-link } | A download for your operating system; no Python installation | `edi …` |
-| :simple-python: [Python package](python.md) | A Python environment with `edi` installed | `python -m edi …` |
+Both options use the same commands and arguments. You can run either from a terminal without writing Python scripts.
 
-Both routes use terminal commands; neither requires writing Python scripts. Choose one installation route.
+=== ":lucide-square-terminal: Standalone executable"
+
+    Download the executable for your operating system and run `edi …`. No Python installation is required.
+
+    [Download the standalone executable](standalone.md#download){ .md-button }
+
+=== ":simple-python: Python package"
+
+    Install `edi` in a Python environment and run `python -m edi …` from your terminal.
+
+    [Set up the Python package CLI](python.md){ .md-button }
 
 <!-- interface-preview:cli -->
 <figure class="ed-interface-preview" data-interface-hero>
@@ -21,7 +28,7 @@ Both routes use terminal commands; neither requires writing Python scripts. Choo
 </figure>
 <!-- /interface-preview -->
 
-The commands and arguments are the same. In the guides, select **Standalone executable** or **Python package** to see the invocation for your installation.
+In the guides, select the tab for your installation to see the matching command.
 
 [Run an example](examples.md){ .md-button }
 [Command reference](reference.md){ .md-button }
