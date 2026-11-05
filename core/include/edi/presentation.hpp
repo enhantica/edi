@@ -22,7 +22,7 @@
 
 namespace edi {
 
-class ExperimentBase;
+struct ExperimentBase;
 class Project;
 
 enum class YScale : std::uint8_t { Linear, Sqrt, Log10 };
