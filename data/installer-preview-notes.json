@@ -1,17 +1,14 @@
 {
   "Added": [
-    "Install EasyDiffraction on macOS, Windows and Linux with the online installer.",
-    "Choose whether to install the AI assistant.",
-    "Read how to install and connect the AI assistant in the user guide.",
-    "See the release notes before starting an update."
+    "Install EasyDiffraction on Windows with the online installer."
   ],
   "Fixed": [
-    "Show the EasyDiffraction icon in the desktop app and installer.",
-    "Keep the Linux installer commands inside the numbered setup instructions."
+    "Keep installer controls readable in light and dark mode and give component details more room.",
+    "Give the EasyDiffraction icon more breathing room in the macOS Dock.",
+    "Show the installed version after checking for updates."
   ],
   "Changed": [
-    "Check for updates hourly and show available updates at the bottom left.",
-    "Suggest the system Applications folder on macOS.",
-    "Use the same calendar version sequence for previews and stable releases."
+    "Move the EasyDiffraction wordmark above the installer steps.",
+    "Make release notes easier to scan with consistent headings, spacing and shorter dates."
   ]
 }

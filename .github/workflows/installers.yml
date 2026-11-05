@@ -53,6 +53,7 @@ jobs:
       contents: write
     outputs:
       version: ${{ steps.select.outputs.version }}
+      date: ${{ steps.select.outputs.date }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -70,9 +71,10 @@ jobs:
           from pathlib import Path
           from plan import next_calendar_version
           from prepare import calendar_tags
-          version = next_calendar_version(calendar_tags(os.environ['GITHUB_REPOSITORY']), datetime.datetime.now(datetime.UTC).date())
+          date = datetime.datetime.now(datetime.UTC).date()
+          version = next_calendar_version(calendar_tags(os.environ['GITHUB_REPOSITORY']), date)
           with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
-              output.write(f'version={version}\n')
+              output.write(f'version={version}\ndate={date.isoformat()}\n')
           PYTHON
 
   installers:
@@ -91,6 +93,7 @@ jobs:
     env:
       CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || '122f77fa46e1143749a4039f65b24438006bb482' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
+      EDI_INSTALLER_PREVIEW_DATE: ${{ needs.preview-version.outputs.date }}
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
     steps:

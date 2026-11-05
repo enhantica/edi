@@ -224,6 +224,10 @@ def resolve_qt_prefix(qt: Path | None) -> Path:
 def write_preview_history(work: Path, version: str, commit: str) -> Path:
     history = work / 'preview-history.json'
     notes = json.loads((ROOT / 'data/installer-preview-notes.json').read_text(encoding='utf-8'))
+    date = (
+        os.environ.get('EDI_INSTALLER_PREVIEW_DATE')
+        or datetime.datetime.now(datetime.UTC).date().isoformat()
+    )
     history.write_text(
         json.dumps(
             {
@@ -232,7 +236,7 @@ def write_preview_history(work: Path, version: str, commit: str) -> Path:
                 'releases': [
                     {
                         'version': version,
-                        'date': datetime.datetime.now(datetime.UTC).date().isoformat(),
+                        'date': date,
                         'commit': commit,
                         'notes': {
                             group: [{'title': title} for title in titles]
@@ -245,6 +249,7 @@ def write_preview_history(work: Path, version: str, commit: str) -> Path:
         )
         + '\n',
         encoding='utf-8',
+        newline='\n',
     )
     return history
 
