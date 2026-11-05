@@ -156,3 +156,9 @@ The public consumer invokes the engine's exported CMake compiler-check interface
 packaging interpreter and compiler environment. The engine owns its fixture inventory; the consumer
 workflow does not cite private source or fixture paths. A missing interface or failed check refuses
 the full build.
+
+The Windows source build and its early compiler probes use the same UTF-8, C++ exception and
+standard conditional-operator flags (`/utf-8 /EHsc /Zc:ternary`). MSVC's legacy conditional mode
+tries to move an explicitly immovable owner selected between same-type prvalues. A small native
+language probe checks both branches and copy counts before the full build; the ownership rule
+and calculation code remain intact. [Microsoft conditional-operator conformance](https://learn.microsoft.com/en-us/cpp/build/reference/zc-ternary).

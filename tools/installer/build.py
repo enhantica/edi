@@ -22,6 +22,8 @@ from package import (
     sha256,
 )
 
+WINDOWS_CXX_FLAGS = '/utf-8 /EHsc /Zc:ternary'
+
 
 def deployed_package_names(files: list[Path], records: list[dict]) -> set[str]:
     """Resolve deployed paths to their nearest package path, refusing ambiguous ownership."""
@@ -204,7 +206,7 @@ def build(
     ]
     options = ['-DCRYSTA_CXX_PACKAGE=ON', '-DCRYSTA_LTO=OFF']
     if SYSTEM == 'windows':
-        common.append('-DCMAKE_CXX_FLAGS=/utf-8 /EHsc')
+        common.append('-DCMAKE_CXX_FLAGS=' + WINDOWS_CXX_FLAGS)
         options.extend([
             f'-DEigen3_DIR={qt.as_posix()}/share/eigen3/cmake',
             f'-DCMAKE_PREFIX_PATH={qt.as_posix()}',
@@ -275,17 +277,29 @@ def check_compiler(crysta: Path, work: Path) -> None:
     source, target = crysta.resolve() / 'compiler-checks', work.resolve() / 'compiler-checks'
     if not (source / 'CMakeLists.txt').is_file():
         raise RuntimeError('The engine checkout does not expose its compiler check interface')
-    run([
-        'cmake',
-        '-G',
-        'Ninja',
-        '-S',
-        source,
-        '-B',
-        target,
-        f'-DPython_EXECUTABLE={sys.executable}',
-    ])
-    run(['cmake', '--build', target, '--target', 'check', '--parallel', '4'])
+    environment = None
+    if SYSTEM == 'windows':
+        environment = {
+            **os.environ,
+            'CXXFLAGS': WINDOWS_CXX_FLAGS,
+            'CMAKE_PREFIX_PATH': os.pathsep.join(
+                filter(None, [str(resolve_qt_prefix(None)), os.environ.get('CMAKE_PREFIX_PATH')])
+            ),
+        }
+    run(
+        [
+            'cmake',
+            '-G',
+            'Ninja',
+            '-S',
+            source,
+            '-B',
+            target,
+            f'-DPython_EXECUTABLE={sys.executable}',
+        ],
+        env=environment,
+    )
+    run(['cmake', '--build', target, '--target', 'check', '--parallel', '4'], env=environment)
 
 
 def main() -> None:

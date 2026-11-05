@@ -8,6 +8,7 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+#include "utc_time.hpp"
 #include <type_traits>
 #include "edi/project_archive.hpp"
 #include "edi/background_estimate.hpp"
@@ -2971,8 +2972,7 @@ detail::ParameterRenames detail::parameter_renames(const Project& project, const
 namespace {
 // STAR-format UTC timestamp ('%d %b %Y %H:%M:%S' — upstream _PROJECT_TIMESTAMP_FORMAT).
 std::string star_timestamp_format(std::time_t t) {
-    std::tm utc{};
-    gmtime_r(&t, &utc);
+    const auto utc = detail::utc_calendar(t);
     char buffer[32];
     std::strftime(buffer, sizeof(buffer), "%d %b %Y %H:%M:%S", &utc);
     return buffer;
@@ -2989,7 +2989,7 @@ std::optional<std::time_t> star_timestamp_seconds(const std::string& stamp) {
     if (in.fail()) {
         return std::nullopt;
     }
-    return timegm(&parsed);
+    return detail::utc_seconds(parsed);
 }
 }  // namespace
 

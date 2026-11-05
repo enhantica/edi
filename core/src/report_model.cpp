@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/report_model.hpp"
+#include "utc_time.hpp"
 
 #include <algorithm>
 #include <array>
@@ -47,12 +48,7 @@ std::string shortest(double value) {
 
 std::string utc_now() {
     const std::time_t now = std::time(nullptr);
-    std::tm parts{};
-#if defined(_WIN32)
-    gmtime_s(&parts, &now);
-#else
-    gmtime_r(&now, &parts);
-#endif
+    const auto parts = detail::utc_calendar(now);
     char buffer[32];
     std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M UTC", &parts);
     return buffer;

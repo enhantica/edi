@@ -96,6 +96,8 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0071](0071-desktop-installers.md) | Self-contained desktop installers | Accepted | 🟡 | High | build crysta first, deploy the C++ app and its dependencies with Qt, qualify offline installers, then publish online installers with per-platform component repositories |
 | [0072](0072-calendar-releases-and-application-updates.md) | Calendar releases and application updates | Accepted | 🟡 | High | calendar release versions; merged user-facing PR titles supply notes; the installed app shows a themed Update button independently of notification preferences and changes since its previous release |
 
+| [0073](0073-portable-utc-timestamps.md) | Portable UTC timestamps | Accepted | 🟡 | Medium | One private conversion path preserves project and report formats across native platforms; early compiler checks cover UTC boundaries. |
+
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.

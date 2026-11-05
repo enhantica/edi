@@ -15,7 +15,7 @@ on:
       crysta_commit:
         description: Exact crysta source commit to build before edi
         required: true
-        default: 2d2adcd72ed12b8cfad4ab8516a8795e2b48e9b2
+        default: 63438e2b08f430ab505024084e7f855388f43fa6
         type: string
   push:
     paths:
@@ -46,7 +46,7 @@ jobs:
           - platform: Windows
             runner: windows-2022
     env:
-      CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || '2d2adcd72ed12b8cfad4ab8516a8795e2b48e9b2' }}
+      CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || '63438e2b08f430ab505024084e7f855388f43fa6' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
@@ -84,6 +84,9 @@ jobs:
         uses: ./.github/actions/setup-pixi
         with:
           manifest-path: tools/installer/pixi.toml
+      - name: Set up the Windows compiler
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
       - name: Acquire source-bound release inputs
         if: inputs.release_plan_run != ''
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/release/download_plan.py" --repo "$GITHUB_REPOSITORY" --run "$PREPARE_RUN" --output "$EDI_RELEASE_PLAN"
@@ -93,6 +96,8 @@ jobs:
           PREPARE_RUN: ${{ inputs.release_plan_run }}
       - name: Validate calendar release policy offline
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/releases" --noconftest -o addopts= -q
+      - name: Check installer boundaries and native UTC conversion offline
+        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/installer" --noconftest -o addopts= -q
       - name: Acquire the pinned Qt Installer Framework
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
       - name: Check installer transport before building the application
@@ -122,9 +127,6 @@ jobs:
           token: ${{ steps.crysta-token.outputs.token }}
           path: .crysta
           persist-credentials: false
-      - name: Set up the Windows compiler
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
       - name: Check engine compiler portability before the full build
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
       - name: Build crysta, edi and its runtime bundle

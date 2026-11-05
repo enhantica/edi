@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/report_save.hpp"
+#include "utc_time.hpp"
 
 #include <ctime>
 #include <filesystem>
@@ -24,8 +25,7 @@ namespace {
 namespace fs = std::filesystem;
 
 std::string iso_utc(std::time_t time) {
-    std::tm utc{};
-    gmtime_r(&time, &utc);
+    const auto utc = detail::utc_calendar(time);
     char buffer[32];
     std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &utc);
     return buffer;
@@ -88,7 +88,9 @@ std::string iso_utc_from_star(const std::string& stamp) {
     std::istringstream in(stamp);
     in.imbue(std::locale::classic());
     in >> std::get_time(&parsed, "%d %b %Y %H:%M:%S");
-    return in.fail() ? stamp : iso_utc(timegm(&parsed));
+    if (in.fail()) return stamp;
+    const auto seconds = detail::utc_seconds(parsed);
+    return seconds ? iso_utc(*seconds) : stamp;
 }
 
 void write_report_file(const std::string& project_path, const std::string& name, const std::string& bytes) {
