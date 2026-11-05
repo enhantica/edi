@@ -150,3 +150,7 @@ Both the ordinary developer app builder and the installer builder explicitly dec
 version and history on every configure, including the empty developer version. These values join the
 ordinary build identity. Reusing a cache after a failed or manually numbered build cannot silently
 retain a previous release version or a different bundled history.
+
+The ordinary incremental web builder also declares its empty developer version and default history
+on every configure, matching the ordinary native builder. It cannot inherit a manually selected
+numbered release or another history file from an earlier CMake cache.

@@ -99,6 +99,7 @@ build_kit() {
   echo "wasm-build: the app for $flavour"
   local args=(-S . -B "$out/app" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Release
     -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF -DEDI_APP_ASSISTANT=OFF -DEDI_WORKER_OWNER_THREAD="$owner"
+    -DEDI_RELEASE_VERSION= -DEDI_RELEASE_HISTORY="$ROOT/data/releases.json"
     -DQT_HOST_PATH="$HOST" -DQT_HOST_PATH_CMAKE_DIR="$HOST/lib/cmake"
     -Dcrysta_DIR="$out/crysta-prefix/lib/cmake/crysta" -DEigen3_DIR="$EIGEN_DIR")
   # The multithread build starts its Web Workers with the page: Qt's four, the calculation worker and crysta's fill pool
