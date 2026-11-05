@@ -418,3 +418,29 @@ def test_windows_runtime_uses_locked_dlls_and_refuses_invalid_inventory(tmp_path
         with pytest.raises(RuntimeError, match='runtime'):
             build.copy_windows_compiler_runtime(prefix, stage)
     assert assistant.read_bytes() == b'official helper'
+
+
+@pytest.mark.parametrize('different', [False, True])
+def test_windows_runtime_only_coalesces_identical_copies(tmp_path, different):
+    stage = tmp_path / 'stage with spaces'
+    stage.mkdir()
+    shipped = stage / 'msvcp140.dll'
+    shipped.write_bytes(b'locked runtime')
+    original = tmp_path / 'msvcp140.dll'
+    original.write_bytes(b'other runtime' if different else shipped.read_bytes())
+    script = tmp_path / 'check.cmake'
+    resolver = PACKAGE.ROOT / 'tools/installer/windows-runtime.cmake'
+    script.write_text(
+        f'include("{resolver.as_posix()}")\n'
+        f'set(STAGE "{stage.as_posix()}")\n'
+        f'edi_choose_runtime_copy(msvcp140.dll selected "{original.as_posix()}" '
+        f'"{shipped.as_posix()}")\n'
+        f'if(NOT selected STREQUAL "{shipped.as_posix()}")\n'
+        '    message(FATAL_ERROR "Expected the staged path")\n'
+        'endif()\n',
+        encoding='utf-8',
+    )
+    result = subprocess.run(['cmake', '-P', script], capture_output=True, text=True, check=False)
+    assert (result.returncode != 0) is different, result.stderr
+    if different:
+        assert 'Different Windows runtime copies found' in result.stderr

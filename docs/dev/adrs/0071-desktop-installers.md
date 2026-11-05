@@ -324,3 +324,8 @@ The first two fields come from the UTC year and month. The last field combines t
 number and attempt so a rebuilt preview has a new archive identity. The app and installer
 carry the same version and the installed smoke test compares them. A preview uses a separate
 version identity from the stable release history and cannot qualify a stable release.
+
+
+The Windows dependency scan can resolve one DLL through both the staging directory and the
+locked Qt prefix. Coalesce these paths only when the files have equal SHA-256 hashes and prefer
+the staged copy. A same-name DLL with different bytes fails staging.
