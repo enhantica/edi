@@ -66,9 +66,7 @@ def copy_preview(
 ) -> None:
     policy = json.loads((ROOT / 'data/distribution.json').read_text())
     name = f'EasyDiffraction-{version}-{platform}-online.zip'
-    url = policy['primary_base'] + policy['repository_path'].format(
-        channel='testing', platform=platform
-    )
+    url = policy['primary_base'] + policy['repository_paths']['testing'].format(platform=platform)
     metadata = json.loads((delivery / 'installer.json').read_text())
     build = json.loads((delivery / 'build-inputs.json').read_text())
     qualification = json.loads((delivery / 'qualification.json').read_text())

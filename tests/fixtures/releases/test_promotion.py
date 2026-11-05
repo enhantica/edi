@@ -79,7 +79,7 @@ def test_delivery_compares_zip_and_executed_app_to_prepared_identity(tmp_path, d
     url = (
         policy['primary_base'].rstrip('/')
         + '/'
-        + policy['repository_path'].format(channel='stable', platform=platform)
+        + policy['repository_paths']['stable'].format(platform=platform)
     )
     name = 'EasyDiffraction-2026.11.0-linux-x86_64-online.zip'
     (tmp_path / name).write_bytes(b'qualified installer')
@@ -113,7 +113,7 @@ def test_delivery_compares_zip_and_executed_app_to_prepared_identity(tmp_path, d
     elif damage == 'not-executed':
         receipt['passed'] = False
     elif damage == 'channel':
-        metadata['repository_url'] = url.replace('/stable/', '/testing/')
+        metadata['repository_url'] = url.replace('/repository/', '/repository/testing/')
     elif damage == 'bytes':
         (tmp_path / name).write_bytes(b'rebuilt installer')
     for filename, value in [

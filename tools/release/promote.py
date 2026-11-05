@@ -98,7 +98,7 @@ def validate_delivery(folder: Path, release: dict, history_hash: str, platform: 
     url = (
         policy['primary_base'].rstrip('/')
         + '/'
-        + policy['repository_path'].format(channel='stable', platform=platform)
+        + policy['repository_paths']['stable'].format(platform=platform)
     )
     expected = [
         (

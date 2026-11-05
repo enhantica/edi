@@ -65,7 +65,7 @@ def read_release_plan(directory: Path, source_commit: str | None = None) -> dict
 def repository_urls(channel: str) -> tuple[str, ...]:
     """Return the primary repository and configured mirrors for this build platform."""
     policy = json.loads((ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
-    tail = policy['repository_path'].format(channel=channel, platform=PLATFORM_ID)
+    tail = policy['repository_paths'][channel].format(platform=PLATFORM_ID)
     return tuple(
         base.rstrip('/') + '/' + tail for base in [policy['primary_base'], *policy['mirror_bases']]
     )
@@ -199,7 +199,6 @@ def write_metadata(
             mirror = ET.SubElement(remote, 'Repository')
             ET.SubElement(mirror, 'Url').text = mirror_url
             ET.SubElement(mirror, 'Enabled').text = '0'
-            ET.SubElement(mirror, 'DisplayName').text = 'EasyDiffraction mirror'
     ET.indent(configuration)
     configuration.write(config / 'config.xml', encoding='utf-8', xml_declaration=True)
     root = xml_file(

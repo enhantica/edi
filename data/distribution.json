@@ -2,7 +2,10 @@
   "schema": "edi.distribution/1",
   "release_page": "https://github.com/enhantica/edi/releases",
   "primary_base": "https://enhantica.github.io/edi/",
-  "mirror_bases": ["https://download.easydiffraction.org/"],
-  "repository_path": "repository/{channel}/{platform}/",
+  "mirror_bases": ["https://downloads.easydiffraction.org/"],
+  "repository_paths": {
+    "stable": "repository/{platform}/",
+    "testing": "repository/testing/{platform}/"
+  },
   "third_party_path": "third-party/"
 }

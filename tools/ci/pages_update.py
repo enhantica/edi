@@ -101,6 +101,11 @@ def overlay_installers(site: Path, incoming: Path) -> None:
     """Replace complete platform repositories while retaining the other published platforms."""
     channels = list(incoming.iterdir())
     allowed = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
+    policy = json.loads(
+        (Path(__file__).resolve().parents[2] / 'data/distribution.json').read_text(
+            encoding='utf-8'
+        )
+    )
     repositories = []
     if not channels:
         raise RuntimeError('Installer input must contain a publication channel')
@@ -123,7 +128,8 @@ def overlay_installers(site: Path, incoming: Path) -> None:
         for part in parts:
             if not (part / 'Updates.xml').is_file():
                 raise RuntimeError(f'Installer repository is incomplete: {part.name}')
-            repositories.append((part, site / 'repository' / channel.name / part.name))
+            path = policy['repository_paths'][channel.name].format(platform=part.name)
+            repositories.append((part, site / path))
     for part, target in repositories:
         for source in part.rglob('*'):
             if source.is_symlink():

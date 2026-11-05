@@ -334,3 +334,18 @@ def test_testing_retention_keeps_two_versions_and_preserves_stable(tmp_path):
     stable = site / 'repository/stable/macos-arm64/org.easyscience.edi'
     assert len(list(stable.iterdir())) == 8
     assert (windows / '2026.11.0bin.7z').is_file()
+
+
+def test_production_components_use_the_public_platform_path(tmp_path):
+    site = tmp_path / 'site'
+    site.mkdir()
+    incoming = tmp_path / 'incoming'
+    repository = incoming / 'stable/macos-arm64'
+    repository.mkdir(parents=True)
+    (repository / 'Updates.xml').write_text('qualified metadata')
+
+    MODULE.overlay_installers(site, incoming)
+
+    public = site / 'repository/macos-arm64/Updates.xml'
+    assert public.read_text() == 'qualified metadata'
+    assert not (site / 'repository/stable').exists()

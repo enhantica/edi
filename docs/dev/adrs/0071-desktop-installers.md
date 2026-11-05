@@ -69,14 +69,15 @@ receipts for Linux x86-64, Windows x86-64 and macOS arm64 independently.
 ## Distribution layout and mirror
 
 GitHub Releases carries the small online installer archives. The generated component repository is a
-separate static file tree on GitHub Pages. Keep `repository/<channel>/<platform>/` for installer
-metadata and archives, using explicit platform/architecture names. This preserves the older project's
-platform separation while distinguishing testing from stable publication.
+separate static file tree on GitHub Pages. Production uses `repository/<platform>/`.
+Preview installers use `repository/testing/<platform>/` so their component updates
+stay separate.
 
-`data/distribution.json` declares the primary Pages base and `https://download.easydiffraction.org/`
-as the future mirror. Both use identical relative paths and immutable archive bytes. The mirror is
-preconfigured but disabled in the installer until its content is available, so an empty mirror cannot
-block the initial installation. Native update metadata can try the mirror after the primary fails.
+`data/distribution.json` declares the primary Pages base and `https://downloads.easydiffraction.org/`
+as the future mirror. Both use identical relative paths and immutable archive bytes. Settings
+shows both full URLs. Qt stores the repositories in a set, so the row order can vary.
+The mirror is preconfigured but disabled until its content is available, so an empty
+mirror cannot block installation. Native update metadata can try the mirror after the primary fails.
 The mirror host itself is populated by the owner; no DNS or hosting change is implied.
 
 Keep versioned third-party report libraries under `third-party/`, separate from application repositories.
