@@ -9,16 +9,12 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// What's new (ADR-0067): the changes since the user last looked, newest first, from the bundled changelog that is also
-// the docs site's What's new page. Show all changes, in the footer beside Close, lists every day; only the list
-// scrolls. The link at its end opens that page. Closing it marks
-// everything as seen. Until numbered releases exist the changes are grouped by date, and the last date seen is kept in
-// the settings (Preferences.whatsNewSeen).
+// Show release notes, or dated changes for builds without a release history.
 AppDialog {
     id: dialog
 
     property bool updateMode: false
-    signal updateRequested()
+    signal updateRequested
 
     // Every day of changes, newest first, read as the dialog opens.
     property var days: []
@@ -108,6 +104,20 @@ AppDialog {
             dialog.markSeen(releaseHistory ? days[0].version : days[0].date);
     }
 
+    component NotesText: Text {
+        width: parent.width
+        wrapMode: Text.WordWrap
+        textFormat: Text.MarkdownText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        color: EaStyle.Colors.themeForeground
+        linkColor: EaStyle.Colors.themeAccent
+        onLinkActivated: link => {
+            if (/^https?:\/\//.test(link))
+                Qt.openUrlExternally(link);
+        }
+    }
+
     Flickable {
         id: changesView
 
@@ -141,32 +151,48 @@ AppDialog {
 
                     objectName: `whatsNew.day.${modelData.date}`
                     width: column.width
-                    spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                    spacing: column.spacing
 
                     EaElements.Label {
+                        readonly property var parts: day.modelData.date.split("-").map(Number)
+                        readonly property string displayDate: Qt.formatDate(new Date(parts[0], parts[1] - 1, parts[2]), "d MMM yyyy")
+
                         font.bold: true
-                        text: day.modelData.version ? `EasyDiffraction ${day.modelData.version} · ${day.modelData.date}` : day.modelData.date
+                        text: day.modelData.version ? qsTr("EasyDiffraction %1 · %2").arg(day.modelData.version).arg(displayDate) : displayDate
                     }
-                    // A plain Text, so a link opens only when it is a web address.
-                    Text {
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        textFormat: Text.MarkdownText
-                        font.family: EaStyle.Fonts.fontFamily
-                        font.pixelSize: EaStyle.Sizes.fontPixelSize
-                        color: EaStyle.Colors.themeForeground
-                        linkColor: EaStyle.Colors.themeAccent
-                        text: day.modelData.text
-                        onLinkActivated: link => {
-                            if (/^https?:\/\//.test(link))
-                                Qt.openUrlExternally(link);
+
+                    NotesText {
+                        visible: !day.modelData.version
+                        text: visible ? day.modelData.text : ""
+                    }
+
+                    Repeater {
+                        model: day.modelData.version ? day.modelData.text.split(/^### /m).filter(section => section.length > 0) : []
+
+                        Column {
+                            id: section
+
+                            required property string modelData
+                            readonly property int titleEnd: modelData.indexOf("\n")
+
+                            width: day.width
+                            spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                            EaElements.Label {
+                                font.bold: true
+                                text: section.modelData.slice(0, section.titleEnd)
+                            }
+
+                            NotesText {
+                                text: section.modelData.slice(section.titleEnd + 1).trim()
+                            }
                         }
                     }
                 }
             }
             IconLink {
                 objectName: "whatsNew.page"
-                fontIcon: "book"
+                fontIcon: "external-link-alt"
                 text: qsTr("The full page on the website")
                 onClicked: Qt.openUrlExternally(ApplicationInfo.changesUrl)
             }

@@ -197,8 +197,9 @@ void DesktopUpdates::fetchNext() {
         if (!success) { fetchNext(); return; }
         available_version_.clear();
         available_changes_.clear();
-        if (!history.isEmpty()) {
-            const auto latest = history.first().toMap().value(QStringLiteral("version")).toString();
+        const auto latest = history.isEmpty() ? QString{} :
+            history.first().toMap().value(QStringLiteral("version")).toString();
+        if (!latest.isEmpty()) {
             if (newerVersion(latest, version_)) {
                 available_version_ = latest;
                 for (const auto& change : history) {
@@ -210,7 +211,8 @@ void DesktopUpdates::fetchNext() {
         checking_ = false;
         status_ = history.isEmpty() ? tr("No published releases are available.") :
                   available() ? tr("EasyDiffraction %1 is available.").arg(available_version_) :
-                                tr("You are using the latest release.");
+                                latest == version_ ? tr("You are using the latest release, %1.").arg(version_) :
+                                       tr("You are using release %1.").arg(version_);
         const bool manual = manual_;
         emit changed();
         emit checkFinished(manual);

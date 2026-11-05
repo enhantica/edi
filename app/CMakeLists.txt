@@ -404,9 +404,9 @@ set(EDI_APP_LICENCE_FILES
     ${EDI_APP_ASSISTANT_LICENCES})
 # How to cite (Home), read from the repository's one citation file.
 qt_add_resources(edi_app_module "edi_citation" PREFIX "/" BASE ${PROJECT_SOURCE_DIR} FILES ${PROJECT_SOURCE_DIR}/CITATION.cff)
-# What's new: the docs site's dated page, the one place the changes are written.
-qt_add_resources(edi_app_module "edi_changelog" PREFIX "/edi" BASE ${PROJECT_SOURCE_DIR}/website/surfaces/docs
-                 FILES ${PROJECT_SOURCE_DIR}/website/surfaces/docs/changelog.md)
+# What's new fallback for builds without a calendar release.
+qt_add_resources(edi_app_module "edi_changelog" PREFIX "/edi" BASE ${PROJECT_SOURCE_DIR}/data
+                 FILES ${PROJECT_SOURCE_DIR}/data/changelog.md)
 # Stored uncompressed, so the texts stay readable in the binary itself as well.
 qt_add_resources(edi_app_module "edi_licences" PREFIX "/" BASE ${PROJECT_SOURCE_DIR}
                  OPTIONS --no-compress FILES ${EDI_APP_LICENCE_FILES})
