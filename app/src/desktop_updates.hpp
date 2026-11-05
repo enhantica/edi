@@ -43,6 +43,7 @@ public:
     Q_INVOKABLE void checkNow(bool manual = false);
     /// Launch the fixed installed updater; call only after the existing unsaved-work guard succeeds.
     Q_INVOKABLE bool startUpdate();
+    Q_INVOKABLE bool startMaintenance();
     /// Compare validated calendar versions numerically; invalid identities are never newer.
     Q_INVOKABLE bool newerVersion(const QString& candidate, const QString& previous) const;
     /// Bundled release notes through the running release, newest first; malformed history yields none.

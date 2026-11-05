@@ -194,3 +194,8 @@ comment before the note text, for example
 `web`, `python`, `cli-python` and `cli-standalone`. Omit the marker for
 general notes. The site renders these identifiers as labelled icons and
 GitHub renders the note text. Scripts and notebooks share the Python API.
+
+Managed desktop installations offer **Open Maintenance Tool** under
+Preferences → Updates. Launching it uses the same unsaved-project flow as
+starting an update. The missing-assistant dialog links to that tab so users
+can add the component from the Maintenance Tool.

@@ -109,6 +109,14 @@ private slots:
         QVERIFY(updates.available());
         QCOMPARE(updates.availableVersion(), "2026.11.1");
     }
+    void upToDateStatusIncludesInstalledVersion() {
+        FeedServer feed(history({release("2026.11.0")}));
+        edi_app::DesktopUpdates updates("2026.11.0", QCoreApplication::applicationFilePath(), {feed.url()}, false);
+        updates.checkNow();
+        QTRY_VERIFY_WITH_TIMEOUT(!updates.checking(), 3000);
+        QVERIFY(!updates.available());
+        QCOMPARE(updates.status(), "You are using the latest release, 2026.11.0.");
+    }
     void failedFeedAndDevelopmentBuild() {
         FeedServer feed("malformed");
         edi_app::DesktopUpdates managed("2026.11.0", QCoreApplication::applicationFilePath(), {feed.url()}, false);
@@ -135,6 +143,8 @@ private slots:
         QVERIFY(updates.available());
         QVERIFY(!updates.startUpdate());
         QVERIFY(updates.status().contains("still open"));
+        QVERIFY(!updates.startMaintenance());
+        QCOMPARE(updates.status(), "The Maintenance Tool could not be opened.");
     }
     void updateActionSettlesUnsavedWorkBeforeLaunch() {
         QQmlApplicationEngine engine;

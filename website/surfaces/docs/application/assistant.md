@@ -11,7 +11,7 @@ and carry out supported actions in your open project.
 ## Install and connect
 
 1. Select **AI assistant** in the [desktop installer](desktop.md#download). To add it to an existing
-   installation, use **EasyDiffraction Maintenance Tool**, then restart the application.
+   installation, open **Preferences → Updates → Open Maintenance Tool** and add **AI assistant**, then restart the application.
 2. Open a project workflow page and select the robot button in the toolbar.
 3. Select **Connect ChatGPT** and complete the OpenAI sign-in if prompted. The assistant needs
    an internet connection and a ChatGPT account with access to a compatible Codex model.

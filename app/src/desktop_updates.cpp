@@ -218,6 +218,15 @@ void DesktopUpdates::fetchNext() {
         emit checkFinished(manual);
     });
 }
+bool DesktopUpdates::startMaintenance() {
+#ifndef __EMSCRIPTEN__
+    if (managed_ && QProcess::startDetached(maintenance_, {}, QFileInfo(maintenance_).absolutePath())) return true;
+#endif
+    status_ = tr("The Maintenance Tool could not be opened.");
+    emit changed();
+    return false;
+}
+
 bool DesktopUpdates::startUpdate() {
 #ifndef __EMSCRIPTEN__
     if (managed_ && available() && QProcess::startDetached(maintenance_, {QStringLiteral("--start-updater")}, QFileInfo(maintenance_).absolutePath())) return true;

@@ -1,6 +1,7 @@
 {
   "Added": [
-    "Install EasyDiffraction on Windows with the online installer."
+    "Install EasyDiffraction on Windows with the online installer.",
+    "Open the Maintenance Tool from Preferences to add the optional AI assistant."
   ],
   "Fixed": [
     "Keep installer controls readable in light and dark mode and give component details more room.",

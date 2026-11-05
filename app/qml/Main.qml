@@ -141,11 +141,16 @@ EaComponents.ApplicationWindow {
     ]
 
     function updateApplication() {
+        window.launchMaintenance(false);
+    }
+
+    function launchMaintenance(openMaintenanceTool: bool) {
         AppState.afterChanges(() => {
-            if (DesktopUpdates.startUpdate()) {
+            if (openMaintenanceTool ? DesktopUpdates.startMaintenance() : DesktopUpdates.startUpdate()) {
                 window.quitting = true;
                 window.close();
             } else {
+                updateLaunchFailed.maintenance = openMaintenanceTool;
                 updateLaunchFailed.open();
             }
         });
@@ -153,7 +158,8 @@ EaComponents.ApplicationWindow {
     AppDialog {
         id: updateLaunchFailed
         objectName: "update.launchFailed"
-        title: qsTr("The updater did not open")
+        property bool maintenance: false
+        title: maintenance ? qsTr("The Maintenance Tool did not open") : qsTr("The updater did not open")
         contentWidth: AppSizes.messagesDialogContentWidth
         contentHeight: updateFailureText.implicitHeight
         standardButtons: Dialog.Ok
@@ -437,7 +443,9 @@ EaComponents.ApplicationWindow {
         onUpdateRequested: updateAvailableNotice.open()
     }
 
-    AppPreferencesDialog {}
+    AppPreferencesDialog {
+        onMaintenanceRequested: window.launchMaintenance(true)
+    }
 
     Item {
         id: assistantFallbackHost
@@ -522,6 +530,17 @@ EaComponents.ApplicationWindow {
                 wrapMode: Text.Wrap
                 // The web build's note (the owner, 2026-11-04): what the desktop app offers and how it signs in.
                 text: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app with your ChatGPT account. It signs in through OpenAI's official app server; your plan's usage limits apply.")
+            }
+            IconLink {
+                objectName: "assistant.desktopOnly.updates"
+                visible: ApplicationInfo.assistantBuilt && DesktopUpdates.managed
+                fontIcon: "cog"
+                text: qsTr("Open Updates in Preferences to add the AI assistant")
+                onClicked: {
+                    assistantDesktopOnlyDialog.close();
+                    Preferences.dialogTab = "updates";
+                    Preferences.dialogShown = true;
+                }
             }
             AssistantDownloadLink {
                 visible: !ApplicationInfo.assistantBuilt

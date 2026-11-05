@@ -20,6 +20,8 @@ import edi.app
 AppDialog {
     id: dialog
 
+    signal maintenanceRequested
+
     // A disabled control takes no hover, so its tooltip hangs on the item around it (§4): why it is disabled.
     component NotAvailable: Item {
         property string reason: qsTr("Not available yet")
@@ -289,6 +291,17 @@ AppDialog {
                 width: dialog.controlWidth
                 wrapMode: Text.Wrap
                 text: DesktopUpdates.status
+            }
+            Item {
+                visible: DesktopUpdates.managed
+                width: dialog.labelWidth
+                height: 1
+            }
+            RowButton {
+                objectName: "preferences.openMaintenanceTool"
+                visible: DesktopUpdates.managed
+                text: qsTr("Open Maintenance Tool")
+                onClicked: dialog.maintenanceRequested()
             }
         }
 

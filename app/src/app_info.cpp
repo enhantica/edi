@@ -205,7 +205,7 @@ bool ApplicationInfo::assistantBuilt() const { return EDI_APP_ASSISTANT != 0; }
 QString ApplicationInfo::assistantUnavailableReason() const {
     if (assistant_available_) return {};
     return assistantBuilt()
-        ? tr("The AI assistant component is not installed or is unavailable. You can add it using the EasyDiffraction Maintenance Tool.")
+        ? tr("The AI assistant component is not installed or is unavailable.")
         : tr("AI assistance is only available in the desktop version.");
 }
 
