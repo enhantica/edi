@@ -19,7 +19,7 @@ SOURCE = r"""
 #include <cstdio>
 #include <memory>
 
-int main(int argc, char** argv) {
+int probe(int argc, char** argv) {
     QCoreApplication app(argc, argv);
     auto owner = std::make_unique<QObject>();
     QByteArray received;
@@ -69,6 +69,12 @@ int main(int argc, char** argv) {
     std::fflush(stdout);
     return 0;
 }
+
+int main(int argc, char** argv) {
+    const auto result = probe(argc, argv);
+    std::fputs("Qt application destroyed\n", stderr);
+    return result;
+}
 """
 
 
@@ -115,6 +121,7 @@ def test_retired_receiver_cannot_consume_input_or_eof(binary):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as process:
+        process.stdin.close()
         try:
             returncode = process.wait(timeout=10)
         except subprocess.TimeoutExpired:
