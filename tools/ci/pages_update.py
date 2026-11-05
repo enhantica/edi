@@ -171,6 +171,25 @@ def overlay_testing_feed(site: Path, feed: Path) -> None:
             raise RuntimeError('Testing update feed must use the calendar sequence')
     target.parent.mkdir(exist_ok=True)
     target.write_text(json.dumps(current, indent=2) + '\n', encoding='utf-8')
+    if current.get('sequence') == 'calendar' and len(current['releases']) >= 2:
+        keep = {entry['version'] for entry in current['releases'][:2]}
+        for platform in feed.parent.iterdir():
+            if (platform / 'Updates.xml').is_file():
+                trim_testing_archives(site / 'repository/testing' / platform.name, keep)
+
+
+def trim_testing_archives(repository: Path, keep: set[str]) -> None:
+    archive_name = re.compile(r'^([0-9]+(?:\.[0-9]+)+)[A-Za-z_-].*\.7z(?:\.sha1)?$')
+    packages = {'org.easyscience.edi', 'org.easyscience.edi.assistant'}
+    for archive in repository.glob('*/*'):
+        match = archive_name.fullmatch(archive.name)
+        if (
+            archive.parent.name in packages
+            and match
+            and match[1] not in keep
+            and archive.is_file()
+        ):
+            archive.unlink()
 
 
 def show_desktop_version(site: Path) -> None:

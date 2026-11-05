@@ -288,3 +288,49 @@ def test_desktop_download_version_prefers_stable_and_labels_preview(tmp_path):
     MODULE.show_desktop_version(tmp_path)
     assert 'Latest release 2026.11.1' in page.read_text()
     assert 'Testing preview' not in page.read_text()
+
+
+def test_testing_retention_keeps_two_versions_and_preserves_stable(tmp_path):
+    site = tmp_path / 'site'
+    releases = site / 'releases'
+    releases.mkdir(parents=True)
+    existing = ['2026.11.1', '2026.11.0']
+    (releases / 'testing.json').write_text(
+        json.dumps({
+            'schema': 'edi.preview-releases/1',
+            'sequence': 'calendar',
+            'releases': [{'version': version} for version in existing],
+        })
+    )
+    for channel in ['testing', 'stable']:
+        root = site / 'repository' / channel / 'macos-arm64/org.easyscience.edi'
+        root.mkdir(parents=True)
+        for version in [*existing, '2026.11.2', '0.0.49.1']:
+            for suffix in ['.7z', '.7z.sha1']:
+                (root / f'{version}bin{suffix}').write_text('archive fixture')
+    incoming = tmp_path / 'incoming/feed.json'
+    incoming.parent.mkdir()
+    macos = incoming.parent / 'macos-arm64'
+    macos.mkdir()
+    (macos / 'Updates.xml').write_text('qualified metadata')
+    windows = site / 'repository/testing/windows-x86_64/org.easyscience.edi'
+    windows.mkdir(parents=True)
+    (windows / '2026.11.0bin.7z').write_text('other platform')
+    incoming.write_text(
+        json.dumps({
+            'schema': 'edi.preview-releases/1',
+            'sequence': 'calendar',
+            'releases': [{'version': '2026.11.2'}],
+        })
+    )
+    MODULE.overlay_testing_feed(site, incoming)
+    testing = site / 'repository/testing/macos-arm64/org.easyscience.edi'
+    assert sorted(path.name for path in testing.iterdir()) == [
+        '2026.11.1bin.7z',
+        '2026.11.1bin.7z.sha1',
+        '2026.11.2bin.7z',
+        '2026.11.2bin.7z.sha1',
+    ]
+    stable = site / 'repository/stable/macos-arm64/org.easyscience.edi'
+    assert len(list(stable.iterdir())) == 8
+    assert (windows / '2026.11.0bin.7z').is_file()

@@ -35,8 +35,10 @@ Docs updates preserve `/webapp/`, `/repository/` and `/third-party/`; a platform
 the web app and other platforms. Only a successfully deployed full-site artifact can become the next
 base. The publication jobs share the same concurrency group. Keep previous versioned component
 archives for downloads already in flight, reject different bytes under a reused archive identity, and
-fail before publishing if the assembled site exceeds GitHub Pages' documented one-GB limit. Initial
-tests do not silently prune components still referenced by an older client.
+fail before publishing if the assembled site exceeds GitHub Pages' documented one-GB limit. Calendar previews retain the
+current and previous testing archives once two calendar previews exist. Older testing
+archives remain in their original CI artifacts. Stable archives do not participate in
+testing retention.
 
 The installed application has a bounded `--testmode <output-directory>` check. It uses fresh settings,
 loads an embedded public example into a temporary directory, calculates a finite nonzero pattern with
