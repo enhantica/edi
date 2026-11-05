@@ -306,3 +306,12 @@ def test_split_runtime_packages_retain_the_exact_upstream_licenses(tmp_path, nam
     metadata['version'] = '999.0.0'
     assert not PACKAGE.bundled_runtime_licenses(metadata, tmp_path / 'wrong-version')
     assert not (tmp_path / 'wrong-version').exists()
+
+
+def test_installation_lifecycles_have_distinct_real_temp_directories(tmp_path):
+    offline = PACKAGE.clean_environment(tmp_path / 'offline')
+    online = PACKAGE.clean_environment(tmp_path / 'online')
+    assert offline['TEMP'] != online['TEMP']
+    for env in [offline, online]:
+        assert env['TEMP'] == env['TMP'] == env['TMPDIR']
+        assert Path(env['TEMP']).is_dir()

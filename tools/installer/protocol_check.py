@@ -33,8 +33,8 @@ def check(tools: Path, output: Path) -> None:
     online = package_app(stage, tools, output / 'online', '2026.11.1', repository)
     home = output / 'isolated home'
     home.mkdir()
-    env = clean_environment(home)
     for kind, bootstrap in [('offline', offline), ('online', online)]:
+        env = clean_environment(home / kind)
         executable = installer_command(
             unpack_installer(bootstrap.with_suffix('.zip'), output / kind / 'unzipped')
         )

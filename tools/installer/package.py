@@ -495,6 +495,8 @@ def package_app(
 
 
 def clean_environment(home: Path) -> dict:
+    temporary = home / 'tmp'
+    temporary.mkdir(parents=True, exist_ok=True)
     env = {
         key: value
         for key, value in os.environ.items()
@@ -512,6 +514,9 @@ def clean_environment(home: Path) -> dict:
         env['PATH'] = '/usr/bin:/bin:/usr/sbin:/sbin'
     env.update(
         HOME=str(home),
+        TMP=str(temporary),
+        TEMP=str(temporary),
+        TMPDIR=str(temporary),
         USERPROFILE=str(home),
         XDG_CONFIG_HOME=str(home / 'config'),
         XDG_DATA_HOME=str(home / 'data'),

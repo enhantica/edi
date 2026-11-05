@@ -140,3 +140,9 @@ Conda packages can place `info/licenses` in either their info archive or their p
 both checksum-verified members while extracting only the licence subtree; do not extract executable
 payload files during licence acquisition. Keep MSVC exception semantics when adding UTF-8 compilation
 flags rather than replacing them with a source-encoding flag alone.
+
+Each qualification lifecycle gets separate home, cache and real temporary directories. Qt IFW 4.11's
+Windows self-removal helper uses a fixed `uninstall.vbs` name in the process temporary directory;
+sharing that directory between independent fixture installations can collide while the earlier
+helper is still finishing ([upstream implementation](https://github.com/qtproject/installer-framework/blob/4.11/src/libs/installer/packagemanagercore_p.cpp)). Isolation also prevents the online-install check from borrowing warmed
+component caches from the earlier update test.
