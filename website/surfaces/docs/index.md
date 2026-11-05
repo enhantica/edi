@@ -14,8 +14,7 @@ hide:
 
 <nav class="ed-landing__interfaces" aria-label="Explore EasyDiffraction interfaces" markdown>
 
-[<span class="ed-interface-icons" aria-hidden="true">:lucide-globe:</span> <span class="ed-icon-text">Web app</span>](application/browser.md "Web app documentation"){ .ed-interface-link .ed-icon-label }
-[<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Desktop app</span>](application/desktop.md#download "Desktop app downloads"){ .ed-interface-link .ed-icon-label }
+[<span class="ed-interface-icons" aria-hidden="true">:lucide-globe: :lucide-monitor:</span> <span class="ed-icon-text">Application</span>](application/index.md "Web and desktop app documentation"){ .ed-interface-link .ed-icon-label }
 [<span class="ed-interface-icons" aria-hidden="true">:simple-python: :simple-jupyter:</span> <span class="ed-icon-text">Python</span>](python/index.md "Python library documentation"){ .ed-interface-link .ed-icon-label }
 [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal: :simple-python:</span> <span class="ed-icon-text">Command Line</span>](cli/index.md "Command Line documentation"){ .ed-interface-link .ed-icon-label }
 

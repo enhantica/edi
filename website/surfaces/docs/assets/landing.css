@@ -80,7 +80,7 @@
 .ed-landing__interfaces a {
   display: inline-flex;
   align-items: center;
-  gap: .1rem;
+  gap: .3em;
   color: var(--md-default-fg-color--light);
   font-size: .65rem;
   font-weight: 600;
@@ -162,11 +162,6 @@
   }
   .ed-landing__actions .md-button {
     flex: 1 1 8rem;
-  }
-  .ed-landing__interfaces p {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .7rem 1rem;
   }
   .ed-landing__interfaces a {
     font-size: .75rem;
