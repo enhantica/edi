@@ -20,12 +20,17 @@ def deployed_base(artifacts, read_jobs) -> dict:
         if artifact.get('expired'):
             continue
         name = artifact['name']
-        match = re.fullmatch(r'pages-site-(docs|wasm|installers)-(\d+)', name)
+        match = re.fullmatch(r'pages-site-(docs|wasm|installers|release)-(\d+)', name)
         if name != 'github-pages' and not match:
             continue
         component = match[1] if match else None
         attempt = int(match[2]) if match else None
-        labels = {'docs': 'documentation', 'wasm': 'WebAssembly', 'installers': 'installers'}
+        labels = {
+            'docs': 'documentation',
+            'wasm': 'WebAssembly',
+            'installers': 'installers',
+            'release': 'release',
+        }
         step_name = (
             f'Deploy {labels[component]} to GitHub Pages'
             if component
@@ -51,14 +56,15 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
         raise RuntimeError('The deployed base must contain documentation and the web app')
     if component == 'docs':
         if not (incoming / 'index.html').is_file() or any(
-            (incoming / name).exists() for name in ['webapp', 'repository', 'third-party']
+            (incoming / name).exists()
+            for name in ['webapp', 'repository', 'third-party', 'releases']
         ):
             raise RuntimeError(
                 'Documentation must have an index and must not own '
-                '/webapp/, /repository/ or /third-party/'
+                '/webapp/, /repository/, /third-party/ or /releases/'
             )
         for child in site.iterdir():
-            if child.name in {'webapp', 'repository', 'third-party'}:
+            if child.name in {'webapp', 'repository', 'third-party', 'releases'}:
                 continue
             if child.is_dir() and not child.is_symlink():
                 shutil.rmtree(child)
@@ -71,10 +77,24 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
             ['bash', str(Path(__file__).with_name('docs-webapp.sh')), str(incoming), str(site)],
             check=True,
         )
+    elif component == 'release':
+        overlay_release(site, incoming)
     elif component == 'installers':
         overlay_installers(site, incoming)
     else:
         raise ValueError('Unknown site component')
+
+
+def overlay_release(site: Path, incoming: Path) -> None:
+    """Publish matching native repositories and their feed in one site deployment."""
+    if {item.name for item in incoming.iterdir()} != {'repository', 'releases'}:
+        raise RuntimeError('Release publication requires component repositories and its feed')
+    feed = incoming / 'releases/stable.json'
+    if feed.is_symlink() or not feed.is_file() or feed.stat().st_size > 1024 * 1024:
+        raise RuntimeError('Release feed must be a bounded regular file')
+    overlay_installers(site, incoming / 'repository')
+    (site / 'releases').mkdir(exist_ok=True)
+    shutil.copy2(feed, site / 'releases/stable.json')
 
 
 def overlay_installers(site: Path, incoming: Path) -> None:
@@ -134,7 +154,9 @@ def check_site_size(site: Path, limit: int = 1_000_000_000) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', required=True)
-    parser.add_argument('--component', choices=('docs', 'wasm', 'installers'), required=True)
+    parser.add_argument(
+        '--component', choices=('docs', 'wasm', 'installers', 'release'), required=True
+    )
     parser.add_argument('--incoming', type=Path, required=True)
     parser.add_argument('--site', type=Path, required=True)
     args = parser.parse_args()

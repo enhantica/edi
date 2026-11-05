@@ -15,7 +15,7 @@ on:
       crysta_commit:
         description: Exact crysta source commit to build before edi
         required: true
-        default: c03923dd3d0155fef3ddf5aae7fcf7483c62fd71
+        default: d3975c72a26f78c29d5ce93f30c1db6710463e83
         type: string
   push:
     paths:
@@ -46,6 +46,7 @@ jobs:
           - platform: Windows
             runner: windows-2022
     env:
+      CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || 'd3975c72a26f78c29d5ce93f30c1db6710463e83' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
       EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
@@ -96,6 +97,14 @@ jobs:
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
       - name: Check installer transport before building the application
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/protocol_check.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/protocol"
+      - name: Require an immutable engine source
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
+          import os, re
+          if not re.fullmatch(r'[0-9a-f]{40}', os.environ['CRYSTA_SOURCE_COMMIT']):
+              raise RuntimeError('Installer qualification requires a complete engine commit')
+          PYTHON
       - name: Mint a crysta installation token
         id: crysta-token
         uses: actions/create-github-app-token@v2
@@ -109,7 +118,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: enhantica/crysta
-          ref: ${{ inputs.crysta_commit || 'c03923dd3d0155fef3ddf5aae7fcf7483c62fd71' }}
+          ref: ${{ env.CRYSTA_SOURCE_COMMIT }}
           token: ${{ steps.crysta-token.outputs.token }}
           path: .crysta
           persist-credentials: false
@@ -117,7 +126,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
       - name: Check engine compiler portability before the full build
-        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/.crysta/tests/fixtures/embedded_text" "${{ github.workspace }}/.crysta/tests/fixtures/space_group_swap" --noconftest -o addopts= -q
+        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/.crysta/tests/fixtures/embedded_text" "${{ github.workspace }}/.crysta/tests/fixtures/space_group_swap" "${{ github.workspace }}/.crysta/tests/fixtures/star_timestamp" --noconftest -o addopts= -q
       - name: Build crysta, edi and its runtime bundle
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
       - name: Create the offline qualification installer
@@ -157,12 +166,18 @@ jobs:
           channel = 'stable' if os.environ.get('EDI_RELEASE_PLAN') else 'testing'
           target = Path('build/installer/components') / channel / metadata['platform']
           shutil.copytree(package / 'repository', target)
+          delivery = Path('build/installer/delivery')
+          delivery.mkdir()
+          os.link(package / metadata['zip'], delivery / metadata['zip'])
+          shutil.copy2(package / 'installer.json', delivery / 'installer.json')
+          shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
+          shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
           PYTHON
       - name: Upload online installer
         uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform }}-${{ github.run_attempt }}
-          path: build/installer/online/*.zip
+          path: build/installer/delivery
           if-no-files-found: error
           compression-level: 0
       - name: Upload tested components

@@ -125,3 +125,23 @@ Artifacts include the workflow attempt in their names, so retries retain previou
 publication requires all platform repositories from the same attempt; rerunning only failed jobs
 cannot silently combine different qualified sets. After all native jobs pass, a separate job retains
 the exact prepared inputs for later promotion. Production publication remains a separate operation.
+
+## Promotion and publication
+
+Publish qualified calendar release is a separate, manual, main-only workflow. It promotes immutable
+artifact IDs from a successful main qualification attempt, without rebuilding. Every native platform
+and retained plan must have succeeded in that same attempt. Check ZIP hashes, platform/stable URLs,
+source/version/history identity and actual installed application receipts; all platforms must build
+the same complete crysta commit. Validate Qt component identities and original archive checksums.
+
+Publication first creates or reuses a matching GitHub draft and uploads only missing, byte-identical
+assets, without clobbering. Existing tags, differing notes/source/asset digests and stale histories
+refuse publication. The tested repositories and matching release-history feed deploy together under
+the shared Pages publication lock, preserving docs, web app and existing archives. Only then is the
+verified release made public. An interruption leaves a retryable draft rather than regenerated
+component archives. Documentation publication preserves the release feed as well as all other reserved
+roots. No production release is dispatched from an unmerged feature branch.
+
+References: [GitHub artifact downloads](https://docs.github.com/en/rest/actions/artifacts#download-an-artifact),
+[release creation](https://cli.github.com/manual/gh_release_create),
+[asset upload without clobber](https://cli.github.com/manual/gh_release_upload).

@@ -1,0 +1,62 @@
+name: Publish qualified calendar release
+
+on:
+  workflow_dispatch:
+    inputs:
+      installer_run:
+        description: Successful main installer run qualified with prepared release inputs
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: pages-publication
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: write
+      actions: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Stage immutable qualified artifacts
+        run: python tools/release/promote.py --repo "$GITHUB_REPOSITORY" --run "$INSTALLER_RUN" --output publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INSTALLER_RUN: ${{ inputs.installer_run }}
+      - name: Prepare the release draft and verify its assets
+        run: python tools/release/publish_assets.py --repo "$GITHUB_REPOSITORY" --folder publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Preserve the site and assemble repositories with their release feed
+        run: python tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component release --incoming publication/incoming --site site
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-site-release-${{ github.run_attempt }}
+          path: site
+          retention-days: 90
+      - name: Deploy release to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-site-release-${{ github.run_attempt }}
+      - name: Publish the verified download assets
+        run: python tools/release/publish_assets.py --repo "$GITHUB_REPOSITORY" --folder publication --finalize
+        env:
+          GH_TOKEN: ${{ github.token }}

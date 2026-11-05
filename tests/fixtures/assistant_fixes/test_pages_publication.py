@@ -223,3 +223,16 @@ def test_invalid_channel_cannot_escape_the_repository_root(tmp_path):
     with pytest.raises(RuntimeError, match='channel'):
         MODULE.overlay_installers(site, incoming)
     assert not site.exists()
+
+
+def test_documentation_refresh_preserves_the_installed_app_release_feed(tmp_path):
+    site, incoming = tmp_path / 'site', tmp_path / 'docs'
+    (site / 'webapp').mkdir(parents=True)
+    (site / 'webapp/index.html').write_text('app')
+    (site / 'index.html').write_text('old docs')
+    (site / 'releases').mkdir()
+    (site / 'releases/stable.json').write_bytes(b'qualified release feed')
+    incoming.mkdir()
+    (incoming / 'index.html').write_text('new docs')
+    MODULE.overlay_component(site, incoming, 'docs')
+    assert (site / 'releases/stable.json').read_bytes() == b'qualified release feed'
