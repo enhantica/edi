@@ -67,6 +67,19 @@ def calendar_tags(repo: str) -> list[str]:
     tags = [
         item['ref'].removeprefix('refs/tags/v') for page in json.loads(content) for item in page
     ]
+    releases = subprocess.check_output([
+        'gh',
+        'api',
+        '--paginate',
+        '--slurp',
+        f'repos/{repo}/releases?per_page=100',
+    ])
+    tags.extend(
+        item['tag_name'].removeprefix('v')
+        for page in json.loads(releases)
+        for item in page
+        if item['draft'] and item['tag_name'].startswith('v')
+    )
     return [
         tag for tag in tags if re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)', tag)
     ]

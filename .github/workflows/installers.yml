@@ -13,7 +13,7 @@ on:
         default: false
         type: boolean
       calendar_preview:
-        description: Build a calendar-versioned macOS and Linux testing preview
+        description: Build a calendar-versioned testing preview and prepare a release draft
         default: false
         type: boolean
       preview_run:
@@ -49,6 +49,8 @@ jobs:
   preview-version:
     if: inputs.calendar_preview && inputs.preview_run == ''
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.select.outputs.version }}
     steps:
@@ -85,7 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.windows_only && '[{"platform":"Windows","runner":"windows-2022"}]' || (inputs.calendar_preview && '[{"platform":"Linux","runner":"ubuntu-24.04"},{"platform":"macOS","runner":"macos-15"}]') || '[{"platform":"Linux","runner":"ubuntu-24.04"},{"platform":"macOS","runner":"macos-15"},{"platform":"Windows","runner":"windows-2022"}]') }}
+        include: ${{ fromJSON(inputs.windows_only && '[{"platform":"Windows","runner":"windows-2022"}]' || '[{"platform":"Linux","runner":"ubuntu-24.04"},{"platform":"macOS","runner":"macos-15"},{"platform":"Windows","runner":"windows-2022"}]') }}
     env:
       CRYSTA_SOURCE_COMMIT: ${{ inputs.crysta_commit || '122f77fa46e1143749a4039f65b24438006bb482' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
@@ -328,6 +330,27 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  draft-preview-release:
+    name: prepare testing release draft
+    needs: installers
+    if: github.event_name == 'workflow_dispatch' && inputs.calendar_preview && inputs.preview_run == ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-{Linux,macOS,Windows}-${{ github.run_attempt }}
+          path: preview-delivery
+      - name: Attach qualified online installers to the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/release/preview_draft.py --repo "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" preview-delivery/installer-*
+
   publish-installers:
     name: publish tested installer components
     needs: installers
@@ -367,16 +390,11 @@ jobs:
           mv preview/components components
       - name: Require the selected platforms from this successful attempt
         if: inputs.preview_run == ''
-        env:
-          CALENDAR_PREVIEW: ${{ inputs.calendar_preview }}
         run: |
           python3 - <<'PYTHON'
-          import os
           from pathlib import Path
           root = Path('components/testing')
-          expected = {'linux-x86_64', 'macos-arm64'}
-          if os.environ['CALENDAR_PREVIEW'] != 'true':
-              expected.add('windows-x86_64')
+          expected = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
           if not root.is_dir() or {item.name for item in root.iterdir()} != expected:
               raise RuntimeError('Publish requires all platforms from one complete successful attempt; rerun all jobs')
           for platform in expected:
@@ -387,7 +405,7 @@ jobs:
         if: inputs.calendar_preview && inputs.preview_run == ''
         uses: actions/download-artifact@v4
         with:
-          pattern: installer-*-${{ github.run_attempt }}
+          pattern: installer-{Linux,macOS,Windows}-${{ github.run_attempt }}
           path: preview-delivery
       - name: Prepare the testing update feed
         if: inputs.calendar_preview && inputs.preview_run == ''
@@ -398,7 +416,7 @@ jobs:
           from pathlib import Path
           root = Path('components/testing')
           histories = sorted(Path('preview-delivery').glob('installer-*/preview-history.json'))
-          if len(histories) != 2 or histories[0].read_bytes() != histories[1].read_bytes():
+          if len(histories) != 3 or any(path.read_bytes() != histories[0].read_bytes() for path in histories[1:]):
               raise RuntimeError('Preview release histories differ')
           payload = histories[0].read_bytes()
           version = json.loads(payload)['releases'][0]['version']

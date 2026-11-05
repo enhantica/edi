@@ -167,3 +167,16 @@ Calendar previews install a testing channel marker. They read a separate release
 atomically with the tested component repositories. Their notes describe the candidate, and their
 bundled copy supplies What's New after installation. Stable releases continue to use the
 source-bound history generated from merged pull requests and the stable feed.
+
+## Testing release drafts
+
+A calendar preview builds the online installers for Linux, macOS and Windows.
+After qualification, CI creates a GitHub draft marked as a prerelease, reserves
+the calendar tag and attaches the verified installers. The draft uses the
+release notes embedded in the installers. A maintainer publishes the draft after
+review. GitHub generates the source archive links from the tag upon publication.
+
+Testing components are published separately to the public Pages repository
+under `/edi/repository/testing/<platform>/`. The application update feed is at
+`/edi/releases/testing.json`. Publish the matching component repositories
+before making the corresponding installer draft public.
