@@ -1,6 +1,6 @@
 # :material-calculator: Analysis
 
-Analysis evaluates the combined structure and experiment model. A calculation predicts its signal at the current values. Refinement changes selected independent parameters to improve agreement with measured observations.
+Analysis evaluates the combined structure and experiment model. A calculation predicts its pattern at the current values. Refinement changes selected independent parameters to improve agreement with measured observations.
 
 ## Calculate the starting model
 
@@ -13,6 +13,18 @@ EasyDiffraction uses the crysta diffraction engine. The [Physics](../../physics/
 Choose which [parameters](../parameters.md) may vary and which stay fixed. Respect symmetry and declared constraints. The fit begins from the current parameter values, so retain the starting state when comparing different refinements.
 
 Refine a set that the observations can constrain. Strongly correlated quantities can trade off against each other, improving an agreement factor while leaving the scientific interpretation uncertain.
+
+## How a refinement iterates
+
+A refinement is an iterative loop. A minimizer repeats these steps, adjusting the free parameters each cycle to reduce the weighted difference between the calculated and measured pattern:
+
+<ol class="ed-workflow-diagram ed-concept-flow" style="--ed-flow-columns:3" markdown="1" aria-label="Refinement iteration loop">
+<li markdown="1">[:material-calculator: Set parameter values](#select-the-independent-parameters)</li>
+<li markdown="1">[:lucide-chart-no-axes-combined: Calculate pattern](../../physics/rietveld.md#eq-rietveld-pattern)</li>
+<li markdown="1">[:lucide-git-compare: Compare with data](#assess-the-outcome)</li>
+</ol>
+
+The loop stops when the change falls below the convergence tolerance, or when the iteration budget is reached. Those limits are minimizer conditions, not part of the scientific model.
 
 ## Choose how observations are combined
 
@@ -28,7 +40,7 @@ The current project format declares them in the `_minimizer` category of `analys
 
 ## Assess the outcome
 
-Read the termination state, then examine the observed and calculated signals, residual, fitted values, uncertainties and correlations. A converged fit can still describe an unsuitable model. Use [fit quality](../fit-quality.md) for the scientific assessment.
+Read the termination state, then examine the observed and calculated pattern, residual, fitted values, uncertainties and correlations. A converged fit can still describe an unsuitable model. Use [fit quality](../fit-quality.md) for the scientific assessment.
 
 For a scan, inspect individual failed or out-of-date results before interpreting a parameter trend. Keep the model and conditions associated with each result.
 

@@ -24,9 +24,44 @@ A symmetry-related value is not an additional independent fitting direction. A t
 
 Keep the [displacement convention](../../physics/displacement.md) used by the source structure; quantities expressed with different conventions should not be compared by name alone. Use [parameters](../parameters.md) for free/fixed values, uncertainty and constraints.
 
+## A structure file
+
+A structure is saved as one `.edi` data block. The example below is `structures/lif.edi` from the LiF project: the symmetry, unit cell and atom sites described above map directly onto its keys.
+
+```text
+data_lif
+
+_edi.schema_version 3
+
+_cell.length_a 4.0267
+_cell.length_b 4.0267
+_cell.length_c 4.0267
+_cell.angle_alpha 90.
+_cell.angle_beta 90.
+_cell.angle_gamma 90.
+
+_space_group.name_h_m "F m -3 m"
+_space_group.coord_system_code 1
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Li1 Li 0. 0. 0. a 1. 1.2 Biso
+F1 F 0.5 0.5 0.5 b 1. 0.8 Biso
+```
+
+A structure imported from a CIF uses the same layout. See [data formats](../data-formats.md) for how `.edi` relates to CIF.
+
 ## Phases and experiment links
 
-A project may contain several structures. An experiment links the structures that contribute to its calculated signal, with a scale for each link. Adding a structure to the project does not by itself establish that it contributes to every measurement.
+A project may contain several structures. An experiment links the structures that contribute to its calculated pattern, with a scale for each link. Adding a structure to the project does not by itself establish that it contributes to every measurement.
 
 Check which phases should contribute and whether their links are enabled. Structural quantities describe the sample; background and peak-profile terms belong to the experiment even though they also affect the calculated pattern.
 

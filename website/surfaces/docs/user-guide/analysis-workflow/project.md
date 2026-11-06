@@ -23,6 +23,32 @@ Several experiments can share a structure while keeping different measurement se
 
 The project folder contains `project.edi` and associated `structures/`, `experiments/`, `analysis/` and `reports/` content. A `.zip` archive packages the folder for transfer. See [data formats](../data-formats.md).
 
+A constant-wavelength X-ray powder example is laid out like this:
+
+```text
+lif_xray/
+├── project.edi            project metadata and display settings
+├── structures/
+│   └── lif.edi            LiF structure model
+├── experiments/
+│   └── cu_ka.edi          measured or simulated experiment
+├── analysis/
+│   └── analysis.edi       fitting mode and minimizer settings
+└── reports/               generated documents (when requested)
+```
+
+Only `project.edi` exists right after you create a project; the other folders appear as you add structures, experiments and analysis settings. `project.edi` records the project-level metadata and display choices:
+
+```text
+_edi.schema_version 3
+
+_metadata.name        lif_xray
+_metadata.title       "LiF [Fm-3m] · Calculated example"
+_metadata.description "Cu Kα₁ calculated profile · X-ray scattering factors and dispersion"
+```
+
+The [:material-puzzle: Structure](structure.md) and [:material-microscope: Experiment](experiment.md) pages show the contents of `lif.edi` and the experiment file.
+
 Keep the full folder or archive when moving between interfaces. Retain starting conditions separately when you want to compare them with a refined state. Saving a report is separate from saving the editable project.
 
 ## Check completeness

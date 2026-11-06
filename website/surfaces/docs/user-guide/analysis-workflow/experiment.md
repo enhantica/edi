@@ -34,4 +34,43 @@ Link each contributing structure and review its scale. One experiment can sum co
 
 Scales connect phase contributions to the experiment. Interpret any derived composition or phase fraction in the context of the model and its conventions.
 
+## An experiment file
+
+An experiment is saved as one `.edi` data block. The example below is `experiments/cu_ka.edi` from the LiF project — a constant-wavelength X-ray simulation, so it declares a calculation range (`_data_range`) rather than measured points:
+
+```text
+data_cu_ka
+
+_edi.schema_version 3
+
+_experiment_type.sample_form powder
+_experiment_type.beam_mode "constant wavelength"
+_experiment_type.radiation_probe xray
+_experiment_type.scattering_type bragg
+
+_scattering_source.xray_form_factor it1992
+_scattering_source.xray_dispersion sasaki1989
+
+_instrument.setup_wavelength 1.54056
+_instrument.calib_twotheta_offset 0.
+
+_peak.type cwl-tch-pseudo-voigt
+_peak.broad_gauss_u 0.048457
+_peak.broad_gauss_v -0.083053
+_peak.broad_gauss_w 0.04
+_peak.broad_lorentz_x 0.
+_peak.broad_lorentz_y 0.049268
+
+_data_range.two_theta_min 10.
+_data_range.two_theta_max 150.
+_data_range.two_theta_step 0.02
+
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+lif 0.01
+```
+
+A measured experiment instead carries a background definition and a `loop_` of measured points with their uncertainties. See [data formats](../data-formats.md).
+
 Configure experiments in the [<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../../application/experiments.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/experiments.md){ .ed-interface-link .ed-icon-label }, then [use the saved experiments from Command Line](../../cli/experiments.md).
