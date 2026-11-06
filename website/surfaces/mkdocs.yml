@@ -73,7 +73,7 @@ nav:
   - user-guide/index.md
   - Foundations:
     - Introduction: user-guide/introduction.md
-    - Features and roadmap: user-guide/features.md
+    - Features: user-guide/features.md
     - Concept: user-guide/concepts.md
     - Data formats: user-guide/data-formats.md
     - Parameters: user-guide/parameters.md

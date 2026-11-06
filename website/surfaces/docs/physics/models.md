@@ -6,7 +6,7 @@ template: physics.html
 
 <span id="planned-scientific-models"></span>
 
-Use the exact model identifier to select its explanation. Planned and proposed capabilities appear beside related models with their status; they have no selectable type token in this reference snapshot. The [parameter index](parameters.md) defines individual scientific fields. [Features and roadmap](../user-guide/features.md) distinguishes editing, execution and planned work in the four interfaces.
+Use the exact model identifier to select its explanation. Planned and proposed capabilities appear beside related models with their status; they have no selectable type token in this reference snapshot. The [parameter index](parameters.md) defines individual scientific fields. [Features](../user-guide/features.md) distinguishes editing, execution and planned work in the four interfaces.
 
 ## Peak profiles {#peak-profiles}
 

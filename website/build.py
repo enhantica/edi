@@ -52,7 +52,7 @@ def _write_reference(built: Path, base_url: str) -> None:
         'Cite its exact section. Stored-only fields are not active calculation terms.',
         'The model catalogue records the inspected source snapshot. Interface availability',
         (
-            'comes from Features and roadmap; planned or proposed work is not available '
+            'comes from Features; planned or proposed work is not available '
             'functionality.'
         ),
         'This export supplies reference content; it does not implement a chat integration.',

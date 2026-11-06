@@ -2,7 +2,7 @@
 template: features.html
 ---
 
-# Features and roadmap
+# Features
 
 Find a capability by its scientific role, then follow a feature link for its equations, parameters and conventions in **Physics**. Available, planned and proposed features appear together in their scientific groups.
 
