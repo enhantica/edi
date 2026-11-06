@@ -154,14 +154,14 @@ def render() -> None:
         if not re.fullmatch(r'[a-z0-9][a-z0-9_-]*', example) or example != fixture:
             raise ValueError('Interface screenshots must use the selected GUI example')
         replace_marker(
-            DOCS / 'python/examples.md',
+            DOCS / 'python/examples/index.md',
             'example',
             'python',
             "```python\nimport edi\n\nproject = edi.Project.load('" + example + "')\n```",
         )
         command = 'fit ' + example + ' --dry'
         replace_marker(
-            DOCS / 'cli/examples.md',
+            DOCS / 'cli/examples/index.md',
             'example',
             'cli',
             '=== "Standalone executable"\n\n    ```console\n    edi ' + command + '\n    ```\n\n'

@@ -623,8 +623,9 @@ def figure(
     )
 
 
-def page(title: str, body: str) -> str:
-    return f'---\ntemplate: gui.html\n---\n\n# {title}\n\n{body.rstrip()}\n'
+def page(title: str, body: str, icon: str = '') -> str:
+    meta = f'icon: {icon}\n' if icon else ''
+    return f'---\n{meta}template: gui.html\n---\n\n# {title}\n\n{body.rstrip()}\n'
 
 
 def native_options(text: str, by_id: dict[str, dict]) -> str:
@@ -1218,8 +1219,8 @@ def _write_first_refinement(manifest: dict, by_id: dict) -> None:
     )
     body += (
         '\n## Continue with the same project\n\nOpen the saved project in '
-        '[Python](../python/examples.md) or run it from the [Command '
-        'Line](../cli/examples.md). Try [joint refinement](refine.md) or a [scan](scans.md) '
+        '[Python](../python/examples/index.md) or run it from the [Command '
+        'Line](../cli/examples/index.md). Try [joint refinement](refine.md) or a [scan](scans.md) '
         'when you are ready for several measurements.\n'
     )
     (DOCS / 'application/first-refinement.md').write_text(page('Example refinement', body))
@@ -1370,7 +1371,9 @@ messages after importing data or when an operation is refused.
         gallery += f'\n### :material-{icon}: {name.title()}\n'
         modes = [scene for scene in scenes if scene['page'] == name and scene['sidebar']]
         gallery += viewer(_page_panes(name, modes, by_id, manifest))
-    (DOCS / 'application/workspace.md').write_text(page('Application layout', workspace + gallery))
+    (DOCS / 'application/workspace.md').write_text(
+        page('Application layout', workspace + gallery, icon='lucide/layout-dashboard')
+    )
 
 
 def _write_examples(by_id: dict) -> None:
@@ -1384,12 +1387,15 @@ def _write_examples(by_id: dict) -> None:
         '\nChoose a **Fitting** example to analyse measured data, or a **Simulation** '
         'example to inspect a calculated pattern. Examples open as working copies; use '
         '**Save project as…** to keep your changes.\n\nFor a guided analysis, follow '
-        '[Example refinement](first-refinement.md). The shared [example '
-        'catalogue](../user-guide/examples/index.md) lets you filter the scientific cases. '
-        '[Experiment labels](../user-guide/glossary.md#experiment-types-and-labels) explain the same tags '
-        'shown in the app.\n'
+        '[Example refinement](../first-refinement.md). The shared [example '
+        'catalogue](../../user-guide/examples/index.md#catalogue) lets you filter the '
+        'scientific cases. '
+        '[Experiment labels](../../user-guide/glossary.md#experiment-types-and-labels) '
+        'explain the same tags shown in the app.\n'
     )
-    (DOCS / 'application/examples.md').write_text(page('Example projects', examples))
+    (DOCS / 'application/examples/index.md').write_text(
+        page('Example projects', examples.replace('"../assets/', '"../../assets/'))
+    )
 
 
 def _write_application_introduction(by_id: dict) -> None:

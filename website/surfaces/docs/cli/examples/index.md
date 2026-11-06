@@ -1,6 +1,6 @@
 # Example refinement from the Command Line
 
-[Download the example project](../assets/interfaces/example-project.zip) and extract it. Open a terminal in the containing folder, using your [standalone executable](standalone.md) or [Python package environment](python.md).
+[Download the example project](../../assets/interfaces/example-project.zip) and extract it. Open a terminal in the containing folder, using your [standalone executable](../standalone.md) or [Python package environment](../python.md).
 
 ## Run without saving
 
@@ -48,4 +48,4 @@ edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 43 free
     python -m edi fit path/to/project --output refined-project
     ```
 
-Replace `path/to/project` with the extracted example folder. See [Run a refinement](fit.md) for progress, output and cancellation options.
+Replace `path/to/project` with the extracted example folder. See [Run a refinement](../fit.md) for progress, output and cancellation options.

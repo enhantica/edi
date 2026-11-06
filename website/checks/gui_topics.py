@@ -21,14 +21,18 @@ def validate_topics(root: Path, config: dict, scenes: list[dict]) -> None:
     navigation = next(
         section['Application'] for section in config['nav'] if 'Application' in section
     )
-    for group in navigation:
-        if (
-            not isinstance(group, dict)
-            or next(iter(group)) not in config['extra']['workflow_icons']
-        ):
+    workflow = next(
+        group['Analysis workflow']
+        for group in navigation
+        if isinstance(group, dict) and 'Analysis workflow' in group
+    )
+    for stage in workflow:
+        if not isinstance(stage, dict):
             continue
-        for entry in next(iter(group.values())):
-            filename = next(iter(entry.values()))
+        pages = next(iter(stage.values()))
+        for filename in (
+            [pages] if isinstance(pages, str) else [next(iter(p.values())) for p in pages]
+        ):
             require(filename in registry, f'{filename}: missing screenshot coverage declaration')
     by_id = {scene['id']: scene for scene in scenes}
     require(len(by_id) == len(scenes), 'Capture bundles reuse a scene id')

@@ -51,10 +51,7 @@ def _write_reference(built: Path, base_url: str) -> None:
         'Identify experiment type, radiation, model and units before selecting an equation.',
         'Cite its exact section. Stored-only fields are not active calculation terms.',
         'The model catalogue records the inspected source snapshot. Interface availability',
-        (
-            'comes from Features; planned or proposed work is not available '
-            'functionality.'
-        ),
+        ('comes from Features; planned or proposed work is not available functionality.'),
         'This export supplies reference content; it does not implement a chat integration.',
         '',
         f'- [Model and parameter catalogue]({base_url}physics/catalogue.json)',
@@ -248,12 +245,29 @@ def _normalized_base_url(parser: argparse.ArgumentParser, base_url: str) -> str:
 
 def _check_navigation(config_data: dict) -> None:
     stages = list(config_data['extra']['workflow_icons'])
-    shared = ['Start here', *stages]
-    for interface in ('Application', 'Python', 'Command Line'):
+    for interface, folder in (
+        ('Application', 'application'),
+        ('Python', 'python'),
+        ('Command Line', 'cli'),
+    ):
         section = next(entry[interface] for entry in config_data['nav'] if interface in entry)
-        groups = [next(iter(entry)) for entry in section if isinstance(entry, dict)]
-        if groups[: len(shared)] != shared:
-            raise SystemExit(f'{interface}: workflow groups must be {shared}')
+        groups = {next(iter(entry)): next(iter(entry.values())) for entry in section}
+        names = list(groups)
+        if names[:2] != ['Start here', 'Analysis workflow'] or names[-1] != 'Examples':
+            raise SystemExit(
+                f'{interface}: groups must start with Start here and Analysis workflow '
+                'and end with Examples'
+            )
+        for name, page in (
+            ('Start here', f'{folder}/index.md'),
+            ('Analysis workflow', f'{folder}/analysis-workflow/index.md'),
+            ('Examples', f'{folder}/examples/index.md'),
+        ):
+            if groups[name][0] != page:
+                raise SystemExit(f'{interface}: {name} must open {page}')
+        found = [next(iter(entry)) for entry in groups['Analysis workflow'][1:]]
+        if found != stages:
+            raise SystemExit(f'{interface}: Analysis workflow must contain {stages}')
     print('Shared interface workflow navigation: PASS', flush=True)
 
 

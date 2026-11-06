@@ -91,13 +91,17 @@ def render() -> None:
     gui_folder = folder / 'gui'
     application = comparison(gui_folder)[0] if (gui_folder / 'capture.json').exists() else prepared
     replace(DOCS / 'application/first-refinement.md', 'learning-comparison', application)
-    replace(DOCS / 'python/examples.md', 'learning-comparison', prepared)
+    replace(
+        DOCS / 'python/examples/index.md',
+        'learning-comparison',
+        prepared.replace('"../assets/', '"../../assets/'),
+    )
     example = metadata['example']
     result = metadata['result']
     output = (
         f'Rwp: {100 * result["rwp"]:.2f}%   ·   Reduced χ²: {result["reduced_chi_square"]:.2f}'
     )
-    path = DOCS / 'python/examples.md'
+    path = DOCS / 'python/examples/index.md'
     text = path.read_text()
     start = text.index('For the supplied starting project:')
     end = text.index('\nThe notebook plots', start)
@@ -109,7 +113,7 @@ def render() -> None:
         + text[end:]
     )
     path.write_text(text)
-    path = DOCS / 'cli/examples.md'
+    path = DOCS / 'cli/examples/index.md'
     text = path.read_text()
     start = text.index('The supplied example converges')
     end = text.index('\n`--dry`', start)

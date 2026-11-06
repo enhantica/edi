@@ -54,7 +54,6 @@ extra:
     Jupyter notebooks: [simple/jupyter]
   section_icons:
     Analysis workflow: routes
-    Start here: compass-outline
     Peak profiles: chart-bell-curve
     Intensity corrections: tune
     Experiment model: microscope
@@ -87,78 +86,78 @@ nav:
   - Examples:
     - user-guide/examples/index.md
 - Application:
-  - application/index.md
   - Start here:
+    - application/index.md
     - In your browser: application/browser.md
     - On your desktop: application/desktop.md
     - AI assistant: application/assistant.md
     - Application layout: application/workspace.md
+  - Analysis workflow:
+    - application/analysis-workflow/index.md
+    - Project:
+      - Create a project: application/new-project.md
+      - Open and save: application/projects.md
+    - Structure:
+      - Load and display: application/structures.md
+      - Symmetry and cell: application/symmetry.md
+      - Atom sites: application/atoms.md
+      - Atomic displacement: application/displacement.md
+      - Scattering lengths: application/scattering.md
+    - Experiment:
+      - Experiments and data: application/experiments.md
+      - Instrument: application/instrument.md
+      - Peak profiles: application/peak-profiles.md
+      - Background and exclusions: application/background.md
+      - Linked structures: application/linked-structures.md
+      - Intensity corrections: application/corrections.md
+    - Analysis:
+      - Refine a pattern: application/refine.md
+      - Parameters and constraints: application/parameters.md
+      - Fitting modes: application/fitting-modes.md
+      - Minimizer: application/minimizer.md
+      - Display and updates: application/display.md
+      - Work with a scan: application/scans.md
+    - Report: application/reports.md
+  - Examples:
+    - application/examples/index.md
     - Example refinement: application/first-refinement.md
-    - Example projects: application/examples.md
-  - Project:
-    - Create a project: application/new-project.md
-    - Open and save: application/projects.md
-  - Structure:
-    - Load and display: application/structures.md
-    - Symmetry and cell: application/symmetry.md
-    - Atom sites: application/atoms.md
-    - Atomic displacement: application/displacement.md
-    - Scattering lengths: application/scattering.md
-  - Experiment:
-    - Experiments and data: application/experiments.md
-    - Instrument: application/instrument.md
-    - Peak profiles: application/peak-profiles.md
-    - Background and exclusions: application/background.md
-    - Linked structures: application/linked-structures.md
-    - Intensity corrections: application/corrections.md
-  - Analysis:
-    - Refine a pattern: application/refine.md
-    - Parameters and constraints: application/parameters.md
-    - Fitting modes: application/fitting-modes.md
-    - Minimizer: application/minimizer.md
-    - Display and updates: application/display.md
-    - Work with a scan: application/scans.md
-  - Report:
-    - Review and save: application/reports.md
 - Python:
-  - python/index.md
   - Start here:
+    - python/index.md
     - Setup: python/setup.md
-    - Example refinement: python/examples.md
-  - Project:
-    - Load and save: python/projects.md
-  - Structure:
-    - Structures and parameters: python/structures.md
-  - Experiment:
-    - Experiments and data: python/experiments.md
-  - Analysis:
-    - Calculate a pattern: python/calculate.md
-    - Fit a project: python/fit.md
-    - Inspect results: python/results.md
-  - Report:
-    - Generate and save: python/reports.md
+  - Analysis workflow:
+    - python/analysis-workflow/index.md
+    - Project: python/projects.md
+    - Structure: python/structures.md
+    - Experiment: python/experiments.md
+    - Analysis:
+      - Calculate a pattern: python/calculate.md
+      - Fit a project: python/fit.md
+      - Inspect results: python/results.md
+    - Report: python/reports.md
   - Reference:
-    - API quick reference: python/reference.md
+    - python/reference/index.md
+  - Examples:
+    - python/examples/index.md
 - Command Line:
-  - cli/index.md
   - Start here:
+    - cli/index.md
     - Standalone executable: cli/standalone.md
     - CLI from Python package: cli/python.md
-    - Example refinement: cli/examples.md
-  - Project:
-    - Inputs and output files: cli/files.md
-  - Structure:
-    - Prepared structures: cli/structures.md
-  - Experiment:
-    - Prepared experiments: cli/experiments.md
-  - Analysis:
-    - Calculate a pattern: cli/calculate.md
-    - Refine a project: cli/fit.md
-    - Batch workflows: cli/batch.md
-  - Report:
-    - Generate and check: cli/reports.md
+  - Analysis workflow:
+    - cli/analysis-workflow/index.md
+    - Project: cli/files.md
+    - Structure: cli/structures.md
+    - Experiment: cli/experiments.md
+    - Analysis:
+      - Calculate a pattern: cli/calculate.md
+      - Refine a project: cli/fit.md
+      - Batch workflows: cli/batch.md
+    - Report: cli/reports.md
   - Reference:
-    - Command reference: cli/reference.md
+    - cli/reference/index.md
+  - Examples:
+    - cli/examples/index.md
 - Physics:
   - physics/index.md
   - Diffraction model:

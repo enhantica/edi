@@ -2,8 +2,8 @@
 
 The public site at <https://enhantica.github.io/edi/>, built with [Zensical](https://zensical.org). EasyDiffraction is
 the public name; `edi` is the package and code name. The site has Home, User guide, Application, Python, Command
-Line, Physics and About. Each interface follows the same steps: Start here, Project, Structure, Experiment, Analysis
-and Report.
+Line, Physics and About. Each interface has the same menu as the User guide: Start here, then an Analysis workflow with
+Project, Structure, Experiment, Analysis and Report, then Examples at the bottom.
 
 The Pages workflow publishes three things together: this site at the root, the contributor documentation (`mkdocs.yml`
 and `docs/` at the repository root) under `/dev/`, and the web application under `/webapp/`.

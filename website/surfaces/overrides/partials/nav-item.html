@@ -17,14 +17,14 @@
 {% macro render_content(nav_item, ref) %}
   {% set ref = ref or nav_item %}
   {% set workflow_icons = config.extra.workflow_icons %}
-  {% if nav_item.title in config.extra.interface_icons %}
+  {% if ref.title in config.extra.interface_icons %}
     <span class="ed-interface-icons" aria-hidden="true">
-      {% for icon in config.extra.interface_icons[nav_item.title] %}
+      {% for icon in config.extra.interface_icons[ref.title] %}
         {% include ".icons/" ~ icon ~ ".svg" %}
       {% endfor %}
     </span>
-  {% elif nav_item.title in workflow_icons %}
-    {% include ".icons/material/" ~ workflow_icons[nav_item.title] ~ ".svg" %}
+  {% elif ref.title in workflow_icons %}
+    {% include ".icons/material/" ~ workflow_icons[ref.title] ~ ".svg" %}
   {% elif nav_item.children and nav_item.title in config.extra.section_icons %}
     {% include ".icons/material/" ~ config.extra.section_icons[nav_item.title] ~ ".svg" %}
   {% elif nav_item.meta and nav_item.meta.category_glyph %}

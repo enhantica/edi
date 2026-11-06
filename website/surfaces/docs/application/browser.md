@@ -1,3 +1,7 @@
+---
+icon: lucide/globe
+---
+
 # Web application
 
 Open EasyDiffraction in a browser, with no application installation.

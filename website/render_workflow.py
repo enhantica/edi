@@ -34,19 +34,37 @@ def render() -> None:
         if not paths:
             raise ValueError('Workflow icon has no vector paths: ' + name)
         steps.append((title, paths))
-    for filename, prefix in [
-        ('user-guide/analysis-workflow/index.md', ''),
-        ('user-guide/index.md', 'analysis-workflow/'),
-    ]:
+
+    def write_diagram(filename: str, links: dict[str, str]) -> None:
         diagram = ['<ol class="ed-workflow-diagram" aria-label="Analysis workflow">']
         for title, paths in steps:
             diagram.append(
-                f'<li><a href="{prefix}{title.lower()}/">'
+                f'<li><a href="{links[title]}">'
                 f'<svg viewBox="0 0 24 24" aria-hidden="true">{paths}</svg>'
                 f'<span>{title}</span></a></li>'
             )
         diagram.append('</ol>')
         replace(DOCS / filename, 'workflow-diagram', '\n'.join(diagram))
+
+    for filename, prefix in [
+        ('user-guide/analysis-workflow/index.md', ''),
+        ('user-guide/index.md', 'analysis-workflow/'),
+    ]:
+        write_diagram(filename, {title: f'{prefix}{title.lower()}/' for title, _ in steps})
+    # Each interface diagram opens the first page of that stage in its own section.
+    for interface, folder in (
+        ('Application', 'application'),
+        ('Python', 'python'),
+        ('Command Line', 'cli'),
+    ):
+        section = next(entry[interface] for entry in config['nav'] if interface in entry)
+        workflow = next(g['Analysis workflow'] for g in section if 'Analysis workflow' in g)
+        links = {}
+        for stage in workflow[1:]:
+            ((title, pages),) = stage.items()
+            first = pages if isinstance(pages, str) else next(iter(pages[0].values()))
+            links[title] = '../' + first.removeprefix(folder + '/').removesuffix('.md') + '/'
+        write_diagram(f'{folder}/analysis-workflow/index.md', links)
     # Broad scientific groups keep the same stage symbols as their navigation.
     group_stages = {
         'Structure model': 'Structure',

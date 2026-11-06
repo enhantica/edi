@@ -1,4 +1,5 @@
 ---
+icon: lucide/monitor
 template: interface.html
 ---
 

@@ -1,4 +1,5 @@
 ---
+icon: lucide/layout-dashboard
 template: gui.html
 ---
 

@@ -28,5 +28,5 @@ Run saved projects from a terminal or shell script. The standalone executable su
 
 In the guides, select the tab for your installation to see the matching command.
 
-[Run an example](examples.md){ .md-button }
-[Command reference](reference.md){ .md-button }
+[Run an example](examples/index.md){ .md-button }
+[Command reference](reference/index.md){ .md-button }

@@ -22,9 +22,9 @@ Use the searchable catalogue below to filter by purpose and measurement type.
 
 ## Follow the example in your interface
 
-- [Application: open an included example](../../application/examples.md).
-- [Python: load and fit an example project](../../python/examples.md).
-- [Command Line: run an example project](../../cli/examples.md).
+- [Application: open an included example](../../application/examples/index.md).
+- [Python: load and fit an example project](../../python/examples/index.md).
+- [Command Line: run an example project](../../cli/examples/index.md).
 
 ## Understand the reference
 

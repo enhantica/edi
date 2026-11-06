@@ -1,3 +1,7 @@
+---
+icon: lucide/download
+---
+
 # Set up Python
 
 Use the same `edi` installation for your scripts, notebooks and `python -m edi` commands.
@@ -21,4 +25,4 @@ pixi run python -c "import edi; print(edi.Project)"
 
     Select a kernel from the environment containing `edi`. A notebook and a terminal should import the same installation.
 
-[Run an example](examples.md){ .md-button }
+[Run an example](examples/index.md){ .md-button }

@@ -9,7 +9,7 @@ hide:
 Work with Python objects in scripts and notebooks, with direct access to parameters, data arrays and results.
 
 [Set up Python](setup.md){ .md-button .md-button--primary }
-[Run a notebook example](examples.md){ .md-button }
+[Run a notebook example](examples/index.md){ .md-button }
 
 <!-- interface-preview:python -->
 <figure class="ed-interface-preview" data-interface-hero>
@@ -22,7 +22,7 @@ Both approaches use the same Python API.
 - :simple-python: **Python scripts** combine `edi` with your own data preparation and analysis tools.
 - :simple-jupyter: **Jupyter notebooks** run code one cell at a time and keep plots and results alongside it.
 
-[Python API reference](reference.md){ .md-button }
+[Python API reference](reference/index.md){ .md-button }
 [Download the example notebook](../assets/interfaces/refinement.ipynb){ .md-button }
 
 [Download the example project](../assets/interfaces/example-project.zip) to run the notebook.

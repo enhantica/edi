@@ -141,13 +141,13 @@ These source notes are retained for authors; they are not part of the published 
 
 - `python/setup.md`: [edi package metadata](https://github.com/enhantica/edi/blob/main/pyproject.toml), [Pixi tasks](https://github.com/enhantica/edi/blob/main/pixi.toml), and [native extension loading](https://github.com/enhantica/edi/blob/main/lib/edi/__init__.py). The introductory progression follows the [earlier library first steps](https://docs.easydiffraction.org/lib/latest/user-guide/first-steps/).
 
-- `python/examples.md`: [current example catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md), [LBCO example](https://github.com/enhantica/edi/blob/main/docs/user/cli/pd-neut-cwl_lbco-hrpt/index.md), and [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py).
+- `python/examples/index.md`: [current example catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md), [LBCO example](https://github.com/enhantica/edi/blob/main/docs/user/cli/pd-neut-cwl_lbco-hrpt/index.md), and [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py).
 
 - `python/index.md`: organization adapted from the [earlier library quick reference](https://docs.easydiffraction.org/lib/latest/quick-reference/); current calls checked against [edi's Python facade](https://github.com/enhantica/edi/blob/main/lib/edi/__init__.py) and [LBCO tutorial source](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py).
 
 - `python/results.md`: current result access copied from the [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py), with interpretation adapted from [fit-quality guidance](https://github.com/enhantica/edi/blob/main/docs/user/guides/fit-quality.md) and the [earlier analysis workflow](https://docs.easydiffraction.org/lib/latest/user-guide/analysis-workflow/analysis/).
 
-- `python/reference.md`: layout adapted from the [earlier quick reference](https://docs.easydiffraction.org/lib/latest/quick-reference/); members checked against [edi's declared API](https://github.com/enhantica/edi/blob/main/data/python-surface.json), [Python facade](https://github.com/enhantica/edi/blob/main/lib/edi/__init__.py), and [project input/output guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md).
+- `python/reference/index.md`: layout adapted from the [earlier quick reference](https://docs.easydiffraction.org/lib/latest/quick-reference/); members checked against [edi's declared API](https://github.com/enhantica/edi/blob/main/data/python-surface.json), [Python facade](https://github.com/enhantica/edi/blob/main/lib/edi/__init__.py), and [project input/output guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md).
 
 - `python/experiments.md`: organization adapted from the [earlier experiment guide](https://docs.easydiffraction.org/lib/latest/user-guide/analysis-workflow/experiment/); current behavior from [ExperimentFactory](https://github.com/enhantica/edi/blob/main/lib/edi/__init__.py) and [projects from scratch](https://github.com/enhantica/edi/blob/main/docs/user/guides/projects-from-scratch-in-the-app.md).
 
@@ -169,7 +169,7 @@ These source notes are retained for authors; they are not part of the published 
 
 - `application/projects.md`: [current opening, saving and exporting guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md).
 
-- `application/examples.md`: [current example catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md), [LBCO example](https://github.com/enhantica/edi/blob/main/docs/user/cli/pd-neut-cwl_lbco-hrpt/index.md), and [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py).
+- `application/examples/index.md`: [current example catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md), [LBCO example](https://github.com/enhantica/edi/blob/main/docs/user/cli/pd-neut-cwl_lbco-hrpt/index.md), and [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py).
 
 - `application/index.md`: [current project creation guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/projects-from-scratch-in-the-app.md), [current open/save guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md), [earlier workflow](https://github.com/easyscience/diffraction-lib/blob/develop/docs/docs/user-guide/analysis-workflow/index.md).
 
@@ -203,13 +203,13 @@ These source notes are retained for authors; they are not part of the published 
 
 - `cli/calculate.md`: [calc implementation and options](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py), [opening and output rules](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md), and the calculation/refinement distinction from the [earlier analysis guide](https://docs.easydiffraction.org/lib/latest/user-guide/analysis-workflow/analysis/).
 
-- `cli/examples.md`: [current example catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md), [LBCO example](https://github.com/enhantica/edi/blob/main/docs/user/cli/pd-neut-cwl_lbco-hrpt/index.md), and [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py).
+- `cli/examples/index.md`: [current example catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md), [LBCO example](https://github.com/enhantica/edi/blob/main/docs/user/cli/pd-neut-cwl_lbco-hrpt/index.md), and [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py).
 
 - `cli/index.md`: current commands and defaults from [edi's argument parser](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py), [complete-project loading](https://github.com/enhantica/edi/blob/main/docs/user/guides/complete-project-loading.md), and [project input/output](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md).
 
 - `cli/batch.md`: the shell composition is new for this preview; command behavior is checked against [edi's Command Line](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py). Scan semantics come from [complete-project loading](https://github.com/enhantica/edi/blob/main/docs/user/guides/complete-project-loading.md).
 
-- `cli/reference.md`: syntax, defaults and behavior checked directly against [the current edi parser and command implementations](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py). This is a selected user reference; the installed command's help remains the version-specific option listing.
+- `cli/reference/index.md`: syntax, defaults and behavior checked directly against [the current edi parser and command implementations](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py). This is a selected user reference; the installed command's help remains the version-specific option listing.
 
 - `cli/files.md`: [project input/output guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md), [current Command Line input handling](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py), and [project-output design](https://github.com/enhantica/edi/blob/main/docs/dev/adrs/0039-project-output.md).
 

@@ -1,3 +1,7 @@
+---
+icon: lucide/sparkles
+---
+
 # AI assistant
 
 The AI assistant in EasyDiffraction can explain a refinement, suggest which parameters to fit next,

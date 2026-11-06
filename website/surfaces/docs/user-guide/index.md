@@ -9,8 +9,8 @@ Start in the interface you want to use. Each section has its own setup and first
 | How you want to work | Start here | First refinement |
 | --- | --- | --- |
 | Visually, in a browser or on your desktop | [<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../application/index.md){ .ed-interface-link .ed-icon-label } | [Follow an example](../application/first-refinement.md) |
-| In a Python script or notebook | [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-link .ed-icon-label } | [Follow an example](../python/examples.md) |
-| From a terminal or shell script | [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Command Line</span>](../cli/index.md){ .ed-interface-link .ed-icon-label } | [Follow an example](../cli/examples.md) |
+| In a Python script or notebook | [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-link .ed-icon-label } | [Follow an example](../python/examples/index.md) |
+| From a terminal or shell script | [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Command Line</span>](../cli/index.md){ .ed-interface-link .ed-icon-label } | [Follow an example](../cli/examples/index.md) |
 
 ## Understand the analysis
 

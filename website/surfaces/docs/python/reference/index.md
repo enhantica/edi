@@ -45,4 +45,4 @@ Optional fit callbacks are `on_start`, `on_iteration`, `on_scan_start`, `on_file
 | `project.report.save_cif(path)` | Write a CIF report. |
 | `project.report.check()` | Read saved-report freshness states. |
 
-See [reports](reports.md) for call-specific options and the difference between saved settings and per-call overrides.
+See [reports](../reports.md) for call-specific options and the difference between saved settings and per-call overrides.

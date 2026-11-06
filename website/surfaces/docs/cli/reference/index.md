@@ -32,7 +32,7 @@ python -m edi fit PROJECT [--output DIR] [--dry]
     [--verbosity off|compact|full] [--report human|machine] [--stream]
 ```
 
-Default output is the human report at compact verbosity. A successful fit normally saves its folder. `--dry` executes without writing; a zip requires `--output DIR` to retain results. [Full guide](fit.md).
+Default output is the human report at compact verbosity. A successful fit normally saves its folder. `--dry` executes without writing; a zip requires `--output DIR` to retain results. [Full guide](../fit.md).
 
 ## Calculate
 
@@ -41,7 +41,7 @@ python -m edi calc PROJECT [--output DIR] [--dry]
     [--verbosity off|compact|full] [--report machine|human]
 ```
 
-Default output is the machine report at compact verbosity. The project supplies its grid and model. [Full guide](calculate.md).
+Default output is the machine report at compact verbosity. The project supplies its grid and model. [Full guide](../calculate.md).
 
 ## Report
 
@@ -52,7 +52,7 @@ python -m edi report PROJECT [--check] [--output PATH]
     [--exclude KEY ...|--include-all] [--colour-scheme NAME]
 ```
 
-`--check` checks saved-report freshness without writing. `--output PATH` writes an HTML document instead of updating the saved-report list. [Full guide](reports.md).
+`--check` checks saved-report freshness without writing. `--output PATH` writes an HTML document instead of updating the saved-report list. [Full guide](../reports.md).
 
 ## Export
 
@@ -60,7 +60,7 @@ python -m edi report PROJECT [--check] [--output PATH]
 python -m edi export PROJECT --output FILE.zip
 ```
 
-`-o` is the short output spelling. This packages the project folder as last saved. [Files and output](files.md).
+`-o` is the short output spelling. This packages the project folder as last saved. [Files and output](../files.md).
 
 ## Undo the last saved fit
 

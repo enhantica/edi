@@ -139,10 +139,11 @@ Math.abs(ratio-.012)<.00001;
                 "link.href.endsWith(link.dataset.downloadPlatform + '-cli.zip')));"
             )
         )
-    for page in (ROOT / 'surfaces/docs/cli').glob('*.md'):
-        if page.name in {'index.md', 'setup.md', 'python.md', 'standalone.md'}:
+    cli_pages = [page.stem for page in (ROOT / 'surfaces/docs/cli').glob('*.md')]
+    for route in sorted({*cli_pages, 'examples', 'reference'}):
+        if route in {'index', 'setup', 'python', 'standalone'}:
             continue
-        browser.goto(base + 'cli/' + page.stem + '/')
+        browser.goto(base + 'cli/' + route + '/')
         pairs = browser.execute("""
 return [...document.querySelectorAll('.tabbed-set')].map(group => {
   const panes=group.querySelectorAll('.tabbed-block');
@@ -152,7 +153,7 @@ return [...document.querySelectorAll('.tabbed-set')].map(group => {
         for pair in pairs:
             require(
                 len(pair) == 2 and pair[0] == pair[1].replace('python -m edi', 'edi'),
-                (page.name, pair),
+                (route, pair),
             )
     require(not browser.errors, browser.errors)
     return checks

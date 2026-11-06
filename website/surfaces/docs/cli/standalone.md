@@ -37,4 +37,4 @@ Pass the saved project and choose where to write the result:
 edi fit path/to/project --output refined-project
 ```
 
-Use [Run a refinement](fit.md) for the options, or [Run an example](examples.md) to try a complete case.
+Use [Run a refinement](fit.md) for the options, or [Run an example](examples/index.md) to try a complete case.
