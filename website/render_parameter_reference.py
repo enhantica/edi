@@ -530,6 +530,9 @@ def _decorate_category_pages(lookup: dict, glyphs: dict) -> None:
 
 def _decorate_feature_headings(lookup: dict, glyphs: dict) -> None:
     heading_categories = {
+        'Symmetry and cell': 'cell',
+        'Atom sites': 'atom_site',
+        'Linked structures': 'linked_structure',
         'Absorption': 'absorption',
         'Preferred orientation': 'preferred_orientation',
         'Background': 'background',
