@@ -62,6 +62,10 @@ def _write_reference(built: Path, base_url: str) -> None:
     for source in sorted(docs.rglob('*.md')):
         relative = source.relative_to(docs)
         text = source.read_text(encoding='utf-8')
+        # Entry pages share the title "Start here", so the index uses their specific one.
+        specific = re.search(
+            r'\A---\n.*?^html_title: "(.+?)"$.*?\n---\n', text, flags=re.DOTALL | re.MULTILINE
+        )
         text = re.sub(r'\A---\n.*?\n---\n', '', text, count=1, flags=re.DOTALL).lstrip()
         route = relative.parent if relative.name == 'index.md' else relative.with_suffix('')
         canonical = base_url + (route.as_posix().strip('.') + '/').lstrip('/')
@@ -100,9 +104,8 @@ def _write_reference(built: Path, base_url: str) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(f'Canonical page: {canonical}\n\n{text}', encoding='utf-8')
         title = re.search(r'^# (.+)$', text, flags=re.MULTILINE)
-        index.append(
-            f'- [{title[1] if title else relative}]({base_url}reference/{relative.as_posix()})'
-        )
+        label = specific[1] if specific else title[1] if title else relative
+        index.append(f'- [{label}]({base_url}reference/{relative.as_posix()})')
     (built / 'llms.txt').write_text('\n'.join(index) + '\n', encoding='utf-8')
 
 

@@ -1,10 +1,11 @@
 ---
 template: interface.html
+html_title: "Application: Start here"
 hide:
   - toc
 ---
 
-# Application
+# Start here
 
 Work visually, with the pattern or crystal structure beside the controls you are editing. Use the same application in your browser or install it on your computer.
 

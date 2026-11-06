@@ -1,10 +1,11 @@
 ---
 template: interface.html
+html_title: "Python: Start here"
 hide:
   - toc
 ---
 
-# Python
+# Start here
 
 Work with Python objects in scripts and notebooks, with direct access to parameters, data arrays and results.
 

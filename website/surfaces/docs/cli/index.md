@@ -1,10 +1,11 @@
 ---
 template: interface.html
+html_title: "Command Line: Start here"
 hide:
   - toc
 ---
 
-# Command Line
+# Start here
 
 Run saved projects from a terminal or shell script. The standalone executable supports refinement with `edi fit`. The Python package also supports calculation, export, undo, collections, reports, and live fit progress. Both run directly from a terminal.
 

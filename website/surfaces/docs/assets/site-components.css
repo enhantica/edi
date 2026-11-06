@@ -58,6 +58,7 @@
 .md-tabs__link:has(.ed-interface-icons) {display:inline-flex;align-items:center;gap:.3em}
 .md-tabs__link .ed-interface-icons svg {margin:0}
 .ed-interface-icons svg {width:1em;height:1em;fill:currentColor;flex:none}
+.md-nav__link > .ed-interface-icons svg {width:1.3em;height:1.3em}
 .md-typeset .ed-interface-icons svg[fill="none"], .ed-interface-icons svg[fill="none"] {fill:none}
 @media (max-width: 600px) {
   .md-typeset ol.ed-workflow-diagram {grid-template-columns:1fr;gap:1rem}
