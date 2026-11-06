@@ -14,29 +14,29 @@ Use the exact model identifier to select its explanation. Planned and proposed c
 
 | Type | Scope | Explanation |
 | --- | --- | --- |
-| `cwl-gaussian` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-cwl-pseudovoigt) |
-| `cwl-lorentzian` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-cwl-pseudovoigt) |
-| `cwl-pseudo-voigt` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-caglioti) |
-| `cwl-pseudo-voigt-berar-baldinozzi` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-berar-baldinozzi) |
-| `cwl-tch-pseudo-voigt` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-tch) |
-| `cwl-tch-pseudo-voigt-fcj` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-fcj) |
+| `cwl-gaussian` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-cwl-pseudovoigt) |
+| `cwl-lorentzian` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-cwl-pseudovoigt) |
+| `cwl-pseudo-voigt` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-caglioti) |
+| `cwl-pseudo-voigt-berar-baldinozzi` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-berar-baldinozzi) |
+| `cwl-tch-pseudo-voigt` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-tch) |
+| `cwl-tch-pseudo-voigt-fcj` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](profiles/cw.md#eq-fcj) |
 
 ### Time-of-flight peak profiles
 
 | Type or model | Scope | Explanation |
 | --- | --- | --- |
-| `tof-jorgensen` | <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a> neutron powder | [Physics](profiles/tof.md#eq-jorgensen) |
-| `tof-jorgensen-von-dreele` | <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a> neutron powder | [Physics](profiles/tof.md#eq-jorgensen-von-dreele) |
-| `tof-pseudo-voigt` | <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a> neutron powder | [Physics](profiles/tof.md#tof-pseudo-voigt) |
-| Ikeda–Carpenter · **Planned** | <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a> pulse profile | [Planned model](profiles/tof.md#ikeda-carpenter) |
+| `tof-jorgensen` | <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> neutron powder | [Physics](profiles/tof.md#eq-jorgensen) |
+| `tof-jorgensen-von-dreele` | <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> neutron powder | [Physics](profiles/tof.md#eq-jorgensen-von-dreele) |
+| `tof-pseudo-voigt` | <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> neutron powder | [Physics](profiles/tof.md#tof-pseudo-voigt) |
+| Ikeda–Carpenter · **Planned** | <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> pulse profile | [Planned model](profiles/tof.md#ikeda-carpenter) |
 
 ## <span class="ed-reference-icon" data-reference-category="absorption" aria-hidden="true">&#61507;</span> Absorption {#absorption}
 
 | Type | Scope | Explanation |
 | --- | --- | --- |
-| `none` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a>/<a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a> | [Physics](corrections/absorption.md#absorption-types) |
-| `cylinder-hewat` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a>; <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a> input spelling cylinder | [Physics](corrections/absorption.md#eq-hewat) |
-| `cylinder-lobanov` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> | [Physics](corrections/absorption.md#eq-lobanov) |
+| `none` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a>/<a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> | [Physics](corrections/absorption.md#absorption-types) |
+| `cylinder-hewat` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a>; <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> input spelling cylinder | [Physics](corrections/absorption.md#eq-hewat) |
+| `cylinder-lobanov` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> | [Physics](corrections/absorption.md#eq-lobanov) |
 
 ## <span class="ed-reference-icon" data-reference-category="extinction" aria-hidden="true">&#62373;</span> Extinction {#extinction}
 
@@ -92,17 +92,17 @@ The current [nuclear neutron](diffraction.md#eq-nuclear-structure-factor) and [X
 
 | Type | Scope | Explanation |
 | --- | --- | --- |
-| `wk1995` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
-| `it1992` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
+| `wk1995` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
+| `it1992` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
 
 ## X-ray dispersion {#xray-dispersion}
 
 | Type | Scope | Explanation |
 | --- | --- | --- |
-| `cromer-liberman` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
-| `sasaki1989` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
-| `it1992` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
-| `none` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
+| `cromer-liberman` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
+| `sasaki1989` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
+| `it1992` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
+| `none` | <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> X-ray | [Physics](diffraction.md#eq-xray-structure-factor) |
 
 ## Neutron scattering length {#neutron-scattering-length}
 
@@ -141,7 +141,7 @@ The current [nuclear neutron](diffraction.md#eq-nuclear-structure-factor) and [X
 
 | Type | Scope | Explanation |
 | --- | --- | --- |
-| `march-dollase` | linked phase in <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](corrections/orientation.md#eq-march-dollase) |
+| `march-dollase` | linked phase in <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> powder | [Physics](corrections/orientation.md#eq-march-dollase) |
 
 ## Reference snapshot {#reference-snapshot}
 

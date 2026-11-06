@@ -30,7 +30,7 @@ def badge(family: str, token: str, *, prefix: str = '../') -> str:
     return (
         f'<a class="ed-tag ed-tag--{item["tone"]}" data-ed-tag="{family}" '
         f'data-ed-token="{html.escape(token, quote=True)}" '
-        f'href="{prefix}user-guide/experiment-types/#{item["anchor"]}" '
+        f'href="{prefix}user-guide/glossary/#{item["anchor"]}" '
         f'title="{html.escape(item["meaning"], quote=True)}">'
         f'{symbol}{html.escape(item["label"])}</a>'
     )
@@ -161,15 +161,9 @@ def _write_experiment_types(registry: dict) -> None:
             'time to diffraction geometry.'
         ),
     }
-    lines = [
-        '# Experiment types and labels',
-        '',
-        (
-            'Use these labels to recognise the same measurement in the app, example '
-            'catalogue and guides. Colour helps scanning; the text identifies the meaning.'
-        ),
-        '',
-        'An experiment has several independent attributes. For example, the first refinement is '
+    intro = (
+        'An experiment combines one label from each family below. For example, the first '
+        'refinement is '
         + ' '.join(
             starmap(
                 badge,
@@ -180,24 +174,19 @@ def _write_experiment_types(registry: dict) -> None:
                 ],
             )
         )
-        + '.',
-        '',
-        (
-            'Choose the measurement type before loading data. The app enables combinations '
-            'it currently supports; a listed attribute does not imply every combination is '
-            'available. [See the experiment controls](../application/experiments.md).'
-        ),
-        '',
-    ]
+        + '. Choose the measurement type before loading data; a listed attribute does not imply '
+        'every combination is available.'
+    )
+    blocks = [intro]
     seen = set()
     for family, values in registry['tags'].items():
-        title, explanation = prose[family]
-        lines += ['## ' + title, '', explanation, '', '| Label | Meaning |', '| --- | --- |']
+        title, _explanation = prose[family]
+        rows = ['### ' + title, '', '| Label | Meaning |', '| --- | --- |']
         for token, item in values.items():
             if item['anchor'] in seen:
                 continue
             seen.add(item['anchor'])
-            lines.append(
+            rows.append(
                 '| <span id="'
                 + item['anchor']
                 + '"></span>'
@@ -206,8 +195,8 @@ def _write_experiment_types(registry: dict) -> None:
                 + meanings.get(item['anchor'], item['meaning'])
                 + ' |'
             )
-        lines.append('')
-    (DOCS / 'user-guide/experiment-types.md').write_text('\n'.join(lines))
+        blocks.append('\n'.join(rows))
+    replace(DOCS / 'user-guide/glossary.md', 'experiment-type-tables', '\n\n'.join(blocks))
 
 
 def _write_glossary_labels() -> None:
@@ -407,14 +396,6 @@ def _write_example_catalogue(registry: dict, metadata: dict) -> None:
         + '\n</div>\n</details>'
     )
     replace(DOCS / 'user-guide/examples.md', 'example-catalogue', content)
-    replace(
-        DOCS / 'user-guide/glossary.md',
-        'experiment-labels',
-        (
-            'For linked definitions of `pd`, `sc`, `neut`, `xray`, `cwl` and `tof`, see '
-            '[Experiment types and labels](experiment-types.md).'
-        ),
-    )
 
 
 def render() -> None:

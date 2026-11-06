@@ -2,7 +2,7 @@
 
 These terms are shared by the application, Python library and command line. The interface changes how you work with them, rather than changing their scientific meaning.
 
-The coloured measurement labels — such as <a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/experiment-types/#powder-diffraction" title="Powder diffraction">pd</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../user-guide/experiment-types/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a>, <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../user-guide/experiment-types/#neutron-diffraction" title="Neutron diffraction">neut</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="probe" data-ed-token="xray" href="../user-guide/experiment-types/#x-ray-diffraction" title="X-ray diffraction">xray</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> and <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a> — have their own page. [Experiment types and labels](experiment-types.md) is generated from the experiment registry and shared by the example catalogue and interface guides, so its chips always match the measurements the application supports. This page defines the scientific terms; that page catalogues the labels.
+The coloured measurement labels — such as <a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a>, <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="probe" data-ed-token="xray" href="../user-guide/glossary/#x-ray-diffraction" title="X-ray diffraction">xray</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> and <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> — are catalogued under [Experiment types and labels](#experiment-types-and-labels) at the end of this page. That catalogue is generated from the experiment registry, so its chips always match the measurements the application supports.
 
 ## Project and model
 
@@ -16,13 +16,13 @@ The coloured measurement labels — such as <a class="ed-tag ed-tag--technique" 
 
 ## Diffraction
 
-**Powder diffraction** <!-- glossary-label:powder --><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/experiment-types/#powder-diffraction" title="Powder diffraction">pd</a><!-- /glossary-label --> describes diffraction from a sample containing many crystallite orientations. The measured signal is commonly an intensity profile in which reflections can overlap.
+**Powder diffraction** <!-- glossary-label:powder --><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a><!-- /glossary-label --> describes diffraction from a sample containing many crystallite orientations. The measured signal is commonly an intensity profile in which reflections can overlap.
 
-**Single-crystal diffraction** <!-- glossary-label:single-crystal --><a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../user-guide/experiment-types/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a><!-- /glossary-label --> measures individual reflections from an oriented crystal. Its observations and fit assessment differ from those of a powder profile.
+**Single-crystal diffraction** <!-- glossary-label:single-crystal --><a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a><!-- /glossary-label --> measures individual reflections from an oriented crystal. Its observations and fit assessment differ from those of a powder profile.
 
-**Constant wavelength (CWL)** <!-- glossary-label:constant-wavelength --><a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a><!-- /glossary-label --> describes a measurement using a specified wavelength, with a powder pattern commonly expressed against the scattering angle 2θ.
+**Constant wavelength (CWL)** <!-- glossary-label:constant-wavelength --><a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a><!-- /glossary-label --> describes a measurement using a specified wavelength, with a powder pattern commonly expressed against the scattering angle 2θ.
 
-**Time of flight (TOF)** <!-- glossary-label:time-of-flight --><a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a><!-- /glossary-label --> separates neutron wavelengths through arrival time. The instrument calibration relates time of flight to the diffraction geometry.
+**Time of flight (TOF)** <!-- glossary-label:time-of-flight --><a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a><!-- /glossary-label --> separates neutron wavelengths through arrival time. The instrument calibration relates time of flight to the diffraction geometry.
 
 **Reflection** refers to diffraction associated with a set of lattice planes. A **Bragg-position mark** indicates where that reflection is expected in the pattern.
 
@@ -58,12 +58,59 @@ The coloured measurement labels — such as <a class="ed-tag ed-tag--technique" 
 
 The **coreCIF** dictionary defines general crystallographic quantities; **pdCIF** defines powder-diffraction quantities; **magCIF** covers magnetic structures. Edi project keys are EasyDiffraction's persistence vocabulary and should not all be assumed to be IUCr dictionary items.
 
-The catalogue uses <a class="ed-tag ed-tag--technique" href="../user-guide/experiment-types/#powder-diffraction" title="Powder diffraction">pd</a> for powder, <a class="ed-tag ed-tag--neutral" href="../user-guide/experiment-types/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a> for single crystal, <a class="ed-tag ed-tag--technique" href="../user-guide/experiment-types/#neutron-diffraction" title="Neutron diffraction">neut</a> for neutron, <a class="ed-tag ed-tag--neutral" href="../user-guide/experiment-types/#x-ray-diffraction" title="X-ray diffraction">xray</a> for X-ray, <a class="ed-tag ed-tag--neutral" href="../user-guide/experiment-types/#constant-wavelength" title="Constant wavelength">cwl</a> for constant wavelength and <a class="ed-tag ed-tag--technique" href="../user-guide/experiment-types/#time-of-flight" title="Time of flight">tof</a> for time of flight.
+The catalogue uses <a class="ed-tag ed-tag--technique" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> for powder, <a class="ed-tag ed-tag--neutral" href="../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a> for single crystal, <a class="ed-tag ed-tag--technique" href="../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a> for neutron, <a class="ed-tag ed-tag--neutral" href="../user-guide/glossary/#x-ray-diffraction" title="X-ray diffraction">xray</a> for X-ray, <a class="ed-tag ed-tag--neutral" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> for constant wavelength and <a class="ed-tag ed-tag--technique" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> for time of flight.
 
 These labels identify measurement types and scientific terms. Current feature availability and model coverage are described by the interface guides and checked examples.
 
 
 
-<!-- experiment-labels -->
-For linked definitions of `pd`, `sc`, `neut`, `xray`, `cwl` and `tof`, see [Experiment types and labels](experiment-types.md).
-<!-- /experiment-labels -->
+## Experiment types and labels
+
+These coloured labels mark the attributes of a measurement. They are generated from the experiment registry and shared by the app, the example catalogue and the guides.
+
+<!-- experiment-type-tables -->
+An experiment combines one label from each family below. For example, the first refinement is <a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a>. Choose the measurement type before loading data; a listed attribute does not imply every combination is available.
+
+### Purpose
+
+| Label | Meaning |
+| --- | --- |
+| <span id="fitting"></span><a class="ed-tag ed-tag--fitting" data-ed-tag="purpose" data-ed-token="refinement" href="../user-guide/glossary/#fitting" title="Fitting measured data"><span class="ed-reference-icon" aria-hidden="true"></span>Fitting</a> | Compare a calculated model with measured intensities and refine its parameters. |
+| <span id="simulation"></span><a class="ed-tag ed-tag--simulation" data-ed-tag="purpose" data-ed-token="simulation" href="../user-guide/glossary/#simulation" title="Calculation without measured data"><span class="ed-reference-icon" aria-hidden="true"></span>Simulation</a> | Calculate the pattern from the current model without measured intensities. |
+
+### Fitting mode
+
+| Label | Meaning |
+| --- | --- |
+| <span id="single-fit"></span><a class="ed-tag ed-tag--mode" data-ed-tag="fittingMode" data-ed-token="single" href="../user-guide/glossary/#single-fit" title="Fit one experiment"><span class="ed-reference-icon" aria-hidden="true"></span>Single</a> | Refine one experiment. |
+| <span id="joint-fit"></span><a class="ed-tag ed-tag--mode" data-ed-tag="fittingMode" data-ed-token="joint" href="../user-guide/glossary/#joint-fit" title="Fit several experiments together"><span class="ed-reference-icon" aria-hidden="true"></span>Joint</a> | Refine several experiments together with shared model quantities. |
+| <span id="sequential-fit"></span><a class="ed-tag ed-tag--mode" data-ed-tag="fittingMode" data-ed-token="sequential" href="../user-guide/glossary/#sequential-fit" title="Fit a scan using the preceding result"><span class="ed-reference-icon" aria-hidden="true"></span>Sequential</a> | Fit a scan in order, using the preceding result as the next starting point. |
+| <span id="independent-fit"></span><a class="ed-tag ed-tag--mode" data-ed-tag="fittingMode" data-ed-token="independent" href="../user-guide/glossary/#independent-fit" title="Fit a scan from common starting values"><span class="ed-reference-icon" aria-hidden="true"></span>Independent</a> | Fit each dataset from the same starting model. |
+
+### Sample form
+
+| Label | Meaning |
+| --- | --- |
+| <span id="powder-diffraction"></span><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> | Diffraction from many crystallite orientations, usually measured as an intensity profile. |
+| <span id="single-crystal-diffraction"></span><a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a> | Diffraction from an oriented crystal, measured as individual reflection intensities. |
+
+### Probe
+
+| Label | Meaning |
+| --- | --- |
+| <span id="neutron-diffraction"></span><a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a> | Diffraction using neutrons; nuclear scattering and, where modelled, magnetic scattering contribute. |
+| <span id="x-ray-diffraction"></span><a class="ed-tag ed-tag--neutral" data-ed-tag="probe" data-ed-token="x-ray" href="../user-guide/glossary/#x-ray-diffraction" title="X-ray diffraction">xray</a> | Diffraction using X-rays; the scattering model depends on the electron distribution. |
+
+### Beam mode
+
+| Label | Meaning |
+| --- | --- |
+| <span id="constant-wavelength"></span><a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> | A specified incident wavelength; powder patterns are commonly expressed against 2θ. |
+| <span id="time-of-flight"></span><a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> | Neutron wavelengths are separated by arrival time. Calibration relates flight time to diffraction geometry. |
+
+### Scattering type
+
+| Label | Meaning |
+| --- | --- |
+| <span id="bragg-diffraction"></span><a class="ed-tag ed-tag--technique" data-ed-tag="scatteringType" data-ed-token="bragg" href="../user-guide/glossary/#bragg-diffraction" title="Bragg diffraction">Bragg</a> | Model the crystalline contribution from lattice reflections. |
+<!-- /experiment-type-tables -->

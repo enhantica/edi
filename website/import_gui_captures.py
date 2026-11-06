@@ -1041,7 +1041,7 @@ supply the wavelength, profile or background.
             + ', '.join('**' + value + '**' for value in type_labels)
             + (
                 ' for this measurement. [Experiment '
-                'labels](../user-guide/experiment-types.md) distinguish these attributes.'
+                'labels](../user-guide/glossary.md#experiment-types-and-labels) distinguish these attributes.'
             ),
             '09-experiment-type',
         ),
@@ -1386,7 +1386,7 @@ def _write_examples(by_id: dict) -> None:
         '**Save project as…** to keep your changes.\n\nFor a guided analysis, follow '
         '[Example refinement](first-refinement.md). The shared [example '
         'catalogue](../user-guide/examples.md) lets you filter the scientific cases. '
-        '[Experiment labels](../user-guide/experiment-types.md) explain the same tags '
+        '[Experiment labels](../user-guide/glossary.md#experiment-types-and-labels) explain the same tags '
         'shown in the app.\n'
     )
     (DOCS / 'application/examples.md').write_text(page('Example projects', examples))

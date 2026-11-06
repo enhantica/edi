@@ -80,7 +80,6 @@ nav:
     - Parameter names: user-guide/parameter-reference.md
     - Fitting modes: user-guide/fitting-modes.md
     - Fit quality: user-guide/fit-quality.md
-    - Experiment types and labels: user-guide/experiment-types.md
     - Glossary: user-guide/glossary.md
   - Analysis workflow:
     - user-guide/analysis-workflow/index.md

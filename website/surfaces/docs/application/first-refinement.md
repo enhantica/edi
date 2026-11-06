@@ -179,7 +179,7 @@ Open **Experiment → Main**, expand **Experiments** and choose **Create experim
 
 ## Choose the measurement type
 
-Before loading data, choose **Powder**, **Constant wavelength**, **Neutron** for this measurement. [Experiment labels](../user-guide/experiment-types.md) distinguish these attributes.
+Before loading data, choose **Powder**, **Constant wavelength**, **Neutron** for this measurement. [Experiment labels](../user-guide/glossary.md#experiment-types-and-labels) distinguish these attributes.
 
 <div class="gui-viewer" markdown="1">
 
