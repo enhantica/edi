@@ -86,7 +86,6 @@ nav:
     - Report: user-guide/analysis-workflow/report.md
   - Examples:
     - user-guide/examples.md
-    - Catalogue: user-guide/example-catalogue.md
 - Application:
   - application/index.md
   - Start here:

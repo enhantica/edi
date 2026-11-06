@@ -387,15 +387,8 @@ def _catalogue_rows(registry: dict, metadata: dict) -> list[str]:
 def _write_example_catalogue(registry: dict, metadata: dict) -> None:
     controls = _catalogue_controls(registry, metadata)
     rows = _catalogue_rows(registry, metadata)
-    content = (
-        (
-            '<details><summary>Find more examples by measurement type</summary>\n<div '
-            'data-example-catalogue>\n'
-        )
-        + '\n'.join(controls + rows)
-        + '\n</div>\n</details>'
-    )
-    replace(DOCS / 'user-guide/example-catalogue.md', 'example-catalogue', content)
+    content = '<div data-example-catalogue>\n' + '\n'.join(controls + rows) + '\n</div>'
+    replace(DOCS / 'user-guide/examples.md', 'example-catalogue', content)
 
 
 def render() -> None:
