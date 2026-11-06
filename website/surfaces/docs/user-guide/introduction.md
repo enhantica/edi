@@ -6,6 +6,21 @@ EasyDiffraction calculates diffraction patterns from crystallographic models and
 
 The application provides a visual workspace in a browser or on a desktop. Python supports scripts and notebooks. The command line runs analyses declared by saved projects. These interfaces use the same project model and current diffraction engine.
 
+<div class="ed-interface-trio" markdown="1">
+<figure markdown="1">
+<figcaption markdown="1">[**Application**](../application/index.md){ .ed-interface-head }<br><span class="ed-interface-tag">Click through the workflow</span></figcaption>
+<img src="../assets/interfaces/application.png" alt="The EasyDiffraction application showing a fitted diffraction pattern and parameter controls" width="1000" height="622" loading="lazy">
+</figure>
+<figure markdown="1">
+<figcaption markdown="1">[**Python**](../python/index.md){ .ed-interface-head }<br><span class="ed-interface-tag">The same objects, in a notebook</span></figcaption>
+<img src="../assets/interfaces/python.png" alt="The same refinement in a Jupyter notebook, plotting the diffraction pattern" width="1000" height="760" loading="lazy">
+</figure>
+<figure markdown="1">
+<figcaption markdown="1">[**Command Line**](../cli/index.md){ .ed-interface-head }<br><span class="ed-interface-tag">The same project, one command</span></figcaption>
+<img src="../assets/interfaces/cli.png" alt="The same project refined from the command line, printing results and a diffraction pattern" width="1000" height="713" loading="lazy">
+</figure>
+</div>
+
 Choose the interface that fits your task. A complete saved project lets you continue the analysis through another interface without rebuilding its scientific inputs by hand. Setup, available controls and file-writing behaviour are described in the respective interface sections.
 
 ## From a model to a result
