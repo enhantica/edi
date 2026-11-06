@@ -1,4 +1,4 @@
-# :material-puzzle: Structures and parameters
+# :fa5-layer-group: Structures and parameters
 
 A structure describes the crystal: its symmetry, unit-cell geometry and atom sites. Experiments link the structures that contribute to their calculated data.
 

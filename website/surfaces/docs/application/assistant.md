@@ -1,5 +1,5 @@
 ---
-icon: lucide/sparkles
+icon: fa5/robot
 ---
 
 # AI assistant
@@ -9,8 +9,8 @@ and carry out supported actions in your open project.
 
 | Interface | Availability |
 | --- | --- |
-| :lucide-monitor: Desktop app | Select the optional **AI assistant** component during installation. |
-| :lucide-globe: Web app | The assistant is unavailable in the browser. The toolbar button opens information about the desktop app. |
+| :fa5-desktop: Desktop app | Select the optional **AI assistant** component during installation. |
+| :fa5-globe: Web app | The assistant is unavailable in the browser. The toolbar button opens information about the desktop app. |
 
 ## Install and connect
 

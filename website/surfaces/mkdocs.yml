@@ -41,30 +41,30 @@ extra_javascript:
   - assets/example-catalogue.js?v=1
 extra:
   interface_icons:
-    Application: [lucide/monitor]
-    Web application: [lucide/globe]
-    Web app: [lucide/globe]
-    Desktop application: [lucide/monitor]
-    Desktop app: [lucide/monitor]
+    Application: [fa5/desktop]
+    Web application: [fa5/globe]
+    Web app: [fa5/globe]
+    Desktop application: [fa5/desktop]
+    Desktop app: [fa5/desktop]
     Python: [simple/python]
-    Command Line: [lucide/square-terminal]
-    Standalone executable: [lucide/square-terminal]
+    Command Line: [fa5/terminal]
+    Standalone executable: [fa5/terminal]
     Python package: [simple/python]
     Python scripts: [simple/python]
     Jupyter notebooks: [simple/jupyter]
   section_icons:
-    Analysis workflow: routes
-    Peak profiles: chart-bell-curve
-    Intensity corrections: tune
+    Analysis workflow: route
+    Peak profiles: chart-area
+    Intensity corrections: sliders-h
     Experiment model: microscope
-    Refinement and statistics: chart-scatter-plot
-    Reference: book-search-outline
+    Refinement and statistics: chart-line
+    Reference: book
   workflow_icons:
     Project: archive
-    Structure: puzzle
+    Structure: layer-group
     Experiment: microscope
     Analysis: calculator
-    Report: clipboard-text
+    Report: clipboard-list
 nav:
 - Home: index.md
 - User guide:

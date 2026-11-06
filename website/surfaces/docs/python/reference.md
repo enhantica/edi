@@ -1,5 +1,5 @@
 ---
-icon: lucide/book-open
+icon: fa5/book-open
 ---
 
 # Python quick reference

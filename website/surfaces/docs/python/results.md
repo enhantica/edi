@@ -1,4 +1,4 @@
-# :material-calculator: Read the result
+# :fa5-calculator: Read the result
 
 Inspect the pattern, parameter values and uncertainties together. Agreement factors summarize a fit; they do not replace a scientific assessment of the model.
 

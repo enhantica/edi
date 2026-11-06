@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-microscope: Intensity corrections
+# :fa5-microscope: Intensity corrections
 
 ## Set absorption
 

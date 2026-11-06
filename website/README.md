@@ -51,3 +51,9 @@ saved starting and fitted projects of a completed native run.
 
 `capture.py surfaces`, `checks/math_browser.py` and `checks/network_browser.py` drive a browser over a built site with
 Playwright, which the pixi environment does not install. They write their reports to `_build-checks/`.
+
+## Icons
+
+The site's symbols are Font Awesome 5.15.4, the same set as the application, as `:fa5-name:` in text and `fa5/name` in
+front matter and `mkdocs.yml`. Add a new one with `render_fa5_icons.py`; the build refuses other sets. See
+[ADR-0014](adrs/0014-font-awesome-icons.md).

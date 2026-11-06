@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-calculator: Display and updates
+# :fa5-calculator: Display and updates
 
 ## Choose which parameters are shown
 

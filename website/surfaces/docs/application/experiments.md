@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-microscope: Experiments and measured data
+# :fa5-microscope: Experiments and measured data
 
 ## Select or create an experiment
 

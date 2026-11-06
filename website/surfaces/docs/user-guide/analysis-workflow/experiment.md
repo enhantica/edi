@@ -1,4 +1,4 @@
-# :material-microscope: Experiment
+# :fa5-microscope: Experiment
 
 An experiment describes an observation of the sample or a simulation of that observation. It combines measured data or a calculation range with an instrument model, peak profile, background and links to the contributing structures.
 
@@ -73,4 +73,4 @@ lif 0.01
 
 A measured experiment instead carries a background definition and a `loop_` of measured points with their uncertainties. See [data formats](../data-formats.md).
 
-Configure experiments in the [<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../../application/experiments.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/experiments.md){ .ed-interface-link .ed-icon-label }, then [use the saved experiments from Command Line](../../cli/experiments.md).
+Configure experiments in the [<span class="ed-interface-icons" aria-hidden="true">:fa5-desktop:</span> <span class="ed-icon-text">Application</span>](../../application/experiments.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/experiments.md){ .ed-interface-link .ed-icon-label }, then [use the saved experiments from Command Line](../../cli/experiments.md).

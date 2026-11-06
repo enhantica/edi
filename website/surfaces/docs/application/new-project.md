@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-archive: Create a project
+# :fa5-archive: Create a project
 
 ## Enter the project details
 

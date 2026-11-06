@@ -273,6 +273,37 @@ def _check_navigation(config_data: dict) -> None:
     print('Shared interface workflow navigation: PASS', flush=True)
 
 
+def _check_icons(config_data: dict) -> None:
+    """Interface symbols come from the app's font; only brand logos may come from elsewhere."""
+    available = {path.stem for path in (ROOT / 'surfaces/overrides/.icons/fa5').glob('*.svg')}
+    extra = config_data['extra']
+    used = {*extra['workflow_icons'].values(), *extra['section_icons'].values()}
+    for icons in extra['interface_icons'].values():
+        for icon in icons:
+            if not icon.startswith(('simple/', 'fontawesome/brands/')):
+                used.add(icon.removeprefix('fa5/'))
+    sources = [
+        *(ROOT / 'surfaces/docs').rglob('*.md'),
+        ROOT.parent / 'data/release-interfaces.json',
+    ]
+    for source in sources:
+        text = source.read_text(encoding='utf-8')
+        foreign = re.search(
+            r':(?:material|lucide|octicons|fontawesome-(?:solid|regular))-[a-z0-9-]+:', text
+        )
+        declared = re.search(r'\A---\n(?:.*\n)*?icon: (.+)\n(?:.*\n)*?---\n', text)
+        if foreign or (declared and not declared[1].startswith('fa5/')):
+            raise SystemExit(f'{source}: use a Font Awesome 5 icon (fa5), see ADR-0014')
+        used.update(re.findall(r':fa5-([a-z0-9-]+):', text))
+        if declared:
+            used.add(declared[1].removeprefix('fa5/'))
+    if used - available:
+        raise SystemExit(
+            f'Missing fa5 icons, add to render_fa5_icons.py: {sorted(used - available)}'
+        )
+    print('App icon set: PASS', flush=True)
+
+
 def _check_captures(config_data: dict) -> None:
     scenes = []
     capture = ROOT / 'surfaces/docs/assets/gui/y2o3'
@@ -376,6 +407,7 @@ def main() -> None:
         args.base_url = _normalized_base_url(parser, args.base_url)
     config_data = yaml.load((ROOT / 'surfaces/mkdocs.yml').read_text(), Loader=yaml.BaseLoader)
     _check_navigation(config_data)
+    _check_icons(config_data)
     _check_captures(config_data)
     version = importlib.metadata.version('zensical')
     if version != '0.0.73':

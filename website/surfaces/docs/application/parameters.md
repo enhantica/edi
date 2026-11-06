@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-calculator: Parameters and constraints
+# :fa5-calculator: Parameters and constraints
 
 ## Choose independent parameters
 

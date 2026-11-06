@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-archive: Projects and files
+# :fa5-archive: Projects and files
 
 Use the application to open, save and export the complete analysis. The shared [Project](../user-guide/analysis-workflow/project.md) stage explains what belongs in a project; [data formats](../user-guide/data-formats.md) explains its folder and archive representations.
 
@@ -122,7 +122,7 @@ A report is separate: saving a project does not create a fresh report. Use [Save
 
 ## Move to another interface
 
-Open the saved folder, `project.edi` or archive from [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">the Command Line</span>](../cli/index.md){ .ed-interface-link .ed-icon-label }. The shared [project concepts](../user-guide/analysis-workflow/project.md) explain what those interfaces read.
+Open the saved folder, `project.edi` or archive from [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:fa5-terminal:</span> <span class="ed-icon-text">the Command Line</span>](../cli/index.md){ .ed-interface-link .ed-icon-label }. The shared [project concepts](../user-guide/analysis-workflow/project.md) explain what those interfaces read.
 
 <!-- gui-guide:move-to-another-interface -->
 <div class="gui-viewer" markdown="1">

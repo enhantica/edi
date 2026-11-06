@@ -1,5 +1,5 @@
 ---
-icon: lucide/monitor
+icon: fa5/desktop
 template: interface.html
 ---
 

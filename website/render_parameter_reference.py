@@ -515,7 +515,7 @@ def _decorate_category_pages(lookup: dict, glyphs: dict) -> None:
             count=1,
             flags=re.MULTILINE,
         )
-        text = re.sub(r'^(# ):material-[a-z-]+:\s*', r'\1', text, count=1, flags=re.MULTILINE)
+        text = re.sub(r'^(# ):fa5-[a-z-]+:\s*', r'\1', text, count=1, flags=re.MULTILINE)
         text, count = re.subn(
             r'^# ',
             '# ' + icon(category['icon'], glyphs, category=uid),

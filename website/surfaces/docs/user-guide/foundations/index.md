@@ -8,7 +8,7 @@ The application provides a visual workspace in a browser or on a desktop. Python
 
 <div class="ed-interface-trio" markdown="1">
 <figure markdown="1">
-<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../../application/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">Click through the workflow</span></figcaption>
+<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:fa5-desktop:</span> <span class="ed-icon-text">Application</span>](../../application/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">Click through the workflow</span></figcaption>
 <img src="../../assets/interfaces/application.png" alt="The EasyDiffraction application showing a fitted diffraction pattern and parameter controls" width="1000" height="622" loading="lazy">
 </figure>
 <figure markdown="1">
@@ -16,7 +16,7 @@ The application provides a visual workspace in a browser or on a desktop. Python
 <img src="../../assets/interfaces/python.png" alt="The same refinement in a Jupyter notebook, plotting the diffraction pattern" width="1000" height="760" loading="lazy">
 </figure>
 <figure markdown="1">
-<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Command Line</span>](../../cli/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">One command, same project</span></figcaption>
+<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:fa5-terminal:</span> <span class="ed-icon-text">Command Line</span>](../../cli/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">One command, same project</span></figcaption>
 <img src="../../assets/interfaces/cli.png" alt="The same project refined from the command line, printing results and a diffraction pattern" width="1000" height="713" loading="lazy">
 </figure>
 </div>
@@ -37,4 +37,4 @@ For your own analysis, retain the source of the structure and data, experimental
 
 ## Find the right documentation
 
-The User guide explains the common scientific model. Start under [<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../../application/index.md){ .ed-interface-link .ed-icon-label }, [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/index.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Command Line</span>](../../cli/index.md){ .ed-interface-link .ed-icon-label } for setup and a first refinement. Those sections follow the same Project → Structure → Experiment → Analysis → Report stages. [Physics](../../physics/index.md) explains the calculations; [About](../../about/index.md) covers the project, licensing, support and citation.
+The User guide explains the common scientific model. Start under [<span class="ed-interface-icons" aria-hidden="true">:fa5-desktop:</span> <span class="ed-icon-text">Application</span>](../../application/index.md){ .ed-interface-link .ed-icon-label }, [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/index.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:fa5-terminal:</span> <span class="ed-icon-text">Command Line</span>](../../cli/index.md){ .ed-interface-link .ed-icon-label } for setup and a first refinement. Those sections follow the same Project → Structure → Experiment → Analysis → Report stages. [Physics](../../physics/index.md) explains the calculations; [About](../../about/index.md) covers the project, licensing, support and citation.

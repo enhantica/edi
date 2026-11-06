@@ -1,4 +1,4 @@
-# :material-clipboard-text: Save and check reports
+# :fa5-clipboard-list: Save and check reports
 
 The report command uses the project's structures, experiments, fit results and saved report settings. It presents the same document as Python and the application's Report page.
 

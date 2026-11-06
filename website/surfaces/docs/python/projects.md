@@ -1,4 +1,4 @@
-# :material-archive: Load and save projects
+# :fa5-archive: Load and save projects
 
 A complete project brings together structures, experiments, measured data or a calculation range, and analysis settings. Python opens the same saved projects as the application and Command Line.
 

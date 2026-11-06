@@ -1,11 +1,11 @@
 {
   "desktop": [
-    "lucide-monitor",
+    "fa5-desktop",
     "Desktop app",
     "desktop"
   ],
   "web": [
-    "lucide-globe",
+    "fa5-globe",
     "Web app",
     "web"
   ],
@@ -20,7 +20,7 @@
     "cli-py"
   ],
   "cli-standalone": [
-    "lucide-square-terminal",
+    "fa5-terminal",
     "Standalone CLI",
     "cli"
   ]

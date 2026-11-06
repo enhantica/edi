@@ -1,5 +1,5 @@
 ---
-icon: material/file-code-outline
+icon: fa5/file-code
 ---
 
 # Data formats
@@ -107,11 +107,11 @@ A structure is read from the one block that gives a cell, and an experiment from
 
 ### Structure files {#structure-edi}
 
-A saved structure — `.edi` or CIF — adds one crystal structure to the current project. It imports the structure model only; it does not open a complete project. The [:material-puzzle: Structure](analysis-workflow/structure.md) stage shows the file contents.
+A saved structure — `.edi` or CIF — adds one crystal structure to the current project. It imports the structure model only; it does not open a complete project. The [:fa5-layer-group: Structure](analysis-workflow/structure.md) stage shows the file contents.
 
 ### Experiment files {#experiment-edi}
 
-A saved experiment — `.edi` or CIF — adds one experiment with its measurement settings and any stored data. Check its linked structures after import. A measured-data text file such as `.xye` instead supplies observations to an existing experiment. The [:material-microscope: Experiment](analysis-workflow/experiment.md) stage shows the file contents.
+A saved experiment — `.edi` or CIF — adds one experiment with its measurement settings and any stored data. Check its linked structures after import. A measured-data text file such as `.xye` instead supplies observations to an existing experiment. The [:fa5-microscope: Experiment](analysis-workflow/experiment.md) stage shows the file contents.
 
 ## Measured-pattern text files
 
@@ -141,4 +141,4 @@ The exact file dialogs, import messages and write-back behaviour are interface-s
 - [Python: experiment input](../python/experiments.md) and [project loading and saving](../python/projects.md).
 - [Command Line: accepted project inputs and output destinations](../cli/files.md).
 
-See the shared [:material-clipboard-text: Report](analysis-workflow/report.md) stage for document formats and provenance.
+See the shared [:fa5-clipboard-list: Report](analysis-workflow/report.md) stage for document formats and provenance.

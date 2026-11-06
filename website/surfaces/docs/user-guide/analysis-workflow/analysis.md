@@ -1,4 +1,4 @@
-# :material-calculator: Analysis
+# :fa5-calculator: Analysis
 
 Analysis evaluates the combined structure and experiment model. A calculation predicts its pattern at the current values. Refinement changes selected independent parameters to improve agreement with measured observations.
 
@@ -19,9 +19,9 @@ Refine a set that the observations can constrain. Strongly correlated quantities
 A refinement is an iterative loop. A minimizer repeats these steps, adjusting the free parameters each cycle to reduce the weighted difference between the calculated and measured pattern:
 
 <ol class="ed-workflow-diagram ed-concept-flow" style="--ed-flow-columns:3" markdown="1" aria-label="Refinement iteration loop">
-<li markdown="1">[:material-calculator: Set parameter values](#select-the-independent-parameters)</li>
-<li markdown="1">[:lucide-chart-no-axes-combined: Calculate pattern](../../physics/rietveld.md#eq-rietveld-pattern)</li>
-<li markdown="1">[:lucide-git-compare: Compare with data](#fit-quality)</li>
+<li markdown="1">[:fa5-calculator: Set parameter values](#select-the-independent-parameters)</li>
+<li markdown="1">[:fa5-chart-line: Calculate pattern](../../physics/rietveld.md#eq-rietveld-pattern)</li>
+<li markdown="1">[:fa5-exchange-alt: Compare with data](#fit-quality)</li>
 </ol>
 
 The loop stops when the change falls below the convergence tolerance, or when the iteration budget is reached. Those limits are minimizer conditions, not part of the scientific model.

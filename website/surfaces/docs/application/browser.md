@@ -1,5 +1,5 @@
 ---
-icon: lucide/globe
+icon: fa5/globe
 ---
 
 # Web application

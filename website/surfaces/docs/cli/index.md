@@ -9,7 +9,7 @@ hide:
 
 Run saved projects from a terminal or shell script. The standalone executable supports refinement with `edi fit`. The Python package also supports calculation, export, undo, collections, reports, and live fit progress. Both run directly from a terminal.
 
-=== ":lucide-square-terminal: Standalone executable"
+=== ":fa5-terminal: Standalone executable"
 
     Download the executable for your operating system and run `edi …`. No Python installation is required.
 

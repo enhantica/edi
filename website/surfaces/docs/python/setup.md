@@ -1,5 +1,5 @@
 ---
-icon: lucide/download
+icon: fa5/download
 ---
 
 # Set up Python

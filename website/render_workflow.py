@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import html
 import re
-from importlib.metadata import distribution
 from pathlib import Path
 
 import yaml
@@ -14,18 +13,16 @@ from render_experiments import replace
 
 ROOT = Path(__file__).resolve().parent
 DOCS = ROOT / 'surfaces/docs'
+ICONS = ROOT / 'surfaces/overrides/.icons/fa5'
 
 
 def render() -> None:
     config = yaml.load((ROOT / 'surfaces/mkdocs.yml').read_text(), Loader=yaml.BaseLoader)
     stages = config['extra']['workflow_icons']
-    package = distribution('zensical')
     # Both entry pages share one responsive component and the navigation's icon paths.
     steps = []
     for title, name in stages.items():
-        relative = 'zensical/templates/.icons/material/' + name + '.svg'
-        source = Path(package.locate_file(relative))
-        root = ElementTree.fromstring(source.read_bytes())
+        root = ElementTree.fromstring((ICONS / (name + '.svg')).read_bytes())
         paths = ''.join(
             '<path d="' + html.escape(path.attrib['d'], quote=True) + '"/>'
             for path in root
@@ -33,14 +30,14 @@ def render() -> None:
         )
         if not paths:
             raise ValueError('Workflow icon has no vector paths: ' + name)
-        steps.append((title, paths))
+        steps.append((title, root.attrib['viewBox'], paths))
 
     def write_diagram(filename: str, links: dict[str, str]) -> None:
         diagram = ['<ol class="ed-workflow-diagram" aria-label="Analysis workflow">']
-        for title, paths in steps:
+        for title, view_box, paths in steps:
             diagram.append(
                 f'<li><a href="{links[title]}">'
-                f'<svg viewBox="0 0 24 24" aria-hidden="true">{paths}</svg>'
+                f'<svg viewBox="{view_box}" aria-hidden="true">{paths}</svg>'
                 f'<span>{title}</span></a></li>'
             )
         diagram.append('</ol>')
@@ -50,7 +47,7 @@ def render() -> None:
         ('user-guide/analysis-workflow/index.md', ''),
         ('user-guide/index.md', 'analysis-workflow/'),
     ]:
-        write_diagram(filename, {title: f'{prefix}{title.lower()}/' for title, _ in steps})
+        write_diagram(filename, {title: f'{prefix}{title.lower()}/' for title, _, _ in steps})
     # Each interface diagram opens the first page of that stage in its own section.
     for interface, folder in (
         ('Application', 'application'),
@@ -76,9 +73,9 @@ def render() -> None:
     text = path.read_text()
     for title, stage in group_stages.items():
         text = re.sub(
-            r'^## (?::material-[a-z-]+: )?' + re.escape(title) + r'( \{#[^}]+\})?$',
+            r'^## (?::fa5-[a-z-]+: )?' + re.escape(title) + r'( \{#[^}]+\})?$',
             lambda match, stage=stage, title=title: (
-                '## :material-'
+                '## :fa5-'
                 + stages[stage]
                 + ': '
                 + title
@@ -100,14 +97,14 @@ def render() -> None:
                 + r'\.md|'
                 + title.lower()
                 + r'\.md)\)',
-                r'[:material-' + name + ': ' + title + r'](\1)',
+                r'[:fa5-' + name + ': ' + title + r'](\1)',
                 text,
             )
         # Table labels can wrap below their icon group without separating icons.
         text = re.sub(
             r'(?m)^(\|.*)$',
             lambda row: re.sub(
-                r'\[(:material-[a-z-]+:) ([^]\n<]+)\]',
+                r'\[(:fa5-[a-z-]+:) ([^]\n<]+)\]',
                 (
                     r'[<span class="ed-icon-label"><span class="ed-icon-group" '
                     r'aria-hidden="true">\1</span><span '

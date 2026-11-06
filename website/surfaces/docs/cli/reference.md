@@ -1,5 +1,5 @@
 ---
-icon: lucide/book-open
+icon: fa5/book-open
 ---
 
 # Command reference

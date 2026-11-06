@@ -1,6 +1,6 @@
 ---
 template: features.html
-icon: material/clipboard-check-outline
+icon: fa5/clipboard-check
 ---
 
 # Features
@@ -11,9 +11,9 @@ Find a capability by its scientific role, then follow a feature link for its equ
 
 **Interfaces** — the application and Python configure the features marked available; Command Line runs the model already saved in a project.
 
-- :lucide-monitor:{ aria-hidden="true" } Application (browser or desktop)
+- :fa5-desktop:{ aria-hidden="true" } Application (browser or desktop)
 - :simple-python:{ aria-hidden="true" } Python library
-- :lucide-square-terminal:{ aria-hidden="true" } Command Line
+- :fa5-terminal:{ aria-hidden="true" } Command Line
 
 <span id="planned-scientific-models"></span>
 
@@ -23,20 +23,20 @@ Find a capability by its scientific role, then follow a feature link for its equ
 - :status-limited: Partial, or runs from a prepared project
 - :status-planned: Planned — a recorded roadmap item, not available yet
 - :status-proposed: Proposed — a candidate still under discussion
-- :material-cancel: Unavailable
+- :fa5-times-circle: Unavailable
 
-## :material-puzzle: Structure model {#structure-model}
+## :fa5-layer-group: Structure model {#structure-model}
 
 ### <span class="ed-reference-icon" data-reference-category="cell" aria-hidden="true">&#61874;</span> Symmetry and cell {#symmetry-and-cell}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Space group and setting](../physics/crystallography.md#symmetry) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Unit-cell lengths and angles](../physics/crystallography.md#eq-cell-metric) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 
 ### <span class="ed-reference-icon" data-reference-category="atom-site" aria-hidden="true">&#62930;</span> Atom sites {#atom-sites}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Atom labels and scattering species](../physics/diffraction.md#eq-nuclear-structure-factor) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Fractional coordinates](../physics/diffraction.md#eq-nuclear-structure-factor) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -45,14 +45,14 @@ Find a capability by its scientific role, then follow a feature link for its equ
 
 ### <span class="ed-reference-icon" data-reference-category="atom-site-aniso" aria-hidden="true">&#61618;</span> Atomic displacement {#atomic-displacement}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Isotropic Biso and Uiso](../physics/displacement.md#eq-isotropic-adp) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Anisotropic Bani, Uani and beta](../physics/displacement.md#eq-anisotropic-adp) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 
 ### Scattering models
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Nuclear neutron structure factors](../physics/diffraction.md#eq-nuclear-structure-factor) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [X-ray atomic form factors and dispersion](../physics/diffraction.md#eq-xray-structure-factor) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -64,16 +64,16 @@ Find a capability by its scientific role, then follow a feature link for its equ
 
 ### <span class="ed-reference-icon" data-reference-category="linked-structure" aria-hidden="true">&#62973;</span> Linked structures {#linked-structures}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Multiple phases and phase scales](../physics/diffraction.md#phase-fractions) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Derived mass fractions](../physics/diffraction.md#phase-fractions) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 
-## :material-microscope: Experiment model {#experiment-model}
+## :fa5-microscope: Experiment model {#experiment-model}
 
 ### Diffraction modes
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Neutron powder](../physics/rietveld.md#eq-rietveld-pattern) <a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [X-ray powder](../physics/diffraction.md#eq-xray-structure-factor) <a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="probe" data-ed-token="xray" href="../user-guide/glossary/#x-ray-diffraction" title="X-ray diffraction">xray</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -83,7 +83,7 @@ Find a capability by its scientific role, then follow a feature link for its equ
 
 ### Constant-wavelength peak profiles
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Gaussian and Lorentzian](../physics/profiles/cw.md#eq-cwl-pseudovoigt) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Pseudo-Voigt · direct width and mixing](../physics/profiles/cw.md#eq-caglioti) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -93,7 +93,7 @@ Find a capability by its scientific role, then follow a feature link for its equ
 
 ### Time-of-flight peak profiles
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Jorgensen · Gaussian pulse convolution](../physics/profiles/tof.md#eq-jorgensen) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Jorgensen–Von Dreele · mixed profile](../physics/profiles/tof.md#eq-jorgensen-von-dreele) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -105,7 +105,7 @@ Find a capability by its scientific role, then follow a feature link for its equ
 
 ### <span class="ed-reference-icon" data-reference-category="instrument" aria-hidden="true">&#62992;</span> Calibration {#calibration}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Wavelength and CW zero offset](../physics/calibration.md#eq-cwl-calibration) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [CW displacement and transparency shifts](../physics/calibration.md#eq-line-shifts) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -115,7 +115,7 @@ The reciprocal TOF coefficient is retained in saved input but is **not an active
 
 ### Radiation settings
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [X-ray wavelength doublet](../physics/corrections/intensity.md#wavelength-doublet) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [X-ray polarization and monochromator](../physics/corrections/intensity.md#eq-xray-polarization) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -123,7 +123,7 @@ The reciprocal TOF coefficient is retained in saved input but is **not an active
 
 ### <span class="ed-reference-icon" data-reference-category="absorption" aria-hidden="true">&#61507;</span> Absorption {#absorption}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Hewat cylinder](../physics/corrections/absorption.md#eq-hewat) <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Lobanov cylinder](../physics/corrections/absorption.md#eq-lobanov) <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -133,14 +133,14 @@ The reciprocal TOF coefficient is retained in saved input but is **not an active
 
 ### <span class="ed-reference-icon" data-reference-category="preferred-orientation" aria-hidden="true">&#61774;</span> Preferred orientation {#preferred-orientation}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [March–Dollase preferred orientation](../physics/corrections/orientation.md#eq-march-dollase) <a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 
 
 ### <span class="ed-reference-icon" data-reference-category="extinction" aria-hidden="true">&#62373;</span> Single-crystal extinction {#single-crystal-extinction}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Becker–Coppens · type I, type II and mixed](../physics/corrections/extinction.md#extinction-types) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Gaussian and Lorentzian mosaic distributions](../physics/corrections/extinction.md#eq-secondary-extinction) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -151,7 +151,7 @@ The reciprocal TOF coefficient is retained in saved input but is **not an active
 
 ### <span class="ed-reference-icon" data-reference-category="background" aria-hidden="true">&#63550;</span> Background models {#background-models}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Line-segment background](../physics/background.md#eq-line-segment-background) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Polynomial background](../physics/background.md#eq-polynomial-background) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -161,7 +161,7 @@ The reciprocal TOF coefficient is retained in saved input but is **not an active
 
 ### <span class="ed-reference-icon" data-reference-category="background-estimate" aria-hidden="true">&#61648;</span> Background estimation {#background-estimation}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Automatic estimation · arPLS, SNIP and FABC](../physics/background.md#background-estimation) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 
@@ -169,19 +169,19 @@ Command Line honours automatic-background settings saved in a project, including
 
 ### <span class="ed-reference-icon" data-reference-category="excluded-region" aria-hidden="true">&#61741;</span> Observation exclusions {#observation-exclusions}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Powder excluded regions](../physics/background.md#excluded-regions) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Single-crystal reflection exclusions](../physics/reliability.md#single-crystal-reflection-exclusions) | <span role="img" aria-label="Shared scientific model planned; unavailable now; interface delivery is not specified" title="Shared scientific model planned; unavailable now; interface delivery is not specified">:status-planned:</span> | <span role="img" aria-label="Shared scientific model planned; unavailable now; interface delivery is not specified" title="Shared scientific model planned; unavailable now; interface delivery is not specified">:status-planned:</span> | <span role="img" aria-label="Shared scientific model planned; unavailable now; interface delivery is not specified" title="Shared scientific model planned; unavailable now; interface delivery is not specified">:status-planned:</span> |
 
 
-## :material-calculator: Analysis and refinement {#analysis-and-refinement}
+## :fa5-calculator: Analysis and refinement {#analysis-and-refinement}
 
 <span id="calculation-and-fitting-modes"></span>
 
 ### Pattern calculation
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Forward calculation without observations](../physics/rietveld.md#eq-rietveld-pattern) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
 
@@ -189,7 +189,7 @@ Command Line honours automatic-background settings saved in a project, including
 
 ### Pattern fitting
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Rietveld least-squares refinement](../physics/rietveld.md#eq-weighted-residual) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Le Bail intensity extraction](../physics/rietveld.md#le-bail-intensity-extraction) | <span role="img" aria-label="Proposed scientific model; unavailable now" title="Proposed scientific model; unavailable now">:status-proposed:</span> | <span role="img" aria-label="Proposed scientific model; unavailable now" title="Proposed scientific model; unavailable now">:status-proposed:</span> | <span role="img" aria-label="Proposed scientific model; unavailable now" title="Proposed scientific model; unavailable now">:status-proposed:</span> |
@@ -197,7 +197,7 @@ Command Line honours automatic-background settings saved in a project, including
 
 ### <span class="ed-reference-icon" data-reference-category="fitting-mode" aria-hidden="true">&#61918;</span> Fitting modes {#fitting-modes}
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Single-experiment fitting](../physics/rietveld.md#joint-refinement) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Joint multi-experiment fitting](../physics/rietveld.md#joint-refinement) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -206,7 +206,7 @@ Command Line honours automatic-background settings saved in a project, including
 
 ### Refinement controls
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Independent free-parameter selection](../physics/minimization.md#eq-jacobian) | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Descent strategy from saved analysis settings](../physics/minimization.md#eq-lm) | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> | <span role="img" aria-label="Available: configure and run" title="Available: configure and run">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -216,7 +216,7 @@ One rule decides which values a fit can vary. A value cannot be fitted when it d
 
 ### Fit assessment
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Covariance, uncertainties and correlations](../physics/minimization.md#eq-covariance) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
 | [Profile and background-subtracted R factors](../physics/reliability.md#eq-profile-factors) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
@@ -224,13 +224,13 @@ One rule decides which values a fit can vary. A value cannot be fitted when it d
 | [Single-crystal factors and reflection subsets](../physics/reliability.md#single-crystal-factors) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
 
 
-## :material-archive: Projects and results {#projects-and-results}
+## :fa5-archive: Projects and results {#projects-and-results}
 
 <span id="project-files-and-measured-input"></span>
 
 ### Project files
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Open and save a complete project](data-formats.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
 | [Import/export a project archive](data-formats.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
@@ -239,9 +239,9 @@ Browser folder access depends on the browser; archive import/export provides a p
 
 ### Model input
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
-| [Create structures and experiments](analysis-workflow/project.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Unavailable" title="Unavailable">:material-cancel:</span> |
+| [Create structures and experiments](analysis-workflow/project.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Unavailable" title="Unavailable">:fa5-times-circle:</span> |
 | [Import a structure from CIF](data-formats.md#cif-files) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Import an experiment from CIF](data-formats.md#cif-files) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
 | [Import a structure from `.edi`](data-formats.md#structure-edi) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available: run a prepared project" title="Available: run a prepared project">:status-limited:</span> |
@@ -256,7 +256,7 @@ Command Line runs prepared projects, whose folders can hold CIF files as well as
 
 The application provides an interactive 3D view. Python and Command Line can include structure views in an HTML report.
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Atoms and symmetry copies](../application/structures.md#structure-viewer-controls) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> |
 | [Atom labels](../application/structures.md#structure-viewer-controls) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> |
@@ -265,29 +265,29 @@ The application provides an interactive 3D view. Python and Command Line can inc
 | [Crystal axes](../application/structures.md#structure-viewer-controls) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> |
 | [Rotation, pan and zoom](../application/structures.md#structure-viewer-controls) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> |
 | [Views along a, b and c](../application/structures.md#structure-viewer-controls) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> |
-| [Atom radii and displacement ellipsoids](../application/structures.md#change-the-structure-display) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="No interactive appearance editor in this interface" title="No interactive appearance editor in this interface">:material-cancel:</span> | <span role="img" aria-label="No interactive appearance editor in this interface" title="No interactive appearance editor in this interface">:material-cancel:</span> |
+| [Atom radii and displacement ellipsoids](../application/structures.md#change-the-structure-display) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="No interactive appearance editor in this interface" title="No interactive appearance editor in this interface">:fa5-times-circle:</span> | <span role="img" aria-label="No interactive appearance editor in this interface" title="No interactive appearance editor in this interface">:fa5-times-circle:</span> |
 | [Magnetic-moment arrows](../application/structures.md#magnetic-moments) | <span role="img" aria-label="Planned; unavailable now" title="Planned; unavailable now">:status-planned:</span> | <span role="img" aria-label="Planned; unavailable now" title="Planned; unavailable now">:status-planned:</span> | <span role="img" aria-label="Planned; unavailable now" title="Planned; unavailable now">:status-planned:</span> |
 
 Camera projection and colour schemes can also be changed in the application. These display choices do not change the structure model.
 
 ### Visual inspection
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Pattern and reflection charts](../physics/rietveld.md#eq-rietveld-pattern) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Partially available; see the qualification below" title="Partially available; see the qualification below">:status-limited:</span> | <span role="img" aria-label="Partially available; see the qualification below" title="Partially available; see the qualification below">:status-limited:</span> |
 | [Parameter correlation matrix](../application/refine.md#inspect-parameter-correlations) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> |
-| [Stacked patterns for multiple datasets](../application/scans.md#inspect-the-scan-views) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="No built-in interactive view in this interface" title="No built-in interactive view in this interface">:material-cancel:</span> | <span role="img" aria-label="No built-in interactive view in this interface" title="No built-in interactive view in this interface">:material-cancel:</span> |
-| [Intensity map for multiple datasets](../application/scans.md#inspect-the-scan-views) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="No built-in interactive view in this interface" title="No built-in interactive view in this interface">:material-cancel:</span> | <span role="img" aria-label="No built-in interactive view in this interface" title="No built-in interactive view in this interface">:material-cancel:</span> |
+| [Stacked patterns for multiple datasets](../application/scans.md#inspect-the-scan-views) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="No built-in interactive view in this interface" title="No built-in interactive view in this interface">:fa5-times-circle:</span> | <span role="img" aria-label="No built-in interactive view in this interface" title="No built-in interactive view in this interface">:fa5-times-circle:</span> |
+| [Intensity map for multiple datasets](../application/scans.md#inspect-the-scan-views) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="No built-in interactive view in this interface" title="No built-in interactive view in this interface">:fa5-times-circle:</span> | <span role="img" aria-label="No built-in interactive view in this interface" title="No built-in interactive view in this interface">:fa5-times-circle:</span> |
 | [Parameter evolution across a scan](../application/scans.md#inspect-the-scan-views) | <span role="img" aria-label="Available: interactive application view" title="Available: interactive application view">:status-available:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> | <span role="img" aria-label="Available in a generated HTML report" title="Available in a generated HTML report">:status-limited:</span> |
 
 Stacked and Map show powder datasets from a scan or a joint fit; several single-crystal datasets share a stacked calculated-versus-measured chart, with no intensity map. Correlations requires a fitted result with usable covariance. Python and Command Line provide report charts and result data; they do not provide the application’s Stacked and Map workspace views.
 
 ### Report export
 
-| Feature | <span role="img" aria-label="Application" title="Application">:lucide-monitor:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:lucide-square-terminal:</span> |
+| Feature | <span role="img" aria-label="Application" title="Application">:fa5-desktop:</span> | <span role="img" aria-label="Python library" title="Python library">:simple-python:</span> | <span role="img" aria-label="Command Line" title="Command Line">:fa5-terminal:</span> |
 | --- | :---: | :---: | :---: |
 | [Interactive and offline HTML reports](analysis-workflow/report.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
-| [PDF reports](analysis-workflow/report.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Unavailable" title="Unavailable">:material-cancel:</span> | <span role="img" aria-label="Unavailable" title="Unavailable">:material-cancel:</span> |
+| [PDF reports](analysis-workflow/report.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Unavailable" title="Unavailable">:fa5-times-circle:</span> | <span role="img" aria-label="Unavailable" title="Unavailable">:fa5-times-circle:</span> |
 | [CIF reports](analysis-workflow/report.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
 | [Saved-report freshness checks](analysis-workflow/report.md) | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> | <span role="img" aria-label="Available" title="Available">:status-available:</span> |
 

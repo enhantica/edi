@@ -23,4 +23,4 @@ The same application runs in your browser or on your desktop, with workflow page
 [Explore the application layout](workspace.md){ .md-button }
 [Follow an example refinement](first-refinement.md){ .md-button }
 
-For file access and saving, read [<span class="ed-interface-icons" aria-hidden="true">:lucide-globe:</span> <span class="ed-icon-text">Web application</span>](browser.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Desktop application</span>](desktop.md){ .ed-interface-link .ed-icon-label }.
+For file access and saving, read [<span class="ed-interface-icons" aria-hidden="true">:fa5-globe:</span> <span class="ed-icon-text">Web application</span>](browser.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:fa5-desktop:</span> <span class="ed-icon-text">Desktop application</span>](desktop.md){ .ed-interface-link .ed-icon-label }.

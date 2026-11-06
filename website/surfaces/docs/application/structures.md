@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-puzzle: Load and display structures
+# :fa5-layer-group: Load and display structures
 
 ## Load, create or duplicate
 

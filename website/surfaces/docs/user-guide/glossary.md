@@ -1,5 +1,5 @@
 ---
-icon: material/book-alphabet
+icon: fa5/book
 ---
 
 # Glossary

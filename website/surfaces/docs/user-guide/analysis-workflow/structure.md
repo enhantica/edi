@@ -1,4 +1,4 @@
-# :material-puzzle: Structure
+# :fa5-layer-group: Structure
 
 A structure describes a crystalline phase used to calculate diffraction. It combines a symmetry setting, unit-cell geometry and atom sites. It can be imported from a structural CIF or assembled from crystallographic information.
 
@@ -65,4 +65,4 @@ A project may contain several structures. An experiment links the structures tha
 
 Check which phases should contribute and whether their links are enabled. Structural quantities describe the sample; background and peak-profile terms belong to the experiment even though they also affect the calculated pattern.
 
-Edit structures in the [<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../../application/structures.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/structures.md){ .ed-interface-link .ed-icon-label }, then [calculate the saved model from Command Line](../../cli/calculate.md).
+Edit structures in the [<span class="ed-interface-icons" aria-hidden="true">:fa5-desktop:</span> <span class="ed-icon-text">Application</span>](../../application/structures.md){ .ed-interface-link .ed-icon-label } or [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/structures.md){ .ed-interface-link .ed-icon-label }, then [calculate the saved model from Command Line](../../cli/calculate.md).

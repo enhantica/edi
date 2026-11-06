@@ -1,4 +1,4 @@
-# :material-calculator: Calculate a pattern
+# :fa5-calculator: Calculate a pattern
 
 A calculation predicts the data from the current model. It does not optimize the model parameters. Use it for a simulation, or to inspect the starting model before a refinement.
 

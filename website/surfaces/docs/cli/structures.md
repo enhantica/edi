@@ -1,4 +1,4 @@
-# :material-puzzle: Structures in a saved project
+# :fa5-layer-group: Structures in a saved project
 
 Commands calculate from the structures stored in your project and linked by its experiments. They retain the same unit cell, symmetry, atom sites and parameter choices as the application and Python.
 

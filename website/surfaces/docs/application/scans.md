@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-calculator: Work with a scan
+# :fa5-calculator: Work with a scan
 
 A scan uses one template experiment for an ordered series of measurements. Open a scan from **Project → Main → Examples** to explore its datasets and results.
 

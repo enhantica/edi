@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-puzzle: Neutron scattering lengths
+# :fa5-layer-group: Neutron scattering lengths
 
 ## Override a structure's scattering lengths
 

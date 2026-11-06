@@ -1,4 +1,4 @@
-# :material-archive: Files and output
+# :fa5-archive: Files and output
 
 The same complete project is used by the application, Python and Command Line. Commands make their output destination explicit so you can retain an initial model and its result separately.
 

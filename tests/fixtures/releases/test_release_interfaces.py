@@ -54,11 +54,11 @@ def test_interface_labels_render_once():
     }
     page = DOCS.render([[published, {**published, 'draft': True, 'name': 'Private draft'}]])
     assert page.count('.ed-release-interface') == 2
-    assert ':lucide-monitor: Desktop app' in page
-    assert ':lucide-globe: Web app' in page
+    assert ':fa5-desktop: Desktop app' in page
+    assert ':fa5-globe: Web app' in page
     assert '`desktop`' not in page
     assert 'Private draft' not in page
-    assert page.index('Improve plot zoom') < page.index(':lucide-monitor: Desktop app')
+    assert page.index('Improve plot zoom') < page.index(':fa5-desktop: Desktop app')
 
 
 def test_notes_without_interfaces_keep_their_existing_text():

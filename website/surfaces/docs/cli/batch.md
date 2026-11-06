@@ -1,4 +1,4 @@
-# :material-calculator: Repeat an analysis
+# :fa5-calculator: Repeat an analysis
 
 Use ordinary shell or workflow tools to run several complete projects. There is no additional batch command to learn: each project declares the model and analysis it needs.
 

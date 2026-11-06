@@ -377,10 +377,10 @@ def viewer(panes: list[tuple[str, str]]) -> str:
 
 def area_icon(area: str) -> str:
     icons = {
-        'navigation': 'material-dock-top',
-        'main': 'lucide-monitor',
-        'sidebar': 'material-dock-right',
-        'status': 'material-dock-bottom',
+        'navigation': 'fa5-window-maximize',
+        'main': 'fa5-desktop',
+        'sidebar': 'fa5-columns',
+        'status': 'fa5-window-minimize',
     }
     return (
         f'<span class="gui-area-icon" data-gui-area="{area}" '
@@ -1355,7 +1355,7 @@ messages after importing data or when an operation is refused.
         )
     )
     gallery += (
-        '\n### :material-home: Home\n\nStart an analysis, learn the interface through '
+        '\n### :fa5-home: Home\n\nStart an analysis, learn the interface through '
         'built-in tutorials, read about EasyDiffraction, open the documentation or get in '
         'touch.\n\n'
     )
@@ -1363,16 +1363,16 @@ messages after importing data or when an operation is refused.
     for name in ['project', 'structure', 'experiment', 'analysis', 'report']:
         icon = {
             'project': 'archive',
-            'structure': 'puzzle',
+            'structure': 'layer-group',
             'experiment': 'microscope',
             'analysis': 'calculator',
-            'report': 'clipboard-text',
+            'report': 'clipboard-list',
         }[name]
-        gallery += f'\n### :material-{icon}: {name.title()}\n'
+        gallery += f'\n### :fa5-{icon}: {name.title()}\n'
         modes = [scene for scene in scenes if scene['page'] == name and scene['sidebar']]
         gallery += viewer(_page_panes(name, modes, by_id, manifest))
     (DOCS / 'application/workspace.md').write_text(
-        page('Application layout', workspace + gallery, icon='lucide/layout-dashboard')
+        page('Application layout', workspace + gallery, icon='fa5/columns')
     )
 
 

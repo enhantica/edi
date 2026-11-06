@@ -1,7 +1,7 @@
 # ADR-0002: Shared workflow navigation and icons
 
 Date: 2026-10-30
-Status: implemented
+Status: implemented; icon choices superseded by ADR-0014
 
 The prior library guide declares Material Design Icons in `diffraction-lib/docs/docs/user-guide/analysis-workflow/`: Project `material/archive`, Structure `material/puzzle`, Experiment `material/microscope`, Analysis `material/calculator`, Report `material/clipboard-text`.
 

@@ -2,7 +2,7 @@
 template: gui.html
 ---
 
-# :material-calculator: Refine a diffraction pattern
+# :fa5-calculator: Refine a diffraction pattern
 
 Refinement adjusts the parameters you choose to bring the calculated result closer to the measured data. Begin with a structural model and experiment that plausibly describe the measurement; refinement is not a substitute for checking those choices.
 
@@ -213,7 +213,7 @@ These groups are read-only. Assess the [agreement factors](../physics/reliabilit
 
 Save the updated project if you want to keep working from its refined values. Use the **Report** page to prepare a separate document containing the selected model, results and figures.
 
-The same project can be opened in [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/fit.md){ .ed-interface-link .ed-icon-label } or run with [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">the Command Line</span>](../cli/fit.md){ .ed-interface-link .ed-icon-label }.
+The same project can be opened in [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/fit.md){ .ed-interface-link .ed-icon-label } or run with [<span class="ed-interface-icons" aria-hidden="true">:fa5-terminal:</span> <span class="ed-icon-text">the Command Line</span>](../cli/fit.md){ .ed-interface-link .ed-icon-label }.
 
 <!-- gui-guide:save-the-project-and-report -->
 <div class="gui-viewer" markdown="1">

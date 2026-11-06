@@ -1,4 +1,4 @@
-# :material-microscope: Experiments and data
+# :fa5-microscope: Experiments and data
 
 An experiment describes the measurement and the model used to calculate it. For powder diffraction, that includes instrument and peak-profile settings, background, exclusions and linked structures.
 

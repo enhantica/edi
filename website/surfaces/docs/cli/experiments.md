@@ -1,4 +1,4 @@
-# :material-microscope: Experiments in a saved project
+# :fa5-microscope: Experiments in a saved project
 
 The saved experiment supplies measured data or a calculation range, instrument settings, peak profile, background, exclusions and links to structures. Commands use these settings when loading the complete project.
 
