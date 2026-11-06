@@ -22,4 +22,4 @@ The repository also contains examples and their scientific provenance. Keep the 
 
 ## Participate and report your work
 
-Use [community and support](community.md) to report a problem or propose an improvement. For publications and shared analyses, follow [citation and reproducibility](citation.md).
+Use [get in touch](community.md) to report a problem or propose an improvement. For publications and shared analyses, follow [citation and reproducibility](citation.md).

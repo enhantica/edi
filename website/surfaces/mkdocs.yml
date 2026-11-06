@@ -192,7 +192,7 @@ nav:
     - Parameter explanations: physics/parameters.md
 - About:
   - about/index.md
-  - Get involved: about/community.md
+  - Get in touch: about/community.md
   - Licence and source: about/licence.md
   - Citation and reproducibility: about/citation.md
   - What's new: changelog.md

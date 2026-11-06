@@ -1,6 +1,36 @@
-# Community and support
+# Get in touch
 
-Questions, reproducible problem reports and improvements to the documentation help make EasyDiffraction more useful for scientific work.
+Questions, feedback, reproducible problem reports and ideas all help make EasyDiffraction more useful for scientific work. Use the form below, whichever interface you work in, or the channels further down if you prefer.
+
+<form class="ed-contact-form" action="#" method="post" aria-label="Get in touch">
+<label>Reason
+<select name="reason">
+<option>Share feedback</option>
+<option>Ask a question</option>
+<option>Report a problem</option>
+<option>Suggest an idea</option>
+</select>
+</label>
+<div class="ed-contact-row">
+<label>Name
+<input type="text" name="name" placeholder="Optional">
+</label>
+<label>E-mail
+<input type="email" name="email" placeholder="So we can reply" required>
+</label>
+<label>Affiliation
+<input type="text" name="affiliation" placeholder="Optional">
+</label>
+</div>
+<label>Subject
+<input type="text" name="subject">
+</label>
+<label>Message
+<textarea name="message" required></textarea>
+</label>
+<button type="submit">Send</button>
+<p class="ed-contact-note">We reply to the e-mail address you provide. Only what you type here is sent.</p>
+</form>
 
 ## Ask a question
 

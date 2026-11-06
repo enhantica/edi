@@ -106,3 +106,13 @@
   font-size: 0.72em;
   white-space: nowrap;
 }
+
+/* Get-in-touch form (about/community.md). Frontend only; the action is wired to the mailer later. */
+.md-typeset .ed-contact-form{display:flex;flex-direction:column;gap:.9rem;margin:1.2rem 0 2rem}
+.md-typeset .ed-contact-form label{display:flex;flex-direction:column;gap:.3rem;font-size:.72rem;font-weight:700}
+.md-typeset .ed-contact-row{display:flex;flex-wrap:wrap;gap:.9rem}
+.md-typeset .ed-contact-row label{flex:1 1 12rem}
+.md-typeset .ed-contact-form input,.md-typeset .ed-contact-form select,.md-typeset .ed-contact-form textarea{font:inherit;width:100%;padding:.5rem .6rem;border:1px solid var(--md-default-fg-color--lighter);border-radius:.2rem;background:var(--md-default-bg-color);color:var(--md-default-fg-color)}
+.md-typeset .ed-contact-form textarea{min-height:8rem;resize:vertical}
+.md-typeset .ed-contact-form button{align-self:flex-start;font:inherit;font-weight:700;cursor:pointer;padding:.55rem 1.4rem;border:none;border-radius:.2rem;background:var(--md-primary-fg-color);color:var(--md-primary-bg-color)}
+.md-typeset .ed-contact-note{font-size:.7rem;color:var(--md-default-fg-color--light);margin-top:-.2rem}
