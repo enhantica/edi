@@ -6,7 +6,7 @@ An experiment describes an observation of the sample or a simulation of that obs
 
 Choose the sample form, radiation probe and beam mode that match the experiment. Constant-wavelength powder data use scattering angle; time-of-flight data use the calibrated time axis. Single-crystal observations describe reflections rather than a continuous powder profile.
 
-The [glossary](../glossary.md) explains the experiment labels. Use the checked [example catalogue](../examples.md) to find an appropriate starting model and its stated scope.
+The [glossary](../glossary.md) explains the experiment labels. Use the checked [example catalogue](../example-catalogue.md) to find an appropriate starting model and its stated scope.
 
 ## Observations or a simulation range
 

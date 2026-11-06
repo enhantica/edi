@@ -84,7 +84,9 @@ nav:
     - Experiment: user-guide/analysis-workflow/experiment.md
     - Analysis: user-guide/analysis-workflow/analysis.md
     - Report: user-guide/analysis-workflow/report.md
-  - Examples: user-guide/examples.md
+  - Examples:
+    - user-guide/examples.md
+    - Catalogue: user-guide/example-catalogue.md
 - Application:
   - application/index.md
   - Start here:

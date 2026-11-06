@@ -395,7 +395,7 @@ def _write_example_catalogue(registry: dict, metadata: dict) -> None:
         + '\n'.join(controls + rows)
         + '\n</div>\n</details>'
     )
-    replace(DOCS / 'user-guide/examples.md', 'example-catalogue', content)
+    replace(DOCS / 'user-guide/example-catalogue.md', 'example-catalogue', content)
 
 
 def render() -> None:

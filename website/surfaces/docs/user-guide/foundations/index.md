@@ -1,7 +1,3 @@
----
-icon: material/information-slab-circle
----
-
 # Foundations
 
 EasyDiffraction calculates diffraction patterns from crystallographic models and refines selected model parameters against measured observations. It helps you connect a proposed structure with experimental evidence and retain the choices behind the result.
