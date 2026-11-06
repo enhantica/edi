@@ -119,8 +119,10 @@
 /* Three-interface illustration on the introduction page (one product, several ways to work). */
 .ed-interface-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.2rem;margin-block:1.2rem 1.6rem}
 .md-typeset .ed-interface-trio figure{margin:0;display:flex;flex-direction:column}
-.md-typeset .ed-interface-trio figcaption{max-width:none;margin:0 0 .5rem;font-size:.72rem;font-style:normal;text-align:left;line-height:1.35}
+.md-typeset .ed-interface-trio figure>p{margin:0}
+.md-typeset .ed-interface-trio figcaption{max-width:none;margin:0 0 .4rem;font-size:.72rem;font-style:normal;text-align:left;line-height:1.35}
+.md-typeset .ed-interface-trio figcaption p{margin:0}
 .md-typeset .ed-interface-trio .ed-interface-head{font-size:.8rem;font-weight:400}
 .ed-interface-trio .ed-interface-tag{color:var(--md-default-fg-color--light);white-space:nowrap}
-.ed-interface-trio img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;object-position:center;border-radius:var(--ed-screenshot-radius);border:1px solid var(--md-default-fg-color--lightest);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.ed-interface-trio img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;object-position:center;border-radius:var(--ed-screenshot-radius);border:1px solid #d6d6d6}
 @media (max-width:720px){.ed-interface-trio{grid-template-columns:1fr;max-width:28rem}}
