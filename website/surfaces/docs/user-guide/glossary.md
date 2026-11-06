@@ -2,6 +2,8 @@
 
 These terms are shared by the application, Python library and command line. The interface changes how you work with them, rather than changing their scientific meaning.
 
+The coloured measurement labels — such as `pd`, `sc`, `neut`, `xray`, `cwl` and `tof` — have their own page. [Experiment types and labels](experiment-types.md) is generated from the experiment registry and shared by the example catalogue and interface guides, so its chips always match the measurements the application supports. This page defines the scientific terms; that page catalogues the labels.
+
 ## Project and model
 
 | Term | Meaning |
