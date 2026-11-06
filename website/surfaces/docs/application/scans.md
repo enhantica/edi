@@ -43,7 +43,7 @@ Before fitting, the pattern uses the template settings. After fitting, selecting
 
 On **Analysis → Extra**, expand **Fitting mode**. **Sequential** starts each dataset from the preceding result; **Independent** starts each from the same template. **Single** fits only the shown dataset and makes that result the new template.
 
-Check the template before running the full series. See [fitting modes](fitting-modes.md) for the starting-state rules.
+Check the template before running the full series. See [fitting modes](analysis/fitting-mode.md) for the starting-state rules.
 
 <!-- gui-guide:choose-the-starting-point-rule -->
 <div class="gui-viewer" markdown="1">
@@ -88,7 +88,7 @@ Expand **Sequential fit** and **Scan extraction rules** on the same tab. Inspect
 
 Press **Fit** at the right of the status bar, on any page, and follow the dataset counts beside it. While a run is under way the button reads **Stop**; stopping keeps the completed results. It then reads **Continue**, which resumes from the first unfitted file, or **Refit** after a change to the template, which fits every file again. **Reset**, next to it, clears every dataset's result for another run, and **Undo** restores the preceding results.
 
-**Follow**, also in the status bar, displays the dataset currently being fitted. Selecting another dataset turns it off; select Follow again to follow progress. [Display and updates](display.md) controls redraw frequency.
+**Follow**, also in the status bar, displays the dataset currently being fitted. Selecting another dataset turns it off; select Follow again to follow progress. [Display and updates](analysis/parameters-shown.md) controls redraw frequency.
 
 <!-- gui-guide:run-stop-and-continue -->
 <div class="gui-viewer" markdown="1">
@@ -149,7 +149,7 @@ Use **Stacked** to compare the patterns one above another or **Map** to inspect 
 
 ## Save the scan
 
-Use **Save project as…** to keep the example together with its data and results. The run writes a row per dataset to `analysis/results.csv` as it progresses. Inspect the scan's report on **Report** and choose [which sections to export](reports.md).
+Use **Save project as…** to keep the example together with its data and results. The run writes a row per dataset to `analysis/results.csv` as it progresses. Inspect the scan's report on **Report** and choose [which sections to export](report/index.md).
 
 <!-- gui-guide:save-the-scan -->
 <div class="gui-viewer" markdown="1">

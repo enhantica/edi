@@ -13,6 +13,8 @@ import subprocess
 from operator import itemgetter
 from pathlib import Path
 
+from render_experiments import replace
+
 ROOT = Path(__file__).resolve().parent
 DOCS = ROOT / 'surfaces/docs'
 ASSETS = DOCS / 'assets/reference'
@@ -54,17 +56,7 @@ EXPERIMENT = {
 
 # Category-specific guides use the native category symbol; broad workflow groups
 # retain the existing Material workflow icons (ADR-0002).
-CATEGORY_PAGES = {
-    'application/symmetry.md': 'cell',
-    'application/atoms.md': 'atom_site',
-    'application/displacement.md': 'atom_site_aniso',
-    'application/instrument.md': 'instrument',
-    'application/peak-profiles.md': 'peak',
-    'application/background.md': 'background',
-    'application/linked-structures.md': 'linked_structure',
-    'application/minimizer.md': 'minimizer',
-    'application/fitting-modes.md': 'fitting_mode',
-}
+GROUPS = json.loads((ROOT / 'application-groups.json').read_text())
 
 
 def anchor(uid: str) -> str:
@@ -497,35 +489,48 @@ def _explanations(categories: list, items: list, glyphs: dict, scientific: dict)
     return details
 
 
-def _decorate_category_pages(lookup: dict, glyphs: dict) -> None:
-    for filename, uid in CATEGORY_PAGES.items():
-        category = lookup[uid]
-        glyph = glyphs[category['icon']]
-        path = DOCS / filename
-        text = path.read_text()
-        # This metadata is generated from the same exported dictionary as headings.
-        text = re.sub(r'^category_glyph:.*\n', '', text, flags=re.MULTILINE)
-        if not text.startswith('---\n'):
-            raise ValueError('Category guide must retain its template front matter: ' + filename)
-        text = text.replace('---\n', '---\ncategory_glyph: ' + json.dumps(chr(glyph)) + '\n', 1)
-        text = re.sub(
-            r'^(# )<span[^>]*data-reference-category="[^"\n]+"[^>]*>.*?</span>\s*',
-            r'\1',
-            text,
-            count=1,
-            flags=re.MULTILINE,
-        )
-        text = re.sub(r'^(# ):fa5-[a-z-]+:\s*', r'\1', text, count=1, flags=re.MULTILINE)
-        text, count = re.subn(
-            r'^# ',
-            '# ' + icon(category['icon'], glyphs, category=uid),
-            text,
-            count=1,
-            flags=re.MULTILINE,
-        )
-        if count != 1:
-            raise ValueError('Category guide must have a title: ' + filename)
-        path.write_text(text)
+def _decorate_group_pages(lookup: dict, glyphs: dict) -> None:
+    """Give each sidebar group's page the app's symbol, in its title and in the menu."""
+    for entries in GROUPS['stages'].values():
+        for entry in entries:
+            uid = entry.get('category', '')
+            if uid and uid not in lookup:
+                raise ValueError('Application group names an unknown category: ' + uid)
+            path = DOCS / entry['page']
+            text = path.read_text()
+            text = re.sub(r'^category_glyph:.*\n', '', text, flags=re.MULTILINE)
+            if not text.startswith('---\n'):
+                raise ValueError('Group page must retain its front matter: ' + entry['page'])
+            glyph = chr(glyphs[entry['icon']])
+            text = text.replace('---\n', '---\ncategory_glyph: ' + json.dumps(glyph) + '\n', 1)
+            text = re.sub(
+                r'^(# )<span class="ed-reference-icon"[^>]*>.*?</span>\s*',
+                r'\1',
+                text,
+                count=1,
+                flags=re.MULTILINE,
+            )
+            text, count = re.subn(
+                r'^# ',
+                '# ' + icon(entry['icon'], glyphs, category=uid),
+                text,
+                count=1,
+                flags=re.MULTILINE,
+            )
+            if count != 1:
+                raise ValueError('Group page must have a title: ' + entry['page'])
+            path.write_text(text)
+
+
+def _write_stage_tables(glyphs: dict) -> None:
+    """List each stage's sidebar groups on its overview page, from the same record as the menu."""
+    for stage, entries in GROUPS['stages'].items():
+        rows = ['| Sidebar group | Tab | Shown |', '| --- | --- | --- |']
+        for entry in entries:
+            name = Path(entry['page']).name
+            title = f'{icon(entry["icon"], glyphs)}[{entry["title"]}]({name})'
+            rows.append(f'| {title} | {entry["tab"]} | {entry.get("when", "Always")} |')
+        replace(DOCS / f'application/{stage}/index.md', 'sidebar-groups', '\n'.join(rows))
 
 
 def _decorate_feature_headings(lookup: dict, glyphs: dict) -> None:
@@ -604,7 +609,8 @@ def render() -> None:
     details = _explanations(categories, items, glyphs, scientific)
     (DOCS / 'physics/parameters.md').write_text('\n'.join(details))
     _inject(DOCS / 'user-guide/parameters.md', 'parameter-names', '\n'.join(tables))
-    _decorate_category_pages(lookup, glyphs)
+    _decorate_group_pages(lookup, glyphs)
+    _write_stage_tables(glyphs)
     _decorate_feature_headings(lookup, glyphs)
     # A portable exact lookup also consumed by native help verification and future integrations.
     (ASSETS / 'parameter-links.json').write_text(

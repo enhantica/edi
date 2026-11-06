@@ -250,7 +250,7 @@ def main() -> None:
     output = ROOT / '_build-checks'
     output.mkdir(exist_ok=True)
     base_path = '' if name == 'surfaces' else f'{name}/'
-    docs_path = 'application/refine/' if name == 'surfaces' else 'guides/refine/'
+    docs_path = 'application/analysis/' if name == 'surfaces' else 'guides/refine/'
     checks = []
     errors = []
     with sync_playwright() as p:

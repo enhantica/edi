@@ -137,7 +137,7 @@ Hand on the complete project folder or archive to keep its saved model, embedded
 
 The exact file dialogs, import messages and write-back behaviour are interface-specific:
 
-- [Application: measured-data import](../application/experiments.md) and [saving projects](../application/projects.md).
+- [Application: measured-data import](../application/experiment/experiments.md) and [saving projects](../application/project/index.md).
 - [Python: experiment input](../python/experiments.md) and [project loading and saving](../python/projects.md).
 - [Command Line: accepted project inputs and output destinations](../cli/files.md).
 

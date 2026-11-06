@@ -95,32 +95,65 @@ nav:
   - Analysis workflow:
     - application/analysis-workflow/index.md
     - Project:
-      - Create a project: application/new-project.md
-      - Open and save: application/projects.md
+      - application/project/index.md
+      - Get started: application/project/get-started.md
+      - Examples: application/project/examples.md
+      - Recent projects: application/project/recent-projects.md
+      - Standard uncertainties: application/project/standard-uncertainties.md
     - Structure:
-      - Load and display: application/structures.md
-      - Symmetry and cell: application/symmetry.md
-      - Atom sites: application/atoms.md
-      - Atomic displacement: application/displacement.md
-      - Scattering lengths: application/scattering.md
+      - application/structure/index.md
+      - Structures: application/structure/structures.md
+      - Space group: application/structure/space-group.md
+      - Cell: application/structure/cell.md
+      - Atom sites: application/structure/atom-sites.md
+      - Atomic displacement: application/structure/atomic-displacement.md
+      - Scattering lengths: application/structure/scattering-lengths.md
+      - Appearance: application/structure/appearance.md
     - Experiment:
-      - Experiments and data: application/experiments.md
-      - Instrument: application/instrument.md
-      - Peak profiles: application/peak-profiles.md
-      - Background and exclusions: application/background.md
-      - Linked structures: application/linked-structures.md
-      - Intensity corrections: application/corrections.md
+      - application/experiment/index.md
+      - Experiments: application/experiment/experiments.md
+      - Calculation range: application/experiment/calculation-range.md
+      - Background: application/experiment/background.md
+      - Instrument: application/experiment/instrument.md
+      - Peak profile: application/experiment/peak-profile.md
+      - Excluded regions: application/experiment/excluded-regions.md
+      - Extinction: application/experiment/extinction.md
+      - Linked structures: application/experiment/linked-structures.md
+      - Background estimation: application/experiment/background-estimation.md
+      - Absorption: application/experiment/absorption.md
+      - Preferred orientations: application/experiment/preferred-orientations.md
+      - Observed reflections: application/experiment/observed-reflections.md
+      - Scattering source: application/experiment/scattering-source.md
+      - Data source: application/experiment/data-source.md
+      - Measured data: application/experiment/measured-data.md
+      - Performance: application/experiment/performance.md
     - Analysis:
-      - Refine a pattern: application/refine.md
-      - Parameters and constraints: application/parameters.md
-      - Fitting modes: application/fitting-modes.md
-      - Minimizer: application/minimizer.md
-      - Display and updates: application/display.md
-      - Work with a scan: application/scans.md
-    - Report: application/reports.md
+      - application/analysis/index.md
+      - Parameters: application/analysis/parameters.md
+      - Minimizer: application/analysis/minimizer.md
+      - Fitting mode: application/analysis/fitting-mode.md
+      - Fitted reflections: application/analysis/fitted-reflections.md
+      - Aliases: application/analysis/aliases.md
+      - Constraints: application/analysis/constraints.md
+      - Joint-fit weights: application/analysis/joint-fit-weights.md
+      - Sequential fit: application/analysis/sequential-fit.md
+      - Scan extraction rules: application/analysis/scan-extraction-rules.md
+      - Fit start values: application/analysis/fit-start-values.md
+      - Fit result: application/analysis/fit-result.md
+      - Experiment fit result: application/analysis/experiment-fit-result.md
+      - Structure fit result: application/analysis/structure-fit-result.md
+      - Parameters shown: application/analysis/parameters-shown.md
+      - Pattern updates during a scan: application/analysis/pattern-updates.md
+      - Performance: application/analysis/performance.md
+    - Report:
+      - application/report/index.md
+      - Export: application/report/export.md
+      - Contents: application/report/contents.md
+      - Saved reports: application/report/saved-reports.md
   - Examples:
     - application/examples/index.md
     - Example refinement: application/first-refinement.md
+    - Work with a scan: application/scans.md
 - Python:
   - Start here:
     - python/index.md

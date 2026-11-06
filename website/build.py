@@ -273,6 +273,41 @@ def _check_navigation(config_data: dict) -> None:
     print('Shared interface workflow navigation: PASS', flush=True)
 
 
+def _check_application_groups(config_data: dict) -> None:
+    """The Application menu repeats the app: one page per sidebar group, in the app's order."""
+    groups = json.loads((ROOT / 'application-groups.json').read_text(encoding='utf-8'))
+    section = next(entry['Application'] for entry in config_data['nav'] if 'Application' in entry)
+    workflow = next(
+        entry['Analysis workflow'] for entry in section if 'Analysis workflow' in entry
+    )
+    for stage in workflow[1:]:
+        ((title, pages),) = stage.items()
+        expected = groups['stages'][title.lower()]
+        found = [next(iter(page.items())) for page in pages[1:]]
+        if found != [(entry['title'], entry['page']) for entry in expected]:
+            raise SystemExit(f'{title}: the menu must follow application-groups.json')
+    entries = [entry for stage in groups['stages'].values() for entry in stage]
+    known = {name for entry in entries for name in entry.get('components', [])}
+    known.update(groups['undocumented']['components'])
+    categories = {entry.get('category') for entry in entries}
+    categories.update(groups['undocumented']['categories'])
+    app = ROOT.parent / 'app'
+    for page in ('Project', 'Structure', 'Experiment', 'Analysis', 'Report'):
+        source = (app / f'qml/Pages/{page}/{page}Page.qml').read_text(encoding='utf-8')
+        found = set(re.findall(r'^\s+(\w+Group) \{', source, flags=re.MULTILINE)) - {
+            'CategoryGroup'
+        }
+        if found - known:
+            raise SystemExit(
+                f'{page}: add these sidebar groups to the menu: {sorted(found - known)}'
+            )
+    model = (app / 'src/category_list_model.cpp').read_text(encoding='utf-8')
+    placed = set(re.findall(r'QStringLiteral\("(\w+)"\), \{T::', model))
+    if placed - categories:
+        raise SystemExit(f'Add these app categories to the menu: {sorted(placed - categories)}')
+    print('Application menu follows the app sidebar: PASS', flush=True)
+
+
 def _check_icons(config_data: dict) -> None:
     """Interface symbols come from the app's font; only brand logos may come from elsewhere."""
     available = {path.stem for path in (ROOT / 'surfaces/overrides/.icons/fa5').glob('*.svg')}
@@ -407,6 +442,7 @@ def main() -> None:
         args.base_url = _normalized_base_url(parser, args.base_url)
     config_data = yaml.load((ROOT / 'surfaces/mkdocs.yml').read_text(), Loader=yaml.BaseLoader)
     _check_navigation(config_data)
+    _check_application_groups(config_data)
     _check_icons(config_data)
     _check_captures(config_data)
     version = importlib.metadata.version('zensical')

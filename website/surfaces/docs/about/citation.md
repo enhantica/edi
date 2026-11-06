@@ -23,7 +23,7 @@ For a scan, retain the file order, template and result table. For a comparison w
 
 ## Keep a project and a report
 
-The project is the state you can reopen and analyse. A [report](../application/reports.md) is a separate account of the model and result. Keep both when sharing work: the report makes the result readable, and the project makes continued analysis possible.
+The project is the state you can reopen and analyse. A [report](../application/report/index.md) is a separate account of the model and result. Keep both when sharing work: the report makes the result readable, and the project makes continued analysis possible.
 
 A figure or a single agreement factor cannot by itself preserve the starting state and fitting choices. The [fit-quality guide](../user-guide/analysis-workflow/analysis.md#fit-quality) explains the context needed to interpret those summaries.
 

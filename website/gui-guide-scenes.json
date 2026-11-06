@@ -1,34 +1,93 @@
 {
-  "application/new-project.md": {
-    "Enter the project details": "03-project-details",
-    "Choose uncertainty formatting": "guide-project-uncertainties"
-  },
-  "application/projects.md": {
-    "Open a project": "guide-project-open",
-    "Save or save a copy": "guide-project-save",
-    "Recent projects and recovery": "guide-project-recent",
+  "application/project/index.md": {
     "What is saved": "guide-project-actions",
     "Browser file handling": "guide-project-open",
     "Move to another interface": "guide-project-save"
   },
-  "application/structures.md": {
-    "Load, create or duplicate": "guide-structure-create",
-    "Change the structure display": "guide-structure-appearance"
+  "application/project/get-started.md": {
+    "Enter the project details": "03-project-details",
+    "Open a project": "guide-project-open",
+    "Save or save a copy": "guide-project-save"
   },
-  "application/experiments.md": {
-    "Select or create an experiment": "guide-experiment-create",
-    "Load a powder pattern": "guide-experiment-data",
-    "Inspect the range and points": "guide-experiment-data-settings",
+  "application/project/examples.md": {
+    "Find an example": "15-project-examples"
+  },
+  "application/project/recent-projects.md": {
+    "Recent projects and recovery": "guide-project-recent"
+  },
+  "application/project/standard-uncertainties.md": {
+    "Choose uncertainty formatting": "guide-project-uncertainties"
+  },
+  "application/structure/index.md": {
+    "Structure viewer controls": "07-structure-loaded"
+  },
+  "application/structure/structures.md": {
+    "Load, create or duplicate": "guide-structure-create"
+  },
+  "application/structure/space-group.md": {
+    "Choose the space-group setting": "guide-structure-symmetry"
+  },
+  "application/structure/cell.md": {
+    "Enter the unit cell": "guide-structure-cell"
+  },
+  "application/structure/atom-sites.md": {
+    "Edit a site": "guide-structure-atoms"
+  },
+  "application/structure/atomic-displacement.md": {
+    "Choose and edit displacement parameters": "guide-structure-displacement"
+  },
+  "application/structure/scattering-lengths.md": {
+    "Override a structure's scattering lengths": "guide-structure-scattering"
+  },
+  "application/structure/appearance.md": {
+    "Change the appearance": "guide-structure-appearance"
+  },
+  "application/experiment/index.md": {
     "Read the pattern": "10-experiment-loaded"
   },
-  "application/background.md": {
+  "application/experiment/experiments.md": {
+    "Select or create an experiment": "guide-experiment-create",
+    "Load a powder pattern": "guide-experiment-data"
+  },
+  "application/experiment/calculation-range.md": {},
+  "application/experiment/background.md": {
     "Choose a background representation": "guide-experiment-background",
     "Estimate the background": "guide-experiment-background",
-    "Estimation settings": "guide-experiment-estimation",
-    "A practical sequence": "13-analysis-basic",
+    "A practical sequence": "13-analysis-basic"
+  },
+  "application/experiment/instrument.md": {
+    "Set the measurement conditions": "guide-experiment-instrument"
+  },
+  "application/experiment/peak-profile.md": {
+    "Choose a profile": "guide-experiment-profile",
+    "Set the calculation window": "guide-experiment-cutoff"
+  },
+  "application/experiment/excluded-regions.md": {
     "Exclude an interval": "guide-experiment-exclusions"
   },
-  "application/refine.md": {
+  "application/experiment/extinction.md": {},
+  "application/experiment/linked-structures.md": {
+    "Choose the contributing phases": "guide-experiment-links"
+  },
+  "application/experiment/background-estimation.md": {
+    "Estimation settings": "guide-experiment-estimation"
+  },
+  "application/experiment/absorption.md": {
+    "Set absorption": "guide-experiment-absorption"
+  },
+  "application/experiment/preferred-orientations.md": {
+    "Set preferred orientation": "guide-experiment-orientation"
+  },
+  "application/experiment/observed-reflections.md": {},
+  "application/experiment/scattering-source.md": {
+    "Choose the experiment's reference table": "guide-experiment-scattering"
+  },
+  "application/experiment/data-source.md": {},
+  "application/experiment/measured-data.md": {
+    "Inspect the range and points": "guide-experiment-data-settings"
+  },
+  "application/experiment/performance.md": {},
+  "application/analysis/index.md": {
     "Load or prepare the project": "guide-project-actions",
     "Compare the starting pattern": "10-experiment-loaded",
     "Choose free parameters": "13-analysis-basic",
@@ -42,60 +101,65 @@
       "Structure fit result": "joint-structure-results"
     }
   },
-  "application/fitting-modes.md": {
-    "Select the mode in the app": "guide-analysis-modes",
-    "Fit a scan": "scan-mode",
-    "Fit the shown scan dataset on its own": "scan-mode",
-    "Fit several experiments jointly": "joint-weights"
+  "application/analysis/parameters.md": {
+    "Choose independent parameters": "13-analysis-basic"
   },
-  "application/reports.md": {
-    "Review the document": "14-report-basic",
-    "Choose the contents": "guide-report-contents",
-    "Choose output formats": "guide-report-export",
-    "Save the report": "guide-report-saved",
-    "Keep saved reports current": "guide-report-saved",
-    "Save the project too": "guide-project-save"
-  },
-  "application/symmetry.md": {
-    "Choose the space-group setting": "guide-structure-symmetry",
-    "Enter the unit cell": "guide-structure-cell"
-  },
-  "application/atoms.md": {
-    "Edit a site": "guide-structure-atoms"
-  },
-  "application/displacement.md": {
-    "Choose and edit displacement parameters": "guide-structure-displacement"
-  },
-  "application/scattering.md": {
-    "Override a structure's scattering lengths": "guide-structure-scattering",
-    "Choose the experiment's reference table": "guide-experiment-scattering"
-  },
-  "application/instrument.md": {
-    "Set the measurement conditions": "guide-experiment-instrument"
-  },
-  "application/peak-profiles.md": {
-    "Choose a profile": "guide-experiment-profile",
-    "Set the calculation window": "guide-experiment-cutoff"
-  },
-  "application/linked-structures.md": {
-    "Choose the contributing phases": "guide-experiment-links"
-  },
-  "application/corrections.md": {
-    "Set absorption": "guide-experiment-absorption",
-    "Set preferred orientation": "guide-experiment-orientation"
-  },
-  "application/parameters.md": {
-    "Choose independent parameters": "13-analysis-basic",
-    "Name parameters with aliases": "guide-analysis-aliases",
-    "Define constraints": "guide-analysis-constraints",
-    "Inspect the last starting values": "guide-analysis-start-values"
-  },
-  "application/minimizer.md": {
+  "application/analysis/minimizer.md": {
     "Choose the search settings": "guide-analysis-minimizer"
   },
-  "application/display.md": {
-    "Choose which parameters are shown": "guide-analysis-shown-parameters",
+  "application/analysis/fitting-mode.md": {
+    "Select the mode in the app": "guide-analysis-modes",
+    "Fit a scan": "scan-mode",
+    "Fit the shown scan dataset on its own": "scan-mode"
+  },
+  "application/analysis/fitted-reflections.md": {},
+  "application/analysis/aliases.md": {
+    "Name parameters with aliases": "guide-analysis-aliases"
+  },
+  "application/analysis/constraints.md": {
+    "Define constraints": "guide-analysis-constraints"
+  },
+  "application/analysis/joint-fit-weights.md": {
+    "Fit several experiments jointly": "joint-weights"
+  },
+  "application/analysis/sequential-fit.md": {
+    "Use this group": "scan-declaration"
+  },
+  "application/analysis/scan-extraction-rules.md": {
+    "Use this group": "scan-extraction"
+  },
+  "application/analysis/fit-start-values.md": {
+    "Inspect the last starting values": "guide-analysis-start-values"
+  },
+  "application/analysis/fit-result.md": {
+    "Use this group": "joint-result"
+  },
+  "application/analysis/experiment-fit-result.md": {
+    "Use this group": "joint-experiment-results"
+  },
+  "application/analysis/structure-fit-result.md": {
+    "Use this group": "joint-structure-results"
+  },
+  "application/analysis/parameters-shown.md": {
+    "Choose which parameters are shown": "guide-analysis-shown-parameters"
+  },
+  "application/analysis/pattern-updates.md": {
     "Choose updates during a scan": "guide-analysis-pattern-updates"
+  },
+  "application/analysis/performance.md": {},
+  "application/report/index.md": {
+    "Review the document": "14-report-basic",
+    "Save the project too": "guide-project-save"
+  },
+  "application/report/export.md": {
+    "Choose output formats": "guide-report-export",
+    "Save the report": "guide-report-saved"
+  },
+  "application/report/contents.md": {
+    "Choose the contents": "guide-report-contents"
+  },
+  "application/report/saved-reports.md": {
+    "Keep saved reports current": "guide-report-saved"
   },
   "application/scans.md": {
     "Choose a dataset": "scan-experiment-before",

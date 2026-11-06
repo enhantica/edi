@@ -46,7 +46,7 @@ def main() -> None:
     try:
         for width in (1440, 390):
             browser.viewport(width, 1000)
-            for route in ('refine', 'workspace'):
+            for route in ('analysis', 'workspace'):
                 browser.goto(f'http://127.0.0.1:{server.server_port}/application/{route}/')
                 measured = browser.execute(MEASURE)
                 require(measured, (width, route, 'No tab icons'))

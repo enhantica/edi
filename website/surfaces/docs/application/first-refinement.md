@@ -465,7 +465,7 @@ Keep the scale and cell free. Repeat the filter-and-free action for `broad_gauss
 
 ## Refine the structural model
 
-Repeat the filter-and-free action for `background` and `fract_` to add background values and independent atom coordinates. Clear the filters. Keep displacement parameters fixed in this first fit; their [advanced refinement](displacement.md) requires additional physical checks. Press **Fit**, inspect the outcome and close the result popup. Symmetry-related quantities remain linked. See [refinement](../physics/rietveld.md) and [fit assessment](../user-guide/analysis-workflow/analysis.md#fit-quality).
+Repeat the filter-and-free action for `background` and `fract_` to add background values and independent atom coordinates. Clear the filters. Keep displacement parameters fixed in this first fit; their [advanced refinement](structure/atomic-displacement.md) requires additional physical checks. Press **Fit**, inspect the outcome and close the result popup. Symmetry-related quantities remain linked. See [refinement](../physics/rietveld.md) and [fit assessment](../user-guide/analysis-workflow/analysis.md#fit-quality).
 
 <div class="gui-viewer" markdown="1">
 
@@ -596,4 +596,4 @@ Change the cell length **a** slightly on **Structure** and watch the peak positi
 
 ## Continue with the same project
 
-Open the saved project in [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/examples/index.md){ .ed-interface-link .ed-icon-label } or run it from the [<span class="ed-interface-icons" aria-hidden="true">:fa5-terminal:</span> <span class="ed-icon-text">Command Line</span>](../cli/examples/index.md){ .ed-interface-link .ed-icon-label }. Try [joint refinement](refine.md) or a [scan](scans.md) when you are ready for several measurements.
+Open the saved project in [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/examples/index.md){ .ed-interface-link .ed-icon-label } or run it from the [<span class="ed-interface-icons" aria-hidden="true">:fa5-terminal:</span> <span class="ed-icon-text">Command Line</span>](../cli/examples/index.md){ .ed-interface-link .ed-icon-label }. Try [joint refinement](analysis/joint-fit-weights.md) or a [scan](scans.md) when you are ready for several measurements.

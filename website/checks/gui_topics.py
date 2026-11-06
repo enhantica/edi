@@ -31,7 +31,9 @@ def validate_topics(root: Path, config: dict, scenes: list[dict]) -> None:
             continue
         pages = next(iter(stage.values()))
         for filename in (
-            [pages] if isinstance(pages, str) else [next(iter(p.values())) for p in pages]
+            [pages]
+            if isinstance(pages, str)
+            else [page if isinstance(page, str) else next(iter(page.values())) for page in pages]
         ):
             require(filename in registry, f'{filename}: missing screenshot coverage declaration')
     by_id = {scene['id']: scene for scene in scenes}
@@ -43,8 +45,10 @@ def validate_topics(root: Path, config: dict, scenes: list[dict]) -> None:
         )
         text = path.read_text()
         headings = set(re.findall(r'^## (.+)$', text, re.MULTILINE)) - {'Related Physics'}
+        # A text-only page declares no scene, because the capture run does not reach its group.
         require(
-            headings == set(sections), f'{filename}: practical headings and capture map differ'
+            not sections or headings == set(sections),
+            f'{filename}: practical headings and capture map differ',
         )
         for heading, references in sections.items():
             identities = references.values() if isinstance(references, dict) else references
@@ -63,7 +67,12 @@ def validate_topics(root: Path, config: dict, scenes: list[dict]) -> None:
                     by_id[identity]['image'] in markers[0],
                     f'{filename}: stale illustration for {identity}',
                 )
-        require(native_options(text, by_id) == text, f'{filename}: stale native selector options')
+        root = '../' * filename.count('/')
+        require(
+            native_options(text, by_id, root) == text, f'{filename}: stale native selector options'
+        )
+        if not sections:
+            continue
         radii = re.findall(r'<rect width="1480" height="800" rx="([0-9.]+)"', text)
         require(
             radii

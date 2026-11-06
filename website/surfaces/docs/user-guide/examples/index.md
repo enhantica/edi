@@ -13,7 +13,7 @@ See [Experiment types and labels](../glossary.md#experiment-types-and-labels) fo
 | A calculation without measured data | LBCO at constant wavelength; silicon in time of flight; NaCl with laboratory X-rays | Structure, experiment and calculation range |
 | A first powder refinement | [Y₂O₃ on SPODI](../../application/first-refinement.md) | Free parameters, profile, background and residual |
 | Time-of-flight refinement | Silicon on SEPD; NCAF on WISH | TOF calibration, profiles and multiple banks |
-| Joint refinement | [PbSO₄ neutron and X-ray data](../../application/fitting-modes.md) | Structural links, scales and joint information |
+| Joint refinement | [PbSO₄ neutron and X-ray data](../../application/analysis/fitting-mode.md) | Structural links, scales and joint information |
 | A scan | [Co₂SiO₄ temperature series](../../application/scans.md); LATP on BM01 | Template, fitting order and parameter evolution |
 
 The [current catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md) lists the available projects and links each project page to its tutorial. Example-specific pages carry the reference and any limitations; support should be read from those pages rather than inferred from an example name alone.

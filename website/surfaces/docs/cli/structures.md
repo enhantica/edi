@@ -4,7 +4,7 @@ Commands calculate from the structures stored in your project and linked by its 
 
 ## Prepare the structural model
 
-Use the [application structure controls](../application/structures.md) or [Python structure objects](../python/structures.md) to prepare and inspect the structure, then save the complete project.
+Use the [application structure controls](../application/structure/structures.md) or [Python structure objects](../python/structures.md) to prepare and inspect the structure, then save the complete project.
 
 The command-line interface does not provide a separate structure editor. Its `fit` and `calc` commands load the model from the project rather than taking cell and atom-site definitions as command options.
 

@@ -628,7 +628,7 @@ def page(title: str, body: str, icon: str = '') -> str:
     return f'---\n{meta}template: gui.html\n---\n\n# {title}\n\n{body.rstrip()}\n'
 
 
-def native_options(text: str, by_id: dict[str, dict]) -> str:
+def native_options(text: str, by_id: dict[str, dict], root: str = '../') -> str:
     """Keep authored choice lists bound to the captured native selector model."""
     models = {
         (entry['category'], entry['id']): entry['explanation_url']
@@ -645,7 +645,7 @@ def native_options(text: str, by_id: dict[str, dict]) -> str:
             name = html.escape(item['label']).replace('|', '&#124;')
             if category:
                 route = models[category, item['token']]
-                name = f'[{name}](../physics/{route})'
+                name = f'[{name}]({root}physics/{route})'
             rows.append(f'- {name}')
         return match[0].split('\n', 1)[0] + '\n' + '\n'.join(rows) + '\n<!-- /gui-options -->'
 
@@ -695,7 +695,9 @@ def illustrate_guides(by_id: dict[str, dict]) -> None:
     registry = json.loads((ROOT / 'gui-guide-scenes.json').read_text())
     for filename, sections in registry.items():
         source = DOCS / filename
-        text = native_options(source.read_text(), by_id)
+        # Links and images resolve from the page, however deep it sits under docs/.
+        root = '../' * (filename.count('/'))
+        text = native_options(source.read_text(), by_id, root)
         text = re.sub(r'<!-- gui-guide:.*?<!-- /gui-guide -->\n?', '', text, flags=re.DOTALL)
         text = re.sub(r'<figure class="gui-figure".*?</figure>\n?', '', text, flags=re.DOTALL)
         headings = list(re.finditer(r'^## (.+)$', text, re.MULTILINE))
@@ -714,7 +716,9 @@ def illustrate_guides(by_id: dict[str, dict]) -> None:
             figures = _guide_figures(by_id, filename, source, slug, scenes)
             end = headings[number + 1].start() if number + 1 < len(headings) else len(text)
             content = (
-                f'\n<!-- gui-guide:{slug} -->\n' + '\n'.join(figures) + '<!-- /gui-guide -->\n\n'
+                f'\n<!-- gui-guide:{slug} -->\n'
+                + '\n'.join(figures).replace('"../assets/', f'"{root}assets/')
+                + '<!-- /gui-guide -->\n\n'
             )
             text = text[:end].rstrip() + '\n' + content + text[end:]
         if not text.startswith('---\n'):
@@ -818,7 +822,9 @@ def _import_references(reference: Path | None, joint: Path | None, by_id: dict) 
                 raise ValueError('Reference and creation scene ids must be distinct')
             by_id[scene['id']] = {**scene, 'asset_folder': folder}
         source = DOCS / (
-            'application/scans.md' if folder == 'scan' else 'application/fitting-modes.md'
+            'application/scans.md'
+            if folder == 'scan'
+            else 'application/analysis/joint-fit-weights.md'
         )
         text = source.read_text()
         text = re.sub(
@@ -1129,7 +1135,8 @@ supply the wavelength, profile or background.
                 'Repeat the filter-and-free action for `background` and `fract_` to add '
                 'background values and independent atom coordinates. Clear the filters. '
                 'Keep displacement parameters fixed in this first fit; their [advanced '
-                'refinement](displacement.md) requires additional physical checks. Press '
+                'refinement](structure/atomic-displacement.md) requires additional physical '
+                'checks. Press '
                 '**Fit**, inspect the outcome and close the result popup. '
                 'Symmetry-related quantities remain linked. See '
                 '[refinement](../physics/rietveld.md) and [fit '
@@ -1220,7 +1227,8 @@ def _write_first_refinement(manifest: dict, by_id: dict) -> None:
     body += (
         '\n## Continue with the same project\n\nOpen the saved project in '
         '[Python](../python/examples/index.md) or run it from the [Command '
-        'Line](../cli/examples/index.md). Try [joint refinement](refine.md) or a [scan](scans.md) '
+        'Line](../cli/examples/index.md). Try [joint refinement](analysis/joint-fit-weights.md) '
+        'or a [scan](scans.md) '
         'when you are ready for several measurements.\n'
     )
     (DOCS / 'application/first-refinement.md').write_text(page('Example refinement', body))

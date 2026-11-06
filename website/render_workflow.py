@@ -59,8 +59,11 @@ def render() -> None:
         links = {}
         for stage in workflow[1:]:
             ((title, pages),) = stage.items()
-            first = pages if isinstance(pages, str) else next(iter(pages[0].values()))
-            links[title] = '../' + first.removeprefix(folder + '/').removesuffix('.md') + '/'
+            first = pages if isinstance(pages, str) else pages[0]
+            if isinstance(first, dict):
+                first = next(iter(first.values()))
+            route = first.removeprefix(folder + '/').removesuffix('.md').removesuffix('/index')
+            links[title] = '../' + route + '/'
         write_diagram(f'{folder}/analysis-workflow/index.md', links)
     # Broad scientific groups keep the same stage symbols as their navigation.
     group_stages = {

@@ -4,7 +4,7 @@ The saved experiment supplies measured data or a calculation range, instrument s
 
 ## Prepare the experiment
 
-Use the [application experiment controls](../application/experiments.md) or [Python experiment objects](../python/experiments.md) to import observations and configure the experiment, then save the project.
+Use the [application experiment controls](../application/experiment/experiments.md) or [Python experiment objects](../python/experiments.md) to import observations and configure the experiment, then save the project.
 
 The command line operates on that saved experiment. It does not create an experiment from a raw pattern file or offer a second set of instrument and background options on the fit command.
 

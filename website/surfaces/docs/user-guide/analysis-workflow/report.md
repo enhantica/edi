@@ -27,7 +27,7 @@ Check report state before sharing it. Keep the report together with the matching
 
 ## Generate the document
 
-- [Application: Report page, export formats and saved-state indicators](../../application/reports.md).
+- [Application: Report page, export formats and saved-state indicators](../../application/report/index.md).
 - [Python: report rendering and save methods](../../python/reports.md).
 - [Command Line: report output and freshness checks](../../cli/reports.md).
 
