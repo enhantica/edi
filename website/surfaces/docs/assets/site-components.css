@@ -71,11 +71,11 @@
 /* Concept figures supplement short explanations; they are not application captures. */
 .md-typeset .ed-concept-flow a {height:100%;box-sizing:border-box;white-space:normal;text-align:center;min-height:4.2rem;padding:.5rem}
 .md-typeset .ed-concept-flow a .twemoji {display:block;width:1.1rem;height:1.1rem;margin:0}
-.ed-concept-figures {display:flex;flex-direction:column;align-items:center;gap:1.2rem;margin-block:.8rem 1.2rem}
-.md-typeset .ed-concept-figures figure {display:flex;flex-direction:column;width:100%;max-width:28rem;margin:0;text-align:center}
+.ed-concept-figures {margin-block:.8rem 1.2rem}
+.md-typeset .ed-concept-figures figure {display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin:1.2rem auto;text-align:center}
 .md-typeset .ed-concept-figures figcaption {order:2;max-width:none;margin:.5rem 0 0;font-size:.7rem;font-style:normal;text-align:center}
 .ed-concept-figures img {order:1;display:block;width:100%;height:auto;border-radius:var(--ed-screenshot-radius)}
-.ed-concept-figures--single {max-width:28rem}
+.ed-concept-figures--single {max-width:360px}
 @media (max-width:600px) {
   .md-typeset .ed-concept-flow a {min-height:0}
 }
@@ -120,7 +120,7 @@
 .ed-interface-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.2rem;margin-block:1.2rem 1.6rem}
 .md-typeset .ed-interface-trio figure{margin:0;display:flex;flex-direction:column}
 .md-typeset .ed-interface-trio figcaption{max-width:none;margin:0 0 .5rem;font-size:.72rem;font-style:normal;text-align:left;line-height:1.35}
-.md-typeset .ed-interface-trio .ed-interface-head{font-size:.8rem;font-weight:700}
-.ed-interface-trio .ed-interface-tag{color:var(--md-default-fg-color--light)}
-.ed-interface-trio img{display:block;width:100%;height:auto;border-radius:var(--ed-screenshot-radius);border:1px solid var(--md-default-fg-color--lightest);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.md-typeset .ed-interface-trio .ed-interface-head{font-size:.8rem;font-weight:400}
+.ed-interface-trio .ed-interface-tag{color:var(--md-default-fg-color--light);white-space:nowrap}
+.ed-interface-trio img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;object-position:center;border-radius:var(--ed-screenshot-radius);border:1px solid var(--md-default-fg-color--lightest);box-shadow:0 1px 4px rgba(0,0,0,.08)}
 @media (max-width:720px){.ed-interface-trio{grid-template-columns:1fr;max-width:28rem}}

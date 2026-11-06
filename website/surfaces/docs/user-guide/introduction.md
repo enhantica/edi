@@ -8,15 +8,15 @@ The application provides a visual workspace in a browser or on a desktop. Python
 
 <div class="ed-interface-trio" markdown="1">
 <figure markdown="1">
-<figcaption markdown="1">[**Application**](../application/index.md){ .ed-interface-head }<br><span class="ed-interface-tag">Click through the workflow</span></figcaption>
+<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../application/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">Click through the workflow</span></figcaption>
 <img src="../assets/interfaces/application.png" alt="The EasyDiffraction application showing a fitted diffraction pattern and parameter controls" width="1000" height="622" loading="lazy">
 </figure>
 <figure markdown="1">
-<figcaption markdown="1">[**Python**](../python/index.md){ .ed-interface-head }<br><span class="ed-interface-tag">The same objects, in a notebook</span></figcaption>
+<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">The same objects in Python</span></figcaption>
 <img src="../assets/interfaces/python.png" alt="The same refinement in a Jupyter notebook, plotting the diffraction pattern" width="1000" height="760" loading="lazy">
 </figure>
 <figure markdown="1">
-<figcaption markdown="1">[**Command Line**](../cli/index.md){ .ed-interface-head }<br><span class="ed-interface-tag">The same project, one command</span></figcaption>
+<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Command Line</span>](../cli/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">One command, same project</span></figcaption>
 <img src="../assets/interfaces/cli.png" alt="The same project refined from the command line, printing results and a diffraction pattern" width="1000" height="713" loading="lazy">
 </figure>
 </div>
