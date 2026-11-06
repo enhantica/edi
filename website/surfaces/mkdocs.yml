@@ -78,6 +78,8 @@ nav:
     - Data formats: user-guide/data-formats.md
     - Parameters: user-guide/parameters.md
     - Parameter names: user-guide/parameter-reference.md
+    - Fitting modes: user-guide/fitting-modes.md
+    - Fit quality: user-guide/fit-quality.md
     - Experiment types and labels: user-guide/experiment-types.md
     - Glossary: user-guide/glossary.md
   - Analysis workflow:
@@ -86,8 +88,6 @@ nav:
     - Structure: user-guide/analysis-workflow/structure.md
     - Experiment: user-guide/analysis-workflow/experiment.md
     - Analysis: user-guide/analysis-workflow/analysis.md
-    - Fitting modes: user-guide/fitting-modes.md
-    - Fit quality: user-guide/fit-quality.md
     - Report: user-guide/analysis-workflow/report.md
   - Examples: user-guide/examples.md
 - Application:

@@ -24,14 +24,6 @@ A complete EasyDiffraction analysis connects the model of a sample with an exper
 
 </div>
 
-## Revisit the model
-
-These stages are connected rather than a one-way checklist. A shifted peak may lead back to the cell or instrument calibration. An unmodelled peak may require checking the phases or measurement history. Review the starting calculation before adding more free parameters.
-
-## Calculate or refine
-
-A simulation uses a calculation range without measured observations. A refinement uses measured data and their uncertainties. A project can include both kinds of experiments; calculation and fitting use them according to their roles.
-
 ## Choose how to carry it out
 
 | Interface | What its section provides |
