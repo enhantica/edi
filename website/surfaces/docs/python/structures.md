@@ -60,4 +60,4 @@ For a complete runnable analysis, start from a project or a checked example. The
 
 
 
-[Compare Python paths with GUI labels, Edi keys and CIF names](../user-guide/parameter-reference.md).
+[Compare Python paths with GUI labels, Edi keys and CIF names](../user-guide/parameters.md#parameter-names).

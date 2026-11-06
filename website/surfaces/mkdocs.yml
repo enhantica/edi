@@ -77,7 +77,6 @@ nav:
     - Concept: user-guide/concepts.md
     - Data formats: user-guide/data-formats.md
     - Parameters: user-guide/parameters.md
-    - Parameter names: user-guide/parameter-reference.md
     - Glossary: user-guide/glossary.md
   - Analysis workflow:
     - user-guide/analysis-workflow/index.md

@@ -357,7 +357,7 @@ def _name_tables(
     categories: list, items: list, lookup: dict, glyphs: dict, rules: list, paths: dict
 ) -> list[str]:
     tables = [
-        '# Parameter names across interfaces',
+        '## Parameter names across interfaces {#parameter-names}',
         '',
         (
             'Compare names used in the app, saved Edi projects, Python and CIF. Select a '
@@ -448,7 +448,7 @@ def _explanation_entry(item: dict, category: dict, scientific: dict) -> list[str
             details += ['| ' + code(variant['token']) + ' | ' + (plain(unit) or '—') + ' |']
         details += ['']
     links.append(
-        '[Names across interfaces](../user-guide/parameter-reference.md#names-'
+        '[Names across interfaces](../user-guide/parameters.md#names-'
         + anchor(category['id'])
         + ')'
     )
@@ -467,7 +467,7 @@ def _explanations(categories: list, items: list, glyphs: dict, scientific: dict)
         (
             'Read what each parameter describes, its units and the models that use it. '
             'Applicability depends on the experiment and selected model. [Compare names '
-            'across interfaces](../user-guide/parameter-reference.md).'
+            'across interfaces](../user-guide/parameters.md#parameter-names).'
         ),
         '',
     ]
@@ -566,6 +566,22 @@ def _decorate_feature_headings(lookup: dict, glyphs: dict) -> None:
         path.write_text(text)
 
 
+def _inject(path: Path, key: str, content: str) -> None:
+    start, end = '<!-- ' + key + ' -->', '<!-- /' + key + ' -->'
+    text = path.read_text(encoding='utf-8')
+    if start not in text:
+        text += '\n\n' + start + '\n' + end + '\n'
+    text, count = re.subn(
+        re.escape(start) + '.*?' + re.escape(end),
+        lambda _: start + '\n' + content + '\n' + end,
+        text,
+        flags=re.DOTALL,
+    )
+    if count != 1:
+        raise ValueError(f'Duplicate marker {key}: {path}')
+    path.write_text(text, encoding='utf-8')
+
+
 def render() -> None:
     if not (ASSETS / 'dictionary.json').exists():
         return
@@ -587,7 +603,7 @@ def render() -> None:
     tables = _name_tables(categories, items, lookup, glyphs, rules, paths)
     details = _explanations(categories, items, glyphs, scientific)
     (DOCS / 'physics/parameters.md').write_text('\n'.join(details))
-    (DOCS / 'user-guide/parameter-reference.md').write_text('\n'.join(tables))
+    _inject(DOCS / 'user-guide/parameters.md', 'parameter-names', '\n'.join(tables))
     _decorate_category_pages(lookup, glyphs)
     _decorate_feature_headings(lookup, glyphs)
     # A portable exact lookup also consumed by native help verification and future integrations.

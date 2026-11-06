@@ -4,7 +4,7 @@ template: physics.html
 
 # Parameter explanations {#parameter-and-category-reference}
 
-Read what each parameter describes, its units and the models that use it. Applicability depends on the experiment and selected model. [Compare names across interfaces](../user-guide/parameter-reference.md).
+Read what each parameter describes, its units and the models that use it. Applicability depends on the experiment and selected model. [Compare names across interfaces](../user-guide/parameters.md#parameter-names).
 
 ## <span class="ed-reference-icon" data-reference-category="space-group" aria-hidden="true">&#63423;</span> Space group {#space-group}
 
@@ -16,7 +16,7 @@ The structure&#x27;s space group.
 
 The Hermann-Mauguin symbol of the space group.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-space-group)
+[Names across interfaces](../user-guide/parameters.md#names-space-group)
 
 </section>
 
@@ -26,7 +26,7 @@ The Hermann-Mauguin symbol of the space group.
 
 The setting of the space group, such as an origin choice or axes.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-space-group)
+[Names across interfaces](../user-guide/parameters.md#names-space-group)
 
 </section>
 
@@ -36,7 +36,7 @@ The setting of the space group, such as an origin choice or axes.
 
 The number of the space group in International Tables, from 1 to 230.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-space-group)
+[Names across interfaces](../user-guide/parameters.md#names-space-group)
 
 </section>
 
@@ -52,7 +52,7 @@ Length of the unit-cell edge along the a axis. Cell geometry determines calculat
 
 **Units:** Å.
 
-[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameter-reference.md#names-cell)
+[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameters.md#names-cell)
 
 </section>
 
@@ -64,7 +64,7 @@ Length of the unit-cell edge along the b axis. Cell geometry determines calculat
 
 **Units:** Å.
 
-[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameter-reference.md#names-cell)
+[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameters.md#names-cell)
 
 </section>
 
@@ -76,7 +76,7 @@ Length of the unit-cell edge along the c axis. Cell geometry determines calculat
 
 **Units:** Å.
 
-[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameter-reference.md#names-cell)
+[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameters.md#names-cell)
 
 </section>
 
@@ -88,7 +88,7 @@ Unit-cell angle between b and c (degrees; engine converts to radians).
 
 **Units:** deg.
 
-[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameter-reference.md#names-cell)
+[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameters.md#names-cell)
 
 </section>
 
@@ -100,7 +100,7 @@ Unit-cell angle between a and c (degrees; engine converts to radians).
 
 **Units:** deg.
 
-[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameter-reference.md#names-cell)
+[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameters.md#names-cell)
 
 </section>
 
@@ -112,7 +112,7 @@ Unit-cell angle between a and b (degrees; engine converts to radians).
 
 **Units:** deg.
 
-[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameter-reference.md#names-cell)
+[Equation and conventions](crystallography.md#eq-cell-metric) · [Names across interfaces](../user-guide/parameters.md#names-cell)
 
 </section>
 
@@ -126,7 +126,7 @@ The atom sites of the structure: position, occupancy and isotropic displacement.
 
 Unique atom-site identifier.
 
-[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -136,7 +136,7 @@ Unique atom-site identifier.
 
 Chemical symbol of the atom at this site.
 
-[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -146,7 +146,7 @@ Chemical symbol of the atom at this site.
 
 Wyckoff letter of the site in its space group.
 
-[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -164,7 +164,7 @@ Atomic displacement parameter type: Biso, Uiso, Bani, Uani or beta; Biso when ab
 | U aniso | Anisotropic, the U tensor in Å². |
 | β | Anisotropic, the dimensionless β tensor. |
 
-[Equation and conventions](displacement.md#eq-isotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](displacement.md#eq-isotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -176,7 +176,7 @@ Position of the representative atom site along the a lattice vector, expressed a
 
 **Units:** dimensionless.
 
-[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -188,7 +188,7 @@ Position of the representative atom site along the b lattice vector, expressed a
 
 **Units:** dimensionless.
 
-[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -200,7 +200,7 @@ Position of the representative atom site along the c lattice vector, expressed a
 
 **Units:** dimensionless.
 
-[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -212,7 +212,7 @@ Site occupancy (raw occupancy; m/M multiplicity applied in &#124;F&#124;^2).
 
 **Units:** dimensionless.
 
-[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](diffraction.md#eq-nuclear-structure-factor) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -232,7 +232,7 @@ Isotropic atomic displacement parameter in the site&#x27;s declared type: B for 
 | <code>Uani</code> | Å² |
 | <code>beta</code> | Å² |
 
-[Equation and conventions](displacement.md#eq-isotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site)
+[Equation and conventions](displacement.md#eq-isotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site)
 
 </section>
 
@@ -246,7 +246,7 @@ The anisotropic displacement of each anisotropic atom site.
 
 The id of the anisotropic atom site the row belongs to.
 
-[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site-aniso)
+[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site-aniso)
 
 </section>
 
@@ -264,7 +264,7 @@ Anisotropic displacement tensor component 11 (diagonal 11) in the site&#x27;s de
 | <code>Bani</code> | Å² |
 | <code>beta</code> | dimensionless |
 
-[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site-aniso)
+[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site-aniso)
 
 </section>
 
@@ -282,7 +282,7 @@ Anisotropic displacement tensor component 22 (diagonal 22) in the site&#x27;s de
 | <code>Bani</code> | Å² |
 | <code>beta</code> | dimensionless |
 
-[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site-aniso)
+[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site-aniso)
 
 </section>
 
@@ -300,7 +300,7 @@ Anisotropic displacement tensor component 33 (diagonal 33) in the site&#x27;s de
 | <code>Bani</code> | Å² |
 | <code>beta</code> | dimensionless |
 
-[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site-aniso)
+[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site-aniso)
 
 </section>
 
@@ -318,7 +318,7 @@ Anisotropic displacement tensor component 12 (off-diagonal 12) in the site&#x27;
 | <code>Bani</code> | Å² |
 | <code>beta</code> | dimensionless |
 
-[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site-aniso)
+[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site-aniso)
 
 </section>
 
@@ -336,7 +336,7 @@ Anisotropic displacement tensor component 13 (off-diagonal 13) in the site&#x27;
 | <code>Bani</code> | Å² |
 | <code>beta</code> | dimensionless |
 
-[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site-aniso)
+[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site-aniso)
 
 </section>
 
@@ -354,7 +354,7 @@ Anisotropic displacement tensor component 23 (off-diagonal 23) in the site&#x27;
 | <code>Bani</code> | Å² |
 | <code>beta</code> | dimensionless |
 
-[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameter-reference.md#names-atom-site-aniso)
+[Equation and conventions](displacement.md#eq-anisotropic-adp) · [Names across interfaces](../user-guide/parameters.md#names-atom-site-aniso)
 
 </section>
 
@@ -368,7 +368,7 @@ Neutron coherent scattering lengths that replace the built-in table for an eleme
 
 The element or isotope the scattering length applies to.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-scattering-length)
+[Names across interfaces](../user-guide/parameters.md#names-scattering-length)
 
 </section>
 
@@ -380,7 +380,7 @@ The coherent neutron scattering length.
 
 **Units:** fm.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-scattering-length)
+[Names across interfaces](../user-guide/parameters.md#names-scattering-length)
 
 </section>
 
@@ -396,7 +396,7 @@ Atoms closer than this are not bonded.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom)
+[Names across interfaces](../user-guide/parameters.md#names-geom)
 
 </section>
 
@@ -408,7 +408,7 @@ How much longer than the sum of the covalent radii a bond may be.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom)
+[Names across interfaces](../user-guide/parameters.md#names-geom)
 
 </section>
 
@@ -429,7 +429,7 @@ What sets the size of each atom.
 | Ionic radius | The ionic radius. |
 | Displacement | The atomic displacement, at the probability set. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -444,7 +444,7 @@ The colours the atoms take, by element.
 | Jmol | The Jmol colours. |
 | VESTA | The VESTA colours. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -454,7 +454,7 @@ The colours the atoms take, by element.
 
 The atoms&#x27; drawn size as a share of their radius.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -464,7 +464,7 @@ The atoms&#x27; drawn size as a share of their radius.
 
 The probability the displacement ellipsoids enclose.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -474,7 +474,7 @@ The probability the displacement ellipsoids enclose.
 
 Whether each atom is labelled.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -490,7 +490,7 @@ Which atoms are drawn.
 | Asymmetric unit | The atoms of the asymmetric unit. |
 | None | No atoms. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -500,7 +500,7 @@ Which atoms are drawn.
 
 Whether bonds are drawn.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -510,7 +510,7 @@ Whether bonds are drawn.
 
 Whether the unit cell is drawn.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -520,7 +520,7 @@ Whether the unit cell is drawn.
 
 Whether the cell axes are drawn.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-structure-view)
+[Names across interfaces](../user-guide/parameters.md#names-structure-view)
 
 </section>
 
@@ -534,7 +534,7 @@ The space group&#x27;s symmetry operators, in the order a symmetry code refers t
 
 A symmetry operator as x, y, z expressions.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-space-group-symop)
+[Names across interfaces](../user-guide/parameters.md#names-space-group-symop)
 
 </section>
 
@@ -548,7 +548,7 @@ Every atom of the unit cell, generated from the atom sites by symmetry.
 
 The atom site this atom is generated from.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -558,7 +558,7 @@ The atom site this atom is generated from.
 
 The symmetry code that generates this atom from its site.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -568,7 +568,7 @@ The symmetry code that generates this atom from its site.
 
 Position of the symmetry-generated atom along the a lattice vector, expressed as a fraction of the unit cell rather than a Cartesian distance.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -578,7 +578,7 @@ Position of the symmetry-generated atom along the a lattice vector, expressed as
 
 Position of the symmetry-generated atom along the b lattice vector, expressed as a fraction of the unit cell rather than a Cartesian distance.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -588,7 +588,7 @@ Position of the symmetry-generated atom along the b lattice vector, expressed as
 
 Position of the symmetry-generated atom along the c lattice vector, expressed as a fraction of the unit cell rather than a Cartesian distance.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -600,7 +600,7 @@ Cartesian X-coordinate.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -612,7 +612,7 @@ Cartesian Y-coordinate.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -624,7 +624,7 @@ Cartesian Z-coordinate.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -634,7 +634,7 @@ Cartesian Z-coordinate.
 
 Occupancy of the atom.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -646,7 +646,7 @@ Isotropic displacement of the atom, as U.
 
 **Units:** Å².
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -656,7 +656,7 @@ Isotropic displacement of the atom, as U.
 
 Atoms within one shared position carry the same cluster number.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-expanded-atom-site)
+[Names across interfaces](../user-guide/parameters.md#names-expanded-atom-site)
 
 </section>
 
@@ -670,7 +670,7 @@ The bonds between the atoms of the cell.
 
 The first atom of the bond, in the atoms of the cell.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom-bond)
+[Names across interfaces](../user-guide/parameters.md#names-geom-bond)
 
 </section>
 
@@ -680,7 +680,7 @@ The first atom of the bond, in the atoms of the cell.
 
 The second atom of the bond, in the atoms of the cell.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom-bond)
+[Names across interfaces](../user-guide/parameters.md#names-geom-bond)
 
 </section>
 
@@ -690,7 +690,7 @@ The second atom of the bond, in the atoms of the cell.
 
 The atom site of the first atom.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom-bond)
+[Names across interfaces](../user-guide/parameters.md#names-geom-bond)
 
 </section>
 
@@ -700,7 +700,7 @@ The atom site of the first atom.
 
 The atom site of the second atom.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom-bond)
+[Names across interfaces](../user-guide/parameters.md#names-geom-bond)
 
 </section>
 
@@ -710,7 +710,7 @@ The atom site of the second atom.
 
 The symmetry code of the first atom.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom-bond)
+[Names across interfaces](../user-guide/parameters.md#names-geom-bond)
 
 </section>
 
@@ -720,7 +720,7 @@ The symmetry code of the first atom.
 
 The symmetry code of the second atom.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom-bond)
+[Names across interfaces](../user-guide/parameters.md#names-geom-bond)
 
 </section>
 
@@ -732,7 +732,7 @@ The length of the bond.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-geom-bond)
+[Names across interfaces](../user-guide/parameters.md#names-geom-bond)
 
 </section>
 
@@ -748,7 +748,7 @@ Element 11 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -760,7 +760,7 @@ Element 12 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -772,7 +772,7 @@ Element 13 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -784,7 +784,7 @@ Element 21 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -796,7 +796,7 @@ Element 22 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -808,7 +808,7 @@ Element 23 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -820,7 +820,7 @@ Element 31 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -832,7 +832,7 @@ Element 32 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -844,7 +844,7 @@ Element 33 of the fractional-to-Cartesian matrix.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -854,7 +854,7 @@ Element 33 of the fractional-to-Cartesian matrix.
 
 How the Cartesian axes are placed in the cell.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-atom-sites-cartn-transform)
+[Names across interfaces](../user-guide/parameters.md#names-atom-sites-cartn-transform)
 
 </section>
 
@@ -873,7 +873,7 @@ How the pattern is measured.
 | Constant wavelength | One wavelength, the pattern measured against the scattering angle 2θ. |
 | Time-of-flight | A white beam, the pattern measured against the time of flight. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-experiment-type)
+[Names across interfaces](../user-guide/parameters.md#names-experiment-type)
 
 </section>
 
@@ -888,7 +888,7 @@ The form of the sample.
 | Powder | A polycrystalline sample. |
 | Single crystal | One crystal. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-experiment-type)
+[Names across interfaces](../user-guide/parameters.md#names-experiment-type)
 
 </section>
 
@@ -903,7 +903,7 @@ The radiation scattered by the sample.
 | Neutron | Neutrons, scattered by the nuclei. |
 | X-ray | X-rays, scattered by the electrons. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-experiment-type)
+[Names across interfaces](../user-guide/parameters.md#names-experiment-type)
 
 </section>
 
@@ -918,7 +918,7 @@ Which scattering the pattern is modelled with.
 | Bragg | Bragg peaks from the average structure. |
 | Total | Bragg and diffuse scattering together. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-experiment-type)
+[Names across interfaces](../user-guide/parameters.md#names-experiment-type)
 
 </section>
 
@@ -932,7 +932,7 @@ The dimensionality of the measured pattern.
 | --- | --- |
 | 1D | A one-dimensional pattern. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-experiment-type)
+[Names across interfaces](../user-guide/parameters.md#names-experiment-type)
 
 </section>
 
@@ -947,7 +947,7 @@ The polarisation of the incident beam; an X-ray experiment states the inapplicab
 | Unpolarised | An unpolarised neutron beam. |
 | Not applicable | An X-ray experiment, whose beam polarisation is not a setting here. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-experiment-type)
+[Names across interfaces](../user-guide/parameters.md#names-experiment-type)
 
 </section>
 
@@ -963,7 +963,7 @@ The first 2θ of the calculation grid.
 
 **Units:** deg.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-range)
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
 
 </section>
 
@@ -975,7 +975,7 @@ The last 2θ of the calculation grid.
 
 **Units:** deg.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-range)
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
 
 </section>
 
@@ -987,7 +987,7 @@ The 2θ step of the calculation grid.
 
 **Units:** deg.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-range)
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
 
 </section>
 
@@ -999,7 +999,7 @@ The 2θ points of the calculation grid.
 
 **Units:** deg.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-range)
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
 
 </section>
 
@@ -1011,7 +1011,7 @@ The first time of flight of the calculation grid.
 
 **Units:** µs.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-range)
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
 
 </section>
 
@@ -1023,7 +1023,7 @@ The last time of flight of the calculation grid.
 
 **Units:** µs.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-range)
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
 
 </section>
 
@@ -1035,7 +1035,7 @@ The time-of-flight step of the calculation grid.
 
 **Units:** µs.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-range)
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
 
 </section>
 
@@ -1047,7 +1047,7 @@ The time-of-flight points of the calculation grid.
 
 **Units:** µs.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-range)
+[Names across interfaces](../user-guide/parameters.md#names-data-range)
 
 </section>
 
@@ -1063,7 +1063,7 @@ Line-segment background intensity anchor (dimensionless in the reduced pattern; 
 
 **Units:** intensity units of the pattern.
 
-[Equation and conventions](background.md#eq-line-segment-background) · [Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Equation and conventions](background.md#eq-line-segment-background) · [Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1075,7 +1075,7 @@ Background anchor position (TOF, us); a fixed node, not a refinable Parameter.
 
 **Units:** µs.
 
-[Equation and conventions](background.md#eq-line-segment-background) · [Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Equation and conventions](background.md#eq-line-segment-background) · [Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1087,7 +1087,7 @@ Polynomial or Chebyshev background coefficient of the row&#x27;s order (dimensio
 
 **Units:** intensity units of the pattern.
 
-[Equation and conventions](background.md#eq-chebyshev-background) · [Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Equation and conventions](background.md#eq-chebyshev-background) · [Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1099,7 +1099,7 @@ Order m of a polynomial or Chebyshev background term (a non-negative integer; a 
 
 **Units:** dimensionless.
 
-[Equation and conventions](background.md#eq-chebyshev-background) · [Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Equation and conventions](background.md#eq-chebyshev-background) · [Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1111,7 +1111,7 @@ Origin of the polynomial background, FullProf Bkpos: the terms are powers of x/o
 
 **Units:** native pattern-axis units (degrees 2θ or µs).
 
-[Equation and conventions](background.md#eq-polynomial-background) · [Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Equation and conventions](background.md#eq-polynomial-background) · [Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1123,7 +1123,7 @@ Lower end of the Chebyshev background&#x27;s normalisation domain (in the patter
 
 **Units:** native pattern-axis units (degrees 2θ or µs).
 
-[Equation and conventions](background.md#eq-chebyshev-background) · [Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Equation and conventions](background.md#eq-chebyshev-background) · [Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1135,7 +1135,7 @@ Upper end of the Chebyshev background&#x27;s normalisation domain (in the patter
 
 **Units:** native pattern-axis units (degrees 2θ or µs).
 
-[Equation and conventions](background.md#eq-chebyshev-background) · [Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Equation and conventions](background.md#eq-chebyshev-background) · [Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1151,7 +1151,7 @@ The background function.
 | Chebyshev | A sum of Chebyshev polynomials. |
 | Polynomial | A polynomial in the scattering variable. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1161,7 +1161,7 @@ The background function.
 
 The name of a background point or term.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background)
+[Names across interfaces](../user-guide/parameters.md#names-background)
 
 </section>
 
@@ -1180,7 +1180,7 @@ Whether the background is edited by hand or estimated again on every change.
 | Manual | The background is edited by hand; Estimate replaces it when asked. |
 | Auto | The background is estimated again whenever the data or the settings change. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1197,7 +1197,7 @@ The background estimation method.
 | arPLS | arPLS (Baek et al. 2015): asymmetrically reweighted penalized least squares. |
 | FABC | FABC (Cobas et al. 2006): finds the baseline points by a wavelet transform. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1207,7 +1207,7 @@ The background estimation method.
 
 The peak width the estimation assumes, in points.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1217,7 +1217,7 @@ The peak width the estimation assumes, in points.
 
 How smooth the estimated background is.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1227,7 +1227,7 @@ How smooth the estimated background is.
 
 How many background points the estimation keeps.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1237,7 +1237,7 @@ How many background points the estimation keeps.
 
 How far, in units of the noise, the thinned background may stray.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1252,7 +1252,7 @@ What happens to a background point that falls in a peak.
 | Move | Move it to the nearest allowed point. |
 | Drop | Drop it. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1268,7 +1268,7 @@ What the estimation does with the peaks of the calculated pattern.
 | Subtract | Always subtract them when there is a calculated pattern. |
 | Ignore | Never subtract them. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1278,7 +1278,7 @@ What the estimation does with the peaks of the calculated pattern.
 
 The most terms a Chebyshev or polynomial background may take.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1288,7 +1288,7 @@ The most terms a Chebyshev or polynomial background may take.
 
 A checksum of what the last estimate was made from.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1298,7 +1298,7 @@ A checksum of what the last estimate was made from.
 
 A checksum of the background the last estimate wrote.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-background-estimate)
+[Names across interfaces](../user-guide/parameters.md#names-background-estimate)
 
 </section>
 
@@ -1314,7 +1314,7 @@ TOF calibration zero offset (TOF = zero + Dtt1*d + Dtt2*d^2 + recip/d).
 
 **Units:** µs.
 
-[Equation and conventions](calibration.md#eq-tof-calibration) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](calibration.md#eq-tof-calibration) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1326,7 +1326,7 @@ TOF calibration linear coefficient Dtt1 (us/A).
 
 **Units:** µs/Å.
 
-[Equation and conventions](calibration.md#eq-tof-calibration) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](calibration.md#eq-tof-calibration) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1338,7 +1338,7 @@ TOF calibration quadratic coefficient Dtt2 (us/A^2).
 
 **Units:** µs/Å².
 
-[Equation and conventions](calibration.md#eq-tof-calibration) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](calibration.md#eq-tof-calibration) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1352,7 +1352,7 @@ TOF calibration reciprocal (1/d) coefficient (us*A); round-tripped, held fixed i
 
 **Stored only.** Retained in project input but not applied in this calculation.
 
-[Equation and conventions](calibration.md#eq-tof-calibration) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](calibration.md#eq-tof-calibration) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1364,7 +1364,7 @@ CW zero-point offset in degrees 2theta, subtracted from the observed axis.
 
 **Units:** deg.
 
-[Equation and conventions](calibration.md#eq-cwl-calibration) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](calibration.md#eq-cwl-calibration) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1380,7 +1380,7 @@ Incident neutron wavelength in angstroms (single wavelength; the doublet tags ar
 | --- | --- |
 | <code>doublet</code> | Å |
 
-[Equation and conventions](calibration.md#eq-cwl-calibration) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](calibration.md#eq-cwl-calibration) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1392,7 +1392,7 @@ CW sample-displacement line shift in degrees 2theta (FullProf SyCos): adds displ
 
 **Units:** deg.
 
-[Equation and conventions](calibration.md#eq-line-shifts) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](calibration.md#eq-line-shifts) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1404,7 +1404,7 @@ CW sample-transparency line shift in degrees 2theta (FullProf SySin): adds trans
 
 **Units:** deg.
 
-[Equation and conventions](calibration.md#eq-line-shifts) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](calibration.md#eq-line-shifts) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1416,7 +1416,7 @@ X-ray CW polarization coefficient K (FullProf Rpolarz): the intensity carries P 
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/intensity.md#eq-xray-polarization) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](corrections/intensity.md#eq-xray-polarization) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1428,7 +1428,7 @@ X-ray CW pre-specimen monochromator angle 2theta_m in degrees (FullProf stores C
 
 **Units:** deg.
 
-[Equation and conventions](corrections/intensity.md#eq-xray-polarization) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](corrections/intensity.md#eq-xray-polarization) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1440,7 +1440,7 @@ X-ray CW second incident wavelength in angstroms (FullProf Lambda2, e.g. Cu K-al
 
 **Units:** Å.
 
-[Equation and conventions](corrections/intensity.md#wavelength-doublet) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](corrections/intensity.md#wavelength-doublet) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1452,7 +1452,7 @@ X-ray CW intensity of the second wavelength relative to the first (FullProf Rati
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/intensity.md#wavelength-doublet) · [Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Equation and conventions](corrections/intensity.md#wavelength-doublet) · [Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1462,7 +1462,7 @@ X-ray CW intensity of the second wavelength relative to the first (FullProf Rati
 
 The instrument the pattern was measured on, or unknown.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1472,7 +1472,7 @@ The instrument the pattern was measured on, or unknown.
 
 The facility the instrument belongs to, or unknown.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1484,7 +1484,7 @@ The scattering angle of the time-of-flight detector bank.
 
 **Units:** deg.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-instrument)
+[Names across interfaces](../user-guide/parameters.md#names-instrument)
 
 </section>
 
@@ -1500,7 +1500,7 @@ Back-to-back exponential rise-rate coefficient alpha_0 (rate, 1/us; no closed un
 
 **Units:** µs⁻¹.
 
-[Equation and conventions](profiles/tof.md#eq-jorgensen) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-jorgensen) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1512,7 +1512,7 @@ Back-to-back exponential rise-rate coefficient alpha_1 (alpha(d)=alpha_0+alpha_1
 
 **Units:** Å/µs.
 
-[Equation and conventions](profiles/tof.md#eq-jorgensen) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-jorgensen) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1524,7 +1524,7 @@ Back-to-back exponential decay-rate coefficient beta_0 (rate, 1/us; no closed un
 
 **Units:** µs⁻¹.
 
-[Equation and conventions](profiles/tof.md#eq-jorgensen) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-jorgensen) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1536,7 +1536,7 @@ Back-to-back exponential decay-rate coefficient beta_1 (beta(d)=beta_0+beta_1/d^
 
 **Units:** Å⁴/µs.
 
-[Equation and conventions](profiles/tof.md#eq-jorgensen) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-jorgensen) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1548,7 +1548,7 @@ Gaussian VARIANCE coefficient sigma_0^2 (variance domain; TCH consumes FWHM_G=sq
 
 **Units:** µs².
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1560,7 +1560,7 @@ Gaussian VARIANCE coefficient sigma_1^2 (d^2 term; variance domain).
 
 **Units:** µs²/Å².
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1572,7 +1572,7 @@ Gaussian VARIANCE coefficient sigma_2^2 (d^4 term; us^2/A^4 not in closed vocab 
 
 **Units:** µs²/Å⁴.
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1584,7 +1584,7 @@ Gaussian isotropic size broadening (variance contribution).
 
 **Units:** µs²/Å⁴.
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1596,7 +1596,7 @@ Gaussian isotropic strain broadening (variance contribution).
 
 **Units:** µs²/Å².
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1608,7 +1608,7 @@ Lorentzian FWHM coefficient gamma_0 (FWHM domain, H_L; consumed as FWHM directly
 
 **Units:** µs.
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1620,7 +1620,7 @@ Lorentzian FWHM coefficient gamma_1 (d term; FWHM domain).
 
 **Units:** µs/Å.
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1632,7 +1632,7 @@ Lorentzian FWHM coefficient gamma_2 (d^2 term; FWHM domain).
 
 **Units:** µs/Å².
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1644,7 +1644,7 @@ Lorentzian isotropic size broadening (FWHM).
 
 **Units:** µs/Å².
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1656,7 +1656,7 @@ Lorentzian isotropic strain broadening (FWHM).
 
 **Units:** µs/Å.
 
-[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/tof.md#eq-tof-widths) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1668,7 +1668,7 @@ Caglioti Gaussian FWHM coefficient U (tan^2(theta) term; H_G^2 in deg^2).
 
 **Units:** deg².
 
-[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1680,7 +1680,7 @@ Caglioti Gaussian FWHM coefficient V (tan(theta) term; H_G^2 in deg^2).
 
 **Units:** deg².
 
-[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1692,7 +1692,7 @@ Caglioti Gaussian FWHM coefficient W (constant term; H_G^2 in deg^2).
 
 **Units:** deg².
 
-[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1704,7 +1704,7 @@ Lorentzian FWHM coefficient X, strain-like (tan(theta) term; H_L in deg).
 
 **Units:** deg.
 
-[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1716,7 +1716,7 @@ Lorentzian FWHM coefficient Y, size-like (1/cos(theta) term; H_L in deg).
 
 **Units:** deg.
 
-[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-tch) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1728,7 +1728,7 @@ Pseudo-Voigt mixing at 2theta = 0: eta = eta_0 + eta_1 2theta (FullProf Eta0).
 
 **Units:** dimensionless.
 
-[Equation and conventions](profiles/cw.md#eq-caglioti) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-caglioti) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1740,7 +1740,7 @@ Pseudo-Voigt mixing slope per degree 2theta: eta = eta_0 + eta_1 2theta (FullPro
 
 **Units:** 1/deg.
 
-[Equation and conventions](profiles/cw.md#eq-caglioti) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-caglioti) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1752,7 +1752,7 @@ Finger-Cox-Jephcoat asymmetry parameter 1: S/L, half the sample height over the 
 
 **Units:** dimensionless.
 
-[Equation and conventions](profiles/cw.md#eq-fcj) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-fcj) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1764,7 +1764,7 @@ Finger-Cox-Jephcoat asymmetry parameter 2: D/L, half the detector height over th
 
 **Units:** dimensionless.
 
-[Equation and conventions](profiles/cw.md#eq-fcj) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-fcj) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1776,7 +1776,7 @@ Berar-Baldinozzi asymmetry coefficient A0 (Fa/tan theta).
 
 **Units:** dimensionless.
 
-[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1788,7 +1788,7 @@ Berar-Baldinozzi asymmetry coefficient B0 (Fb/tan theta).
 
 **Units:** dimensionless.
 
-[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1800,7 +1800,7 @@ Berar-Baldinozzi asymmetry coefficient A1 (Fa/tan 2theta).
 
 **Units:** dimensionless.
 
-[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1812,7 +1812,7 @@ Berar-Baldinozzi asymmetry coefficient B1 (Fb/tan 2theta).
 
 **Units:** dimensionless.
 
-[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1824,7 +1824,7 @@ Berar-Baldinozzi limit angle (deg 2theta): reflections at or above it get no asy
 
 **Units:** deg.
 
-[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Equation and conventions](profiles/cw.md#eq-berar-baldinozzi) · [Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1846,7 +1846,7 @@ The peak-profile function.
 | Jorgensen-Von Dreele | The back-to-back exponentials convolved with a pseudo-Voigt. |
 | Pseudo-Voigt | A time-of-flight pseudo-Voigt peak. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1856,7 +1856,7 @@ The peak-profile function.
 
 How far from its centre a peak is calculated, in units of its width.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-peak)
+[Names across interfaces](../user-guide/parameters.md#names-peak)
 
 </section>
 
@@ -1870,7 +1870,7 @@ Ranges of the pattern left out of the fit.
 
 The name of the excluded region.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-excluded-region)
+[Names across interfaces](../user-guide/parameters.md#names-excluded-region)
 
 </section>
 
@@ -1887,7 +1887,7 @@ Where the excluded region starts.
 | <code>constant wavelength</code> | deg |
 | <code>time-of-flight</code> | µs |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-excluded-region)
+[Names across interfaces](../user-guide/parameters.md#names-excluded-region)
 
 </section>
 
@@ -1904,7 +1904,7 @@ Where the excluded region ends.
 | <code>constant wavelength</code> | deg |
 | <code>time-of-flight</code> | µs |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-excluded-region)
+[Names across interfaces](../user-guide/parameters.md#names-excluded-region)
 
 </section>
 
@@ -1920,7 +1920,7 @@ Becker-Coppens domain (mosaic block) radius r (micrometres; extinction types II 
 
 **Units:** μm.
 
-[Equation and conventions](corrections/extinction.md#extinction-units) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#extinction-units) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -1932,7 +1932,7 @@ Becker-Coppens mosaic spread g of the crystal, the inverse width of its mosaic d
 
 **Units:** rad⁻¹.
 
-[Equation and conventions](corrections/extinction.md#extinction-units) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#extinction-units) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -1944,7 +1944,7 @@ Radius of the crystal taken as a sphere, which sets each reflection&#x27;s mean 
 
 **Units:** mm.
 
-[Equation and conventions](corrections/extinction.md#extinction-units) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#extinction-units) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -1956,7 +1956,7 @@ Larson&#x27;s empirical extinction coefficient x, as SHELXL&#x27;s EXTI: F2calc 
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -1968,7 +1968,7 @@ The term of h² in Larson&#x27;s anisotropic extinction tensor x_aniso = x11 h^2
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -1980,7 +1980,7 @@ The term of k² in Larson&#x27;s anisotropic extinction tensor x_aniso = x11 h^2
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -1992,7 +1992,7 @@ The term of l² in Larson&#x27;s anisotropic extinction tensor x_aniso = x11 h^2
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -2004,7 +2004,7 @@ The term of hk in Larson&#x27;s anisotropic extinction tensor x_aniso = x11 h^2 
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -2016,7 +2016,7 @@ The term of hl in Larson&#x27;s anisotropic extinction tensor x_aniso = x11 h^2 
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -2028,7 +2028,7 @@ The term of kl in Larson&#x27;s anisotropic extinction tensor x_aniso = x11 h^2 
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Equation and conventions](corrections/extinction.md#eq-larson) · [Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -2047,7 +2047,7 @@ The extinction correction of a single crystal.
 | Isotropic Larson | Larson&#x27;s empirical coefficient, as SHELXL&#x27;s EXTI. |
 | Anisotropic Larson | Larson&#x27;s anisotropic extinction tensor. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -2062,7 +2062,7 @@ The shape of a Becker-Coppens crystal&#x27;s mosaic distribution.
 | Gaussian | A Gaussian mosaic distribution. |
 | Lorentzian | A Lorentzian mosaic distribution. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-extinction)
+[Names across interfaces](../user-guide/parameters.md#names-extinction)
 
 </section>
 
@@ -2078,7 +2078,7 @@ Scale factor of one linked structure&#x27;s (phase&#x27;s) pattern, the overall 
 
 **Units:** dimensionless.
 
-[Equation and conventions](diffraction.md#phase-fractions) · [Names across interfaces](../user-guide/parameter-reference.md#names-linked-structure)
+[Equation and conventions](diffraction.md#phase-fractions) · [Names across interfaces](../user-guide/parameters.md#names-linked-structure)
 
 </section>
 
@@ -2088,7 +2088,7 @@ Scale factor of one linked structure&#x27;s (phase&#x27;s) pattern, the overall 
 
 The structure that contributes to the pattern.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-linked-structure)
+[Names across interfaces](../user-guide/parameters.md#names-linked-structure)
 
 </section>
 
@@ -2098,7 +2098,7 @@ The structure that contributes to the pattern.
 
 Whether the structure contributes to the pattern.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-linked-structure)
+[Names across interfaces](../user-guide/parameters.md#names-linked-structure)
 
 </section>
 
@@ -2108,7 +2108,7 @@ Whether the structure contributes to the pattern.
 
 The structure&#x27;s weight fraction in the sample, from the scales (Hill and Howard); computed, never edited.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-linked-structure)
+[Names across interfaces](../user-guide/parameters.md#names-linked-structure)
 
 </section>
 
@@ -2124,7 +2124,7 @@ TOF sample absorption coefficient ABSCOR1 (muR = ABSCOR1 * lambda; refinable).
 
 **Units:** Å⁻¹.
 
-[Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameter-reference.md#names-absorption)
+[Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameters.md#names-absorption)
 
 </section>
 
@@ -2138,7 +2138,7 @@ TOF sample absorption lambda-power ABSCOR2 (round-tripped, held fixed; freeing i
 
 **Stored only.** Retained in project input but not applied in this calculation.
 
-[Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameter-reference.md#names-absorption)
+[Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameters.md#names-absorption)
 
 </section>
 
@@ -2150,7 +2150,7 @@ CW cylinder sample absorption mu*R (mu the linear absorption coefficient, R the 
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameter-reference.md#names-absorption)
+[Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameters.md#names-absorption)
 
 </section>
 
@@ -2166,7 +2166,7 @@ The absorption correction.
 | Cylinder (Hewat) | The Hewat (1979) polynomial for a cylindrical sample. |
 | Cylinder (Lobanov) | The Lobanov and Alte da Veiga (1998) fit for a cylindrical sample. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-absorption)
+[Names across interfaces](../user-guide/parameters.md#names-absorption)
 
 </section>
 
@@ -2182,7 +2182,7 @@ March-Dollase coefficient r (FullProf Pref1, IUCr _pd_pref_orient_March_Dollase.
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/orientation.md#eq-march-dollase) · [Names across interfaces](../user-guide/parameter-reference.md#names-preferred-orientation)
+[Equation and conventions](corrections/orientation.md#eq-march-dollase) · [Names across interfaces](../user-guide/parameters.md#names-preferred-orientation)
 
 </section>
 
@@ -2194,7 +2194,7 @@ Random (untextured) fraction mixed with the March-Dollase term (FullProf Pref2; 
 
 **Units:** dimensionless.
 
-[Equation and conventions](corrections/orientation.md#eq-march-dollase) · [Names across interfaces](../user-guide/parameter-reference.md#names-preferred-orientation)
+[Equation and conventions](corrections/orientation.md#eq-march-dollase) · [Names across interfaces](../user-guide/parameters.md#names-preferred-orientation)
 
 </section>
 
@@ -2204,7 +2204,7 @@ Random (untextured) fraction mixed with the March-Dollase term (FullProf Pref2; 
 
 The structure the correction applies to.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-preferred-orientation)
+[Names across interfaces](../user-guide/parameters.md#names-preferred-orientation)
 
 </section>
 
@@ -2214,7 +2214,7 @@ The structure the correction applies to.
 
 The h index of the preferred-orientation direction.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-preferred-orientation)
+[Names across interfaces](../user-guide/parameters.md#names-preferred-orientation)
 
 </section>
 
@@ -2224,7 +2224,7 @@ The h index of the preferred-orientation direction.
 
 The k index of the preferred-orientation direction.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-preferred-orientation)
+[Names across interfaces](../user-guide/parameters.md#names-preferred-orientation)
 
 </section>
 
@@ -2234,7 +2234,7 @@ The k index of the preferred-orientation direction.
 
 The l index of the preferred-orientation direction.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-preferred-orientation)
+[Names across interfaces](../user-guide/parameters.md#names-preferred-orientation)
 
 </section>
 
@@ -2248,7 +2248,7 @@ Which of a single crystal&#x27;s reflections count as observed, for its counts a
 
 The multiple n of its su above which a single crystal&#x27;s reflection counts as observed; 2 when absent.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-reflns)
+[Names across interfaces](../user-guide/parameters.md#names-reflns)
 
 </section>
 
@@ -2263,7 +2263,7 @@ Whether the observed threshold is on the intensity or the amplitude; the intensi
 | I | The intensity: I &gt; n u(I). |
 | F | The amplitude: F &gt; n u(F). |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-reflns)
+[Names across interfaces](../user-guide/parameters.md#names-reflns)
 
 </section>
 
@@ -2273,7 +2273,7 @@ Whether the observed threshold is on the intensity or the amplitude; the intensi
 
 The observed threshold as CIF writes it, such as I&gt;2u(I); a save writes it beside the counts and R factors it gives.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-reflns)
+[Names across interfaces](../user-guide/parameters.md#names-reflns)
 
 </section>
 
@@ -2292,7 +2292,7 @@ The published table the X-ray atomic form factors come from.
 | Waasmaier &amp; Kirfel (1995) | Waasmaier and Kirfel, Acta Cryst. A51 (1995) 416. |
 | International Tables C (1992) | International Tables for Crystallography, Vol. C (1992). |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-scattering-source)
+[Names across interfaces](../user-guide/parameters.md#names-scattering-source)
 
 </section>
 
@@ -2309,7 +2309,7 @@ The published table the anomalous dispersion corrections come from.
 | International Tables C (1992) | International Tables for Crystallography, Vol. C (1992). |
 | None | No anomalous dispersion correction. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-scattering-source)
+[Names across interfaces](../user-guide/parameters.md#names-scattering-source)
 
 </section>
 
@@ -2324,7 +2324,7 @@ The published table the neutron scattering lengths come from.
 | Rauch &amp; Waschkowski (2003) | Rauch and Waschkowski (2003), extended with the isotopes it lacks. |
 | Sears (1992) | Sears, Neutron News 3 (1992) 26. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-scattering-source)
+[Names across interfaces](../user-guide/parameters.md#names-scattering-source)
 
 </section>
 
@@ -2338,7 +2338,7 @@ The file the measured data were read from.
 
 The file the measured data were read from.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-source)
+[Names across interfaces](../user-guide/parameters.md#names-data-source)
 
 </section>
 
@@ -2354,7 +2354,7 @@ The scattering angle of each point.
 
 **Units:** deg.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data)
+[Names across interfaces](../user-guide/parameters.md#names-data)
 
 </section>
 
@@ -2366,7 +2366,7 @@ The time of flight of each point.
 
 **Units:** µs.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data)
+[Names across interfaces](../user-guide/parameters.md#names-data)
 
 </section>
 
@@ -2376,7 +2376,7 @@ The time of flight of each point.
 
 The measured intensity.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data)
+[Names across interfaces](../user-guide/parameters.md#names-data)
 
 </section>
 
@@ -2386,7 +2386,7 @@ The measured intensity.
 
 The standard uncertainty of the measured intensity.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data)
+[Names across interfaces](../user-guide/parameters.md#names-data)
 
 </section>
 
@@ -2398,7 +2398,7 @@ The d-spacing of each point.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data)
+[Names across interfaces](../user-guide/parameters.md#names-data)
 
 </section>
 
@@ -2408,7 +2408,7 @@ The d-spacing of each point.
 
 The calculated intensity, the background included.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data)
+[Names across interfaces](../user-guide/parameters.md#names-data)
 
 </section>
 
@@ -2418,7 +2418,7 @@ The calculated intensity, the background included.
 
 The background at each point.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data)
+[Names across interfaces](../user-guide/parameters.md#names-data)
 
 </section>
 
@@ -2433,7 +2433,7 @@ Whether the point takes part in the calculation and the fit.
 | Included | The point is calculated and fitted. |
 | Excluded | The point lies in an excluded region and is not calculated. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data)
+[Names across interfaces](../user-guide/parameters.md#names-data)
 
 </section>
 
@@ -2447,7 +2447,7 @@ The calculated pattern the command line writes.
 
 The index of the point in the calculated pattern.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-data-calc)
+[Names across interfaces](../user-guide/parameters.md#names-data-calc)
 
 </section>
 
@@ -2461,7 +2461,7 @@ The structures the per-point curves follow.
 
 The structures whose curves the per-point lists hold, in their order.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-pd-calc-overall)
+[Names across interfaces](../user-guide/parameters.md#names-pd-calc-overall)
 
 </section>
 
@@ -2475,7 +2475,7 @@ Each structure&#x27;s calculated curve, one value per structure at every point o
 
 Each structure&#x27;s calculated intensity at the point, the background excluded, in the order _pd_calc_overall.component_presentation_order gives.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-pd-calc)
+[Names across interfaces](../user-guide/parameters.md#names-pd-calc)
 
 </section>
 
@@ -2489,7 +2489,7 @@ The Bragg reflections of each linked structure.
 
 The structure the reflection belongs to.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2501,7 +2501,7 @@ The d-spacing of the reflection.
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2513,7 +2513,7 @@ sin θ over λ of the reflection.
 
 **Units:** 1/Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2523,7 +2523,7 @@ sin θ over λ of the reflection.
 
 The h index of the reflection.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2533,7 +2533,7 @@ The h index of the reflection.
 
 The k index of the reflection.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2543,7 +2543,7 @@ The k index of the reflection.
 
 The l index of the reflection.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2553,7 +2553,7 @@ The l index of the reflection.
 
 The calculated structure-factor amplitude.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2563,7 +2563,7 @@ The calculated structure-factor amplitude.
 
 The measured structure-factor amplitude, the square root of a single crystal&#x27;s measured F², as its chart plots it in F.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2573,7 +2573,7 @@ The measured structure-factor amplitude, the square root of a single crystal&#x2
 
 The calculated squared structure factor.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2583,7 +2583,7 @@ The calculated squared structure factor.
 
 The measured squared structure factor of a single crystal&#x27;s reflection.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2593,7 +2593,7 @@ The measured squared structure factor of a single crystal&#x27;s reflection.
 
 The standard uncertainty of the measured squared structure factor.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2603,7 +2603,7 @@ The standard uncertainty of the measured squared structure factor.
 
 The calculated squared structure factor of a single crystal&#x27;s reflection.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2615,7 +2615,7 @@ The wavelength a time-of-flight single crystal&#x27;s reflection was measured at
 
 **Units:** Å.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2627,7 +2627,7 @@ The Bragg angle of the reflection.
 
 **Units:** deg.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2639,7 +2639,7 @@ The time of flight of the reflection.
 
 **Units:** µs.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refln)
+[Names across interfaces](../user-guide/parameters.md#names-refln)
 
 </section>
 
@@ -2653,7 +2653,7 @@ The project&#x27;s name, title, description and authors.
 
 The project&#x27;s short name, which names its folder.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-metadata)
+[Names across interfaces](../user-guide/parameters.md#names-metadata)
 
 </section>
 
@@ -2663,7 +2663,7 @@ The project&#x27;s short name, which names its folder.
 
 The project&#x27;s title.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-metadata)
+[Names across interfaces](../user-guide/parameters.md#names-metadata)
 
 </section>
 
@@ -2673,7 +2673,7 @@ The project&#x27;s title.
 
 What the project is about.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-metadata)
+[Names across interfaces](../user-guide/parameters.md#names-metadata)
 
 </section>
 
@@ -2683,7 +2683,7 @@ What the project is about.
 
 The people the project and its report credit, separated by semicolons.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-metadata)
+[Names across interfaces](../user-guide/parameters.md#names-metadata)
 
 </section>
 
@@ -2693,7 +2693,7 @@ The people the project and its report credit, separated by semicolons.
 
 The project&#x27;s folder.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-metadata)
+[Names across interfaces](../user-guide/parameters.md#names-metadata)
 
 </section>
 
@@ -2703,7 +2703,7 @@ The project&#x27;s folder.
 
 When the project was created.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-metadata)
+[Names across interfaces](../user-guide/parameters.md#names-metadata)
 
 </section>
 
@@ -2713,7 +2713,7 @@ When the project was created.
 
 When the project was last saved.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-metadata)
+[Names across interfaces](../user-guide/parameters.md#names-metadata)
 
 </section>
 
@@ -2723,7 +2723,7 @@ When the project was last saved.
 
 A machine-readable time of the last save.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-metadata)
+[Names across interfaces](../user-guide/parameters.md#names-metadata)
 
 </section>
 
@@ -2742,7 +2742,7 @@ How a value with a standard uncertainty is rounded when it is written and shown.
 | IUCr recommendation: 1 digit, or 2 from 10 to 19 | The IUCr recommendation 12: one significant digit in the uncertainty, two from 10 to 19. |
 | Always 2 digits, 10 to 99 | Always two significant digits in the uncertainty, the practice the IUCr also admits. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-su-format)
+[Names across interfaces](../user-guide/parameters.md#names-su-format)
 
 </section>
 
@@ -2756,7 +2756,7 @@ Which report formats are saved, and what they leave out.
 
 Whether Save report writes the HTML report.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report)
+[Names across interfaces](../user-guide/parameters.md#names-report)
 
 </section>
 
@@ -2766,7 +2766,7 @@ Whether Save report writes the HTML report.
 
 Whether Save report writes the PDF report.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report)
+[Names across interfaces](../user-guide/parameters.md#names-report)
 
 </section>
 
@@ -2776,7 +2776,7 @@ Whether Save report writes the PDF report.
 
 Whether Save report writes the CIF report.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report)
+[Names across interfaces](../user-guide/parameters.md#names-report)
 
 </section>
 
@@ -2786,7 +2786,7 @@ Whether Save report writes the CIF report.
 
 Whether the HTML report carries its chart libraries, so it opens offline.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report)
+[Names across interfaces](../user-guide/parameters.md#names-report)
 
 </section>
 
@@ -2796,7 +2796,7 @@ Whether the HTML report carries its chart libraries, so it opens offline.
 
 The report sections left out.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report)
+[Names across interfaces](../user-guide/parameters.md#names-report)
 
 </section>
 
@@ -2810,7 +2810,7 @@ Settings of the parameter-correlation chart.
 
 The smallest absolute correlation the chart shows.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-correlation-chart)
+[Names across interfaces](../user-guide/parameters.md#names-correlation-chart)
 
 </section>
 
@@ -2829,7 +2829,7 @@ The pattern chart&#x27;s horizontal axis.
 | Measured axis | The experiment&#x27;s own axis: 2θ or time of flight. |
 | d-spacing | The d-spacing of each point. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-pattern-chart)
+[Names across interfaces](../user-guide/parameters.md#names-pattern-chart)
 
 </section>
 
@@ -2847,7 +2847,7 @@ The calculation engine.
 | --- | --- |
 | crysta | The crysta engine. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-calculator)
+[Names across interfaces](../user-guide/parameters.md#names-calculator)
 
 </section>
 
@@ -2865,7 +2865,7 @@ The minimizer.
 | --- | --- |
 | crysta | crysta&#x27;s own least-squares minimizer. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-minimizer)
+[Names across interfaces](../user-guide/parameters.md#names-minimizer)
 
 </section>
 
@@ -2875,7 +2875,7 @@ The minimizer.
 
 The most iterations a fit may take.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-minimizer)
+[Names across interfaces](../user-guide/parameters.md#names-minimizer)
 
 </section>
 
@@ -2893,7 +2893,7 @@ The descent strategy of the minimizer.
 | Fast descent with guarded linear snap | The fast descent, keeping a linear snap only when it lowers χ². |
 | Multi-start with pruning | Several starts, the worse ones dropped as the fit goes on. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-minimizer)
+[Names across interfaces](../user-guide/parameters.md#names-minimizer)
 
 </section>
 
@@ -2903,7 +2903,7 @@ The descent strategy of the minimizer.
 
 The relative change of χ² at which a fit stops.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-minimizer)
+[Names across interfaces](../user-guide/parameters.md#names-minimizer)
 
 </section>
 
@@ -2924,7 +2924,7 @@ How the experiments of the project are fitted.
 | Sequential: each from the previous | Each data file is fitted, starting from the previous result. |
 | Independent: each from the same start | Each data file is fitted from the same start. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fitting-mode)
+[Names across interfaces](../user-guide/parameters.md#names-fitting-mode)
 
 </section>
 
@@ -2938,7 +2938,7 @@ Which of a single crystal&#x27;s reflections a fit uses.
 
 The multiple n of its su above which a single crystal&#x27;s reflection is fitted; every reflection when absent.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-refine-ls)
+[Names across interfaces](../user-guide/parameters.md#names-refine-ls)
 
 </section>
 
@@ -2952,7 +2952,7 @@ Short names for parameters, used in constraints.
 
 The short name.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-alias)
+[Names across interfaces](../user-guide/parameters.md#names-alias)
 
 </section>
 
@@ -2962,7 +2962,7 @@ The short name.
 
 The parameter the short name stands for.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-alias)
+[Names across interfaces](../user-guide/parameters.md#names-alias)
 
 </section>
 
@@ -2976,7 +2976,7 @@ Expressions that compute a parameter from others.
 
 The name of the constraint.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-constraint)
+[Names across interfaces](../user-guide/parameters.md#names-constraint)
 
 </section>
 
@@ -2986,7 +2986,7 @@ The name of the constraint.
 
 The expression, such as occ_Ba = 1 - occ_La.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-constraint)
+[Names across interfaces](../user-guide/parameters.md#names-constraint)
 
 </section>
 
@@ -2996,7 +2996,7 @@ The expression, such as occ_Ba = 1 - occ_La.
 
 Whether the constraint applies.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-constraint)
+[Names across interfaces](../user-guide/parameters.md#names-constraint)
 
 </section>
 
@@ -3010,7 +3010,7 @@ Each experiment&#x27;s weight in a joint fit.
 
 The experiment&#x27;s weight in a joint fit.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-joint-fit)
+[Names across interfaces](../user-guide/parameters.md#names-joint-fit)
 
 </section>
 
@@ -3024,7 +3024,7 @@ Which data files a sequential fit runs over.
 
 The folder of the data files.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-sequential-fit)
+[Names across interfaces](../user-guide/parameters.md#names-sequential-fit)
 
 </section>
 
@@ -3034,7 +3034,7 @@ The folder of the data files.
 
 Which files of the folder are fitted.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-sequential-fit)
+[Names across interfaces](../user-guide/parameters.md#names-sequential-fit)
 
 </section>
 
@@ -3044,7 +3044,7 @@ Which files of the folder are fitted.
 
 Whether the files are fitted in reverse order.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-sequential-fit)
+[Names across interfaces](../user-guide/parameters.md#names-sequential-fit)
 
 </section>
 
@@ -3054,7 +3054,7 @@ Whether the files are fitted in reverse order.
 
 The experiment every file is fitted with.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-sequential-fit)
+[Names across interfaces](../user-guide/parameters.md#names-sequential-fit)
 
 </section>
 
@@ -3068,7 +3068,7 @@ Rules that read a value, such as a temperature, from each data file name.
 
 The name of the value read from each file name.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-sequential-fit-extract)
+[Names across interfaces](../user-guide/parameters.md#names-sequential-fit-extract)
 
 </section>
 
@@ -3078,7 +3078,7 @@ The name of the value read from each file name.
 
 What the value is stored as.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-sequential-fit-extract)
+[Names across interfaces](../user-guide/parameters.md#names-sequential-fit-extract)
 
 </section>
 
@@ -3088,7 +3088,7 @@ What the value is stored as.
 
 The pattern that finds the value in the file name.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-sequential-fit-extract)
+[Names across interfaces](../user-guide/parameters.md#names-sequential-fit-extract)
 
 </section>
 
@@ -3098,7 +3098,7 @@ The pattern that finds the value in the file name.
 
 Whether a file whose name does not match fails.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-sequential-fit-extract)
+[Names across interfaces](../user-guide/parameters.md#names-sequential-fit-extract)
 
 </section>
 
@@ -3112,7 +3112,7 @@ The header every .edi file starts with.
 
 The version of the .edi format the file follows.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-edi)
+[Names across interfaces](../user-guide/parameters.md#names-edi)
 
 </section>
 
@@ -3132,7 +3132,7 @@ The format of a saved report file.
 | PDF | A PDF document on A4 pages. |
 | CIF | A CIF file with the official CIF names. |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report-file)
+[Names across interfaces](../user-guide/parameters.md#names-report-file)
 
 </section>
 
@@ -3142,7 +3142,7 @@ The format of a saved report file.
 
 The saved report file, in the reports folder.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report-file)
+[Names across interfaces](../user-guide/parameters.md#names-report-file)
 
 </section>
 
@@ -3152,7 +3152,7 @@ The saved report file, in the reports folder.
 
 When the report file was saved.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report-file)
+[Names across interfaces](../user-guide/parameters.md#names-report-file)
 
 </section>
 
@@ -3162,7 +3162,7 @@ When the report file was saved.
 
 When the project was last saved before the report was.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report-file)
+[Names across interfaces](../user-guide/parameters.md#names-report-file)
 
 </section>
 
@@ -3172,7 +3172,7 @@ When the project was last saved before the report was.
 
 A checksum of the saved report file.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-report-file)
+[Names across interfaces](../user-guide/parameters.md#names-report-file)
 
 </section>
 
@@ -3186,7 +3186,7 @@ The values the last fit started from, kept so the fit can be undone.
 
 The parameter the start value belongs to.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter)
 
 </section>
 
@@ -3196,7 +3196,7 @@ The parameter the start value belongs to.
 
 The value the last fit started from.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter)
 
 </section>
 
@@ -3206,7 +3206,7 @@ The value the last fit started from.
 
 The uncertainty the parameter had when the last fit started.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter)
 
 </section>
 
@@ -3216,7 +3216,7 @@ The uncertainty the parameter had when the last fit started.
 
 Whether the parameter was tied when the last fit started.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter)
 
 </section>
 
@@ -3230,7 +3230,7 @@ The outcome of the last fit.
 
 What kind of fit gave the result.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3240,7 +3240,7 @@ What kind of fit gave the result.
 
 Whether the fit converged.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3250,7 +3250,7 @@ Whether the fit converged.
 
 The minimizer&#x27;s message.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3260,7 +3260,7 @@ The minimizer&#x27;s message.
 
 How many iterations the fit took.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3272,7 +3272,7 @@ How long the fit took.
 
 **Units:** s.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3282,7 +3282,7 @@ How long the fit took.
 
 χ² divided by the degrees of freedom.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3292,7 +3292,7 @@ How long the fit took.
 
 The quantity the fit minimized.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3302,7 +3302,7 @@ The quantity the fit minimized.
 
 The value of the objective at the end of the fit.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3312,7 +3312,7 @@ The value of the objective at the end of the fit.
 
 How many data points the fit used.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3322,7 +3322,7 @@ How many data points the fit used.
 
 How many parameters the project has.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3332,7 +3332,7 @@ How many parameters the project has.
 
 How many parameters the fit refined.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3342,7 +3342,7 @@ How many parameters the fit refined.
 
 The points minus the free parameters.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3352,7 +3352,7 @@ The points minus the free parameters.
 
 Whether the fit gave a covariance matrix.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3362,7 +3362,7 @@ Whether the fit gave a covariance matrix.
 
 Why the fit stopped.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3378,7 +3378,7 @@ The weighted profile R factor.
 | --- | --- |
 | <code>single crystal</code> | % |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3394,7 +3394,7 @@ The profile R factor.
 | --- | --- |
 | <code>single crystal</code> | % |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3406,7 +3406,7 @@ The expected weighted profile R factor.
 
 **Units:** %.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3418,7 +3418,7 @@ The background-corrected profile R factor.
 
 **Units:** %.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3430,7 +3430,7 @@ The background-corrected weighted profile R factor.
 
 **Units:** %.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3440,7 +3440,7 @@ The background-corrected weighted profile R factor.
 
 The peak profile the fit used.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3450,7 +3450,7 @@ The peak profile the fit used.
 
 The background the fit used.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3460,7 +3460,7 @@ The background the fit used.
 
 The descent strategy the fit used.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result)
 
 </section>
 
@@ -3474,7 +3474,7 @@ The agreement factors of each experiment in the last fit.
 
 How many data points of the experiment the fit used.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-bank)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-bank)
 
 </section>
 
@@ -3490,7 +3490,7 @@ The experiment&#x27;s profile R factor.
 | --- | --- |
 | <code>single crystal</code> | % |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-bank)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-bank)
 
 </section>
 
@@ -3506,7 +3506,7 @@ The experiment&#x27;s weighted profile R factor.
 | --- | --- |
 | <code>single crystal</code> | % |
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-bank)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-bank)
 
 </section>
 
@@ -3518,7 +3518,7 @@ The experiment&#x27;s expected weighted profile R factor.
 
 **Units:** %.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-bank)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-bank)
 
 </section>
 
@@ -3530,7 +3530,7 @@ The experiment&#x27;s background-corrected profile R factor.
 
 **Units:** %.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-bank)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-bank)
 
 </section>
 
@@ -3542,7 +3542,7 @@ The experiment&#x27;s background-corrected weighted profile R factor.
 
 **Units:** %.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-bank)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-bank)
 
 </section>
 
@@ -3552,7 +3552,7 @@ The experiment&#x27;s background-corrected weighted profile R factor.
 
 The experiment&#x27;s reduced χ².
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-bank)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-bank)
 
 </section>
 
@@ -3568,7 +3568,7 @@ The structure&#x27;s Bragg R factor in the experiment.
 
 **Units:** %.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-phase)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-phase)
 
 </section>
 
@@ -3580,7 +3580,7 @@ The structure&#x27;s structure-factor R factor in the experiment.
 
 **Units:** %.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-result-phase)
+[Names across interfaces](../user-guide/parameters.md#names-fit-result-phase)
 
 </section>
 
@@ -3594,7 +3594,7 @@ The correlations between the fitted parameters.
 
 The name of the correlation.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter-correlation)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter-correlation)
 
 </section>
 
@@ -3604,7 +3604,7 @@ The name of the correlation.
 
 What kind of fit the correlation comes from.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter-correlation)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter-correlation)
 
 </section>
 
@@ -3614,7 +3614,7 @@ What kind of fit the correlation comes from.
 
 The first parameter.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter-correlation)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter-correlation)
 
 </section>
 
@@ -3624,7 +3624,7 @@ The first parameter.
 
 The second parameter.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter-correlation)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter-correlation)
 
 </section>
 
@@ -3634,7 +3634,7 @@ The second parameter.
 
 The correlation coefficient between the two parameters.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter-correlation)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter-correlation)
 
 </section>
 
@@ -3644,7 +3644,7 @@ The correlation coefficient between the two parameters.
 
 The data file of a sequential fit the correlation belongs to.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-fit-parameter-correlation)
+[Names across interfaces](../user-guide/parameters.md#names-fit-parameter-correlation)
 
 </section>
 
@@ -3658,6 +3658,6 @@ The name each data block of the CIF report gives itself.
 
 The name of a data block of the CIF report, which a phase link refers to.
 
-[Names across interfaces](../user-guide/parameter-reference.md#names-pd-block)
+[Names across interfaces](../user-guide/parameters.md#names-pd-block)
 
 </section>
