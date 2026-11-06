@@ -1,5 +1,6 @@
 ---
 template: features.html
+icon: material/clipboard-check-outline
 ---
 
 # Features

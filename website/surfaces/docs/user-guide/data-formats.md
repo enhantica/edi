@@ -1,3 +1,7 @@
+---
+icon: material/file-code-outline
+---
+
 # Data formats
 
 EasyDiffraction keeps a saved analysis as an **Edi project**. It reads crystal structures and experiments from **CIF**, imports measured patterns from plain text, and exports reports as readable documents. Use the complete project to continue an analysis; use the other formats to bring data in or to share a result.

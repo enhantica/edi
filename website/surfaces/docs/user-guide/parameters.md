@@ -1,3 +1,7 @@
+---
+icon: material/tune-variant
+---
+
 # Parameters
 
 Parameters describe both the sample and the experiment. Changing a cell length moves calculated reflections; changing a scale changes their contribution to intensity; changing a background coefficient changes the signal underneath the peaks.

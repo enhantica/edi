@@ -53,7 +53,6 @@ extra:
     Python scripts: [simple/python]
     Jupyter notebooks: [simple/jupyter]
   section_icons:
-    Foundations: book-open-variant
     Analysis workflow: routes
     Start here: compass-outline
     Peak profiles: chart-bell-curve

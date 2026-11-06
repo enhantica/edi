@@ -1,3 +1,7 @@
+---
+icon: material/lightbulb-on-outline
+---
+
 # From measurement to analysis
 
 EasyDiffraction compares a crystallographic model with diffraction measurements. Understanding where that comparison begins helps you choose suitable inputs and recognise what a fit can establish.

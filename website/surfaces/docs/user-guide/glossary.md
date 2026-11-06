@@ -1,3 +1,7 @@
+---
+icon: material/book-alphabet
+---
+
 # Glossary
 
 These terms are shared by the application, Python library and command line. The interface changes how you work with them, rather than changing their scientific meaning.
