@@ -1385,7 +1385,7 @@ def _write_examples(by_id: dict) -> None:
         'example to inspect a calculated pattern. Examples open as working copies; use '
         '**Save project as…** to keep your changes.\n\nFor a guided analysis, follow '
         '[Example refinement](first-refinement.md). The shared [example '
-        'catalogue](../user-guide/examples.md) lets you filter the scientific cases. '
+        'catalogue](../user-guide/examples/index.md) lets you filter the scientific cases. '
         '[Experiment labels](../user-guide/glossary.md#experiment-types-and-labels) explain the same tags '
         'shown in the app.\n'
     )

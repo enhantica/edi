@@ -28,7 +28,7 @@ The [foundations](foundations/index.md) and [concept](concepts.md) explain what 
 </ol>
 <!-- /workflow-diagram -->
 
-The [workflow overview](analysis-workflow/index.md) connects these stages, and [example projects](examples.md) provide complete starting models and measurements.
+The [workflow overview](analysis-workflow/index.md) connects these stages, and [example projects](examples/index.md) provide complete starting models and measurements.
 
 ## Understand the physics
 

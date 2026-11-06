@@ -123,7 +123,7 @@ These source notes are retained for authors; they are not part of the published 
 
 - `user-guide/concepts.md`: [earlier library concepts](https://github.com/easyscience/diffraction-lib/blob/master/docs/docs/user-guide/concept.md), [edi project model](https://github.com/enhantica/edi/blob/main/docs/user/guides/complete-project-loading.md), [edi fit-quality guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/fit-quality.md).
 
-- `user-guide/examples.md`: [edi catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md), [LBCO example](https://github.com/enhantica/edi/blob/main/docs/user/cli/pd-neut-cwl_lbco-hrpt/index.md), [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py), [tutorial execution declaration](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/execution-exclusions.yml).
+- `user-guide/examples/index.md`: [edi catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli/index.md), [LBCO example](https://github.com/enhantica/edi/blob/main/docs/user/cli/pd-neut-cwl_lbco-hrpt/index.md), [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py), [tutorial execution declaration](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/execution-exclusions.yml).
 
 - `user-guide/parameters.md`: [earlier parameter guide](https://github.com/easyscience/diffraction-lib/blob/master/docs/docs/user-guide/parameters.md), [edi project loading and free-set contract](https://github.com/enhantica/edi/blob/main/docs/user/guides/complete-project-loading.md), [current example tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py).
 

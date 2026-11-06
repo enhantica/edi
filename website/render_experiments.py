@@ -348,7 +348,7 @@ def _catalogue_controls(registry: dict, metadata: dict) -> list[str]:
     return controls
 
 
-def _catalogue_rows(registry: dict, metadata: dict) -> list[str]:
+def _catalogue_rows(registry: dict, metadata: dict, *, prefix: str = '../') -> list[str]:
     rows = [
         '<table><thead><tr><th>Example</th><th>Purpose and experiment</th></tr></thead><tbody>'
     ]
@@ -361,7 +361,7 @@ def _catalogue_rows(registry: dict, metadata: dict) -> list[str]:
         labels = []
         for family, values in registry['tags'].items():
             labels.extend(
-                badge(family, token)
+                badge(family, token, prefix=prefix)
                 for token in entry['values'].get(family, [])
                 if token in values
             )
@@ -386,9 +386,9 @@ def _catalogue_rows(registry: dict, metadata: dict) -> list[str]:
 
 def _write_example_catalogue(registry: dict, metadata: dict) -> None:
     controls = _catalogue_controls(registry, metadata)
-    rows = _catalogue_rows(registry, metadata)
+    rows = _catalogue_rows(registry, metadata, prefix='../../')
     content = '<div data-example-catalogue>\n' + '\n'.join(controls + rows) + '\n</div>'
-    replace(DOCS / 'user-guide/examples.md', 'example-catalogue', content)
+    replace(DOCS / 'user-guide/examples/index.md', 'example-catalogue', content)
 
 
 def render() -> None:

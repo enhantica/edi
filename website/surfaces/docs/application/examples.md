@@ -18,4 +18,4 @@ The web and desktop applications both include built-in example projects. Go to *
 
 Choose a **Fitting** example to analyse measured data, or a **Simulation** example to inspect a calculated pattern. Examples open as working copies; use **Save project as…** to keep your changes.
 
-For a guided analysis, follow [Example refinement](first-refinement.md). The shared [example catalogue](../user-guide/examples.md#catalogue) lets you filter the scientific cases. [Experiment labels](../user-guide/glossary.md#experiment-types-and-labels) explain the same tags shown in the app.
+For a guided analysis, follow [Example refinement](first-refinement.md). The shared [example catalogue](../user-guide/examples/index.md#catalogue) lets you filter the scientific cases. [Experiment labels](../user-guide/glossary.md#experiment-types-and-labels) explain the same tags shown in the app.

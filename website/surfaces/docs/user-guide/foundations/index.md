@@ -31,7 +31,7 @@ The [Concept](../concepts.md) page explains where this analysis sits after acqui
 
 ## Start from a reproducible example
 
-An [example project](../examples.md) includes structures, experiments and starting conditions together. Use an example that matches your intended measurement, and read its provenance and reference comparison before treating it as a template for new work.
+An [example project](../examples/index.md) includes structures, experiments and starting conditions together. Use an example that matches your intended measurement, and read its provenance and reference comparison before treating it as a template for new work.
 
 For your own analysis, retain the source of the structure and data, experimental conditions, fitting choices and software version. These two outputs serve different purposes: a report communicates the result to others, while the complete project is what you reopen to continue the analysis.
 
