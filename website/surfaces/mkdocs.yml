@@ -34,7 +34,7 @@ theme:
 extra_css:
   - assets/brand-colors.css?v=1
   - assets/wordmark.css?v=header-2
-  - assets/site-components.css?v=release-notes-1
+  - assets/site-components.css?v=release-notes-2
   - assets/experiment-tags.css?v=2
   - assets/parameter-reference.css?v=3
 extra_javascript:

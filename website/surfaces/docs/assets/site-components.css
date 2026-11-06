@@ -71,13 +71,12 @@
 /* Concept figures supplement short explanations; they are not application captures. */
 .md-typeset .ed-concept-flow a {height:100%;box-sizing:border-box;white-space:normal;text-align:center;min-height:4.2rem;padding:.5rem}
 .md-typeset .ed-concept-flow a .twemoji {display:block;width:1.1rem;height:1.1rem;margin:0}
-.ed-concept-figures {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-block:.8rem 1rem}
-.md-typeset .ed-concept-figures figure {display:block;width:100%;max-width:100%;margin:0;text-align:left}
-.md-typeset .ed-concept-figures figcaption {max-width:none;margin:0 0 .5rem;font-size:.7rem;font-style:normal;text-align:left}
-.ed-concept-figures img {display:block;width:100%;height:auto;border-radius:var(--ed-screenshot-radius)}
-.ed-concept-figures--single {grid-template-columns:minmax(0,1fr);max-width:28rem}
+.ed-concept-figures {display:flex;flex-direction:column;align-items:center;gap:1.2rem;margin-block:.8rem 1.2rem}
+.md-typeset .ed-concept-figures figure {display:flex;flex-direction:column;width:100%;max-width:28rem;margin:0;text-align:center}
+.md-typeset .ed-concept-figures figcaption {order:2;max-width:none;margin:.5rem 0 0;font-size:.7rem;font-style:normal;text-align:center}
+.ed-concept-figures img {order:1;display:block;width:100%;height:auto;border-radius:var(--ed-screenshot-radius)}
+.ed-concept-figures--single {max-width:28rem}
 @media (max-width:600px) {
-  .ed-concept-figures {grid-template-columns:1fr}
   .md-typeset .ed-concept-flow a {min-height:0}
 }
 
