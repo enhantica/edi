@@ -256,10 +256,9 @@ def _check_navigation(config_data: dict) -> None:
         section = next(entry[interface] for entry in config_data['nav'] if interface in entry)
         groups = {next(iter(entry)): next(iter(entry.values())) for entry in section}
         names = list(groups)
-        if names[:2] != ['Start here', 'Analysis workflow'] or names[-1] != 'Examples':
+        if names != ['Start here', 'Analysis workflow', 'Examples']:
             raise SystemExit(
-                f'{interface}: groups must start with Start here and Analysis workflow '
-                'and end with Examples'
+                f'{interface}: groups must be Start here, Analysis workflow and Examples'
             )
         for name, page in (
             ('Start here', f'{folder}/index.md'),

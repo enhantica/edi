@@ -125,6 +125,7 @@ nav:
   - Start here:
     - python/index.md
     - Setup: python/setup.md
+    - API quick reference: python/reference.md
   - Analysis workflow:
     - python/analysis-workflow/index.md
     - Project: python/projects.md
@@ -135,8 +136,6 @@ nav:
       - Fit a project: python/fit.md
       - Inspect results: python/results.md
     - Report: python/reports.md
-  - Reference:
-    - python/reference/index.md
   - Examples:
     - python/examples/index.md
 - Command Line:
@@ -144,6 +143,7 @@ nav:
     - cli/index.md
     - Standalone executable: cli/standalone.md
     - Python package: cli/python.md
+    - Command reference: cli/reference.md
   - Analysis workflow:
     - cli/analysis-workflow/index.md
     - Project: cli/files.md
@@ -154,8 +154,6 @@ nav:
       - Refine a project: cli/fit.md
       - Batch workflows: cli/batch.md
     - Report: cli/reports.md
-  - Reference:
-    - cli/reference/index.md
   - Examples:
     - cli/examples/index.md
 - Physics:

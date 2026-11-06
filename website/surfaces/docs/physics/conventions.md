@@ -27,7 +27,7 @@ Anisotropic displacement uses components in a specified basis. Keep the source c
 
 ## Parameter and file names
 
-Python access paths, Edi project keys and scientific CIF names have different roles. Use the [Python reference](../python/reference/index.md) for code and [data formats](../user-guide/data-formats.md) for persistence; identify the actual scientific quantity before comparing a similarly named value.
+Python access paths, Edi project keys and scientific CIF names have different roles. Use the [Python reference](../python/reference.md) for code and [data formats](../user-guide/data-formats.md) for persistence; identify the actual scientific quantity before comparing a similarly named value.
 
 ## Comparing calculations
 

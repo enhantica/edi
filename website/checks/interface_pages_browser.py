@@ -140,7 +140,7 @@ Math.abs(ratio-.012)<.00001;
             )
         )
     cli_pages = [page.stem for page in (ROOT / 'surfaces/docs/cli').glob('*.md')]
-    for route in sorted({*cli_pages, 'examples', 'reference'}):
+    for route in sorted({*cli_pages, 'examples'}):
         if route in {'index', 'setup', 'python', 'standalone'}:
             continue
         browser.goto(base + 'cli/' + route + '/')

@@ -147,7 +147,7 @@ These source notes are retained for authors; they are not part of the published 
 
 - `python/results.md`: current result access copied from the [LBCO tutorial](https://github.com/enhantica/edi/blob/main/docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py), with interpretation adapted from [fit-quality guidance](https://github.com/enhantica/edi/blob/main/docs/user/guides/fit-quality.md) and the [earlier analysis workflow](https://docs.easydiffraction.org/lib/latest/user-guide/analysis-workflow/analysis/).
 
-- `python/reference/index.md`: layout adapted from the [earlier quick reference](https://docs.easydiffraction.org/lib/latest/quick-reference/); members checked against [edi's declared API](https://github.com/enhantica/edi/blob/main/data/python-surface.json), [Python facade](https://github.com/enhantica/edi/blob/main/lib/edi/__init__.py), and [project input/output guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md).
+- `python/reference.md`: layout adapted from the [earlier quick reference](https://docs.easydiffraction.org/lib/latest/quick-reference/); members checked against [edi's declared API](https://github.com/enhantica/edi/blob/main/data/python-surface.json), [Python facade](https://github.com/enhantica/edi/blob/main/lib/edi/__init__.py), and [project input/output guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md).
 
 - `python/experiments.md`: organization adapted from the [earlier experiment guide](https://docs.easydiffraction.org/lib/latest/user-guide/analysis-workflow/experiment/); current behavior from [ExperimentFactory](https://github.com/enhantica/edi/blob/main/lib/edi/__init__.py) and [projects from scratch](https://github.com/enhantica/edi/blob/main/docs/user/guides/projects-from-scratch-in-the-app.md).
 
@@ -209,7 +209,7 @@ These source notes are retained for authors; they are not part of the published 
 
 - `cli/batch.md`: the shell composition is new for this preview; command behavior is checked against [edi's Command Line](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py). Scan semantics come from [complete-project loading](https://github.com/enhantica/edi/blob/main/docs/user/guides/complete-project-loading.md).
 
-- `cli/reference/index.md`: syntax, defaults and behavior checked directly against [the current edi parser and command implementations](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py). This is a selected user reference; the installed command's help remains the version-specific option listing.
+- `cli/reference.md`: syntax, defaults and behavior checked directly against [the current edi parser and command implementations](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py). This is a selected user reference; the installed command's help remains the version-specific option listing.
 
 - `cli/files.md`: [project input/output guide](https://github.com/enhantica/edi/blob/main/docs/user/guides/open-save-and-export.md), [current Command Line input handling](https://github.com/enhantica/edi/blob/main/lib/edi/__main__.py), and [project-output design](https://github.com/enhantica/edi/blob/main/docs/dev/adrs/0039-project-output.md).
 

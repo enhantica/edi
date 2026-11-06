@@ -23,7 +23,7 @@ Both approaches use the same Python API.
 - :simple-python: **Python scripts** combine `edi` with your own data preparation and analysis tools.
 - :simple-jupyter: **Jupyter notebooks** run code one cell at a time and keep plots and results alongside it.
 
-[Python API reference](reference/index.md){ .md-button }
+[Python API reference](reference.md){ .md-button }
 [Download the example notebook](../assets/interfaces/refinement.ipynb){ .md-button }
 
 [Download the example project](../assets/interfaces/example-project.zip) to run the notebook.

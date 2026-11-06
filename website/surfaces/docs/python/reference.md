@@ -1,3 +1,7 @@
+---
+icon: lucide/book-open
+---
+
 # Python quick reference
 
 This page covers the calls used in the Python guides. It is a **selected reference**, not a complete generated API catalogue. The [current declared surface](https://github.com/enhantica/edi/blob/main/data/python-surface.json) lists the broader interface; signatures and behavior should be checked in the matching edi version.
@@ -45,4 +49,4 @@ Optional fit callbacks are `on_start`, `on_iteration`, `on_scan_start`, `on_file
 | `project.report.save_cif(path)` | Write a CIF report. |
 | `project.report.check()` | Read saved-report freshness states. |
 
-See [reports](../reports.md) for call-specific options and the difference between saved settings and per-call overrides.
+See [reports](reports.md) for call-specific options and the difference between saved settings and per-call overrides.
