@@ -58,7 +58,9 @@
 .md-tabs__link:has(.ed-interface-icons) {display:inline-flex;align-items:center;gap:.3em}
 .md-tabs__link .ed-interface-icons svg {margin:0}
 .ed-interface-icons svg {width:1em;height:1em;fill:currentColor;flex:none}
-.md-nav__link > .ed-interface-icons svg {width:1.3em;height:1.3em}
+/* Font Awesome fills its box, so it draws at text size inside the theme's 1.3em icon slot. */
+.md-nav__link > svg {width:1em;height:1em;margin-inline:.15em;align-self:center;flex:none}
+.md-nav__link > .ed-interface-icons {inline-size:1.3em;justify-content:center;align-self:center}
 .md-typeset .ed-interface-icons svg[fill="none"], .ed-interface-icons svg[fill="none"] {fill:none}
 @media (max-width: 600px) {
   .md-typeset ol.ed-workflow-diagram {grid-template-columns:1fr;gap:1rem}
