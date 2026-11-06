@@ -32,7 +32,7 @@ Apply the relevant corrections and turn detector measurements into observations 
 Compare a calculated pattern with the observations, refine the model and inspect the result. **EasyDiffraction focuses on this stage.**
 
 <div class="ed-concept-figures">
-<figure><figcaption>Measured, calculated and residual signals</figcaption><img src="../assets/concepts/data-analysis_refinement.png" alt="Measured intensity in blue, calculated intensity in red and their residual in grey" width="1631" height="931" loading="lazy"></figure>
+<figure><figcaption>Measured, calculated and residual patterns</figcaption><img src="../assets/concepts/data-analysis_refinement.png" alt="Measured intensity in blue, calculated intensity in red and their residual in grey" width="1631" height="931" loading="lazy"></figure>
 <figure><figcaption>Crystal structure model</figcaption><img src="../assets/concepts/data-analysis_model.png" alt="A crystal structure represented by atoms and bonds inside a unit cell" width="1142" height="684" loading="lazy"></figure>
 </div>
 
@@ -53,21 +53,17 @@ The calculated intensity depends on more than atom positions. EasyDiffraction se
 
 A disagreement between measured and calculated patterns can therefore have several causes. A peak-position error may come from the cell or calibration; a broad mismatch underneath peaks may come from the background; an intensity mismatch can involve the structure as well as experiment settings.
 
-## Calculation before refinement
+## Calculation and refinement
 
 <ol class="ed-workflow-diagram ed-concept-flow" style="--ed-flow-columns:3" markdown="1" aria-label="Model calculation and comparison">
 <li markdown="1">[:material-puzzle: Structure + experiment](#a-model-of-the-sample-and-the-experiment)</li>
 <li markdown="1">[:lucide-chart-no-axes-combined: Calculated pattern](../physics/rietveld.md#eq-rietveld-pattern)</li>
-<li markdown="1">[:lucide-git-compare: Compare with observations](#refinement-is-an-optimisation-problem)</li>
+<li markdown="1">[:lucide-git-compare: Compare with observations](#calculation-and-refinement)</li>
 </ol>
 
-A calculation predicts the diffraction signal from the current structure and experiment. It does not need measured intensities. Use it to inspect peak positions and the influence of the model before fitting.
+A calculation predicts the diffraction pattern from the current structure and experiment. It does not need measured intensities. Use it to inspect peak positions and the influence of the model before fitting.
 
-A refinement requires observations to compare against. It changes the parameters marked as free in order to improve agreement with those observations. Parameters that remain fixed still contribute to the calculated pattern.
-
-## Refinement is an optimisation problem
-
-A least-squares fit reduces a weighted difference between observations and calculations. The starting model, free-parameter set, constraints, excluded regions and minimizer conditions all influence the result.
+A refinement needs observations to compare against. A least-squares fit reduces the weighted difference between observations and calculations: it changes the parameters marked as free, while fixed parameters still contribute to the calculated pattern. The starting model, free-parameter set, constraints, excluded regions and minimizer conditions all influence the result.
 
 Start from a physically meaningful model. Inspect the initial pattern, allow parameters to vary deliberately, and review the result after each meaningful change. Adding more free parameters may reduce a residual without making the model more informative.
 
@@ -82,11 +78,11 @@ Both compare a model with observations, but summarise parameter uncertainty diff
 
 The fitting instructions in this documentation use **least squares**. Its [objective and covariance conventions](../physics/minimization.md) explain the reported uncertainties. Bayesian sampling is a separate workflow; the older library's sampler choices should not be assumed to be available in this application.
 
-## A result needs interpretation
+## Interpreting the result
 
 Convergence describes how the optimisation ended. It does not by itself establish that the sample model is correct or that all uncertainty sources have been captured.
 
-Inspect the observed and calculated signal, the residual, parameter uncertainties and correlations, and the physical plausibility of the result. [Fit quality](fit-quality.md) explains these checks in more detail.
+Inspect the observed and calculated pattern, the residual, parameter uncertainties and correlations, and the physical plausibility of the result. [Fit quality](fit-quality.md) explains these checks in more detail.
 
 ## The same ideas in every interface
 
