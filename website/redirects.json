@@ -1,4 +1,5 @@
 {
+  "user-guide/introduction/": "user-guide/foundations/",
   "learn/fit-quality/": "user-guide/analysis-workflow/analysis/",
   "learn/fitting-modes/": "user-guide/analysis-workflow/analysis/",
   "learn/glossary/": "user-guide/glossary/",

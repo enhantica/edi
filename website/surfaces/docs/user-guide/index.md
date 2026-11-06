@@ -14,7 +14,7 @@ Start in the interface you want to use. Each section has its own setup and first
 
 ## Understand the analysis
 
-The [introduction](introduction.md) and [concept](concepts.md) explain what an analysis contains. Use [data formats](data-formats.md), [parameters](parameters.md) and the [glossary](glossary.md) as you prepare your own work.
+The [foundations](foundations/index.md) and [concept](concepts.md) explain what an analysis contains. Use [data formats](data-formats.md), [parameters](parameters.md) and the [glossary](glossary.md) as you prepare your own work.
 
 ## Follow the workflow
 
