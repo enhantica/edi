@@ -12,7 +12,7 @@ The application provides a visual workspace in a browser or on a desktop. Python
 <img src="../assets/interfaces/application.png" alt="The EasyDiffraction application showing a fitted diffraction pattern and parameter controls" width="1000" height="622" loading="lazy">
 </figure>
 <figure markdown="1">
-<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">The same objects in Python</span></figcaption>
+<figcaption markdown="1">[<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-head .ed-icon-label .ed-interface-link }<br><span class="ed-interface-tag">The same objects in Jupyter</span></figcaption>
 <img src="../assets/interfaces/python.png" alt="The same refinement in a Jupyter notebook, plotting the diffraction pattern" width="1000" height="760" loading="lazy">
 </figure>
 <figure markdown="1">

@@ -75,7 +75,7 @@
 .md-typeset .ed-concept-figures figure {display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin:1.2rem auto;text-align:center}
 .md-typeset .ed-concept-figures figcaption {order:2;max-width:none;margin:.5rem 0 0;font-size:.7rem;font-style:normal;text-align:center}
 .ed-concept-figures img {order:1;display:block;width:100%;height:auto;border-radius:var(--ed-screenshot-radius)}
-.ed-concept-figures--single {max-width:360px}
+.ed-concept-figures--single {max-width:360px;margin-inline:auto}
 @media (max-width:600px) {
   .md-typeset .ed-concept-flow a {min-height:0}
 }
