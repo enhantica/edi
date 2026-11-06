@@ -15,7 +15,7 @@ print(result.rwp)
 print(result.reduced_chi_square)
 ```
 
-Check the status before interpreting a result as converged. Rwp and reduced χ² depend on the data, uncertainties, fitted range and free parameters. See [fit quality](../user-guide/fit-quality.md) for the shared interpretation.
+Check the status before interpreting a result as converged. Rwp and reduced χ² depend on the data, uncertainties, fitted range and free parameters. See [fit quality](../user-guide/analysis-workflow/analysis.md#fit-quality) for the shared interpretation.
 
 ## Values and uncertainties
 

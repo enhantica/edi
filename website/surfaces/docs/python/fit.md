@@ -29,7 +29,7 @@ print(result.rwp)
 print(result.reduced_chi_square)
 ```
 
-`analysis.fit()` dispatches according to the fitting mode saved in the project. The shared [fitting-mode guide](../user-guide/fitting-modes.md) explains the modes and their starting-state policies; the same method runs each declared mode. Scan results have a different shape from single or joint outcomes: use [result handling](results.md).
+`analysis.fit()` dispatches according to the fitting mode saved in the project. The shared [fitting-mode guide](../user-guide/analysis-workflow/analysis.md#fitting-modes) explains the modes and their starting-state policies; the same method runs each declared mode. Scan results have a different shape from single or joint outcomes: use [result handling](results.md).
 
 ## Follow progress
 

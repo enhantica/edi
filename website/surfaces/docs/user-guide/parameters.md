@@ -30,7 +30,7 @@ A fitted parameter may have a [standard uncertainty](../physics/minimization.md#
 
 A small standard uncertainty describes precision under the fit's assumptions. It does not remove uncertainty from calibration, sample effects, missing phases, an unsuitable background, or another systematic source.
 
-See [fit quality](fit-quality.md) for how parameter uncertainties relate to agreement factors and the residual.
+See [fit quality](analysis-workflow/analysis.md#fit-quality) for how parameter uncertainties relate to agreement factors and the residual.
 
 ## Constraints and symmetry
 
@@ -46,7 +46,7 @@ Model-admissibility limits describe which values the model accepts. They have a 
 
 When interpreting a constrained or limited value, check the applicable model and fitting settings. A result reaching a permitted limit can be a reason to inspect the starting assumptions, observations and parameter correlations.
 
-For scan analyses, the [fitting mode](fitting-modes.md) determines whether each dataset starts from the same template values or from the previous fit.
+For scan analyses, the [fitting mode](analysis-workflow/analysis.md#fitting-modes) determines whether each dataset starts from the same template values or from the previous fit.
 
 ## Names in code and files
 

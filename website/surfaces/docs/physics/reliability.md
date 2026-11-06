@@ -67,7 +67,7 @@ Per-experiment factors use that experiment's included observations. Pooled facto
 
 ## Interpretation
 
-There is no universal threshold that proves structural correctness. Changing the data range, uncertainty estimates, background, excluded observations or free set changes the statistic. See [assessing a fit](../user-guide/fit-quality.md).
+There is no universal threshold that proves structural correctness. Changing the data range, uncertainty estimates, background, excluded observations or free set changes the statistic. See [assessing a fit](../user-guide/analysis-workflow/analysis.md#fit-quality).
 
 ## References
 

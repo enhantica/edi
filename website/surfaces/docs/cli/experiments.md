@@ -15,4 +15,4 @@ The command line operates on that saved experiment. It does not create an experi
 
 Use `--dry` when you want to calculate or fit without writing project changes. It still executes the calculation or refinement.
 
-The shared [Experiment](../user-guide/analysis-workflow/experiment.md) stage explains the model, and [fitting modes](../user-guide/fitting-modes.md) explains single, joint and scan analyses.
+The shared [Experiment](../user-guide/analysis-workflow/experiment.md) stage explains the model, and [fitting modes](../user-guide/analysis-workflow/analysis.md#fitting-modes) explains single, joint and scan analyses.

@@ -465,7 +465,7 @@ Keep the scale and cell free. Repeat the filter-and-free action for `broad_gauss
 
 ## Refine the structural model
 
-Repeat the filter-and-free action for `background` and `fract_` to add background values and independent atom coordinates. Clear the filters. Keep displacement parameters fixed in this first fit; their [advanced refinement](displacement.md) requires additional physical checks. Press **Fit**, inspect the outcome and close the result popup. Symmetry-related quantities remain linked. See [refinement](../physics/rietveld.md) and [fit assessment](../user-guide/fit-quality.md).
+Repeat the filter-and-free action for `background` and `fract_` to add background values and independent atom coordinates. Clear the filters. Keep displacement parameters fixed in this first fit; their [advanced refinement](displacement.md) requires additional physical checks. Press **Fit**, inspect the outcome and close the result popup. Symmetry-related quantities remain linked. See [refinement](../physics/rietveld.md) and [fit assessment](../user-guide/analysis-workflow/analysis.md#fit-quality).
 
 <div class="gui-viewer" markdown="1">
 

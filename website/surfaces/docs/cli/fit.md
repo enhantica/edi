@@ -98,7 +98,7 @@ The chosen report goes to standard output; warnings and errors go to standard er
 
 ## Fitting mode and minimizer
 
-The project declares `single`, `joint`, `sequential` or `independent` mode. Its `_minimizer` settings choose the descent strategy, tolerance and iteration budget. They are project data, not extra fit flags. See [fitting modes](../user-guide/fitting-modes.md).
+The project declares `single`, `joint`, `sequential` or `independent` mode. Its `_minimizer` settings choose the descent strategy, tolerance and iteration budget. They are project data, not extra fit flags. See [fitting modes](../user-guide/analysis-workflow/analysis.md#fitting-modes).
 
 ## Stop and resume
 

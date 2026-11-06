@@ -31,4 +31,4 @@ selection before continuing. **Show actions** lets you follow what the assistant
 Use **Stop** to interrupt ongoing work.
 
 Inspect the resulting pattern and fitted parameters before relying on the result. The
-[fit quality guide](../user-guide/fit-quality.md) explains how to assess a refinement.
+[fit quality guide](../user-guide/analysis-workflow/analysis.md#fit-quality) explains how to assess a refinement.

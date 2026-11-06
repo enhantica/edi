@@ -7,7 +7,7 @@ template: gui.html
 
 The fitting mode determines how the project's experiments or scan datasets are fitted. It changes the relationship between fits, not the meaning of the structures and experiments.
 
-The shared [fitting-mode guide](../user-guide/fitting-modes.md) explains single, joint, sequential and independent fitting, including their starting-state policies. This page explains the application controls.
+The shared [fitting-mode guide](../user-guide/analysis-workflow/analysis.md#fitting-modes) explains single, joint, sequential and independent fitting, including their starting-state policies. This page explains the application controls.
 
 ## Select the mode in the app
 

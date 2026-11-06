@@ -31,7 +31,7 @@ The [current catalogue](https://github.com/enhantica/edi/blob/main/docs/user/cli
 
 An example may compare a calculated curve or fitted values with FullProf or another reference. Read what is being compared: identical model settings, a program-specific model, or a labelled regression result answer different questions.
 
-Use [fit quality](fit-quality.md) to interpret agreement factors. The references validate the paths and cases they cover; they do not establish every possible model or interface operation.
+Use [fit quality](analysis-workflow/analysis.md#fit-quality) to interpret agreement factors. The references validate the paths and cases they cover; they do not establish every possible model or interface operation.
 
 
 <!-- example-catalogue -->

@@ -1132,7 +1132,7 @@ supply the wavelength, profile or background.
                 '**Fit**, inspect the outcome and close the result popup. '
                 'Symmetry-related quantities remain linked. See '
                 '[refinement](../physics/rietveld.md) and [fit '
-                'assessment](../user-guide/fit-quality.md).'
+                'assessment](../user-guide/analysis-workflow/analysis.md#fit-quality).'
             ),
             '13-analysis-basic',
         ),

@@ -37,7 +37,7 @@ Inspect each experiment after a joint fit. Combined agreement can hide a systema
 
 ## Sequential and independent scans {#scan-refinement}
 
-Both scan modes run a sequence of fits against a template experiment. Their distinction is the starting model, not parallel execution. See the [fitting-mode guide](../user-guide/fitting-modes.md).
+Both scan modes run a sequence of fits against a template experiment. Their distinction is the starting model, not parallel execution. See the [fitting-mode guide](../user-guide/analysis-workflow/analysis.md#fitting-modes).
 
 ### Sequential scans {#sequential-scans}
 
@@ -63,7 +63,7 @@ The distinction is described in the [IUCr intensity-extraction overview](https:/
 
 ## Interpretation
 
-Refinement improves agreement under the model and its uncertainties. Convergence does not establish that the phase model, background, calibration or uncertainty estimates are correct. Use the [practical fit assessment](../user-guide/fit-quality.md) and retain the starting project.
+Refinement improves agreement under the model and its uncertainties. Convergence does not establish that the phase model, background, calibration or uncertainty estimates are correct. Use the [practical fit assessment](../user-guide/analysis-workflow/analysis.md#fit-quality) and retain the starting project.
 
 ## References
 

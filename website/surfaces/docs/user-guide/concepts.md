@@ -82,7 +82,7 @@ The fitting instructions in this documentation use **least squares**. Its [objec
 
 Convergence describes how the optimisation ended. It does not by itself establish that the sample model is correct or that all uncertainty sources have been captured.
 
-Inspect the observed and calculated pattern, the residual, parameter uncertainties and correlations, and the physical plausibility of the result. [Fit quality](fit-quality.md) explains these checks in more detail.
+Inspect the observed and calculated pattern, the residual, parameter uncertainties and correlations, and the physical plausibility of the result. [Fit quality](analysis-workflow/analysis.md#fit-quality) explains these checks in more detail.
 
 ## The same ideas in every interface
 

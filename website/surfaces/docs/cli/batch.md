@@ -51,7 +51,7 @@ If the measured files belong to one sequential or independent scan, declare that
 - **Sequential:** the previous fit supplies the next pattern's initial parameters.
 - **Independent:** every pattern starts from the same initial parameters.
 
-Both process files serially. See [shared fitting modes](../user-guide/fitting-modes.md).
+Both process files serially. See [shared fitting modes](../user-guide/analysis-workflow/analysis.md#fitting-modes).
 
 ## Keep failure information
 

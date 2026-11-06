@@ -1,6 +1,6 @@
 {
-  "learn/fit-quality/": "user-guide/fit-quality/",
-  "learn/fitting-modes/": "user-guide/fitting-modes/",
+  "learn/fit-quality/": "user-guide/analysis-workflow/analysis/",
+  "learn/fitting-modes/": "user-guide/analysis-workflow/analysis/",
   "learn/glossary/": "user-guide/glossary/",
   "learn/concepts/": "user-guide/concepts/",
   "learn/projects/": "user-guide/analysis-workflow/project/",
