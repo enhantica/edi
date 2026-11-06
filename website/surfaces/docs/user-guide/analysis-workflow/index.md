@@ -36,8 +36,8 @@ A simulation uses a calculation range without measured observations. A refinemen
 
 | Interface | What its section provides |
 | --- | --- |
-| [<span class="ed-interface-icons" aria-hidden="true">:lucide-globe: :lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../../application/index.md){ .ed-interface-link .ed-icon-label } | Workspace, imports, parameter controls, fit progress and visual inspection |
-| [<span class="ed-interface-icons" aria-hidden="true">:simple-python: :simple-jupyter:</span> <span class="ed-icon-text">Python</span>](../../python/index.md){ .ed-interface-link .ed-icon-label } | Project objects, parameter access, analysis calls and result objects |
-| [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal: :simple-python:</span> <span class="ed-icon-text">Command Line</span>](../../cli/index.md){ .ed-interface-link .ed-icon-label } | Commands for saved projects, output options and automation |
+| [<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../../application/index.md){ .ed-interface-link .ed-icon-label } | Workspace, imports, parameter controls, fit progress and visual inspection |
+| [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/index.md){ .ed-interface-link .ed-icon-label } | Project objects, parameter access, analysis calls and result objects |
+| [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Command Line</span>](../../cli/index.md){ .ed-interface-link .ed-icon-label } | Commands for saved projects, output options and automation |
 
 The scientific explanations belong here; the interface pages link back to them as needed.

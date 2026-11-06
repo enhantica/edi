@@ -11,7 +11,7 @@ The interfaces share the project model and native calculation core, using crysta
 ## Documentation
 
 - [User guide](../user-guide/index.md) explains the shared model and analysis workflow.
-- [<span class="ed-interface-icons" aria-hidden="true">:lucide-globe: :lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../application/index.md){ .ed-interface-link .ed-icon-label }, [<span class="ed-interface-icons" aria-hidden="true">:simple-python: :simple-jupyter:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-link .ed-icon-label } and [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal: :simple-python:</span> <span class="ed-icon-text">Command Line</span>](../cli/index.md){ .ed-interface-link .ed-icon-label } explain how to follow that workflow in each interface.
+- [<span class="ed-interface-icons" aria-hidden="true">:lucide-monitor:</span> <span class="ed-icon-text">Application</span>](../application/index.md){ .ed-interface-link .ed-icon-label }, [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../python/index.md){ .ed-interface-link .ed-icon-label } and [<span class="ed-interface-icons" aria-hidden="true">:lucide-square-terminal:</span> <span class="ed-icon-text">Command Line</span>](../cli/index.md){ .ed-interface-link .ed-icon-label } explain how to follow that workflow in each interface.
 - [Physics](../physics/index.md) explains the scientific models, equations and conventions.
 
 ## Open scientific software

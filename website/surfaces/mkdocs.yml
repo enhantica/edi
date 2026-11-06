@@ -41,13 +41,13 @@ extra_javascript:
   - assets/example-catalogue.js?v=1
 extra:
   interface_icons:
-    Application: [lucide/globe, lucide/monitor]
+    Application: [lucide/monitor]
     Web application: [lucide/globe]
     Web app: [lucide/globe]
     Desktop application: [lucide/monitor]
     Desktop app: [lucide/monitor]
-    Python: [simple/python, simple/jupyter]
-    Command Line: [lucide/square-terminal, simple/python]
+    Python: [simple/python]
+    Command Line: [lucide/square-terminal]
     Standalone executable: [lucide/square-terminal]
     CLI from Python package: [simple/python]
     Python scripts: [simple/python]
