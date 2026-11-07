@@ -109,7 +109,8 @@ Control {
     // A clickable item is a button for the keyboard too, as the sidebar's fit buttons were: Tab reaches it, Space, Enter
     // or Return activates it, it shows its focus, and an unavailable one does neither. Assistive tools see the action
     // above.
-    focusPolicy: clickable ? Qt.StrongFocus : Qt.NoFocus
+    // Kept while focused: Qt refuses to take the tab focus from the focused item (a fit stopping greys the button).
+    focusPolicy: clickable || activeFocus ? Qt.StrongFocus : Qt.NoFocus
     Keys.onPressed: event => ApplicationInfo.statusItemKeyPressed(control, event)
 
     contentItem: Row {

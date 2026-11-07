@@ -107,7 +107,8 @@ EaComponents.ListViewTextInput {
 
     readOnly: locked
     activeFocusOnPress: !locked
-    activeFocusOnTab: !locked
+    // A cell locked while it has the focus keeps it until the focus moves: Qt refuses to take it from the focused item.
+    activeFocusOnTab: !locked || activeFocus
     // The base's colours, with a locked cell kept in the normal colour rather than the read-only grey.
     color: enterFlash ? EaStyle.Colors.themeForeground : warned ? EaStyle.Colors.red : !enabled || (readOnly && !locked) || minored ? EaStyle.Colors.themeForegroundMinor : activeFocus || selected || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
 

@@ -29,7 +29,8 @@ EaComponents.ListViewParameter {
     // auto-estimated background's points or terms (the owner, 2026-10-20). readOnly would grey it and hide the toggle.
     property bool locked: false
     activeFocusOnPress: !locked
-    activeFocusOnTab: !locked
+    // A cell locked while it has the focus keeps it until the focus moves: Qt refuses to take it from the focused item.
+    activeFocusOnTab: !locked || activeFocus
     // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
     property string typedRefusal: ""
     readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
