@@ -254,7 +254,16 @@ TestCase {
             const title = data.group === "experiments" && index === 1
                 ? group[0] + " " + Session.project.currentExperiment.name : group[0];
             compare(header.text, title, "The menu names the group and its selected target");
-            verify(!header.enabled, "Group headings are labels");
+            verify(typeof header.triggered !== "function" && typeof header.clicked !== "function",
+                   "Group headings are inert labels without an item action");
+            const heldIndex = menu.currentIndex;
+            mouseMove(header, header.width / 2, header.height / 2);
+            settle();
+            verify(menu.currentIndex === heldIndex || menu.currentIndex === -1, "Hovering a section label does not select another menu action");
+            mouseClick(header, header.width / 2, header.height / 2);
+            settle();
+            verify(menu.opened, "Clicking a section label leaves the Load menu open");
+            verify(menu.currentIndex === heldIndex || menu.currentIndex === -1, "Clicking a section label does not select another menu action");
             for (const [offset, labelText] of [[1, "From file…"], [2, "From web…"]]) {
                 const action = menu.itemAt(3 * index + offset);
                 compare(action.text, labelText, "The group presents file and web actions in order");
@@ -608,7 +617,7 @@ TestCase {
     }
 
     function check_cod_http(data) {
-        resetProject();
+        resetProject(false);
         const search = Session.onlineSearch;
         verify(OnlineHttpFixture.attach(search), "The real search receives a socket-free COD transport");
         OnlineHttpFixture.clear();
@@ -643,7 +652,7 @@ TestCase {
     }
 
     function check_outage_class(data) {
-        resetProject();
+        resetProject(false);
         const search = Session.onlineSearch;
         verify(OnlineHttpFixture.attach(search), "The outage gate replaces only the HTTP transport");
         OnlineHttpFixture.clear();
@@ -654,11 +663,15 @@ TestCase {
         if (data.route === "download") {
             const body = SettingsProof.fileObservation(fixture({file: ""}), "cod_response.json");
             const hit = JSON.parse(body.text).filter(row => String(row.file) === "9001003");
+            OnlineHttpFixture.enqueue(200, String(hit.length));
             OnlineHttpFixture.enqueue(200, JSON.stringify(hit));
             searchFor("9001003");
         }
         OnlineHttpFixture.enqueueError(data.status, data.error);
-        if (data.route === "download") loadResult(0);
+        if (data.route === "download") {
+            onlineControl("results").selectWithModifiers(0, Qt.NoModifier);
+            onlineDialog.loadSelected();
+        }
         else searchFor("");
         tryCompare(search, "busy", false, 3000, "The outage reaches the shipped callback");
         verify(search.unreachable, "Every server or proxy outage is classified as unavailable");
@@ -760,7 +773,7 @@ TestCase {
     }
 
     function check_unavailable_http(data) {
-        resetProject();
+        resetProject(false);
         const search = Session.onlineSearch;
         verify(OnlineHttpFixture.attach(search), "HTTP status comes from the socket-free fixture transport");
         OnlineHttpFixture.clear();
@@ -769,13 +782,16 @@ TestCase {
             const body = SettingsProof.fileObservation(fixture({file: ""}), "cod_response.json");
             verify(body.exists, "The downloaded-file case starts from a known COD entry");
             const hit = JSON.parse(body.text).filter(row => String(row.file) === "9001003");
+            OnlineHttpFixture.enqueue(200, String(hit.length));
             OnlineHttpFixture.enqueue(200, JSON.stringify(hit));
             searchFor("9001003");
             compare(onlineControl("id.0").text, "9001003", "The known entry can be selected before its file fails");
             OnlineHttpFixture.enqueue(data.status, "");
-            loadResult(0);
+            onlineControl("results").selectWithModifiers(0, Qt.NoModifier);
+            onlineDialog.loadSelected();
         } else {
             OnlineHttpFixture.enqueue(data.status, data.status === 200 ? "0" : "");
+            if (data.status === 200) OnlineHttpFixture.enqueue(200, "[]");
             searchFor(data.status === 200 ? "9999999" : "");
         }
         tryCompare(search, "busy", false, 3000, "The controlled reply reaches the rendered result state");

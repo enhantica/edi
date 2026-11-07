@@ -28,6 +28,8 @@ PopupContractSession {
     function check_placeholders(data) {
         resetProject();
         const search = searchDocument(data.tag, sourceDocument());
+        onlineControl("source").activated(search.sources.indexOfKey("new-source"));
+        settle();
         for (const pair of [["id","ID"], ["name","Name"], ["formula","Formula"], ["elements","Elements"]]) {
             verify(onlineControl("field." + pair[0]).placeholderText.startsWith(pair[1]), "Every text field carries its own title in the placeholder");
         }

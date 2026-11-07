@@ -81,3 +81,26 @@ supply the structure reply: reusing an existing structure forbids replacing or
 duplicating it, not fetching its entry. The reuse control first changes a cell
 length and requires that held structure to survive unchanged. Actual pointer
 row loading remains a separate gate.
+
+Menu section checks previously required the old disabled MenuItem shape. They
+now require inert labels: no item action and no selection or menu dismissal on
+real hover/click input. A plain Item may be enabled while still accepting no
+input; that property alone did not prove the required behavior. The section
+texts, selected target names, action order and format hints remain checked.
+
+Metadata-selector cases now activate the source selector's real handler after
+installing the injected source, as a user does. Previously they assigned the
+search object's source directly and skipped the popup's metadata preparation.
+The Any-first selectors and their source-provided values remain required.
+
+The retained HTTP failure actors now answer count and detail requests even for
+an exact ID or zero matches. They formerly supplied a single JSON document.
+Download-error dispatch uses the shipped selected-row handler, leaving pointer
+loading to its own gate, so transport classification and alternative-source
+checks remain reachable when pointer loading is broken.
+
+Transport-only cases use an empty real project instead of creating unrelated
+structures, experiments and live calculations for every response. The native
+request owner, scripted server, ordinary download callback, visible alternative
+and actual source-switch checks remain. This removes scientific work from the
+outage measurement path while retaining every status and route.
