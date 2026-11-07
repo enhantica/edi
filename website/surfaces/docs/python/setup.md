@@ -54,15 +54,16 @@ Linux x86-64. The wheels are attached to the matching GitHub release.
     `.\.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install and verify:
 
     ```console
-    python -m pip install --isolated --no-deps --force-reinstall --index-url https://enhantica.github.io/edi/pypi/simple/ "easydiffraction==VERSION"
-    python -m pip install "easydiffraction==VERSION"
+    python -m pip install "easydiffraction @ WHEEL_LINK"
     python -c "import edi; print(edi.Project)"
     python -m edi --help
     ```
 
-    The first command takes `easydiffraction` only from the preview index, so a
-    package of the same name on PyPI is never installed instead. The second adds
-    its dependencies from PyPI. To upgrade, run both with the new version.
+    Replace `WHEEL_LINK` with the link to the wheel for your platform on the
+    preview package index, copied whole: it ends with `#sha256=` and the
+    file's digest. Pip then installs exactly that file and checks its digest,
+    so no other package index can supply `easydiffraction`. Its dependencies
+    come from PyPI as usual. To upgrade, run the command with the newer link.
 
 ## From source
 

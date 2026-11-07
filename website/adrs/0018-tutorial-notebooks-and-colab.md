@@ -27,14 +27,23 @@ The public docs build and `pixi run notebook-convert` use this converter.
 The Examples table links to each notebook at the documentation's source
 commit. Downloadable ZIPs carry the same tutorial with project-relative paths.
 
-The package itself comes only from our index. Setup and the pip instructions
-install it with `--index-url` set to our index, `--no-deps` and `--force-reinstall`,
-with `--isolated` in notebooks so pip configuration cannot add an index, then run a
-second install of the same version to resolve dependencies from PyPI. Pip treats all
-configured indexes as one pool and prefers the highest version, so
-`--extra-index-url` would let PyPI or another index supply a package of the same
-name, and would fall back to it when our index is unreachable. A pip-installed `edi`
-is replaced, since its origin cannot be told from its metadata; an `edi` imported
-from a source build is the developer's own and is kept. Published release wheels
+The package itself comes only from our index. Pip never chooses it: the setup
+cell (`website/notebook_install.py`, copied whole into each notebook) reads our
+index page, takes the newest wheel this interpreter supports with its SHA-256,
+and installs it as a direct reference without dependencies, with every pip
+environment setting and configuration file switched off. It then installs the
+wheel's declared dependencies by name with the user's usual pip settings, which
+cannot reselect the package itself, and finally proves the result: the installed
+distribution's `direct_url.json` names that URL and digest, and `import edi`
+loads its files. The pip instructions give the same direct reference. Pip pools
+all configured indexes and find-links and prefers the highest version, and
+`--isolated` still reads global and per-environment configuration files, so no
+index option can bind the package.
+
+An `edi` already imported from another distribution cannot be replaced in a
+running kernel; the cell refuses and asks for a restart. An `edi` no pip
+distribution owns is a source build and is used as it is, with a message naming
+its path.
+Published release wheels
 must be publicly downloadable before the index can expose them; draft assets are
 excluded.

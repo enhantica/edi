@@ -2,8 +2,9 @@
 """The notebook setup cell installs easydiffraction only from our index, offline.
 
 Two local PEP 503 indexes stand in for ours and for PyPI. The PyPI stand-in offers the same
-version and a higher one with different content, and it is also configured as an extra index,
-so pip's own candidate selection would pick it if the setup let it.
+version and a higher one with different content, and it is offered to pip every way pip takes
+a source: environment variables, a configuration file in the environment, and find-links. Each
+case runs the generated cell, then asks the environment which package ``import edi`` loads.
 """
 
 import base64
@@ -51,7 +52,10 @@ def wheel(directory, name, version, files, requires=()):
     with zipfile.ZipFile(target, 'w') as archive:
         for path, text in entries.items():
             archive.writestr(path, text)
-    links = ''.join(f'<a href="{p.name}">{p.name}</a>\n' for p in sorted(project.glob('*.whl')))
+    links = ''.join(
+        f'<a href="{p.name}#sha256={hashlib.sha256(p.read_bytes()).hexdigest()}">{p.name}</a>\n'
+        for p in sorted(project.glob('*.whl'))
+    )
     (project / 'index.html').write_text(f'<html><body>\n{links}</body></html>\n')
 
 
@@ -155,3 +159,52 @@ def test_a_source_build_is_kept_without_installing(indexes, python, tmp_path):
         [python, '-c', code], env=env, capture_output=True, text=True, check=False
     ).stdout
     assert out.split() == ['source', 'None']
+
+
+def configure_pip(python, pypi):
+    """A pip configuration file inside the environment, which --isolated does not ignore."""
+    venv_root = python.parent.parent
+    name = 'pip.ini' if os.name == 'nt' else 'pip.conf'
+    (venv_root / name).write_text(
+        f'[global]\nindex-url = {pypi.as_uri()}\nextra-index-url = {pypi.as_uri()}\n'
+        f'find-links = {(pypi / "easydiffraction").as_uri()}\n'
+    )
+
+
+def test_configuration_files_and_find_links_cannot_supply_the_package(indexes, python, tmp_path):
+    ours, pypi = indexes
+    configure_pip(python, pypi)
+    env = environment(pypi)
+    result = run_setup(python, ours, env, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert installed(python, env, tmp_path) == ['ours', VERSION]
+
+
+def test_the_dependency_pass_cannot_reselect_the_package(indexes, python, tmp_path):
+    ours, pypi = indexes
+    configure_pip(python, pypi)
+    env = environment(pypi, PIP_FORCE_REINSTALL='1', PIP_IGNORE_INSTALLED='1')
+    result = run_setup(python, ours, env, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert installed(python, env, tmp_path) == ['ours', VERSION]
+
+
+def test_an_imported_wrong_package_refuses_until_the_kernel_restarts(indexes, python, tmp_path):
+    ours, pypi = indexes
+    env = environment(pypi)
+    pip_install(python, env, f'easydiffraction=={VERSION}')
+    cell = tmp_path / 'setup_cell.py'
+    cell.write_text(PREPARE.setup_source('case', index=ours.as_uri()))
+    kernel = f'import edi\nexec(open({str(cell)!r}).read())\n'
+    result = subprocess.run(
+        [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+    assert result.returncode != 0
+    assert 'Restart the kernel' in result.stderr
+    assert installed(python, env, tmp_path) == ['pypi', VERSION]
+    assert run_setup(python, ours, env, tmp_path).returncode == 0
+    rerun = subprocess.run(
+        [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+    assert rerun.returncode == 0, rerun.stderr
+    assert installed(python, env, tmp_path) == ['ours', VERSION]

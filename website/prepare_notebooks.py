@@ -7,45 +7,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_INDEX = 'https://enhantica.github.io/edi/pypi/simple/'
+INSTALL = Path(__file__).with_name('notebook_install.py')
 
 
 def setup_source(case: str, *, portable: bool = False, index: str = PACKAGE_INDEX) -> str:
     """Install the Python package when needed and provide project files in Colab.
 
-    The package comes from EasyDiffraction's index alone: PyPI or another index cannot supply
-    it, even at an equal or higher version, ``--isolated`` stops pip configuration adding one,
-    and an unreachable index stops the setup instead of falling back. Its dependencies then
-    resolve from the default index. A pip-installed ``edi`` is replaced; one imported from a
-    source build is kept.
+    The install code is ``notebook_install.py``, copied in whole so the notebook needs nothing
+    else; ADR-0018 explains how it keeps the package to the wheel our index lists.
     """
     relative = 'project' if portable else f'../cli/{case}/project'
+    install = INSTALL.read_text(encoding='utf-8').split('\n', 2)[2]
     return (
         '# Install EasyDiffraction and prepare the example when running in Colab.\n'
-        'import importlib\n'
-        'import importlib.metadata\n'
-        'import importlib.util\n'
+        + install
+        + f'\ninstall_edi({index!r})\n\n'
         'import io\n'
         'import os\n'
-        'import subprocess\n'
-        'import sys\n'
         'import tempfile\n'
         'import urllib.request\n'
         'import zipfile\n'
         'from pathlib import Path\n\n'
-        'installed = importlib.util.find_spec("edi") is not None\n'
-        'from_pip = bool(importlib.metadata.packages_distributions().get("edi"))\n'
-        'if "edi" not in sys.modules and (from_pip or not installed):\n'
-        '    pip = [sys.executable, "-m", "pip", "install", "--only-binary=:all:"]\n'
-        '    subprocess.check_call([\n'
-        '        *pip, "--isolated", "--no-deps", "--force-reinstall",\n'
-        f'        "--index-url", "{index}", "easydiffraction",\n'
-        '    ])\n'
-        '    version = subprocess.check_output([\n'
-        '        sys.executable, "-c",\n'
-        '        "import importlib.metadata as m; print(m.version(\'easydiffraction\'))",\n'
-        '    ], text=True).strip()\n'
-        '    subprocess.check_call([*pip, f"easydiffraction=={version}"])\n'
-        '    importlib.invalidate_caches()\n\n'
         'if "google.colab" in sys.modules:\n'
         '    workspace = Path(tempfile.mkdtemp(prefix="edi-tutorial-"))\n'
         '    (workspace / "notebooks").mkdir()\n'
