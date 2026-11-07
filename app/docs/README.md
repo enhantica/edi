@@ -32,6 +32,10 @@ pixi run site-build
 
 The importer generates the walkthrough, workspace guide and page/sidebar reference. Responsive SVG highlights use the captured geometry. The documentation build validates hashes, dimensions, workflow order, sidebar coverage and post-fit state. The native capture remains a manual command; automatic native capture in CI is a later integration. After import, run `website/capture_learning.py --edi-root . --gui-capture BUNDLE` to regenerate the Application comparison from these saved checkpoints; regenerate the prepared Python/CLI comparison without `--gui-capture`. The normal build renders and checks their source hashes.
 
+## Conditional groups and the dark theme
+
+`group-reference.js` captures sidebar groups that only some projects show. Change its `EXAMPLE_ID` and `GROUPS` together in a copy, and pass the copy with `--docs-script`. For dark screenshots, run each script again with `theme:light` changed to `theme:dark`.
+
 ## Select another example
 
 Change only `EXAMPLE_ID` near the start of `app/docs/y2o3-spodi.js`, or copy the script, change that setting and pass it with `--docs-script`. The schema-2 script declares `example` and `build(capture)`. The app resolves the bundled fixture and supplies its title, name, description and separate input paths. Input filenames and dependent data files are discovered rather than hard-coded; standard CIF/XYE teaching inputs are exported from the selected fixture. The CIF/XYE creation template currently requires a measured constant-wavelength powder example with one structure and one experiment; other experiment families and multi-block cases need an extended teaching plan. Fixture selection supplies the inputs and measurement labels; it does not guarantee that the same parameter batches are appropriate for every model.

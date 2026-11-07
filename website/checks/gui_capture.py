@@ -36,7 +36,7 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _check_identity(root: Path, manifest: dict, workflow: str) -> str:
+def _check_identity(root: Path, manifest: dict, workflow: str, *, groups: bool = False) -> str:
     """Check the bundle's workflow, fixture and sources; return the reference kind."""
     require(workflow in {'creation', 'reference'}, 'Unknown capture workflow')
     require(manifest.get('workflow', 'creation') == workflow, 'Wrong capture workflow')
@@ -52,7 +52,10 @@ def _check_identity(root: Path, manifest: dict, workflow: str) -> str:
     if fixture is not None:
         require(fixture.get('id') == manifest['example'], 'Fixture and example id disagree')
     reference_kind = 'scan'
-    if workflow == 'reference':
+    if groups:
+        require(workflow == 'reference', 'A group capture is a reference capture')
+        reference_kind = 'groups'
+    elif workflow == 'reference':
         modes = (fixture or {}).get('values', {}).get('fittingMode', [])
         require(
             any(mode in {'sequential', 'independent', 'joint'} for mode in modes),
@@ -101,7 +104,9 @@ def _check_inputs(root: Path, manifest: dict) -> bool:
     return raw_inputs
 
 
-def _check_actions(manifest: dict, workflow: str, *, raw_inputs: bool) -> None:
+def _check_actions(
+    manifest: dict, workflow: str, *, raw_inputs: bool, groups: bool = False
+) -> None:
     actions = [item.get('action', '') for item in manifest.get('actions', [])]
     loads = [
         a
@@ -144,6 +149,8 @@ def _check_actions(manifest: dict, workflow: str, *, raw_inputs: bool) -> None:
         ]
     if workflow == 'reference':
         expected = [loads[0], 'statusBar.fit.button', 'wait-fit', 'close-fit-results']
+    if groups:
+        expected = [loads[0]]
     position = -1
     for action in expected:
         candidates = [
@@ -249,6 +256,10 @@ def _scene_metadata(
 
 
 def _check_coverage(captured: list[dict], workflow: str, reference_kind: str) -> None:
+    # A group capture shows a few conditional groups, not every page of a project.
+    if reference_kind == 'groups':
+        require(any(s.get('layout', {}).get('highlights') for s in captured), 'No group captured')
+        return
     checkpoints = (
         [
             '01-home',
@@ -278,11 +289,13 @@ def _check_coverage(captured: list[dict], workflow: str, reference_kind: str) ->
         )
 
 
-def validate_bundle(root: Path, *, workflow: str = 'creation') -> tuple[dict, list[dict]]:
+def validate_bundle(
+    root: Path, *, workflow: str = 'creation', groups: bool = False
+) -> tuple[dict, list[dict]]:
     manifest = read_json(root / 'manifest.json')
-    reference_kind = _check_identity(root, manifest, workflow)
+    reference_kind = _check_identity(root, manifest, workflow, groups=groups)
     raw_inputs = _check_inputs(root, manifest)
-    _check_actions(manifest, workflow, raw_inputs=raw_inputs)
+    _check_actions(manifest, workflow, raw_inputs=raw_inputs, groups=groups)
     captured = []
     ids = set()
     for scene in manifest.get('scenes', []):
@@ -302,8 +315,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('bundle', type=Path)
     parser.add_argument('--workflow', choices=['creation', 'reference'], default='creation')
+    parser.add_argument('--groups', action='store_true', help='A capture of conditional groups')
     args = parser.parse_args()
-    manifest, scenes = validate_bundle(args.bundle, workflow=args.workflow)
+    manifest, scenes = validate_bundle(args.bundle, workflow=args.workflow, groups=args.groups)
     print(
         json.dumps(
             {

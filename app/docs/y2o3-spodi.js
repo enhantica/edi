@@ -47,8 +47,10 @@
           select("experimentType.beamMode", capture.fixture.values.beamMode[0]),
           select("experimentType.radiationProbe", capture.fixture.values.probe[0])),
         ["experimentType"]);
+    shot("guide-experiment-calculation-range", "experiment", "Set the calculation range before any data are loaded",
+        ["reveal:group.data_range", "expand:group.data_range"], ["group.data_range"]);
     shot("09-experiment-data", "experiment", "Load the measured angle, intensity and uncertainty columns",
-        ["import-data:" + capture.dataFile], ["experiments.load", "workflow.experiment.mainContent"]);
+        ["reveal:group.experiments", "expand:group.experiments", "import-data:" + capture.dataFile], ["experiments.load", "workflow.experiment.mainContent"]);
     shot("09-wavelength", "experiment", "Set the wavelength used for this measurement",
         ["reveal:group.instrument", "expand:group.instrument"].concat(setValue("instrument.setup_wavelength", capture.wavelength)),
         ["instrument.setup_wavelength"]);
@@ -119,6 +121,7 @@
     panel("guide-structure-displacement", "structure", "basic", "group.atom_site_aniso", "Inspect anisotropic atomic displacement", ["group.atom_site_aniso"]);
     panel("guide-structure-create", "structure", "basic", "group.structures", "Load, create or duplicate a structure", ["structures.load", "structures.create", "structures.duplicate"]);
     panel("guide-experiment-data", "experiment", "basic", "group.experiments", "Select an experiment or load measured data", ["experiments.list", "experiments.file.0"]);
+    panel("guide-experiment-data-source", "experiment", "extras", "group.data_source", "See which file the measured data were read from", ["group.data_source"]);
     panel("guide-experiment-create", "experiment", "basic", "group.experiments", "Load or create an experiment", ["experiments.load", "experiments.create"]);
     panel("guide-experiment-instrument", "experiment", "basic", "group.instrument", "Inspect instrument parameters", ["group.instrument"]);
     panel("guide-experiment-profile", "experiment", "basic", "group.peak", "Choose and inspect a peak profile", ["group.peak"]);
