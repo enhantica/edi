@@ -6,6 +6,7 @@
 #include <QPointer>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 #include <QtQml/qqmlregistration.h>
 #include <optional>
 #include <string>
@@ -160,6 +161,11 @@ class EvolutionViewModel : public QObject {
     const edi::Project* project_ = nullptr;
     const edi::Project* template_ = nullptr;
     std::vector<Point> points_;
+    // A running scan adds a point per fitted file, up to dozens a second with several fits at once: the chart is
+    // redrawn for the first at once and then at most every kRowRedrawMs, the last always drawn (the owner, 2026-11-04).
+    QTimer row_redraw_;
+    bool row_redraw_due_ = false;
+    void finishRow();
     // The x of a dataset: its first extracted value, or its place in the scan from 1; nullopt when not finite.
     std::optional<double> xOf(int dataset, const std::vector<std::string>* extracted) const;
     void finish();

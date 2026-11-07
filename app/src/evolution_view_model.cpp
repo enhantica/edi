@@ -49,8 +49,31 @@ void EvolutionParameterListModel::setNames(const QStringList& names) {
     setTableRows(rows);
 }
 
+namespace {
+constexpr int kRowRedrawMs = 250;
+}  // namespace
+
 EvolutionViewModel::EvolutionViewModel(QObject* parent)
-    : QObject(parent), parameters_(new EvolutionParameterListModel(this)) {}
+    : QObject(parent), parameters_(new EvolutionParameterListModel(this)) {
+    row_redraw_.setSingleShot(true);
+    row_redraw_.setInterval(kRowRedrawMs);
+    connect(&row_redraw_, &QTimer::timeout, this, [this] {
+        if (row_redraw_due_) {
+            row_redraw_due_ = false;
+            finish();
+            row_redraw_.start();
+        }
+    });
+}
+
+void EvolutionViewModel::finishRow() {
+    if (row_redraw_.isActive()) {
+        row_redraw_due_ = true;
+        return;
+    }
+    finish();
+    row_redraw_.start();
+}
 
 void EvolutionViewModel::setScan(const ScanSession* session, const edi::Project* project,
                                  const QString& extracted_title) {
@@ -192,7 +215,7 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
         }
         point.x = *x;
         points_.push_back(point);
-        finish();
+        finishRow();
         return;
     }
 }
