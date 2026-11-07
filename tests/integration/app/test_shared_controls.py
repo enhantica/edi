@@ -17,6 +17,7 @@ CASES = [
     ('tst_shared_tooltips.qml', 'SharedTooltips', 'app_bar'),
     ('tst_shared_tooltips.qml', 'SharedTooltips', 'button_clicks'),
     ('tst_model_column_widths.qml', 'ModelColumnWidths', 'distant_row_metrics_and_scroll'),
+    ('tst_model_column_widths.qml', 'ModelColumnWidths', 'no_rows_created_to_measure'),
 ]
 
 

@@ -10,8 +10,8 @@ production engine and window and sends a real pointer click to its tooltip butto
 
 The table actor supplies a Qt ListModel with 1000 rows and the widest text at row 917.
 Qt FontMetrics supplies the independent text advances. Delegate construction is counted
-from the actor, including temporary delegates outside the view. The bound allows the
-small viewport population but rejects whole-model delegate construction. Header and
+from the actor. Every delegate must belong to the actual ListView; the count of
+delegates created outside that view must be exactly zero. Header and
 body widths, scrolling, and an off-screen data edit are separate observations.
 
 The census includes the configured base QML selected by CMake, as well as app QML.

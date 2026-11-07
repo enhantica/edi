@@ -9,6 +9,7 @@ Item {
     width: 1400
     height: 400
     property int made: 0
+    property int measured: 0
     property string widest: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     ListModel {
         id: rows
@@ -19,6 +20,7 @@ Item {
     Component {
         id: tableFactory
         DataTable {
+            id: table
             width: 1200
             height: 200
             sourceModel: rows
@@ -35,7 +37,11 @@ Item {
                 id: row
                 required property string label
                 required property string other
-                Component.onCompleted: surface.made += 1
+                Component.onCompleted: {
+                    surface.made += 1;
+                    if (row.ListView.view !== table)
+                        surface.measured += 1;
+                }
                 Components.ListViewLabel {
                     text: row.label
                 }
@@ -56,6 +62,14 @@ Item {
                     other: "x"
                 });
             surface.made = 0;
+            surface.measured = 0;
+        }
+        function test_no_rows_created_to_measure() {
+            const table = createTemporaryObject(tableFactory, surface);
+            verify(table !== null, "The delegate census runs the actual production table");
+            verify(waitForPolish(table), "The visible table builds its viewport delegates");
+            tryVerify(() => table.fittedWidths.length === 2 && table.fittedWidths[0] > 0, 3000, "The complete model width pass finishes before checking delegate construction");
+            compare(surface.measured, 0, "No delegate is ever constructed outside the table's actual ListView for column measurement");
         }
         function test_distant_row_metrics_and_scroll() {
             const table = createTemporaryObject(tableFactory, surface);
@@ -63,7 +77,6 @@ Item {
             verify(waitForPolish(table), "The table finishes its initial visible-row layout");
             tryVerify(() => table.fittedWidths.length === 2 && table.fittedWidths[0] > 0, 3000, "The model publishes both fitted column widths");
             verify(table.itemAtIndex(917) === null, "The widest row starts far outside the viewport");
-            verify(surface.made < 100, "Column measurement creates no extra model rows: only viewport delegates may be built; actual " + surface.made);
             const header = table.headerItem;
             const labels = Render.descendants(header).filter(item => typeof item.text === "string" && typeof item.horizontalAlignment === "number" && (item.text === "Name" || item.text === "A header wider than its values"));
             verify(labels.length >= 2, "Both real header cells expose their fonts for independent Qt metrics");

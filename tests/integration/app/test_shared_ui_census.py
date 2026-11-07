@@ -41,12 +41,99 @@ def test_overlap_deferrals_are_explicit():
         )
 
 
+def binding(body, name):
+    depth = 0
+    for index, word in enumerate(body[:-1]):
+        if depth == 0 and word == name and body[index + 1] == ':':
+            result = []
+            level = 0
+            for offset in range(index + 2, len(body)):
+                value = body[offset]
+                if level == 0 and (
+                    value in {'property', 'readonly', 'function', 'signal', ';'}
+                    or (offset + 1 < len(body) and body[offset + 1] == ':')
+                ):
+                    break
+                result.append(value)
+                level += value in {'(', '[', '{'}
+                level -= value in {')', ']', '}'}
+            return result
+        depth += word in {'(', '[', '{'}
+        depth -= word in {')', ']', '}'}
+    return []
+
+
+def requires_decision(expression, decision):
+    def unwrap(words):
+        while words and words[0] == '(' and words[-1] == ')':
+            depth = 0
+            consumed = 0
+            for word in words:
+                consumed += 1
+                depth += word == '('
+                depth -= word == ')'
+                if depth == 0:
+                    break
+            if consumed != len(words):
+                break
+            words = words[1:-1]
+        return words
+
+    expression = unwrap(expression)
+    factors = []
+    start = depth = 0
+    for index, word in enumerate(expression):
+        if depth == 0 and expression[index : index + 2] == ['|', '|']:
+            return False
+        if depth == 0 and expression[index : index + 2] == ['&', '&']:
+            factors.append(expression[start:index])
+            start = index + 2
+        depth += word in {'(', '[', '{'}
+        depth -= word in {')', ']', '}'}
+    factors.append(expression[start:])
+    for part in factors:
+        factor = unwrap(part)
+        if len(factor) < 3 or factor[:2] != [decision, '('] or factor[-1] != ')':
+            continue
+        depth = 0
+        consumed = 1
+        for word in factor[1:]:
+            consumed += 1
+            depth += word == '('
+            depth -= word == ')'
+            if depth == 0:
+                break
+        if consumed == len(factor):
+            return True
+    return False
+
+
+def test_census_rejects_visibility_bypasses():
+    assert requires_decision(tokens('hovered && Policy.allowed(control)'), 'Policy.allowed'), (
+        'A genuine required level decision remains admissible'
+    )
+    for source in (
+        'true || Policy.allowed(control)',
+        'hovered || (Policy.allowed(control) && text)',
+        'hovered && (true || Policy.allowed(control))',
+        'hovered; onClicked: Policy.allowed(control)',
+        '"Policy.allowed(control)"',
+        'hovered /* Policy.allowed(control) */',
+    ):
+        body = tokens('visible: ' + source)
+        assert not requires_decision(binding(body, 'visible'), 'Policy.allowed'), (
+            'A named call must be a required visibility conjunct, not a comment or bypass: '
+            + source
+        )
+
+
 def test_tooltip_uses_share_one_level_decision():
     failures = []
     found = []
     shared = sources()['app/qml/Base/Gui/Elements/ToolTip.qml']
-    visible = re.search(r'(?m)^\s*visible\s*:\s*(.*(?:\n[ \t]+[^\n:]+)*)', shared)
-    decisions = set(re.findall(r'\b([\w.]+)\s*\(', visible[1])) if visible else set()
+    root = list(qml_objects(shared))[-1][1]
+    visible = binding(root, 'visible')
+    decisions = set(re.findall(r'\b([\w.]+)\s*\(', ' '.join(visible)))
     decisions -= {'Boolean', 'qsTr'}
     if len(decisions) != 1:
         failures.append(
@@ -69,11 +156,8 @@ def test_tooltip_uses_share_one_level_decision():
             # The shared tooltip owns the level decision; uses inherit it. A local
             # visible binding is allowed only through the same decision method.
             if 'visible' in bindings:
-                text = ' '.join(body)
-                if not any(
-                    re.search(r'\b' + re.escape(decision) + r'\s*\(', text)
-                    for decision in decisions
-                ):
+                expression = binding(body, 'visible')
+                if not any(requires_decision(expression, decision) for decision in decisions):
                     failures.append(path + ': tooltip visibility bypasses the shared decision')
     assert found, (
         'The census must reach actual tooltip declarations, including the shared component'
