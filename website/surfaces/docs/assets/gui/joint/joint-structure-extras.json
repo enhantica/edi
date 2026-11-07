@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's structure controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.structure.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "joint-structure-extras",
     "image": "joint-structure-extras.png",
-    "image_sha256": "1d6f92549d83b1c5472d90985e340490237566a721f287e80fdbf4e7855c609f",
+    "image_sha256": "f2e0045e90e378dabb618282c648be10da79e09edb2b462e72530c302672a8e9",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +42,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                131
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                131
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                131
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                131
             ]
         },
         "appBar": {
@@ -352,7 +353,7 @@
         "group.appearance": {
             "bounds": [
                 770,
-                313,
+                439,
                 710,
                 42
             ],
@@ -361,7 +362,41 @@
             "label": "Appearance",
             "visible_bounds": [
                 770,
-                313,
+                439,
+                710,
+                42
+            ]
+        },
+        "group.expanded_atom_site": {
+            "bounds": [
+                770,
+                355,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "braille",
+            "label": "Atoms in the cell (24)",
+            "visible_bounds": [
+                770,
+                355,
+                710,
+                42
+            ]
+        },
+        "group.geom_bond": {
+            "bounds": [
+                770,
+                397,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "grip-lines",
+            "label": "Bonds (14)",
+            "visible_bounds": [
+                770,
+                397,
                 710,
                 42
             ]
@@ -381,6 +416,23 @@
                 119,
                 710,
                 194
+            ]
+        },
+        "group.space_group_symop": {
+            "bounds": [
+                770,
+                313,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "sync-alt",
+            "label": "Symmetry operators (8)",
+            "visible_bounds": [
+                770,
+                313,
+                710,
+                42
             ]
         },
         "label": {
@@ -708,7 +760,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -806,7 +858,7 @@
         },
         "structure.toolbar.a": {
             "bounds": [
-                472.75,
+                503,
                 182,
                 35,
                 35
@@ -814,7 +866,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                472.75,
+                503,
                 182,
                 35,
                 35
@@ -822,24 +874,23 @@
         },
         "structure.toolbar.atoms": {
             "bounds": [
-                231.25,
+                201.25,
                 182,
-                35,
+                95.25,
                 35
             ],
             "enabled": true,
-            "icon": "atom",
             "label": "",
             "visible_bounds": [
-                231.25,
+                201.25,
                 182,
-                35,
+                95.25,
                 35
             ]
         },
         "structure.toolbar.axes": {
             "bounds": [
-                385.25,
+                415.5,
                 182,
                 35,
                 35
@@ -848,7 +899,7 @@
             "icon": "location-arrow",
             "label": "",
             "visible_bounds": [
-                385.25,
+                415.5,
                 182,
                 35,
                 35
@@ -856,7 +907,7 @@
         },
         "structure.toolbar.b": {
             "bounds": [
-                511.25,
+                541.5,
                 182,
                 35,
                 35
@@ -864,7 +915,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                511.25,
+                541.5,
                 182,
                 35,
                 35
@@ -872,7 +923,7 @@
         },
         "structure.toolbar.bonds": {
             "bounds": [
-                308.25,
+                338.5,
                 182,
                 35,
                 35
@@ -881,7 +932,7 @@
             "icon": "link",
             "label": "",
             "visible_bounds": [
-                308.25,
+                338.5,
                 182,
                 35,
                 35
@@ -889,7 +940,7 @@
         },
         "structure.toolbar.c": {
             "bounds": [
-                549.75,
+                580,
                 182,
                 35,
                 35
@@ -897,7 +948,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                549.75,
+                580,
                 182,
                 35,
                 35
@@ -905,7 +956,7 @@
         },
         "structure.toolbar.cell": {
             "bounds": [
-                346.75,
+                377,
                 182,
                 35,
                 35
@@ -914,7 +965,7 @@
             "icon": "vector-square",
             "label": "",
             "visible_bounds": [
-                346.75,
+                377,
                 182,
                 35,
                 35
@@ -922,7 +973,7 @@
         },
         "structure.toolbar.colors": {
             "bounds": [
-                146,
+                116,
                 182,
                 71.25,
                 35
@@ -930,7 +981,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                146,
+                116,
                 182,
                 71.25,
                 35
@@ -938,7 +989,7 @@
         },
         "structure.toolbar.labels": {
             "bounds": [
-                269.75,
+                300,
                 182,
                 35,
                 35
@@ -947,7 +998,7 @@
             "icon": "tag",
             "label": "",
             "visible_bounds": [
-                269.75,
+                300,
                 182,
                 35,
                 35
@@ -955,7 +1006,7 @@
         },
         "structure.toolbar.projection": {
             "bounds": [
-                434.25,
+                464.5,
                 182,
                 35,
                 35
@@ -964,7 +1015,7 @@
             "icon": "cube",
             "label": "",
             "visible_bounds": [
-                434.25,
+                464.5,
                 182,
                 35,
                 35
@@ -972,7 +1023,7 @@
         },
         "structure.toolbar.reset": {
             "bounds": [
-                588.25,
+                618.5,
                 182,
                 35,
                 35
@@ -981,7 +1032,7 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                588.25,
+                618.5,
                 182,
                 35,
                 35
@@ -1110,8 +1161,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

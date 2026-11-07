@@ -21,7 +21,7 @@
             "scene": "03-project-details"
         },
         {
-            "action": "fill:createProject.title=Y₂O₃ [Ia-3] · SPODI @ FRM II",
+            "action": "fill:createProject.title=Y₂O₃ [Ia-3] - SPODI @ FRM II",
             "scene": "03-project-details"
         },
         {
@@ -33,7 +33,7 @@
             "scene": "03-project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-EWTNsl/pd-neut-cwl_y2o3-spodi",
+            "action": "fill:createProject.location=/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/pd-neut-cwl_y2o3-spodi",
             "scene": "03-project-details"
         },
         {
@@ -101,7 +101,7 @@
             "scene": "06-structure-import"
         },
         {
-            "action": "import-structure:/tmp/edi-realistic-walkthrough-r10/inputs/structures/y2o3.cif",
+            "action": "import-structure:/Users/andrewsazonov/runs/edi-cap/y2o3-light/inputs/structures/y2o3.cif",
             "scene": "07-structure-loaded"
         },
         {
@@ -189,7 +189,23 @@
             "scene": "09-experiment-type"
         },
         {
-            "action": "import-data:/tmp/edi-realistic-walkthrough-r10/inputs/spodi.xye",
+            "action": "reveal:group.data_range",
+            "scene": "guide-experiment-calculation-range"
+        },
+        {
+            "action": "expand:group.data_range",
+            "scene": "guide-experiment-calculation-range"
+        },
+        {
+            "action": "reveal:group.experiments",
+            "scene": "09-experiment-data"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "09-experiment-data"
+        },
+        {
+            "action": "import-data:/Users/andrewsazonov/runs/edi-cap/y2o3-light/inputs/spodi.xye",
             "scene": "09-experiment-data"
         },
         {
@@ -425,6 +441,10 @@
             "scene": "11-experiment-settings"
         },
         {
+            "action": "sideBar.tab.settings",
+            "scene": "11-experiment-settings"
+        },
+        {
             "action": "appBar.tab.analysis",
             "scene": "12-analysis-choose"
         },
@@ -485,7 +505,7 @@
             "scene": "12-analysis-choose"
         },
         {
-            "action": "save-as:/tmp/edi-realistic-walkthrough-r10/checkpoints/starting",
+            "action": "save-as:/Users/andrewsazonov/runs/edi-cap/y2o3-light/checkpoints/starting",
             "scene": "12-save-start"
         },
         {
@@ -605,7 +625,7 @@
             "scene": "12-run-refinement"
         },
         {
-            "action": "save-as:/tmp/edi-realistic-walkthrough-r10/checkpoints/refined",
+            "action": "save-as:/Users/andrewsazonov/runs/edi-cap/y2o3-light/checkpoints/refined",
             "scene": "12-save-refined"
         },
         {
@@ -883,6 +903,26 @@
         {
             "action": "reveal:experiments.list",
             "scene": "guide-experiment-data"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "guide-experiment-data-source"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "guide-experiment-data-source"
+        },
+        {
+            "action": "reveal:group.data_source",
+            "scene": "guide-experiment-data-source"
+        },
+        {
+            "action": "expand:group.data_source",
+            "scene": "guide-experiment-data-source"
+        },
+        {
+            "action": "reveal:group.data_source",
+            "scene": "guide-experiment-data-source"
         },
         {
             "action": "appBar.tab.experiment",
@@ -1381,11 +1421,11 @@
             "scene": "guide-analysis-pattern-updates"
         }
     ],
-    "binary_sha256": "86fd973f5e8716dbc4707f2539efa8d1b9230ab0d8493cc604e9a26b8f103628",
+    "binary_sha256": "36fabf46df62e17b958837e0a67741a409f9a69b16f26c27aa7abc14af5b516b",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
+            "sha256": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1"
         },
         {
             "file": "inputs/structures/y2o3.edi",
@@ -1442,6 +1482,9 @@
             ],
             "scatteringType": [
                 "bragg"
+            ],
+            "structure": [
+                "crystal"
             ]
         }
     },
@@ -1606,6 +1649,15 @@
             "status": "captured"
         },
         {
+            "description": "Set the calculation range before any data are loaded",
+            "id": "guide-experiment-calculation-range",
+            "image": "guide-experiment-calculation-range.png",
+            "metadata": "guide-experiment-calculation-range.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
             "description": "Load the measured angle, intensity and uncertainty columns",
             "id": "09-experiment-data",
             "image": "09-experiment-data.png",
@@ -1732,11 +1784,13 @@
             "status": "captured"
         },
         {
+            "description": "Experiment and measured data — Settings",
             "id": "11-experiment-settings",
+            "image": "11-experiment-settings.png",
+            "metadata": "11-experiment-settings.json",
             "page": "experiment",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Begin with the scale and cell length; keep the other parameters fixed",
@@ -1937,6 +1991,15 @@
             "id": "guide-experiment-data",
             "image": "guide-experiment-data.png",
             "metadata": "guide-experiment-data.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "See which file the measured data were read from",
+            "id": "guide-experiment-data-source",
+            "image": "guide-experiment-data-source.png",
+            "metadata": "guide-experiment-data-source.json",
             "page": "experiment",
             "sidebar": "",
             "status": "captured"
@@ -2177,8 +2240,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "status": "complete",
     "workflow": "creation"
 }

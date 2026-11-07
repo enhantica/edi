@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's structure controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.structure.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "scan-structure-text",
     "image": "scan-structure-text.png",
-    "image_sha256": "12f3a2a2f04d5c49d03e12f11d44205958b2071d7ae565d31830e64a0e5076b2",
+    "image_sha256": "715558ccdc05dbcc4064ac36a91a8c78257b0f7e9bb753585a0aac69e05f261a",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -516,7 +517,7 @@
         },
         "statusBar.calculator": {
             "bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -525,7 +526,7 @@
             "icon": "calculator",
             "label": "",
             "visible_bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -533,7 +534,7 @@
         },
         "statusBar.experiments": {
             "bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -542,7 +543,7 @@
             "icon": "microscope",
             "label": "",
             "visible_bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -659,7 +660,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "155/155 155 0 12s 4.74–7.19",
+            "label": "213/213 213 0 11s 4.32–6.25",
             "visible_bounds": [
                 985,
                 770,
@@ -669,7 +670,7 @@
         },
         "statusBar.minimizer": {
             "bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
                 51.890625,
                 14
@@ -678,26 +679,26 @@
             "icon": "level-down-alt",
             "label": "",
             "visible_bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
-                51.890625,
+                51.89062499999994,
                 14
             ]
         },
         "statusBar.parameters": {
             "bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ],
             "enabled": true,
             "icon": "th-list",
             "label": "",
             "visible_bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ]
         },
@@ -705,7 +706,7 @@
             "bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ],
             "enabled": true,
@@ -714,13 +715,13 @@
             "visible_bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ]
         },
         "statusBar.structures": {
             "bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -729,7 +730,7 @@
             "icon": "layer-group",
             "label": "",
             "visible_bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -757,7 +758,7 @@
         },
         "structure.toolbar.a": {
             "bounds": [
-                472.75,
+                529.5,
                 182,
                 35,
                 35
@@ -765,7 +766,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                472.75,
+                529.5,
                 182,
                 35,
                 35
@@ -773,24 +774,23 @@
         },
         "structure.toolbar.atoms": {
             "bounds": [
-                231.25,
+                175.25,
                 182,
-                35,
+                109.25,
                 35
             ],
             "enabled": true,
-            "icon": "atom",
             "label": "",
             "visible_bounds": [
-                231.25,
+                175.25,
                 182,
-                35,
+                109.25,
                 35
             ]
         },
         "structure.toolbar.axes": {
             "bounds": [
-                385.25,
+                442,
                 182,
                 35,
                 35
@@ -799,7 +799,7 @@
             "icon": "location-arrow",
             "label": "",
             "visible_bounds": [
-                385.25,
+                442,
                 182,
                 35,
                 35
@@ -807,7 +807,7 @@
         },
         "structure.toolbar.b": {
             "bounds": [
-                511.25,
+                568,
                 182,
                 35,
                 35
@@ -815,7 +815,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                511.25,
+                568,
                 182,
                 35,
                 35
@@ -823,7 +823,7 @@
         },
         "structure.toolbar.bonds": {
             "bounds": [
-                308.25,
+                326.5,
                 182,
                 35,
                 35
@@ -832,7 +832,7 @@
             "icon": "link",
             "label": "",
             "visible_bounds": [
-                308.25,
+                326.5,
                 182,
                 35,
                 35
@@ -840,7 +840,7 @@
         },
         "structure.toolbar.c": {
             "bounds": [
-                549.75,
+                606.5,
                 182,
                 35,
                 35
@@ -848,7 +848,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                549.75,
+                606.5,
                 182,
                 35,
                 35
@@ -856,7 +856,7 @@
         },
         "structure.toolbar.cell": {
             "bounds": [
-                346.75,
+                365,
                 182,
                 35,
                 35
@@ -865,7 +865,7 @@
             "icon": "vector-square",
             "label": "",
             "visible_bounds": [
-                346.75,
+                365,
                 182,
                 35,
                 35
@@ -873,7 +873,7 @@
         },
         "structure.toolbar.colors": {
             "bounds": [
-                146,
+                90,
                 182,
                 71.25,
                 35
@@ -881,7 +881,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                146,
+                90,
                 182,
                 71.25,
                 35
@@ -889,7 +889,7 @@
         },
         "structure.toolbar.labels": {
             "bounds": [
-                269.75,
+                288,
                 182,
                 35,
                 35
@@ -898,7 +898,24 @@
             "icon": "tag",
             "label": "",
             "visible_bounds": [
-                269.75,
+                288,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.moments": {
+            "bounds": [
+                403.5,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "long-arrow-alt-up",
+            "label": "",
+            "visible_bounds": [
+                403.5,
                 182,
                 35,
                 35
@@ -906,7 +923,7 @@
         },
         "structure.toolbar.projection": {
             "bounds": [
-                434.25,
+                491,
                 182,
                 35,
                 35
@@ -915,7 +932,7 @@
             "icon": "cube",
             "label": "",
             "visible_bounds": [
-                434.25,
+                491,
                 182,
                 35,
                 35
@@ -923,7 +940,7 @@
         },
         "structure.toolbar.reset": {
             "bounds": [
-                588.25,
+                645,
                 182,
                 35,
                 35
@@ -932,7 +949,7 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                588.25,
+                645,
                 182,
                 35,
                 35
@@ -1024,15 +1041,15 @@
                 784,
                 133,
                 511.828125,
-                496
+                992
             ],
             "enabled": true,
-            "label": "data_cosio\n\n_space_group.name_h_m \"P n m a\"\n_space_group.coord_system_code abc\n_space_group.it_number 62\n\n_cell.length_a 10.30610(32)\n_cell.length_b 6.00254(20)\n_cell.length_c 4.78631(15)\n_cell.angle_alpha 90\n_cell.angle_beta 90\n_cell.angle_gamma 90\n\nloop_",
+            "label": "data_cosio\n\n_space_group.name_h_m \"P n m a\"\n_space_group.coord_system_code abc\n_space_group.it_number 62\n\n_cell.length_a 10.34303(29)\n_cell.length_b 6.03401(17)\n_cell.length_c 4.80087(14)\n_cell.angle_alpha 90\n_cell.angle_beta 90\n_cell.angle_gamma 90\n\nloop_",
             "visible_bounds": [
                 784,
                 133,
                 511.828125,
-                496
+                611
             ]
         },
         "workflow.home.sidebarHost": {
@@ -1110,8 +1127,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "ef922929905b91dd8cfd48e3b6ba434bb97747b460d2f9376ab1427fb94e883c",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1122,8 +1139,8 @@
         "has_project": true,
         "page": "structure",
         "scan_failed": 0,
-        "scan_fitted": 155,
-        "scan_total": 155,
+        "scan_fitted": 213,
+        "scan_total": 213,
         "sidebar": "Text",
         "sidebar_tabs": [
             {

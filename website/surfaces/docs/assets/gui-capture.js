@@ -22,8 +22,13 @@
           [tx + tw - inset, ty + inset], [tx + tw - inset, top]);
       }
       points.push([right, top], [right, bottom], [left, bottom]);
-      const path = points.map((point, number) => {
-        const [before, after] = [points.at(number - 1), points[(number + 1) % points.length]];
+      // A tab flush with its panel's edge repeats a corner; a repeated point has no direction.
+      const corners = points.filter((point, number) => {
+        const before = points.at(number - 1);
+        return point[0] !== before[0] || point[1] !== before[1];
+      });
+      const path = corners.map((point, number) => {
+        const [before, after] = [corners.at(number - 1), corners[(number + 1) % corners.length]];
         const [start, end] = [before, after].map(other => {
           const length = Math.hypot(other[0] - point[0], other[1] - point[1]);
           const share = Math.min(radius, length / 2) / length;

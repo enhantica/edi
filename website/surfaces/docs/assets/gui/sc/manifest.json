@@ -1,0 +1,222 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "group-open"
+        },
+        {
+            "action": "theme:light",
+            "scene": "group-open"
+        },
+        {
+            "action": "home.start",
+            "scene": "group-open"
+        },
+        {
+            "action": "appBar.tab.project",
+            "scene": "group-open"
+        },
+        {
+            "action": "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi",
+            "scene": "group-open"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "group-open"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "group-extinction"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "group-extinction"
+        },
+        {
+            "action": "reveal:group.extinction",
+            "scene": "group-extinction"
+        },
+        {
+            "action": "expand:group.extinction",
+            "scene": "group-extinction"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "group-reflns"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-reflns"
+        },
+        {
+            "action": "reveal:group.reflns",
+            "scene": "group-reflns"
+        },
+        {
+            "action": "expand:group.reflns",
+            "scene": "group-reflns"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "group-refln"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-refln"
+        },
+        {
+            "action": "reveal:group.refln",
+            "scene": "group-refln"
+        },
+        {
+            "action": "expand:group.refln",
+            "scene": "group-refln"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "group-refine-ls"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-refine-ls"
+        },
+        {
+            "action": "reveal:group.refine_ls",
+            "scene": "group-refine-ls"
+        },
+        {
+            "action": "expand:group.refine_ls",
+            "scene": "group-refine-ls"
+        }
+    ],
+    "binary_sha256": "36fabf46df62e17b958837e0a67741a409f9a69b16f26c27aa7abc14af5b516b",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "bcb41f0443973b807efc468d51550db4f628d47a49538b39271c1289c2d66171"
+        }
+    ],
+    "error": "",
+    "example": "sc-neut-cwl_tb2ti2o7-heidi",
+    "fixture": {
+        "detail": "Single crystal · Anisotropic displacements and extinction from a rough start",
+        "id": "sc-neut-cwl_tb2ti2o7-heidi",
+        "origin": "HEiDi @ MLZ (FRM II)",
+        "samples": [
+            "Tb₂Ti₂O₇ [Fd-3m]"
+        ],
+        "searchAliases": [
+            "sc-neut-cwl_tb2ti2o7-heidi",
+            "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+            "Single crystal · Anisotropic displacements and extinction from a rough start"
+        ],
+        "sources": [
+            "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project/project.edi",
+            "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project/analysis/analysis.edi",
+            "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project/experiments/heidi.edi",
+            "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project/structures/tb2ti2o7.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "MLZ (FRM II)"
+            ],
+            "fittingMode": [
+                "single"
+            ],
+            "instruments": [
+                "HEiDi"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "single crystal"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/heidi.edi",
+            "sha256": "d62059565f31efd60e18618d7c3a018c4313f849866cfe59a4ce62df727ac660"
+        },
+        "structure": {
+            "file": "inputs/structures/tb2ti2o7.edi",
+            "sha256": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Open the example project",
+            "id": "group-open",
+            "image": "group-open.png",
+            "metadata": "group-open.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Set the extinction correction",
+            "id": "group-extinction",
+            "image": "group-extinction.png",
+            "metadata": "group-extinction.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Set which reflections count as observed",
+            "id": "group-reflns",
+            "image": "group-reflns.png",
+            "metadata": "group-reflns.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Read the Bragg reflections",
+            "id": "group-refln",
+            "image": "group-refln.png",
+            "metadata": "group-refln.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Set which reflections a fit uses",
+            "id": "group-refine-ls",
+            "image": "group-refine-ls.png",
+            "metadata": "group-refine-ls.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "d5122f9a30b820ddb8e950bd218add712484af4ed386761370e29f6deabec864",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "status": "complete",
+    "workflow": "reference"
+}

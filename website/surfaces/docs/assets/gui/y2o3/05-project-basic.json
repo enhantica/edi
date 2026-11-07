@@ -10,7 +10,7 @@
     ],
     "id": "05-project-basic",
     "image": "05-project-basic.png",
-    "image_sha256": "142ee9189eadc1bfba6f1cbd51dba382458aa13be68fcc6b19c62ad636045248",
+    "image_sha256": "3ceee9cee309b136397e585efd890c9f5d9f02d203c9bfefbe2fc68c72faa762",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -44,22 +44,6 @@
                 800
             ]
         },
-        "GetStartedGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                92
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                92
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -74,6 +58,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                92
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                92
             ]
         },
         "appBar": {
@@ -473,7 +473,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-EWTNsl/pd-neut-cwl_y2o3-spodi",
+            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -556,7 +556,7 @@
                 19
             ],
             "enabled": true,
-            "label": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+            "label": "Y₂O₃ [Ia-3] - SPODI @ FRM II",
             "visible_bounds": [
                 183.4,
                 222.8,
@@ -699,7 +699,7 @@
             "bounds": [
                 875.128125,
                 772,
-                195.734375,
+                103.375,
                 14
             ],
             "enabled": true,
@@ -708,7 +708,7 @@
             "visible_bounds": [
                 875.128125,
                 772,
-                195.734375,
+                103.375,
                 14
             ]
         },
@@ -841,8 +841,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

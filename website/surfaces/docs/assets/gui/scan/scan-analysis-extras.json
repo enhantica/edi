@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's analysis controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.analysis.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "scan-analysis-extras",
     "image": "scan-analysis-extras.png",
-    "image_sha256": "37994af88d4f9f56249b28e6a07c3efb35ff26aa23aa285b47b1a9b578703cca",
+    "image_sha256": "670ca910051b0170dacbe1c0e156d67f9f9820135df02ebc8c5b8d57177e9b45",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +42,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                126
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                126
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                196
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                196
             ]
         },
         "appBar": {
@@ -773,7 +774,7 @@
         "group.alias": {
             "bounds": [
                 770,
-                350,
+                420,
                 710,
                 42
             ],
@@ -782,7 +783,7 @@
             "label": "Aliases (2)",
             "visible_bounds": [
                 770,
-                350,
+                420,
                 710,
                 42
             ]
@@ -790,7 +791,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                392,
+                462,
                 710,
                 42
             ],
@@ -799,7 +800,7 @@
             "label": "Constraints (1)",
             "visible_bounds": [
                 770,
-                392,
+                462,
                 710,
                 42
             ]
@@ -807,7 +808,7 @@
         "group.fitting_mode": {
             "bounds": [
                 770,
-                308,
+                378,
                 710,
                 42
             ],
@@ -816,7 +817,7 @@
             "label": "Fitting mode",
             "visible_bounds": [
                 770,
-                308,
+                378,
                 710,
                 42
             ]
@@ -826,7 +827,7 @@
                 770,
                 119,
                 710,
-                189
+                259
             ],
             "enabled": true,
             "icon": "level-down-alt",
@@ -835,13 +836,13 @@
                 770,
                 119,
                 710,
-                189
+                259
             ]
         },
         "group.sequential_fit": {
             "bounds": [
                 770,
-                434,
+                504,
                 710,
                 42
             ],
@@ -850,7 +851,7 @@
             "label": "Sequential fit",
             "visible_bounds": [
                 770,
-                434,
+                504,
                 710,
                 42
             ]
@@ -858,7 +859,7 @@
         "group.sequential_fit_extract": {
             "bounds": [
                 770,
-                476,
+                546,
                 710,
                 42
             ],
@@ -867,7 +868,7 @@
             "label": "Scan extraction rules (1)",
             "visible_bounds": [
                 770,
-                476,
+                546,
                 710,
                 42
             ]
@@ -1029,7 +1030,7 @@
                 56
             ],
             "enabled": true,
-            "label": "0.000001",
+            "label": "0.1",
             "visible_bounds": [
                 1126.75,
                 238,
@@ -1068,7 +1069,7 @@
                     "token": "multistart_prune"
                 }
             ],
-            "selected": "ladder",
+            "selected": "fast_descent",
             "uid": "minimizer.descent",
             "visible_bounds": [
                 1126.75,
@@ -1080,12 +1081,68 @@
         "minimizer.maxIterations": {
             "bounds": [
                 784,
-                238,
+                308,
                 339.25,
                 56
             ],
             "enabled": true,
             "label": "1000",
+            "visible_bounds": [
+                784,
+                308,
+                339.25,
+                56
+            ]
+        },
+        "minimizer.momentsNearZero": {
+            "bounds": [
+                1126.75,
+                308,
+                339.25,
+                56
+            ],
+            "enabled": true,
+            "label": "",
+            "options": [
+                {
+                    "label": "Try exact zero",
+                    "token": "try_exact_zero"
+                },
+                {
+                    "label": "Keep free",
+                    "token": "keep_free"
+                }
+            ],
+            "selected": "try_exact_zero",
+            "uid": "minimizer.moments_near_zero",
+            "visible_bounds": [
+                1126.75,
+                308,
+                339.25,
+                56
+            ]
+        },
+        "minimizer.stopRule": {
+            "bounds": [
+                784,
+                238,
+                339.25,
+                56
+            ],
+            "enabled": true,
+            "label": "",
+            "options": [
+                {
+                    "label": "χ² change",
+                    "token": "chi_square_change"
+                },
+                {
+                    "label": "Shift/s.u.",
+                    "token": "shift_su"
+                }
+            ],
+            "selected": "shift_su",
+            "uid": "minimizer.stop_rule",
             "visible_bounds": [
                 784,
                 238,
@@ -1199,7 +1256,7 @@
         },
         "statusBar.calculator": {
             "bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -1208,7 +1265,7 @@
             "icon": "calculator",
             "label": "",
             "visible_bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -1216,7 +1273,7 @@
         },
         "statusBar.experiments": {
             "bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -1225,7 +1282,7 @@
             "icon": "microscope",
             "label": "",
             "visible_bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -1342,7 +1399,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "155/155 155 0 12s 4.74–7.19",
+            "label": "213/213 213 0 11s 4.32–6.25",
             "visible_bounds": [
                 985,
                 770,
@@ -1352,7 +1409,7 @@
         },
         "statusBar.minimizer": {
             "bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
                 51.890625,
                 14
@@ -1361,26 +1418,26 @@
             "icon": "level-down-alt",
             "label": "",
             "visible_bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
-                51.890625,
+                51.89062499999994,
                 14
             ]
         },
         "statusBar.parameters": {
             "bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ],
             "enabled": true,
             "icon": "th-list",
             "label": "",
             "visible_bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ]
         },
@@ -1388,7 +1445,7 @@
             "bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ],
             "enabled": true,
@@ -1397,13 +1454,13 @@
             "visible_bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ]
         },
         "statusBar.structures": {
             "bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -1412,7 +1469,7 @@
             "icon": "layer-group",
             "label": "",
             "visible_bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -1513,8 +1570,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "ef922929905b91dd8cfd48e3b6ba434bb97747b460d2f9376ab1427fb94e883c",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1525,8 +1582,8 @@
         "has_project": true,
         "page": "analysis",
         "scan_failed": 0,
-        "scan_fitted": 155,
-        "scan_total": 155,
+        "scan_fitted": 213,
+        "scan_total": 213,
         "sidebar": "Extra",
         "sidebar_tabs": [
             {

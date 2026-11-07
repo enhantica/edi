@@ -10,7 +10,7 @@
     ],
     "id": "11-experiment-text",
     "image": "11-experiment-text.png",
-    "image_sha256": "80266b17696a19e1fa22d21a08a437b120e8ea17944afd7ecd08b17df3146b4c",
+    "image_sha256": "564596fce131eafe24f718e8cdfeef9f6e4d5de13b0b1795d9effef9327982fe",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -913,7 +913,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.703125,
@@ -1249,8 +1249,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1285,7 +1285,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

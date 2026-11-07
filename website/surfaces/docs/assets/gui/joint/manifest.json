@@ -185,6 +185,10 @@
             "scene": "joint-experiment-settings"
         },
         {
+            "action": "sideBar.tab.settings",
+            "scene": "joint-experiment-settings"
+        },
+        {
             "action": "appBar.tab.analysis",
             "scene": "joint-analysis-basic"
         },
@@ -425,11 +429,11 @@
             "scene": "joint-correlations"
         }
     ],
-    "binary_sha256": "60c260e6b4fa8eeaed4cb06aaa6a9dd09e7dafaf55e9d40daaa587effd3c6b8c",
+    "binary_sha256": "36fabf46df62e17b958837e0a67741a409f9a69b16f26c27aa7abc14af5b516b",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "17f359c213950f1f635d83d1a22a465491101031b51a0e79e72297d5d7e58d4e"
+            "sha256": "b1e2d25a5f3152ed7f500ed3c0348fe0b9294e72839c8e9352b74ff9f5ef6063"
         },
         {
             "file": "inputs/experiments/lab.edi",
@@ -491,6 +495,9 @@
             ],
             "scatteringType": [
                 "bragg"
+            ],
+            "structure": [
+                "crystal"
             ]
         }
     },
@@ -615,11 +622,13 @@
             "status": "captured"
         },
         {
+            "description": "Inspect the project's experiment controls",
             "id": "joint-experiment-settings",
+            "image": "joint-experiment-settings.png",
+            "metadata": "joint-experiment-settings.json",
             "page": "experiment",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect the project's analysis controls",
@@ -781,8 +790,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "status": "complete",
     "workflow": "reference"
 }

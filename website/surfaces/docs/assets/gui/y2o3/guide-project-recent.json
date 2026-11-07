@@ -7,7 +7,7 @@
     ],
     "id": "guide-project-recent",
     "image": "guide-project-recent.png",
-    "image_sha256": "40b73ecd4e4d4f31a28dcc8b3ced812dced105a6cae4ec580ab6a4eed252944a",
+    "image_sha256": "77e50dcad244ce498cf766ca53bf685543422f594152cbf9284e019b09c6da65",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -57,10 +57,10 @@
                 800
             ]
         },
-        "RecentProjectsGroup": {
+        "SideBarGroup": {
             "bounds": [
                 784,
-                252,
+                252.0000000000036,
                 682,
                 195
             ],
@@ -68,9 +68,9 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252,
+                252.0000000000036,
                 682,
-                195
+                195.00000000000003
             ]
         },
         "appBar": {
@@ -346,7 +346,7 @@
         "group.examples": {
             "bounds": [
                 770,
-                161,
+                161.0000000000036,
                 710,
                 42
             ],
@@ -355,7 +355,7 @@
             "label": "Examples",
             "visible_bounds": [
                 770,
-                161,
+                161.0000000000036,
                 710,
                 42
             ]
@@ -380,7 +380,7 @@
         "group.recentProjects": {
             "bounds": [
                 770,
-                203,
+                203.0000000000036,
                 710,
                 258
             ],
@@ -389,7 +389,7 @@
             "label": "Recent projects",
             "visible_bounds": [
                 770,
-                203,
+                203.0000000000036,
                 710,
                 258
             ]
@@ -469,7 +469,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-EWTNsl/docs-saved-project",
+            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/docs-saved-project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -517,7 +517,7 @@
                 19
             ],
             "enabled": true,
-            "label": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+            "label": "Y₂O₃ [Ia-3] - SPODI @ FRM II",
             "visible_bounds": [
                 183.4,
                 222.8,
@@ -528,7 +528,7 @@
         "recentProjects.list": {
             "bounds": [
                 784,
-                252,
+                252.0000000000036,
                 682,
                 195
             ],
@@ -536,79 +536,79 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252,
+                252.0000000000036,
                 682,
-                195
+                195.00000000000003
             ]
         },
         "recentProjects.path.0": {
             "bounds": [
                 815,
-                291,
-                571,
+                291.00000000000364,
+                570,
                 39
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-EWTNsl/docs-saved-project",
+            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/docs-saved-project",
             "visible_bounds": [
                 815,
-                291,
-                571,
+                291.00000000000364,
+                570,
                 39
             ]
         },
         "recentProjects.path.1": {
             "bounds": [
                 815,
-                330,
-                571,
+                330.00000000000364,
+                570,
                 39
             ],
             "enabled": true,
-            "label": "/tmp/edi-realistic-walkthrough-r10/checkpoints/refined",
+            "label": "/Users/andrewsazonov/runs/edi-cap/y2o3-light/checkpoints/refined",
             "visible_bounds": [
                 815,
-                330,
-                571,
+                330.00000000000364,
+                570,
                 39
             ]
         },
         "recentProjects.path.2": {
             "bounds": [
                 815,
-                369,
-                571,
+                369.00000000000364,
+                570,
                 39
             ],
             "enabled": true,
-            "label": "/tmp/edi-realistic-walkthrough-r10/checkpoints/starting",
+            "label": "/Users/andrewsazonov/runs/edi-cap/y2o3-light/checkpoints/starting",
             "visible_bounds": [
                 815,
-                369,
-                571,
+                369.00000000000364,
+                570,
                 39
             ]
         },
         "recentProjects.path.3": {
             "bounds": [
                 815,
-                408,
-                571,
+                408.00000000000364,
+                570,
                 39
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-EWTNsl/pd-neut-cwl_y2o3-spodi",
+            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 815,
-                408,
-                571,
+                408.00000000000364,
+                570,
                 39
             ]
         },
         "recentProjects.remove.0": {
             "bounds": [
-                1422,
-                291,
+                1421,
+                291.00000000000364,
                 39,
                 39
             ],
@@ -616,16 +616,16 @@
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1422,
-                291,
+                1421,
+                291.00000000000364,
                 39,
                 39
             ]
         },
         "recentProjects.remove.1": {
             "bounds": [
-                1422,
-                330,
+                1421,
+                330.00000000000364,
                 39,
                 39
             ],
@@ -633,16 +633,16 @@
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1422,
-                330,
+                1421,
+                330.00000000000364,
                 39,
                 39
             ]
         },
         "recentProjects.remove.2": {
             "bounds": [
-                1422,
-                369,
+                1421,
+                369.00000000000364,
                 39,
                 39
             ],
@@ -650,16 +650,16 @@
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1422,
-                369,
+                1421,
+                369.00000000000364,
                 39,
                 39
             ]
         },
         "recentProjects.remove.3": {
             "bounds": [
-                1422,
-                408,
+                1421,
+                408.00000000000364,
                 39,
                 39
             ],
@@ -667,16 +667,16 @@
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1422,
-                408,
+                1421,
+                408.00000000000364,
                 39,
                 39
             ]
         },
         "recentProjects.status.0": {
             "bounds": [
-                1390,
-                291,
+                1389,
+                291.00000000000364,
                 28,
                 39
             ],
@@ -684,16 +684,16 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                1390,
-                291,
+                1389,
+                291.00000000000364,
                 28,
                 39
             ]
         },
         "recentProjects.status.1": {
             "bounds": [
-                1390,
-                330,
+                1389,
+                330.00000000000364,
                 28,
                 39
             ],
@@ -701,16 +701,16 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                1390,
-                330,
+                1389,
+                330.00000000000364,
                 28,
                 39
             ]
         },
         "recentProjects.status.2": {
             "bounds": [
-                1390,
-                369,
+                1389,
+                369.00000000000364,
                 28,
                 39
             ],
@@ -718,16 +718,16 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                1390,
-                369,
+                1389,
+                369.00000000000364,
                 28,
                 39
             ]
         },
         "recentProjects.status.3": {
             "bounds": [
-                1390,
-                408,
+                1389,
+                408.00000000000364,
                 28,
                 39
             ],
@@ -735,8 +735,8 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                1390,
-                408,
+                1389,
+                408.00000000000364,
                 28,
                 39
             ]
@@ -932,7 +932,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1103,8 +1103,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

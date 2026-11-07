@@ -7,7 +7,7 @@
     ],
     "id": "09-exclusion-1",
     "image": "09-exclusion-1.png",
-    "image_sha256": "7bea815a44ccff98d92cbfd521212325e3b120b713eb65c59196509f71472492",
+    "image_sha256": "ca10d12024b123fa848ec6030e2334f7ac666a94cb2a39cdef9d06b5d2430293",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                336,
-                682,
-                170
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                336,
-                682,
-                170
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                336.0000000000047,
+                682,
+                170
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                336.0000000000047,
+                682,
+                170
             ]
         },
         "appBar": {
@@ -773,7 +773,7 @@
         "currentRowBar": {
             "bounds": [
                 785,
-                414,
+                414.0000000000047,
                 2,
                 39
             ],
@@ -781,47 +781,47 @@
             "label": "",
             "visible_bounds": [
                 785,
-                414,
+                414.0000000000047,
                 2,
                 39
             ]
         },
         "excludedRegion.end.0": {
             "bounds": [
-                907,
-                375,
-                511,
+                913,
+                375.0000000000047,
+                505,
                 39
             ],
             "enabled": true,
             "label": "12",
             "visible_bounds": [
-                907,
-                375,
-                511,
+                913,
+                375.0000000000047,
+                505,
                 39
             ]
         },
         "excludedRegion.end.1": {
             "bounds": [
-                907,
-                414,
-                511,
+                913,
+                414.0000000000047,
+                505,
                 39
             ],
             "enabled": true,
             "label": "180",
             "visible_bounds": [
-                907,
-                414,
-                511,
+                913,
+                414.0000000000047,
+                505,
                 39
             ]
         },
         "excludedRegion.id.0": {
             "bounds": [
                 815,
-                375,
+                375.0000000000047,
                 32,
                 39
             ],
@@ -829,7 +829,7 @@
             "label": "1",
             "visible_bounds": [
                 815,
-                375,
+                375.0000000000047,
                 32,
                 39
             ]
@@ -837,7 +837,7 @@
         "excludedRegion.id.1": {
             "bounds": [
                 815,
-                414,
+                414.0000000000047,
                 32,
                 39
             ],
@@ -845,7 +845,7 @@
             "label": "2",
             "visible_bounds": [
                 815,
-                414,
+                414.0000000000047,
                 32,
                 39
             ]
@@ -853,7 +853,7 @@
         "excludedRegion.remove.0": {
             "bounds": [
                 1422,
-                375,
+                375.0000000000047,
                 39,
                 39
             ],
@@ -862,7 +862,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                375,
+                375.0000000000047,
                 39,
                 39
             ]
@@ -870,7 +870,7 @@
         "excludedRegion.remove.1": {
             "bounds": [
                 1422,
-                414,
+                414.0000000000047,
                 39,
                 39
             ],
@@ -879,7 +879,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                414,
+                414.0000000000047,
                 39,
                 39
             ]
@@ -887,39 +887,39 @@
         "excludedRegion.start.0": {
             "bounds": [
                 851,
-                375,
-                52,
+                375.0000000000047,
+                58,
                 39
             ],
             "enabled": true,
             "label": "0",
             "visible_bounds": [
                 851,
-                375,
-                52,
+                375.0000000000047,
+                58,
                 39
             ]
         },
         "excludedRegion.start.1": {
             "bounds": [
                 851,
-                414,
-                52,
+                414.0000000000047,
+                58,
                 39
             ],
             "enabled": true,
             "label": "137.5",
             "visible_bounds": [
                 851,
-                414,
-                52,
+                414.0000000000047,
+                58,
                 39
             ]
         },
         "excludedRegions.append": {
             "bounds": [
                 784,
-                467,
+                467.0000000000047,
                 682,
                 39
             ],
@@ -928,7 +928,7 @@
             "label": "Append new region",
             "visible_bounds": [
                 784,
-                467,
+                467.0000000000047,
                 682,
                 39
             ]
@@ -936,7 +936,7 @@
         "excludedRegions.list": {
             "bounds": [
                 784,
-                336,
+                336.0000000000047,
                 682,
                 117
             ],
@@ -944,7 +944,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                336,
+                336.0000000000047,
                 682,
                 117
             ]
@@ -969,7 +969,7 @@
         "group.excluded_region": {
             "bounds": [
                 770,
-                287,
+                287.0000000000047,
                 710,
                 233
             ],
@@ -978,9 +978,9 @@
             "label": "Excluded regions (2)",
             "visible_bounds": [
                 770,
-                287,
+                287.0000000000047,
                 710,
-                233
+                233.00000000000006
             ]
         },
         "group.experiments": {
@@ -1037,7 +1037,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                245,
+                245.00000000000472,
                 710,
                 42
             ],
@@ -1046,7 +1046,7 @@
             "label": "Peak profile",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000472,
                 710,
                 42
             ]
@@ -1207,7 +1207,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1494,8 +1494,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1530,7 +1530,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

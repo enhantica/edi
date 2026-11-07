@@ -9,7 +9,7 @@
     ],
     "id": "guide-structure-create",
     "image": "guide-structure-create.png",
-    "image_sha256": "2ea790acda14b9c0b65116388d2cb4d41c66870189d934e304580feac74b55c2",
+    "image_sha256": "3ccedc0f26686d5f3a41d908dfe11f00494f8769b6ed589ed53923b2c5f73264",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -59,12 +59,12 @@
                 800
             ]
         },
-        "StructuresGroup": {
+        "SideBarGroup": {
             "bounds": [
                 784,
                 168,
                 682,
-                184
+                131
             ],
             "enabled": true,
             "label": "",
@@ -72,7 +72,7 @@
                 784,
                 168,
                 682,
-                184
+                131
             ]
         },
         "appBar": {
@@ -370,7 +370,7 @@
         "group.atom_site": {
             "bounds": [
                 770,
-                450,
+                396.9999999999951,
                 710,
                 42
             ],
@@ -379,7 +379,7 @@
             "label": "Atom sites (3)",
             "visible_bounds": [
                 770,
-                450,
+                396.9999999999951,
                 710,
                 42
             ]
@@ -387,7 +387,7 @@
         "group.atom_site_aniso": {
             "bounds": [
                 770,
-                492,
+                438.9999999999951,
                 710,
                 42
             ],
@@ -396,7 +396,7 @@
             "label": "Atomic displacement (3)",
             "visible_bounds": [
                 770,
-                492,
+                438.9999999999951,
                 710,
                 42
             ]
@@ -404,7 +404,7 @@
         "group.cell": {
             "bounds": [
                 770,
-                408,
+                354.9999999999951,
                 710,
                 42
             ],
@@ -413,7 +413,7 @@
             "label": "Cell",
             "visible_bounds": [
                 770,
-                408,
+                354.9999999999951,
                 710,
                 42
             ]
@@ -421,7 +421,7 @@
         "group.space_group": {
             "bounds": [
                 770,
-                366,
+                312.9999999999951,
                 710,
                 42
             ],
@@ -430,7 +430,7 @@
             "label": "Space group",
             "visible_bounds": [
                 770,
-                366,
+                312.9999999999951,
                 710,
                 42
             ]
@@ -440,7 +440,7 @@
                 770,
                 119,
                 710,
-                247
+                194
             ],
             "enabled": true,
             "icon": "layer-group",
@@ -449,7 +449,7 @@
                 770,
                 119,
                 710,
-                247
+                194
             ]
         },
         "label": {
@@ -744,7 +744,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -842,7 +842,7 @@
         },
         "structure.toolbar.a": {
             "bounds": [
-                472.75,
+                503,
                 182,
                 35,
                 35
@@ -850,7 +850,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                472.75,
+                503,
                 182,
                 35,
                 35
@@ -858,24 +858,23 @@
         },
         "structure.toolbar.atoms": {
             "bounds": [
-                231.25,
+                201.25,
                 182,
-                35,
+                95.25,
                 35
             ],
             "enabled": true,
-            "icon": "atom",
             "label": "",
             "visible_bounds": [
-                231.25,
+                201.25,
                 182,
-                35,
+                95.25,
                 35
             ]
         },
         "structure.toolbar.axes": {
             "bounds": [
-                385.25,
+                415.5,
                 182,
                 35,
                 35
@@ -884,7 +883,7 @@
             "icon": "location-arrow",
             "label": "",
             "visible_bounds": [
-                385.25,
+                415.5,
                 182,
                 35,
                 35
@@ -892,7 +891,7 @@
         },
         "structure.toolbar.b": {
             "bounds": [
-                511.25,
+                541.5,
                 182,
                 35,
                 35
@@ -900,7 +899,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                511.25,
+                541.5,
                 182,
                 35,
                 35
@@ -908,7 +907,7 @@
         },
         "structure.toolbar.bonds": {
             "bounds": [
-                308.25,
+                338.5,
                 182,
                 35,
                 35
@@ -917,7 +916,7 @@
             "icon": "link",
             "label": "",
             "visible_bounds": [
-                308.25,
+                338.5,
                 182,
                 35,
                 35
@@ -925,7 +924,7 @@
         },
         "structure.toolbar.c": {
             "bounds": [
-                549.75,
+                580,
                 182,
                 35,
                 35
@@ -933,7 +932,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                549.75,
+                580,
                 182,
                 35,
                 35
@@ -941,7 +940,7 @@
         },
         "structure.toolbar.cell": {
             "bounds": [
-                346.75,
+                377,
                 182,
                 35,
                 35
@@ -950,7 +949,7 @@
             "icon": "vector-square",
             "label": "",
             "visible_bounds": [
-                346.75,
+                377,
                 182,
                 35,
                 35
@@ -958,7 +957,7 @@
         },
         "structure.toolbar.colors": {
             "bounds": [
-                146,
+                116,
                 182,
                 71.25,
                 35
@@ -966,7 +965,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                146,
+                116,
                 182,
                 71.25,
                 35
@@ -974,7 +973,7 @@
         },
         "structure.toolbar.labels": {
             "bounds": [
-                269.75,
+                300,
                 182,
                 35,
                 35
@@ -983,7 +982,7 @@
             "icon": "tag",
             "label": "",
             "visible_bounds": [
-                269.75,
+                300,
                 182,
                 35,
                 35
@@ -991,7 +990,7 @@
         },
         "structure.toolbar.projection": {
             "bounds": [
-                434.25,
+                464.5,
                 182,
                 35,
                 35
@@ -1000,7 +999,7 @@
             "icon": "cube",
             "label": "",
             "visible_bounds": [
-                434.25,
+                464.5,
                 182,
                 35,
                 35
@@ -1008,7 +1007,7 @@
         },
         "structure.toolbar.reset": {
             "bounds": [
-                588.25,
+                618.5,
                 182,
                 35,
                 35
@@ -1017,7 +1016,7 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                588.25,
+                618.5,
                 182,
                 35,
                 35
@@ -1090,35 +1089,35 @@
         },
         "structures.create": {
             "bounds": [
-                1132,
+                1016,
                 260,
-                334,
+                218,
                 39
             ],
             "enabled": true,
             "icon": "plus-circle",
             "label": "Create structure",
             "visible_bounds": [
-                1132,
+                1016,
                 260,
-                334,
+                218,
                 39
             ]
         },
         "structures.duplicate": {
             "bounds": [
-                784,
-                313,
-                334,
+                1248,
+                260,
+                218,
                 39
             ],
             "enabled": true,
             "icon": "clone",
             "label": "Duplicate structure",
             "visible_bounds": [
-                784,
-                313,
-                334,
+                1248,
+                260,
+                218,
                 39
             ]
         },
@@ -1142,33 +1141,16 @@
             "bounds": [
                 784,
                 260,
-                334,
+                218,
                 39
             ],
             "enabled": true,
             "icon": "upload",
-            "label": "Load structure from file",
+            "label": "Load",
             "visible_bounds": [
                 784,
                 260,
-                334,
-                39
-            ]
-        },
-        "structures.loadCod": {
-            "bounds": [
-                1132,
-                313,
-                334,
-                39
-            ],
-            "enabled": false,
-            "icon": "cloud-download-alt",
-            "label": "Load from COD",
-            "visible_bounds": [
-                1132,
-                313,
-                334,
+                218,
                 39
             ]
         },
@@ -1296,8 +1278,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

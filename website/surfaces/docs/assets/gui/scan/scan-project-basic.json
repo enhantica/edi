@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's project controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.project.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "scan-project-basic",
     "image": "scan-project-basic.png",
-    "image_sha256": "fdd9dc4c82342548483b8519a2bf0f76f32e52248b5ab626b84784325006ed2f",
+    "image_sha256": "24ed46d8938dc59d602944d4f1467ef59385cd848b50a79d5721ee30e5ae9a9a",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +42,6 @@
                 800
             ]
         },
-        "GetStartedGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                92
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                92
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                92
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                92
             ]
         },
         "appBar": {
@@ -451,21 +452,21 @@
                 183.4,
                 284.6,
                 567,
-                19
+                38
             ],
             "enabled": true,
-            "label": "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out",
+            "label": "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure",
             "visible_bounds": [
                 183.4,
                 284.6,
                 567,
-                19
+                38
             ]
         },
         "project.experiments": {
             "bounds": [
                 183.4,
-                390.20000000000005,
+                409.20000000000005,
                 567,
                 234.203125
             ],
@@ -473,7 +474,7 @@
             "label": "",
             "visible_bounds": [
                 183.4,
-                390.20000000000005,
+                409.20000000000005,
                 567,
                 234.203125
             ]
@@ -481,15 +482,15 @@
         "project.location": {
             "bounds": [
                 183.4,
-                328.40000000000003,
+                347.40000000000003,
                 567,
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-PhabDw/pd-neut-cwl_cosio-d20_scan/project",
+            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-fBtegR/pd-neut-cwl_cosio-d20_scan-213f/project",
             "visible_bounds": [
                 183.4,
-                328.40000000000003,
+                347.40000000000003,
                 567,
                 19
             ]
@@ -498,15 +499,15 @@
             "bounds": [
                 31.5,
                 140,
-                533.40625,
+                634.796875,
                 58
             ],
             "enabled": true,
-            "label": "pd-neut-cwl_cosio-d20_scan",
+            "label": "pd-neut-cwl_cosio-d20_scan-213f",
             "visible_bounds": [
                 31.5,
                 140,
-                533.40625,
+                634.796875,
                 58
             ]
         },
@@ -564,7 +565,7 @@
         "project.structures": {
             "bounds": [
                 183.4,
-                359.30000000000007,
+                378.30000000000007,
                 567,
                 18.109375
             ],
@@ -572,7 +573,7 @@
             "label": "",
             "visible_bounds": [
                 183.4,
-                359.30000000000007,
+                378.30000000000007,
                 567,
                 18.109375
             ]
@@ -585,7 +586,7 @@
                 19
             ],
             "enabled": true,
-            "label": "Co₂SiO₄ [Pnma] · D20 @ ILL",
+            "label": "Co₂SiO₄ [Pnma.1] · D20 @ ILL",
             "visible_bounds": [
                 183.4,
                 222.8,
@@ -675,7 +676,7 @@
         },
         "statusBar.calculator": {
             "bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -684,7 +685,7 @@
             "icon": "calculator",
             "label": "",
             "visible_bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -692,7 +693,7 @@
         },
         "statusBar.experiments": {
             "bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -701,7 +702,7 @@
             "icon": "microscope",
             "label": "",
             "visible_bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -818,7 +819,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "155/155 155 0 12s 4.74–7.19",
+            "label": "213/213 213 0 11s 4.32–6.25",
             "visible_bounds": [
                 985,
                 770,
@@ -828,7 +829,7 @@
         },
         "statusBar.minimizer": {
             "bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
                 51.890625,
                 14
@@ -837,26 +838,26 @@
             "icon": "level-down-alt",
             "label": "",
             "visible_bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
-                51.890625,
+                51.89062499999994,
                 14
             ]
         },
         "statusBar.parameters": {
             "bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ],
             "enabled": true,
             "icon": "th-list",
             "label": "",
             "visible_bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ]
         },
@@ -864,7 +865,7 @@
             "bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ],
             "enabled": true,
@@ -873,13 +874,13 @@
             "visible_bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ]
         },
         "statusBar.structures": {
             "bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -888,7 +889,7 @@
             "icon": "layer-group",
             "label": "",
             "visible_bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -989,8 +990,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "ef922929905b91dd8cfd48e3b6ba434bb97747b460d2f9376ab1427fb94e883c",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1001,8 +1002,8 @@
         "has_project": true,
         "page": "project",
         "scan_failed": 0,
-        "scan_fitted": 155,
-        "scan_total": 155,
+        "scan_fitted": 213,
+        "scan_total": 213,
         "sidebar": "Main",
         "sidebar_tabs": [
             {

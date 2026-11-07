@@ -10,7 +10,7 @@
     ],
     "id": "03-project-details",
     "image": "03-project-details.png",
-    "image_sha256": "3d2b30b6f5f249a8739e21c9b2a0e4fdf8b99bffd85581ee4ca23686664674cb",
+    "image_sha256": "919b7f1fa1ba0350511ac6774966cf5d2ff3b8f850be605d1d605e034c1073ee",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -44,22 +44,6 @@
                 800
             ]
         },
-        "GetStartedGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                92
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                92
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -79,33 +63,49 @@
         "ProjectDescriptionDialog": {
             "bounds": [
                 467,
-                157,
+                158,
                 546,
-                486
+                484
             ],
             "enabled": true,
             "label": "Create project",
             "visible_bounds": [
                 467,
-                157,
+                158,
                 546,
-                486
+                484
             ]
         },
         "QQuickPopupItem": {
             "bounds": [
                 495,
-                218,
+                219,
                 490,
-                364
+                362
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 495,
-                218,
+                219,
                 490,
-                364
+                362
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                92
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                92
             ]
         },
         "appBar": {
@@ -381,7 +381,7 @@
         "createProject.accept": {
             "bounds": [
                 973.90625,
-                610,
+                609,
                 18.09375,
                 19
             ],
@@ -389,7 +389,7 @@
             "label": "OK",
             "visible_bounds": [
                 973.90625,
-                610,
+                609,
                 18.09375,
                 19
             ]
@@ -397,7 +397,7 @@
         "createProject.authors": {
             "bounds": [
                 495,
-                373,
+                374,
                 490,
                 35
             ],
@@ -405,7 +405,7 @@
             "label": "EasyDiffraction documentation",
             "visible_bounds": [
                 495,
-                373,
+                374,
                 490,
                 35
             ]
@@ -413,31 +413,31 @@
         "createProject.description": {
             "bounds": [
                 495,
-                441,
+                442,
                 490,
-                73
+                71
             ],
             "enabled": true,
             "label": "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background",
             "visible_bounds": [
                 495,
-                441,
+                442,
                 490,
-                73
+                71
             ]
         },
         "createProject.location": {
             "bounds": [
                 495,
-                547,
+                546,
                 490,
                 35
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-EWTNsl/pd-neut-cwl_y2o3-spodi",
+            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 495,
-                547,
+                546,
                 490,
                 35
             ]
@@ -445,7 +445,7 @@
         "createProject.name": {
             "bounds": [
                 495,
-                237,
+                238,
                 490,
                 35
             ],
@@ -453,7 +453,7 @@
             "label": "pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 495,
-                237,
+                238,
                 490,
                 35
             ]
@@ -461,15 +461,15 @@
         "createProject.title": {
             "bounds": [
                 495,
-                305,
+                306,
                 490,
                 35
             ],
             "enabled": true,
-            "label": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+            "label": "Y₂O₃ [Ia-3] - SPODI @ FRM II",
             "visible_bounds": [
                 495,
-                305,
+                306,
                 490,
                 35
             ]
@@ -821,8 +821,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

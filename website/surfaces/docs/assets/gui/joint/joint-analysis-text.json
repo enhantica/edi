@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's analysis controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.analysis.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "joint-analysis-text",
     "image": "joint-analysis-text.png",
-    "image_sha256": "7c177929e4e07909c88afd0992278b9df9b9d1e24b824fbd32b49ddd41f39a6c",
+    "image_sha256": "0560c0d0de0a70833837a4c80ee95a8dabfdbbab96e6326df6b6f2a5790a9edc",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1075,7 +1076,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1209,15 +1210,15 @@
                 784,
                 133,
                 251.71875,
-                176
+                192
             ],
             "enabled": true,
-            "label": "_minimizer.type crysta\n_minimizer.max_iterations 1000\n\n_fitting_mode.type joint\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nd1a 0.5\nlab 0.5\n",
+            "label": "_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.stop_rule shift_su\n\n_fitting_mode.type joint\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nd1a 0.5\nlab 0.5\n",
             "visible_bounds": [
                 784,
                 133,
                 251.71875,
-                176
+                192
             ]
         },
         "workflow.analysis.mainContent": {
@@ -1295,8 +1296,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

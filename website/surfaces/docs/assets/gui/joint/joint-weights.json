@@ -1,12 +1,13 @@
 {
     "description": "Set the relative weights of the experiments in the joint fit",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "group.joint_fit"
     ],
     "id": "joint-weights",
     "image": "joint-weights.png",
-    "image_sha256": "6037e5261d90fcd44e7071e8108c8bb0f5354ed9885bc574da4a904f5df4802b",
+    "image_sha256": "0ac75d672a76c6647a6cfef867b54b8a53335e7a215905029d23d06139dca432",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -40,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                336,
-                682,
-                117
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                336,
-                682,
-                117
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -70,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                336.00000000000244,
+                682,
+                117
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                336.00000000000244,
+                682,
+                117
             ]
         },
         "appBar": {
@@ -769,7 +770,7 @@
         "group.alias": {
             "bounds": [
                 770,
-                203,
+                203.00000000000244,
                 710,
                 42
             ],
@@ -778,7 +779,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000244,
                 710,
                 42
             ]
@@ -786,7 +787,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ],
@@ -795,7 +796,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ]
@@ -803,7 +804,7 @@
         "group.fit_parameter": {
             "bounds": [
                 770,
-                467,
+                466.99999999999807,
                 710,
                 42
             ],
@@ -812,7 +813,7 @@
             "label": "Fit start values (51)",
             "visible_bounds": [
                 770,
-                467,
+                466.99999999999807,
                 710,
                 42
             ]
@@ -820,7 +821,7 @@
         "group.fit_result": {
             "bounds": [
                 770,
-                509,
+                508.99999999999807,
                 710,
                 42
             ],
@@ -829,7 +830,7 @@
             "label": "Fit result",
             "visible_bounds": [
                 770,
-                509,
+                508.99999999999807,
                 710,
                 42
             ]
@@ -837,7 +838,7 @@
         "group.fit_result_bank": {
             "bounds": [
                 770,
-                551,
+                550.9999999999981,
                 710,
                 42
             ],
@@ -846,7 +847,7 @@
             "label": "Experiment fit result (2)",
             "visible_bounds": [
                 770,
-                551,
+                550.9999999999981,
                 710,
                 42
             ]
@@ -854,7 +855,7 @@
         "group.fit_result_phase": {
             "bounds": [
                 770,
-                593,
+                592.9999999999981,
                 710,
                 42
             ],
@@ -863,7 +864,7 @@
             "label": "Structure fit result (2)",
             "visible_bounds": [
                 770,
-                593,
+                592.9999999999981,
                 710,
                 42
             ]
@@ -888,7 +889,7 @@
         "group.joint_fit": {
             "bounds": [
                 770,
-                287,
+                287.00000000000244,
                 710,
                 180
             ],
@@ -897,7 +898,7 @@
             "label": "Joint-fit weights (2)",
             "visible_bounds": [
                 770,
-                287,
+                287.00000000000244,
                 710,
                 180
             ]
@@ -922,7 +923,7 @@
         "jointFit.color.0": {
             "bounds": [
                 815,
-                375,
+                375.00000000000244,
                 28,
                 39
             ],
@@ -931,7 +932,7 @@
             "label": "",
             "visible_bounds": [
                 815,
-                375,
+                375.00000000000244,
                 28,
                 39
             ]
@@ -939,7 +940,7 @@
         "jointFit.color.1": {
             "bounds": [
                 815,
-                414,
+                414.00000000000244,
                 28,
                 39
             ],
@@ -948,7 +949,7 @@
             "label": "",
             "visible_bounds": [
                 815,
-                414,
+                414.00000000000244,
                 28,
                 39
             ]
@@ -956,7 +957,7 @@
         "jointFit.list": {
             "bounds": [
                 784,
-                336,
+                336.00000000000244,
                 682,
                 117
             ],
@@ -964,40 +965,40 @@
             "label": "",
             "visible_bounds": [
                 784,
-                336,
+                336.00000000000244,
                 682,
                 117
             ]
         },
         "jointFit.weight.0": {
             "bounds": [
-                940,
-                375,
-                521,
+                936,
+                375.00000000000244,
+                525,
                 39
             ],
             "enabled": true,
             "label": "0.5",
             "visible_bounds": [
-                940,
-                375,
-                521,
+                936,
+                375.00000000000244,
+                525,
                 39
             ]
         },
         "jointFit.weight.1": {
             "bounds": [
-                940,
-                414,
-                521,
+                936,
+                414.00000000000244,
+                525,
                 39
             ],
             "enabled": true,
             "label": "0.5",
             "visible_bounds": [
-                940,
-                414,
-                521,
+                936,
+                414.00000000000244,
+                525,
                 39
             ]
         },
@@ -1325,7 +1326,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1496,8 +1497,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

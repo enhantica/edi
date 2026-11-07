@@ -1,3 +1,5 @@
+_minimizer.stop_rule shift_su
+
 _fitting_mode.type single
 
 _edi.schema_version 3
@@ -7,16 +9,16 @@ _fit_parameter.id
 _fit_parameter.start_value
 _fit_parameter.start_uncertainty
 _fit_parameter.start_tied
-structure.cell.length_a 10.60447547975193 0.0001275371725970272 .
+structure.cell.length_a 10.604475293718144 0.00012753792898126872 .
 structure.Y1.fract_x -0.03 0 .
 structure.O1.fract_x 0.39 0 .
 structure.O1.fract_y 0.15 0 .
 structure.O1.fract_z 0.38 0 .
-spodi.broad_gauss_u 0.015551183969990051 0.0026348202215347905 .
-spodi.broad_gauss_v -0.0649650738173046 0.006188313274735937 .
-spodi.broad_gauss_w 0.08851940588659896 0.0029824494802885076 .
-spodi.calib_twotheta_offset -0.04427872192161893 0.0012878912779334011 .
-spodi.y2o3.scale 0.11343653499258545 0.00045108121063309336 .
+spodi.broad_gauss_u 0.015554324371115126 0.0026348660724879697 .
+spodi.broad_gauss_v -0.06497350181881417 0.006188387438723714 .
+spodi.broad_gauss_w 0.08852421772922281 0.0029824995587609906 .
+spodi.calib_twotheta_offset -0.04427957351105445 0.0012879031134904937 .
+spodi.y2o3.scale 0.11343667569141726 0.00045108161204255665 .
 spodi.background.1 9952.21 0 .
 spodi.background.2 9167.78 0 .
 spodi.background.3 7891.89 0 .
@@ -42,11 +44,11 @@ spodi.background.21 6524.2 0 .
 _fit_result.result_kind deterministic
 _fit_result.success true
 _fit_result.message done
-_fit_result.iterations 4
-_fit_result.fitting_time 0.0808856
-_fit_result.reduced_chi_square 2.27777
+_fit_result.iterations 3
+_fit_result.fitting_time 0.0252067
+_fit_result.reduced_chi_square 2.27778
 _fit_result.objective_name chi_square
-_fit_result.objective_value 5644.32
+_fit_result.objective_value 5644.33
 _fit_result.n_data_points 2509
 _fit_result.n_parameters 70
 _fit_result.n_free_parameters 31
@@ -71,14 +73,14 @@ _fit_result_bank.prof_r_factor
 _fit_result_bank.prof_wr_expected
 _fit_result_bank.prof_cr_factor
 _fit_result_bank.prof_cwr_factor
-spodi 2509 0.0185822 5644.32 0.0143777 0.0123123 0.230581 0.141354
+spodi 2509 0.0185822 5644.33 0.0143777 0.0123123 0.230581 0.141354
 
 loop_
 _fit_result_phase.experiment_id
 _fit_result_phase.structure_id
 _fit_result_phase.bragg_r_factor
 _fit_result_phase.f_r_factor
-spodi y2o3 0.0733818 0.0413993
+spodi y2o3 0.0733956 0.0413953
 
 loop_
 _fit_parameter_correlation.id
@@ -202,11 +204,11 @@ _fit_parameter_correlation.correlation
 114 deterministic y2o3.atom_site.O1.fract_y spodi.background.21.intensity 0.020
 115 deterministic y2o3.atom_site.O1.fract_z spodi.linked_structure.y2o3.scale 0.0086
 116 deterministic y2o3.atom_site.O1.fract_z spodi.instrument.calib_twotheta_offset 0.0014
-117 deterministic y2o3.atom_site.O1.fract_z spodi.peak.broad_gauss_u 0.0098
-118 deterministic y2o3.atom_site.O1.fract_z spodi.peak.broad_gauss_v -0.0097
+117 deterministic y2o3.atom_site.O1.fract_z spodi.peak.broad_gauss_u 0.0097
+118 deterministic y2o3.atom_site.O1.fract_z spodi.peak.broad_gauss_v -0.0096
 119 deterministic y2o3.atom_site.O1.fract_z spodi.peak.broad_gauss_w 0.011
 120 deterministic y2o3.atom_site.O1.fract_z spodi.background.1.intensity 0.0063
-121 deterministic y2o3.atom_site.O1.fract_z spodi.background.2.intensity -0.0086
+121 deterministic y2o3.atom_site.O1.fract_z spodi.background.2.intensity -0.0087
 122 deterministic y2o3.atom_site.O1.fract_z spodi.background.3.intensity 0.023
 123 deterministic y2o3.atom_site.O1.fract_z spodi.background.4.intensity -0.022
 124 deterministic y2o3.atom_site.O1.fract_z spodi.background.5.intensity -0.0082
@@ -228,7 +230,7 @@ _fit_parameter_correlation.correlation
 140 deterministic y2o3.atom_site.O1.fract_z spodi.background.21.intensity 0.065
 141 deterministic spodi.linked_structure.y2o3.scale spodi.instrument.calib_twotheta_offset -0.0043
 142 deterministic spodi.linked_structure.y2o3.scale spodi.peak.broad_gauss_u -0.0035
-143 deterministic spodi.linked_structure.y2o3.scale spodi.peak.broad_gauss_v 0.0066
+143 deterministic spodi.linked_structure.y2o3.scale spodi.peak.broad_gauss_v 0.0067
 144 deterministic spodi.linked_structure.y2o3.scale spodi.peak.broad_gauss_w 0.12
 145 deterministic spodi.linked_structure.y2o3.scale spodi.background.1.intensity 0.0042
 146 deterministic spodi.linked_structure.y2o3.scale spodi.background.2.intensity -0.034
@@ -261,7 +263,7 @@ _fit_parameter_correlation.correlation
 173 deterministic spodi.instrument.calib_twotheta_offset spodi.background.5.intensity 0.0088
 174 deterministic spodi.instrument.calib_twotheta_offset spodi.background.6.intensity 0.00034
 175 deterministic spodi.instrument.calib_twotheta_offset spodi.background.7.intensity -0.00045
-176 deterministic spodi.instrument.calib_twotheta_offset spodi.background.8.intensity 0.0000013
+176 deterministic spodi.instrument.calib_twotheta_offset spodi.background.8.intensity 0.0000017
 177 deterministic spodi.instrument.calib_twotheta_offset spodi.background.9.intensity 0.00066
 178 deterministic spodi.instrument.calib_twotheta_offset spodi.background.10.intensity -0.00079
 179 deterministic spodi.instrument.calib_twotheta_offset spodi.background.11.intensity -0.0014
@@ -328,7 +330,7 @@ _fit_parameter_correlation.correlation
 240 deterministic spodi.peak.broad_gauss_w spodi.background.6.intensity -0.034
 241 deterministic spodi.peak.broad_gauss_w spodi.background.7.intensity -0.016
 242 deterministic spodi.peak.broad_gauss_w spodi.background.8.intensity -0.0058
-243 deterministic spodi.peak.broad_gauss_w spodi.background.9.intensity -0.00020
+243 deterministic spodi.peak.broad_gauss_w spodi.background.9.intensity -0.00018
 244 deterministic spodi.peak.broad_gauss_w spodi.background.10.intensity -0.0093
 245 deterministic spodi.peak.broad_gauss_w spodi.background.11.intensity 0.0056
 246 deterministic spodi.peak.broad_gauss_w spodi.background.12.intensity -0.0075
@@ -494,7 +496,7 @@ _fit_parameter_correlation.correlation
 406 deterministic spodi.background.10.intensity spodi.background.17.intensity -0.032
 407 deterministic spodi.background.10.intensity spodi.background.18.intensity 0.020
 408 deterministic spodi.background.10.intensity spodi.background.19.intensity 0.029
-409 deterministic spodi.background.10.intensity spodi.background.20.intensity 0.0073
+409 deterministic spodi.background.10.intensity spodi.background.20.intensity 0.0074
 410 deterministic spodi.background.10.intensity spodi.background.21.intensity 0.010
 411 deterministic spodi.background.11.intensity spodi.background.12.intensity -0.40
 412 deterministic spodi.background.11.intensity spodi.background.13.intensity 0.078

@@ -7,7 +7,7 @@
     ],
     "id": "09-experiment-type",
     "image": "09-experiment-type.png",
-    "image_sha256": "17aa5f3f168efcee99d995943b3c4be6df6f5034c03ac59262e207cfa9bda6de",
+    "image_sha256": "d8d78f5d9133cf385333fc5e249465e9fab0f300fdee76a61eb05c7e3ad004bd",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "ExperimentsGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                271
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                271
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                271
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                271
             ]
         },
         "appBar": {
@@ -950,6 +950,22 @@
                 39
             ]
         },
+        "experiments.file.0": {
+            "bounds": [
+                978,
+                207,
+                80.84375,
+                39
+            ],
+            "enabled": true,
+            "label": "— no data yet",
+            "visible_bounds": [
+                978,
+                207,
+                80.84375,
+                39
+            ]
+        },
         "experiments.fit.0": {
             "bounds": [
                 849,
@@ -991,7 +1007,7 @@
             ],
             "enabled": true,
             "icon": "upload",
-            "label": "Load experiment",
+            "label": "Load",
             "visible_bounds": [
                 784,
                 400,
@@ -999,27 +1015,11 @@
                 39
             ]
         },
-        "experiments.loadData.0": {
-            "bounds": [
-                974,
-                207,
-                68.875,
-                39
-            ],
-            "enabled": true,
-            "label": "Load data…",
-            "visible_bounds": [
-                974,
-                207,
-                68.875,
-                39
-            ]
-        },
         "experiments.name.0": {
             "bounds": [
                 874,
                 207,
-                96,
+                100,
                 39
             ],
             "enabled": true,
@@ -1027,7 +1027,7 @@
             "visible_bounds": [
                 874,
                 207,
-                96,
+                100,
                 39
             ]
         },
@@ -1322,7 +1322,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1467,7 +1467,7 @@
             "bounds": [
                 875.128125,
                 772,
-                210.984375,
+                111,
                 14
             ],
             "enabled": true,
@@ -1476,7 +1476,7 @@
             "visible_bounds": [
                 875.128125,
                 772,
-                210.984375,
+                111,
                 14
             ]
         },
@@ -1609,8 +1609,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1645,7 +1645,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

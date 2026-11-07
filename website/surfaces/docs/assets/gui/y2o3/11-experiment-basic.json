@@ -10,7 +10,7 @@
     ],
     "id": "11-experiment-basic",
     "image": "11-experiment-basic.png",
-    "image_sha256": "181ef1b9d27e72723c7195e48153d72b28b1358bed112fb75aa571a976b07860",
+    "image_sha256": "65333df1612912e54a85a0f0b462acb0335b3dc49ba48faaee60768467292516",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -44,22 +44,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                210,
-                682,
-                337.5
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                210,
-                682,
-                337.5
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -74,6 +58,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                210,
+                682,
+                337.5
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                210,
+                682,
+                337.5
             ]
         },
         "appBar": {
@@ -384,7 +384,7 @@
             "bounds": [
                 823,
                 319,
-                32,
+                40,
                 39
             ],
             "enabled": true,
@@ -392,7 +392,7 @@
             "visible_bounds": [
                 823,
                 319,
-                32,
+                40,
                 39
             ]
         },
@@ -400,7 +400,7 @@
             "bounds": [
                 823,
                 358,
-                32,
+                40,
                 39
             ],
             "enabled": true,
@@ -408,7 +408,7 @@
             "visible_bounds": [
                 823,
                 358,
-                32,
+                40,
                 39
             ]
         },
@@ -416,7 +416,7 @@
             "bounds": [
                 823,
                 397,
-                32,
+                40,
                 39
             ],
             "enabled": true,
@@ -424,7 +424,7 @@
             "visible_bounds": [
                 823,
                 397,
-                32,
+                40,
                 39
             ]
         },
@@ -432,7 +432,7 @@
             "bounds": [
                 823,
                 436,
-                32,
+                40,
                 39
             ],
             "enabled": true,
@@ -440,7 +440,7 @@
             "visible_bounds": [
                 823,
                 436,
-                32,
+                40,
                 39
             ]
         },
@@ -448,7 +448,7 @@
             "bounds": [
                 823,
                 475,
-                32,
+                40,
                 39
             ],
             "enabled": true,
@@ -456,87 +456,87 @@
             "visible_bounds": [
                 823,
                 475,
-                32,
+                40,
                 19.5
             ]
         },
         "background.intensity.0": {
             "bounds": [
-                932,
+                938,
                 319,
-                486,
+                480,
                 39
             ],
             "enabled": true,
             "label": "9952.21",
             "visible_bounds": [
-                932,
+                938,
                 319,
-                486,
+                480,
                 39
             ]
         },
         "background.intensity.1": {
             "bounds": [
-                932,
+                938,
                 358,
-                486,
+                480,
                 39
             ],
             "enabled": true,
             "label": "9167.78",
             "visible_bounds": [
-                932,
+                938,
                 358,
-                486,
+                480,
                 39
             ]
         },
         "background.intensity.2": {
             "bounds": [
-                932,
+                938,
                 397,
-                486,
+                480,
                 39
             ],
             "enabled": true,
             "label": "7891.89",
             "visible_bounds": [
-                932,
+                938,
                 397,
-                486,
+                480,
                 39
             ]
         },
         "background.intensity.3": {
             "bounds": [
-                932,
+                938,
                 436,
-                486,
+                480,
                 39
             ],
             "enabled": true,
             "label": "7884.3",
             "visible_bounds": [
-                932,
+                938,
                 436,
-                486,
+                480,
                 39
             ]
         },
         "background.intensity.4": {
             "bounds": [
-                932,
+                938,
                 475,
-                486,
+                480,
                 39
             ],
             "enabled": true,
             "label": "7613.33",
             "visible_bounds": [
-                932,
+                938,
                 475,
-                486,
+                480,
                 19.5
             ]
         },
@@ -575,81 +575,81 @@
         },
         "background.position.0": {
             "bounds": [
-                859,
+                867,
                 319,
-                69,
+                67,
                 39
             ],
             "enabled": true,
             "label": "12.05",
             "visible_bounds": [
-                859,
+                867,
                 319,
-                69,
+                67,
                 39
             ]
         },
         "background.position.1": {
             "bounds": [
-                859,
+                867,
                 358,
-                69,
+                67,
                 39
             ],
             "enabled": true,
             "label": "21.15",
             "visible_bounds": [
-                859,
+                867,
                 358,
-                69,
+                67,
                 39
             ]
         },
         "background.position.2": {
             "bounds": [
-                859,
+                867,
                 397,
-                69,
+                67,
                 39
             ],
             "enabled": true,
             "label": "45.6",
             "visible_bounds": [
-                859,
+                867,
                 397,
-                69,
+                67,
                 39
             ]
         },
         "background.position.3": {
             "bounds": [
-                859,
+                867,
                 436,
-                69,
+                67,
                 39
             ],
             "enabled": true,
             "label": "49.95",
             "visible_bounds": [
-                859,
+                867,
                 436,
-                69,
+                67,
                 39
             ]
         },
         "background.position.4": {
             "bounds": [
-                859,
+                867,
                 475,
-                69,
+                67,
                 39
             ],
             "enabled": true,
             "label": "55.45",
             "visible_bounds": [
-                859,
+                867,
                 475,
-                69,
+                67,
                 19.5
             ]
         },
@@ -1499,7 +1499,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1786,8 +1786,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1822,7 +1822,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

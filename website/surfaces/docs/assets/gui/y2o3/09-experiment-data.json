@@ -3,12 +3,12 @@
     "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
-        "experiments.loadData.0",
+        "experiments.load",
         "workflow.experiment.mainContent"
     ],
     "id": "09-experiment-data",
     "image": "09-experiment-data.png",
-    "image_sha256": "44087322755abe38ea0c3e70d65d4282a1ac80ba5f5c826b87b93a6c16031526",
+    "image_sha256": "164b50237448f12a09b494352702221d63656101d13a1279a8056034dd027edd",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -42,22 +42,6 @@
                 800
             ]
         },
-        "ExperimentsGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                271
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                271
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -72,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                271
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                271
             ]
         },
         "appBar": {
@@ -1015,6 +1015,22 @@
                 39
             ]
         },
+        "experiments.file.0": {
+            "bounds": [
+                978,
+                207,
+                56.078125,
+                39
+            ],
+            "enabled": true,
+            "label": "spodi.xye",
+            "visible_bounds": [
+                978,
+                207,
+                56.078125,
+                39
+            ]
+        },
         "experiments.fit.0": {
             "bounds": [
                 849,
@@ -1056,7 +1072,7 @@
             ],
             "enabled": true,
             "icon": "upload",
-            "label": "Load experiment",
+            "label": "Load",
             "visible_bounds": [
                 784,
                 400,
@@ -1064,27 +1080,11 @@
                 39
             ]
         },
-        "experiments.loadData.0": {
-            "bounds": [
-                974,
-                207,
-                56.078125,
-                39
-            ],
-            "enabled": true,
-            "label": "spodi.xye",
-            "visible_bounds": [
-                974,
-                207,
-                56.078125,
-                39
-            ]
-        },
         "experiments.name.0": {
             "bounds": [
                 874,
                 207,
-                96,
+                100,
                 39
             ],
             "enabled": true,
@@ -1092,7 +1092,7 @@
             "visible_bounds": [
                 874,
                 207,
-                96,
+                100,
                 39
             ]
         },
@@ -1387,7 +1387,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1674,8 +1674,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1710,7 +1710,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

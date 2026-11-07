@@ -8,7 +8,7 @@
     ],
     "id": "02-project-start",
     "image": "02-project-start.png",
-    "image_sha256": "8668e1c863fd96a57f0959297f418d70be8f5e99f1fb63e2f451b4715dd861bd",
+    "image_sha256": "15e6d8ca898b8cee6e22a75f1467dfe82fda6ababa673c0cea61f4bdb3595c8e",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -42,22 +42,6 @@
                 800
             ]
         },
-        "GetStartedGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                92
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                92
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -72,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                92
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                92
             ]
         },
         "appBar": {
@@ -691,8 +691,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

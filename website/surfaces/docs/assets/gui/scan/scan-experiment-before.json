@@ -1,5 +1,6 @@
 {
     "description": "Select an experiment or dataset",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.experiment.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "scan-experiment-before",
     "image": "scan-experiment-before.png",
-    "image_sha256": "9fc8afcf68b70238956b79c64067a5be1d04160bb93666952a796fe754bf2d99",
+    "image_sha256": "623f5036f382b779567e371434e2fe1d6a63722f9c8557f4dde41cabf41854a3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +42,6 @@
                 800
             ]
         },
-        "ExperimentsGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                446.5
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                446.5
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                446.5
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                446.5
             ]
         },
         "appBar": {
@@ -363,35 +364,22 @@
             "ambiguous": true
         },
         "chart.bragg.label": {
-            "bounds": [
-                37.375,
-                547,
-                52.625,
-                18
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                37.375,
-                547,
-                52.625,
-                18
-            ]
+            "ambiguous": true
         },
         "chart.frame.bragg": {
             "bounds": [
                 96,
-                542,
+                531,
                 646,
-                28
+                49
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 96,
-                542,
+                531,
                 646,
-                28
+                49
             ]
         },
         "chart.frame.main": {
@@ -399,7 +387,7 @@
                 96,
                 245,
                 646,
-                283
+                272
             ],
             "enabled": true,
             "label": "",
@@ -407,23 +395,23 @@
                 96,
                 245,
                 646,
-                283
+                272
             ]
         },
         "chart.frame.residual": {
             "bounds": [
                 96,
-                584,
+                594,
                 646,
-                105
+                95
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 96,
-                584,
+                594,
                 646,
-                105
+                95
             ]
         },
         "chart.measured": {
@@ -431,7 +419,7 @@
                 96,
                 245,
                 646,
-                283
+                272
             ],
             "enabled": true,
             "label": "",
@@ -439,7 +427,7 @@
                 96,
                 245,
                 646,
-                283
+                272
             ]
         },
         "chart.pointer": {
@@ -447,7 +435,7 @@
                 96,
                 245,
                 646,
-                283
+                272
             ],
             "enabled": true,
             "label": "",
@@ -455,45 +443,45 @@
                 96,
                 245,
                 646,
-                283
+                272
             ]
         },
         "chart.pointer.bragg": {
             "bounds": [
                 96,
-                542,
+                531,
                 646,
-                28
+                49
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 96,
-                542,
+                531,
                 646,
-                28
+                49
             ]
         },
         "chart.pointer.residual": {
             "bounds": [
                 96,
-                584,
+                594,
                 646,
-                105
+                95
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 96,
-                584,
+                594,
                 646,
-                105
+                95
             ]
         },
         "chart.title.residual": {
             "bounds": [
                 15.5,
-                601.765625,
+                606.765625,
                 19,
                 69.46875
             ],
@@ -501,7 +489,7 @@
             "label": "<font color=\"#618ec8\">meas</font> − <font color=\"#ad1a6b\">calc</font>",
             "visible_bounds": [
                 15.5,
-                601.765625,
+                606.765625,
                 19,
                 69.46875
             ]
@@ -525,7 +513,7 @@
         "chart.title.y": {
             "bounds": [
                 15.5,
-                342.453125,
+                336.953125,
                 19,
                 88.09375
             ],
@@ -533,7 +521,7 @@
             "label": "<font color=\"#618ec8\">meas</font>, <font color=\"#ad1a6b\">calc</font>, <font color=\"#8a8a8a\">bkg</font>",
             "visible_bounds": [
                 15.5,
-                342.453125,
+                336.953125,
                 19,
                 88.09375
             ]
@@ -725,17 +713,17 @@
         "chart.view.bragg": {
             "bounds": [
                 0,
-                542,
+                531,
                 770,
-                28
+                49
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 0,
-                542,
+                531,
                 770,
-                28
+                49
             ]
         },
         "chart.view.main": {
@@ -743,7 +731,7 @@
                 0,
                 245,
                 770,
-                323
+                312
             ],
             "enabled": true,
             "label": "",
@@ -751,23 +739,23 @@
                 0,
                 245,
                 770,
-                323
+                312
             ]
         },
         "chart.view.residual": {
             "bounds": [
                 0,
-                584,
+                594,
                 770,
-                145
+                135
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
                 0,
-                584,
+                594,
                 770,
-                145
+                135
             ]
         },
         "currentRowBar": {
@@ -1000,9 +988,105 @@
                 39
             ]
         },
+        "experiments.file.0": {
+            "bounds": [
+                947,
+                207,
+                132.65625,
+                39
+            ],
+            "enabled": true,
+            "label": "01_213_002p3440.dat",
+            "visible_bounds": [
+                947,
+                207,
+                132.65625,
+                39
+            ]
+        },
+        "experiments.file.1": {
+            "bounds": [
+                947,
+                246,
+                132.65625,
+                39
+            ],
+            "enabled": true,
+            "label": "01_212_002p3560.dat",
+            "visible_bounds": [
+                947,
+                246,
+                132.65625,
+                39
+            ]
+        },
+        "experiments.file.2": {
+            "bounds": [
+                947,
+                285,
+                132.65625,
+                39
+            ],
+            "enabled": true,
+            "label": "01_211_002p3630.dat",
+            "visible_bounds": [
+                947,
+                285,
+                132.65625,
+                39
+            ]
+        },
+        "experiments.file.3": {
+            "bounds": [
+                947,
+                324,
+                132.65625,
+                39
+            ],
+            "enabled": true,
+            "label": "01_210_002p3820.dat",
+            "visible_bounds": [
+                947,
+                324,
+                132.65625,
+                39
+            ]
+        },
+        "experiments.file.4": {
+            "bounds": [
+                947,
+                363,
+                132.65625,
+                39
+            ],
+            "enabled": true,
+            "label": "01_209_002p4210.dat",
+            "visible_bounds": [
+                947,
+                363,
+                132.65625,
+                39
+            ]
+        },
+        "experiments.file.5": {
+            "bounds": [
+                947,
+                402,
+                132.65625,
+                39
+            ],
+            "enabled": true,
+            "label": "01_208_008p5330.dat",
+            "visible_bounds": [
+                947,
+                402,
+                132.65625,
+                19.5
+            ]
+        },
         "experiments.fit.0": {
             "bounds": [
-                834,
+                835,
                 207,
                 28,
                 39
@@ -1010,7 +1094,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                834,
+                835,
                 207,
                 28,
                 39
@@ -1018,7 +1102,7 @@
         },
         "experiments.fit.1": {
             "bounds": [
-                834,
+                835,
                 246,
                 28,
                 39
@@ -1026,7 +1110,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                834,
+                835,
                 246,
                 28,
                 39
@@ -1034,7 +1118,7 @@
         },
         "experiments.fit.2": {
             "bounds": [
-                834,
+                835,
                 285,
                 28,
                 39
@@ -1042,7 +1126,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                834,
+                835,
                 285,
                 28,
                 39
@@ -1050,7 +1134,7 @@
         },
         "experiments.fit.3": {
             "bounds": [
-                834,
+                835,
                 324,
                 28,
                 39
@@ -1058,7 +1142,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                834,
+                835,
                 324,
                 28,
                 39
@@ -1066,7 +1150,7 @@
         },
         "experiments.fit.4": {
             "bounds": [
-                834,
+                835,
                 363,
                 28,
                 39
@@ -1074,7 +1158,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                834,
+                835,
                 363,
                 28,
                 39
@@ -1082,7 +1166,7 @@
         },
         "experiments.fit.5": {
             "bounds": [
-                834,
+                835,
                 402,
                 28,
                 39
@@ -1090,7 +1174,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                834,
+                835,
                 402,
                 28,
                 19.5
@@ -1121,7 +1205,7 @@
             ],
             "enabled": true,
             "icon": "upload",
-            "label": "Load experiment",
+            "label": "Load",
             "visible_bounds": [
                 784,
                 575.5,
@@ -1131,97 +1215,97 @@
         },
         "experiments.name.0": {
             "bounds": [
-                866,
+                867,
                 207,
-                80,
+                76,
                 39
             ],
             "enabled": true,
             "label": "d20",
             "visible_bounds": [
-                866,
+                867,
                 207,
-                80,
+                76,
                 39
             ]
         },
         "experiments.name.1": {
             "bounds": [
-                866,
+                867,
                 246,
-                80,
+                76,
                 39
             ],
             "enabled": true,
             "label": "d20",
             "visible_bounds": [
-                866,
+                867,
                 246,
-                80,
+                76,
                 39
             ]
         },
         "experiments.name.2": {
             "bounds": [
-                866,
+                867,
                 285,
-                80,
+                76,
                 39
             ],
             "enabled": true,
             "label": "d20",
             "visible_bounds": [
-                866,
+                867,
                 285,
-                80,
+                76,
                 39
             ]
         },
         "experiments.name.3": {
             "bounds": [
-                866,
+                867,
                 324,
-                80,
+                76,
                 39
             ],
             "enabled": true,
             "label": "d20",
             "visible_bounds": [
-                866,
+                867,
                 324,
-                80,
+                76,
                 39
             ]
         },
         "experiments.name.4": {
             "bounds": [
-                866,
+                867,
                 363,
-                80,
+                76,
                 39
             ],
             "enabled": true,
             "label": "d20",
             "visible_bounds": [
-                866,
+                867,
                 363,
-                80,
+                76,
                 39
             ]
         },
         "experiments.name.5": {
             "bounds": [
-                866,
+                867,
                 402,
-                80,
+                76,
                 39
             ],
             "enabled": true,
             "label": "d20",
             "visible_bounds": [
-                866,
+                867,
                 402,
-                80,
+                76,
                 19.5
             ]
         },
@@ -1321,22 +1405,6 @@
                 19.5
             ]
         },
-        "experiments.template.0": {
-            "bounds": [
-                1089.03125,
-                207,
-                53.3125,
-                39
-            ],
-            "enabled": true,
-            "label": "template",
-            "visible_bounds": [
-                1089.03125,
-                207,
-                53.3125,
-                39
-            ]
-        },
         "group.background": {
             "bounds": [
                 770,
@@ -1346,7 +1414,7 @@
             ],
             "enabled": true,
             "icon": "wave-square",
-            "label": "Background (14)",
+            "label": "Background (16)",
             "visible_bounds": [
                 770,
                 628.5,
@@ -1363,7 +1431,7 @@
             ],
             "enabled": true,
             "icon": "microscope",
-            "label": "Experiments (155)",
+            "label": "Experiments (213)",
             "visible_bounds": [
                 770,
                 119,
@@ -1561,7 +1629,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1604,7 +1672,7 @@
         },
         "statusBar.calculator": {
             "bounds": [
-                640.23125,
+                673.5906249999999,
                 772,
                 122.84375,
                 14
@@ -1613,7 +1681,7 @@
             "icon": "calculator",
             "label": "",
             "visible_bounds": [
-                640.23125,
+                673.5906249999999,
                 772,
                 122.84375,
                 14
@@ -1621,7 +1689,7 @@
         },
         "statusBar.experiments": {
             "bounds": [
-                496.93125000000003,
+                530.290625,
                 772,
                 126.5,
                 14
@@ -1630,9 +1698,9 @@
             "icon": "microscope",
             "label": "",
             "visible_bounds": [
-                496.93125000000003,
+                530.290625,
                 772,
-                126.50000000000006,
+                126.5,
                 14
             ]
         },
@@ -1721,7 +1789,7 @@
         },
         "statusBar.minimizer": {
             "bounds": [
-                779.875,
+                813.2343749999999,
                 772,
                 118.109375,
                 14
@@ -1730,7 +1798,7 @@
             "icon": "level-down-alt",
             "label": "",
             "visible_bounds": [
-                779.875,
+                813.2343749999999,
                 772,
                 118.109375,
                 14
@@ -1738,18 +1806,18 @@
         },
         "statusBar.parameters": {
             "bounds": [
-                914.784375,
+                948.1437499999998,
                 772,
-                210.234375,
+                218.609375,
                 14
             ],
             "enabled": true,
             "icon": "th-list",
             "label": "",
             "visible_bounds": [
-                914.784375,
+                948.1437499999998,
                 772,
-                210.234375,
+                218.6093749999999,
                 14
             ]
         },
@@ -1757,7 +1825,7 @@
             "bounds": [
                 126.58125,
                 772,
-                239.359375,
+                272.71875,
                 14
             ],
             "enabled": true,
@@ -1766,13 +1834,13 @@
             "visible_bounds": [
                 126.58125,
                 772,
-                239.359375,
+                272.71875,
                 14
             ]
         },
         "statusBar.structures": {
             "bounds": [
-                382.740625,
+                416.1,
                 772,
                 97.390625,
                 14
@@ -1781,7 +1849,7 @@
             "icon": "layer-group",
             "label": "",
             "visible_bounds": [
-                382.740625,
+                416.1,
                 772,
                 97.390625,
                 14
@@ -1882,8 +1950,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "ef922929905b91dd8cfd48e3b6ba434bb97747b460d2f9376ab1427fb94e883c",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1895,7 +1963,7 @@
         "page": "experiment",
         "scan_failed": 0,
         "scan_fitted": 0,
-        "scan_total": 155,
+        "scan_total": 213,
         "sidebar": "",
         "sidebar_tabs": [
             {
@@ -1918,7 +1986,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

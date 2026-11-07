@@ -7,7 +7,7 @@
     ],
     "id": "guide-project-save",
     "image": "guide-project-save.png",
-    "image_sha256": "6668eba38bd5f91c8616813640bb18da92779f8129b18b6f7007c0d3a472bbc3",
+    "image_sha256": "65ead927e96be3fe6f84d224ca4ec30f73a50d7be2b6afcbb10332b16705e500",
     "items": {
         "AppDialog": {
             "bounds": [
@@ -57,22 +57,6 @@
                 800
             ]
         },
-        "GetStartedGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                92
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                92
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -103,6 +87,22 @@
                 354,
                 266,
                 93
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                92
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                92
             ]
         },
         "appBar": {
@@ -378,7 +378,7 @@
         "group.examples": {
             "bounds": [
                 770,
-                274,
+                273.99999999999636,
                 710,
                 42
             ],
@@ -387,7 +387,7 @@
             "label": "Examples",
             "visible_bounds": [
                 770,
-                274,
+                273.99999999999636,
                 710,
                 42
             ]
@@ -412,7 +412,7 @@
         "group.recentProjects": {
             "bounds": [
                 770,
-                316,
+                316.00000000001467,
                 710,
                 42
             ],
@@ -421,7 +421,7 @@
             "label": "Recent projects",
             "visible_bounds": [
                 770,
-                316,
+                316.00000000001467,
                 710,
                 42
             ]
@@ -518,7 +518,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-EWTNsl/docs-saved-project",
+            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/docs-saved-project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -633,7 +633,7 @@
                 19
             ],
             "enabled": true,
-            "label": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+            "label": "Y₂O₃ [Ia-3] - SPODI @ FRM II",
             "visible_bounds": [
                 183.4,
                 222.8,
@@ -896,7 +896,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1067,8 +1067,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

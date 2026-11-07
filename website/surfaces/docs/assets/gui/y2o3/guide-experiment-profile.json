@@ -7,7 +7,7 @@
     ],
     "id": "guide-experiment-profile",
     "image": "guide-experiment-profile.png",
-    "image_sha256": "63f7e181d8630597f3688bd48d4c5c743fa9ee40367a6c8b6923879864e93e71",
+    "image_sha256": "023685c6be5d7b18ee674b7447ebe779cd3b8c55f8a999ef33f5fa713b972f51",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                294,
-                682,
-                126
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                294,
-                682,
-                126
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                294.0000000000047,
+                682,
+                126
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                294.0000000000047,
+                682,
+                126
             ]
         },
         "appBar": {
@@ -773,7 +773,7 @@
         "group.background": {
             "bounds": [
                 770,
-                161,
+                161.00000000000932,
                 710,
                 42
             ],
@@ -782,7 +782,7 @@
             "label": "Background (21)",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000932,
                 710,
                 42
             ]
@@ -790,7 +790,7 @@
         "group.excluded_region": {
             "bounds": [
                 770,
-                434,
+                434.00000000000466,
                 710,
                 42
             ],
@@ -799,7 +799,7 @@
             "label": "Excluded regions (2)",
             "visible_bounds": [
                 770,
-                434,
+                434.00000000000466,
                 710,
                 42
             ]
@@ -824,7 +824,7 @@
         "group.instrument": {
             "bounds": [
                 770,
-                203,
+                203.00000000000932,
                 710,
                 42
             ],
@@ -833,7 +833,7 @@
             "label": "Instrument",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000932,
                 710,
                 42
             ]
@@ -841,7 +841,7 @@
         "group.linked_structure": {
             "bounds": [
                 770,
-                476,
+                476.00000000000466,
                 710,
                 42
             ],
@@ -850,7 +850,7 @@
             "label": "Linked structures (1)",
             "visible_bounds": [
                 770,
-                476,
+                476.00000000000466,
                 710,
                 42
             ]
@@ -858,7 +858,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                245,
+                245.00000000000472,
                 710,
                 189
             ],
@@ -867,7 +867,7 @@
             "label": "Peak profile",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000472,
                 710,
                 189
             ]
@@ -992,7 +992,7 @@
         "peak.broad_gauss_u": {
             "bounds": [
                 784,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1000,7 +1000,7 @@
             "label": "0.0156",
             "visible_bounds": [
                 784,
-                364,
+                364.0000000000047,
                 133.60000000000002,
                 56
             ]
@@ -1008,7 +1008,7 @@
         "peak.broad_gauss_v": {
             "bounds": [
                 921.1,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1016,7 +1016,7 @@
             "label": "-0.0667",
             "visible_bounds": [
                 921.1,
-                364,
+                364.0000000000047,
                 133.60000000000002,
                 56
             ]
@@ -1024,7 +1024,7 @@
         "peak.broad_gauss_w": {
             "bounds": [
                 1058.2,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1032,7 +1032,7 @@
             "label": "0.0938",
             "visible_bounds": [
                 1058.2,
-                364,
+                364.0000000000047,
                 133.5999999999999,
                 56
             ]
@@ -1040,7 +1040,7 @@
         "peak.broad_lorentz_x": {
             "bounds": [
                 1195.3,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1048,7 +1048,7 @@
             "label": "0",
             "visible_bounds": [
                 1195.3,
-                364,
+                364.0000000000047,
                 133.5999999999999,
                 56
             ]
@@ -1056,7 +1056,7 @@
         "peak.broad_lorentz_y": {
             "bounds": [
                 1332.4,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1064,7 +1064,7 @@
             "label": "0.1",
             "visible_bounds": [
                 1332.4,
-                364,
+                364.0000000000047,
                 133.5999999999999,
                 56
             ]
@@ -1072,7 +1072,7 @@
         "peak.type": {
             "bounds": [
                 784,
-                294,
+                294.0000000000047,
                 682,
                 56
             ],
@@ -1108,7 +1108,7 @@
             "uid": "peak.type",
             "visible_bounds": [
                 784,
-                294,
+                294.0000000000047,
                 682,
                 56
             ]
@@ -1152,7 +1152,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1304,7 +1304,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1475,8 +1475,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1511,7 +1511,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

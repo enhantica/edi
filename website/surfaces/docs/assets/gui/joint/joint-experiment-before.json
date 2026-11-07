@@ -1,5 +1,6 @@
 {
     "description": "Select an experiment or dataset",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.experiment.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "joint-experiment-before",
     "image": "joint-experiment-before.png",
-    "image_sha256": "dbe77eef78702bb4d501927c5fb69d47adc7941a7646eced02a2f85e55a7701b",
+    "image_sha256": "d0a06fd5a7aadffd5dd8514eb026c646bbfcd8bc288beaad37a6b70984b622b5",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +42,6 @@
                 800
             ]
         },
-        "ExperimentsGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                310
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                310
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                310
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                310
             ]
         },
         "appBar": {
@@ -1031,6 +1032,38 @@
                 39
             ]
         },
+        "experiments.file.0": {
+            "bounds": [
+                954,
+                207,
+                43.46875,
+                39
+            ],
+            "enabled": true,
+            "label": "d1a.edi",
+            "visible_bounds": [
+                954,
+                207,
+                43.46875,
+                39
+            ]
+        },
+        "experiments.file.1": {
+            "bounds": [
+                954,
+                246,
+                39.765625,
+                39
+            ],
+            "enabled": true,
+            "label": "lab.edi",
+            "visible_bounds": [
+                954,
+                246,
+                39.765625,
+                39
+            ]
+        },
         "experiments.fit.0": {
             "bounds": [
                 849,
@@ -1088,7 +1121,7 @@
             ],
             "enabled": true,
             "icon": "upload",
-            "label": "Load experiment",
+            "label": "Load",
             "visible_bounds": [
                 784,
                 439,
@@ -1096,43 +1129,11 @@
                 39
             ]
         },
-        "experiments.loadData.0": {
-            "bounds": [
-                958,
-                207,
-                43.46875,
-                39
-            ],
-            "enabled": true,
-            "label": "d1a.edi",
-            "visible_bounds": [
-                958,
-                207,
-                43.46875,
-                39
-            ]
-        },
-        "experiments.loadData.1": {
-            "bounds": [
-                958,
-                246,
-                39.765625,
-                39
-            ],
-            "enabled": true,
-            "label": "lab.edi",
-            "visible_bounds": [
-                958,
-                246,
-                39.765625,
-                39
-            ]
-        },
         "experiments.name.0": {
             "bounds": [
                 874,
                 207,
-                80,
+                76,
                 39
             ],
             "enabled": true,
@@ -1140,7 +1141,7 @@
             "visible_bounds": [
                 874,
                 207,
-                80,
+                76,
                 39
             ]
         },
@@ -1148,7 +1149,7 @@
             "bounds": [
                 874,
                 246,
-                80,
+                76,
                 39
             ],
             "enabled": true,
@@ -1156,7 +1157,7 @@
             "visible_bounds": [
                 874,
                 246,
-                80,
+                76,
                 39
             ]
         },
@@ -1484,7 +1485,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1771,8 +1772,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "",
@@ -1807,7 +1808,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

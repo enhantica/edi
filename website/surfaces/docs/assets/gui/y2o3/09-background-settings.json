@@ -7,7 +7,7 @@
     ],
     "id": "09-background-settings",
     "image": "09-background-settings.png",
-    "image_sha256": "7f72c2e3105b2bc368ee4e8c70cdc894979f2986cb62f36bd55cfbb5d92ab0fc",
+    "image_sha256": "01bca0baf5b3af54b2fdfcbd69b4d4705017dbea55bdc6f95780df9e976a67c8",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                196
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                196
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                196
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                196
             ]
         },
         "appBar": {
@@ -939,13 +939,30 @@
         "group.data": {
             "bounds": [
                 770,
-                546,
+                588,
                 710,
                 42
             ],
             "enabled": true,
             "icon": "arrows-alt-h",
             "label": "Measured data (3060)",
+            "visible_bounds": [
+                770,
+                588,
+                710,
+                42
+            ]
+        },
+        "group.data_source": {
+            "bounds": [
+                770,
+                546,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "file-import",
+            "label": "Data source",
             "visible_bounds": [
                 770,
                 546,
@@ -983,6 +1000,23 @@
             "visible_bounds": [
                 770,
                 462,
+                710,
+                42
+            ]
+        },
+        "group.refln": {
+            "bounds": [
+                770,
+                630,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "list",
+            "label": "Reflections (194)",
+            "visible_bounds": [
+                770,
+                630,
                 710,
                 42
             ]
@@ -1160,7 +1194,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.453125,
@@ -1447,8 +1481,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1483,7 +1517,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

@@ -347,6 +347,8 @@ def region_path(parts: list[list[float]], inset: float = 1, radius: float = 4) -
             (tx + tw - inset, top),
         ]
     points += [(right, top), (right, bottom), (left, bottom)]
+    # A tab flush with its panel's edge repeats a corner; a repeated point has no direction.
+    points = [p for n, p in enumerate(points) if p != points[n - 1]]
     commands = []
     for number, (px, py) in enumerate(points):
         before, after = points[number - 1], points[(number + 1) % len(points)]

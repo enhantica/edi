@@ -27,7 +27,8 @@ their declared example to illustrate controls specific to that project type.
 | 08-structure-settings | structure / Settings | `appBar.tab.structure` → `if-enabled:sideBar.tab.settings` | skipped |
 | [09-experiment-import](surfaces/docs/assets/gui/y2o3/09-experiment-import.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `expand:group.experiments` | `experiments.create` |
 | [09-experiment-type](surfaces/docs/assets/gui/y2o3/09-experiment-type.png) | experiment / — | `experiments.create` → `experimentType.sampleForm` → `choose-token:experimentType.sampleForm=powder` → `experimentType.beamMode` → `choose-token:experimentType.beamMode=constant wavelength` → `experimentType.radiationProbe` → `choose-token:experimentType.radiationProbe=neutron` | `experimentType` |
-| [09-experiment-data](surfaces/docs/assets/gui/y2o3/09-experiment-data.png) | experiment / — | `import-data:/tmp/edi-realistic-walkthrough-r10/inputs/spodi.xye` | `experiments.loadData.0`, `workflow.experiment.mainContent` |
+| [guide-experiment-calculation-range](surfaces/docs/assets/gui/y2o3/guide-experiment-calculation-range.png) | experiment / — | `reveal:group.data_range` → `expand:group.data_range` | `group.data_range` |
+| [09-experiment-data](surfaces/docs/assets/gui/y2o3/09-experiment-data.png) | experiment / — | `reveal:group.experiments` → `expand:group.experiments` → `import-data:/Users/andrewsazonov/runs/edi-cap/y2o3-light/inputs/spodi.xye` | `experiments.load`, `workflow.experiment.mainContent` |
 | [09-wavelength](surfaces/docs/assets/gui/y2o3/09-wavelength.png) | experiment / — | `reveal:group.instrument` → `expand:group.instrument` → `reveal:instrument.setup_wavelength` → `fill:instrument.setup_wavelength` → `key:Return` | `instrument.setup_wavelength` |
 | [09-profile](surfaces/docs/assets/gui/y2o3/09-profile.png) | experiment / — | `reveal:group.peak` → `expand:group.peak` → `peak.type` → `choose-token:peak.type=cwl-tch-pseudo-voigt` | `peak.type`, `group.peak` |
 | [09-profile-broad-gauss-u](surfaces/docs/assets/gui/y2o3/09-profile-broad-gauss-u.png) | experiment / — | `reveal:peak.broad_gauss_u` → `fill:peak.broad_gauss_u` → `key:Return` | `peak.broad_gauss_u` |
@@ -40,13 +41,13 @@ their declared example to illustrate controls specific to that project type.
 | [11-experiment-basic](surfaces/docs/assets/gui/y2o3/11-experiment-basic.png) | experiment / Main | `appBar.tab.experiment` → `if-enabled:sideBar.tab.basic` → `sideBar.tab.basic` | `appBar`, `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar`, `statusBar` |
 | [11-experiment-extras](surfaces/docs/assets/gui/y2o3/11-experiment-extras.png) | experiment / Extra | `appBar.tab.experiment` → `if-enabled:sideBar.tab.extras` → `sideBar.tab.extras` | `appBar`, `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar`, `statusBar` |
 | [11-experiment-text](surfaces/docs/assets/gui/y2o3/11-experiment-text.png) | experiment / Text | `appBar.tab.experiment` → `if-enabled:sideBar.tab.text` → `sideBar.tab.text` | `appBar`, `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar`, `statusBar` |
-| 11-experiment-settings | experiment / Settings | `appBar.tab.experiment` → `if-enabled:sideBar.tab.settings` | skipped |
+| [11-experiment-settings](surfaces/docs/assets/gui/y2o3/11-experiment-settings.png) | experiment / Settings | `appBar.tab.experiment` → `if-enabled:sideBar.tab.settings` → `sideBar.tab.settings` | `appBar`, `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar`, `statusBar` |
 | [12-analysis-choose](surfaces/docs/assets/gui/y2o3/12-analysis-choose.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `parameters.clearFilters` → `parameters.freeHeader` → `parameters.freeHeader.fixed` → `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` | `group.parameters`, `parameters.freeHeader` |
-| 12-save-start | analysis / — | `save-as:/tmp/edi-realistic-walkthrough-r10/checkpoints/starting` | action only |
+| 12-save-start | analysis / — | `save-as:/Users/andrewsazonov/runs/edi-cap/y2o3-light/checkpoints/starting` | action only |
 | [12-fit-scale-cell](surfaces/docs/assets/gui/y2o3/12-fit-scale-cell.png) | analysis / — | `statusBar.fit.button` → `wait-fit` → `close-fit-results` | `workflow.analysis.mainContent`, `group.parameters` |
 | [12-fit-profile](surfaces/docs/assets/gui/y2o3/12-fit-profile.png) | analysis / — | `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `statusBar.fit.button` → `wait-fit` → `close-fit-results` | `workflow.analysis.mainContent`, `group.parameters` |
 | 12-run-refinement | analysis / — | `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `statusBar.fit.button` → `wait-fit` → `close-fit-results` | action only |
-| 12-save-refined | analysis / — | `save-as:/tmp/edi-realistic-walkthrough-r10/checkpoints/refined` | action only |
+| 12-save-refined | analysis / — | `save-as:/Users/andrewsazonov/runs/edi-cap/y2o3-light/checkpoints/refined` | action only |
 | [12-correlations](surfaces/docs/assets/gui/y2o3/12-correlations.png) | analysis / — | `mainArea.analysis.tab.correlations` | `workflow.analysis.mainContent` |
 | 12-pattern-return | analysis / — | `mainArea.analysis.tab.fitting` | action only |
 | [13-analysis-basic](surfaces/docs/assets/gui/y2o3/13-analysis-basic.png) | analysis / Main | `appBar.tab.analysis` → `if-enabled:sideBar.tab.basic` → `sideBar.tab.basic` | `appBar`, `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar`, `statusBar` |
@@ -67,7 +68,8 @@ their declared example to illustrate controls specific to that project type.
 | [guide-structure-atoms](surfaces/docs/assets/gui/y2o3/guide-structure-atoms.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.basic` → `reveal:group.atom_site` → `expand:group.atom_site` → `reveal:atomSites.list` | `atomSites.list` |
 | [guide-structure-displacement](surfaces/docs/assets/gui/y2o3/guide-structure-displacement.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.basic` → `reveal:group.atom_site_aniso` → `expand:group.atom_site_aniso` → `reveal:group.atom_site_aniso` | `group.atom_site_aniso` |
 | [guide-structure-create](surfaces/docs/assets/gui/y2o3/guide-structure-create.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.basic` → `reveal:group.structures` → `expand:group.structures` → `reveal:structures.load` | `structures.load`, `structures.create`, `structures.duplicate` |
-| [guide-experiment-data](surfaces/docs/assets/gui/y2o3/guide-experiment-data.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `reveal:group.experiments` → `expand:group.experiments` → `reveal:experiments.list` | `experiments.list`, `experiments.loadData.0` |
+| [guide-experiment-data](surfaces/docs/assets/gui/y2o3/guide-experiment-data.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `reveal:group.experiments` → `expand:group.experiments` → `reveal:experiments.list` | `experiments.list`, `experiments.file.0` |
+| [guide-experiment-data-source](surfaces/docs/assets/gui/y2o3/guide-experiment-data-source.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.extras` → `reveal:group.data_source` → `expand:group.data_source` → `reveal:group.data_source` | `group.data_source` |
 | [guide-experiment-create](surfaces/docs/assets/gui/y2o3/guide-experiment-create.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `reveal:group.experiments` → `expand:group.experiments` → `reveal:experiments.load` | `experiments.load`, `experiments.create` |
 | [guide-experiment-instrument](surfaces/docs/assets/gui/y2o3/guide-experiment-instrument.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `reveal:group.instrument` → `expand:group.instrument` → `reveal:group.instrument` | `group.instrument` |
 | [guide-experiment-profile](surfaces/docs/assets/gui/y2o3/guide-experiment-profile.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `reveal:group.peak` → `expand:group.peak` → `reveal:group.peak` | `group.peak` |
@@ -96,13 +98,13 @@ their declared example to illustrate controls specific to that project type.
 | [guide-analysis-pattern-updates](surfaces/docs/assets/gui/y2o3/guide-analysis-pattern-updates.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.settings` → `reveal:group.patternUpdates` → `expand:group.patternUpdates` → `reveal:group.patternUpdates` | `group.patternUpdates` |
 | [10-experiment-loaded](surfaces/docs/assets/gui/y2o3/10-experiment-loaded.png) | experiment / — |  | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
 
-## pd-neut-cwl_cosio-d20_scan
+## pd-neut-cwl_cosio-d20_scan-213f
 
 [Executed plan](surfaces/docs/assets/gui/scan/walkthrough.js) · [Native manifest](surfaces/docs/assets/gui/scan/manifest.json)
 
 | Scene | Page / sidebar | Actions before capture | Highlights / result |
 | --- | --- | --- | --- |
-| [scan-experiment-before](surfaces/docs/assets/gui/scan/scan-experiment-before.png) | experiment / — | `platform:light` → `theme:light` → `home.start` → `appBar.tab.project` → `open-cli-project:pd-neut-cwl_cosio-d20_scan` → `pin-time:01 Jan 2026 12:00:00` → `appBar.tab.experiment` → `sideBar.tab.basic` | `workflow.experiment.mainContent`, `group.experiments` |
+| [scan-experiment-before](surfaces/docs/assets/gui/scan/scan-experiment-before.png) | experiment / — | `platform:light` → `theme:light` → `home.start` → `appBar.tab.project` → `open-cli-project:pd-neut-cwl_cosio-d20_scan-213f` → `pin-time:01 Jan 2026 12:00:00` → `appBar.tab.experiment` → `sideBar.tab.basic` | `workflow.experiment.mainContent`, `group.experiments` |
 | scan-run | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `statusBar.fit.button` → `wait-fit` → `close-fit-results` | action only |
 | [scan-project-basic](surfaces/docs/assets/gui/scan/scan-project-basic.png) | project / Main | `appBar.tab.project` → `if-enabled:sideBar.tab.basic` → `sideBar.tab.basic` | `workflow.project.mainContent`, `workflow.project.manualSidebar` |
 | [scan-project-extras](surfaces/docs/assets/gui/scan/scan-project-extras.png) | project / Extra | `appBar.tab.project` → `if-enabled:sideBar.tab.extras` → `sideBar.tab.extras` | `workflow.project.mainContent`, `workflow.project.manualSidebar` |
@@ -115,7 +117,7 @@ their declared example to illustrate controls specific to that project type.
 | [scan-experiment-basic](surfaces/docs/assets/gui/scan/scan-experiment-basic.png) | experiment / Main | `appBar.tab.experiment` → `if-enabled:sideBar.tab.basic` → `sideBar.tab.basic` | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
 | [scan-experiment-extras](surfaces/docs/assets/gui/scan/scan-experiment-extras.png) | experiment / Extra | `appBar.tab.experiment` → `if-enabled:sideBar.tab.extras` → `sideBar.tab.extras` | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
 | [scan-experiment-text](surfaces/docs/assets/gui/scan/scan-experiment-text.png) | experiment / Text | `appBar.tab.experiment` → `if-enabled:sideBar.tab.text` → `sideBar.tab.text` | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
-| scan-experiment-settings | experiment / Settings | `appBar.tab.experiment` → `if-enabled:sideBar.tab.settings` | skipped |
+| [scan-experiment-settings](surfaces/docs/assets/gui/scan/scan-experiment-settings.png) | experiment / Settings | `appBar.tab.experiment` → `if-enabled:sideBar.tab.settings` → `sideBar.tab.settings` | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
 | [scan-analysis-basic](surfaces/docs/assets/gui/scan/scan-analysis-basic.png) | analysis / Main | `appBar.tab.analysis` → `if-enabled:sideBar.tab.basic` → `sideBar.tab.basic` | `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar` |
 | [scan-analysis-extras](surfaces/docs/assets/gui/scan/scan-analysis-extras.png) | analysis / Extra | `appBar.tab.analysis` → `if-enabled:sideBar.tab.extras` → `sideBar.tab.extras` | `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar` |
 | [scan-analysis-text](surfaces/docs/assets/gui/scan/scan-analysis-text.png) | analysis / Text | `appBar.tab.analysis` → `if-enabled:sideBar.tab.text` → `sideBar.tab.text` | `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar` |
@@ -125,6 +127,7 @@ their declared example to illustrate controls specific to that project type.
 | [scan-report-text](surfaces/docs/assets/gui/scan/scan-report-text.png) | report / Text | `appBar.tab.report` → `if-enabled:sideBar.tab.text` → `sideBar.tab.text` | `workflow.report.mainContent`, `workflow.report.manualSidebar` |
 | scan-report-settings | report / Settings | `appBar.tab.report` → `if-enabled:sideBar.tab.settings` | skipped |
 | [scan-mode](surfaces/docs/assets/gui/scan/scan-mode.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.fitting_mode` → `expand:group.fitting_mode` | `group.fitting_mode` |
+| [scan-performance-analysis](surfaces/docs/assets/gui/scan/scan-performance-analysis.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.settings` → `reveal:group.performance` → `expand:group.performance` | `group.performance` |
 | [scan-declaration](surfaces/docs/assets/gui/scan/scan-declaration.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.sequential_fit` → `expand:group.sequential_fit` | `group.sequential_fit` |
 | [scan-extraction](surfaces/docs/assets/gui/scan/scan-extraction.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.sequential_fit_extract` → `expand:group.sequential_fit_extract` | `group.sequential_fit_extract` |
 | [scan-experiment-stacked](surfaces/docs/assets/gui/scan/scan-experiment-stacked.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.experiment.tab.stacked` → `wait-scan:stacked` | `workflow.experiment.mainContent` |
@@ -154,7 +157,7 @@ their declared example to illustrate controls specific to that project type.
 | [joint-experiment-basic](surfaces/docs/assets/gui/joint/joint-experiment-basic.png) | experiment / Main | `appBar.tab.experiment` → `if-enabled:sideBar.tab.basic` → `sideBar.tab.basic` | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
 | [joint-experiment-extras](surfaces/docs/assets/gui/joint/joint-experiment-extras.png) | experiment / Extra | `appBar.tab.experiment` → `if-enabled:sideBar.tab.extras` → `sideBar.tab.extras` | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
 | [joint-experiment-text](surfaces/docs/assets/gui/joint/joint-experiment-text.png) | experiment / Text | `appBar.tab.experiment` → `if-enabled:sideBar.tab.text` → `sideBar.tab.text` | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
-| joint-experiment-settings | experiment / Settings | `appBar.tab.experiment` → `if-enabled:sideBar.tab.settings` | skipped |
+| [joint-experiment-settings](surfaces/docs/assets/gui/joint/joint-experiment-settings.png) | experiment / Settings | `appBar.tab.experiment` → `if-enabled:sideBar.tab.settings` → `sideBar.tab.settings` | `workflow.experiment.mainContent`, `workflow.experiment.manualSidebar` |
 | [joint-analysis-basic](surfaces/docs/assets/gui/joint/joint-analysis-basic.png) | analysis / Main | `appBar.tab.analysis` → `if-enabled:sideBar.tab.basic` → `sideBar.tab.basic` | `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar` |
 | [joint-analysis-extras](surfaces/docs/assets/gui/joint/joint-analysis-extras.png) | analysis / Extra | `appBar.tab.analysis` → `if-enabled:sideBar.tab.extras` → `sideBar.tab.extras` | `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar` |
 | [joint-analysis-text](surfaces/docs/assets/gui/joint/joint-analysis-text.png) | analysis / Text | `appBar.tab.analysis` → `if-enabled:sideBar.tab.text` → `sideBar.tab.text` | `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar` |
@@ -173,3 +176,32 @@ their declared example to illustrate controls specific to that project type.
 | [joint-analysis-stacked](surfaces/docs/assets/gui/joint/joint-analysis-stacked.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.analysis.tab.stacked` → `wait-scan:stacked` | `workflow.analysis.mainContent` |
 | [joint-analysis-map](surfaces/docs/assets/gui/joint/joint-analysis-map.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.analysis.tab.map` → `wait-scan:map` | `workflow.analysis.mainContent` |
 | [joint-correlations](surfaces/docs/assets/gui/joint/joint-correlations.png) | analysis / — | `appBar.tab.analysis` → `mainArea.analysis.tab.correlations` | `workflow.analysis.mainContent` |
+
+## sc-neut-cwl_tb2ti2o7-heidi
+
+[Executed plan](surfaces/docs/assets/gui/sc/walkthrough.js) · [Native manifest](surfaces/docs/assets/gui/sc/manifest.json)
+
+| Scene | Page / sidebar | Actions before capture | Highlights / result |
+| --- | --- | --- | --- |
+| [group-open](surfaces/docs/assets/gui/sc/group-open.png) | project / — | `platform:light` → `theme:light` → `home.start` → `appBar.tab.project` → `open-cli-project:sc-neut-cwl_tb2ti2o7-heidi` → `pin-time:01 Jan 2026 12:00:00` |  |
+| [group-extinction](surfaces/docs/assets/gui/sc/group-extinction.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `reveal:group.extinction` → `expand:group.extinction` | `group.extinction` |
+| [group-reflns](surfaces/docs/assets/gui/sc/group-reflns.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.extras` → `reveal:group.reflns` → `expand:group.reflns` | `group.reflns` |
+| [group-refln](surfaces/docs/assets/gui/sc/group-refln.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.extras` → `reveal:group.refln` → `expand:group.refln` | `group.refln` |
+| [group-refine-ls](surfaces/docs/assets/gui/sc/group-refine-ls.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.refine_ls` → `expand:group.refine_ls` | `group.refine_ls` |
+
+## pd-neut-cwl_cosio-d20_2k
+
+[Executed plan](surfaces/docs/assets/gui/magnetic/walkthrough.js) · [Native manifest](surfaces/docs/assets/gui/magnetic/manifest.json)
+
+| Scene | Page / sidebar | Actions before capture | Highlights / result |
+| --- | --- | --- | --- |
+| [group-open](surfaces/docs/assets/gui/magnetic/group-open.png) | project / — | `platform:light` → `theme:light` → `home.start` → `appBar.tab.project` → `open-cli-project:pd-neut-cwl_cosio-d20_2k` → `pin-time:01 Jan 2026 12:00:00` |  |
+| [group-space-group-magn](surfaces/docs/assets/gui/magnetic/group-space-group-magn.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.basic` → `reveal:group.space_group_magn` → `expand:group.space_group_magn` | `group.space_group_magn` |
+| [group-propagation](surfaces/docs/assets/gui/magnetic/group-propagation.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.basic` → `reveal:group.parent_propagation_vector` → `expand:group.parent_propagation_vector` | `group.parent_propagation_vector` |
+| [group-moments](surfaces/docs/assets/gui/magnetic/group-moments.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.basic` → `reveal:group.atom_site_moment` → `expand:group.atom_site_moment` | `group.atom_site_moment` |
+| [group-symop](surfaces/docs/assets/gui/magnetic/group-symop.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.extras` → `reveal:group.space_group_symop` → `expand:group.space_group_symop` | `group.space_group_symop` |
+| [group-magn-operators](surfaces/docs/assets/gui/magnetic/group-magn-operators.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.extras` → `reveal:group.space_group_symop_magn_operation` → `expand:group.space_group_symop_magn_operation` | `group.space_group_symop_magn_operation` |
+| [group-expanded-atoms](surfaces/docs/assets/gui/magnetic/group-expanded-atoms.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.extras` → `reveal:group.expanded_atom_site` → `expand:group.expanded_atom_site` | `group.expanded_atom_site` |
+| [group-expanded-moments](surfaces/docs/assets/gui/magnetic/group-expanded-moments.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.extras` → `reveal:group.expanded_atom_site_moment` → `expand:group.expanded_atom_site_moment` | `group.expanded_atom_site_moment` |
+| [group-bonds](surfaces/docs/assets/gui/magnetic/group-bonds.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.extras` → `reveal:group.geom_bond` → `expand:group.geom_bond` | `group.geom_bond` |
+| [group-form-factors](surfaces/docs/assets/gui/magnetic/group-form-factors.png) | structure / — | `appBar.tab.structure` → `sideBar.tab.extras` → `reveal:group.magnetic_form_factor` → `expand:group.magnetic_form_factor` | `group.magnetic_form_factor` |

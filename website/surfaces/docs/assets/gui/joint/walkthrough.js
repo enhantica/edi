@@ -29,6 +29,12 @@
         ["project", "structure", "experiment", "analysis", "report"].forEach(tabs);
         panel(prefix + "-mode", "group.fitting_mode", scan ? "Choose sequential, independent or single-dataset fitting" : "Inspect joint fitting for the project's experiments");
         if (scan) {
+        shot("scan-data-source", "experiment", "See which file the shown dataset was read from",
+            ["appBar.tab.experiment", "sideBar.tab.extras", "reveal:group.data_source", "expand:group.data_source"],
+            ["group.data_source"]);
+        shot("scan-performance-analysis", "analysis", "See how many files are fitted at once",
+            ["appBar.tab.analysis", "sideBar.tab.settings", "reveal:group.performance", "expand:group.performance"],
+            ["group.performance"]);
         panel("scan-declaration", "group.sequential_fit", "Inspect the scan's data directory, file pattern and order");
         panel("scan-extraction", "group.sequential_fit_extract", "Inspect values extracted from each dataset");
         } else {

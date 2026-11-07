@@ -7,7 +7,7 @@
     ],
     "id": "guide-project-uncertainties",
     "image": "guide-project-uncertainties.png",
-    "image_sha256": "2e0aa97039a3a59fca335412faaa7793e8d7f319be4c93dd6b14afb0a4e67ca0",
+    "image_sha256": "da0928844ee2d53ee3c013c82ca115a30489c2b6dfe3cbe86cefba7b79b3dc25",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -57,7 +57,7 @@
                 800
             ]
         },
-        "StandardUncertaintiesGroup": {
+        "SideBarGroup": {
             "bounds": [
                 784,
                 168,
@@ -435,7 +435,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-EWTNsl/docs-saved-project",
+            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/docs-saved-project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -499,7 +499,7 @@
                 19
             ],
             "enabled": true,
-            "label": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+            "label": "Y₂O₃ [Ia-3] - SPODI @ FRM II",
             "visible_bounds": [
                 183.4,
                 222.8,
@@ -698,7 +698,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -869,8 +869,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

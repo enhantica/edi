@@ -10,7 +10,7 @@
     ],
     "id": "13-analysis-extras",
     "image": "13-analysis-extras.png",
-    "image_sha256": "a25c2a76cf1d1420482ed011934d4509d0514d21160eda7d4a12292b735cff12",
+    "image_sha256": "712e8a3fb41037bec3611aa4362ad8577e974984228e8f6c739c3389091802d2",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -44,22 +44,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                126
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                126
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -74,6 +58,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                196
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                196
             ]
         },
         "appBar": {
@@ -776,7 +776,7 @@
         "group.alias": {
             "bounds": [
                 770,
-                350,
+                420,
                 710,
                 42
             ],
@@ -785,7 +785,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                350,
+                420,
                 710,
                 42
             ]
@@ -793,7 +793,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                392,
+                462,
                 710,
                 42
             ],
@@ -802,7 +802,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                392,
+                462,
                 710,
                 42
             ]
@@ -810,7 +810,7 @@
         "group.fit_parameter": {
             "bounds": [
                 770,
-                434,
+                504,
                 710,
                 42
             ],
@@ -819,7 +819,58 @@
             "label": "Fit start values (31)",
             "visible_bounds": [
                 770,
-                434,
+                504,
+                710,
+                42
+            ]
+        },
+        "group.fit_result": {
+            "bounds": [
+                770,
+                546,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "check-circle",
+            "label": "Fit result",
+            "visible_bounds": [
+                770,
+                546,
+                710,
+                42
+            ]
+        },
+        "group.fit_result_bank": {
+            "bounds": [
+                770,
+                588,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "check",
+            "label": "Experiment fit result (1)",
+            "visible_bounds": [
+                770,
+                588,
+                710,
+                42
+            ]
+        },
+        "group.fit_result_phase": {
+            "bounds": [
+                770,
+                630,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "check",
+            "label": "Structure fit result (1)",
+            "visible_bounds": [
+                770,
+                630,
                 710,
                 42
             ]
@@ -827,7 +878,7 @@
         "group.fitting_mode": {
             "bounds": [
                 770,
-                308,
+                378,
                 710,
                 42
             ],
@@ -836,7 +887,7 @@
             "label": "Fitting mode",
             "visible_bounds": [
                 770,
-                308,
+                378,
                 710,
                 42
             ]
@@ -846,7 +897,7 @@
                 770,
                 119,
                 710,
-                189
+                259
             ],
             "enabled": true,
             "icon": "level-down-alt",
@@ -855,7 +906,7 @@
                 770,
                 119,
                 710,
-                189
+                259
             ]
         },
         "label": {
@@ -999,7 +1050,7 @@
                 56
             ],
             "enabled": true,
-            "label": "0.000001",
+            "label": "0.1",
             "visible_bounds": [
                 1126.75,
                 238,
@@ -1050,12 +1101,40 @@
         "minimizer.maxIterations": {
             "bounds": [
                 784,
-                238,
+                308,
                 339.25,
                 56
             ],
             "enabled": true,
             "label": "50",
+            "visible_bounds": [
+                784,
+                308,
+                339.25,
+                56
+            ]
+        },
+        "minimizer.stopRule": {
+            "bounds": [
+                784,
+                238,
+                339.25,
+                56
+            ],
+            "enabled": true,
+            "label": "",
+            "options": [
+                {
+                    "label": "χ² change",
+                    "token": "chi_square_change"
+                },
+                {
+                    "label": "Shift/s.u.",
+                    "token": "shift_su"
+                }
+            ],
+            "selected": "shift_su",
+            "uid": "minimizer.stop_rule",
             "visible_bounds": [
                 784,
                 238,
@@ -1278,7 +1357,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1449,8 +1528,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

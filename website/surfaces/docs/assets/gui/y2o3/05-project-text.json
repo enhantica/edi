@@ -10,7 +10,7 @@
     ],
     "id": "05-project-text",
     "image": "05-project-text.png",
-    "image_sha256": "9d48f46e12ed10d93c97136a7f674fcb438fe07fb374fcacefda9390adb8d327",
+    "image_sha256": "586a8672db17ef1e2bdd5cf4d822ba94b5f4e10bdedb70c5f4edf5e5f8c6e45e",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -389,7 +389,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-EWTNsl/pd-neut-cwl_y2o3-spodi",
+            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -421,7 +421,7 @@
                 19
             ],
             "enabled": true,
-            "label": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+            "label": "Y₂O₃ [Ia-3] - SPODI @ FRM II",
             "visible_bounds": [
                 183.4,
                 222.8,
@@ -564,7 +564,7 @@
             "bounds": [
                 875.128125,
                 772,
-                195.734375,
+                103.375,
                 14
             ],
             "enabled": true,
@@ -573,7 +573,7 @@
             "visible_bounds": [
                 875.128125,
                 772,
-                195.734375,
+                103.375,
                 14
             ]
         },
@@ -672,7 +672,7 @@
                 180
             ],
             "enabled": true,
-            "label": "_metadata.name             pd-neut-cwl_y2o3-spodi\n_metadata.title            \"Y₂O₃ [Ia-3] · SPODI @ FRM II\"\n_metadata.description\n;\nAnisotropic β tensors tied by site symmetry · Coordinates, profile and\nbackground\n;\n_metadata.authors          \"EasyDiffract",
+            "label": "_metadata.name             pd-neut-cwl_y2o3-spodi\n_metadata.title            \"Y₂O₃ [Ia-3] - SPODI @ FRM II\"\n_metadata.description\n;\nAnisotropic β tensors tied by site symmetry · Coordinates, profile and\nbackground\n;\n_metadata.authors          \"EasyDiffract",
             "visible_bounds": [
                 784,
                 133,
@@ -755,8 +755,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

@@ -8,7 +8,7 @@
     ],
     "id": "06-structure-import",
     "image": "06-structure-import.png",
-    "image_sha256": "b9a32d40c46597f05c8b2a58b84f1211483135c48ef54fd72d34db4c877ea287",
+    "image_sha256": "18a3db57323385f5b1c1756e1ee0c00067d2ec9a5f701570568a7fd9bd11f18b",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -58,12 +58,12 @@
                 800
             ]
         },
-        "StructuresGroup": {
+        "SideBarGroup": {
             "bounds": [
                 784,
                 168,
                 682,
-                184
+                131
             ],
             "enabled": true,
             "label": "",
@@ -71,7 +71,7 @@
                 784,
                 168,
                 682,
-                184
+                131
             ]
         },
         "appBar": {
@@ -349,7 +349,7 @@
                 770,
                 119,
                 710,
-                247
+                194
             ],
             "enabled": true,
             "icon": "layer-group",
@@ -358,7 +358,7 @@
                 770,
                 119,
                 710,
-                247
+                194
             ]
         },
         "label": {
@@ -531,7 +531,7 @@
             "bounds": [
                 875.128125,
                 772,
-                195.734375,
+                103.375,
                 14
             ],
             "enabled": true,
@@ -540,7 +540,7 @@
             "visible_bounds": [
                 875.128125,
                 772,
-                195.734375,
+                103.375,
                 14
             ]
         },
@@ -764,35 +764,35 @@
         },
         "structures.create": {
             "bounds": [
-                1132,
+                1016,
                 260,
-                334,
+                218,
                 39
             ],
             "enabled": true,
             "icon": "plus-circle",
             "label": "Create structure",
             "visible_bounds": [
-                1132,
+                1016,
                 260,
-                334,
+                218,
                 39
             ]
         },
         "structures.duplicate": {
             "bounds": [
-                784,
-                313,
-                334,
+                1248,
+                260,
+                218,
                 39
             ],
             "enabled": false,
             "icon": "clone",
             "label": "Duplicate structure",
             "visible_bounds": [
-                784,
-                313,
-                334,
+                1248,
+                260,
+                218,
                 39
             ]
         },
@@ -816,33 +816,16 @@
             "bounds": [
                 784,
                 260,
-                334,
+                218,
                 39
             ],
             "enabled": true,
             "icon": "upload",
-            "label": "Load structure from file",
+            "label": "Load",
             "visible_bounds": [
                 784,
                 260,
-                334,
-                39
-            ]
-        },
-        "structures.loadCod": {
-            "bounds": [
-                1132,
-                313,
-                334,
-                39
-            ],
-            "enabled": false,
-            "icon": "cloud-download-alt",
-            "label": "Load from COD",
-            "visible_bounds": [
-                1132,
-                313,
-                334,
+                218,
                 39
             ]
         },
@@ -921,8 +904,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

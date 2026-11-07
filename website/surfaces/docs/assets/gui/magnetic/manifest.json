@@ -1,0 +1,348 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "group-open"
+        },
+        {
+            "action": "theme:light",
+            "scene": "group-open"
+        },
+        {
+            "action": "home.start",
+            "scene": "group-open"
+        },
+        {
+            "action": "appBar.tab.project",
+            "scene": "group-open"
+        },
+        {
+            "action": "open-cli-project:pd-neut-cwl_cosio-d20_2k",
+            "scene": "group-open"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "group-open"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-space-group-magn"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "group-space-group-magn"
+        },
+        {
+            "action": "reveal:group.space_group_magn",
+            "scene": "group-space-group-magn"
+        },
+        {
+            "action": "expand:group.space_group_magn",
+            "scene": "group-space-group-magn"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-propagation"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "group-propagation"
+        },
+        {
+            "action": "reveal:group.parent_propagation_vector",
+            "scene": "group-propagation"
+        },
+        {
+            "action": "expand:group.parent_propagation_vector",
+            "scene": "group-propagation"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-moments"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "group-moments"
+        },
+        {
+            "action": "reveal:group.atom_site_moment",
+            "scene": "group-moments"
+        },
+        {
+            "action": "expand:group.atom_site_moment",
+            "scene": "group-moments"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-symop"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-symop"
+        },
+        {
+            "action": "reveal:group.space_group_symop",
+            "scene": "group-symop"
+        },
+        {
+            "action": "expand:group.space_group_symop",
+            "scene": "group-symop"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-magn-operators"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-magn-operators"
+        },
+        {
+            "action": "reveal:group.space_group_symop_magn_operation",
+            "scene": "group-magn-operators"
+        },
+        {
+            "action": "expand:group.space_group_symop_magn_operation",
+            "scene": "group-magn-operators"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-expanded-atoms"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-expanded-atoms"
+        },
+        {
+            "action": "reveal:group.expanded_atom_site",
+            "scene": "group-expanded-atoms"
+        },
+        {
+            "action": "expand:group.expanded_atom_site",
+            "scene": "group-expanded-atoms"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-expanded-moments"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-expanded-moments"
+        },
+        {
+            "action": "reveal:group.expanded_atom_site_moment",
+            "scene": "group-expanded-moments"
+        },
+        {
+            "action": "expand:group.expanded_atom_site_moment",
+            "scene": "group-expanded-moments"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-bonds"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-bonds"
+        },
+        {
+            "action": "reveal:group.geom_bond",
+            "scene": "group-bonds"
+        },
+        {
+            "action": "expand:group.geom_bond",
+            "scene": "group-bonds"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "group-form-factors"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "group-form-factors"
+        },
+        {
+            "action": "reveal:group.magnetic_form_factor",
+            "scene": "group-form-factors"
+        },
+        {
+            "action": "expand:group.magnetic_form_factor",
+            "scene": "group-form-factors"
+        }
+    ],
+    "binary_sha256": "36fabf46df62e17b958837e0a67741a409f9a69b16f26c27aa7abc14af5b516b",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "87aed0d15aea1ac6ce289611341709557ca4ef11344a3bab5fcc9c152ea3b1a4"
+        }
+    ],
+    "error": "",
+    "example": "pd-neut-cwl_cosio-d20_2k",
+    "fixture": {
+        "detail": "Olivine at 2.3 K · Magnetic structure, k = 0",
+        "id": "pd-neut-cwl_cosio-d20_2k",
+        "origin": "D20 @ ILL",
+        "samples": [
+            "Co₂SiO₄ [Pnma.1]"
+        ],
+        "searchAliases": [
+            "pd-neut-cwl_cosio-d20_2k",
+            "Co₂SiO₄ [Pnma.1] · D20 @ ILL",
+            "Olivine at 2.3 K · Magnetic structure, k = 0"
+        ],
+        "sources": [
+            "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/project.edi",
+            "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi",
+            "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/experiments/d20.edi",
+            "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/structures/cosio.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "ILL"
+            ],
+            "fittingMode": [
+                "single"
+            ],
+            "instruments": [
+                "D20"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "powder"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal",
+                "magnetic"
+            ]
+        }
+    },
+    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/d20.edi",
+            "sha256": "50e40518f4864b3e310c0b76de5d43d5f48af1a8b89191a6f03cfd9ab87e280d"
+        },
+        "structure": {
+            "file": "inputs/structures/cosio.edi",
+            "sha256": "37983b2243d249186d235bc0eb2b3d5acf78edb0872ddbd0f5314ef39c252443"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Open the example project",
+            "id": "group-open",
+            "image": "group-open.png",
+            "metadata": "group-open.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Read the magnetic space group",
+            "id": "group-space-group-magn",
+            "image": "group-space-group-magn.png",
+            "metadata": "group-space-group-magn.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Edit the propagation vectors",
+            "id": "group-propagation",
+            "image": "group-propagation.png",
+            "metadata": "group-propagation.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Set the magnetic moments",
+            "id": "group-moments",
+            "image": "group-moments.png",
+            "metadata": "group-moments.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Read the symmetry operators",
+            "id": "group-symop",
+            "image": "group-symop.png",
+            "metadata": "group-symop.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Read the magnetic operators",
+            "id": "group-magn-operators",
+            "image": "group-magn-operators.png",
+            "metadata": "group-magn-operators.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Read every atom in the cell",
+            "id": "group-expanded-atoms",
+            "image": "group-expanded-atoms.png",
+            "metadata": "group-expanded-atoms.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Read every moment in the cell",
+            "id": "group-expanded-moments",
+            "image": "group-expanded-moments.png",
+            "metadata": "group-expanded-moments.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Read the bonds",
+            "id": "group-bonds",
+            "image": "group-bonds.png",
+            "metadata": "group-bonds.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Set the magnetic form factors",
+            "id": "group-form-factors",
+            "image": "group-form-factors.png",
+            "metadata": "group-form-factors.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "status": "complete",
+    "workflow": "reference"
+}

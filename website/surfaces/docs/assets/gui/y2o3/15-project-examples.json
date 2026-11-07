@@ -7,7 +7,7 @@
     ],
     "id": "15-project-examples",
     "image": "15-project-examples.png",
-    "image_sha256": "adb94651ecbe863dacc871ec9979ad41f2a13eb6a81a6d26d780ea19219e7566",
+    "image_sha256": "8264d06653f9814e9b2100a04f56475e0dae152505db907fe29e2ca5ce792db8",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "ExamplesGroup": {
-            "bounds": [
-                784,
-                210,
-                682,
-                549.5
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                210,
-                682,
-                534
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                210,
+                682,
+                549.5
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                210,
+                682,
+                534
             ]
         },
         "appBar": {
@@ -343,6 +343,23 @@
                 35
             ]
         },
+        "examples.clearFilters": {
+            "bounds": [
+                1431,
+                210,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "eraser",
+            "label": "",
+            "visible_bounds": [
+                1431,
+                210,
+                35,
+                35
+            ]
+        },
         "examples.list": {
             "bounds": [
                 784,
@@ -373,6 +390,22 @@
                 644,
                 682,
                 77
+            ]
+        },
+        "examples.open.pd-neut-cwl_cosio-d20_2k": {
+            "bounds": [
+                784,
+                721,
+                682,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                721,
+                682,
+                23
             ]
         },
         "examples.open.pd-neut-cwl_hs-hrpt": {
@@ -423,22 +456,6 @@
                 77
             ]
         },
-        "examples.open.pd-neut-cwl_lmo-echidna": {
-            "bounds": [
-                784,
-                721,
-                682,
-                77
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                721,
-                682,
-                23
-            ]
-        },
         "examples.open.pd-neut-tof_si_simulation": {
             "bounds": [
                 784,
@@ -473,49 +490,49 @@
         },
         "examples.property": {
             "bounds": [
-                1012.5,
+                784,
                 210,
-                225,
+                212.16666666666666,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1012.5,
+                784,
                 210,
-                225,
+                212.16666666666663,
                 35
             ]
         },
         "examples.search": {
             "bounds": [
-                784,
+                1215.3333333333333,
                 210,
-                225,
+                212.16666666666666,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                784,
+                1215.3333333333333,
                 210,
-                225,
+                212.16666666666674,
                 35
             ]
         },
         "examples.value": {
             "bounds": [
-                1241,
+                999.6666666666666,
                 210,
-                225,
+                212.16666666666666,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1241,
+                999.6666666666666,
                 210,
-                225,
+                212.16666666666663,
                 35
             ]
         },
@@ -628,7 +645,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/edi-realistic-walkthrough-r10/checkpoints/refined",
+            "label": "/Users/andrewsazonov/runs/edi-cap/y2o3-light/checkpoints/refined",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -676,7 +693,7 @@
                 19
             ],
             "enabled": true,
-            "label": "Y₂O₃ [Ia-3] · SPODI @ FRM II",
+            "label": "Y₂O₃ [Ia-3] - SPODI @ FRM II",
             "visible_bounds": [
                 183.4,
                 222.8,
@@ -875,7 +892,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1046,8 +1063,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

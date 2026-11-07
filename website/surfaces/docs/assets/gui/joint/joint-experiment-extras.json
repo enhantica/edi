@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's experiment controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.experiment.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "joint-experiment-extras",
     "image": "joint-experiment-extras.png",
-    "image_sha256": "ed73b440221e9c1564a5bd595da7e7ac17ddd3326a56034b0b430a3804b8086e",
+    "image_sha256": "2379bf38c629b6c86da274899ee8c92c7f275abc736bc78c4b0381fce695da17",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +42,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                196
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                196
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                196
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                196
             ]
         },
         "appBar": {
@@ -984,6 +985,23 @@
                 42
             ]
         },
+        "group.refln": {
+            "bounds": [
+                770,
+                588,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "list",
+            "label": "Reflections (207)",
+            "visible_bounds": [
+                770,
+                588,
+                710,
+                42
+            ]
+        },
         "group.scattering_source": {
             "bounds": [
                 770,
@@ -1157,7 +1175,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.453125,
@@ -1309,7 +1327,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1480,8 +1498,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",
@@ -1516,7 +1534,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

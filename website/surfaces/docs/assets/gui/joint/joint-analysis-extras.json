@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's analysis controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.analysis.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "joint-analysis-extras",
     "image": "joint-analysis-extras.png",
-    "image_sha256": "27d1da52dfac0bb47d414bd0cd9b8a6707c13a1270ef0933eb1f9428324cff2d",
+    "image_sha256": "4385482fcdf697b72eeb449778dd6a4db8781a35eeb61a841f824225b7fa7d50",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +42,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                168,
-                682,
-                126
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                168,
-                682,
-                126
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                196
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                196
             ]
         },
         "appBar": {
@@ -770,7 +771,7 @@
         "group.alias": {
             "bounds": [
                 770,
-                350,
+                420,
                 710,
                 42
             ],
@@ -779,7 +780,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                350,
+                420,
                 710,
                 42
             ]
@@ -787,7 +788,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                392,
+                462,
                 710,
                 42
             ],
@@ -796,7 +797,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                392,
+                462,
                 710,
                 42
             ]
@@ -804,7 +805,7 @@
         "group.fit_parameter": {
             "bounds": [
                 770,
-                476,
+                546,
                 710,
                 42
             ],
@@ -813,7 +814,7 @@
             "label": "Fit start values (51)",
             "visible_bounds": [
                 770,
-                476,
+                546,
                 710,
                 42
             ]
@@ -821,7 +822,7 @@
         "group.fit_result": {
             "bounds": [
                 770,
-                518,
+                588,
                 710,
                 42
             ],
@@ -830,7 +831,7 @@
             "label": "Fit result",
             "visible_bounds": [
                 770,
-                518,
+                588,
                 710,
                 42
             ]
@@ -838,7 +839,7 @@
         "group.fit_result_bank": {
             "bounds": [
                 770,
-                560,
+                630,
                 710,
                 42
             ],
@@ -847,7 +848,7 @@
             "label": "Experiment fit result (2)",
             "visible_bounds": [
                 770,
-                560,
+                630,
                 710,
                 42
             ]
@@ -855,7 +856,7 @@
         "group.fit_result_phase": {
             "bounds": [
                 770,
-                602,
+                672,
                 710,
                 42
             ],
@@ -864,7 +865,7 @@
             "label": "Structure fit result (2)",
             "visible_bounds": [
                 770,
-                602,
+                672,
                 710,
                 42
             ]
@@ -872,7 +873,7 @@
         "group.fitting_mode": {
             "bounds": [
                 770,
-                308,
+                378,
                 710,
                 42
             ],
@@ -881,7 +882,7 @@
             "label": "Fitting mode",
             "visible_bounds": [
                 770,
-                308,
+                378,
                 710,
                 42
             ]
@@ -889,7 +890,7 @@
         "group.joint_fit": {
             "bounds": [
                 770,
-                434,
+                504,
                 710,
                 42
             ],
@@ -898,7 +899,7 @@
             "label": "Joint-fit weights (2)",
             "visible_bounds": [
                 770,
-                434,
+                504,
                 710,
                 42
             ]
@@ -908,7 +909,7 @@
                 770,
                 119,
                 710,
-                189
+                259
             ],
             "enabled": true,
             "icon": "level-down-alt",
@@ -917,7 +918,7 @@
                 770,
                 119,
                 710,
-                189
+                259
             ]
         },
         "label": {
@@ -1061,7 +1062,7 @@
                 56
             ],
             "enabled": true,
-            "label": "0.000001",
+            "label": "0.1",
             "visible_bounds": [
                 1126.75,
                 238,
@@ -1112,12 +1113,40 @@
         "minimizer.maxIterations": {
             "bounds": [
                 784,
-                238,
+                308,
                 339.25,
                 56
             ],
             "enabled": true,
             "label": "1000",
+            "visible_bounds": [
+                784,
+                308,
+                339.25,
+                56
+            ]
+        },
+        "minimizer.stopRule": {
+            "bounds": [
+                784,
+                238,
+                339.25,
+                56
+            ],
+            "enabled": true,
+            "label": "",
+            "options": [
+                {
+                    "label": "χ² change",
+                    "token": "chi_square_change"
+                },
+                {
+                    "label": "Shift/s.u.",
+                    "token": "shift_su"
+                }
+            ],
+            "selected": "shift_su",
+            "uid": "minimizer.stop_rule",
             "visible_bounds": [
                 784,
                 238,
@@ -1340,7 +1369,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1511,8 +1540,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

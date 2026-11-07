@@ -7,7 +7,7 @@
     ],
     "id": "guide-experiment-data-settings",
     "image": "guide-experiment-data-settings.png",
-    "image_sha256": "c1fe9bc9ff7673f4ef4bf5269ea957ab0df7208fc208de5b17387b6158d00781",
+    "image_sha256": "fb731db1cd8f1e919ed510dca16252e918ea5277b898b0298fb4425d317688f0",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                378,
-                682,
-                323.5
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                378,
-                682,
-                323.5
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                420,
+                682,
+                323.5
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                420,
+                682,
+                323.5
             ]
         },
         "appBar": {
@@ -772,24 +772,24 @@
         },
         "data.header.component.y2o3": {
             "bounds": [
-                1408,
-                448,
-                50,
+                1393.888,
+                490,
+                65.111,
                 39
             ],
             "enabled": true,
             "label": "y2o3",
             "visible_bounds": [
-                1408,
-                448,
-                50,
+                1393.888,
+                490,
+                65.1110000000001,
                 39
             ]
         },
         "data.list": {
             "bounds": [
                 784,
-                448,
+                490,
                 682,
                 253.5
             ],
@@ -797,110 +797,110 @@
             "label": "",
             "visible_bounds": [
                 784,
-                448,
+                490,
                 682,
                 253.5
             ]
         },
         "data.status.0": {
             "bounds": [
-                1377,
-                487,
-                52,
+                1357.777,
+                529,
+                65.111,
                 39
             ],
             "enabled": true,
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1377,
-                487,
-                52,
+                1357.777,
+                529,
+                65.1110000000001,
                 39
             ]
         },
         "data.status.1": {
             "bounds": [
-                1377,
-                526,
-                52,
+                1357.777,
+                568,
+                65.111,
                 39
             ],
             "enabled": true,
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1377,
-                526,
-                52,
+                1357.777,
+                568,
+                65.1110000000001,
                 39
             ]
         },
         "data.status.2": {
             "bounds": [
-                1377,
-                565,
-                52,
+                1357.777,
+                607,
+                65.111,
                 39
             ],
             "enabled": true,
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1377,
-                565,
-                52,
+                1357.777,
+                607,
+                65.1110000000001,
                 39
             ]
         },
         "data.status.3": {
             "bounds": [
-                1377,
-                604,
-                52,
+                1357.777,
+                646,
+                65.111,
                 39
             ],
             "enabled": true,
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1377,
-                604,
-                52,
+                1357.777,
+                646,
+                65.1110000000001,
                 39
             ]
         },
         "data.status.4": {
             "bounds": [
-                1377,
-                643,
-                52,
+                1357.777,
+                685,
+                65.111,
                 39
             ],
             "enabled": true,
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1377,
-                643,
-                52,
+                1357.777,
+                685,
+                65.1110000000001,
                 39
             ]
         },
         "data.status.5": {
             "bounds": [
-                1377,
-                682,
-                52,
+                1357.777,
+                724,
+                65.111,
                 39
             ],
             "enabled": true,
             "icon": "minus-circle",
             "label": "",
             "visible_bounds": [
-                1377,
-                682,
-                52,
+                1357.777,
+                724,
+                65.1110000000001,
                 19.5
             ]
         },
@@ -941,7 +941,7 @@
         "group.data": {
             "bounds": [
                 770,
-                329,
+                371,
                 710,
                 386.5
             ],
@@ -950,9 +950,26 @@
             "label": "Measured data (3060)",
             "visible_bounds": [
                 770,
+                371,
+                710,
+                373
+            ]
+        },
+        "group.data_source": {
+            "bounds": [
+                770,
                 329,
                 710,
-                386.5
+                42
+            ],
+            "enabled": true,
+            "icon": "file-import",
+            "label": "Data source",
+            "visible_bounds": [
+                770,
+                329,
+                710,
+                42
             ]
         },
         "group.peak": {
@@ -1126,7 +1143,7 @@
         "range.maximum": {
             "bounds": [
                 955.375,
-                378,
+                420,
                 167.875,
                 56
             ],
@@ -1134,7 +1151,7 @@
             "label": "153.9",
             "visible_bounds": [
                 955.375,
-                378,
+                420,
                 167.875,
                 56
             ]
@@ -1142,7 +1159,7 @@
         "range.minimum": {
             "bounds": [
                 784,
-                378,
+                420,
                 167.875,
                 56
             ],
@@ -1150,7 +1167,7 @@
             "label": "0.95",
             "visible_bounds": [
                 784,
-                378,
+                420,
                 167.875,
                 56
             ]
@@ -1158,7 +1175,7 @@
         "range.points": {
             "bounds": [
                 1298.125,
-                378,
+                420,
                 167.875,
                 56
             ],
@@ -1166,7 +1183,7 @@
             "label": "3060",
             "visible_bounds": [
                 1298.125,
-                378,
+                420,
                 167.875,
                 56
             ]
@@ -1174,7 +1191,7 @@
         "range.step": {
             "bounds": [
                 1126.75,
-                378,
+                420,
                 167.875,
                 56
             ],
@@ -1182,7 +1199,7 @@
             "label": "0.05",
             "visible_bounds": [
                 1126.75,
-                378,
+                420,
                 167.875,
                 56
             ]
@@ -1226,7 +1243,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.453125,
@@ -1378,7 +1395,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1549,8 +1566,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1585,7 +1602,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

@@ -7,7 +7,7 @@
     ],
     "id": "guide-experiment-instrument",
     "image": "guide-experiment-instrument.png",
-    "image_sha256": "bae4fdce53935f510d106aa386133bd0c79d6699ba3a8812fbcf811e817b4f08",
+    "image_sha256": "50d2a59bc70036c1dcc5f48cda2525aad482e63b5536133f3ed89ee875b94b56",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                252,
-                682,
-                126
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                252,
-                682,
-                126
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                252.00000000000932,
+                682,
+                126
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                252.00000000000932,
+                682,
+                126
             ]
         },
         "appBar": {
@@ -773,7 +773,7 @@
         "group.background": {
             "bounds": [
                 770,
-                161,
+                161.00000000000932,
                 710,
                 42
             ],
@@ -782,7 +782,7 @@
             "label": "Background (21)",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000932,
                 710,
                 42
             ]
@@ -790,7 +790,7 @@
         "group.excluded_region": {
             "bounds": [
                 770,
-                434,
+                434.00000000000466,
                 710,
                 42
             ],
@@ -799,7 +799,7 @@
             "label": "Excluded regions (2)",
             "visible_bounds": [
                 770,
-                434,
+                434.00000000000466,
                 710,
                 42
             ]
@@ -824,7 +824,7 @@
         "group.instrument": {
             "bounds": [
                 770,
-                203,
+                203.00000000000932,
                 710,
                 189
             ],
@@ -833,7 +833,7 @@
             "label": "Instrument",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000932,
                 710,
                 189
             ]
@@ -841,7 +841,7 @@
         "group.linked_structure": {
             "bounds": [
                 770,
-                476,
+                476.00000000000466,
                 710,
                 42
             ],
@@ -850,7 +850,7 @@
             "label": "Linked structures (1)",
             "visible_bounds": [
                 770,
-                476,
+                476.00000000000466,
                 710,
                 42
             ]
@@ -858,7 +858,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                392,
+                392.00000000000466,
                 710,
                 42
             ],
@@ -867,7 +867,7 @@
             "label": "Peak profile",
             "visible_bounds": [
                 770,
-                392,
+                392.00000000000466,
                 710,
                 42
             ]
@@ -875,7 +875,7 @@
         "instrument.calib_twotheta_offset": {
             "bounds": [
                 1126.75,
-                322,
+                322.0000000000093,
                 339.25,
                 56
             ],
@@ -883,7 +883,7 @@
             "label": "-0.0441",
             "visible_bounds": [
                 1126.75,
-                322,
+                322.0000000000093,
                 339.25,
                 56
             ]
@@ -891,7 +891,7 @@
         "instrument.facility": {
             "bounds": [
                 784,
-                252,
+                252.00000000000932,
                 339.25,
                 56
             ],
@@ -959,7 +959,7 @@
             "uid": "",
             "visible_bounds": [
                 784,
-                252,
+                252.00000000000932,
                 339.25,
                 56
             ]
@@ -967,7 +967,7 @@
         "instrument.name": {
             "bounds": [
                 1126.75,
-                252,
+                252.00000000000932,
                 339.25,
                 56
             ],
@@ -983,7 +983,7 @@
             "uid": "",
             "visible_bounds": [
                 1126.75,
-                252,
+                252.00000000000932,
                 339.25,
                 56
             ]
@@ -991,7 +991,7 @@
         "instrument.setup_wavelength": {
             "bounds": [
                 784,
-                322,
+                322.0000000000093,
                 339.25,
                 56
             ],
@@ -999,7 +999,7 @@
             "label": "1.54822",
             "visible_bounds": [
                 784,
-                322,
+                322.0000000000093,
                 339.25,
                 56
             ]
@@ -1160,7 +1160,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1312,7 +1312,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1483,8 +1483,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1519,7 +1519,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

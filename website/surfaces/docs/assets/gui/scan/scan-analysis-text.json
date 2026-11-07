@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's analysis controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.analysis.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "scan-analysis-text",
     "image": "scan-analysis-text.png",
-    "image_sha256": "51ca90d02864fafc17c4e51387bf8fc1838c962ebadb724150dd76ed92e83be5",
+    "image_sha256": "8a623bb387a9ae4f80a031ef2058c10e680b3415397c92f22b39ec3aa0ac4b4b",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -985,7 +986,7 @@
         },
         "statusBar.calculator": {
             "bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -994,7 +995,7 @@
             "icon": "calculator",
             "label": "",
             "visible_bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -1002,7 +1003,7 @@
         },
         "statusBar.experiments": {
             "bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -1011,7 +1012,7 @@
             "icon": "microscope",
             "label": "",
             "visible_bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -1128,7 +1129,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "155/155 155 0 12s 4.74–7.19",
+            "label": "213/213 213 0 11s 4.32–6.25",
             "visible_bounds": [
                 985,
                 770,
@@ -1138,7 +1139,7 @@
         },
         "statusBar.minimizer": {
             "bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
                 51.890625,
                 14
@@ -1147,26 +1148,26 @@
             "icon": "level-down-alt",
             "label": "",
             "visible_bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
-                51.890625,
+                51.89062499999994,
                 14
             ]
         },
         "statusBar.parameters": {
             "bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ],
             "enabled": true,
             "icon": "th-list",
             "label": "",
             "visible_bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ]
         },
@@ -1174,7 +1175,7 @@
             "bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ],
             "enabled": true,
@@ -1183,13 +1184,13 @@
             "visible_bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ]
         },
         "statusBar.structures": {
             "bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -1198,7 +1199,7 @@
             "icon": "layer-group",
             "label": "",
             "visible_bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -1262,15 +1263,15 @@
                 784,
                 133,
                 511.828125,
-                448
+                464
             ],
             "enabled": true,
-            "label": "_minimizer.type crysta\n_minimizer.max_iterations 1000\n\n_fitting_mode.type sequential\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.Co2.adp_iso\n\nloop_\n_constraint.id\n_constraint.expression\nbiso_C",
+            "label": "_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.descent fast_descent\n_minimizer.stop_rule shift_su\n\n_fitting_mode.type sequential\n\nloop_\n_alias.id\n_alias.parameter_unique_name\nbiso_Co1 cosio.atom_site.Co1.adp_iso\nbiso_Co2 cosio.atom_site.C",
             "visible_bounds": [
                 784,
                 133,
                 511.828125,
-                448
+                464
             ]
         },
         "workflow.analysis.mainContent": {
@@ -1348,8 +1349,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "ef922929905b91dd8cfd48e3b6ba434bb97747b460d2f9376ab1427fb94e883c",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1360,8 +1361,8 @@
         "has_project": true,
         "page": "analysis",
         "scan_failed": 0,
-        "scan_fitted": 155,
-        "scan_total": 155,
+        "scan_fitted": 213,
+        "scan_total": 213,
         "sidebar": "Text",
         "sidebar_tabs": [
             {

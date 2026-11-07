@@ -1,12 +1,13 @@
 {
     "description": "Inspect the overall outcome and statistics of the completed fit",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "group.fit_result"
     ],
     "id": "joint-result",
     "image": "joint-result.png",
-    "image_sha256": "4be3b4572054c033a6bf62398bdac6c935c1d912e4b2fab9e5c65c3ca9ff61b2",
+    "image_sha256": "3b426e992b69beaa22f2845f2c2a38f9f2651dacd33b79bfb92c33a44ab783c3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -40,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                420,
-                682,
-                406
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                420,
-                682,
-                324
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -70,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                420,
+                682,
+                406
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                420,
+                682,
+                324
             ]
         },
         "appBar": {
@@ -771,15 +772,15 @@
                 784,
                 630,
                 167.875,
-                56
+                21
             ],
-            "enabled": true,
-            "label": "true",
+            "enabled": false,
+            "label": "covariance",
             "visible_bounds": [
                 784,
                 630,
                 167.875,
-                56
+                21
             ]
         },
         "generated.fit_result.degrees_of_freedom": {
@@ -822,7 +823,7 @@
                 56
             ],
             "enabled": true,
-            "label": "0.982958",
+            "label": "0.523607",
             "visible_bounds": [
                 784,
                 490,
@@ -1075,21 +1076,21 @@
                 955.375,
                 420,
                 167.875,
-                56
+                21
             ],
-            "enabled": true,
-            "label": "true",
+            "enabled": false,
+            "label": "success",
             "visible_bounds": [
                 955.375,
                 420,
                 167.875,
-                56
+                21
             ]
         },
         "group.alias": {
             "bounds": [
                 770,
-                203,
+                203.00000000000244,
                 710,
                 42
             ],
@@ -1098,7 +1099,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000244,
                 710,
                 42
             ]
@@ -1106,7 +1107,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ],
@@ -1115,7 +1116,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ]
@@ -1174,7 +1175,7 @@
         "group.joint_fit": {
             "bounds": [
                 770,
-                287,
+                287.00000000000244,
                 710,
                 42
             ],
@@ -1183,7 +1184,7 @@
             "label": "Joint-fit weights (2)",
             "visible_bounds": [
                 770,
-                287,
+                287.00000000000244,
                 710,
                 42
             ]
@@ -1529,7 +1530,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1700,8 +1701,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

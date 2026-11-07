@@ -7,7 +7,7 @@
     ],
     "id": "09-exclusion-0",
     "image": "09-exclusion-0.png",
-    "image_sha256": "14ad442ee534306c3d413dc8311c5560f4d7ca2eb8f45ebe9a6d2e7ef281737d",
+    "image_sha256": "cc351661952b7a8bd49b2d8a2655a5e1932e0773ac4cb5541e6688e2a4657568",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                336,
-                682,
-                131
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                336,
-                682,
-                131
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                336.0000000000047,
+                682,
+                131
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                336.0000000000047,
+                682,
+                131
             ]
         },
         "appBar": {
@@ -773,7 +773,7 @@
         "currentRowBar": {
             "bounds": [
                 785,
-                375,
+                375.0000000000047,
                 2,
                 39
             ],
@@ -781,31 +781,31 @@
             "label": "",
             "visible_bounds": [
                 785,
-                375,
+                375.0000000000047,
                 2,
                 39
             ]
         },
         "excludedRegion.end.0": {
             "bounds": [
-                903,
-                375,
-                515,
+                899,
+                375.0000000000047,
+                519,
                 39
             ],
             "enabled": true,
             "label": "12",
             "visible_bounds": [
-                903,
-                375,
-                515,
+                899,
+                375.0000000000047,
+                519,
                 39
             ]
         },
         "excludedRegion.id.0": {
             "bounds": [
                 815,
-                375,
+                375.0000000000047,
                 32,
                 39
             ],
@@ -813,7 +813,7 @@
             "label": "1",
             "visible_bounds": [
                 815,
-                375,
+                375.0000000000047,
                 32,
                 39
             ]
@@ -821,7 +821,7 @@
         "excludedRegion.remove.0": {
             "bounds": [
                 1422,
-                375,
+                375.0000000000047,
                 39,
                 39
             ],
@@ -830,7 +830,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                375,
+                375.0000000000047,
                 39,
                 39
             ]
@@ -838,23 +838,23 @@
         "excludedRegion.start.0": {
             "bounds": [
                 851,
-                375,
-                48,
+                375.0000000000047,
+                44,
                 39
             ],
             "enabled": true,
             "label": "0",
             "visible_bounds": [
                 851,
-                375,
-                48,
+                375.0000000000047,
+                44,
                 39
             ]
         },
         "excludedRegions.append": {
             "bounds": [
                 784,
-                428,
+                428.0000000000047,
                 682,
                 39
             ],
@@ -863,7 +863,7 @@
             "label": "Append new region",
             "visible_bounds": [
                 784,
-                428,
+                428.0000000000047,
                 682,
                 39
             ]
@@ -871,7 +871,7 @@
         "excludedRegions.list": {
             "bounds": [
                 784,
-                336,
+                336.0000000000047,
                 682,
                 78
             ],
@@ -879,7 +879,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                336,
+                336.0000000000047,
                 682,
                 78
             ]
@@ -904,7 +904,7 @@
         "group.excluded_region": {
             "bounds": [
                 770,
-                287,
+                287.0000000000047,
                 710,
                 194
             ],
@@ -913,7 +913,7 @@
             "label": "Excluded regions (1)",
             "visible_bounds": [
                 770,
-                287,
+                287.0000000000047,
                 710,
                 194
             ]
@@ -955,7 +955,7 @@
         "group.linked_structure": {
             "bounds": [
                 770,
-                481,
+                480.9999999999999,
                 710,
                 42
             ],
@@ -964,7 +964,7 @@
             "label": "Linked structures (1)",
             "visible_bounds": [
                 770,
-                481,
+                480.9999999999999,
                 710,
                 42
             ]
@@ -972,7 +972,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                245,
+                245.00000000000472,
                 710,
                 42
             ],
@@ -981,7 +981,7 @@
             "label": "Peak profile",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000472,
                 710,
                 42
             ]
@@ -1142,7 +1142,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1429,8 +1429,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1465,7 +1465,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

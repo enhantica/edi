@@ -1,12 +1,13 @@
 {
     "description": "Inspect the structure contributions recorded for each experiment",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "group.fit_result_phase"
     ],
     "id": "joint-structure-results",
     "image": "joint-structure-results.png",
-    "image_sha256": "d7f7ef9560b842cdd3d4917487fbc5b9dd77758756333ab57de7f0d131b5835f",
+    "image_sha256": "ef082eec3e1c01e0ecfcd3b84f68bc6bc0c732aac6f60aabd871efde47720df8",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -40,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                504,
-                682,
-                117
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                504,
-                682,
-                117
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -70,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                504,
+                682,
+                117
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                504,
+                682,
+                117
             ]
         },
         "appBar": {
@@ -768,33 +769,33 @@
         },
         "generated.fit_result_phase.bragg_r_factor.0": {
             "bounds": [
-                1021,
+                1013,
                 543,
-                90,
+                86,
                 39
             ],
             "enabled": true,
-            "label": "0.0407587",
+            "label": "4.08",
             "visible_bounds": [
-                1021,
+                1013,
                 543,
-                90,
+                86,
                 39
             ]
         },
         "generated.fit_result_phase.bragg_r_factor.1": {
             "bounds": [
-                1021,
+                1013,
                 582,
-                90,
+                86,
                 39
             ],
             "enabled": true,
-            "label": "0.0442653",
+            "label": "4.43",
             "visible_bounds": [
-                1021,
+                1013,
                 582,
-                90,
+                86,
                 39
             ]
         },
@@ -802,7 +803,7 @@
             "bounds": [
                 817,
                 543,
-                105,
+                101,
                 39
             ],
             "enabled": true,
@@ -810,7 +811,7 @@
             "visible_bounds": [
                 817,
                 543,
-                105,
+                101,
                 39
             ]
         },
@@ -818,7 +819,7 @@
             "bounds": [
                 817,
                 582,
-                105,
+                101,
                 39
             ],
             "enabled": true,
@@ -826,39 +827,39 @@
             "visible_bounds": [
                 817,
                 582,
-                105,
+                101,
                 39
             ]
         },
         "generated.fit_result_phase.f_r_factor.0": {
             "bounds": [
-                1115,
+                1103,
                 543,
-                343,
+                355,
                 39
             ],
             "enabled": true,
-            "label": "0.0295593",
+            "label": "2.96",
             "visible_bounds": [
-                1115,
+                1103,
                 543,
-                343,
+                355,
                 39
             ]
         },
         "generated.fit_result_phase.f_r_factor.1": {
             "bounds": [
-                1115,
+                1103,
                 582,
-                343,
+                355,
                 39
             ],
             "enabled": true,
-            "label": "0.0308507",
+            "label": "3.09",
             "visible_bounds": [
-                1115,
+                1103,
                 582,
-                343,
+                355,
                 39
             ]
         },
@@ -880,40 +881,40 @@
         },
         "generated.fit_result_phase.structure_id.0": {
             "bounds": [
-                926,
+                922,
                 543,
-                91,
+                87,
                 39
             ],
             "enabled": true,
             "label": "pbso4",
             "visible_bounds": [
-                926,
+                922,
                 543,
-                91,
+                87,
                 39
             ]
         },
         "generated.fit_result_phase.structure_id.1": {
             "bounds": [
-                926,
+                922,
                 582,
-                91,
+                87,
                 39
             ],
             "enabled": true,
             "label": "pbso4",
             "visible_bounds": [
-                926,
+                922,
                 582,
-                91,
+                87,
                 39
             ]
         },
         "group.alias": {
             "bounds": [
                 770,
-                203,
+                203.00000000000244,
                 710,
                 42
             ],
@@ -922,7 +923,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000244,
                 710,
                 42
             ]
@@ -930,7 +931,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ],
@@ -939,7 +940,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ]
@@ -1032,7 +1033,7 @@
         "group.joint_fit": {
             "bounds": [
                 770,
-                287,
+                287.00000000000244,
                 710,
                 42
             ],
@@ -1041,7 +1042,7 @@
             "label": "Joint-fit weights (2)",
             "visible_bounds": [
                 770,
-                287,
+                287.00000000000244,
                 710,
                 42
             ]
@@ -1387,7 +1388,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1558,8 +1559,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

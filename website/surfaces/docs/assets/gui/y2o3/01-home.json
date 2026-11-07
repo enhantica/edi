@@ -9,7 +9,7 @@
     ],
     "id": "01-home",
     "image": "01-home.png",
-    "image_sha256": "88492aa4f719d7d156f6a71051428b0eb841d178b4ef5bd3297e9310f216ddfa",
+    "image_sha256": "3f0cf8f88de02dfb7ac6c571afe4fc02f6ad8dd854847b3a36be97cfcaa70113",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -331,18 +331,119 @@
         },
         "home.about": {
             "bounds": [
-                572,
-                478,
-                129.515625,
+                742.921875,
+                544,
+                150.515625,
                 19
             ],
             "enabled": true,
+            "icon": "info-circle",
             "label": "About EasyDiffraction",
             "visible_bounds": [
-                572,
-                478,
-                129.515625,
+                742.921875,
+                544,
+                150.515625,
                 19
+            ]
+        },
+        "home.changes": {
+            "bounds": [
+                587,
+                511,
+                91.34375,
+                19
+            ],
+            "enabled": true,
+            "icon": "bullhorn",
+            "label": "What's new",
+            "visible_bounds": [
+                587,
+                511,
+                91.34375,
+                19
+            ]
+        },
+        "home.cite": {
+            "bounds": [
+                742.921875,
+                511,
+                89.984375,
+                19
+            ],
+            "enabled": true,
+            "icon": "quote-right",
+            "label": "How to cite",
+            "visible_bounds": [
+                742.921875,
+                511,
+                89.984375,
+                19
+            ]
+        },
+        "home.contact": {
+            "bounds": [
+                742.921875,
+                478,
+                150.515625,
+                85
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                742.921875,
+                478,
+                150.515625,
+                85
+            ]
+        },
+        "home.documentation": {
+            "bounds": [
+                587,
+                544,
+                113.921875,
+                19
+            ],
+            "enabled": true,
+            "icon": "external-link-alt",
+            "label": "Documentation",
+            "visible_bounds": [
+                587,
+                544,
+                113.921875,
+                19
+            ]
+        },
+        "home.feedback": {
+            "bounds": [
+                742.921875,
+                478,
+                133.890625,
+                19
+            ],
+            "enabled": true,
+            "icon": "comments",
+            "label": "Help and feedback",
+            "visible_bounds": [
+                742.921875,
+                478,
+                133.890625,
+                19
+            ]
+        },
+        "home.learn": {
+            "bounds": [
+                587,
+                478,
+                113.921875,
+                85
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                587,
+                478,
+                113.921875,
+                85
             ]
         },
         "home.start": {
@@ -360,6 +461,23 @@
                 404,
                 334,
                 39
+            ]
+        },
+        "home.tutorials": {
+            "bounds": [
+                587,
+                478,
+                75.8125,
+                19
+            ],
+            "enabled": true,
+            "icon": "graduation-cap",
+            "label": "Tutorials",
+            "visible_bounds": [
+                587,
+                478,
+                75.8125,
+                19
             ]
         },
         "home.version": {
@@ -424,8 +542,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

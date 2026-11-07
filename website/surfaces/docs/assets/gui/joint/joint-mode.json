@@ -1,12 +1,13 @@
 {
     "description": "Inspect joint fitting for the project's experiments",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "group.fitting_mode"
     ],
     "id": "joint-mode",
     "image": "joint-mode.png",
-    "image_sha256": "af65da46894d1f9eea61b1ca5278c852dadf2e07a87e9fccd6a64ae2cd67b194",
+    "image_sha256": "38a4c9ff9523b85065fdf200088980891fe822a13c74d2a50230f2ce72734be3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -40,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                210,
-                682,
-                56
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                210,
-                682,
-                56
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -70,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                210,
+                682,
+                56
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                210,
+                682,
+                56
             ]
         },
         "appBar": {
@@ -1267,7 +1268,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1438,8 +1439,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

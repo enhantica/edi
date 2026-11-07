@@ -7,7 +7,7 @@
     ],
     "id": "guide-experiment-orientation",
     "image": "guide-experiment-orientation.png",
-    "image_sha256": "cd5de98d4204e91c679de4a978730eea10aa3040ea3b403b87c199176e1156fd",
+    "image_sha256": "77ba1cb3f279f91a106da25ae2e47b4b4e662d84570ef4c8e686ba345bdffb7f",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -41,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                294,
-                682,
-                131
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                294,
-                682,
-                131
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -71,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                294,
+                682,
+                131
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                294,
+                682,
+                131
             ]
         },
         "appBar": {
@@ -807,13 +807,30 @@
         "group.data": {
             "bounds": [
                 770,
-                481,
+                523,
                 710,
                 42
             ],
             "enabled": true,
             "icon": "arrows-alt-h",
             "label": "Measured data (3060)",
+            "visible_bounds": [
+                770,
+                523,
+                710,
+                42
+            ]
+        },
+        "group.data_source": {
+            "bounds": [
+                770,
+                481,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "file-import",
+            "label": "Data source",
             "visible_bounds": [
                 770,
                 481,
@@ -853,6 +870,23 @@
                 245,
                 710,
                 194
+            ]
+        },
+        "group.refln": {
+            "bounds": [
+                770,
+                565,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "list",
+            "label": "Reflections (194)",
+            "visible_bounds": [
+                770,
+                565,
+                710,
+                42
             ]
         },
         "group.scattering_source": {
@@ -1061,7 +1095,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.453125,
@@ -1213,7 +1247,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "4 0.081s 3.58→2.28",
+            "label": "3 0.025s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1384,8 +1418,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1420,7 +1454,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

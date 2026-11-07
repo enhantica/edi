@@ -383,7 +383,8 @@ def _check_captures(config_data: dict) -> None:
         reference = ROOT / 'surfaces/docs/assets/gui' / folder
         if (reference / 'manifest.json').exists():
             _, captured = validate_bundle(reference, workflow='reference', groups=True)
-            scenes.extend(captured)
+            # Each group run starts by opening its project; no guide shows that shared scene.
+            scenes.extend(scene for scene in captured if scene['id'] != 'group-open')
             print(f'Native {folder} group bundle: PASS', flush=True)
     for folder in ('y2o3', 'scan', 'joint', 'sc', 'magnetic'):
         _check_dark(ROOT / 'surfaces/docs/assets/gui' / folder)

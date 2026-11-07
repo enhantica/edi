@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 (function () {
-    const EXAMPLE_ID = "pd-neut-cwl_cosio-d20_scan";
+    const EXAMPLE_ID = "pd-neut-cwl_cosio-d20_scan-213f";
     return {schema: 2, workflow: "reference", example: EXAMPLE_ID, build: function (capture) {
         const scan = capture.fixture.values.fittingMode.some(function (mode) { return mode === "sequential" || mode === "independent"; });
         const prefix = scan ? "scan" : "joint";
@@ -29,10 +29,16 @@
         ["project", "structure", "experiment", "analysis", "report"].forEach(tabs);
         panel(prefix + "-mode", "group.fitting_mode", scan ? "Choose sequential, independent or single-dataset fitting" : "Inspect joint fitting for the project's experiments");
         if (scan) {
+        shot("scan-performance-analysis", "analysis", "See how many files are fitted at once",
+            ["appBar.tab.analysis", "sideBar.tab.settings", "reveal:group.performance", "expand:group.performance"],
+            ["group.performance"]);
         panel("scan-declaration", "group.sequential_fit", "Inspect the scan's data directory, file pattern and order");
         panel("scan-extraction", "group.sequential_fit_extract", "Inspect values extracted from each dataset");
         } else {
             panel("joint-weights", "group.joint_fit", "Set the relative weights of the experiments in the joint fit");
+            panel("joint-result", "group.fit_result", "Inspect the overall outcome and statistics of the completed fit");
+            panel("joint-experiment-results", "group.fit_result_bank", "Compare fit statistics for the individual experiments");
+            panel("joint-structure-results", "group.fit_result_phase", "Inspect the structure contributions recorded for each experiment");
         }
         ["experiment", "analysis"].forEach(function (page) {
             ["stacked", "map"].forEach(function (view) {

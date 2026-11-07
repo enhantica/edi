@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's project controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.project.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "joint-project-extras",
     "image": "joint-project-extras.png",
-    "image_sha256": "fc204f0b7f98c4a89b3dc0bb52e45c28871ea18bd810457479991d1b6380d921",
+    "image_sha256": "ae08c40932904a0623c49dc2434c29661468f1c423d7599c8bb690670bc9a0d3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -57,7 +58,7 @@
                 800
             ]
         },
-        "StandardUncertaintiesGroup": {
+        "SideBarGroup": {
             "bounds": [
                 784,
                 168,
@@ -400,7 +401,7 @@
                 183.4,
                 284.6,
                 567,
-                19
+                20
             ],
             "enabled": true,
             "label": "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly",
@@ -408,13 +409,13 @@
                 183.4,
                 284.6,
                 567,
-                19
+                20
             ]
         },
         "project.experiments": {
             "bounds": [
                 183.4,
-                390.20000000000005,
+                391.20000000000005,
                 567,
                 39.71875
             ],
@@ -422,7 +423,7 @@
             "label": "",
             "visible_bounds": [
                 183.4,
-                390.20000000000005,
+                391.20000000000005,
                 567,
                 39.71875
             ]
@@ -430,15 +431,15 @@
         "project.location": {
             "bounds": [
                 183.4,
-                328.40000000000003,
+                329.40000000000003,
                 567,
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-QXHtXP/pd-neut-xray-cwl_pbso4-d1a-lab/project",
+            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-TQaCzK/pd-neut-xray-cwl_pbso4-d1a-lab/project",
             "visible_bounds": [
                 183.4,
-                328.40000000000003,
+                329.40000000000003,
                 567,
                 19
             ]
@@ -462,7 +463,7 @@
         "project.structures": {
             "bounds": [
                 183.4,
-                359.30000000000007,
+                360.30000000000007,
                 567,
                 18.109375
             ],
@@ -470,7 +471,7 @@
             "label": "",
             "visible_bounds": [
                 183.4,
-                359.30000000000007,
+                360.30000000000007,
                 567,
                 18.109375
             ]
@@ -698,7 +699,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -869,8 +870,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

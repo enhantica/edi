@@ -1,12 +1,13 @@
 {
     "description": "Compare fit statistics for the individual experiments",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "group.fit_result_bank"
     ],
     "id": "joint-experiment-results",
     "image": "joint-experiment-results.png",
-    "image_sha256": "bd0f8a2cf32b9b27485753a4fa86c4b7c94cfa85f86baa1a9c7eb9fcd821e5e4",
+    "image_sha256": "b5bd098d92b02c9aa343cf64a9962540f41f8c4935fdb5af5dfcf0b0438ef9ec",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -40,22 +41,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                462,
-                682,
-                117
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                462,
-                682,
-                117
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -70,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                462,
+                682,
+                117
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                462,
+                682,
+                117
             ]
         },
         "appBar": {
@@ -768,33 +769,33 @@
         },
         "generated.fit_result_bank.chi_square.0": {
             "bounds": [
-                1055,
+                1051,
                 501,
-                79,
+                83,
                 39
             ],
             "enabled": true,
-            "label": "15456.4",
+            "label": "15456.40",
             "visible_bounds": [
-                1055,
+                1051,
                 501,
-                79,
+                83,
                 39
             ]
         },
         "generated.fit_result_bank.chi_square.1": {
             "bounds": [
-                1055,
+                1051,
                 540,
-                79,
+                83,
                 39
             ],
             "enabled": true,
-            "label": "18442.6",
+            "label": "18442.60",
             "visible_bounds": [
-                1055,
+                1051,
                 540,
-                79,
+                83,
                 39
             ]
         },
@@ -802,7 +803,7 @@
             "bounds": [
                 817,
                 501,
-                98,
+                101,
                 39
             ],
             "enabled": true,
@@ -810,7 +811,7 @@
             "visible_bounds": [
                 817,
                 501,
-                98,
+                101,
                 39
             ]
         },
@@ -818,7 +819,7 @@
             "bounds": [
                 817,
                 540,
-                98,
+                101,
                 39
             ],
             "enabled": true,
@@ -826,7 +827,7 @@
             "visible_bounds": [
                 817,
                 540,
-                98,
+                101,
                 39
             ]
         },
@@ -848,97 +849,97 @@
         },
         "generated.fit_result_bank.n_data_points.0": {
             "bounds": [
-                919,
+                922,
                 501,
-                51,
+                56,
                 39
             ],
             "enabled": true,
             "label": "2910",
             "visible_bounds": [
-                919,
+                922,
                 501,
-                51,
+                56,
                 39
             ]
         },
         "generated.fit_result_bank.n_data_points.1": {
             "bounds": [
-                919,
+                922,
                 540,
-                51,
+                56,
                 39
             ],
             "enabled": true,
             "label": "5799",
             "visible_bounds": [
-                919,
+                922,
                 540,
-                51,
+                56,
                 39
             ]
         },
         "generated.fit_result_bank.prof_cr_factor.0": {
             "bounds": [
-                1300,
+                1269,
                 501,
-                70,
+                61,
                 39
             ],
             "enabled": true,
-            "label": "0.091399",
+            "label": "9.14",
             "visible_bounds": [
-                1300,
+                1269,
                 501,
-                70,
+                61,
                 39
             ]
         },
         "generated.fit_result_bank.prof_cr_factor.1": {
             "bounds": [
-                1300,
+                1269,
                 540,
-                70,
+                61,
                 39
             ],
             "enabled": true,
-            "label": "0.101342",
+            "label": "10.13",
             "visible_bounds": [
-                1300,
+                1269,
                 540,
-                70,
+                61,
                 39
             ]
         },
         "generated.fit_result_bank.prof_cwr_factor.0": {
             "bounds": [
-                1374,
+                1334,
                 501,
-                84,
+                124,
                 39
             ],
             "enabled": true,
-            "label": "0.0839931",
+            "label": "8.40",
             "visible_bounds": [
-                1374,
+                1334,
                 501,
-                84,
+                124,
                 39
             ]
         },
         "generated.fit_result_bank.prof_cwr_factor.1": {
             "bounds": [
-                1374,
+                1334,
                 540,
-                84,
+                124,
                 39
             ],
             "enabled": true,
-            "label": "0.119866",
+            "label": "11.99",
             "visible_bounds": [
-                1374,
+                1334,
                 540,
-                84,
+                124,
                 39
             ]
         },
@@ -946,15 +947,15 @@
             "bounds": [
                 1138,
                 501,
-                77,
+                55,
                 39
             ],
             "enabled": true,
-            "label": "0.038309",
+            "label": "3.83",
             "visible_bounds": [
                 1138,
                 501,
-                77,
+                55,
                 39
             ]
         },
@@ -962,86 +963,86 @@
             "bounds": [
                 1138,
                 540,
-                77,
+                55,
                 39
             ],
             "enabled": true,
-            "label": "0.0665279",
+            "label": "6.65",
             "visible_bounds": [
                 1138,
                 540,
-                77,
+                55,
                 39
             ]
         },
         "generated.fit_result_bank.prof_wr_expected.0": {
             "bounds": [
-                1219,
+                1197,
                 501,
-                77,
+                68,
                 39
             ],
             "enabled": true,
-            "label": "0.0193418",
+            "label": "1.93",
             "visible_bounds": [
-                1219,
+                1197,
                 501,
-                77,
+                68,
                 39
             ]
         },
         "generated.fit_result_bank.prof_wr_expected.1": {
             "bounds": [
-                1219,
+                1197,
                 540,
-                77,
+                68,
                 39
             ],
             "enabled": true,
-            "label": "0.0486291",
+            "label": "4.86",
             "visible_bounds": [
-                1219,
+                1197,
                 540,
-                77,
+                68,
                 39
             ]
         },
         "generated.fit_result_bank.prof_wr_factor.0": {
             "bounds": [
-                974,
+                982,
                 501,
-                77,
+                65,
                 39
             ],
             "enabled": true,
-            "label": "0.0449722",
+            "label": "4.50",
             "visible_bounds": [
-                974,
+                982,
                 501,
-                77,
+                65,
                 39
             ]
         },
         "generated.fit_result_bank.prof_wr_factor.1": {
             "bounds": [
-                974,
+                982,
                 540,
-                77,
+                65,
                 39
             ],
             "enabled": true,
-            "label": "0.0871062",
+            "label": "8.71",
             "visible_bounds": [
-                974,
+                982,
                 540,
-                77,
+                65,
                 39
             ]
         },
         "group.alias": {
             "bounds": [
                 770,
-                203,
+                203.00000000000244,
                 710,
                 42
             ],
@@ -1050,7 +1051,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000244,
                 710,
                 42
             ]
@@ -1058,7 +1059,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ],
@@ -1067,7 +1068,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ]
@@ -1160,7 +1161,7 @@
         "group.joint_fit": {
             "bounds": [
                 770,
-                287,
+                287.00000000000244,
                 710,
                 42
             ],
@@ -1169,7 +1170,7 @@
             "label": "Joint-fit weights (2)",
             "visible_bounds": [
                 770,
-                287,
+                287.00000000000244,
                 710,
                 42
             ]
@@ -1515,7 +1516,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1686,8 +1687,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

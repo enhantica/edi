@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's experiment controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.experiment.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "scan-experiment-text",
     "image": "scan-experiment-text.png",
-    "image_sha256": "11935ef167d24a98b072a8d831df18afc0f9d16d1e310138f9cc5815d5e4f8ed",
+    "image_sha256": "a4d254716ca0713cfab4caf90acb9bf99a0c27fb8d9552c749d8b21403ba99ce",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -910,7 +911,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.703125,
@@ -953,7 +954,7 @@
         },
         "statusBar.calculator": {
             "bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -962,7 +963,7 @@
             "icon": "calculator",
             "label": "",
             "visible_bounds": [
-                378.12187500000005,
+                411.48125000000005,
                 772,
                 55.390625,
                 14
@@ -970,7 +971,7 @@
         },
         "statusBar.experiments": {
             "bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -979,7 +980,7 @@
             "icon": "microscope",
             "label": "",
             "visible_bounds": [
-                316.44687500000003,
+                349.80625000000003,
                 772,
                 44.875,
                 14
@@ -1096,7 +1097,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "155/155 155 0 12s 4.74–7.19",
+            "label": "213/213 213 0 11s 4.32–6.25",
             "visible_bounds": [
                 985,
                 770,
@@ -1106,7 +1107,7 @@
         },
         "statusBar.minimizer": {
             "bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
                 51.890625,
                 14
@@ -1115,26 +1116,26 @@
             "icon": "level-down-alt",
             "label": "",
             "visible_bounds": [
-                450.31250000000006,
+                483.67187500000006,
                 772,
-                51.890625,
+                51.89062499999994,
                 14
             ]
         },
         "statusBar.parameters": {
             "bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ],
             "enabled": true,
             "icon": "th-list",
             "label": "",
             "visible_bounds": [
-                519.0031250000001,
+                552.3625,
                 772,
-                136.484375,
+                144.859375,
                 14
             ]
         },
@@ -1142,7 +1143,7 @@
             "bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ],
             "enabled": true,
@@ -1151,13 +1152,13 @@
             "visible_bounds": [
                 62.175,
                 772,
-                191.046875,
+                224.40625,
                 14
             ]
         },
         "statusBar.structures": {
             "bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -1166,7 +1167,7 @@
             "icon": "layer-group",
             "label": "",
             "visible_bounds": [
-                270.021875,
+                303.38125,
                 772,
                 29.625,
                 14
@@ -1230,10 +1231,10 @@
                 784,
                 133,
                 369.1875,
-                848
+                944
             ],
             "enabled": true,
-            "label": "data_d20\n\n_background.type line-segment\n\nloop_\n_background.id\n_background.position\n_background.intensity\n1 8 611(19)\n2 9 605(13)\n3 10 592(12)\n4 11 577(12)\n5 12 528.2(76)\n6 15 505.5(44)\n7 25 484.9(41)\n8 30 421.1(30)\n9 50 457.9(28)\n10 70 424.1(25)\n11 90 412.",
+            "label": "data_d20\n\n_background.type line-segment\n\nloop_\n_background.id\n_background.position\n_background.intensity\n1 6 706(28)\n2 6.5 692(17)\n3 7 661(15)\n4 7.6 629.9(70)\n5 12.6 530.1(70)\n6 13 532(15)\n7 13.5 516.1(95)\n8 15 512.9(44)\n9 25 468.5(38)\n10 30 459.8(29)\n11 5",
             "visible_bounds": [
                 784,
                 133,
@@ -1316,8 +1317,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "ef922929905b91dd8cfd48e3b6ba434bb97747b460d2f9376ab1427fb94e883c",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1328,8 +1329,8 @@
         "has_project": true,
         "page": "experiment",
         "scan_failed": 0,
-        "scan_fitted": 155,
-        "scan_total": 155,
+        "scan_fitted": 213,
+        "scan_total": 213,
         "sidebar": "Text",
         "sidebar_tabs": [
             {
@@ -1352,7 +1353,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

@@ -17,7 +17,7 @@
             "scene": "scan-experiment-before"
         },
         {
-            "action": "open-cli-project:pd-neut-cwl_cosio-d20_scan",
+            "action": "open-cli-project:pd-neut-cwl_cosio-d20_scan-213f",
             "scene": "scan-experiment-before"
         },
         {
@@ -185,6 +185,10 @@
             "scene": "scan-experiment-settings"
         },
         {
+            "action": "sideBar.tab.settings",
+            "scene": "scan-experiment-settings"
+        },
+        {
             "action": "appBar.tab.analysis",
             "scene": "scan-analysis-basic"
         },
@@ -287,6 +291,22 @@
         {
             "action": "expand:group.fitting_mode",
             "scene": "scan-mode"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "scan-performance-analysis"
+        },
+        {
+            "action": "sideBar.tab.settings",
+            "scene": "scan-performance-analysis"
+        },
+        {
+            "action": "reveal:group.performance",
+            "scene": "scan-performance-analysis"
+        },
+        {
+            "action": "expand:group.performance",
+            "scene": "scan-performance-analysis"
         },
         {
             "action": "appBar.tab.analysis",
@@ -409,11 +429,11 @@
             "scene": "scan-correlations"
         }
     ],
-    "binary_sha256": "60c260e6b4fa8eeaed4cb06aaa6a9dd09e7dafaf55e9d40daaa587effd3c6b8c",
+    "binary_sha256": "36fabf46df62e17b958837e0a67741a409f9a69b16f26c27aa7abc14af5b516b",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "f3be9aaf7a450a964908736076414946c1dbe77087030fe2cb632d679f5e362b"
+            "sha256": "1e3e07e8d90b6d07f00a7dc60d9a89213637a3062ed3c3223c47091285f5db6e"
         },
         {
             "file": "inputs/experiments/d20_scan/01_001_497p3790.dat",
@@ -1034,27 +1054,259 @@
         {
             "file": "inputs/experiments/d20_scan/01_155_052p3450.dat",
             "sha256": "c6ddfe0309c55ce450cdb1b9a0a009b1dd2a66b0616b3f39f911bc86fd64cc19"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_156_051p8630.dat",
+            "sha256": "afd9c3153047f2348f032054326c34b7d00231e7a55be6ccafe0b9237c56602e"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_157_051p8610.dat",
+            "sha256": "811d12ff3ce0b8a2f0810233572120f3b7e4a9aa1f37dc1004b1caa498b0a2c8"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_158_051p8530.dat",
+            "sha256": "71fb1da8bf9ae6c13fb7e12305c7dbcdfab4eb55cb79c4bbd9fd679404bd9b25"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_159_051p8480.dat",
+            "sha256": "fa790d2e6485682af832719cf2c4072f4299677bffa67e71159b9ac4a1d754e0"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_160_051p7720.dat",
+            "sha256": "f7de52240ea61be6602658e7ba18202c11c469cebb1c8cedca0b2184262d3b02"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_161_051p3070.dat",
+            "sha256": "180edbe3e0f475f2238d43739ab946bacec6475c3e9286a81d66679128754cad"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_162_050p4140.dat",
+            "sha256": "145b3d0e82b0324eca2fc3da02ee15b890114e41a7883c7f70e0058a430f00f3"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_163_049p5100.dat",
+            "sha256": "3f72afac921f939272a2e2af875c0d96fb6721099a6467273fee134bc0368928"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_164_048p5780.dat",
+            "sha256": "6a9d1c4cfd9580d02ba206130b7973eb3781151dbc8bb7fdbfeb9d27b0ee8322"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_165_047p6520.dat",
+            "sha256": "a2867a6a962247b746e69d2f2e46b270cf2de1cc60488c203acf4e1bb8184ee6"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_166_046p7410.dat",
+            "sha256": "3849f29a274b577cf3bf7dea5b8370f5a0a8fb49eaf51c11c227b09c03e176e9"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_167_045p8280.dat",
+            "sha256": "15c3ba1248fa9b1da9d5616bab289a407916afd890977ef6e6d50fc1bf5b680b"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_168_044p8800.dat",
+            "sha256": "552f1bf8b43ed4f666ae6d6f3f5bbbe5b6ca21e4c139f671a296cc77441456fd"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_169_043p9300.dat",
+            "sha256": "0be66f9dc0700716aa29604596dd75487e2efe9d58388714e7a378cd805b8dbb"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_170_042p9980.dat",
+            "sha256": "3628fdb9bac6543ff7fe9fa53699fb248ff5c2cc6062af77b62299df763f5388"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_171_042p0250.dat",
+            "sha256": "f50598a9269d4813b03ada3e7bd547985b41b61b07d39a313a51c79b2e677417"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_172_041p0850.dat",
+            "sha256": "d2a1b99b09c75c58f265a3d33f7b33142c69be94f79bf72273936728402a9e85"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_173_040p1430.dat",
+            "sha256": "16719890588360875a8e29e5ad517d520817150005ca0f667bcfc5c1a6e3f83f"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_174_039p1600.dat",
+            "sha256": "858f0d0691d0a4aae9ffa7896f272c6b107aae9311b2ec09ba306dd268ac67a3"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_175_038p1900.dat",
+            "sha256": "2920f400245c5f222141845c311f8f48a17d47d28625a50ade7147b2edf527ac"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_176_037p2260.dat",
+            "sha256": "223a0d456b85ea38cd139722e6482e803191eafdec6ab3c34eaafa143b71825c"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_177_036p1860.dat",
+            "sha256": "0a211d751c98a86b8f85214a5ad4b48a1f8c0d2c16dd60ef998e4182205065ae"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_178_035p1750.dat",
+            "sha256": "af916d96ce75e102756cca98dbf09473663989147953d17aed224bcad72e09ce"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_179_034p1880.dat",
+            "sha256": "99fea8ce6cba98bc3c37edd7fb255f858698cf64b845ae67fdd4850da4432936"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_180_033p1380.dat",
+            "sha256": "a9b329e53a957098d81cc5d38d11c3a440625b3a380884681385b4dec4b936ac"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_181_032p1420.dat",
+            "sha256": "fcf8e21e2bbeefed7ad2532b25c7f3d3b362f9a762c4a33765816ba65654bc23"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_182_031p0960.dat",
+            "sha256": "9c3b32a4a53f9967500ecfd3a1e822cafbd146c5e664ae93a02021a5a751348a"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_183_030p1220.dat",
+            "sha256": "554adc14a1c3eaa81954652491d943282e9d74791e03e48614fa6c487a47371f"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_184_029p1170.dat",
+            "sha256": "f07f3b6f226196a0a540b56dd213d8a940e0f9af73f942dacff2ed38568e1893"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_185_028p1190.dat",
+            "sha256": "8f1e7f28cfee9d5c5a48bb3e8ebd732051dcea04a0703606c8ee1b05ef7d6fc0"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_186_027p1230.dat",
+            "sha256": "be0a44ea7d98589c595850449f09fab571c4fdfd1862306b4802de161edf2f12"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_187_026p2390.dat",
+            "sha256": "1eb3ac63a473cff2086a403205c2bb474f5f0ef9d6a708904aab0de22d02a639"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_188_025p4280.dat",
+            "sha256": "affcd4fd5f81520274b8531feea351de3e962a0ced130ba678e03fc7fe2df3dd"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_189_024p3610.dat",
+            "sha256": "2154e677da2ee707faa938e08ca96592083260aea7a0e1304f20d642ebf71d98"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_190_023p3090.dat",
+            "sha256": "e638dadf40777267b1df6dec1a8546ad09d502e3be21e17ce21e6f6e0c6e3d5c"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_191_022p3220.dat",
+            "sha256": "3333d2b8773c4cff72ecba22aaa9eb80a28710f3bcabd5b502f9dc6b8adb0f30"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_192_021p2820.dat",
+            "sha256": "0e21920dd2873d03a5d32600c395176ea7c79c6e2dc859714bc1f966657122be"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_193_020p4790.dat",
+            "sha256": "58eea13391e47dc197234d4cf86625457d9afd03eb445634acff4e8c14963749"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_194_020p1780.dat",
+            "sha256": "b635dd0fdfdc2c39b00ade3208124d2a32e5aba94acbbdae878660feec0467ef"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_195_019p4400.dat",
+            "sha256": "b5f864f844d048c10e094376fdb45064224e0bdbf59e80b0f3bd8854b93edfd7"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_196_018p3620.dat",
+            "sha256": "197abcbd8f7009d3d18883f940476a11a90a315f55ddbf6bcaf492718234f506"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_197_017p5110.dat",
+            "sha256": "c11ee50b1d42c44c4395f898a6292e24b8b33fcca56b2773c147ddb21fe9bc03"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_198_017p3310.dat",
+            "sha256": "5240bb3c60d5ec47cc8293a2744e2dd912419b1fd939fb4b0a1631e244eaa482"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_199_017p2190.dat",
+            "sha256": "42e0c10b3539ef0ce163441e324e5a9e65de623227407a7b8b5fd2a8f809d8bb"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_200_015p6390.dat",
+            "sha256": "0fcc9d239dd453fe4efd2d1e8c5f7b5c1243d15afcd43a8368f8ea0f38b2d281"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_201_015p5080.dat",
+            "sha256": "cb67460aaaa84cec92ba272d82b064c32dd1b89846242bfbc3ff37b890243c72"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_202_014p6330.dat",
+            "sha256": "7f4ab33b8f3af382b7ba0a031277537a1cf5b914e6214b0381e85f53d1a8ebca"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_203_014p3990.dat",
+            "sha256": "767ab97d10200d0a765d5d8cdbaadb81701353664d633ad8fd66b61f22a63aa9"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_204_012p0890.dat",
+            "sha256": "3beeac4a136115f678a4614e0197cd14d4e0dbde5058cce6c175584c8a085a98"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_205_011p8600.dat",
+            "sha256": "6f22f10f22c40615913ea03ea89e9f960a0b2fcf7b8c620a404a1c645de0622b"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_206_011p1240.dat",
+            "sha256": "c65092a5c0dd5d48c7a2c771035f7da352af063a557d8f138adf5c2ba0f5e192"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_207_010p5190.dat",
+            "sha256": "4a8049e79eafaf6ccf262063990e1444809cf7d8bfad0df5845b1b8c28471717"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_208_008p5330.dat",
+            "sha256": "5341fbb0f29f85b224537b955a02b7d86e726cf438a3012a4059e47d37d36acc"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_209_002p4210.dat",
+            "sha256": "5c685cd0582acb66231e3dc690c993ab2275a5abf8156bcc99af46b698761a90"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_210_002p3820.dat",
+            "sha256": "24925b6fc608565eb650ab9e5ffd0dbfbe1503fc338e631292781e8eb7e38789"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_211_002p3630.dat",
+            "sha256": "ecc507091c34d2574bbb613ae2aa6d5bb1ac63601b9496afa4bc8dd09a15e994"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_212_002p3560.dat",
+            "sha256": "c0a6cc202b237504a7627ea17a15fc672d5fdc52663c86d33086c980e1e2647d"
+        },
+        {
+            "file": "inputs/experiments/d20_scan/01_213_002p3440.dat",
+            "sha256": "eb0b0ebdefb0b2225cebd3d7c244d5c94132b181cd367bbba001841f89961578"
         }
     ],
     "error": "",
-    "example": "pd-neut-cwl_cosio-d20_scan",
+    "example": "pd-neut-cwl_cosio-d20_scan-213f",
     "fixture": {
-        "detail": "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out",
-        "id": "pd-neut-cwl_cosio-d20_scan",
+        "detail": "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure",
+        "id": "pd-neut-cwl_cosio-d20_scan-213f",
         "origin": "D20 @ ILL",
         "samples": [
-            "Co₂SiO₄ [Pnma]"
+            "Co₂SiO₄ [Pnma.1]"
         ],
         "searchAliases": [
-            "pd-neut-cwl_cosio-d20_scan",
-            "Co₂SiO₄ [Pnma] · D20 @ ILL",
-            "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out"
+            "pd-neut-cwl_cosio-d20_scan-213f",
+            "Co₂SiO₄ [Pnma.1] · D20 @ ILL",
+            "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure"
         ],
         "sources": [
-            "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/project.edi",
-            "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/analysis/analysis.edi",
-            "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/experiments/d20.edi",
-            "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/structures/cosio.edi"
+            "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/project.edi",
+            "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/analysis/analysis.edi",
+            "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/experiments/d20.edi",
+            "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/structures/cosio.edi"
         ],
         "values": {
             "beamMode": [
@@ -1086,6 +1338,10 @@
             ],
             "scatteringType": [
                 "bragg"
+            ],
+            "structure": [
+                "crystal",
+                "magnetic"
             ]
         }
     },
@@ -1093,11 +1349,11 @@
     "inputs": {
         "experiment": {
             "file": "inputs/experiments/d20.edi",
-            "sha256": "5a6677ccebd2aa192905c93f58abd18e7fb6006a278aa764bdad4cb7b663ca6f"
+            "sha256": "f647dd3cc5b10ab31a05ed5660f635c9df6090c44986cc8c0857db992fe4076f"
         },
         "structure": {
             "file": "inputs/structures/cosio.edi",
-            "sha256": "db297a9cb8148c8be36f3d5d52d5151e9b0f67e31ffcf92e52854a678c4f24d6"
+            "sha256": "70324d6326ee447d4c4d83d26918e6a7ce2f0fd929e261e999ee30af8d8b329a"
         }
     },
     "logical_size": [
@@ -1210,11 +1466,13 @@
             "status": "captured"
         },
         {
+            "description": "Inspect the project's experiment controls",
             "id": "scan-experiment-settings",
+            "image": "scan-experiment-settings.png",
+            "metadata": "scan-experiment-settings.json",
             "page": "experiment",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect the project's analysis controls",
@@ -1289,6 +1547,15 @@
             "id": "scan-mode",
             "image": "scan-mode.png",
             "metadata": "scan-mode.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "See how many files are fitted at once",
+            "id": "scan-performance-analysis",
+            "image": "scan-performance-analysis.png",
+            "metadata": "scan-performance-analysis.json",
             "page": "analysis",
             "sidebar": "",
             "status": "captured"
@@ -1376,8 +1643,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "ef922929905b91dd8cfd48e3b6ba434bb97747b460d2f9376ab1427fb94e883c",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "status": "complete",
     "workflow": "reference"
 }

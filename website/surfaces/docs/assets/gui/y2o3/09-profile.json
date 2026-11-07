@@ -8,7 +8,7 @@
     ],
     "id": "09-profile",
     "image": "09-profile.png",
-    "image_sha256": "ffebe50fb1aabf10eb9569e7b8dc089aee185baf1f34f28708bdf6168dd8f9ed",
+    "image_sha256": "213bf52b302840e8da51f9423ba6d97c3e3de41c680195621d9632ddf13fb593",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -42,22 +42,6 @@
                 800
             ]
         },
-        "CategoryGroup": {
-            "bounds": [
-                784,
-                294,
-                682,
-                126
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                294,
-                682,
-                126
-            ]
-        },
         "Main": {
             "bounds": [
                 0,
@@ -72,6 +56,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                294.0000000000047,
+                682,
+                126
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                294.0000000000047,
+                682,
+                126
             ]
         },
         "appBar": {
@@ -856,7 +856,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                245,
+                245.00000000000472,
                 710,
                 189
             ],
@@ -865,7 +865,7 @@
             "label": "Peak profile",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000472,
                 710,
                 189
             ]
@@ -990,7 +990,7 @@
         "peak.broad_gauss_u": {
             "bounds": [
                 784,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -998,7 +998,7 @@
             "label": "0.1",
             "visible_bounds": [
                 784,
-                364,
+                364.0000000000047,
                 133.60000000000002,
                 56
             ]
@@ -1006,7 +1006,7 @@
         "peak.broad_gauss_v": {
             "bounds": [
                 921.1,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1014,7 +1014,7 @@
             "label": "-0.1",
             "visible_bounds": [
                 921.1,
-                364,
+                364.0000000000047,
                 133.60000000000002,
                 56
             ]
@@ -1022,7 +1022,7 @@
         "peak.broad_gauss_w": {
             "bounds": [
                 1058.2,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1030,7 +1030,7 @@
             "label": "0.1",
             "visible_bounds": [
                 1058.2,
-                364,
+                364.0000000000047,
                 133.5999999999999,
                 56
             ]
@@ -1038,7 +1038,7 @@
         "peak.broad_lorentz_x": {
             "bounds": [
                 1195.3,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1046,7 +1046,7 @@
             "label": "0",
             "visible_bounds": [
                 1195.3,
-                364,
+                364.0000000000047,
                 133.5999999999999,
                 56
             ]
@@ -1054,7 +1054,7 @@
         "peak.broad_lorentz_y": {
             "bounds": [
                 1332.4,
-                364,
+                364.0000000000047,
                 133.6,
                 56
             ],
@@ -1062,7 +1062,7 @@
             "label": "0.1",
             "visible_bounds": [
                 1332.4,
-                364,
+                364.0000000000047,
                 133.5999999999999,
                 56
             ]
@@ -1070,7 +1070,7 @@
         "peak.type": {
             "bounds": [
                 784,
-                294,
+                294.0000000000047,
                 682,
                 56
             ],
@@ -1106,7 +1106,7 @@
             "uid": "peak.type",
             "visible_bounds": [
                 784,
-                294,
+                294.0000000000047,
                 682,
                 56
             ]
@@ -1150,7 +1150,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -1437,8 +1437,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "53af884d7b5eb69c047a5672d0c9e032377c4725fde5721d2069d4e31af7b64f",
-    "source_revision": "60fb4880cf1a5a1f2af61faa89e0af01112552a6",
+    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1473,7 +1473,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

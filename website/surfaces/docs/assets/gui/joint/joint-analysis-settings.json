@@ -1,5 +1,6 @@
 {
     "description": "Inspect the project's analysis controls",
+    "fit_phase": "",
     "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
     "highlights": [
         "workflow.analysis.mainContent",
@@ -7,7 +8,7 @@
     ],
     "id": "joint-analysis-settings",
     "image": "joint-analysis-settings.png",
-    "image_sha256": "d0bc5fd29bde9644aa4bf25951b1728b78d5bfe37041889d8f542b6b446b269d",
+    "image_sha256": "5aec0139c2e9d294a08363701f1d1efde3eb9a91f6895d1217b17857c0cbe927",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -57,7 +58,7 @@
                 800
             ]
         },
-        "ShownParametersGroup": {
+        "SideBarGroup": {
             "bounds": [
                 784,
                 168,
@@ -1189,7 +1190,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.98s 242.73→1.96",
+            "label": "12 0.52s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1360,8 +1361,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "48bee8c5ef346772f3c5aca653e45a62bb63426b1d6ff49f135339572ebbcc1e",
-    "source_revision": "8e15283e6debf52d50f9c64237263fb19daf8fbe",
+    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
+    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",
