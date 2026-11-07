@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 from tests.integration.app.test_shared_ui_census import binding
-from tests.integration.py.test_table_and_about_contract import qml_objects, table_delegates
+from tests.integration.py.test_table_and_about_contract import qml_objects
 
 ROOT = Path(__file__).resolve().parents[3]
 CONTAINERS = {
@@ -49,8 +49,11 @@ def cell_clips(gui):
     sources.update({p.stem: p.read_text() for p in app})
     pending = []
     for path in app:
-        for body in table_delegates(path.read_text()):
-            pending.extend(kind.rsplit('.', 1)[-1] for kind, _ in qml_objects(' '.join(body)))
+        for kind, body in qml_objects(path.read_text()):
+            if kind.rsplit('.', 1)[-1] == 'TableRow':
+                pending.extend(
+                    child.rsplit('.', 1)[-1] for child, _ in qml_objects(' '.join(body))
+                )
     # These reusable cells also appear through dynamically populated example/text views.
     pending.extend(['ParameterCell', 'ExampleCell', 'TextTab'])
     seen = set()
@@ -91,7 +94,7 @@ def test_crossing_containers_use_texture_crops():
     assert not failures, REASON + ' Violations: ' + ', '.join(failures)
 
 
-def test_crop_census_rejects_nested_clip_and_unrelated_layer():
+def test_crop_census_rejects_nested_clip_and_unrelated_layer(tmp_path, monkeypatch):
     for source in (
         'Item { clip: true }',
         'Item { clip: true; layer.enabled: true }',
@@ -105,3 +108,13 @@ def test_crop_census_rejects_nested_clip_and_unrelated_layer():
     fallback = list(qml_objects('Item { clip: true }'))[-1][1]
     assert crop_safe(layer, ['clipped cell']), REASON
     assert crop_safe(fallback), REASON
+
+    monkeypatch.setitem(globals(), 'ROOT', tmp_path)
+    app = tmp_path / 'app/qml'
+    app.mkdir(parents=True)
+    (app / 'Page.qml').write_text('Item { TableRow { NewCell {} } }')
+    cell = app / 'NewCell.qml'
+    cell.write_text('Item { Item { clip: true } }')
+    assert cell_clips(tmp_path) == ['NewCell'], REASON
+    cell.write_text('Item { Item { clip: false } }')
+    assert cell_clips(tmp_path) == [], REASON
