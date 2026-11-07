@@ -24,6 +24,7 @@ Item {
             width: 1200
             height: 200
             sourceModel: rows
+            columnRoles: ["label", "other"]
             columns: [-1, -1]
             header: Components.ListViewHeader {
                 Components.ListViewLabel {
