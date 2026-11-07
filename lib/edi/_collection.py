@@ -34,7 +34,7 @@ DEFAULT_SOURCES = (
 )
 DEFAULT_SOURCE = DEFAULT_SOURCES[0]
 # The tutorials the documentation publishes, indexed beside its notebooks (ADR-0075).
-DEFAULT_TUTORIALS = 'https://enhantica.github.io/edi/assets/tutorials'
+DEFAULT_TUTORIALS = 'https://enhantica.github.io/edi/tutorials'
 _FIELDS = frozenset({
     'id',
     'name',

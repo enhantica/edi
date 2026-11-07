@@ -39,6 +39,7 @@ struct Entry {
     std::string year;         ///< may be empty
     std::string doi;          ///< without a scheme, may be empty
     std::vector<std::string> structures;  ///< an experiment's linked structures, by their entry ids; may be empty
+    long long order = -1;     ///< a tutorial's place in the learning order, when the index gives one
     std::vector<File> files;  ///< at least one
 };
 

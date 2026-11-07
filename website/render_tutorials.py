@@ -18,7 +18,9 @@ START = '<!-- python-tutorials -->'
 END = '<!-- /python-tutorials -->'
 
 
-def tutorial_bundle(notebook: Path, output: Path) -> tuple[str, str]:
+def tutorial_bundle(
+    notebook: Path, output: Path, published: Path | None = None
+) -> tuple[str, str]:
     """Bundle a notebook and its exact starting project for local execution."""
     document = notebook_from_source(notebook)
     notebook_name = notebook.with_suffix('.ipynb').name
@@ -60,7 +62,8 @@ def tutorial_bundle(notebook: Path, output: Path) -> tuple[str, str]:
     ]
     for index, cell in enumerate(document['cells']):
         cell['id'] = str(index)
-    folder = output.parent
+    folder = published or output.parent
+    folder.mkdir(parents=True, exist_ok=True)
     text = json.dumps(document, ensure_ascii=False, indent=1) + '\n'
     (folder / notebook_name).write_text(text, encoding='utf-8')
     import jupytext  # noqa: PLC0415 - only the site build needs it
@@ -77,7 +80,7 @@ def tutorial_bundle(notebook: Path, output: Path) -> tuple[str, str]:
     return title, ' '.join(description.split())
 
 
-def tutorial_entry(folder: Path, stem: str, title: str, description: str) -> dict:
+def tutorial_entry(folder: Path, stem: str, title: str, description: str, order: int) -> dict:
     """One tutorial in the collection format (ADR-0075): its notebook and Python source."""
     files = []
     for suffix, file_format in (('.ipynb', 'ipynb'), ('.py', 'py')):
@@ -93,12 +96,17 @@ def tutorial_entry(folder: Path, stem: str, title: str, description: str) -> dic
         'kind': 'tutorial',
         'name': title,
         'description': description,
+        'order': order,
         'files': files,
     }
 
 
-def render_tutorials(output: Path, source: str) -> str:
-    """Build the downloadable examples and render the catalogue."""
+def render_tutorials(output: Path, source: str, published: Path) -> str:
+    """Build the downloadable examples and render the catalogue.
+
+    The ZIPs go to `output`; each notebook, its Python source and `index.json` go to `published`,
+    which the site serves at `tutorials/` for list_tutorials and download_tutorial (ADR-0075).
+    """
     output.mkdir(parents=True, exist_ok=True)
     prepare_notebooks(ROOT / 'docs/user/tutorials')
     revision = subprocess.check_output(
@@ -107,8 +115,10 @@ def render_tutorials(output: Path, source: str) -> str:
     rows, entries = [], []
     for notebook in sorted((ROOT / 'docs/user/tutorials').glob('*.py')):
         name = notebook.stem + '.zip'
-        title, description = tutorial_bundle(notebook, output / name)
-        entries.append(tutorial_entry(output, notebook.stem, title, description))
+        title, description = tutorial_bundle(notebook, output / name, published)
+        entries.append(
+            tutorial_entry(published, notebook.stem, title, description, len(entries) + 1)
+        )
         colab = (
             'https://colab.research.google.com/github/enhantica/edi/blob/'
             f'{revision}/docs/user/tutorials/{quote(notebook.with_suffix(".ipynb").name)}'

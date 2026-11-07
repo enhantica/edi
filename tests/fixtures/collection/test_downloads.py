@@ -191,3 +191,20 @@ def test_python_m_edi_lists_and_downloads(source, tmp_path):
         check=True,
     )
     assert list((tmp_path / 'p').glob('lbco-project-*/lbco/project.edi'))
+
+
+def test_an_edited_tutorial_is_kept_unless_overwriting(tmp_path):
+    tutorials = tmp_path / 'tutorials'
+    files = [file_record(tutorials, 'fit-lbco.ipynb', b'{"cells": []}\n', 'ipynb')]
+    entry = {'id': 'fit-lbco', 'kind': 'tutorial', 'name': 'Fit LBCO', 'files': files}
+    (tutorials / 'index.json').write_text(
+        json.dumps({'schema': 'edi-data-index/1', 'entries': [entry]})
+    )
+    path = Path(edi.download_tutorial('fit-lbco', tmp_path / 'out', source=tutorials))
+    path.write_bytes(b'my notes')
+    assert (
+        Path(edi.download_tutorial('fit-lbco', tmp_path / 'out', source=tutorials)).read_bytes()
+        == b'my notes'
+    )
+    edi.download_tutorial('fit-lbco', tmp_path / 'out', overwrite=True, source=tutorials)
+    assert path.read_bytes() == b'{"cells": []}\n'

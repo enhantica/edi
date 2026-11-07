@@ -54,8 +54,8 @@ class FileRead {
     std::string url_, bytes_, served_by_, error_;
 };
 
-/// The entries a listing shows, numbered from 1 in this order: by id, as diffraction-lib lists its data, except that
-/// tutorials keep the index's learning order.
+/// The entries a listing shows, numbered from 1 in diffraction-lib's order: entries with an `order` (a tutorial's
+/// learning order) first, by it, then the rest by id.
 std::vector<const Entry*> listing(const Index& index, const std::string& kind = {});
 
 /// The entry a user names: an id, or a number from `listing(index, kind)`. Refuses an unknown id or a number out of
@@ -68,12 +68,13 @@ const Entry& resolve(const Index& index, const std::string& name, const std::str
 struct Placement {
     std::string file;
     std::string folder;  ///< empty unless the file is a project archive to unpack
+    bool keep_edited = false;  ///< a tutorial: an existing file is the user's and is kept unless overwriting
 };
 Placement placement(const std::string& destination, const Entry& entry, const File& file);
 
 /// Store verified bytes at their placement and answer the path a user opens: the unpacked project folder for an
-/// archive, else the file. An existing file or folder is kept unless `overwrite`; a kept file must still match the
-/// index, or it is replaced.
+/// archive, else the file. An existing file or folder is kept unless `overwrite`; a kept data file must still match
+/// the index or it is replaced, while an existing tutorial is kept as it is, since the user may have edited it.
 std::string store(const Placement& where, const File& file, std::string_view bytes, bool overwrite);
 
 /// The path `store` would answer if a placement can be used without reading anything: the unpacked project folder, or

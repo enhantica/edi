@@ -194,9 +194,13 @@ std::vector<const Entry*> listing(const Index& index, const std::string& kind) {
     std::vector<const Entry*> out;
     for (const Entry& entry : index.entries)
         if (kind.empty() || entry.kind == kind) out.push_back(&entry);
-    // Tutorials keep the index's learning order; everything else is listed by id, as diffraction-lib lists its data.
-    if (kind != "tutorial")
-        std::stable_sort(out.begin(), out.end(), [](const Entry* a, const Entry* b) { return a->id < b->id; });
+    // As diffraction-lib lists them: entries with a learning order first, in that order, then the rest by id.
+    std::stable_sort(out.begin(), out.end(), [](const Entry* a, const Entry* b) {
+        const bool ordered_a = a->order >= 0, ordered_b = b->order >= 0;
+        if (ordered_a != ordered_b) return ordered_a;
+        if (ordered_a && a->order != b->order) return a->order < b->order;
+        return a->id < b->id;
+    });
     return out;
 }
 
@@ -219,7 +223,7 @@ Placement placement(const std::string& destination, const Entry& entry, const Fi
     const fs::path root(destination);
     const auto slash = file.path.find_last_of('/');
     const std::string name = slash == std::string::npos ? file.path : file.path.substr(slash + 1);
-    Placement where{(root / name).string(), {}};
+    Placement where{(root / name).string(), {}, entry.kind == "tutorial"};
     if (entry.kind == "project" && file.format == "zip")
         where.folder = (root / (file.sha256.empty() ? entry.id : entry.id + "-" + lowercase(file.sha256).substr(0, 12))).string();
     return where;
@@ -228,7 +232,8 @@ Placement placement(const std::string& destination, const Entry& entry, const Fi
 std::string stored(const Placement& where, const File& file) {
     std::error_code ec;
     if (!where.folder.empty()) return fs::is_directory(where.folder, ec) ? project_folder(where.folder) : std::string();
-    if (fs::is_regular_file(where.file, ec) && content_mismatch(read_file(where.file), file) == Mismatch::none)
+    if (fs::is_regular_file(where.file, ec) &&
+        (where.keep_edited || content_mismatch(read_file(where.file), file) == Mismatch::none))
         return where.file;
     return {};
 }

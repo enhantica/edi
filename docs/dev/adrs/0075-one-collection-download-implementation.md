@@ -24,8 +24,8 @@ prevent.
 
 - **The rules live in the core, in `edi::online`, beside the index parser.** It owns:
   - resolving what a user names, an entry id or a 1-based number from a listing (a number is a row on screen, never
-    stored), with one listing order for every interface: by id, as diffraction-lib lists its data, with tutorials in their
-    learning order;
+    stored), with one listing order for every interface: entries with a learning `order` (tutorials) first by it, then the rest by id,
+    as diffraction-lib lists them;
   - the order of locations for a request and the fallback rule of ADR-0068: the next location only after an outage (a
     transport, proxy or server failure or a 5xx answer), never after an answer such as a 404;
   - checking received bytes against the size and SHA-256 the index records, with a SHA-256 in the core;
@@ -48,7 +48,7 @@ prevent.
   file has a size and SHA-256 and a mismatch refuses. A changed file must take a new id, so a published id keeps meaning
   the same bytes. `EDI_COLLECTION` still selects another collection.
 - **Tutorials are indexed by the documentation site, not by the data collection.** The docs build writes
-  `assets/tutorials/index.json` in the collection's format: one `tutorial` entry per tutorial, in learning order, with
+  `tutorials/index.json` in the collection's format: one `tutorial` entry per tutorial, with its learning `order`, with
   its notebook and Python source as files with their sizes and SHA-256, published beside them. A tutorial is
   documentation versioned with the code that runs it. Its data stays in `enhantica/edi-data`, and its notebook fetches
   the data with `download_data`.

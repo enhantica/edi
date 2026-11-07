@@ -504,7 +504,11 @@ def main() -> None:
     try:
         if 'surfaces' in names:
             examples.write_text(
-                render_tutorials(ROOT / 'surfaces/docs/assets/tutorials', originals[examples]),
+                render_tutorials(
+                    ROOT / 'surfaces/docs/assets/tutorials',
+                    originals[examples],
+                    ROOT / '.tutorials',
+                ),
                 encoding='utf-8',
             )
         if args.github_releases:
@@ -521,6 +525,8 @@ def main() -> None:
             path.write_text(original, encoding='utf-8')
     if 'surfaces' in names:
         write_package_index(output, releases if args.github_releases else [])
+        # What list_tutorials and download_tutorial read, at the site's tutorials/ (ADR-0075).
+        shutil.copytree(ROOT / '.tutorials', output / 'tutorials', dirs_exist_ok=True)
     _check_links(output.resolve(), args.base_url)
     command = f'python -m http.server 8873 --bind 127.0.0.1 --directory {output}'
     print(f'Preview: {command}', flush=True)

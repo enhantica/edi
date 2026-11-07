@@ -224,6 +224,12 @@ Index parse_index(const std::string& text) {
         entry.first_page = text_member(item, "first_page");
         entry.year = text_member(item, "year");
         entry.doi = text_member(item, "doi");
+        if (const json::Value& order = item.get("order"); !order.is_null()) {
+            const double n = order.number("order");
+            if (!(n >= 0) || n != std::floor(n) || n > 9007199254740992.0)
+                throw std::invalid_argument("entry " + entry.id + " has an order that is not a whole number");
+            entry.order = static_cast<long long>(n);
+        }
         const json::Value& structures = item.get("structures");
         if (!structures.is_null())
             for (const json::Value& id : structures.array("structures")) entry.structures.push_back(id.string("structures"));
