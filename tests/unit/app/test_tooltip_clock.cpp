@@ -8,6 +8,10 @@
 #include <QtTest/qtestmouse.h>
 #include "engine_setup.hpp"
 #include <QTimerEvent>
+#include <QTemporaryDir>
+#include <QSettings>
+#include <QQmlContext>
+#include <vector>
 #include <QScopeGuard>
 #include <QtQml/qqml.h>
 #include <memory>
@@ -18,8 +22,22 @@ class TooltipClock final : public QObject {
     QPointer<QObject> target_;
     int timer_ = 0;
     int remaining_ = 0;
+    std::vector<std::unique_ptr<QTemporaryDir>> settings_;
 public:
     explicit TooltipClock(QQmlEngine* caller) : caller_(caller) {}
+    Q_INVOKABLE QString isolateSettings() {
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        auto directory = std::make_unique<QTemporaryDir>();
+        if (!directory->isValid()) return {};
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, directory->path());
+        const auto url = QUrl::fromLocalFile(edi_app::settings_store_path()).toString();
+        caller_->rootContext()->setContextProperty("pySettingsPath", url);
+        settings_.push_back(std::move(directory));
+        return url;
+    }
+    Q_INVOKABLE bool isTooltip(QObject* object) const {
+        return object && object->inherits("QQuickToolTip");
+    }
     Q_INVOKABLE QVariantMap restartAndClick() {
         auto* controller = caller_->incubationController();
         const auto restore = qScopeGuard([&] { caller_->setIncubationController(controller); });

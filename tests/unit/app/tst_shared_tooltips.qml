@@ -61,6 +61,19 @@ TestCase {
         verify(app !== null, "The tooltip controls run in the actual application host");
         verify(waitForRendering(app.contentItem), "The real application presents a frame before pointer input");
     }
+    function init() {
+        const location = TooltipClock.isolateSettings();
+        verify(location !== "", "Each tooltip case owns a fresh temporary settings store");
+        compare(Globals.Vars.settingsFile, location, "The production Preferences points at this case's isolated store");
+        setLevel("Important");
+        Preferences[delayKey()] = 1500;
+        const last = Object.keys(Preferences).filter(k => /^tooltips?last.*level$/i.test(k));
+        for (const k of last)
+            Preferences[k] = "Important";
+        for (const k of Object.keys(Preferences).filter(k => /^tooltips?(?:level|delay(?:ms)?|last.*level)$/i.test(k)))
+            SettingsProof.erase(Globals.Vars.settingsFile, "Edi.Preferences", k);
+        SettingsProof.erase(Globals.Vars.settingsFile, "Edi.Preferences", "toolTips");
+    }
     function cleanup() {
         SettingsProof.endAnimationClock();
         if (app) {
@@ -94,6 +107,7 @@ TestCase {
         compare(freshValue(fresh(), /^tooltips?level$/i), data.level, "The saved legacy flag migrates to the declared level");
     }
     function test_persistence() {
+        setLevel("Off");
         setLevel("All");
         Preferences[delayKey()] = 2371;
         const snapshot = fresh();
@@ -122,11 +136,11 @@ TestCase {
             y: 200,
             enabled: data.enabled
         });
-        const tips = SettingsProof.tooltipObjects(button).filter(t => t.text === button.ToolTip.text);
+        const tips = SettingsProof.tooltipObjects(button).filter(t => TooltipClock.isTooltip(t) && t.text === button.ToolTip.text);
         verify(tips.length > 0, "The real shared control owns an actual tooltip");
         for (const tip of tips) {
-            const names = Object.keys(tip).filter(k => /self.?explanatory/i.test(k));
-            compare(names.length, 1, "A tooltip use can declare its control self-explanatory");
+            const names = Object.keys(tip).filter(k => /self.?explanatory/i.test(k) && typeof tip[k] === "boolean");
+            compare(names.length, 1, "Each actual Qt tooltip exposes one boolean self-explanatory declaration, excluding change signals");
             tip[names[0]] = data.self;
         }
         mouseMove(button, 40, 20);
