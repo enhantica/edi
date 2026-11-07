@@ -628,6 +628,18 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"report-scan-2-saved", {"save-as:" + (kept.isEmpty() ? QStringLiteral("report-scan") : kept),
                                                   "report.writesPdf", "report.save"}});
     }
+    // A scan opened from the file EDI_DEMO_SCAN_PROJECT names, its pages, then Fit and Reset, which stop the run when
+    // disabled. Run only when asked (`--demo-only scan-open-`).
+    if (only.startsWith(QLatin1String("scan-open-"))) {
+        steps_.push_back({"scan-open-1-opened",
+                          {"resize:1280x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
+        steps_.push_back({"scan-open-2-structure", {"appBar.tab.structure", basic}});
+        steps_.push_back({"scan-open-3-experiment", {"appBar.tab.experiment", basic}});
+        steps_.push_back({"scan-open-4-analysis", {analysis, basic}});
+        steps_.push_back({"scan-open-5-fitting", {"statusBar.fit.button", "wait-files:5", "capture-now"}});
+        steps_.push_back({"scan-open-6-stopped", {"statusBar.fit.button", "wait-fit"}});
+        steps_.push_back({"scan-open-7-reset", {"statusBar.fit.reset"}});
+    }
     // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
     // (`--demo-only evolution-`).
     if (only.startsWith(QLatin1String("evolution-"))) {
@@ -1800,6 +1812,7 @@ void DemoDriver::park_pointer() {
 
 void DemoDriver::settle_then(std::function<void()> next) {
     settle_attempts_ = 0;
+    preparing_attempts_ = 0;
     previous_frame_ = QImage();
     auto poll = std::make_shared<std::function<void()>>();
     *poll = [this, next, poll] {
@@ -1825,6 +1838,10 @@ void DemoDriver::settle_then(std::function<void()> next) {
         }
         const int max_attempts = documentation_ && documentation_workflow_ == "reference"
                                      ? kSettleMaxAttempts * 10 : kSettleMaxAttempts;
+        // A large scan's pages take longer to prepare than any animation runs: the bound starts when they are ready.
+        if (preparing && ++preparing_attempts_ <= kSettleMaxAttempts * 20) {
+            settle_attempts_ = 0;
+        }
         if (++settle_attempts_ > max_attempts) {
             // The last two frames, to see what kept changing.
             previous_frame_.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-a.png")));

@@ -128,6 +128,7 @@ class DemoDriver : public QObject {
     qsizetype action_ = 0;
     QImage previous_frame_;
     int settle_attempts_ = 0;
+    int preparing_attempts_ = 0;
     QTemporaryDir loaded_files_;
     QElapsedTimer timer_;
     std::vector<double> pre_fit_values_;
