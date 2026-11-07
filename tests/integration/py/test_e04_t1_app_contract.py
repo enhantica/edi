@@ -22,11 +22,12 @@ import yaml
 from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
-# Frozen from the published gui-components archive; ADR-0015.
+# Previously pinned the base before container layers and tooltip levels. These
+# digests are frozen from the published replacement archive; ADR-0015.
 
-GUI_PIN = '10dc5828020c90666a1ef015835475936d56e819'
-GUI_ARCHIVE_SHA256 = '89cfb0443e84a9d4a0cf0a07994f8ac7aa5b0bc296c7f23c3ce1e6f1eff9c93b'
-GUI_SOURCE_SHA256 = '65b857b24fdd782e7068d422fc11667e6aca84377d88f757efeed082be16d030'
+GUI_PIN = '7e48926fc0ff88df515b0865dc05a8f961226488'
+GUI_ARCHIVE_SHA256 = 'ebd4ac578f8c76b6fe1c96ce6a1ea9f2307a7277d9b28d4720f692b6a6f09d9e'
+GUI_SOURCE_SHA256 = 'dce641b2e9a900aab6c2d80e2c2d6546c4a7a01bacbfd1a347dae89ec9c0dcca'
 
 ROOT = Path(__file__).resolve().parents[3]
 SCREENSHOTS = ROOT / 'docs/dev/design/app-screenshots'
