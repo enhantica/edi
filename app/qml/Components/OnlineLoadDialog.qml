@@ -471,14 +471,21 @@ AppDialog {
                 required property string referenceUrl
                 objectName: `onlineLoad.row.${row.index}`
                 // A click loads the row's entry (the owner, 2026-11-04); in the measured-data popup Ctrl or Shift selects
-                // several rows instead, for Load N. Beneath the cells, so the reference's link keeps its own click.
+                // several rows instead, for Load N. Above the row's own selection input, which would take the click; a
+                // reference's link is opened from here.
                 MouseArea {
                     parent: row
                     anchors.fill: parent
-                    z: -1
+                    z: 1
                     cursorShape: Qt.PointingHandCursor
                     onClicked: mouse => {
+                        const onReference = referenceCell.mapFromItem(this, mouse.x, mouse.y);
+                        if (referenceCell.linked && referenceCell.contains(onReference)) {
+                            Qt.openUrlExternally(row.referenceUrl);
+                            return;
+                        }
                         const adding = dialog.kind === "data" && (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier));
+                        results.currentIndex = row.index;
                         results.selectWithModifiers(row.index, adding ? mouse.modifiers : Qt.NoModifier);
                         dialog.search.rememberSelection(row.index);
                         if (!adding)
@@ -539,11 +546,6 @@ AppDialog {
                     HoverHandler {
                         id: referenceHover
                         cursorShape: referenceCell.linked ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    }
-                    TapHandler {
-                        enabled: referenceCell.linked
-                        acceptedButtons: Qt.LeftButton
-                        onTapped: Qt.openUrlExternally(row.referenceUrl)
                     }
                 }
             }
