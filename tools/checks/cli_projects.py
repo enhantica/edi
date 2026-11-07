@@ -237,18 +237,18 @@ def loaded_settings(project_dir: str | Path) -> dict[str, dict[str, dict]]:
 # ----------------------------------------------------------------------
 
 
-_ASYMMETRY = re.compile(r'(?m)^(_peak\.asym_beba_(?:a0|b0|a1|b1)) .*$')
+_ASYMMETRY = re.compile(r'(?m)^(_peak\.asym_(?:beba_(?:a0|b0|a1|b1)|fcj_1|fcj_2)) .*$')
 
 
 def fix_asymmetry_off(project: Path) -> None:
-    """Fix every Bérar-Baldinozzi coefficient of the project copy at 0."""
+    """Fix every Bérar-Baldinozzi or FCJ asymmetry coefficient of the project copy at 0."""
     changed = 0
     for path in sorted((project / 'experiments').glob('*.edi')):
         text, count = _ASYMMETRY.subn(r'\1 0', path.read_text(encoding='utf-8'))
         changed += count
         path.write_text(text, encoding='utf-8')
     if not changed:
-        raise ValueError('asymmetry-off: the project has no Bérar-Baldinozzi coefficients')
+        raise ValueError('asymmetry-off: the project has no asymmetry coefficients')
 
 
 def fit_template_only(project: Path) -> None:

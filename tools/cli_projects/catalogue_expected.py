@@ -12,8 +12,9 @@ copy gives the regression pins: iterations and reduced chi-square. A reference t
 is kept and printed, so the check reports it.
 
 A scan is compared on its template file's single fit, as FullProf's reference is. An example whose
-Bérar-Baldinozzi asymmetry differs in form between the programs has a FullProf fit with the
-asymmetry fixed at 0 beside its reference (``asymmetry-off/``): the full model is compared on
+asymmetry differs in form between the programs (Bérar-Baldinozzi, or FCJ, whose quadrature edi
+takes continuously and FullProf on a node ladder) has a FullProf fit with the asymmetry fixed at 0
+beside its reference (``asymmetry-off/``): the full model is compared on
 R_wp and the number of free parameters only, and every shared value on the ``asymmetry-off``
 variant. A single-crystal case's record gives FullProf's values in edi's report labels and units
 (``report_values``, ``tools/cli_projects/catalogue_sc_references.py``), each compared within two of
@@ -56,8 +57,7 @@ LADDER_WITNESS = {'pd-xray-cwl_lam7o3-p021': ('param.O1.fract_x',)}
 LADDER_RWP_TOLERANCE = 0.02
 # With the asymmetry off, LATP's two weak AlPO4 phases have flat cells: edi moves them to a lower
 # minimum than FullProf reaches, and P1's Biso moves with them, so they are pins of edi's own
-# result. That fit stops after the engine's allowed resumes, every value settled; a refit from its
-# end converges at the same values.
+# result.
 ASYMMETRY_OFF_PINNED = {
     'pd-xray-cwl_latp-bm01_scan': (
         'alpo4_c2221.cell.',
@@ -65,7 +65,8 @@ ASYMMETRY_OFF_PINNED = {
         'latp.atom_site.P1.adp_iso',
     )
 }
-ASYMMETRY_OFF_STATUS = {'pd-xray-cwl_latp-bm01_scan': 'max_iter'}
+# A variant that ends other than `done`, by case; none since the stricter Shift/s.u. test.
+ASYMMETRY_OFF_STATUS: dict[str, str] = {}
 
 
 def machine_run(project: Path, command: str = 'fit') -> tuple[dict[str, str], float]:

@@ -1,0 +1,160 @@
+{
+  "program": "FullProf",
+  "version": "8.40 Feb2026",
+  "scope": "asymmetry-off fit",
+  "start_project": "docs/user/cli/pd-neut-cwl_lmo-echidna/project",
+  "n_free": 24,
+  "converged": true,
+  "r_wp": 0.07400000000000001,
+  "r_wp_by_bank": {
+    "echidna": 0.07400000000000001
+  },
+  "fullprof_parameters": {
+    "1": {
+      "symbol": "Bck_0_pat1",
+      "value": 590.51184,
+      "uncertainty": 5.7779088
+    },
+    "2": {
+      "symbol": "Bck_1_pat1",
+      "value": 549.18256,
+      "uncertainty": 4.1166964
+    },
+    "3": {
+      "symbol": "Bck_2_pat1",
+      "value": 575.68872,
+      "uncertainty": 4.1880589
+    },
+    "4": {
+      "symbol": "Bck_3_pat1",
+      "value": 567.50287,
+      "uncertainty": 4.4119668
+    },
+    "5": {
+      "symbol": "Bck_4_pat1",
+      "value": 562.47491,
+      "uncertainty": 4.3662071
+    },
+    "6": {
+      "symbol": "Bck_5_pat1",
+      "value": 588.37689,
+      "uncertainty": 4.0227032
+    },
+    "7": {
+      "symbol": "Bck_6_pat1",
+      "value": 636.56854,
+      "uncertainty": 5.2009506
+    },
+    "8": {
+      "symbol": "Bck_7_pat1",
+      "value": 615.36084,
+      "uncertainty": 5.6530247
+    },
+    "9": {
+      "symbol": "Bck_8_pat1",
+      "value": 630.255,
+      "uncertainty": 9.3168077
+    },
+    "10": {
+      "symbol": "Zero_pat1",
+      "value": -0.34995946,
+      "uncertainty": 0.010060243
+    },
+    "11": {
+      "symbol": "SyCos_pat1",
+      "value": 0.0018390312,
+      "uncertainty": 0.0060948036
+    },
+    "12": {
+      "symbol": "SySin_pat1",
+      "value": 0.20121084,
+      "uncertainty": 0.0073947576
+    },
+    "13": {
+      "symbol": "Z_O_ph1",
+      "value": 0.25855899,
+      "uncertainty": 9.8229524e-05
+    },
+    "14": {
+      "symbol": "Biso_O_ph1",
+      "value": 0.71153456,
+      "uncertainty": 0.037669573
+    },
+    "15": {
+      "symbol": "Biso_Ni1_ph1",
+      "value": 0.79825544,
+      "uncertainty": 0.15030092
+    },
+    "16": {
+      "symbol": "Occ_Ni1_ph1",
+      "value": 0.080830395,
+      "uncertainty": 1.8227636e-05
+    },
+    "17": {
+      "symbol": "Biso_Li2_ph1",
+      "value": 0.21087939,
+      "uncertainty": 0.022509115
+    },
+    "18": {
+      "symbol": "Scale_ph1_pat1",
+      "value": 15.659242,
+      "uncertainty": 0.12348339
+    },
+    "19": {
+      "symbol": "U-Cagl_ph1_pat1",
+      "value": 0.17688015,
+      "uncertainty": 0.0038464414
+    },
+    "20": {
+      "symbol": "V-Cagl_ph1_pat1",
+      "value": -0.53697306,
+      "uncertainty": 0.010542861
+    },
+    "21": {
+      "symbol": "W-Cagl_ph1_pat1",
+      "value": 0.59895253,
+      "uncertainty": 0.0083066383
+    },
+    "22": {
+      "symbol": "Y-cos_ph1_pat1",
+      "value": 0.085079446,
+      "uncertainty": 0.0032797849
+    },
+    "23": {
+      "symbol": "Cell_A_ph1_pat1",
+      "value": 2.872489,
+      "uncertainty": 4.5421115e-05
+    },
+    "24": {
+      "symbol": "Cell_C_ph1_pat1",
+      "value": 14.170136,
+      "uncertainty": 0.00026995045
+    }
+  },
+  "parameter_codes": {
+    "echidna.background.1.intensity": 1,
+    "echidna.background.2.intensity": 2,
+    "echidna.background.3.intensity": 3,
+    "echidna.background.4.intensity": 4,
+    "echidna.background.5.intensity": 5,
+    "echidna.background.6.intensity": 6,
+    "echidna.background.7.intensity": 7,
+    "echidna.background.8.intensity": 8,
+    "echidna.background.9.intensity": 9,
+    "echidna.instrument.calib_twotheta_offset": 10,
+    "echidna.instrument.calib_sample_displacement": 11,
+    "echidna.instrument.calib_sample_transparency": 12,
+    "lmo.atom_site.O.fract_z": 13,
+    "lmo.atom_site.O.adp_iso": 14,
+    "lmo.atom_site.Li1.adp_iso": 15,
+    "lmo.atom_site.Li1.occupancy": 16,
+    "lmo.atom_site.Ni2.adp_iso": 17,
+    "echidna.linked_structure.lmo.scale": 18,
+    "echidna.peak.broad_gauss_u": 19,
+    "echidna.peak.broad_gauss_v": 20,
+    "echidna.peak.broad_gauss_w": 21,
+    "echidna.peak.broad_lorentz_y": 22,
+    "lmo.cell.length_a": 23,
+    "lmo.cell.length_c": 24
+  }
+}
