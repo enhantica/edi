@@ -4203,7 +4203,8 @@ void ApplicationInfo::chooseExperimentData(const QJSValue& experiment) const {
         projectWrite(f, "group", "webDataExperiment", experiment);
         const auto group = panelUsageContextRead(f, "group");
         const auto filter = assistantContextField(f, "group", "dataFilter");
-        const auto request = projectInvoke(f, "WebFiles", "openFiles", {filter, QJSValue(false)});
+        // Several files at once, as from the desktop chooser (the owner, 2026-11-04).
+        const auto request = projectInvoke(f, "WebFiles", "openFiles", {filter, QJSValue(true)});
         assistantMemberWrite(f, group, "webRequest", request);
     } else {
         if (panelUsageTruth(assistantContextField(f, "dataDialog", "visible"))) return;
@@ -4230,6 +4231,11 @@ void ApplicationInfo::formFilesOpened(const QJSValue& request, const QJSValue& f
     const auto current = assistantContextField(f, "group", "project");
     if (!projectFieldIs(f, "group", "webRequestProject", current)) return;
     const auto project = assistantContextField(f, "group", "project");
+    // More than one measured file asks how to load them, as from the desktop chooser.
+    if (data && panelUsageRead(f, files, "length").toInt() > 1) {
+        projectInvoke(f, "group", "askDatasets", {experiment, files});
+        return;
+    }
     if (!experiments || data) {
         const auto first = panelUsageIndex(f, files, 0);
         panelUsageMemberCall(f, project, experiments ? "loadDataInto" : "loadStructure", experiments ? QJSValueList{experiment, first} : QJSValueList{first});
