@@ -48,9 +48,9 @@ CollectionBoundarySession {
         AppState.open(AppState.Page.Project);
         settle();
         Ui.click(this, Probe, app, "project.create");
-        const dialog = SettingsProof.creationDialog(app);
-        verify(dialog !== null, "Project creation uses the production form");
-        tryCompare(dialog, "opened", true, 3000, "The production create form finishes opening before its inputs are set");
+        const dialog = Probe.objectsWithProperty(app, "projectName").find(item => item.visible && item.objectName === "createProject.dialog");
+        verify(dialog !== undefined, "Project creation uses the visible production form");
+        tryVerify(() => { settle(); return dialog.opened; }, 3000, "The production create form finishes opening before its inputs are set");
         const data = creationInput();
         dialog.projectName = data.name;
         dialog.projectTitle = data.title;
@@ -61,7 +61,9 @@ CollectionBoundarySession {
         retainedFormValues = formValues(dialog);
         compare(retainedFormValues.name, data.name, "The actual form holds the requested name");
         compare(retainedFormValues.description, data.description, "The actual form holds the requested description");
-        click(requireButton("Create project"));
+        const accept = Probe.objectsWithProperty(app, "objectName").find(item => item.objectName === "createProject.accept" && Ui.exposed(item));
+        verify(accept !== undefined, "The visible create form exposes its real acceptance button");
+        click(accept);
         return dialog;
     }
     function expectQuestion() {
@@ -110,8 +112,8 @@ CollectionBoundarySession {
         click(requireButton("Replace"));
         tryVerify(() => Session.lastError !== "", 3000, "A failing ordinary replacement reports its factual failure");
         const reason = Session.lastError;
-        verify(/permission|denied|read.only|writ|not allowed|cannot create|failed to create|could not create|access/i.test(reason),
-               "The replacement failure names the actual unwritable-destination reason");
+        verify(/permission|denied|read.only|writ|not allowed|cannot create|failed to create|could not create|could not be moved aside|access/i.test(reason),
+               "The replacement failure names the actual unwritable-destination reason: " + reason);
         const texts = () => Render.descendants(Ui.windowRoot(app)).filter(item => typeof item.text === "string" && Ui.exposed(item)).map(item => item.text.replace(/<[^>]*>/g, "")).join("\n");
         tryVerify(() => texts().includes(reason), 3000, "The user-visible failure contains the backend's factual reason");
     }

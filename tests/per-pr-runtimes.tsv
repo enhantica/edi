@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-04T08:57:58Z
+# measured_utc = 2026-11-07T09:03:51Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 166635 banked, 0 stale row(s) dropped)
-# Collected tests: 212051; with a reported duration: 70853
-# Module-scoped fixture costs recorded: 124
+# Recorded from: measured test run (4 node(s) measured once, 166667 banked, 0 stale row(s) dropped)
+# Collected tests: 212114; with a reported duration: 70889
+# Module-scoped fixture costs recorded: 130
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 212051
+# inventory_python = 212114
 # inventory_cpp = 396
-# inventory_measured = 166635
-# inventory_unmeasured = 45812
+# inventory_measured = 166671
+# inventory_unmeasured = 45839
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 68626
+# inventory_pr_python = 68689
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -202469,6 +202469,26 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_copy_size_default_at_each_boundary[52428799]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_copy_size_default_at_each_boundary[52428800]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_copy_size_default_at_each_boundary[52428801]
+0.250	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[19]
+0.300	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[20]
+0.240	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[21]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[4]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[5]
+0.220	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[6]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_include_data_on_save_follows_copy_defaults[2-52428800]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_include_data_on_save_follows_copy_defaults[2-52428801]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_include_data_on_save_follows_copy_defaults[20-None]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_include_data_on_save_follows_copy_defaults[21-None]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_large_save_warning_boundary_and_choices[104857599]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_large_save_warning_boundary_and_choices[104857600]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_large_save_warning_boundary_and_choices[104857601]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_missing_external_scan_opens_and_locate_restores_it
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_scan_links_external_files_and_stays_single
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_scan_template_choice_is_undoable
+0.990	tests/system/py/test_dataset_load_contract.py::test_separate_equals_individual_copies_and_switches_to_joint
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[absorption]
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[background]
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[cell]
@@ -204508,6 +204528,17 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_usage_theme_ori
 0.250	tests/system/py/test_experiment_cif_refusal_cli.py::test_cli_discovers_experiment_cif_members[upper-suffix-underscore]
 0.240	tests/system/py/test_experiment_cif_refusal_cli.py::test_cli_discovers_experiment_cif_members[upper-suffix-upper]
 0.240	tests/system/py/test_experiment_cif_refusal_cli.py::test_cli_discovers_experiment_cif_members[upper-suffix-wrapped-row]
+1.610	tests/system/py/test_experiment_create_and_replace.py::test_both_replace_actions_keep_the_selected_experiment[file]
+UNMEASURED:failed-in-this-run	tests/system/py/test_experiment_create_and_replace.py::test_both_replace_actions_keep_the_selected_experiment[web]
+0.470	tests/system/py/test_experiment_create_and_replace.py::test_create_uses_default_type_and_its_editable_selectors
+0.490	tests/system/py/test_experiment_create_and_replace.py::test_measured_menu_requires_creation_and_names_load_or_replace[empty]
+0.290	tests/system/py/test_experiment_create_and_replace.py::test_measured_menu_requires_creation_and_names_load_or_replace[loaded]
+0.124	tests/system/py/test_experiment_create_and_replace.py::test_measured_menu_requires_creation_and_names_load_or_replace[none]
+1.190	tests/system/py/test_experiment_create_and_replace.py::test_replace_preserves_parameters_matches_fresh_and_undoes
+0.110	tests/system/py/test_experiment_create_and_replace.py::test_retired_new_experiment_type_group_is_absent[none]
+0.190	tests/system/py/test_experiment_create_and_replace.py::test_retired_new_experiment_type_group_is_absent[selected]
+1.990	tests/system/py/test_experiment_create_and_replace.py::test_wrong_type_data_is_refused_without_changing_the_target[powder-target]
+2.010	tests/system/py/test_experiment_create_and_replace.py::test_wrong_type_data_is_refused_without_changing_the_target[single-crystal-target]
 0.000	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[pattern]
 0.000	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[stacked]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_adaptive_is_retained]
@@ -205541,6 +205572,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_
 0.360	tests/system/py/test_online_popup_contract.py::test_cod_name_is_applied_and_exact_formula_query_is_retained[title]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_cod_publication_text_opens_its_injected_doi[multi]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_cod_publication_text_opens_its_injected_doi[single]
+0.350	tests/system/py/test_online_popup_contract.py::test_cod_publication_text_opens_its_injected_doi[unknown]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_complete_results_table_fits_the_popup[minimum-cod]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_complete_results_table_fits_the_popup[minimum-collection]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_complete_results_table_fits_the_popup[wide-cod]
@@ -205568,10 +205600,27 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::tes
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_formula_search_ignores_amounts_and_prioritizes_exact[data]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_formula_search_ignores_amounts_and_prioritizes_exact[experiment]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_formula_search_ignores_amounts_and_prioritizes_exact[structure]
-UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_selection_load_and_double_click_use_the_ordinary_loader[button]
-UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_selection_load_and_double_click_use_the_ordinary_loader[double-click]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_row_click_uses_the_ordinary_loader_and_one_undo[row-click]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_structure_columns_are_shared_without_kind[cod]
 UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_structure_columns_are_shared_without_kind[collection]
+0.770	tests/system/py/test_online_search_continuation.py::test_case_free_formula_search_keeps_exact_match_first[LaCoO3]
+0.850	tests/system/py/test_online_search_continuation.py::test_case_free_formula_search_keeps_exact_match_first[la co o3]
+0.750	tests/system/py/test_online_search_continuation.py::test_case_free_formula_search_keeps_exact_match_first[laCoO3]
+0.461	tests/system/py/test_online_search_continuation.py::test_cell_rounding_at_nontrivial_values
+1.650	tests/system/py/test_online_search_continuation.py::test_cod_scroll_chunks_preserve_inventory_and_retry[retry]
+1.270	tests/system/py/test_online_search_continuation.py::test_cod_scroll_chunks_preserve_inventory_and_retry[success]
+0.470	tests/system/py/test_online_search_continuation.py::test_empty_collection_query_lists_every_entry_of_kind[data]
+0.560	tests/system/py/test_online_search_continuation.py::test_empty_collection_query_lists_every_entry_of_kind[experiment]
+0.620	tests/system/py/test_online_search_continuation.py::test_empty_collection_query_lists_every_entry_of_kind[structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_search_continuation.py::test_field_placeholders_and_metadata_selectors[data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_search_continuation.py::test_field_placeholders_and_metadata_selectors[experiment]
+0.460	tests/system/py/test_online_search_continuation.py::test_field_placeholders_and_metadata_selectors[structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_search_continuation.py::test_full_experiment_brings_or_reuses_its_structure_in_one_undo[missing]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_search_continuation.py::test_full_experiment_brings_or_reuses_its_structure_in_one_undo[present]
+0.310	tests/system/py/test_online_search_continuation.py::test_journal_table_generator_uses_the_independent_local_csv
+0.560	tests/system/py/test_online_search_continuation.py::test_reopen_keeps_search_and_clear_discards_it[data]
+0.540	tests/system/py/test_online_search_continuation.py::test_reopen_keeps_search_and_clear_discards_it[experiment]
+0.530	tests/system/py/test_online_search_continuation.py::test_reopen_keeps_search_and_clear_discards_it[structure]
 3.690	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-chebyshev-chebyshev]
 1.180	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-line-segment-points]
 2.200	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-polynomial-polynomial]
@@ -206336,6 +206385,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-folder-zip]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-zip-folder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-zip-zip]
+0.790	tests/system/py/test_project_creation_overwrite.py::test_cancel_keeps_old_bytes_and_every_form_value
+2.460	tests/system/py/test_project_creation_overwrite.py::test_failed_replace_keeps_old_bytes_and_explains_the_reason
+1.630	tests/system/py/test_project_creation_overwrite.py::test_fresh_creation_is_the_independent_overwrite_control
+3.220	tests/system/py/test_project_creation_overwrite.py::test_replace_equals_creation_in_an_empty_folder
 4.200	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-open]
 3.390	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-recent]
 4.350	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-open]
@@ -208736,6 +208789,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pat
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 3.870	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scientific_tutorial_completion.py::test_actual_scientific_tutorial_reaches_its_end[fitting]
+0.348	tests/system/py/test_scientific_tutorial_completion.py::test_actual_scientific_tutorial_reaches_its_end[simulation]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scientific_tutorial_completion.py::test_completed_lesson_has_the_independent_scientific_state[fitting]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scientific_tutorial_completion.py::test_completed_lesson_has_the_independent_scientific_state[simulation]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scientific_tutorial_completion.py::test_completed_lesson_returns_to_the_original_user_project[fitting]
+0.270	tests/system/py/test_scientific_tutorial_completion.py::test_completed_lesson_returns_to_the_original_user_project[simulation]
 4.670	tests/system/py/test_sequential_scan_lifecycle.py::test_sequential_scan_ends_and_stays_stopped_in_the_normal_app[2]
 4.530	tests/system/py/test_sequential_scan_lifecycle.py::test_sequential_scan_ends_and_stays_stopped_in_the_normal_app[3]
 0.000	tests/system/py/test_sequential_scan_lifecycle.py::test_terminal_oracle_accepts_a_completed_and_quiet_scan
@@ -208998,6 +209057,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_simulation_parameter_filters.
 0.030	tests/system/py/test_single_crystal_edges.py::test_unsupported_free_slots_refuse_instead_of_zero_columns[none-mosaic_spread]
 0.730	tests/system/py/test_single_crystal_taurine_converged.py::test_actual_taurine_fit_matches_all_fullprof_parameters_and_uncertainties
 0.040	tests/system/py/test_single_crystal_taurine_converged.py::test_converged_artifacts_and_parameter_conventions_are_independent
+UNMEASURED:failed-in-this-run	tests/system/py/test_slider_release_contract.py::test_held_adjustment_defers_text_context_and_one_undo[cell]
+UNMEASURED:failed-in-this-run	tests/system/py/test_slider_release_contract.py::test_held_adjustment_defers_text_context_and_one_undo[profile]
+UNMEASURED:failed-in-this-run	tests/system/py/test_slider_release_contract.py::test_held_adjustment_defers_text_context_and_one_undo[wavelength]
+UNMEASURED:failed-in-this-run	tests/system/py/test_slider_release_contract.py::test_real_analysis_slider_has_one_release_and_one_undo
 0.140	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-gpu-needle]
 0.490	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-gpu-peak]
 0.140	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-software-needle]
@@ -212506,7 +212569,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 927.726	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 27.200	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
-# module-cost: 5.215	tests/integration/app/test_online_load.py
+# module-cost: 5.691	tests/integration/app/test_online_load.py
 # module-cost: 1.077	tests/integration/app/test_online_structure_loading.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
@@ -212554,6 +212617,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.201	tests/system/py/test_correlation_selection.py
 # module-cost: 24.143	tests/system/py/test_current_row_input.py
 # module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
+# module-cost: 0.928	tests/system/py/test_dataset_load_contract.py
 # module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
 # module-cost: 0.109	tests/system/py/test_e04_t12_public_release.py
 # module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
@@ -212561,6 +212625,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 226.993	tests/system/py/test_element_contrast.py
+# module-cost: 0.886	tests/system/py/test_experiment_create_and_replace.py
 # module-cost: 687.412	tests/system/py/test_fast_chart_fit_timing.py
 # module-cost: 263.960	tests/system/py/test_fast_chart_redraws.py
 # module-cost: 0.018	tests/system/py/test_feedback_payload.py
@@ -212573,12 +212638,14 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 28.190	tests/system/py/test_onboarding_extra_tables.py
 # module-cost: 1.098	tests/system/py/test_online_collection.py
-# module-cost: 0.994	tests/system/py/test_online_file_loading.py
-# module-cost: 1.025	tests/system/py/test_online_popup_contract.py
+# module-cost: 1.683	tests/system/py/test_online_file_loading.py
+# module-cost: 0.899	tests/system/py/test_online_popup_contract.py
+# module-cost: 1.689	tests/system/py/test_online_search_continuation.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 27.704	tests/system/py/test_pattern_range.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 20.357	tests/system/py/test_project_archive_app.py
+# module-cost: 5.190	tests/system/py/test_project_creation_overwrite.py
 # module-cost: 64.280	tests/system/py/test_project_page_readiness.py
 # module-cost: 100.158	tests/system/py/test_project_tooltip_style.py
 # module-cost: 1.470	tests/system/py/test_project_transactions.py
@@ -212601,9 +212668,11 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 9.268	tests/system/py/test_scan_owner_additions.py
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
 # module-cost: 241.876	tests/system/py/test_scan_update_modes.py
+# module-cost: 84.582	tests/system/py/test_scientific_tutorial_completion.py
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 71.426	tests/system/py/test_sidebar_defaults.py
 # module-cost: 13.305	tests/system/py/test_simulation_parameter_filters.py
+# module-cost: 5.308	tests/system/py/test_slider_release_contract.py
 # module-cost: 28.755	tests/system/py/test_stacked_line_quality.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 133.169	tests/system/py/test_status_fit_controls.py

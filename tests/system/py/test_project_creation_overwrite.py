@@ -42,17 +42,31 @@ def existing_project(host, parent):
     target = inputs(host, parent)
     shutil.copytree(ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt/project', target)
     metadata = target / 'project.edi'
-    metadata.write_text(
-        re.sub(
-            r'(?m)^_metadata.name\s+.*$', '_metadata.name ' + VALUES['name'], metadata.read_text()
-        )
+    text = re.sub(
+        r'(?m)^_metadata.name\s+.*$', '_metadata.name ' + VALUES['name'], metadata.read_text()
     )
+    text = re.sub(
+        r'(?m)^(_metadata\.(?:created|last_modified))\s+.*$',
+        r'\1 "01 Jan 2001 00:00:00"',
+        text,
+    )
+    metadata.write_text(text)
     return target
 
 
 def tree(folder, *, model_only=False):
+    def contents(path):
+        value = path.read_bytes()
+        if model_only and path.relative_to(folder) == Path('project.edi'):
+            value = re.sub(
+                rb'(?m)^(_metadata\.(?:created|last_modified))\s+.+$',
+                rb'\1 CLOCK',
+                value,
+            )
+        return value
+
     return {
-        str(path.relative_to(folder)): path.read_bytes()
+        str(path.relative_to(folder)): contents(path)
         for path in folder.rglob('*')
         if path.is_file()
         and (
@@ -85,6 +99,9 @@ def test_replace_equals_creation_in_an_empty_folder(creation_host, tmp_path):
     expected = tree(fresh, model_only=True)
     target = existing_project(creation_host, tmp_path / 'existing')
     creation_host.check('creation_replace')
+    assert b'01 Jan 2001 00:00:00' not in (target / 'project.edi').read_bytes(), (
+        'Replace discards the old project clock metadata as well as its old model'
+    )
     assert tree(target, model_only=True) == expected, (
         'Replace produces the same complete persisted project inputs as ordinary fresh creation'
     )

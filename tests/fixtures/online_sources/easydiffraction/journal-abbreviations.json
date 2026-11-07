@@ -1,0 +1,7 @@
+{
+  "schema": "edi-data-journals/1",
+  "abbreviations": {
+    "Physical Review B": "Phys. Rev. B",
+    "Journal of Solid State Chemistry": "J. Solid State Chem."
+  }
+}

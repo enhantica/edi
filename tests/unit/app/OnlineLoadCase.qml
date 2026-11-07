@@ -175,7 +175,7 @@ TestCase {
         verify(button.enabled, "Selecting an entry enables the bottom Load action");
         return button;
     }
-    function loadResult(row) { click(selectedLoad(row)); }
+    function loadResult(row) { click(onlineControl("id." + row)); }
 
     function menuAction(data) {
         click(openPage(data));
@@ -274,11 +274,11 @@ TestCase {
     function check_from_web_opens_source_selector_data() {
         return [
             {tag: "structure", page: AppState.Page.Structure, group: "structures", action: "web",
-             sources: ["COD", "EasyDiffraction"], fields: ["ID", "Name", "Formula", "Elements", "Space group"]},
+             sources: ["Crystallography Open Database (COD)", "EasyDiffraction Database"], fields: ["ID", "Name", "Formula", "Elements", "Space group"]},
             {tag: "experiment", page: AppState.Page.Experiment, group: "experiments", action: "experimentWeb",
-             sources: ["EasyDiffraction"], fields: ["ID", "Name", "Formula", "Elements", "Radiation", "Technique", "Instrument"]},
+             sources: ["EasyDiffraction Database"], fields: ["ID", "Name", "Formula", "Elements", "Radiation", "Technique", "Instrument"]},
             {tag: "measured", page: AppState.Page.Experiment, group: "experiments", action: "dataWeb",
-             sources: ["EasyDiffraction"], fields: ["ID", "Name", "Formula", "Elements", "Radiation", "Technique", "Instrument"]}
+             sources: ["EasyDiffraction Database"], fields: ["ID", "Name", "Formula", "Elements", "Radiation", "Technique", "Instrument"]}
         ];
     }
 
@@ -313,8 +313,8 @@ TestCase {
         tryVerify(() => table !== null && table.visible, 3000, "The Projects tab shows its online sources table");
         Ui.scrollIntoView(table);
         for (const [id, name, kinds] of [
-            ["cod", "COD", "structures"],
-            ["easydiffraction", "EasyDiffraction", "structures, experiments, data, projects"]
+            ["cod", "Crystallography Open Database (COD)", "structures"],
+            ["easydiffraction", "EasyDiffraction Database", "structures, experiments, data, projects"]
         ]) {
             const row = "preferences.online.source.";
             const cell = () => Render.descendants(table).find(item => item.objectName === row + "name." + id);
@@ -356,6 +356,8 @@ TestCase {
         const field = onlineControl("field.id");
         field.forceActiveFocus();
         tryCompare(field, "activeFocus", true, 2000, "The open search field accepts keyboard input");
+        keyClick(Qt.Key_A, Qt.ControlModifier);
+        keyClick(Qt.Key_Backspace);
         for (const character of id)
             keyClick(character);
         compare(field.text, id, "The search ID is entered through the dialog field");
@@ -409,7 +411,7 @@ TestCase {
         const selectedIndex = Session.project.currentExperimentIndex;
         const selector = openOnline(data);
         if (data.kind === "Structure")
-            selectSource(selector, "EasyDiffraction", Qt.Key_Down);
+            selectSource(selector, "EasyDiffraction Database", Qt.Key_Down);
         searchFor(data.id);
         result(data.id, data.kind);
         loadResult(0);
@@ -532,15 +534,13 @@ TestCase {
         prepare(data);
         const selector = openOnline(data);
         if (data.kind === "Structure")
-            selectSource(selector, "EasyDiffraction", Qt.Key_Down);
+            selectSource(selector, "EasyDiffraction Database", Qt.Key_Down);
         searchFor(data.id);
         result(data.id, data.kind);
         const project = Session.project;
-        const load = selectedLoad(0);
-        verify(load.enabled && Ui.exposed(load), "The real result action can start the download");
-        // Invoke the shipped click signal in this frame. The fixture file reply
-        // is queued for the next event-loop turn, after the owner change below.
-        load.clicked();
+        onlineControl("results").selectWithModifiers(0, Qt.NoModifier);
+        // Keep the ownership change in this frame, before the transport callback.
+        onlineDialog.loadSelected();
         verify(onlineDialog.search.busy, "The selected file has an outstanding delivery");
         if (data.remove) {
             const target = project.currentExperiment;
@@ -614,6 +614,7 @@ TestCase {
         OnlineHttpFixture.clear();
         const body = SettingsProof.fileObservation(fixture({file: ""}), "cod_response.json");
         verify(body.exists, "The independent COD-shaped response is present");
+        OnlineHttpFixture.enqueue(200, String(JSON.parse(body.text).length));
         OnlineHttpFixture.enqueue(200, body.text);
         openOnline({page: AppState.Page.Structure, group: "structures", action: "web"});
         search.setField("space_group", "P 21/c");
@@ -621,7 +622,7 @@ TestCase {
         search.search();
         tryCompare(search, "busy", false, 3000, "The injected COD answer settles in the production search");
         const requests = OnlineHttpFixture.requests();
-        compare(requests.length, 1, "The entered element list reaches the COD request once");
+        compare(requests.length, 2, "The entered element list reaches count and details requests once each");
         if (data.checkUrl) {
             const query = OnlineHttpFixture.query(requests[0]);
             compare(query.spacegroup, "P 21/c", "COD requests its documented spacegroup parameter");
@@ -669,7 +670,7 @@ TestCase {
             keyClick(Qt.Key_A, Qt.ControlModifier);
             keyClick(Qt.Key_Backspace);
             clickAlternative(onlineControl("alternative"));
-            tryCompare(selector, "currentText", "EasyDiffraction", 3000, "The alternate source remains usable");
+            tryCompare(selector, "currentText", "EasyDiffraction Database", 3000, "The alternate source remains usable");
             result("lbco", "Structure");
         }
     }
@@ -727,7 +728,7 @@ TestCase {
                        group: data.kind === "structure" ? "structures" : "experiments",
                        action: data.kind === "structure" ? "web" : data.kind === "experiment" ? "experimentWeb" : "dataWeb"};
         const selector = openOnline(shape);
-        if (data.kind === "structure") selectSource(selector, "EasyDiffraction", Qt.Key_Down);
+        if (data.kind === "structure") selectSource(selector, "EasyDiffraction Database", Qt.Key_Down);
         searchFor(data.tag);
         result(data.tag, data.kind === "structure" ? "Structure" : data.kind === "experiment" ? "Experiment" : "Data");
     }
@@ -774,7 +775,7 @@ TestCase {
             OnlineHttpFixture.enqueue(data.status, "");
             loadResult(0);
         } else {
-            OnlineHttpFixture.enqueue(data.status, data.status === 200 ? "[]" : "");
+            OnlineHttpFixture.enqueue(data.status, data.status === 200 ? "0" : "");
             searchFor(data.status === 200 ? "9999999" : "");
         }
         tryCompare(search, "busy", false, 3000, "The controlled reply reaches the rendered result state");
@@ -791,7 +792,7 @@ TestCase {
             }
             const alternative = onlineControl("alternative");
             clickAlternative(alternative);
-            tryCompare(selector, "currentText", "EasyDiffraction", 3000, "The alternative selects EasyDiffraction");
+            tryCompare(selector, "currentText", "EasyDiffraction Database", 3000, "The alternative selects EasyDiffraction");
             result("lbco", "Structure");
         } else {
             verify(!search.unreachable && search.alternativeId === "",
@@ -822,14 +823,14 @@ TestCase {
 
     function check_cod_fallback() {
         const selector = openOnline({page: AppState.Page.Structure, group: "structures", action: "web"});
-        selectSource(selector, "COD", Qt.Key_Up);
+        selectSource(selector, "Crystallography Open Database (COD)", Qt.Key_Up);
         click(onlineControl("search"));
         verify(/COD.*cannot be reached/i.test(onlineControl("message").text),
                "The unreachable fixture reports the COD failure in the popup: " + onlineControl("message").text);
         const alternative = onlineControl("alternative");
         compare(alternative.text, "Search EasyDiffraction instead", "The popup offers the other collection");
         clickAlternative(alternative);
-        tryCompare(selector, "currentText", "EasyDiffraction", 2000, "The search uses the selected fallback source");
+        tryCompare(selector, "currentText", "EasyDiffraction Database", 2000, "The search uses the selected fallback source");
         result("lbco", "Structure");
         onlineControl("field.name");
         const id = onlineControl("field.id");

@@ -220,7 +220,7 @@ PopupContractSession {
             const before = panel.step;
             click(findChild(panel, "tutorial.next"));
             tryVerify(() => { OnboardingProbe.advanceClock(16); return panel.step > before || panel.atEnd; }, 15000,
-                      "A real Next action advances the scientific tutorial without an unmet-state stall");
+                      "A real Next action advances the scientific tutorial without an unmet-state stall: " + data.tag + " step " + before);
             if (Session.project) {
                 tryCompare(Session.project.fit, "running", false, 15000, "Tutorial fits finish through the ordinary worker");
                 tryCompare(Session.project, "calculating", false, 15000, "Tutorial model changes finish calculating before the next action");

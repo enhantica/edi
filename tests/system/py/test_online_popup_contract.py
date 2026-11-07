@@ -43,7 +43,7 @@ def test_cod_name_is_applied_and_exact_formula_query_is_retained(popup_host, nam
     popup_host.check('cod_name_and_formula', name_field)
 
 
-@pytest.mark.parametrize('authors', ['multi', 'single'])
+@pytest.mark.parametrize('authors', ['multi', 'single', 'unknown'])
 def test_cod_publication_text_opens_its_injected_doi(popup_host, authors):
     popup_host.check('reference', authors)
 
@@ -58,8 +58,8 @@ def test_complete_results_table_fits_the_popup(popup_host, source, width):
     popup_host.check('fits', source + '-' + width)
 
 
-@pytest.mark.parametrize('action', ['button', 'double-click'])
-def test_selection_load_and_double_click_use_the_ordinary_loader(popup_host, action):
+@pytest.mark.parametrize('action', ['row-click'])
+def test_row_click_uses_the_ordinary_loader_and_one_undo(popup_host, action):
     popup_host.check('load', action)
 
 

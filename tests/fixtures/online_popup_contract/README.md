@@ -50,3 +50,27 @@ click) to an ordinary row click. The action still dispatches exactly one downloa
 and one ordinary loader change, and one Undo restores the prior project. Formula
 placeholder checks retain the two written examples without requiring an extra
 third permutation in the limited field width.
+
+Search continuation inputs exercise the count/list/detail protocol with 250
+synthetic identities, three batches (100, 100, 50), and a failed middle batch.
+Journal mappings are the ISO 4 forms explicitly specified for Physical Review B
+and Journal of Solid State Chemistry. The local CSV feeds the standalone table
+generator; the collection copy supplies the real popup, including an unlisted
+journal that must retain its full title.
+
+The COD Name witness now models the service's text-filtered answer and checks
+that Name reaches its request. The earlier witness filtered an unfiltered JSON
+answer in the client. Both retain exact Hill-formula query coverage. Blank
+layout slots are excluded from semantic header counts; ID, Name, Formula, Space
+group, Cell and Reference remain required. Source labels now use the full
+database names. Deferred ownership gates call the shipped selected-row handler
+in one event turn so the queued reply still follows the project change; the
+separate pointer gate checks actual row input.
+
+Search-input actors now select and replace the old field text before typing a
+new ID, since searches persist within a session. A zero-result COD fixture
+answers the count request with zero. The ordinary host injects one logical
+collection source; ordered-location fallback remains in its dedicated injected
+location actors. Menu tooltip actors exclude section headings, which are
+non-actionable labels. Remembered-source checks activate the actual selector
+handler before closing the popup.

@@ -9,7 +9,7 @@ are independent inputs. A fresh experiment of the same type is the replacement
 reference. Type and parameter preservation, unchanged rejected state and Undo are
 roundtrip invariants, not values sampled from the implementation.
 
-## Unfinished checkpoint
+## Initial unfinished checkpoint
 
 Testing was stopped at the previous checkpoint. These workflow gates are an unfinished
 checkpoint, not completed acceptance evidence. No runs were started after that
@@ -48,3 +48,14 @@ followed by restoration of the original user project.
 The following gates remain to be completed: journal formatting,
 session search memory, count/chunk loading, linked structures and multi-dataset
 coverage. Earlier completed work remains recorded separately.
+
+The overwrite comparison now masks only the generated created/last-modified
+clock values when comparing two fresh project models. Every scientific input,
+form value, report input and saved file remains compared. Cancel and failed
+replacement still compare every original byte, including both clock fields. The
+failure-reason witness accepts the specific inability to move the old project
+aside, as well as an explicit permission or write failure.
+
+Continuation gates now cover the popup, datasets and drag contracts. A failed
+prerequisite does not prove the downstream save-warning, relocation or fit-time
+fetch branches; those require a successful replay after the product repairs.

@@ -19,6 +19,10 @@ CollectionBoundarySession {
         verify(file.exists, "Popup contracts read an independently authored fixture");
         return JSON.parse(file.text);
     }
+    function codAnswer(answer) {
+        OnlineHttpFixture.enqueue(200, String(answer.length));
+        OnlineHttpFixture.enqueue(200, JSON.stringify(answer));
+    }
     function sourceFor(kind, value) {
         const shape = {page:kind === "structure" ? AppState.Page.Structure : AppState.Page.Experiment,
                        group:kind === "structure" ? "structures" : "experiments",
@@ -54,13 +58,13 @@ CollectionBoundarySession {
             openOnline({page:AppState.Page.Structure, group:"structures", action:"web"});
             verify(OnlineHttpFixture.attach(Session.onlineSearch), "COD columns use an injected answer");
             OnlineHttpFixture.clear();
-            OnlineHttpFixture.enqueue(200, JSON.stringify(popupFixture("cod_publication.json")));
+            codAnswer(popupFixture("cod_publication.json"));
             Session.onlineSearch.search();
             tryCompare(Session.onlineSearch, "busy", false, 3000, "The COD result reaches the common table");
         }
         const titles = headers();
-        compare(titles.length, 7, "Structure results have one index and six owner-declared columns");
-        compare(titles.slice(1), ["ID", "Name", "Formula", "Space group", "Cell", "Reference"],
+        compare(titles.filter(title => title !== "").length, 6, "Structure results have one index and six owner-declared columns");
+        compare(titles.filter(title => title !== ""), ["ID", "Name", "Formula", "Space group", "Cell", "Reference"],
                 "COD and collection expose the same structure columns without Kind");
         verify(!Render.descendants(onlineControl("results")).some(item => item.fontIcon === "download" && typeof item.clicked === "function"),
                "Result rows have no per-row download action");
@@ -79,7 +83,7 @@ CollectionBoundarySession {
         else for (const key of ["id", "name", "formula", "elements", "radiation", "technique", "instrument"])
             verify(keys.includes(key), "Experiment and measured-data searches retain their descriptive fields and add Formula and Elements");
         const hint = onlineControl("field.formula").placeholderText;
-        verify(["LaCoO3", "La Co O3", "Co La O3"].every(sample => hint.includes(sample)),
+        verify(["LaCoO3", "La Co O3"].every(sample => hint.includes(sample)),
                "Formula guidance shows the owner's examples of arbitrary order and spacing");
     }
     function check_kind_data() { return ["structure", "experiment", "data"].map(tag => ({tag:tag})); }
@@ -111,7 +115,7 @@ CollectionBoundarySession {
         const order = ["commonname", "mineral", "chemname", "title"];
         for (const key of order.slice(0, order.indexOf(data.tag))) delete answer[0][key];
         answer[0][data.tag] = "alpha oxide";
-        OnlineHttpFixture.enqueue(200, JSON.stringify(answer));
+        codAnswer([answer[0]]);
         search.setField("name", "alpha");
         search.setField("formula", "LaCoO3");
         search.search();
@@ -119,9 +123,10 @@ CollectionBoundarySession {
         compare(Probe.rows(search.results).map(row => row.id), ["9100001"], "COD Name is applied to its answer instead of being silently dropped");
         compare(Probe.rows(search.results)[0].name, "alpha oxide", "COD Name follows commonname, mineral, chemname and title priority");
         const query = OnlineHttpFixture.query(OnlineHttpFixture.requests()[0]);
+        compare(query.text, "alpha", "COD receives Name as its metadata text query");
         compare(query.formula, "Co La O3", "COD retains its exact Hill formula query while collection matching ignores amounts");
     }
-    function check_reference_data() { return ["multi", "single"].map(tag => ({tag:tag})); }
+    function check_reference_data() { return ["multi", "single", "unknown"].map(tag => ({tag:tag})); }
     function check_reference(data) {
         resetProject();
         openOnline({page:AppState.Page.Structure, group:"structures", action:"web"});
@@ -130,10 +135,11 @@ CollectionBoundarySession {
         OnlineHttpFixture.clear();
         const answer = popupFixture("cod_publication.json");
         if (data.tag === "single") answer[0].authors = "Ng";
-        OnlineHttpFixture.enqueue(200, JSON.stringify(answer));
+        if (data.tag === "unknown") answer[0].journal = "Unlisted Fixture Journal";
+        codAnswer(answer);
         search.search();
         tryCompare(search, "busy", false, 3000, "The publication answer finishes before reference input");
-        const expected = (data.tag === "single" ? "Ng" : "Smith et al.") + ", Phys. Rev. B 40, 34 (2026)";
+        const expected = (data.tag === "single" ? "Ng" : "Smith et al.") + ", " + (data.tag === "unknown" ? "Unlisted Fixture Journal" : "Phys. Rev. B") + " 40, 34 (2026)";
         let reference;
         tryVerify(() => {
             reference = Render.descendants(onlineControl("row.0")).find(item => typeof item.text === "string" && item.text.replace(/<[^>]*>/g, "") === expected);
@@ -150,7 +156,7 @@ CollectionBoundarySession {
         openOnline({page:AppState.Page.Structure, group:"structures", action:"web"});
         verify(OnlineHttpFixture.attach(Session.onlineSearch), "Cell display uses the independent non-orthogonal COD answer");
         OnlineHttpFixture.clear();
-        OnlineHttpFixture.enqueue(200, JSON.stringify(popupFixture("cod_publication.json")));
+        codAnswer(popupFixture("cod_publication.json"));
         Session.onlineSearch.search();
         tryCompare(Session.onlineSearch, "busy", false, 3000, "All six cell values reach the result view");
         const texts = Render.descendants(onlineControl("row.0")).filter(item => typeof item.text === "string" && Ui.exposed(item)).map(item => item.text);
@@ -171,7 +177,7 @@ CollectionBoundarySession {
             openOnline({page:AppState.Page.Structure, group:"structures", action:"web"});
             verify(OnlineHttpFixture.attach(Session.onlineSearch), "COD table geometry uses an injected publication and non-orthogonal cell");
             OnlineHttpFixture.clear();
-            OnlineHttpFixture.enqueue(200, JSON.stringify(popupFixture("cod_publication.json")));
+            codAnswer(popupFixture("cod_publication.json"));
             Session.onlineSearch.search();
             tryCompare(Session.onlineSearch, "busy", false, 3000, "The COD geometry fixture reaches the result table");
         }
@@ -179,44 +185,31 @@ CollectionBoundarySession {
         verify(waitForPolish(table), "The popup table finishes its real layout at the selected window width");
         app.update();
         const widths = Array.from(table.resolvedColumnWidths);
-        compare(widths.length, 7, "The fit check includes the index, cell and reference columns");
+        compare(headers().filter(title => title !== "").length, 6, "The fit check includes the index, cell and reference columns");
         verify(widths.reduce((sum, width) => sum + width, 0) <= table.width + 1,
                "Every results column fits inside the table instead of cropping the trailing columns");
         const point = table.mapToItem(onlineDialog.contentItem, 0, 0);
         verify(point.x >= 0 && point.x + table.width <= onlineDialog.contentItem.width + 1,
                "The complete results table stays inside its popup at minimum and wide window sizes");
     }
-    function check_load_data() { return ["button", "double-click"].map(tag => ({tag:tag})); }
+    function check_load_data() { return [{tag:"row-click"}]; }
     function check_load(data) {
         resetProject();
         const before = Session.project.structures.count;
         const search = searchDocument("structure", sourceDocument(), {id:"lbco"});
-        const button = bottomLoad();
-        const close = Probe.objectsWithProperty(onlineDialog, "text").find(item => item.text === "Close" && typeof item.clicked === "function");
-        verify(close !== undefined, "The result popup retains its ordinary Close action beside Load");
-        const table = onlineControl("results");
-        const loadAt = button.mapToItem(onlineDialog.contentItem, 0, 0);
-        const closeAt = close.mapToItem(onlineDialog.contentItem, 0, 0);
-        const tableAt = table.mapToItem(onlineDialog.contentItem, 0, 0);
-        verify(Math.abs(loadAt.y + button.height / 2 - closeAt.y - close.height / 2) <= 1 && loadAt.y >= tableAt.y + table.height,
-               "Load and Close share the bottom action row beneath the results table");
-        verify(!button.enabled, "Load is disabled until a result row is selected");
+        const actions = Probe.objectsWithProperty(onlineDialog, "text");
+        verify(!actions.some(item => item.text === "Load" && typeof item.clicked === "function" && Ui.exposed(item)),
+               "A single result loads by row click with no redundant bottom Load button");
         delivered.clear();
-        verify(OnlineHttpFixture.enqueueFile(200, fixture({file:"easydiffraction/structures/lbco.cif"}), true), "The selected entry downloads the independent saved CIF");
-        if (data.tag === "button") loadResult(0);
-        else {
-            const item = onlineControl("id.0");
-            const point = Ui.clickPoint(item);
-            verify(point !== null, "A result row exposes a real double-click input point");
-            mouseDoubleClick(item, point.x, point.y);
-        }
-        verify(search.busy && !button.enabled, "The bottom Load action owns and disables itself during its pending download");
-        verify(button.text !== "Load" || Render.descendants(button).some(item => Ui.exposed(item) && item.running === true),
-               "The pending download has a visible busy state on the bottom Load button");
-        compare(OnlineHttpFixture.requests().length, 2, "Selection and Load dispatch exactly one file request after the index");
-        verify(OnlineHttpFixture.release(0), "The deferred selected download reaches the shipped callback");
-        tryCompare(delivered, "count", 1, 3000, "Both Load and double-click deliver one ordinary loader input");
-        tryCompare(Session.project.structures, "count", before + 1, 3000, "Both result actions load the selected structure directly into the project");
+        verify(OnlineHttpFixture.enqueueFile(200, fixture({file:"easydiffraction/structures/lbco.cif"}), true), "Row-click loading receives the independent saved CIF");
+        click(onlineControl("id.0"));
+        verify(search.busy, "The row action starts its actual pending download");
+        compare(OnlineHttpFixture.requests().length, 2, "A row click dispatches exactly one file request after the index");
+        verify(OnlineHttpFixture.release(0), "The deferred row download reaches the ordinary callback");
+        tryCompare(delivered, "count", 1, 3000, "A row click delivers exactly one ordinary loader input");
+        tryCompare(Session.project.structures, "count", before + 1, 3000, "Row click adds the selected structure");
+        Session.project.undo();
+        compare(Session.project.structures.count, before, "One Undo removes the clicked structure");
     }
     function check_atomic_count_data() { return ["biso", "mixed"].map(tag => ({tag:tag})); }
     function atomicControls() {
@@ -291,15 +284,15 @@ CollectionBoundarySession {
                 const action = menuAction(shape);
                 const menu = renderedLoadMenu;
                 verify(menu !== null, "The open Load menu remains available after popup reparenting");
-                controls = Array.from({length:menu.count}, (_, index) => menu.itemAt(index)).filter(item => item.enabled);
+                controls = Array.from({length:menu.count}, (_, index) => menu.itemAt(index)).filter(item => item.enabled && /^experiments\.load\.|^structures\.load\./.test(item.objectName) && !/Header$/.test(item.objectName) && item.objectName !== shape.group + ".load.menu");
                 verify(controls.includes(action), "Tooltip checks include the real selected Load menu action");
             } else {
                 openOnline(shape);
                 controls = [onlineControl("source"), onlineControl("field.id"), onlineControl("field.formula"), onlineControl("field.elements"), onlineControl("search")];
             }
             for (const control of controls) {
-                const explanation = typeof control.toolTip === "string" ? control.toolTip : control.ToolTip.text;
-                verify(typeof explanation === "string" && explanation !== "", "Each actual menu item and popup control declares its own explanatory tooltip");
+                const explanation = control.toolTip || control.ToolTip.text;
+                verify(typeof explanation === "string" && explanation !== "", "Each actual menu item and popup control declares its own explanatory tooltip: " + control.objectName);
                 const tips = () => {
                     const found = Probe.objectsWithProperty(control, "enterAnimationDuration").filter(tip => tip.text === explanation);
                     const attached = control.ToolTip.toolTip;

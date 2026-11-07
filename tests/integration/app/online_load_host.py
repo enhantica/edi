@@ -124,7 +124,6 @@ def run_online_host(
     sources = ';'.join((
         f'cod={cod}',
         f'easydiffraction={collection.as_uri()}',
-        f'easydiffraction-mirror={(mailbox / "unused-mirror").as_uri()}',
     ))
     environment = {
         **os.environ,
