@@ -43,7 +43,7 @@ original could. Three facts shape the decision:
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
 2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `c61bcb8578094bbf2009606ac1f2b5b635e3dce6` and declares its own QML modules under the upstream URIs
+   `7e48926fc0ff88df515b0865dc05a8f961226488` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
    declared replacement seams: ParamTextField for parameter menu terminology and units (ADR-0029), TextInput for its
@@ -536,3 +536,9 @@ and a change in one area no longer redraws the others. On a GPU the gain is smal
 texture's memory. Text drawn through a layer is not blurred at a scale of 1 or 1.25, and its glyphs are a little
 heavier. No automated test sees the Windows fault: only a look at the web app on a Windows machine with a GPU shows
 whether it is gone.
+
+## Tooltip levels in the base (2026-11-07)
+
+The base pin advances from c61bcb85 to 7e48926f, the `edi` branch. The base's globals hold the tooltip level (All,
+Important or Off) and delay, and one function decides whether a tooltip may open. Every base element asks through its
+tooltip's `requested` instead of binding `visible`. The design and its rules are edi's tooltip ADR.

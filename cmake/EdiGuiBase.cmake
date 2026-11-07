@@ -14,10 +14,10 @@
 
 include(FetchContent)
 
-set(EDI_GUI_COMPONENTS_SHA c61bcb8578094bbf2009606ac1f2b5b635e3dce6)  # edi branch, containers drawn through layers; ADR-0015
-set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 2e0a0ccb38e64aace21b46d734259f120f15b43780faa73d86a8cfce42ee8a81)
+set(EDI_GUI_COMPONENTS_SHA 7e48926fc0ff88df515b0865dc05a8f961226488)  # edi branch, tooltip levels; ADR-0015
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 ebd4ac578f8c76b6fe1c96ce6a1ea9f2307a7277d9b28d4720f692b6a6f09d9e)
 # Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
-set(EDI_GUI_COMPONENTS_SRC_SHA256 4a3213f3ed58069b549349e08a2d5eb11bd7dc8686d1a3f59245ee273076ce21)
+set(EDI_GUI_COMPONENTS_SRC_SHA256 dce641b2e9a900aab6c2d80e2c2d6546c4a7a01bacbfd1a347dae89ec9c0dcca)
 
 if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
     message(STATUS "gui-components: using the pinned source archive ${EDI_GUI_COMPONENTS_SHA}")
