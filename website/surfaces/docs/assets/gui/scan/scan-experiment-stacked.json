@@ -7,7 +7,7 @@
     ],
     "id": "scan-experiment-stacked",
     "image": "scan-experiment-stacked.png",
-    "image_sha256": "fbc391a7440d9d001d738850731c85a11dd7ddd22e389e4d491713995c948712",
+    "image_sha256": "07ed82f33d542f45ac16ad8a4926ab4e0d05d210a671ac7d028e2a4516669112",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -2162,7 +2162,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

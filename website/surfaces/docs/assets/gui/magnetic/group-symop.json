@@ -7,7 +7,7 @@
     ],
     "id": "group-symop",
     "image": "group-symop.png",
-    "image_sha256": "67405012b36d77a98d6bc19392940725fae2c84b2e8c2206d9c72662b6ee572e",
+    "image_sha256": "98ad11cac0ad9f84359b34e6c9439aa0cfa0ec80989a011bf290bc4bae76092a",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                252.00000000000486,
+                252,
                 682,
                 253.5
             ],
@@ -68,9 +68,9 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252.00000000000486,
+                252,
                 682,
-                253.50000000000003
+                253.5
             ]
         },
         "appBar": {
@@ -352,7 +352,7 @@
         "generated.space_group_symop.id.0": {
             "bounds": [
                 817,
-                291.0000000000049,
+                291,
                 32,
                 39
             ],
@@ -360,7 +360,7 @@
             "label": "1",
             "visible_bounds": [
                 817,
-                291.0000000000049,
+                291,
                 32,
                 39
             ]
@@ -368,7 +368,7 @@
         "generated.space_group_symop.id.1": {
             "bounds": [
                 817,
-                330.0000000000049,
+                330,
                 32,
                 39
             ],
@@ -376,7 +376,7 @@
             "label": "2",
             "visible_bounds": [
                 817,
-                330.0000000000049,
+                330,
                 32,
                 39
             ]
@@ -384,7 +384,7 @@
         "generated.space_group_symop.id.2": {
             "bounds": [
                 817,
-                369.0000000000049,
+                369,
                 32,
                 39
             ],
@@ -392,7 +392,7 @@
             "label": "3",
             "visible_bounds": [
                 817,
-                369.0000000000049,
+                369,
                 32,
                 39
             ]
@@ -400,7 +400,7 @@
         "generated.space_group_symop.id.3": {
             "bounds": [
                 817,
-                408.0000000000049,
+                408,
                 32,
                 39
             ],
@@ -408,7 +408,7 @@
             "label": "4",
             "visible_bounds": [
                 817,
-                408.0000000000049,
+                408,
                 32,
                 39
             ]
@@ -416,7 +416,7 @@
         "generated.space_group_symop.id.4": {
             "bounds": [
                 817,
-                447.0000000000049,
+                447,
                 32,
                 39
             ],
@@ -424,7 +424,7 @@
             "label": "5",
             "visible_bounds": [
                 817,
-                447.0000000000049,
+                447,
                 32,
                 39
             ]
@@ -432,7 +432,7 @@
         "generated.space_group_symop.id.5": {
             "bounds": [
                 817,
-                486.0000000000049,
+                486,
                 32,
                 39
             ],
@@ -440,7 +440,7 @@
             "label": "6",
             "visible_bounds": [
                 817,
-                486.0000000000049,
+                486,
                 32,
                 19.5
             ]
@@ -448,7 +448,7 @@
         "generated.space_group_symop.list": {
             "bounds": [
                 784,
-                252.00000000000486,
+                252,
                 682,
                 253.5
             ],
@@ -456,15 +456,15 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252.00000000000486,
+                252,
                 682,
-                253.50000000000003
+                253.5
             ]
         },
         "generated.space_group_symop.operation_xyz.0": {
             "bounds": [
                 853,
-                291.0000000000049,
+                291,
                 605,
                 39
             ],
@@ -472,7 +472,7 @@
             "label": "x,y,z",
             "visible_bounds": [
                 853,
-                291.0000000000049,
+                291,
                 605,
                 39
             ]
@@ -480,7 +480,7 @@
         "generated.space_group_symop.operation_xyz.1": {
             "bounds": [
                 853,
-                330.0000000000049,
+                330,
                 605,
                 39
             ],
@@ -488,7 +488,7 @@
             "label": "-x+1/2,-y,z+1/2",
             "visible_bounds": [
                 853,
-                330.0000000000049,
+                330,
                 605,
                 39
             ]
@@ -496,7 +496,7 @@
         "generated.space_group_symop.operation_xyz.2": {
             "bounds": [
                 853,
-                369.0000000000049,
+                369,
                 605,
                 39
             ],
@@ -504,7 +504,7 @@
             "label": "-x+1/2,y+1/2,z+1/2",
             "visible_bounds": [
                 853,
-                369.0000000000049,
+                369,
                 605,
                 39
             ]
@@ -512,7 +512,7 @@
         "generated.space_group_symop.operation_xyz.3": {
             "bounds": [
                 853,
-                408.0000000000049,
+                408,
                 605,
                 39
             ],
@@ -520,7 +520,7 @@
             "label": "-x,-y,-z",
             "visible_bounds": [
                 853,
-                408.0000000000049,
+                408,
                 605,
                 39
             ]
@@ -528,7 +528,7 @@
         "generated.space_group_symop.operation_xyz.4": {
             "bounds": [
                 853,
-                447.0000000000049,
+                447,
                 605,
                 39
             ],
@@ -536,7 +536,7 @@
             "label": "-x,y+1/2,-z",
             "visible_bounds": [
                 853,
-                447.0000000000049,
+                447,
                 605,
                 39
             ]
@@ -544,7 +544,7 @@
         "generated.space_group_symop.operation_xyz.5": {
             "bounds": [
                 853,
-                486.0000000000049,
+                486,
                 605,
                 39
             ],
@@ -552,7 +552,7 @@
             "label": "x+1/2,-y+1/2,-z+1/2",
             "visible_bounds": [
                 853,
-                486.0000000000049,
+                486,
                 605,
                 19.5
             ]
@@ -628,7 +628,7 @@
         "group.magnetic_form_factor": {
             "bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ],
@@ -637,7 +637,7 @@
             "label": "Magnetic form factors (1)",
             "visible_bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ]
@@ -662,7 +662,7 @@
         "group.space_group_symop": {
             "bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 316.5
             ],
@@ -671,7 +671,7 @@
             "label": "Symmetry operators (8)",
             "visible_bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 316.5
             ]
@@ -1368,7 +1368,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

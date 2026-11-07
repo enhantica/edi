@@ -7,7 +7,7 @@
     ],
     "id": "guide-analysis-aliases",
     "image": "guide-analysis-aliases.png",
-    "image_sha256": "56b620c5335c7dd8eaf6283edb39805b35bd893d77e25ff1ce5aa2a83b99f43e",
+    "image_sha256": "035e93c77a26899238823f8dbf15d13d25d98a29a746cdd023d6e83455b66690",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 131
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 131
             ]
@@ -76,7 +76,7 @@
         "aliases.append": {
             "bounds": [
                 784,
-                344,
+                344.00000000000693,
                 334,
                 39
             ],
@@ -85,7 +85,7 @@
             "label": "Append new alias",
             "visible_bounds": [
                 784,
-                344,
+                344.00000000000693,
                 334,
                 39
             ]
@@ -93,7 +93,7 @@
         "aliases.duplicate": {
             "bounds": [
                 1132,
-                344,
+                344.00000000000693,
                 334,
                 39
             ],
@@ -102,7 +102,7 @@
             "label": "Duplicate selected alias",
             "visible_bounds": [
                 1132,
-                344,
+                344.00000000000693,
                 334,
                 39
             ]
@@ -110,7 +110,7 @@
         "aliases.list": {
             "bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 78
             ],
@@ -118,7 +118,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 78
             ]
@@ -823,7 +823,7 @@
         "group.alias": {
             "bounds": [
                 770,
-                203,
+                203.00000000000693,
                 710,
                 194
             ],
@@ -832,7 +832,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000693,
                 710,
                 194
             ]
@@ -840,7 +840,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                397,
+                396.9999999999951,
                 710,
                 42
             ],
@@ -849,7 +849,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                397,
+                396.9999999999951,
                 710,
                 42
             ]
@@ -857,7 +857,7 @@
         "group.fit_parameter": {
             "bounds": [
                 770,
-                439,
+                439.00000000000205,
                 710,
                 42
             ],
@@ -866,7 +866,7 @@
             "label": "Fit start values (31)",
             "visible_bounds": [
                 770,
-                439,
+                439.00000000000205,
                 710,
                 42
             ]
@@ -874,7 +874,7 @@
         "group.fit_result": {
             "bounds": [
                 770,
-                481,
+                481.00000000000205,
                 710,
                 42
             ],
@@ -883,7 +883,7 @@
             "label": "Fit result",
             "visible_bounds": [
                 770,
-                481,
+                481.00000000000205,
                 710,
                 42
             ]
@@ -891,7 +891,7 @@
         "group.fit_result_bank": {
             "bounds": [
                 770,
-                523,
+                523.000000000002,
                 710,
                 42
             ],
@@ -900,7 +900,7 @@
             "label": "Experiment fit result (1)",
             "visible_bounds": [
                 770,
-                523,
+                523.000000000002,
                 710,
                 42
             ]
@@ -908,7 +908,7 @@
         "group.fit_result_phase": {
             "bounds": [
                 770,
-                565,
+                565.000000000002,
                 710,
                 42
             ],
@@ -917,7 +917,7 @@
             "label": "Structure fit result (1)",
             "visible_bounds": [
                 770,
-                565,
+                565.000000000002,
                 710,
                 42
             ]
@@ -925,7 +925,7 @@
         "group.fitting_mode": {
             "bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 42
             ],
@@ -934,7 +934,7 @@
             "label": "Fitting mode",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 42
             ]
@@ -1092,7 +1092,7 @@
         "relations.aliases": {
             "bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 131
             ],
@@ -1100,7 +1100,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 131
             ]
@@ -1296,7 +1296,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1468,7 +1468,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

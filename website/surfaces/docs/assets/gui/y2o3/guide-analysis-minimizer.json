@@ -7,7 +7,7 @@
     ],
     "id": "guide-analysis-minimizer",
     "image": "guide-analysis-minimizer.png",
-    "image_sha256": "a119986eac1bdd1eb0cc8268a38f46ab48f233fb752786455fc5e5ef82a52c84",
+    "image_sha256": "b32020e388cb2bd3fb605ad1d4763e0401e10ec8a2fb85692c0a0e28aabfeed0",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -773,7 +773,7 @@
         "group.alias": {
             "bounds": [
                 770,
-                420,
+                419.9999999999955,
                 710,
                 42
             ],
@@ -782,7 +782,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                420,
+                419.9999999999955,
                 710,
                 42
             ]
@@ -790,7 +790,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                462,
+                461.9999999999955,
                 710,
                 42
             ],
@@ -799,7 +799,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                462,
+                461.9999999999955,
                 710,
                 42
             ]
@@ -807,7 +807,7 @@
         "group.fit_parameter": {
             "bounds": [
                 770,
-                504,
+                503.9999999999955,
                 710,
                 42
             ],
@@ -816,15 +816,15 @@
             "label": "Fit start values (31)",
             "visible_bounds": [
                 770,
-                504,
+                503.9999999999955,
                 710,
-                42
+                41.99999999999994
             ]
         },
         "group.fit_result": {
             "bounds": [
                 770,
-                546,
+                545.9999999999955,
                 710,
                 42
             ],
@@ -833,7 +833,7 @@
             "label": "Fit result",
             "visible_bounds": [
                 770,
-                546,
+                545.9999999999955,
                 710,
                 42
             ]
@@ -841,7 +841,7 @@
         "group.fit_result_bank": {
             "bounds": [
                 770,
-                588,
+                587.9999999999955,
                 710,
                 42
             ],
@@ -850,7 +850,7 @@
             "label": "Experiment fit result (1)",
             "visible_bounds": [
                 770,
-                588,
+                587.9999999999955,
                 710,
                 42
             ]
@@ -858,7 +858,7 @@
         "group.fit_result_phase": {
             "bounds": [
                 770,
-                630,
+                629.9999999999955,
                 710,
                 42
             ],
@@ -867,7 +867,7 @@
             "label": "Structure fit result (1)",
             "visible_bounds": [
                 770,
-                630,
+                629.9999999999955,
                 710,
                 42
             ]
@@ -875,7 +875,7 @@
         "group.fitting_mode": {
             "bounds": [
                 770,
-                378,
+                377.99999999999307,
                 710,
                 42
             ],
@@ -884,7 +884,7 @@
             "label": "Fitting mode",
             "visible_bounds": [
                 770,
-                378,
+                377.99999999999307,
                 710,
                 42
             ]
@@ -1354,7 +1354,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1526,7 +1526,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

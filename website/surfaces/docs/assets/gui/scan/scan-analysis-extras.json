@@ -8,7 +8,7 @@
     ],
     "id": "scan-analysis-extras",
     "image": "scan-analysis-extras.png",
-    "image_sha256": "670ca910051b0170dacbe1c0e156d67f9f9820135df02ebc8c5b8d57177e9b45",
+    "image_sha256": "b9b4a4a09ead16f970ddfd9c7ad1b191f9f9e0e14de1f867dfc4d1e3c9269c15",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1571,7 +1571,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

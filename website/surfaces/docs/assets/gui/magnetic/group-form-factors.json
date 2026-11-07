@@ -7,7 +7,7 @@
     ],
     "id": "group-form-factors",
     "image": "group-form-factors.png",
-    "image_sha256": "ffd75b726f59d55cbd108d5967a3e0e1b354f6ad99d50ad1e95a919e6fbf4bdf",
+    "image_sha256": "e189e0590197fec5d9231d0b3961b15e62ff23ccbef73b8323cea6e8db868ae0",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                210.00000000000486,
+                210,
                 682,
                 78
             ],
@@ -68,9 +68,9 @@
             "label": "",
             "visible_bounds": [
                 784,
-                210.00000000000486,
+                210,
                 682,
-                78.00000000000003
+                78
             ]
         },
         "appBar": {
@@ -420,7 +420,7 @@
         "group.magnetic_form_factor": {
             "bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 141
             ],
@@ -429,9 +429,9 @@
             "label": "Magnetic form factors (1)",
             "visible_bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
-                141.00000000000003
+                141
             ]
         },
         "group.scattering_length": {
@@ -491,7 +491,7 @@
         "magneticFormFactor.approximation.0": {
             "bounds": [
                 939,
-                251.00000000000486,
+                251,
                 172.75,
                 35
             ],
@@ -499,15 +499,15 @@
             "label": "",
             "visible_bounds": [
                 939,
-                251.00000000000486,
+                251,
                 172.75,
-                35.00000000000003
+                35
             ]
         },
         "magneticFormFactor.c2.0": {
             "bounds": [
                 1222,
-                249.00000000000486,
+                249,
                 77,
                 39
             ],
@@ -515,15 +515,15 @@
             "label": "0",
             "visible_bounds": [
                 1222,
-                249.00000000000486,
+                249,
                 77,
-                39.00000000000003
+                39
             ]
         },
         "magneticFormFactor.c4.0": {
             "bounds": [
                 1303,
-                249.00000000000486,
+                249,
                 77,
                 39
             ],
@@ -531,15 +531,15 @@
             "label": "0",
             "visible_bounds": [
                 1303,
-                249.00000000000486,
+                249,
                 77,
-                39.00000000000003
+                39
             ]
         },
         "magneticFormFactor.c6.0": {
             "bounds": [
                 1384,
-                249.00000000000486,
+                249,
                 77,
                 39
             ],
@@ -547,15 +547,15 @@
             "label": "0",
             "visible_bounds": [
                 1384,
-                249.00000000000486,
+                249,
                 77,
-                39.00000000000003
+                39
             ]
         },
         "magneticFormFactor.ion.0": {
             "bounds": [
                 875,
-                249.00000000000486,
+                249,
                 56,
                 39
             ],
@@ -563,15 +563,15 @@
             "label": "Co2+",
             "visible_bounds": [
                 875,
-                249.00000000000486,
+                249,
                 56,
-                39.00000000000003
+                39
             ]
         },
         "magneticFormFactor.type.0": {
             "bounds": [
                 815,
-                249.00000000000486,
+                249,
                 56,
                 39
             ],
@@ -579,15 +579,15 @@
             "label": "Co",
             "visible_bounds": [
                 815,
-                249.00000000000486,
+                249,
                 56,
-                39.00000000000003
+                39
             ]
         },
         "magneticFormFactors.list": {
             "bounds": [
                 784,
-                210.00000000000486,
+                210,
                 682,
                 78
             ],
@@ -595,9 +595,9 @@
             "label": "",
             "visible_bounds": [
                 784,
-                210.00000000000486,
+                210,
                 682,
-                78.00000000000003
+                78
             ]
         },
         "mainArea.blocks": {
@@ -1272,7 +1272,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

@@ -8,7 +8,7 @@
     ],
     "id": "scan-report-basic",
     "image": "scan-report-basic.png",
-    "image_sha256": "3704eaed5e90dba8665fc4f435945b03544b933b92950ae929679ba6770937f1",
+    "image_sha256": "51c45961f4ea8dfafc374ce1c463cd08115bec9979a24f18a4f3d94f5445408b",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -955,7 +955,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

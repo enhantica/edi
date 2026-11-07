@@ -7,7 +7,7 @@
     ],
     "id": "guide-report-contents",
     "image": "guide-report-contents.png",
-    "image_sha256": "fe8df3ee135d6647a11af276ceb22acb23256139cb0df93eee198d76c82e7cc7",
+    "image_sha256": "e586adf3305e4759d283c43439bbdce8107c91b3e28dafb0552d0740ca39297e",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                210,
+                210.00000000000662,
                 682,
                 126
             ],
@@ -68,9 +68,9 @@
             "label": "",
             "visible_bounds": [
                 784,
-                210,
+                210.00000000000662,
                 682,
-                126
+                125.99999999999997
             ]
         },
         "appBar": {
@@ -346,7 +346,7 @@
         "group.reportContents": {
             "bounds": [
                 770,
-                161,
+                161.00000000000662,
                 710,
                 189
             ],
@@ -355,9 +355,9 @@
             "label": "Contents",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000662,
                 710,
-                189
+                188.99999999999997
             ]
         },
         "group.reportExport": {
@@ -399,7 +399,7 @@
         "report.contents.charts": {
             "bounds": [
                 784,
-                210,
+                210.00000000000662,
                 682,
                 21
             ],
@@ -407,7 +407,7 @@
             "label": "Charts",
             "visible_bounds": [
                 784,
-                210,
+                210.00000000000662,
                 682,
                 21
             ]
@@ -415,7 +415,7 @@
         "report.contents.correlations": {
             "bounds": [
                 784,
-                245,
+                245.00000000000662,
                 682,
                 21
             ],
@@ -423,15 +423,15 @@
             "label": "Correlations",
             "visible_bounds": [
                 784,
-                245,
+                245.00000000000662,
                 682,
-                21
+                20.99999999999997
             ]
         },
         "report.contents.data": {
             "bounds": [
                 784,
-                315,
+                315.0000000000066,
                 682,
                 21
             ],
@@ -439,7 +439,7 @@
             "label": "Data",
             "visible_bounds": [
                 784,
-                315,
+                315.0000000000066,
                 682,
                 21
             ]
@@ -447,7 +447,7 @@
         "report.contents.reflections": {
             "bounds": [
                 784,
-                280,
+                280.0000000000066,
                 682,
                 21
             ],
@@ -455,7 +455,7 @@
             "label": "Reflections",
             "visible_bounds": [
                 784,
-                280,
+                280.0000000000066,
                 682,
                 21
             ]
@@ -683,7 +683,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -855,7 +855,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

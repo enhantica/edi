@@ -7,7 +7,7 @@
     ],
     "id": "group-bonds",
     "image": "group-bonds.png",
-    "image_sha256": "99432ba21f4ae842ffa917990260fc471e29b59996227fe4aa74506d6158e849",
+    "image_sha256": "2da1dacaa78c59e956d46d8a6bf1cf3573490a48bdbcdd0329a1a5ac0d5547f8",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1204,7 +1204,7 @@
         "group.magnetic_form_factor": {
             "bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ],
@@ -1213,7 +1213,7 @@
             "label": "Magnetic form factors (1)",
             "visible_bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ]
@@ -1238,7 +1238,7 @@
         "group.space_group_symop": {
             "bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 42
             ],
@@ -1247,7 +1247,7 @@
             "label": "Symmetry operators (8)",
             "visible_bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 42
             ]
@@ -1944,7 +1944,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

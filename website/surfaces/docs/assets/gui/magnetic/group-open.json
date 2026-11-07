@@ -6,7 +6,7 @@
     ],
     "id": "group-open",
     "image": "group-open.png",
-    "image_sha256": "ae0d73457b76d21b55be1fddaee733739ac0de4cb3b29cd5e82727a63e54eb57",
+    "image_sha256": "ecd82b62c88e0ef13c404fb1b8f3ff7661ae28a463d3a788156703cc20489804",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -485,7 +485,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-bauxXf/pd-neut-cwl_cosio-d20_2k/project",
+            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-OhzliS/pd-neut-cwl_cosio-d20_2k/project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -919,7 +919,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

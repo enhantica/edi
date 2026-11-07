@@ -7,7 +7,7 @@
     ],
     "id": "guide-analysis-modes",
     "image": "guide-analysis-modes.png",
-    "image_sha256": "d6a80302d0b8c5341a8a4082f3cee380d4ef6073e88735986db37e3371049498",
+    "image_sha256": "aa289c4cff48b0a25bee0bdb9db9b69f0f67a015f59b6429a643a73af829e43e",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                210,
+                210.00000000000693,
                 682,
                 56
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                210,
+                210.00000000000693,
                 682,
                 56
             ]
@@ -773,7 +773,7 @@
         "fittingMode.type": {
             "bounds": [
                 784,
-                210,
+                210.00000000000693,
                 682,
                 56
             ],
@@ -789,7 +789,7 @@
             "uid": "fitting_mode.type",
             "visible_bounds": [
                 784,
-                210,
+                210.00000000000693,
                 682,
                 56
             ]
@@ -797,7 +797,7 @@
         "group.alias": {
             "bounds": [
                 770,
-                280,
+                280.0000000000045,
                 710,
                 42
             ],
@@ -806,7 +806,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                280,
+                280.0000000000045,
                 710,
                 42
             ]
@@ -814,7 +814,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                322,
+                322.0000000000045,
                 710,
                 42
             ],
@@ -823,7 +823,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                322,
+                322.0000000000045,
                 710,
                 42
             ]
@@ -831,7 +831,7 @@
         "group.fit_parameter": {
             "bounds": [
                 770,
-                364,
+                364.0000000000045,
                 710,
                 42
             ],
@@ -840,7 +840,7 @@
             "label": "Fit start values (31)",
             "visible_bounds": [
                 770,
-                364,
+                364.0000000000045,
                 710,
                 42
             ]
@@ -848,7 +848,7 @@
         "group.fit_result": {
             "bounds": [
                 770,
-                406,
+                406.0000000000045,
                 710,
                 42
             ],
@@ -857,7 +857,7 @@
             "label": "Fit result",
             "visible_bounds": [
                 770,
-                406,
+                406.0000000000045,
                 710,
                 42
             ]
@@ -865,7 +865,7 @@
         "group.fit_result_bank": {
             "bounds": [
                 770,
-                448,
+                448.0000000000045,
                 710,
                 42
             ],
@@ -874,7 +874,7 @@
             "label": "Experiment fit result (1)",
             "visible_bounds": [
                 770,
-                448,
+                448.0000000000045,
                 710,
                 42
             ]
@@ -882,7 +882,7 @@
         "group.fit_result_phase": {
             "bounds": [
                 770,
-                490,
+                490.0000000000045,
                 710,
                 42
             ],
@@ -891,15 +891,15 @@
             "label": "Structure fit result (1)",
             "visible_bounds": [
                 770,
-                490,
+                490.0000000000045,
                 710,
-                42
+                42.00000000000006
             ]
         },
         "group.fitting_mode": {
             "bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 119
             ],
@@ -908,7 +908,7 @@
             "label": "Fitting mode",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 119
             ]
@@ -1254,7 +1254,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1426,7 +1426,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

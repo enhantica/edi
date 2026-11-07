@@ -7,7 +7,7 @@
     ],
     "id": "scan-evolution",
     "image": "scan-evolution.png",
-    "image_sha256": "3050ec290102bcf07abc9a7d76d319e0c49d01e9f498b532269993d7f2942692",
+    "image_sha256": "0ea137e350902782a88e3138d4b030eb569717ea962bab07fca342fc0811ece3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -2190,7 +2190,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

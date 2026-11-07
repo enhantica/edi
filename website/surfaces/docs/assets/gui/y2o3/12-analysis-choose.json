@@ -8,7 +8,7 @@
     ],
     "id": "12-analysis-choose",
     "image": "12-analysis-choose.png",
-    "image_sha256": "6ae3a8b67365a29133baca38ee4c4dc356feed4f53df7398611634b256dc77bb",
+    "image_sha256": "7cc4b1e2098c5a571e7bb832807141a56602a307e5b08a7a14ef5e5e182be86a",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -2304,7 +2304,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

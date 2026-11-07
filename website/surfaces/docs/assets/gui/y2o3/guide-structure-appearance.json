@@ -7,7 +7,7 @@
     ],
     "id": "guide-structure-appearance",
     "image": "guide-structure-appearance.png",
-    "image_sha256": "ae87b3fbd2f65cacb465074b8f8754c7f6dcc56dbced711e5ed246ae92fa3551",
+    "image_sha256": "9f2c9e9ba1331bda5aab676c60a00d2d437f4a7d413fe14b77cce4ba90812120",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                336,
+                336.0000000000049,
                 682,
                 56
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                336,
+                336.0000000000049,
                 682,
                 56
             ]
@@ -352,7 +352,7 @@
         "group.appearance": {
             "bounds": [
                 770,
-                287,
+                287.0000000000049,
                 710,
                 119
             ],
@@ -361,7 +361,7 @@
             "label": "Appearance",
             "visible_bounds": [
                 770,
-                287,
+                287.0000000000049,
                 710,
                 119
             ]
@@ -369,7 +369,7 @@
         "group.expanded_atom_site": {
             "bounds": [
                 770,
-                203,
+                203.00000000000486,
                 710,
                 42
             ],
@@ -378,7 +378,7 @@
             "label": "Atoms in the cell (92)",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000486,
                 710,
                 42
             ]
@@ -386,7 +386,7 @@
         "group.geom_bond": {
             "bounds": [
                 770,
-                245,
+                245.00000000000486,
                 710,
                 42
             ],
@@ -395,9 +395,9 @@
             "label": "Bonds (168)",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000486,
                 710,
-                42
+                42.00000000000003
             ]
         },
         "group.scattering_length": {
@@ -420,7 +420,7 @@
         "group.space_group_symop": {
             "bounds": [
                 770,
-                161,
+                161.00000000000486,
                 710,
                 42
             ],
@@ -429,7 +429,7 @@
             "label": "Symmetry operators (48)",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000486,
                 710,
                 42
             ]
@@ -726,7 +726,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -825,7 +825,7 @@
         "structure.appearance.atomScale": {
             "bounds": [
                 1126.75,
-                336,
+                336.0000000000049,
                 339.25,
                 56
             ],
@@ -833,7 +833,7 @@
             "label": "0.3",
             "visible_bounds": [
                 1126.75,
-                336,
+                336.0000000000049,
                 339.25,
                 56
             ]
@@ -841,7 +841,7 @@
         "structure.appearance.atomView": {
             "bounds": [
                 784,
-                336,
+                336.0000000000049,
                 339.25,
                 56
             ],
@@ -869,7 +869,7 @@
             "uid": "",
             "visible_bounds": [
                 784,
-                336,
+                336.0000000000049,
                 339.25,
                 56
             ]
@@ -1180,7 +1180,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

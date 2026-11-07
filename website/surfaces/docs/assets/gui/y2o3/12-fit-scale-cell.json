@@ -8,7 +8,7 @@
     ],
     "id": "12-fit-scale-cell",
     "image": "12-fit-scale-cell.png",
-    "image_sha256": "361e38ebcf50b3c5753f299e1275fcbd2473606d274f70dec3ebd77da86178ed",
+    "image_sha256": "abf47776a93ba7fddbf23317d954023f19a8e33cf549696b4281d775a0547dc4",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -2168,7 +2168,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "7 0.047s 5853.37→6.92",
+            "label": "7 0.045s 5853.37→6.92",
             "visible_bounds": [
                 1162,
                 770,
@@ -2340,7 +2340,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

@@ -8,7 +8,7 @@
     ],
     "id": "joint-experiment-text",
     "image": "joint-experiment-text.png",
-    "image_sha256": "1484c656d397216a58229af7ec4c76a19cc9bf62f6689f5df994a7dc0eeb342b",
+    "image_sha256": "2bbc11d7a0014aba6931b0ba24910eaef8e12efa54412c23a8862036cad5d44c",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1060,7 +1060,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.52s 242.73→1.96",
+            "label": "12 0.53s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1281,7 +1281,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

@@ -45,7 +45,7 @@ _fit_result.result_kind deterministic
 _fit_result.success true
 _fit_result.message done
 _fit_result.iterations 3
-_fit_result.fitting_time 0.0252067
+_fit_result.fitting_time 0.0258849
 _fit_result.reduced_chi_square 2.27778
 _fit_result.objective_name chi_square
 _fit_result.objective_value 5644.33

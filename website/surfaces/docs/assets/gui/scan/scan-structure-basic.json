@@ -8,7 +8,7 @@
     ],
     "id": "scan-structure-basic",
     "image": "scan-structure-basic.png",
-    "image_sha256": "8d2f46fcf224442148cb193f70a90e46af892fbe636dca70e86643ce25b0bd17",
+    "image_sha256": "5053ced2310fb479d2f0424b7c057eb6ce9ea2be0d7a8434e9405c068e7fd845",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1380,7 +1380,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

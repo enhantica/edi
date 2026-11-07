@@ -8,7 +8,7 @@
     ],
     "id": "joint-analysis-text",
     "image": "joint-analysis-text.png",
-    "image_sha256": "0560c0d0de0a70833837a4c80ee95a8dabfdbbab96e6326df6b6f2a5790a9edc",
+    "image_sha256": "2646d15ee3dd1ad5242be142e8372e7ac7cf2c67df0c6c9c8860e4525a929d4f",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1076,7 +1076,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.52s 242.73→1.96",
+            "label": "12 0.53s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1297,7 +1297,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

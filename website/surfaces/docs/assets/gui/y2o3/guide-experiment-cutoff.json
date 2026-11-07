@@ -7,7 +7,7 @@
     ],
     "id": "guide-experiment-cutoff",
     "image": "guide-experiment-cutoff.png",
-    "image_sha256": "802568146f8683a81513601b7358327e27e082d2f1373f8bc759f4b2d8cfe6b5",
+    "image_sha256": "ff3fd24de51ce48f7aead19caaf021a3da7beb67ab264be61cea304c658754cd",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                210,
+                210.00000000000693,
                 682,
                 56
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                210,
+                210.00000000000693,
                 682,
                 56
             ]
@@ -841,7 +841,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 119
             ],
@@ -850,7 +850,7 @@
             "label": "Peak cutoff",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 119
             ]
@@ -1026,7 +1026,7 @@
         "peak.cutoff_fwhm": {
             "bounds": [
                 784,
-                210,
+                210.00000000000693,
                 339.25,
                 56
             ],
@@ -1034,7 +1034,7 @@
             "label": "8",
             "visible_bounds": [
                 784,
-                210,
+                210.00000000000693,
                 339.25,
                 56
             ]
@@ -1042,7 +1042,7 @@
         "peak.cutoff_fwhm.auto": {
             "bounds": [
                 1126.75,
-                231,
+                231.00000000000693,
                 334,
                 35
             ],
@@ -1051,7 +1051,7 @@
             "label": "Set automatically",
             "visible_bounds": [
                 1126.75,
-                231,
+                231.00000000000693,
                 334,
                 35
             ]
@@ -1247,7 +1247,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1419,7 +1419,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

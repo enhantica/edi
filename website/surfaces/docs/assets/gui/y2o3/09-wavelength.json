@@ -7,7 +7,7 @@
     ],
     "id": "09-wavelength",
     "image": "09-wavelength.png",
-    "image_sha256": "a3972ec20d27f8c5c380fc54c9c75bc4fe5ca6035cff2c3d2cb033cd43442352",
+    "image_sha256": "9e698b2f357d98209f739d0d4991c81caf9943bbfe1069f6b24680b54f4c368c",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                252,
+                252.00000000000932,
                 682,
                 126
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252,
+                252.00000000000932,
                 682,
                 126
             ]
@@ -770,7 +770,7 @@
         "group.background": {
             "bounds": [
                 770,
-                161,
+                161.00000000000932,
                 710,
                 42
             ],
@@ -779,7 +779,7 @@
             "label": "Background (0)",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000932,
                 710,
                 42
             ]
@@ -787,7 +787,7 @@
         "group.excluded_region": {
             "bounds": [
                 770,
-                434,
+                434.00000000000466,
                 710,
                 42
             ],
@@ -796,7 +796,7 @@
             "label": "Excluded regions (0)",
             "visible_bounds": [
                 770,
-                434,
+                434.00000000000466,
                 710,
                 42
             ]
@@ -821,7 +821,7 @@
         "group.instrument": {
             "bounds": [
                 770,
-                203,
+                203.00000000000932,
                 710,
                 189
             ],
@@ -830,7 +830,7 @@
             "label": "Instrument",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000932,
                 710,
                 189
             ]
@@ -838,7 +838,7 @@
         "group.linked_structure": {
             "bounds": [
                 770,
-                476,
+                476.00000000000466,
                 710,
                 42
             ],
@@ -847,7 +847,7 @@
             "label": "Linked structures (1)",
             "visible_bounds": [
                 770,
-                476,
+                476.00000000000466,
                 710,
                 42
             ]
@@ -855,7 +855,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                392,
+                392.00000000000466,
                 710,
                 42
             ],
@@ -864,7 +864,7 @@
             "label": "Peak profile",
             "visible_bounds": [
                 770,
-                392,
+                392.00000000000466,
                 710,
                 42
             ]
@@ -872,7 +872,7 @@
         "instrument.calib_twotheta_offset": {
             "bounds": [
                 1126.75,
-                322,
+                322.0000000000093,
                 339.25,
                 56
             ],
@@ -880,7 +880,7 @@
             "label": "0",
             "visible_bounds": [
                 1126.75,
-                322,
+                322.0000000000093,
                 339.25,
                 56
             ]
@@ -888,7 +888,7 @@
         "instrument.facility": {
             "bounds": [
                 784,
-                252,
+                252.00000000000932,
                 339.25,
                 56
             ],
@@ -956,7 +956,7 @@
             "uid": "",
             "visible_bounds": [
                 784,
-                252,
+                252.00000000000932,
                 339.25,
                 56
             ]
@@ -964,7 +964,7 @@
         "instrument.name": {
             "bounds": [
                 1126.75,
-                252,
+                252.00000000000932,
                 339.25,
                 56
             ],
@@ -980,7 +980,7 @@
             "uid": "",
             "visible_bounds": [
                 1126.75,
-                252,
+                252.00000000000932,
                 339.25,
                 56
             ]
@@ -988,7 +988,7 @@
         "instrument.setup_wavelength": {
             "bounds": [
                 784,
-                322,
+                322.0000000000093,
                 339.25,
                 56
             ],
@@ -996,7 +996,7 @@
             "label": "1.54822",
             "visible_bounds": [
                 784,
-                322,
+                322.0000000000093,
                 339.25,
                 56
             ]
@@ -1445,7 +1445,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

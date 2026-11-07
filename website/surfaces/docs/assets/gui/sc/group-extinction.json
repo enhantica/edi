@@ -7,7 +7,7 @@
     ],
     "id": "group-extinction",
     "image": "group-extinction.png",
-    "image_sha256": "b0a44be70782c1739bcf1cd5dd65ef064a54955d90176aa70eefbaf1dd43e0e0",
+    "image_sha256": "c973321303bbf6ecad7caf1d0edd1a632ff5625f6dc178f2d83944cd3ec1d9d1",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1172,7 +1172,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "d5122f9a30b820ddb8e950bd218add712484af4ed386761370e29f6deabec864",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
