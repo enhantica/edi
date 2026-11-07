@@ -324,3 +324,29 @@ def test_publishers_claim_their_reservation_and_refuse_another_source_or_date(
     archive.write_bytes(b'preview installer')
     with pytest.raises(ValueError, match='another source'):
         PREVIEW.publish(REPO, preview, 'Notes\n', [(archive, 'x' * 64)])
+
+
+def test_a_lost_response_with_a_same_source_rival_keeps_the_first_reservation(github):
+    github.rival_before_create = 'a' * 40
+    github.fail_after_create = True
+    with pytest.raises(subprocess.CalledProcessError):
+        reserve('a' * 40)
+    github.fail_after_create = False
+    assert reserve('a' * 40) == ('2026.11.0', TODAY)
+    ((release_id, release),) = github.releases.items()
+    assert release_id == 1 and release['body'] == '<!-- edi release date 2026-11-07 -->\n'
+
+
+def test_two_claimed_drafts_for_one_source_stay_refused(github):
+    for tag in ('v2026.11.0', 'v2026.11.1'):
+        github.add({
+            'tag_name': tag,
+            'target_commitish': 'a' * 40,
+            'name': 'edi ' + tag[1:],
+            'body': 'Notes\n<!-- edi release date 2026-11-07 -->\n',
+            'draft': True,
+            'prerelease': True,
+        })
+    with pytest.raises(ValueError, match='Several drafts claim this source'):
+        reserve('a' * 40)
+    assert len(github.releases) == 2

@@ -10,6 +10,7 @@ import datetime
 import json
 import re
 import subprocess
+from operator import itemgetter
 from pathlib import Path
 
 from plan import (
@@ -112,6 +113,39 @@ def list_releases(repo: str) -> list[dict]:
     return [item for page in json.loads(content) for item in page]
 
 
+def reservation_only(draft: dict) -> bool:
+    """Whether a draft is still only a reservation: no assets and a text that is only its date."""
+    date = release_date(draft['body'])
+    return (
+        draft['draft']
+        and not draft['assets']
+        and date is not None
+        and draft['body'] == release_body('', date)
+    )
+
+
+def settle_own_duplicates(repo: str, own: list[dict]) -> list[dict]:
+    """Keep one of several drafts for this source and channel, deleting the reservation-only rest.
+
+    Two allocators for the same source can both reserve before either sees the other, and a lost
+    response can hide which one a retry made. The draft kept is the one already claimed by a
+    publisher, else the earliest; the tag check after this decides whether it keeps its number.
+    More than one claimed draft, or anything else, is ambiguous and refuses.
+    """
+    claimed = [draft for draft in own if not reservation_only(draft)]
+    if len(claimed) > 1:
+        raise ValueError('Several drafts claim this source')
+    kept = claimed[0] if claimed else min(own, key=itemgetter('id'))
+    for draft in own:
+        if draft is not kept:
+            subprocess.run(
+                ['gh', 'api', '--method', 'DELETE', f'repos/{repo}/releases/{draft["id"]}'],
+                check=True,
+                capture_output=True,
+            )
+    return [kept]
+
+
 def reserve_identity(
     repo: str, commit: str, today: datetime.date, *, prerelease: bool, attempts: int = 5
 ) -> tuple[str, datetime.date]:
@@ -136,7 +170,7 @@ def reserve_identity(
         if published:
             raise ValueError(f'This source is already published as {published[0]}')
         if len(own) > 1:
-            raise ValueError('Several drafts claim this source')
+            own = settle_own_duplicates(repo, own)
         if own:
             draft, recorded = own[0], release_date(own[0]['body'])
             if recorded is None:
