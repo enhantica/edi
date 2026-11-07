@@ -46,8 +46,7 @@ def install_edi(index: str) -> None:
         print('Using edi from', spec.origin, '(a source build, not installed by pip)')
         return
     url, digest = _wheel(index)
-    imported = getattr(sys.modules.get('edi'), '__file__', '') or ''
-    if _ours(url, digest, imported):
+    if _ours(url, digest, _kernel_edi()):
         return
     if 'edi' in sys.modules:
         raise RuntimeError(
@@ -67,9 +66,9 @@ def install_edi(index: str) -> None:
     )
     if json.loads(requires):
         _pip(*json.loads(requires), settings=True)
-    if not _ours(url, digest, ''):
-        raise RuntimeError('The installed easydiffraction is not the wheel from ' + index)
     importlib.invalidate_caches()
+    if not _ours(url, digest, _kernel_edi()):
+        raise RuntimeError('The installed easydiffraction is not the wheel from ' + index)
 
 
 def _wheel(index: str) -> tuple[str, str]:
@@ -109,6 +108,15 @@ def _wheel(index: str) -> tuple[str, str]:
         raise RuntimeError('No EasyDiffraction wheel for this Python on ' + page_url)
     _, _, url, digest = max(found)
     return url, digest
+
+
+def _kernel_edi() -> str:
+    """Where this kernel's ``import edi`` loads from, which its own sys.path decides."""
+    module = sys.modules.get('edi')
+    if module is not None:
+        return getattr(module, '__file__', '') or ''
+    spec = importlib.util.find_spec('edi')
+    return (spec.origin or '') if spec else ''
 
 
 def _ours(url: str, digest: str, imported: str) -> bool:

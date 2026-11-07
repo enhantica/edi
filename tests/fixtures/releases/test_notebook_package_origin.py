@@ -208,3 +208,20 @@ def test_an_imported_wrong_package_refuses_until_the_kernel_restarts(indexes, py
     )
     assert rerun.returncode == 0, rerun.stderr
     assert installed(python, env, tmp_path) == ['ours', VERSION]
+
+
+def test_an_edi_shadowing_the_installed_one_on_the_kernel_path_refuses(indexes, python, tmp_path):
+    ours, pypi = indexes
+    env = environment(pypi)
+    pip_install(python, env, f'easydiffraction=={VERSION}')
+    shadow = tmp_path / 'shadow'
+    (shadow / 'edi').mkdir(parents=True)
+    (shadow / 'edi/__init__.py').write_text("ORIGIN = 'shadow'\n")
+    cell = tmp_path / 'setup_cell.py'
+    cell.write_text(PREPARE.setup_source('case', index=ours.as_uri()))
+    kernel = f'import sys\nsys.path.insert(0, {str(shadow)!r})\nexec(open({str(cell)!r}).read())\n'
+    result = subprocess.run(
+        [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+    assert result.returncode != 0
+    assert 'is not the wheel from' in result.stderr
