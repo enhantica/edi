@@ -117,6 +117,18 @@ def next_calendar_version(versions: list[str], today: datetime.date) -> str:
     return f'{today.year:04d}.{today.month:02d}.{sequence}'
 
 
+def _new_identity(
+    known: dict, reserved: tuple[str, ...], today: datetime.date, identity
+) -> tuple[str, datetime.date]:
+    """The given reserved identity, else the next free calendar version for today."""
+    if identity is None:
+        published = [release['version'] for release in known.values()]
+        return next_calendar_version([*published, *reserved], today), today
+    if version_key(identity[0]) in known:
+        raise ValueError('The reserved version is already published for another source')
+    return identity
+
+
 def release_plan(
     pull_requests: list[dict],
     releases: list[dict],
@@ -125,8 +137,12 @@ def release_plan(
     today: datetime.date,
     *,
     reserved_versions: tuple[str, ...] = (),
+    identity: tuple[str, datetime.date] | None = None,
 ) -> dict:
-    """Choose a retry-stable identity and group only PRs included in this release."""
+    """Choose a retry-stable identity and group only PRs included in this release.
+
+    ``identity`` is a version and date already reserved for this commit; it is used as given.
+    """
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('A release requires the complete source commit')
     known = {}
@@ -140,9 +156,7 @@ def release_plan(
         if len(repeated) != 1:
             raise ValueError('A source commit has conflicting published release identities')
         return repeated[0]
-    version = next_calendar_version(
-        [*[release['version'] for release in releases], *reserved_versions], today
-    )
+    version, today = _new_identity(known, reserved_versions, today, identity)
     notes = {group: [] for group in ['Added', 'Fixed', 'Changed']}
     seen = set()
     for request in sorted(pull_requests, key=itemgetter('number')):

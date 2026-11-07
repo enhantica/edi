@@ -7,6 +7,7 @@ in the release list and by its ID, and its tag exists only once it is published
 ``gh release upload`` finds a draft by tag the same way, by listing.
 """
 
+import datetime
 import hashlib
 import importlib.util
 import json
@@ -55,6 +56,7 @@ class GitHub:
 
     def __init__(self):
         self.releases, self.tags, self.next_id, self.fail_after_create = {}, set(), 1, False
+        self.rival_before_create = None
 
     def run(self, command, *, check=False, input=None, **_):
         code, out = self.answer(command[1:], input)
@@ -65,6 +67,18 @@ class GitHub:
 
     def check_output(self, command, *, input=None, **_):
         return self.run(command, check=True, input=input).stdout
+
+    def add(self, payload):
+        release = {
+            **payload,
+            'id': self.next_id,
+            'assets': [],
+            'html_url': 'u',
+            'created_at': '2026-11-05T10:00:00Z',
+        }
+        self.releases[self.next_id] = release
+        self.next_id += 1
+        return release
 
     def by_tag_with_drafts(self, tag):
         return next((r for r in self.releases.values() if r['tag_name'] == tag), None)
@@ -82,18 +96,27 @@ class GitHub:
         path = next(a for a in args[1:] if a.startswith('repos/'))[len(f'repos/{REPO}/') :]
         if method == 'POST' and path == 'releases':
             payload = json.loads(data)
-            release = {**payload, 'id': self.next_id, 'assets': [], 'html_url': 'u'}
-            self.releases[self.next_id] = release
-            self.next_id += 1
+            if self.rival_before_create:
+                rival, self.rival_before_create = self.rival_before_create, None
+                self.add({**payload, 'target_commitish': rival})
+            release = self.add(payload)
             if self.fail_after_create:
                 return 1, b''
             return 0, json.dumps(release).encode()
+        if method == 'DELETE':
+            del self.releases[int(path.rsplit('/', 1)[1])]
+            return 0, b''
+        if method == 'PATCH' and '--input' in args:
+            self.releases[int(path.rsplit('/', 1)[1])].update(json.loads(data))
+            return 0, b'{}'
         if method == 'PATCH':
             release = self.releases[int(path.rsplit('/', 1)[1])]
             release['draft'] = False
             release['make_latest'] = 'true' if 'make_latest=true' in args else 'false'
             self.tags.add(release['tag_name'])
             return 0, b'{}'
+        if path == 'git/matching-refs/tags/v':
+            return 0, json.dumps([[{'ref': 'refs/tags/' + tag} for tag in self.tags]]).encode()
         if path.startswith('releases?'):
             return 0, json.dumps([list(self.releases.values())]).encode()
         if path.startswith('releases/tags/'):
@@ -118,6 +141,7 @@ def github():
     with (
         mock.patch.object(PUBLISH, 'subprocess', fake),
         mock.patch.object(PREVIEW, 'subprocess', fake),
+        mock.patch.object(PREPARE, 'subprocess', fake),
         mock.patch.object(PUBLISH, 'published_history', return_value={**HISTORY, 'releases': []}),
     ):
         yield model
@@ -186,3 +210,42 @@ def test_preview_drafts_are_found_through_the_same_lookup(github, tmp_path):
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     (release,) = github.releases.values()
     assert release['draft'] and release['prerelease'] and len(release['assets']) == 1
+
+
+TODAY = datetime.date(2026, 11, 7)
+
+
+def reserve(commit, *, prerelease=True):
+    return PREPARE.reserve_identity(REPO, commit, TODAY, prerelease=prerelease)
+
+
+def test_a_retry_of_the_same_source_keeps_its_reserved_version_and_date(github):
+    github.tags.add('v2026.11.0')
+    assert reserve('a' * 40) == ('2026.11.1', datetime.date(2026, 11, 5))
+    assert reserve('a' * 40) == ('2026.11.1', datetime.date(2026, 11, 5))
+    assert reserve('c' * 40)[0] == '2026.11.2'
+    assert reserve('a' * 40, prerelease=False)[0] == '2026.11.3'
+    assert len(github.releases) == 3
+
+
+def test_a_simultaneous_allocator_keeps_the_number_and_the_later_one_moves_on(github):
+    github.rival_before_create = 'd' * 40
+    assert reserve('a' * 40)[0] == '2026.11.1'
+    owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
+    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}
+
+
+def test_publishers_claim_their_reservation_and_refuse_another_sources(github, folder, tmp_path):
+    version, _ = reserve(RELEASE['commit'], prerelease=False)
+    assert version == RELEASE['version']
+    PUBLISH.publish(REPO, folder)
+    (release,) = github.releases.values()
+    assert release['body'] == PLAN.markdown_notes(RELEASE) and len(release['assets']) == 2
+
+    github.releases.clear()
+    preview = {**RELEASE, 'commit': 'e' * 40}
+    reserve('f' * 40)
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'preview installer')
+    with pytest.raises(ValueError, match='another source'):
+        PREVIEW.publish(REPO, preview, 'Notes\n', [(archive, 'x' * 64)])

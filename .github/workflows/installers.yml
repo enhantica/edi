@@ -57,20 +57,22 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.14'
-      - name: Select the next calendar version
+      - name: Reserve this source's calendar version
         id: select
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Reserving creates an empty draft, which needs the release token used for drafts.
+          GH_TOKEN: ${{ secrets.GH_API_PERSONAL_ACCESS_TOKEN }}
           PYTHONPATH: tools/release
         run: |
           python - <<'PYTHON'
           import datetime
           import os
           from pathlib import Path
-          from plan import next_calendar_version
-          from prepare import calendar_tags
-          date = datetime.datetime.now(datetime.UTC).date()
-          version = next_calendar_version(calendar_tags(os.environ['GITHUB_REPOSITORY']), date)
+          from prepare import reserve_identity
+          today = datetime.datetime.now(datetime.UTC).date()
+          version, date = reserve_identity(
+              os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_SHA'], today, prerelease=True
+          )
           with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
               output.write(f'version={version}\ndate={date.isoformat()}\n')
           PYTHON

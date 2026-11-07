@@ -63,6 +63,35 @@ def create_draft(repo: str, payload: dict) -> dict:
     return existing
 
 
+def claim_reservation(repo: str, existing: dict, commit: str, notes: str) -> dict:
+    """Give the empty draft that reserved this version its notes, then read it back.
+
+    Any other draft or release is returned unchanged for the ordinary identity checks.
+    """
+    if not existing['draft'] or existing['body'] or existing['assets']:
+        return existing
+    if existing['target_commitish'] != commit:
+        raise ValueError('The reserved version belongs to another source')
+    subprocess.run(
+        [
+            'gh',
+            'api',
+            '--method',
+            'PATCH',
+            f'repos/{repo}/releases/{existing["id"]}',
+            '--input',
+            '-',
+        ],
+        input=json.dumps({'body': notes}).encode(),
+        check=True,
+        capture_output=True,
+    )
+    claimed = optional_api(repo, f'releases/{existing["id"]}')
+    if claimed is None or claimed['body'] != notes:
+        raise RuntimeError('The reserved draft could not be updated')
+    return claimed
+
+
 def check_progression(history: dict, previous: dict, release: dict) -> None:
     """Refuse stale plans while allowing a retry of the identical published release."""
     validate_history(history)
@@ -157,6 +186,7 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
                 'make_latest': 'false',
             },
         )
+    existing = claim_reservation(repo, existing, release['commit'], notes)
     if existing['prerelease'] or existing['name'] != 'edi ' + release['version']:
         raise ValueError('Release tag already names a different release')
     found = check_existing(existing, release, notes, assets)

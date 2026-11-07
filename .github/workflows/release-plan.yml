@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: read
 
 jobs:
@@ -20,7 +20,8 @@ jobs:
       - name: Prepare the source-bound identity and user notes
         run: python tools/release/prepare.py --repo "$GITHUB_REPOSITORY" --output release-plan
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Preparation reserves the version as an empty draft, made with the release token.
+          GH_TOKEN: ${{ secrets.GH_API_PERSONAL_ACCESS_TOKEN }}
       - name: Upload the release inputs for review and qualification
         uses: actions/upload-artifact@v4
         with:

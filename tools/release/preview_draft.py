@@ -10,7 +10,13 @@ from pathlib import Path
 
 from plan import markdown_note, note_interfaces
 from promote import digest, validate_cli, validate_wheel
-from publish_assets import check_existing, create_draft, find_release, optional_api
+from publish_assets import (
+    check_existing,
+    claim_reservation,
+    create_draft,
+    find_release,
+    optional_api,
+)
 
 PLATFORMS = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
 
@@ -126,6 +132,7 @@ def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str
                 'make_latest': 'false',
             },
         )
+    existing = claim_reservation(repo, existing, release['commit'], notes)
     assets = {path.name: digest for path, digest in archives}
 
     def verified_assets(metadata, *, replace_draft_assets=False):

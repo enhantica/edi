@@ -73,6 +73,15 @@ month. Numeric ordering applies to release sequences, including sequences above 
 The versioned history has schema `edi.releases/1`. Both GitHub Markdown notes and the application's
 release-range selection consume these recorded entries. Release preparation and publication remain
 separate: creating a plan does not tag, publish, merge or alter an online component repository.
+Its one change on GitHub is the version reservation described below.
+
+A version is reserved when it is chosen, for previews and stable releases alike: an empty draft
+release at the source commit, named `edi VERSION`. Other allocators see it among the drafts and
+skip the number. A retry of the same commit in the same channel finds that draft and keeps its
+version and date, the date being the draft's creation day. If two allocators take one number at the
+same moment, the earlier draft keeps it and the later one is deleted and takes the next number.
+Publication fills in the reserved draft's notes; a reservation made for another commit refuses. An
+abandoned reservation leaves a gap in the month's sequence, which is harmless.
 
 Release builds supply `EDI_RELEASE_VERSION` to the existing C++ version generator; ordinary developer
 builds keep their git-derived identity. The installer source-build driver accepts the same version.
@@ -135,7 +144,8 @@ source/version/history identity and actual installed application receipts; all p
 the same complete crysta commit. Validate Qt component identities and original archive checksums.
 
 Publication first creates or reuses a matching GitHub draft and uploads only missing, byte-identical
-assets, without clobbering. Existing tags, differing notes/source/asset digests and stale histories
+assets, without clobbering. Drafts are found by listing releases and handled by release ID, since
+GitHub's tag route answers for published releases only. Existing tags, differing notes/source/asset digests and stale histories
 refuse publication. The tested repositories and matching release-history feed deploy together under
 the shared Pages publication lock, preserving docs, web app and existing archives. Only then is the
 verified release made public. An interruption leaves a retryable draft rather than regenerated
@@ -187,6 +197,15 @@ Testing components are published separately to the public Pages repository
 under `/edi/repository/testing/<platform>/`. The application update feed is at
 `/edi/releases/testing.json`. Publish the matching component repositories
 before making the corresponding installer draft public.
+
+Every installer or release publication checks the assembled site: each
+platform repository must offer exactly the version its channel's feed
+advertises. That refuses diagnostic components over a calendar feed, a single
+platform ahead of the others and stable components without their feed.
+Recovering a retained run uses the newest attempt in which every platform's
+installer job succeeded and every artifact is still kept, takes the calendar
+identity from those artifacts and never combines attempts. Only calendar
+previews can be recovered.
 
 ## Public release notes
 
