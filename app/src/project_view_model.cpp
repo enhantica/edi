@@ -4594,6 +4594,12 @@ void ProjectViewModel::workIn(const QString& folder) {
     project_->path = folder.toStdString();
     project_->metadata.path = project_->path;
     project_->scan_data_root.clear();
+    // A scan fits its template, set aside while a dataset is shown: it works in the same folder.
+    if (scan_template_) {
+        scan_template_->path = project_->path;
+        scan_template_->metadata.path = project_->path;
+        scan_template_->scan_data_root.clear();
+    }
     emit pathChanged();
 }
 
