@@ -1640,6 +1640,12 @@ int main(int argc,char** argv) {
                     {"actual_worker_entered",reader->entered.load()},{"actual_worker_finished",done},{"native_file_read_before",reader->before},{"native_file_read_after",reader->after},
                     {"native_fit_exercised",false},{"original_root",root}};
             }
+            else if(op=="object_names") {
+                Array names;
+                for (auto* object : objects(window))
+                    if (!object->objectName().isEmpty()) names.append(object->objectName());
+                result={{"names", names}};
+            }
             else if(op=="evaluate") {
                 QQmlExpression expression(qmlContext(window),window,input["expression"].toString());
                 const auto value=expression.evaluate();
