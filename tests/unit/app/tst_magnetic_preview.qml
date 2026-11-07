@@ -556,11 +556,13 @@ TestCase {
         const visibleBefore = new Set(Render.descendants(appWindow.contentItem).filter(item => item.visible && typeof item.text === "string").map(item => item.text));
         if (editor.enabled && !editor.readOnly) {
             Ui.scrollIntoView(editor);
-            mouseClick(editor);
+            Ui.click(test, Probe, appWindow, editor.objectName, true);
+            tryCompare(editor, "activeFocus", true, 3000, "The converted editor receives actual keyboard input");
             editor.selectAll();
             for (const ch of String(data.value)) keyClick(ch === "-" ? Qt.Key_Minus : Qt.Key_0 + Number(ch));
+            compare(Number(editor.text), data.value, "The complete requested value is typed before Return");
             keyClick(Qt.Key_Return);
-            tryVerify(() => Render.descendants(appWindow.contentItem).some(item => item.visible &&
+            tryVerify(() => Render.descendants(moments).some(item => item.visible &&
                    typeof item.text === "string" && !visibleBefore.has(item.text) && /symmetry|cannot|invalid|range|positive|negative|polar|modulus|angle|direction/i.test(item.text)),
                    3000, "An impossible direction or invalid spherical value produces a visible refusal");
         }
