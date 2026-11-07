@@ -80,10 +80,55 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
         )
     elif component == 'release':
         overlay_release(site, incoming)
+        check_feed_agreement(site)
     elif component == 'installers':
         overlay_installers(site, incoming)
+        check_feed_agreement(site)
     else:
         raise ValueError('Unknown site component')
+
+
+def check_feed_agreement(site: Path) -> None:
+    """Refuse a site whose platform repositories offer another version than their feed.
+
+    The app reads the feed to show an update and the Maintenance Tool installs what the
+    repository offers, so both must name the same version on every published platform. This
+    holds whatever was published: calendar previews, recovered runs, stable releases, a
+    diagnostic build or a single platform.
+    """
+    policy = json.loads(
+        (Path(__file__).resolve().parents[2] / 'data/distribution.json').read_text(
+            encoding='utf-8'
+        )
+    )
+    for channel, feed_name in (('testing', 'testing.json'), ('stable', 'stable.json')):
+        repositories = [
+            site / policy['repository_paths'][channel].format(platform=platform)
+            for platform in ('linux-x86_64', 'macos-arm64', 'windows-x86_64')
+        ]
+        repositories = [path for path in repositories if (path / 'Updates.xml').is_file()]
+        if not repositories:
+            continue
+        feed = site / 'releases' / feed_name
+        if not feed.is_file():
+            raise RuntimeError(f'The {channel} repositories have no update feed')
+        releases = json.loads(feed.read_text(encoding='utf-8')).get('releases') or []
+        if not releases:
+            raise RuntimeError(f'The {channel} update feed lists no release')
+        versions = [entry['version'] for entry in releases]
+        advertised = versions[0] if channel == 'testing' else max(versions, key=version_key)
+        for repository in repositories:
+            document = ET.parse(repository / 'Updates.xml')  # noqa: S314 - qualified artifact
+            offered = {item.findtext('Version') for item in document.findall('PackageUpdate')}
+            if offered != {advertised}:
+                raise RuntimeError(
+                    f'The {channel} repository for {repository.name} offers '
+                    f'{sorted(map(str, offered))}, but its feed advertises {advertised}'
+                )
+
+
+def version_key(version: str) -> tuple[int, ...]:
+    return tuple(map(int, version.split('.')))
 
 
 def overlay_release(site: Path, incoming: Path) -> None:

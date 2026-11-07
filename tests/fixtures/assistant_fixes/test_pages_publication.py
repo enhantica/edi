@@ -21,6 +21,18 @@ def artifact(run, name, created, *, expired=False):
     }
 
 
+def updates(version):
+    """Repository metadata offering the application at one version."""
+    return (
+        '<Updates><PackageUpdate><Name>org.easyscience.edi</Name>'
+        f'<Version>{version}</Version></PackageUpdate></Updates>'
+    )
+
+
+def preview_feed(version):
+    return json.dumps({'schema': 'edi.preview-releases/1', 'releases': [{'version': version}]})
+
+
 def deployed(step, state='success', completed='2026-11-04T22:00:00Z'):
     return [{'steps': [{'name': step, 'conclusion': state, 'completed_at': completed}]}]
 
@@ -146,13 +158,16 @@ def test_installers_update_preserves_other_platforms_docs_and_app(tmp_path):
     (site / 'index.html').write_text('docs')
     previous = site / 'repository/testing/windows-x86_64'
     previous.mkdir(parents=True)
-    (previous / 'Updates.xml').write_text('previous Windows')
+    (previous / 'Updates.xml').write_text(updates('2026.11.1') + '<!-- previous Windows -->')
+    (site / 'releases').mkdir()
+    (site / 'releases/testing.json').write_text(preview_feed('2026.11.1'))
     part = incoming / 'testing/linux-x86_64'
     part.mkdir(parents=True)
-    (part / 'Updates.xml').write_text('new Linux')
+    (part / 'Updates.xml').write_text(updates('2026.11.1') + '<!-- new Linux -->')
     MODULE.overlay_component(site, incoming, 'installers')
-    assert (previous / 'Updates.xml').read_text() == 'previous Windows'
-    assert (site / 'repository/testing/linux-x86_64/Updates.xml').read_text() == 'new Linux'
+    assert (previous / 'Updates.xml').read_text().endswith('<!-- previous Windows -->')
+    linux = site / 'repository/testing/linux-x86_64/Updates.xml'
+    assert linux.read_text().endswith('<!-- new Linux -->')
     assert (site / 'index.html').read_text() == 'docs'
     assert (site / 'webapp/index.html').read_text() == 'app'
 
@@ -190,15 +205,16 @@ def test_new_metadata_retains_previous_downloads_and_rejects_reused_identity(tmp
     (site / 'index.html').write_text('docs')
     old = site / 'repository/testing/linux-x86_64'
     old.mkdir(parents=True)
-    (old / 'Updates.xml').write_text('old metadata')
+    (old / 'Updates.xml').write_text(updates('1.0.0'))
     (old / '1.0.0content.7z').write_bytes(b'old download in flight')
     new = incoming / 'testing/linux-x86_64'
     new.mkdir(parents=True)
-    (new / 'Updates.xml').write_text('new metadata')
+    (new / 'Updates.xml').write_text(updates('2.0.0'))
     (new / '2.0.0content.7z').write_bytes(b'new download')
+    (new.parent / 'feed.json').write_text(preview_feed('2.0.0'))
     MODULE.overlay_component(site, incoming, 'installers')
     assert (old / '1.0.0content.7z').read_bytes() == b'old download in flight'
-    assert (old / 'Updates.xml').read_text() == 'new metadata'
+    assert (old / 'Updates.xml').read_text() == updates('2.0.0')
     (new / '2.0.0content.7z').write_bytes(b'changed under an existing version')
     with pytest.raises(RuntimeError, match='identity was reused'):
         MODULE.overlay_component(site, incoming, 'installers')
@@ -249,10 +265,10 @@ def test_testing_feed_keeps_stable_and_rejects_stale_preview(tmp_path):
     (site / 'webapp/index.html').write_text('web app')
     target = incoming / 'testing/macos-arm64'
     target.mkdir(parents=True)
-    (target / 'Updates.xml').write_text('qualified metadata')
     feed = target.parent / 'feed.json'
 
     for version in ['2026.11.1', '2026.11.2']:
+        (target / 'Updates.xml').write_text(updates(version))
         feed.write_text(
             json.dumps({
                 'schema': 'edi.preview-releases/1',
@@ -349,3 +365,63 @@ def test_pages_budget_prunes_only_unreferenced_preview_archives(tmp_path):
     budget = metadata.stat().st_size + live.stat().st_size
     assert MODULE.check_site_size(tmp_path, limit=budget) == budget
     assert live.is_file() and not old.exists()
+
+
+def calendar_site(tmp_path, version='2026.11.6'):
+    """A deployed site whose three testing repositories agree with its calendar feed."""
+    site = tmp_path / 'site'
+    (site / 'webapp').mkdir(parents=True)
+    (site / 'webapp/index.html').write_text('app')
+    (site / 'index.html').write_text('docs')
+    (site / 'releases').mkdir()
+    feed = json.loads(preview_feed(version))
+    (site / 'releases/testing.json').write_text(json.dumps({**feed, 'sequence': 'calendar'}))
+    for platform in ['linux-x86_64', 'macos-arm64', 'windows-x86_64']:
+        repository = site / 'repository/testing' / platform
+        repository.mkdir(parents=True)
+        (repository / 'Updates.xml').write_text(updates(version))
+    return site
+
+
+@pytest.mark.parametrize('route', ['installers', 'release-stable', 'stable-without-feed'])
+def test_diagnostic_components_cannot_replace_a_calendar_feed(tmp_path, route):
+    site, incoming = calendar_site(tmp_path), tmp_path / 'incoming'
+    platforms = ['linux-x86_64', 'macos-arm64', 'windows-x86_64']
+    channel = 'testing' if route == 'installers' else 'stable'
+    root = incoming / 'repository' if route == 'release-stable' else incoming
+    for platform in platforms:
+        part = root / channel / platform
+        part.mkdir(parents=True)
+        (part / 'Updates.xml').write_text(updates('0.0.42.1'))
+    if route == 'release-stable':
+        (incoming / 'releases').mkdir()
+        (incoming / 'releases/stable.json').write_text(
+            json.dumps({'schema': 'edi.releases/1', 'releases': [{'version': '2026.11.0'}]})
+        )
+    component = 'release' if route == 'release-stable' else 'installers'
+    with pytest.raises(RuntimeError, match='feed'):
+        MODULE.overlay_component(site, incoming, component)
+
+
+def test_one_platform_cannot_move_ahead_of_the_others(tmp_path):
+    site, incoming = calendar_site(tmp_path), tmp_path / 'incoming'
+    part = incoming / 'testing/linux-x86_64'
+    part.mkdir(parents=True)
+    (part / 'Updates.xml').write_text(updates('2026.11.7'))
+    feed = json.loads(preview_feed('2026.11.7'))
+    (part.parent / 'feed.json').write_text(json.dumps({**feed, 'sequence': 'calendar'}))
+    with pytest.raises(RuntimeError, match='macos-arm64 offers'):
+        MODULE.overlay_component(site, incoming, 'installers')
+
+
+def test_a_complete_calendar_preview_moves_feed_and_repositories_together(tmp_path):
+    site, incoming = calendar_site(tmp_path), tmp_path / 'incoming'
+    for platform in ['linux-x86_64', 'macos-arm64', 'windows-x86_64']:
+        part = incoming / 'testing' / platform
+        part.mkdir(parents=True)
+        (part / 'Updates.xml').write_text(updates('2026.11.7'))
+    feed = json.loads(preview_feed('2026.11.7'))
+    (incoming / 'testing/feed.json').write_text(json.dumps({**feed, 'sequence': 'calendar'}))
+    MODULE.overlay_component(site, incoming, 'installers')
+    published = json.loads((site / 'releases/testing.json').read_text())
+    assert [entry['version'] for entry in published['releases']] == ['2026.11.7', '2026.11.6']
