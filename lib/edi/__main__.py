@@ -57,6 +57,45 @@ _VERBOSITY = {
 }
 
 
+def _add_download_commands(subcommands: argparse._SubParsersAction) -> None:
+    """diffraction-lib's download commands and options, over EasyDiffraction's collection."""
+    source_help = (
+        "a collection's base URL or folder (default: EDI_COLLECTION, else EasyDiffraction's)"
+    )
+    tutorials_help = (
+        "the tutorials' base URL or folder (default: EDI_TUTORIALS, else the docs site)"
+    )
+    list_data = subcommands.add_parser('list-data', help="list the collection's entries, numbered")
+    list_data.add_argument(
+        '--kind', choices=('structure', 'experiment', 'data', 'project'), default=''
+    )
+    download_data = subcommands.add_parser(
+        'download-data', help='download an entry by id or listing number; a project is unpacked'
+    )
+    download_data.add_argument('name', help='the entry id, or its number in list-data')
+    download_data.add_argument('-d', '--destination', metavar='DIR', default='data')
+    list_tutorials = subcommands.add_parser('list-tutorials', help='list the tutorials, numbered')
+    download_tutorial = subcommands.add_parser(
+        'download-tutorial', help='download a tutorial by id or listing number'
+    )
+    download_tutorial.add_argument('name', help='the tutorial id, or its number in list-tutorials')
+    download_tutorial.add_argument('-d', '--destination', metavar='DIR', default='tutorials')
+    download_tutorial.add_argument('--ipynb', action='store_true', help='the notebook (default)')
+    download_tutorial.add_argument('--py', action='store_true', help='the Python script')
+    download_all = subcommands.add_parser('download-all-tutorials', help='download every tutorial')
+    download_all.add_argument('-d', '--destination', metavar='DIR', default='tutorials')
+    for parser in (download_data, download_tutorial, download_all):
+        parser.add_argument('-o', '--overwrite', action='store_true')
+    for parser, help_text in (
+        (list_data, source_help),
+        (download_data, source_help),
+        (list_tutorials, tutorials_help),
+        (download_tutorial, tutorials_help),
+        (download_all, tutorials_help),
+    ):
+        parser.add_argument('--source', metavar='URL_OR_FOLDER', default=None, help=help_text)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='python -m edi',
@@ -65,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     subcommands = parser.add_subparsers(dest='command', required=True)
     # `fit` only. A speculative subcommand family would be inventing an interface nobody asked for;
     # this is what exists and what was requested.
-    fit = subcommands.add_parser('fit', help='refine a project directory')
+    fit = subcommands.add_parser('fit', help='fit a project directory')
     fit.add_argument(
         'project',
         help='project directory (structures/, experiments/, analysis/) with embedded measured'
@@ -201,6 +240,7 @@ def build_parser() -> argparse.ArgumentParser:
     fetching.add_argument(
         '--into', metavar='DIR', default='.', help='the folder to write into (default: .)'
     )
+    _add_download_commands(subcommands)
     report = subcommands.add_parser(
         'report',
         help="save a project's report into its reports folder, as the app's Save report does",
@@ -827,6 +867,30 @@ def run_collection(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_downloads(args: argparse.Namespace) -> int:
+    if args.command == 'list-data':
+        edi.list_data(args.kind, source=args.source)
+    elif args.command == 'download-data':
+        edi.download_data(
+            args.name, args.destination, overwrite=args.overwrite, source=args.source
+        )
+    elif args.command == 'list-tutorials':
+        edi.list_tutorials(source=args.source)
+    elif args.command == 'download-tutorial':
+        formats = [name for name, chosen in (('ipynb', args.ipynb), ('py', args.py)) if chosen]
+        for file_format in formats or ['ipynb']:
+            edi.download_tutorial(
+                args.name,
+                args.destination,
+                file_format=file_format,
+                overwrite=args.overwrite,
+                source=args.source,
+            )
+    else:
+        edi.download_all_tutorials(args.destination, overwrite=args.overwrite, source=args.source)
+    return 0
+
+
 def run_report(args: argparse.Namespace) -> int:
     # The project's own report settings, a flag replacing one for this run only; nothing is
     # written to the project. Save report writes the ticked formats but the PDF, which is the
@@ -872,6 +936,18 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     # The commands without a fit record: an error is one stderr line beside the non-zero exit.
     plain = {'report': run_report, 'export': run_export, 'collection': run_collection}
+    plain.update(
+        dict.fromkeys(
+            (
+                'list-data',
+                'download-data',
+                'list-tutorials',
+                'download-tutorial',
+                'download-all-tutorials',
+            ),
+            run_downloads,
+        )
+    )
     if args.command in plain:
         try:
             return plain[args.command](args)

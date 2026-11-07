@@ -2,7 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-07
-- **Implementation:** ⬜ Not implemented
+- **Implementation:** 🟡 Partially implemented — the core (`edi/online_fetch.hpp`), the app's transport, the Python
+  functions, the `python -m edi` commands and the docs' tutorials index; the standalone CLI's transport is pending
 - **Priority:** High
 - **Forward constraint (binding on new features):** a new interface or feature that reads EasyDiffraction's collection
   supplies only a transport and its presentation; choosing the location, falling back, resolving an id or a listing
@@ -23,7 +24,8 @@ prevent.
 
 - **The rules live in the core, in `edi::online`, beside the index parser.** It owns:
   - resolving what a user names, an entry id or a 1-based number from a listing (a number is a row on screen, never
-    stored), with one listing order for every interface: the index's order;
+    stored), with one listing order for every interface: by id, as diffraction-lib lists its data, with tutorials in their
+    learning order;
   - the order of locations for a request and the fallback rule of ADR-0068: the next location only after an outage (a
     transport, proxy or server failure or a 5xx answer), never after an answer such as a 404;
   - checking received bytes against the size and SHA-256 the index records, with a SHA-256 in the core;
@@ -46,8 +48,8 @@ prevent.
   file has a size and SHA-256 and a mismatch refuses. A changed file must take a new id, so a published id keeps meaning
   the same bytes. `EDI_COLLECTION` still selects another collection.
 - **Tutorials are indexed by the documentation site, not by the data collection.** The docs build writes
-  `tutorials/index.json`, listing each tutorial's id, title, description, learning order and the notebook and
-  Python-source URLs at the documentation's source revision, beside the notebooks it publishes. A tutorial is
+  `assets/tutorials/index.json` in the collection's format: one `tutorial` entry per tutorial, in learning order, with
+  its notebook and Python source as files with their sizes and SHA-256, published beside them. A tutorial is
   documentation versioned with the code that runs it. Its data stays in `enhantica/edi-data`, and its notebook fetches
   the data with `download_data`.
 - **The standalone CLI's transport is decided separately.** It is Qt-free and Python-free (ADR-0007), so HTTPS there

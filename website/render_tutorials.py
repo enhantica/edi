@@ -2,6 +2,7 @@
 """Publish portable Python tutorial bundles from the maintained example projects."""
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -17,7 +18,7 @@ START = '<!-- python-tutorials -->'
 END = '<!-- /python-tutorials -->'
 
 
-def tutorial_bundle(notebook: Path, output: Path) -> str:
+def tutorial_bundle(notebook: Path, output: Path) -> tuple[str, str]:
     """Bundle a notebook and its exact starting project for local execution."""
     document = notebook_from_source(notebook)
     notebook_name = notebook.with_suffix('.ipynb').name
@@ -38,6 +39,16 @@ def tutorial_bundle(notebook: Path, output: Path) -> str:
             cell['outputs'] = []
         cell['source'] = text.splitlines(keepends=True)
         cells.append(cell)
+    description = next(
+        (
+            ''.join(cell['source']).strip().split('\n\n')[1]
+            for cell in document['cells']
+            if cell['cell_type'] == 'markdown'
+            and ''.join(cell['source']).startswith('# ')
+            and '\n\n' in ''.join(cell['source']).strip()
+        ),
+        '',
+    )
     if not title or cases != {notebook.stem}:
         raise ValueError(f'Tutorial must name its starting project: {notebook.name}')
     document['cells'] = [
@@ -49,6 +60,13 @@ def tutorial_bundle(notebook: Path, output: Path) -> str:
     ]
     for index, cell in enumerate(document['cells']):
         cell['id'] = str(index)
+    folder = output.parent
+    text = json.dumps(document, ensure_ascii=False, indent=1) + '\n'
+    (folder / notebook_name).write_text(text, encoding='utf-8')
+    import jupytext  # noqa: PLC0415 - only the site build needs it
+
+    source_text = jupytext.writes(jupytext.reads(text, fmt='ipynb'), fmt='py:percent')
+    (folder / notebook.with_suffix('.py').name).write_text(source_text, encoding='utf-8')
     case = ROOT / 'docs/user/cli' / notebook.stem
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         archive.writestr(notebook_name, json.dumps(document, ensure_ascii=False, indent=1))
@@ -56,7 +74,27 @@ def tutorial_bundle(notebook: Path, output: Path) -> str:
         for path in sorted((case / 'project').rglob('*')):
             if path.is_file():
                 archive.write(path, path.relative_to(case).as_posix())
-    return title
+    return title, ' '.join(description.split())
+
+
+def tutorial_entry(folder: Path, stem: str, title: str, description: str) -> dict:
+    """One tutorial in the collection format (ADR-0075): its notebook and Python source."""
+    files = []
+    for suffix, file_format in (('.ipynb', 'ipynb'), ('.py', 'py')):
+        data = (folder / (stem + suffix)).read_bytes()
+        files.append({
+            'path': stem + suffix,
+            'format': file_format,
+            'sha256': hashlib.sha256(data).hexdigest(),
+            'bytes': len(data),
+        })
+    return {
+        'id': stem,
+        'kind': 'tutorial',
+        'name': title,
+        'description': description,
+        'files': files,
+    }
 
 
 def render_tutorials(output: Path, source: str) -> str:
@@ -66,10 +104,11 @@ def render_tutorials(output: Path, source: str) -> str:
     revision = subprocess.check_output(
         ['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True
     ).strip()
-    rows = []
+    rows, entries = [], []
     for notebook in sorted((ROOT / 'docs/user/tutorials').glob('*.py')):
         name = notebook.stem + '.zip'
-        title = tutorial_bundle(notebook, output / name)
+        title, description = tutorial_bundle(notebook, output / name)
+        entries.append(tutorial_entry(output, notebook.stem, title, description))
         colab = (
             'https://colab.research.google.com/github/enhantica/edi/blob/'
             f'{revision}/docs/user/tutorials/{quote(notebook.with_suffix(".ipynb").name)}'
@@ -78,6 +117,11 @@ def render_tutorials(output: Path, source: str) -> str:
             f'| {title} | [Download notebook and project](../../assets/tutorials/{name}) '
             f'| [Open in Colab]({colab}) |'
         )
+    # What list_tutorials and download_tutorial read, in Python and python -m edi (ADR-0075).
+    index = {'schema': 'edi-data-index/1', 'entries': entries}
+    (output / 'index.json').write_text(
+        json.dumps(index, ensure_ascii=False, indent=1) + '\n', 'utf-8'
+    )
     before, rest = source.split(START, 1)
     _, after = rest.split(END, 1)
     table = '\n'.join(['| Tutorial | Files | Google Colab |', '| --- | --- | --- |', *rows])

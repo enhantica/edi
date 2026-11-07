@@ -151,6 +151,11 @@ if _importlib_util.find_spec('edi._edi') is None:
 
 from edi._collection import (  # noqa: E402 - after the __path__ resolution
     Collection,
+    download_all_tutorials,
+    download_data,
+    download_tutorial,
+    list_data,
+    list_tutorials,
     load_collection,
 )
 from edi._edi import (  # noqa: E402 - the __path__ resolution above must run first
@@ -380,8 +385,13 @@ __all__ = [
     'ValidationError',
     'VerbosityEnum',
     'WeightFraction',
+    'download_all_tutorials',
+    'download_data',
+    'download_tutorial',
     'error_report',
     'iteration_line',
+    'list_data',
+    'list_tutorials',
     'load_collection',
     'machine_report',
     'parameter_table',
