@@ -169,6 +169,34 @@ EaComponents.ApplicationWindow {
             Accessible.name: !ApplicationInfo.assistantAvailable ? qsTr("Desktop version required") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
             Accessible.description: ApplicationInfo.assistantUnavailableReason
             onClicked: ApplicationInfo.assistantToolbarActivated(window, assistantToggle, assistantPanel, Session, Preferences, assistantDesktopOnlyDialog)
+
+            // The status bar's faint rule, between the tabs and the app controls (the owner, 2026-11-01).
+            Rectangle {
+                objectName: "appBar.separator"
+                x: -EaStyle.Sizes.fontPixelSize * 0.5
+                anchors.verticalCenter: parent.verticalCenter
+                width: EaStyle.Sizes.borderThickness
+                height: Math.round(EaStyle.Sizes.fontPixelSize * 6 / 7)
+                color: EaStyle.Colors.appBarBorder
+            }
+        },
+        // The tooltip switch (the owner, 2026-11-01): a click turns tooltips off, or back on at the last level used; a right
+        // click opens Preferences, where the level and the delay are.
+        EaElements.ToolButton {
+            id: toolTipsButton
+
+            readonly property bool on: Preferences.toolTipLevel !== "Off"
+
+            objectName: "appBar.button.toolTips"
+            fontIcon: on ? "comment" : "comment-slash"
+            ToolTip.text: on ? qsTr("Turn tooltips off; right-click for their level and delay") : qsTr("Turn tooltips on; right-click for their level and delay")
+            Accessible.name: on ? qsTr("Turn tooltips off") : qsTr("Turn tooltips on")
+            onClicked: Preferences.toolTipLevel = on ? "Off" : Preferences.toolTipLastLevel
+
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                onTapped: Preferences.dialogShown = true
+            }
         },
         EaElements.ToolButton {
             objectName: "appBar.button.preferences"
@@ -177,20 +205,6 @@ EaComponents.ApplicationWindow {
             Accessible.name: ToolTip.text
             // edi's own preferences dialog (AppPreferencesDialog; edi ADR-0017 §12), not the base's.
             onClicked: Preferences.dialogShown = true
-        },
-        EaElements.ToolButton {
-            objectName: "appBar.button.help"
-            fontIcon: "question-circle"
-            ToolTip.text: qsTr("Get online help")
-            Accessible.name: ToolTip.text
-            onClicked: Qt.openUrlExternally(ApplicationInfo.docsUrl)
-        },
-        EaElements.ToolButton {
-            objectName: "appBar.button.bug"
-            fontIcon: "bug"
-            ToolTip.text: qsTr("Report a bug or issue")
-            Accessible.name: ToolTip.text
-            onClicked: Qt.openUrlExternally(ApplicationInfo.issuesUrl)
         }
     ]
 
@@ -301,7 +315,7 @@ EaComponents.ApplicationWindow {
         EaElements.ToolTip {
             objectName: "appBar.preparingToolTip"
             parent: tabBarOverlay.preparingTab !== null ? tabBarOverlay.preparingTab : tabBarOverlay
-            visible: tabBarOverlay.preparingTab !== null && EaGlobals.Vars.showToolTips
+            requested: tabBarOverlay.preparingTab !== null
             text: qsTr("Preparing this page…")
         }
     }
@@ -742,7 +756,7 @@ EaComponents.ApplicationWindow {
                 EaElements.ToolTip {
                     Component.onCompleted: contentItem.objectName = "saveAs.folderTooltip"
                     text: saveAsChoice.diskWritable ? "" : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
-                    visible: text !== "" && saveAsFolderHover.hovered && EaGlobals.Vars.showToolTips
+                    requested: saveAsFolderHover.hovered
                 }
             }
             ChoiceRadioButton {
