@@ -10,7 +10,7 @@ from pathlib import Path
 
 from plan import markdown_note, note_interfaces
 from promote import digest, validate_cli, validate_wheel
-from publish_assets import check_existing, optional_api
+from publish_assets import check_existing, create_draft, find_release, optional_api
 
 PLATFORMS = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
 
@@ -111,39 +111,20 @@ def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str
     title = 'edi ' + version
     command = ['gh', 'release']
 
-    def read_release():
-        pages = subprocess.check_output([
-            'gh',
-            'api',
-            '--paginate',
-            '--slurp',
-            f'repos/{repo}/releases?per_page=100',
-        ])
-        matches = [item for page in json.loads(pages) for item in page if item['tag_name'] == tag]
-        if len(matches) > 1:
-            raise ValueError('Multiple releases use the same calendar tag')
-        if matches:
-            return optional_api(repo, f'releases/{matches[0]["id"]}')
-        return None
-
-    existing = read_release()
+    existing = find_release(repo, tag)
     if existing is None:
         if optional_api(repo, f'git/ref/tags/{tag}') is not None:
             raise ValueError('Release tag already exists')
-        payload = {
-            'tag_name': tag,
-            'target_commitish': release['commit'],
-            'name': title,
-            'body': notes,
-            'draft': True,
-            'prerelease': True,
-            'make_latest': 'false',
-        }
-        existing = json.loads(
-            subprocess.check_output(
-                ['gh', 'api', '--method', 'POST', f'repos/{repo}/releases', '--input', '-'],
-                input=json.dumps(payload).encode(),
-            )
+        existing = create_draft(
+            repo,
+            {
+                'tag_name': tag,
+                'target_commitish': release['commit'],
+                'name': title,
+                'body': notes,
+                'prerelease': True,
+                'make_latest': 'false',
+            },
         )
     assets = {path.name: digest for path, digest in archives}
 

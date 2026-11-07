@@ -23,6 +23,46 @@ def optional_api(repo: str, path: str) -> dict | None:
     return json.loads(result.stdout)
 
 
+def find_release(repo: str, tag: str) -> dict | None:
+    """The release with this tag, draft or published, read by its ID.
+
+    GitHub's ``releases/tags/{tag}`` route answers for published releases only, so a draft is
+    found by listing every release the token can see.
+    """
+    pages = subprocess.run(
+        ['gh', 'api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100'],
+        capture_output=True,
+        check=False,
+    )
+    if pages.returncode:
+        raise RuntimeError('Release publication metadata could not be read')
+    matches = [
+        item for page in json.loads(pages.stdout) for item in page if item['tag_name'] == tag
+    ]
+    if len(matches) > 1:
+        raise ValueError('Multiple releases use the same calendar tag')
+    if not matches:
+        return None
+    found = optional_api(repo, f'releases/{matches[0]["id"]}')
+    if found is None:
+        raise RuntimeError('A listed release could not be read')
+    return found
+
+
+def create_draft(repo: str, payload: dict) -> dict:
+    """Create a draft release and read it back by the ID GitHub returned."""
+    created = json.loads(
+        subprocess.check_output(
+            ['gh', 'api', '--method', 'POST', f'repos/{repo}/releases', '--input', '-'],
+            input=json.dumps({**payload, 'draft': True}).encode(),
+        )
+    )
+    existing = optional_api(repo, f'releases/{created["id"]}')
+    if existing is None or existing['tag_name'] != payload['tag_name'] or not existing['draft']:
+        raise RuntimeError('Created release could not be verified')
+    return existing
+
+
 def check_progression(history: dict, previous: dict, release: dict) -> None:
     """Refuse stale plans while allowing a retry of the identical published release."""
     validate_history(history)
@@ -59,6 +99,32 @@ def check_existing(
     return found
 
 
+def publish_draft(repo: str, existing: dict, release: dict, notes: str, assets: dict) -> None:
+    """Publish the verified draft by its ID and read it back as the latest release."""
+    if check_existing(existing, release, notes, assets) != set(assets):
+        raise ValueError('All qualified assets must be uploaded before publication')
+    subprocess.run(
+        [
+            'gh',
+            'api',
+            '--method',
+            'PATCH',
+            f'repos/{repo}/releases/{existing["id"]}',
+            '-F',
+            'draft=false',
+            '-f',
+            'make_latest=true',
+        ],
+        check=True,
+        capture_output=True,
+    )
+    published = optional_api(repo, f'releases/{existing["id"]}')
+    if published is None or published['draft'] or published['tag_name'] != existing['tag_name']:
+        raise RuntimeError('Published release could not be verified')
+    if check_existing(published, release, notes, assets) != set(assets):
+        raise RuntimeError('Published release assets could not be verified')
+
+
 def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
     """Create/reuse a matching draft, then finalize only after repository deployment."""
     release = json.loads((folder / 'release.json').read_text())
@@ -74,47 +140,35 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
         with path.open('rb') as stream:
             assets[path.name] = hashlib.file_digest(stream, 'sha256').hexdigest()
     tag = 'v' + release['version']
-    existing = optional_api(repo, f'releases/tags/{tag}')
+    existing = find_release(repo, tag)
     if existing is None:
         if finalize:
             raise ValueError('Create and verify the draft before finalizing publication')
         if optional_api(repo, f'git/ref/tags/{tag}') is not None:
             raise ValueError('A tag already exists without its qualified release')
-        subprocess.run(
-            [
-                'gh',
-                'release',
-                'create',
-                tag,
-                '--repo',
-                repo,
-                '--draft',
-                '--target',
-                release['commit'],
-                '--title',
-                'edi ' + release['version'],
-                '--notes-file',
-                str(folder / 'notes.md'),
-            ],
-            check=True,
+        existing = create_draft(
+            repo,
+            {
+                'tag_name': tag,
+                'target_commitish': release['commit'],
+                'name': 'edi ' + release['version'],
+                'body': notes,
+                'prerelease': False,
+                'make_latest': 'false',
+            },
         )
-        existing = optional_api(repo, f'releases/tags/{tag}')
-        if existing is None:
-            raise RuntimeError('Created release could not be verified')
+    if existing['prerelease'] or existing['name'] != 'edi ' + release['version']:
+        raise ValueError('Release tag already names a different release')
     found = check_existing(existing, release, notes, assets)
     if finalize:
-        if found != set(assets):
-            raise ValueError('All qualified assets must be uploaded before publication')
-        subprocess.run(
-            ['gh', 'release', 'edit', tag, '--repo', repo, '--draft=false', '--latest'], check=True
-        )
+        publish_draft(repo, existing, release, notes, assets)
     else:
         for name in sorted(set(assets) - found):
             subprocess.run(
                 ['gh', 'release', 'upload', tag, str(folder / 'assets' / name), '--repo', repo],
                 check=True,
             )
-        verified = optional_api(repo, f'releases/tags/{tag}')
+        verified = optional_api(repo, f'releases/{existing["id"]}')
         if verified is None or check_existing(verified, release, notes, assets) != set(assets):
             raise RuntimeError('Uploaded release assets could not be verified')
 
