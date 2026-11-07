@@ -6,8 +6,7 @@ Only test transport replies are scripted; the shipped parsers, download callback
 project adoption, tutorial actions and archive opener execute normally. HTTP fixture
 requests stay inside the scripted transport. No external network is used.
 
-Correctness references are the collection design note in relay
-`knowledge/design/edi-online-data-collection.md`, committed fixture file bytes,
+Correctness references are the documented collection schema, committed fixture file bytes,
 SHA-256 and ZIP member inventories, the unchanged owner catalogue selection and
 scan checksum oracle, and state/ownership invariants. Tutorial inputs deliberately
 use a cell length of 3.77 and a three-point pattern beginning at 21.5 with intensity
@@ -38,7 +37,7 @@ Python/CLI/app parity and WebAssembly HTTP fixture coverage. The preceding turn 
 replayed every 5xx and all four named server/proxy errors across search, index and
 file download; those gates remain unchanged.
 
-The single-source update follows relay decision `3e0ad149d`: before, the source
+The single-source update changes the selector: before, the source
 selector and Preferences expected separate EasyDiffraction and mirror rows; after,
 the selector expects one EasyDiffraction row. Socket-free transports inject replies
 for the two owner-declared ordered locations. Python and CLI intercept URL reads;

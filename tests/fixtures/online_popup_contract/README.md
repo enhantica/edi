@@ -1,6 +1,6 @@
 # Popup contract fixtures
 
-Authority: relay decisions of 2026-11-04, “the online popup’s results table,
+The popup contract of 2026-11-04 covers “the online popup’s results table,
 fields and Load action”, “formula search for experiments, and every collection
 entry carries its formula”, and “search popups follow the app’s design, and the
 experiment Load menu shows tooltips”.
@@ -44,3 +44,9 @@ Tooltip text from a control is only its ownership/roundtrip marker; the independ
 oracle is the nonempty explanation and its visible response to Preferences. The
 displacement fixtures prepare their common physical input once, then exercise
 type changes, row removal, duplication and Undo through the public model actions.
+
+The single-result action changed from selection plus bottom Load (or double
+click) to an ordinary row click. The action still dispatches exactly one download
+and one ordinary loader change, and one Undo restores the prior project. Formula
+placeholder checks retain the two written examples without requiring an extra
+third permutation in the limited field width.

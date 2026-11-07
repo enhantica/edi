@@ -1,7 +1,7 @@
 # Experiment workflow references
 
-Authority: relay decision `a8f7938d3`, “a new experiment always starts from Create
-experiment; measured data loads into or replaces the selected one”.
+A new experiment always starts from Create experiment; measured data loads into
+or replaces the selected one.
 
 `replacement.xye` is hand authored: four distinct coordinates, intensities and
 uncertainties. The retained LBCO CIF/experiment and FullProf TbTi reflection file
@@ -9,10 +9,9 @@ are independent inputs. A fresh experiment of the same type is the replacement
 reference. Type and parameter preservation, unchanged rejected state and Undo are
 roundtrip invariants, not values sampled from the implementation.
 
-## Parked checkpoint, conductor seq22
+## Unfinished checkpoint
 
-The committed relay decision “E04-T43 parks except the implement lane's GUI
-requests” stops testing immediately. These workflow gates are an unfinished
+Testing was stopped at the previous checkpoint. These workflow gates are an unfinished
 checkpoint, not completed acceptance evidence. No runs were started after that
 instruction. Runtime banking, both passenger runtime audits and the final hub
 requirement diagnostic remain pending; the runtime table is unchanged. Resume
@@ -20,7 +19,7 @@ those steps before claiming the new nodes are ready for CI.
 
 Before parking, the scoped `test_experiment_create_and_replace.py` replay on
 edi `1b14d72e` recorded 5 failures and 6 passes in
-`~/runs/e04-t43/tests-seq15-experiments-durations.log`. Its independent reference
+the retained scoped experiment replay log. Its independent reference
 and preservation controls reached the ordinary loader. The failures concern the
 create-first menu, retired type group and bottom web Load action. The complete
 lesson walk exceeded the original host protocol timeout; the subsequent longer
@@ -46,6 +45,6 @@ and failure compare every original project byte. Tutorial completion uses real
 Next actions, the independent HRPT data and written 1.494 angstrom setting,
 followed by restoration of the original user project.
 
-Pending drives seq17–21 remain unimplemented here: journal formatting,
+The following gates remain to be completed: journal formatting,
 session search memory, count/chunk loading, linked structures and multi-dataset
-gate 8. Earlier completed work remains recorded in the verdict ledger.
+coverage. Earlier completed work remains recorded separately.
