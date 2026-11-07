@@ -1197,6 +1197,34 @@ QString ProjectViewModel::missingDataFolder() const {
     return QFileInfo(folder).isDir() ? QString() : QDir::cleanPath(folder);
 }
 
+bool ProjectViewModel::useAsTemplate(int dataset) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    if (retired_ || !scan_ || scan_session_ == nullptr) return false;
+    const auto& files = scan_session_->datasets().files;
+    if (dataset < 0 || static_cast<std::size_t>(dataset) >= files.size()) return false;
+    const auto refuse = [&](const QString& message) {
+        setLastError(message);
+        if (self && !retired_) emit refused(message);
+        return false;
+    };
+    if (scan_template_) return refuse(tr("Show the template first, then choose the new template"));
+    edi::Project next(*project_);
+    try {
+        edi::set_scan_template_file(next, files[static_cast<std::size_t>(dataset)]);
+    } catch (const std::exception& problem) {
+        return refuse(QString::fromUtf8(problem.what()));
+    }
+    auto before = std::make_shared<const edi::Project>(*project_);
+    const QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
+    if (!self || retired_) return false;
+    if (!error.isEmpty()) return refuse(error);
+    undo_history_.emplace_back(AppliedText{std::move(before)});
+    syncUndo();
+    emit templateIndexChanged();
+    return true;
+}
+
 bool ProjectViewModel::locateDataFolder(const QUrl& folder) {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
@@ -1235,8 +1263,20 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
     if (files.isEmpty()) return false;
     for (const QUrl& file : files)
         if (!file.isLocalFile()) return refuse(QStringLiteral("not a local file: %1").arg(file.toString()));
-    if (scan_) return refuse(tr("This project is a scan already; its datasets come from the scan's folder"));
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refuse(refusal);
+    // A project that is a scan already has its scan replaced (the owner, 2026-11-04): the declaration goes first, as
+    // an undoable change of its own, and the files load as into any project.
+    if (project_->sequential_fit.declared()) {
+        edi::Project plain(*project_);
+        plain.sequential_fit = edi::SequentialFitConfig{};
+        plain.fitting_mode.clear();
+        auto before = std::make_shared<const edi::Project>(*project_);
+        const QString error = apply(edi::Edit::replace_project(*project_, std::move(plain)), true);
+        if (!self || retired_) return false;
+        if (!error.isEmpty()) return refuse(error);
+        undo_history_.emplace_back(AppliedText{std::move(before)});
+        syncUndo();
+    }
     edi::Project& project = *project_;
     const edi::BraggPdExperiment& source = *project.experiments[static_cast<std::size_t>(index)];
     const auto fileName = [](const QUrl& url) { return QFileInfo(url.toLocalFile()).fileName(); };
@@ -1271,6 +1311,8 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         syncLoadState();
         noteAddedExperiments(before);
         setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+        // A joint fit's experiments: Analysis switches to joint by itself (the owner, 2026-11-04).
+        if (analysis_ != nullptr && project.experiments.size() > 1) analysis_->setFittingMode(QStringLiteral("joint"));
         qCInfo(lcApp, "%d datasets loaded as experiments", static_cast<int>(files.size()));
         return true;
     }
@@ -2267,6 +2309,14 @@ void ProjectViewModel::syncScanAdmission() {
             scan_template_.reset();
         }
         emit scanChanged();
+        // A scan starts on its template's row, so the selectors name a dataset from the start (the owner, 2026-11-04).
+        if (scan_ && current_dataset_ < 0) {
+            if (const int at = templateIndex(); at >= 0) {
+                current_dataset_ = at;
+                syncDataset(at);
+                emit currentExperimentIndexChanged();
+            }
+        }
     }
 }
 

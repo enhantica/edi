@@ -46,7 +46,9 @@ AppDialog {
         text: qsTr("Space group, Hermann-Mauguin: P m -3 m")
     }
     readonly property real fieldColumnWidth: Math.ceil(widestPlaceholder.advanceWidth) + 2 * EaStyle.Sizes.fontPixelSize
-    contentWidth: Math.min(parent ? Math.floor(parent.width * 0.95) - 2 * EaStyle.Sizes.fontPixelSize : 0, 3 * fieldColumnWidth + 2 * EaStyle.Sizes.fontPixelSize)
+    // A structure's table needs more: its ID and cell in full and a reference about half as wide again (the owner,
+    // 2026-11-04).
+    contentWidth: Math.min(parent ? Math.floor(parent.width * 0.95) - 2 * EaStyle.Sizes.fontPixelSize : 0, (kind === "structure" ? 1.3 : 1) * (3 * fieldColumnWidth + 2 * EaStyle.Sizes.fontPixelSize))
     contentHeight: column.implicitHeight
 
     // Moves whenever the fields are rebuilt (a source change, the collection's values arriving), so each field reads
@@ -325,7 +327,8 @@ AppDialog {
             spacing: EaStyle.Sizes.fontPixelSize
             EaElements.SideBarButton {
                 objectName: "onlineLoad.search"
-                width: column.cellWidth
+                // Search and Clear share the first column (the owner, 2026-11-04).
+                width: (column.cellWidth - EaStyle.Sizes.fontPixelSize) / 2
                 fontIcon: "search"
                 text: dialog.search.busy && dialog.selectedRow < 0 ? qsTr("Searching…") : qsTr("Search")
                 enabled: !dialog.search.busy && dialog.search.sourceId !== ""
@@ -334,16 +337,17 @@ AppDialog {
             }
             EaElements.SideBarButton {
                 objectName: "onlineLoad.clear"
-                width: column.cellWidth
+                width: (column.cellWidth - EaStyle.Sizes.fontPixelSize) / 2
                 fontIcon: "eraser"
                 text: qsTr("Clear")
                 enabled: !dialog.search.busy
                 ToolTip.text: qsTr("Empty the fields and the results; the next search starts afresh")
                 onClicked: dialog.clearSearch()
             }
-            // The search's message, or for an unreachable source the next one that holds this kind.
+            // The search's message, or for an unreachable source the next one that holds this kind, over the other two
+            // columns.
             Item {
-                width: column.cellWidth
+                width: 2 * column.cellWidth + EaStyle.Sizes.fontPixelSize
                 height: alternative.visible ? alternative.height : messageLabel.implicitHeight
                 anchors.verticalCenter: parent.verticalCenter
                 EaElements.Label {
@@ -414,6 +418,7 @@ AppDialog {
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {}
                 EaComponents.ListViewLabel {
+                    elide: Text.ElideNone
                     text: qsTr("ID")
                     horizontalAlignment: Text.AlignLeft
                 }
@@ -426,18 +431,22 @@ AppDialog {
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
+                    elide: Text.ElideNone
                     text: qsTr("Formula")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
+                    elide: Text.ElideNone
                     text: results.structures ? Session.categoryTitle("space_group") : qsTr("Radiation")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
+                    elide: Text.ElideNone
                     text: results.structures ? Session.categoryTitle("cell") : qsTr("Technique")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
+                    elide: Text.ElideNone
                     text: results.structures ? qsTr("Reference") : Session.categoryTitle("instrument")
                     horizontalAlignment: Text.AlignLeft
                 }
@@ -466,17 +475,19 @@ AppDialog {
                 objectName: `onlineLoad.row.${row.index}`
                 // A click selects the row through the table's own selection (remembered for the next opening); a
                 // double click loads it. Beneath the cells, so the reference's link keeps its own click.
+                // A click loads the row's entry (the owner, 2026-11-04); in the measured-data popup Ctrl or Shift selects
+                // several rows instead, for Load N.
                 MouseArea {
                     parent: row
                     anchors.fill: parent
                     z: -1
+                    cursorShape: Qt.PointingHandCursor
                     onClicked: mouse => {
-                        results.selectWithModifiers(row.index, mouse.modifiers);
+                        const adding = dialog.kind === "data" && (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier));
+                        results.selectWithModifiers(row.index, adding ? mouse.modifiers : Qt.NoModifier);
                         dialog.search.rememberSelection(row.index);
-                    }
-                    onDoubleClicked: {
-                        results.selectWithModifiers(row.index, Qt.NoModifier);
-                        dialog.loadSelected();
+                        if (!adding)
+                            dialog.loadSelected();
                     }
                 }
                 // The row number as the app's other tables show it: greyed, highlighted with the selected row.
@@ -488,7 +499,7 @@ AppDialog {
                 EaComponents.ListViewLabel {
                     objectName: `onlineLoad.id.${row.index}`
                     horizontalAlignment: Text.AlignLeft
-                    elide: Text.ElideMiddle
+                    elide: Text.ElideNone  // ID, Formula, Space group or Radiation, Cell and Instrument show in full (the owner, 2026-11-04)
                     text: row.model.id
                     ToolTip.text: row.source
                 }
@@ -504,24 +515,24 @@ AppDialog {
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
-                    elide: Text.ElideRight
+                    elide: Text.ElideNone
                     text: row.formula
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
-                    elide: Text.ElideRight
+                    elide: Text.ElideNone
                     text: results.structures ? row.spaceGroup : row.radiation
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignLeft
-                    elide: Text.ElideRight
+                    elide: results.structures ? Text.ElideNone : Text.ElideRight
                     text: results.structures ? dialog.cellText(row) : row.technique
                 }
                 EaComponents.ListViewLabel {
                     id: referenceCell
                     objectName: `onlineLoad.reference.${row.index}`
                     horizontalAlignment: Text.AlignLeft
-                    elide: Text.ElideRight
+                    elide: results.structures ? Text.ElideRight : Text.ElideNone
                     // The reference with its authors in italic, in the ordinary colour; a DOI shows as a link only under
                     // the pointer and opens in the browser (the owner, 2026-11-04). The whole reference is its tool tip.
                     readonly property bool linked: results.structures && row.referenceUrl !== ""
@@ -575,8 +586,9 @@ AppDialog {
             }
             EaElements.Button {
                 objectName: "onlineLoad.load"
+                visible: dialog.selectedRows.length > 1
                 enabled: dialog.canLoad
-                text: dialog.search.busy && dialog.selectedRow >= 0 ? qsTr("Loading…") : qsTr("Load")
+                text: dialog.search.busy ? qsTr("Loading…") : qsTr("Load %1").arg(dialog.selectedRows.length)
                 ToolTip.text: dialog.kind === "structure" ? qsTr("Load the selected structure into the project") : dialog.kind === "experiment" ? qsTr("Open the selected experiment in the project, with the structures it links") : dialog.targetExperiment !== null ? qsTr("Load the selected pattern into %1").arg(dialog.targetExperiment.name) : qsTr("Create an experiment from the selected data")
                 onClicked: dialog.loadSelected()
             }

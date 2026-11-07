@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "analysis_view_model.hpp"
+#include "run_log.hpp"
 
 #include <QMetaObject>
 
@@ -301,6 +302,7 @@ void AnalysisViewModel::setFittingMode(const QString& mode) {
         return;
     }
     edi::Project& project = project_;
+    qCInfo(lcApp, "fitting mode: %s", qPrintable(mode));
     setLastError(editor_.apply_setting(edi::Edit::fitting_mode(project, mode.toStdString())));
 }
 
@@ -345,7 +347,10 @@ void AnalysisViewModel::sync() {
     const std::vector<std::string> modes = edi::applicable_fitting_modes(project_);
     if (modes != fitting_modes_) {
         fitting_modes_ = modes;
-        fitting_mode_options_->setItemOptions("fitting_mode.type", modes, modes.front());
+        // Single is the default wherever it applies: a scan stays a single fit until the user switches (the owner,
+        // 2026-11-04).
+        const bool single = std::find(modes.begin(), modes.end(), "single") != modes.end();
+        fitting_mode_options_->setItemOptions("fitting_mode.type", modes, single ? std::string("single") : modes.front());
     }
     if (std::find(modes.begin(), modes.end(), edi::effective_fitting_mode(project_)) == modes.end()) {
         QMetaObject::invokeMethod(

@@ -1178,9 +1178,24 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     else if (!existing.isDir() || !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi")))
         setLastError(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
     else {
-        saved = saveInto(existing.absoluteFilePath());
-        if (saved) { archive_location_.clear(); leaveTemporaryOrigin(); releaseTemporaryFolder(); }
-        else if (current()) setLastError(tr("The project %1 could not be replaced: %2").arg(existing.fileName(), last_error_));
+        // Nothing of the old project survives (the owner, 2026-11-04): it moves aside, the new one is saved fresh in
+        // its place, and only then is the old one removed; a refused save puts it back as it was.
+        const QString place = existing.absoluteFilePath();
+        QString aside = place + QStringLiteral(".edi-replaced");
+        for (int n = 2; QFileInfo::exists(aside); ++n) aside = place + QStringLiteral(".edi-replaced-%1").arg(n);
+        if (!QDir().rename(place, aside)) {
+            setLastError(tr("The project %1 could not be replaced: it could not be moved aside").arg(existing.fileName()));
+        } else {
+            saved = saveProjectAsFresh(QUrl::fromLocalFile(place), false, false, false);
+            if (saved) {
+                QDir(aside).removeRecursively();
+            } else {
+                const QString why = last_error_;
+                QDir(place).removeRecursively();
+                QDir().rename(aside, place);
+                if (current()) setLastError(tr("The project %1 could not be replaced: %2").arg(existing.fileName(), why));
+            }
+        }
     }
     const QString error=current()?(saved?QString{}:last_error_):QStringLiteral("The original Create save owner changed");
     if (outcome) { outcome->error = error; outcome->saved = error.isEmpty(); outcome->path = originalCreated ? originalCreated->path() : QString{}; }

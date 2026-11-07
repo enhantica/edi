@@ -243,6 +243,18 @@ SideBarGroup {
             experiment: group.project ? group.project.currentExperiment : null
             experimentIndex: group.project ? group.project.currentExperimentIndex : -1
         }
+        // A scan's template is chosen here: the selected dataset becomes it (the owner, 2026-11-04).
+        EaElements.SideBarButton {
+            objectName: "experiments.useAsTemplate"
+            visible: group.scan
+            width: EaStyle.Sizes.sideBarContentWidth
+            enabled: group.project !== null && group.project.currentExperimentIndex >= 0 && group.project.currentExperimentIndex !== group.project.templateIndex
+            fontIcon: "star"
+            text: qsTr("Use as template")
+            ToolTip.text: qsTr("Make the selected dataset the scan's template: the template experiment takes its data")
+            onClicked: group.project.useAsTemplate(group.project.currentExperimentIndex)
+        }
+
         // A scan whose data folder cannot be found (ADR-0069): the project still opens; this line says which folder
         // and Locate folder… points the scan at its new place.
         Row {
@@ -529,6 +541,14 @@ SideBarGroup {
                     text: qsTr("Copy data into the project")
                     checked: datasetsChoice.copy
                     onToggled: datasetsChoice.copy = checked
+                }
+                // A project that is a scan already has it replaced (the owner, 2026-11-04).
+                EaElements.Label {
+                    visible: group.project !== null && group.project.scan
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: EaStyle.Colors.red
+                    text: qsTr("This project is a scan already: OK replaces its scan.")
                 }
             }
         }
