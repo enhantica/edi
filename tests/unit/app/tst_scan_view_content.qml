@@ -2263,6 +2263,32 @@ Rectangle {
             chart.destroy();
             chart = null;
             Session.closeProject();
+            const templateRoot = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));
+            verify(SettingsProof.write(templateRoot, "analysis/results.csv", ""),
+                   "The fitted-template witness has no scan result rows");
+            verify(Session.openProject(templateRoot), "A fitted template opens before any scan has run");
+            chart = evolutionFactory.createObject(surface, {project: Session.project,
+                width: Math.min(1100, surface.Window.window.width), height: Math.min(760, surface.Window.window.height)});
+            const templateLayer = findChild(chart, "evolution.points");
+            const templateAxes = findChild(chart, "evolution.view");
+            const evolution = Session.project.evolution;
+            evolution.xMode = 1;
+            tryCompare(templateLayer, "count", 1, 3000,
+                       "The fitted template supplies one point without results.csv");
+            compare(evolution.yTitle, "bank.background.P1.intensity",
+                    "The fitted-template point uses the independently held P1 parameter");
+            verify(templateAxes.axisX.min <= 1 && templateAxes.axisX.max >= 1 &&
+                   templateAxes.axisY.min <= 4 && templateAxes.axisY.max >= 4,
+                   "File-index axes contain the independent template coordinate (1,4)");
+            evolution.xMode = 0;
+            tryCompare(templateLayer, "count", 1, 3000,
+                       "Switching to the extracted temperature retains the fitted-template point");
+            verify(templateAxes.axisX.min <= 293.15 && templateAxes.axisX.max >= 293.15 &&
+                   templateAxes.axisY.min <= 4 && templateAxes.axisY.max >= 4,
+                   "Temperature axes contain TEMP 293.15 and the held P1 value 4");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
         }
 
         function test_scan_axis_fonts_data() {
