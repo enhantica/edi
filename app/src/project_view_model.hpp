@@ -155,6 +155,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(QString authors READ authors WRITE setAuthors NOTIFY authorsChanged)
     // How values with a standard uncertainty are written and shown: "iucr_19" or "iucr_99".
     Q_PROPERTY(QString suRule READ suRule WRITE setSuRule NOTIFY suRuleChanged)
+    // edi ADR-0069: whether a save copies a linked scan's files into the project ("all"), keeps them linked
+    // ("linked") or asks ("ask"). Kept by the app for the project's folder; until chosen, all up to 20 files and
+    // 50 MB, linked above.
+    Q_PROPERTY(QString includeDataOnSave READ includeDataOnSave WRITE setIncludeDataOnSave NOTIFY includeDataOnSaveChanged)
     // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`: d-spacing, or the experiment's own.
     // The report's charts follow it. An undoable edit.
     Q_PROPERTY(bool patternDSpacing READ patternDSpacing WRITE setPatternDSpacing NOTIFY patternDSpacingChanged)
@@ -458,6 +462,15 @@ class ProjectViewModel : public QObject, public ProjectEditor {
                                   bool copy = true);
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
+    QString includeDataOnSave() const;
+    void setIncludeDataOnSave(const QString& mode);
+    /// What a save of the project writes (edi ADR-0069): `linked` (a scan reads files outside the project), their
+    /// `linkedFiles` and `linkedBytes`, the save's `files` and `bytes` when those are copied, the `mode`, and `ask`:
+    /// whether the user chooses first (the mode asks, or copying writes more than 100 MB).
+    Q_INVOKABLE QVariantMap saveDataPlan() const;
+    /// Copies a linked scan's files into `directory`'s scans/<name> and points the scan there, one undoable change;
+    /// empty, or the refusal.
+    QString includeLinkedData(const QString& directory);
     /// Makes a scan's dataset its template (the owner, 2026-11-04): the template mark moves to its row, one undoable
     /// change. A shown dataset becomes the template as shown; otherwise the template experiment takes that file's data.
     /// A dataset still being read, or not shown, gives the template its file's data.
@@ -580,6 +593,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void descriptionChanged();
     void authorsChanged();
     void suRuleChanged();
+    void includeDataOnSaveChanged();
     void patternDSpacingChanged();
     void lastModifiedChanged();
     void currentStructureIndexChanged();
@@ -1035,6 +1049,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString editReadinessRefusal(bool restoring) const;
     bool calculating_ = false;
     bool adjusting_ = false;
+    std::optional<QString> include_data_on_save_;  // chosen before the project has a folder to key it by
     bool adjusted_ = false;  // a drag step left the full publish for the release
     edi::PreviewResult adjust_result_;  // the newest drag step's calculation, published in full on release
     bool modified_ = false;

@@ -999,6 +999,61 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    // A save of a project whose scan reads linked files (edi ADR-0069): above 100 MB, or with the project set to
+    // ask, the user chooses whether the files go with it (the owner, 2026-11-04).
+    AppDialog {
+        id: saveData
+        objectName: "save.dataChoice"
+        property real bytes: 0
+        property int files: 0
+        property bool large: false
+        title: qsTr("Linked data")
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: saveDataText.implicitHeight
+        onRejected: Session.answerSaveData("cancel")
+
+        EaElements.Label {
+            id: saveDataText
+            width: saveData.contentWidth
+            wrapMode: Text.Wrap
+            text: saveData.large ? qsTr("This save writes %1 (%2 files). Keep the data linked instead?").arg(Qt.locale().formattedDataSize(saveData.bytes)).arg(saveData.files) : qsTr("This save writes %1 (%2 files) with the linked data. Copy the data into the project?").arg(Qt.locale().formattedDataSize(saveData.bytes)).arg(saveData.files)
+        }
+        footer: EaElements.DialogButtonBox {
+            EaElements.Button {
+                objectName: "save.dataChoice.linked"
+                text: qsTr("Keep linked")
+                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                onClicked: {
+                    saveData.close();
+                    Session.answerSaveData("linked");
+                }
+            }
+            EaElements.Button {
+                objectName: "save.dataChoice.copy"
+                text: saveData.large ? qsTr("Copy anyway") : qsTr("Copy")
+                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                onClicked: {
+                    saveData.close();
+                    Session.answerSaveData("copy");
+                }
+            }
+            EaElements.Button {
+                objectName: "save.dataChoice.cancel"
+                text: qsTr("Cancel")
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+            }
+        }
+    }
+    Connections {
+        target: Session
+        function onSaveDataChoiceNeeded(bytes, files, large) {
+            saveData.bytes = bytes;
+            saveData.files = files;
+            saveData.large = large;
+            saveData.open();
+        }
+    }
+
     // A fit's end: its results in diffraction-lib's table, or why it was refused.
     FitResultsDialog {
         id: fitResults

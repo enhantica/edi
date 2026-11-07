@@ -1187,6 +1187,132 @@ QString declared_folder(const std::string& projectPath, const QString& folder) {
 }
 }  // namespace
 
+namespace {
+// What a save above this writes is asked about first (the owner, 2026-11-04).
+constexpr qint64 kLargeSaveBytes = 100LL * 1024 * 1024;
+// Linked data copied by default up to these (the dataset dialog's Copy data rule).
+constexpr int kCopyFiles = 20;
+constexpr qint64 kCopyBytes = 50LL * 1024 * 1024;
+}  // namespace
+
+QVariantMap ProjectViewModel::saveDataPlan() const {
+    QVariantMap plan;
+    qint64 linked_bytes = 0;
+    int linked_files = 0;
+    const edi::Project& project = scan_template_ ? *scan_template_ : *project_;
+    const std::string& base = project.scan_data_root.empty() ? project.path : project.scan_data_root;
+    bool linked = false;
+    if (scan_ && scan_session_ != nullptr && project.sequential_fit.declared()) {
+        const QString folder = QDir::cleanPath(QString::fromStdString(scan_session_->datasets().directory));
+        const QString root = base.empty() ? QString() : QDir::cleanPath(QString::fromStdString(base));
+        linked = root.isEmpty() || QDir(root).relativeFilePath(folder).startsWith(QStringLiteral(".."));
+        if (linked) {
+            for (const std::string& file : scan_session_->datasets().files) {
+                linked_bytes += QFileInfo(QDir(folder).filePath(QString::fromStdString(file))).size();
+                ++linked_files;
+            }
+        }
+    }
+    qint64 bytes = 0;
+    int files = 0;
+    try {
+        for (const auto& [name, text] : savedFiles()) {
+            bytes += static_cast<qint64>(text.size());
+            ++files;
+        }
+    } catch (const std::exception&) {
+        // A save that refuses says so itself; the plan counts what it can.
+    }
+    const QString mode = includeDataOnSave();
+    if (linked && mode != QLatin1String("linked")) {
+        bytes += linked_bytes;
+        files += linked_files;
+    }
+    plan.insert(QStringLiteral("linked"), linked);
+    plan.insert(QStringLiteral("linkedFiles"), linked_files);
+    plan.insert(QStringLiteral("linkedBytes"), linked_bytes);
+    plan.insert(QStringLiteral("files"), files);
+    plan.insert(QStringLiteral("bytes"), bytes);
+    plan.insert(QStringLiteral("mode"), mode);
+    plan.insert(QStringLiteral("ask"), linked && (mode == QLatin1String("ask") ||
+                                                  (mode == QLatin1String("all") && bytes > kLargeSaveBytes)));
+    return plan;
+}
+
+QString ProjectViewModel::includeDataOnSave() const {
+    if (!project_->path.empty() && !settings_file_path().isEmpty()) {
+        QSettings store(settings_file_path(), QSettings::IniFormat);
+        store.beginGroup(QStringLiteral("IncludeDataOnSave"));
+        const QString stored = store.value(selectionKey()).toString();
+        if (stored == QLatin1String("all") || stored == QLatin1String("linked") || stored == QLatin1String("ask")) {
+            return stored;
+        }
+    }
+    if (include_data_on_save_.has_value()) return *include_data_on_save_;
+    // Until chosen, by the copy rule over the linked files.
+    qint64 bytes = 0;
+    int files = 0;
+    if (scan_ && scan_session_ != nullptr) {
+        const QString folder = QString::fromStdString(scan_session_->datasets().directory);
+        for (const std::string& file : scan_session_->datasets().files) {
+            bytes += QFileInfo(QDir(folder).filePath(QString::fromStdString(file))).size();
+            ++files;
+        }
+    }
+    return files <= kCopyFiles && bytes <= kCopyBytes ? QStringLiteral("all") : QStringLiteral("linked");
+}
+
+void ProjectViewModel::setIncludeDataOnSave(const QString& mode) {
+    if (mode != QLatin1String("all") && mode != QLatin1String("linked") && mode != QLatin1String("ask")) return;
+    if (mode == includeDataOnSave()) return;
+    include_data_on_save_ = mode;  // also for a project not saved yet
+    if (!project_->path.empty() && !settings_file_path().isEmpty()) {
+        QSettings store(settings_file_path(), QSettings::IniFormat);
+        store.beginGroup(QStringLiteral("IncludeDataOnSave"));
+        store.setValue(selectionKey(), mode);
+    }
+    emit includeDataOnSaveChanged();
+}
+
+QString ProjectViewModel::includeLinkedData(const QString& directory) {
+    const PublicationScope publication(*this);
+    if (retired_ || !scan_ || scan_session_ == nullptr) return {};
+    const QString source = QString::fromStdString(scan_session_->datasets().directory);
+    const QDir root(directory);
+    const edi::Project& project = scan_template_ ? *scan_template_ : *project_;
+    const QString name = QString::fromStdString(project.experiments.empty() ? std::string("scan") : project.experiment().name.value());
+    QString folder = QStringLiteral("scans/") + name;
+    for (int n = 2; root.exists(folder); ++n) folder = QStringLiteral("scans/%1_%2").arg(name).arg(n);
+    if (!root.mkpath(folder)) return tr("The folder %1 could not be made in the project").arg(folder);
+    const QString target = root.filePath(folder);
+    for (const std::string& file : scan_session_->datasets().files) {
+        const QString name_of = QString::fromStdString(file);
+        if (!QFile::copy(QDir(source).filePath(name_of), QDir(target).filePath(name_of))) {
+            QDir(target).removeRecursively();
+            return tr("%1 could not be copied into the project").arg(name_of);
+        }
+    }
+    // The scan now reads the copies, wherever the project is saved next (an absolute folder, re-expressed by the
+    // save for its place).
+    edi::Project next(project);
+    next.sequential_fit.data_dir = QDir::cleanPath(target).toStdString();
+    auto before = std::make_shared<const edi::Project>(*project_);
+    if (scan_template_) scan_template_.reset();
+    const QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
+    if (!error.isEmpty()) {
+        QDir(target).removeRecursively();
+        return error;
+    }
+    undo_history_.emplace_back(AppliedText{std::move(before)});
+    syncUndo();
+    view_applied_ = ++view_request_;  // a dataset read in flight was of the linked files
+    publishCalculating();
+    emit missingDataFolderChanged();
+    qCInfo(lcApp, "%d linked datasets copied into %s", static_cast<int>(scan_session_->datasets().files.size()),
+           qPrintable(target));
+    return {};
+}
+
 QString ProjectViewModel::missingDataFolder() const {
     const edi::Project& project = *project_;
     if (!project.sequential_fit.declared()) return {};

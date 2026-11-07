@@ -220,6 +220,8 @@ class Session : public QObject {
     // directory. False, with `lastError` the core's message, when the write is refused; `save` refuses
     // when the project must be saved as.
     Q_INVOKABLE bool save();
+    /// The answer to saveDataChoiceNeeded: "copy", "linked" or "cancel"; the save that asked runs again with it.
+    Q_INVOKABLE void answerSaveData(const QString& choice);
     Q_INVOKABLE bool saveAs(const QUrl& directory);
     // Save as (edi ADR-0052): into the folder or the .zip `target` (a `file:` URL), as `zip` says. A project saved as a
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
@@ -300,6 +302,9 @@ class Session : public QObject {
     void locationTextChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
+    // A save of a project whose scan reads linked files asks first (edi ADR-0069): it writes `bytes` in `files`, and
+    // `large` says it passes 100 MB. answerSaveData continues it.
+    void saveDataChoiceNeeded(qint64 bytes, int files, bool large);
     void colourSchemeChanged();
     void lastErrorChanged();
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
@@ -383,6 +388,10 @@ class Session : public QObject {
     QString colour_scheme_ = QStringLiteral("earth");
     // The .zip the project was saved as: its location, rewritten by every Save from the working folder.
     QString archive_location_;
+    // edi ADR-0069: the save waiting for the data choice, and the answer it runs with.
+    std::function<void()> pending_save_;
+    QString save_data_choice_;
+    bool settleSaveData(const QString& directory, std::function<void()> again);
     // The read-only folder a temporary working copy was made from.
     QString read_only_source_;
     // The temporary folder the project works in (an unpacked archive), removed when it is no longer the project's.

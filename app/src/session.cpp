@@ -612,6 +612,8 @@ bool Session::save() {
         setLastError(QStringLiteral("this project has no directory of its own yet: save it as"));
         return false;
     }
+    // A linked scan's files go with the save, stay linked, or the user is asked first (edi ADR-0069).
+    if (!settleSaveData(project_->path(), [this] { save(); })) return false;
     if (!archive_location_.isEmpty()) {
         // The archive is written from a staged copy, and the open project then takes that snapshot and works in its
         // folder: a refused archive leaves the project as it was.
@@ -629,6 +631,37 @@ bool Session::save() {
     }
     emit projectDirectoryUsed(QFileInfo(project_->path()).absoluteFilePath());
     return logged("project saved");
+}
+
+bool Session::settleSaveData(const QString& directory, std::function<void()> again) {
+    const QString choice = std::exchange(save_data_choice_, QString());
+    if (project_ == nullptr) return true;
+    const QVariantMap plan = project_->saveDataPlan();
+    if (!plan.value(QStringLiteral("linked")).toBool()) return true;
+    bool include = false;
+    if (choice == QLatin1String("copy") || choice == QLatin1String("linked")) {
+        include = choice == QLatin1String("copy");
+    } else if (plan.value(QStringLiteral("ask")).toBool()) {
+        pending_save_ = std::move(again);
+        const qint64 bytes = plan.value(QStringLiteral("bytes")).toLongLong();
+        emit saveDataChoiceNeeded(bytes, plan.value(QStringLiteral("files")).toInt(), bytes > 100LL * 1024 * 1024);
+        return false;  // asked, not refused: no message
+    } else {
+        include = plan.value(QStringLiteral("mode")).toString() == QLatin1String("all");
+    }
+    if (!include) return true;
+    if (const QString refusal = project_->includeLinkedData(directory); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return false;
+    }
+    return true;
+}
+
+void Session::answerSaveData(const QString& choice) {
+    std::function<void()> again = std::exchange(pending_save_, {});
+    if (choice != QLatin1String("copy") && choice != QLatin1String("linked")) return;  // cancelled: nothing is saved
+    save_data_choice_ = choice;
+    if (again) again();
 }
 
 QString Session::writeBackReports() {
@@ -781,6 +814,11 @@ bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
         return false;
     }
     const QString where = target.toLocalFile();
+    // The linked data, if it goes with the project, is copied into the project's folder first; the save then
+    // carries it as it carries the rest (edi ADR-0069).
+    if (!project_->path().isEmpty() &&
+        !settleSaveData(project_->path(), [this, target, zip, copy] { saveProjectAs(target, zip, copy); }))
+        return false;
     if (copy) {
         return saveCopy(where, zip);
     }

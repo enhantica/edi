@@ -43,6 +43,9 @@ WorkflowPage {
             StandardUncertaintiesGroup {
                 project: page.project
             }
+            SaveDataGroup {
+                project: page.project
+            }
             // The rest of `project.edi`, each category in a group made from the dictionary; the standard
             // uncertainties have theirs above, the report's settings theirs on the Report page.
             Repeater {
