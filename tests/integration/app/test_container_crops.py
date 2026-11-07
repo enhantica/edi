@@ -16,8 +16,9 @@ CONTAINERS = {
     'Components/MainContent.qml': 'SwipeView',
 }
 REASON = (
-    'A crossing child clip must not intersect its enclosing clip; use a texture layer '
-    'on the container, or remove the ListView cells\' inner clips. '
+    'A clipped item crossing its enclosing clip needs a layer boundary between them; '
+    'the container may keep its clip under its own layer, or ListView may remove '
+    'its cells\' inner clips. '
     'Rendered acceptance remains the owner\'s look on dev with a GPU.'
 )
 
@@ -74,7 +75,7 @@ def cell_clips(gui):
 def crop_safe(body, cells=()):
     clip = binding(body, 'clip')
     layer = binding(body, 'layer.enabled')
-    return (layer == ['true'] and (not clip or clip == ['false'])) or (
+    return layer == ['true'] or (
         clip == ['true'] and not cells
     )
 
@@ -97,7 +98,6 @@ def test_crossing_containers_use_texture_crops():
 def test_crop_census_rejects_nested_clip_and_unrelated_layer(tmp_path, monkeypatch):
     for source in (
         'Item { clip: true }',
-        'Item { clip: true; layer.enabled: true }',
         'Item { clip: true; Item { layer.enabled: true } }',
         'Item { clip: false; layer.enabled: false }',
         'Item { clip: false /* layer.enabled: true */ }',
@@ -107,6 +107,8 @@ def test_crop_census_rejects_nested_clip_and_unrelated_layer(tmp_path, monkeypat
     layer = list(qml_objects('Item { clip: false; layer.enabled: true }'))[-1][1]
     fallback = list(qml_objects('Item { clip: true }'))[-1][1]
     assert crop_safe(layer, ['clipped cell']), REASON
+    retained = list(qml_objects('Item { clip: true; layer.enabled: true }'))[-1][1]
+    assert crop_safe(retained, ['clipped cell']), REASON
     assert crop_safe(fallback), REASON
 
     monkeypatch.setitem(globals(), 'ROOT', tmp_path)
