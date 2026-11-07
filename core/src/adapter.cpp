@@ -4928,13 +4928,12 @@ crysta::IterationCallback to_engine_callback(const IterationCallback& subscriber
 template <typename Provider>
 std::vector<std::string> zero_start_messages(Provider& provider) {
     std::vector<std::string> messages;
-    // The starts the fit takes: none for a moment beside a fixed non-zero component.
-    bool moments_carry_all = true;
-    if constexpr (requires { provider.free_moments_carry_all(); }) {
-        moments_carry_all = provider.free_moments_carry_all();
+    // The starts the fit takes: none for a moment whose structure has a fixed non-zero component.
+    std::vector<bool> carried;
+    if constexpr (requires { provider.moments_carried(); }) {
+        carried = provider.moments_carried();
     }
-    for (const crysta::ZeroStart& start :
-         crysta::zero_starts(provider.labels(), provider.values(), moments_carry_all)) {
+    for (const crysta::ZeroStart& start : crysta::zero_starts(provider.labels(), provider.values(), carried)) {
         messages.push_back(start.message);
     }
     return messages;
