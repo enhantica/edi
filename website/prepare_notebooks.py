@@ -5,16 +5,24 @@ import argparse
 import json
 from pathlib import Path
 
-import jupytext
-
 ROOT = Path(__file__).resolve().parents[1]
+PACKAGE_INDEX = 'https://enhantica.github.io/edi/pypi/simple/'
 
 
-def setup_source(case: str, *, portable: bool = False) -> str:
-    """Install the Python package when needed and provide project files in Colab."""
+def setup_source(case: str, *, portable: bool = False, index: str = PACKAGE_INDEX) -> str:
+    """Install the Python package when needed and provide project files in Colab.
+
+    The package comes from EasyDiffraction's index alone: PyPI or another index cannot supply
+    it, even at an equal or higher version, ``--isolated`` stops pip configuration adding one,
+    and an unreachable index stops the setup instead of falling back. Its dependencies then
+    resolve from the default index. A pip-installed ``edi`` is replaced; one imported from a
+    source build is kept.
+    """
     relative = 'project' if portable else f'../cli/{case}/project'
     return (
         '# Install EasyDiffraction and prepare the example when running in Colab.\n'
+        'import importlib\n'
+        'import importlib.metadata\n'
         'import importlib.util\n'
         'import io\n'
         'import os\n'
@@ -24,12 +32,20 @@ def setup_source(case: str, *, portable: bool = False) -> str:
         'import urllib.request\n'
         'import zipfile\n'
         'from pathlib import Path\n\n'
-        'if importlib.util.find_spec("edi") is None:\n'
+        'installed = importlib.util.find_spec("edi") is not None\n'
+        'from_pip = bool(importlib.metadata.packages_distributions().get("edi"))\n'
+        'if "edi" not in sys.modules and (from_pip or not installed):\n'
+        '    pip = [sys.executable, "-m", "pip", "install", "--only-binary=:all:"]\n'
         '    subprocess.check_call([\n'
-        '        sys.executable, "-m", "pip", "install", "--only-binary=:all:",\n'
-        '        "--extra-index-url", "https://enhantica.github.io/edi/pypi/simple/",\n'
-        '        "easydiffraction",\n'
-        '    ])\n\n'
+        '        *pip, "--isolated", "--no-deps", "--force-reinstall",\n'
+        f'        "--index-url", "{index}", "easydiffraction",\n'
+        '    ])\n'
+        '    version = subprocess.check_output([\n'
+        '        sys.executable, "-c",\n'
+        '        "import importlib.metadata as m; print(m.version(\'easydiffraction\'))",\n'
+        '    ], text=True).strip()\n'
+        '    subprocess.check_call([*pip, f"easydiffraction=={version}"])\n'
+        '    importlib.invalidate_caches()\n\n'
         'if "google.colab" in sys.modules:\n'
         '    workspace = Path(tempfile.mkdtemp(prefix="edi-tutorial-"))\n'
         '    (workspace / "notebooks").mkdir()\n'
@@ -47,8 +63,30 @@ def setup_source(case: str, *, portable: bool = False) -> str:
     )
 
 
+REPORT_CELLS = (
+    {
+        'cell_type': 'markdown',
+        'metadata': {},
+        'source': (
+            '## Explore the interactive report\n\n'
+            'Run the cell and trust the notebook to interact with the report. '
+            'It includes Plotly plots and three.js structures where available.'
+        ),
+    },
+    {
+        'cell_type': 'code',
+        'execution_count': None,
+        'metadata': {},
+        'outputs': [],
+        'source': 'project.report.html_offline = True\nproject.report',
+    },
+)
+
+
 def notebook_from_source(source: Path) -> dict:
     """Regenerate all cells from the Python source with stable sequential IDs."""
+    import jupytext  # noqa: PLC0415 - the setup cell alone is used where jupytext is absent
+
     notebook = dict(jupytext.read(source, fmt='py:percent'))
     notebook['cells'].insert(
         0,
@@ -60,6 +98,8 @@ def notebook_from_source(source: Path) -> dict:
             'source': setup_source(source.stem),
         },
     )
+    # Colab opens this notebook and the ZIP carries the same cells, so both end with the report.
+    notebook['cells'].extend(dict(cell) for cell in REPORT_CELLS)
     for index, cell in enumerate(notebook['cells']):
         cell['id'] = str(index)
         cell['source'] = ''.join(cell['source']).splitlines(keepends=True)

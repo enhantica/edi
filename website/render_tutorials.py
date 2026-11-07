@@ -40,32 +40,6 @@ def tutorial_bundle(notebook: Path, output: Path) -> str:
         cells.append(cell)
     if not title or cases != {notebook.stem}:
         raise ValueError(f'Tutorial must name its starting project: {notebook.name}')
-    cells.extend([
-        {
-            'cell_type': 'markdown',
-            'id': 'interactive-report-heading',
-            'metadata': {},
-            'source': [
-                '## Explore the interactive report\n',
-                '\n',
-                (
-                    'Run the cell and trust the notebook to interact with the report. '
-                    'It includes Plotly plots and three.js structures where available.'
-                ),
-            ],
-        },
-        {
-            'cell_type': 'code',
-            'id': 'interactive-report',
-            'execution_count': None,
-            'metadata': {},
-            'outputs': [],
-            'source': [
-                'project.report.html_offline = True\n',
-                'project.report',
-            ],
-        },
-    ])
     document['cells'] = [
         {
             **document['cells'][0],

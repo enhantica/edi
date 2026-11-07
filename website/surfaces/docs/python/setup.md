@@ -54,12 +54,15 @@ Linux x86-64. The wheels are attached to the matching GitHub release.
     `.\.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install and verify:
 
     ```console
-    python -m pip install --extra-index-url https://enhantica.github.io/edi/pypi/simple/ "easydiffraction==VERSION"
+    python -m pip install --isolated --no-deps --force-reinstall --index-url https://enhantica.github.io/edi/pypi/simple/ "easydiffraction==VERSION"
+    python -m pip install "easydiffraction==VERSION"
     python -c "import edi; print(edi.Project)"
     python -m edi --help
     ```
 
-    To upgrade, run the same install command with the new version.
+    The first command takes `easydiffraction` only from the preview index, so a
+    package of the same name on PyPI is never installed instead. The second adds
+    its dependencies from PyPI. To upgrade, run both with the new version.
 
 ## From source
 

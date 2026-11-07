@@ -536,7 +536,7 @@ docs-build = "mkdocs build --strict"
 site-build = "python website/build.py"
 # Build the public site, then serve website/_build at http://127.0.0.1:8873/ for local preview.
 site-serve = { cmd = "python -m http.server 8873 --bind 127.0.0.1 --directory website/_build", depends-on = ["site-build"] }
-pages-check = "python -m pytest tests/fixtures/assistant_fixes/test_pages_publication.py --noconftest -o addopts= -q"
+pages-check = "python -m pytest tests/fixtures/assistant_fixes/test_pages_publication.py tests/fixtures/website tests/fixtures/releases/test_notebook_package_origin.py --noconftest -o addopts= -q"
 docs-clean = "rm -rf site"
 docs-serve = "mkdocs serve"
 # --- the full local gate --------------------------------------------------------------:
