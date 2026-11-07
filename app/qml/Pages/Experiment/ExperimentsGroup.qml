@@ -351,7 +351,7 @@ SideBarGroup {
                     // Measured data goes into the selected experiment, or replaces what it holds (the owner, 2026-11-04):
                     // a new experiment always starts from Create experiment. With none selected the line says so and
                     // the two items are greyed.
-                    readonly property bool dataIntoSelected: loadMenu.selected !== null && !group.scan && loadMenu.selected.canLoadData
+                    readonly property bool dataIntoSelected: loadMenu.selected !== null && loadMenu.selected.canLoadData
                     readonly property bool replacing: loadMenu.selected !== null && !loadMenu.selected.calculationOnly
                     LoadMenuHeader {
                         objectName: "experiments.load.dataHeader"
@@ -366,7 +366,7 @@ SideBarGroup {
                         text: qsTr("From file…")
                         hint: ".xye .xy .dat .txt .csv · .int .hkl"
                         toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace the measured data of %1 with a file's; its type and parameters stay, Undo brings the data back").arg(loadMenu.selected.name) : qsTr("Load a measured pattern or reflection list into %1").arg(loadMenu.selected.name)
-                        onTriggered: group.chooseDataForSelected()
+                        onTriggered: group.confirmScanReplacement(() => group.chooseDataForSelected())
                     }
                     LoadMenuItem {
                         objectName: "experiments.load.dataWeb"
@@ -375,7 +375,10 @@ SideBarGroup {
                         text: qsTr("From web…")
                         hint: "EasyDiffraction"
                         toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : qsTr("Search EasyDiffraction's collection for measured data for %1").arg(loadMenu.selected.name)
-                        onTriggered: onlineLoad.openFor("data", loadMenu.selected)
+                        onTriggered: {
+                            const target = loadMenu.selected;
+                            group.confirmScanReplacement(() => onlineLoad.openFor("data", target));
+                        }
                     }
                 }
             }
@@ -412,6 +415,18 @@ SideBarGroup {
     }
 
     // Measured data goes into the selected experiment (the owner, 2026-11-04); the menu offers it only then.
+    // Measured data loaded into a scan project replaces its scan (the owner, 2026-11-04): asked first, then `proceed`.
+    function confirmScanReplacement(proceed) {
+        if (!group.scan) {
+            proceed();
+            return;
+        }
+        const dialog = scanReplaceComponent.createObject(Overlay.overlay, {
+            proceed: proceed
+        }) as AppDialog;
+        dialog.open();
+    }
+
     function chooseDataForSelected() {
         if (project !== null && project.currentExperiment !== null)
             chooseData(project.currentExperiment);
@@ -485,12 +500,32 @@ SideBarGroup {
             files: files,
             asScan: files.length > 5,
             copy: files.length <= 20 && group.project.filesBytes(files) <= 50 * 1024 * 1024
-        });
+        }) as AppDialog;
         dialog.open();
     }
 
     // Made only while it is asked and destroyed once closed. A Component is no item of the group: the group sizes to
     // its one content column, and a second item (a Loader) left it an empty strip.
+    Component {
+        id: scanReplaceComponent
+        AppDialog {
+            id: scanReplace
+            objectName: "datasets.replaceScan"
+            property var proceed: null
+            title: qsTr("Replace the scan")
+            standardButtons: Dialog.Ok | Dialog.Cancel
+            contentWidth: AppSizes.messagesDialogContentWidth
+            onClosed: destroy()
+            onAccepted: if (scanReplace.proceed)
+                scanReplace.proceed()
+
+            EaElements.Label {
+                width: scanReplace.contentWidth
+                wrapMode: Text.Wrap
+                text: qsTr("This project is a scan. Loading measured data replaces its scan; Undo brings it back.")
+            }
+        }
+    }
     Component {
         id: datasetsComponent
         AppDialog {
@@ -541,14 +576,6 @@ SideBarGroup {
                     text: qsTr("Copy data into the project")
                     checked: datasetsChoice.copy
                     onToggled: datasetsChoice.copy = checked
-                }
-                // A project that is a scan already has it replaced (the owner, 2026-11-04).
-                EaElements.Label {
-                    visible: group.project !== null && group.project.scan
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: EaStyle.Colors.red
-                    text: qsTr("This project is a scan already: OK replaces its scan.")
                 }
             }
         }

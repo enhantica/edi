@@ -458,9 +458,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
                                   bool copy = true);
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
-    /// Makes a scan's dataset its template (the owner, 2026-11-04): the template experiment takes that file's data and
-    /// the template mark moves to its row, one undoable change. Refused while a dataset other than the template is
-    /// shown in the model.
+    /// Makes a scan's dataset its template (the owner, 2026-11-04): the template mark moves to its row, one undoable
+    /// change. A shown dataset becomes the template as shown; otherwise the template experiment takes that file's data.
+    /// A dataset still being read, or not shown, gives the template its file's data.
     Q_INVOKABLE bool useAsTemplate(int dataset);
     /// The scan's data folder when it cannot be found (ADR-0069), else empty: the Experiment page marks the experiment
     /// "data not found" and offers Locate folder…; the project still opens.

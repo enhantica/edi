@@ -1209,19 +1209,43 @@ bool ProjectViewModel::useAsTemplate(int dataset) {
         if (self && !retired_) emit refused(message);
         return false;
     };
-    if (scan_template_) return refuse(tr("Show the template first, then choose the new template"));
-    edi::Project next(*project_);
-    try {
-        edi::set_scan_template_file(next, files[static_cast<std::size_t>(dataset)]);
-    } catch (const std::exception& problem) {
-        return refuse(QString::fromUtf8(problem.what()));
+    if (dataset == templateIndex()) return false;
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refuse(refusal);
+    const std::string& file = files[static_cast<std::size_t>(dataset)];
+    // The template the project saves: set aside while a dataset is shown, else the model itself.
+    const bool stashed = scan_template_.has_value();
+    auto before = std::make_shared<const edi::Project>(stashed ? *scan_template_ : *project_);
+    edi::Project next(*before);
+    if (stashed && projected_dataset_ == dataset && view_applied_ == view_request_) {
+        // The chosen dataset is shown: it becomes the template as shown, its values and its data, as a single fit of a
+        // shown dataset makes it (fit_template_undo_).
+        next = *project_;
+        next.sequential_fit.template_file = file;
+    } else {
+        // Otherwise the template takes the chosen file's data, whatever is shown or still being read.
+        try {
+            edi::set_scan_template_file(next, file);
+        } catch (const std::exception& problem) {
+            return refuse(QString::fromUtf8(problem.what()));
+        }
     }
-    auto before = std::make_shared<const edi::Project>(*project_);
+    // The model is the template from here on; one Undo brings back the old one.
+    scan_template_.reset();
     const QString error = apply(edi::Edit::replace_project(*project_, std::move(next)), true);
     if (!self || retired_) return false;
-    if (!error.isEmpty()) return refuse(error);
+    if (!error.isEmpty()) {
+        if (stashed) scan_template_ = *before;  // refused before it wrote: the old template is still the one saved
+        return refuse(error);
+    }
     undo_history_.emplace_back(AppliedText{std::move(before)});
     syncUndo();
+    // A dataset read still in flight was of the old template: it is dropped, and the new template's row is selected.
+    view_applied_ = ++view_request_;
+    publishCalculating();
+    if (current_dataset_ != dataset) {
+        current_dataset_ = dataset;
+        emit currentExperimentIndexChanged();
+    }
     emit templateIndexChanged();
     return true;
 }
@@ -1265,31 +1289,56 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
     for (const QUrl& file : files)
         if (!file.isLocalFile()) return refuse(QStringLiteral("not a local file: %1").arg(file.toString()));
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refuse(refusal);
-    // A project that is a scan already has its scan replaced (the owner, 2026-11-04): the declaration goes first, as
-    // an undoable change of its own, and the files load as into any project.
-    if (project_->sequential_fit.declared()) {
-        edi::Project plain(*project_);
-        plain.sequential_fit = edi::SequentialFitConfig{};
-        plain.fitting_mode.clear();
-        auto before = std::make_shared<const edi::Project>(*project_);
-        const QString error = apply(edi::Edit::replace_project(*project_, std::move(plain)), true);
+    // A project that is a scan already has its scan replaced (the owner, 2026-11-04). Everything is built from a copy
+    // without the scan and published as one change once every file has been read: a refusal leaves the scan as it
+    // was, and one Undo brings it back.
+    edi::Project& project = *project_;
+    const bool replacing = project.sequential_fit.declared();
+    edi::Project base(project);
+    if (replacing) {
+        base.sequential_fit = edi::SequentialFitConfig{};
+        base.fitting_mode.clear();
+    }
+    const edi::BraggPdExperiment& source = *base.experiments[static_cast<std::size_t>(index)];
+    const auto fileName = [](const QUrl& url) { return QFileInfo(url.toLocalFile()).fileName(); };
+    // The replacement published as one undoable change.
+    const auto replace = [&](edi::Project next) {
+        auto before = std::make_shared<const edi::Project>(project);
+        const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
         if (!self || retired_) return false;
         if (!error.isEmpty()) return refuse(error);
         undo_history_.emplace_back(AppliedText{std::move(before)});
         syncUndo();
+        syncLoadState();
+        return true;
+    };
+    if (replacing && files.size() == 1 && !asScan) {
+        // One file in place of a scan: the template experiment takes its data, as Load data does elsewhere.
+        edi::Project next(base);
+        try {
+            auto read = edi::experiment_with_plain_data(source, files.front().toLocalFile().toStdString(), false);
+            std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
+            for (std::size_t i = 0; i < next.experiments.size(); ++i)
+                held.push_back(i == static_cast<std::size_t>(index) ? std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment))
+                                                                    : next.experiments[i]);
+            next.experiments.assign(std::move(held));
+            next.adopt_experiments();
+        } catch (const std::exception& problem) {
+            return refuse(tr("%1 could not be loaded: %2").arg(fileName(files.front()), QString::fromUtf8(problem.what())));
+        }
+        if (!replace(std::move(next))) return false;
+        qCInfo(lcApp, "a scan replaced by one dataset");
+        return true;
     }
-    edi::Project& project = *project_;
-    const edi::BraggPdExperiment& source = *project.experiments[static_cast<std::size_t>(index)];
-    const auto fileName = [](const QUrl& url) { return QFileInfo(url.toLocalFile()).fileName(); };
     if (!asScan) {
         // One experiment per file, its setup the selected experiment's, its name the file's (unique in the project).
         std::vector<edi::BraggPdExperiment> batch;
         std::set<std::string> taken;
-        for (const auto& held : project.experiments) taken.insert(edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name));
+        for (const auto& held : base.experiments) taken.insert(edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name));
         for (const QUrl& file : files) {
             edi::PlainDataLoad read;
             try {
-                read = edi::experiment_with_plain_data(edi::experiment_copy(project, source), file.toLocalFile().toStdString(), true);
+                read = edi::experiment_with_plain_data(edi::experiment_copy(base, source), file.toLocalFile().toStdString(), true);
             } catch (const std::exception& problem) {
                 return refuse(tr("%1 could not be loaded: %2").arg(fileName(file), QString::fromUtf8(problem.what())));
             }
@@ -1299,6 +1348,20 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
             taken.insert(edi::KeyTraits<edi::BraggPdExperiment>::canonical(name));
             read.experiment.name = name;
             batch.push_back(std::move(read.experiment));
+        }
+        if (replacing) {
+            // The scan's template stays as the first experiment, the files join it, and Analysis fits them jointly.
+            edi::Project next(base);
+            std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
+            for (std::size_t i = 0; i < next.experiments.size(); ++i) held.push_back(next.experiments[i]);
+            for (auto& experiment : batch) held.push_back(std::make_shared<edi::BraggPdExperiment>(std::move(experiment)));
+            next.experiments.assign(std::move(held));
+            next.adopt_experiments();
+            next.fitting_mode = "joint";
+            if (!replace(std::move(next))) return false;
+            setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
+            qCInfo(lcApp, "a scan replaced by %d datasets as experiments", static_cast<int>(files.size()));
+            return true;
         }
         const std::size_t before = project.experiments.size();
         QString error;
@@ -1319,9 +1382,9 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
     }
     // One experiment with a scan. Copied: the files go into scans/<name> in the project's folder. Linked (ADR-0069):
     // the scan reads the files' own folder, which must hold them alone or all of them under one extension.
-    if (project.experiments.size() != 1)
+    if (base.experiments.size() != 1)
         return refuse(tr("A scan fits one experiment; this project holds %1. Load the files as separate experiments, or "
-                         "keep only the template experiment").arg(project.experiments.size()));
+                         "keep only the template experiment").arg(base.experiments.size()));
     if (!copy) {
         const QString parent = QFileInfo(files.front().toLocalFile()).absolutePath();
         QStringList names;
@@ -1337,7 +1400,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         QStringList held = QDir(parent).entryList(QStringList{pattern}, QDir::Files, QDir::Name);
         if (held != names)
             return refuse(tr("%1 holds other %2 files too; copy the chosen ones into the project instead").arg(parent, oneSuffix ? QStringLiteral(".") + suffix : QString()));
-        edi::Project next(project);
+        edi::Project next(base);
         try {
             auto read = edi::experiment_with_plain_data(source, QDir(parent).filePath(names.front()).toStdString(), false);
             std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> kept{std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment))};
@@ -1351,12 +1414,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         } catch (const std::exception& problem) {
             return refuse(tr("%1 could not be loaded: %2").arg(names.front(), QString::fromUtf8(problem.what())));
         }
-        auto before = std::make_shared<const edi::Project>(project);
-        const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
-        if (!self || retired_) return false;
-        if (!error.isEmpty()) return refuse(error);
-        undo_history_.emplace_back(AppliedText{std::move(before)});
-        syncUndo();
+        if (!replace(std::move(next))) return false;
         emit missingDataFolderChanged();
         qCInfo(lcApp, "%d datasets linked as a scan in %s", static_cast<int>(files.size()), qPrintable(parent));
         return true;
@@ -1382,7 +1440,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         }
         names.append(name);
     }
-    edi::Project next(project);
+    edi::Project next(base);
     try {
         // The template holds the first dataset's data; the scan lists every file of its folder, in name order.
         auto read = edi::experiment_with_plain_data(source, QDir(target).filePath(names.front()).toStdString(), false);
@@ -1398,15 +1456,10 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         discard();
         return refuse(tr("%1 could not be loaded: %2").arg(names.front(), QString::fromUtf8(problem.what())));
     }
-    auto before = std::make_shared<const edi::Project>(project);
-    const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
-    if (!self || retired_) return false;
-    if (!error.isEmpty()) {
-        discard();
-        return refuse(error);
+    if (!replace(std::move(next))) {
+        if (self) discard();
+        return false;
     }
-    undo_history_.emplace_back(AppliedText{std::move(before)});
-    syncUndo();
     qCInfo(lcApp, "%d datasets loaded as a scan in %s", static_cast<int>(files.size()), qPrintable(folder));
     return true;
 }
@@ -1697,10 +1750,10 @@ void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, con
 }
 
 void ProjectViewModel::syncLoadState() {
-    // Every experiment but a scan's takes Load data, made in this session or read from its file (the owner,
-    // 2026-10-11): a scan's datasets take their data from the scan's files.
+    // Every experiment takes Load data, made in this session or read from its file (the owner, 2026-10-11); in a scan
+    // project the data replaces the scan (the owner, 2026-11-04; loadDatasets).
     for (ExperimentViewModel* model : experiment_models_) {
-        model->setCanLoadData(!scan_);
+        model->setCanLoadData(true);
     }
 }
 
@@ -1889,6 +1942,8 @@ bool ProjectViewModel::loadDataInto(ExperimentViewModel* experiment, const QUrl&
         emit refused(refusal);
         return false;
     }
+    // Into a scan project the file replaces the scan, whichever way it came (file, browser, web, assistant).
+    if (project_->sequential_fit.declared()) return loadDatasets(experiment, {file}, false, true);
     return loadData(index, file);
 }
 
@@ -4734,13 +4789,12 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
     // file, so nothing can refuse after the save was published.
     edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
     saved.metadata = staged.metadata;
-    saved.path = directory.toStdString();
-    saved.metadata.path = saved.path;
-    saved.scan_data_root.clear();
+    edi::adopt_save_location(saved, directory.toStdString());
     if (scan_template_) {
         project_->path = scan_template_->path;
         project_->metadata = scan_template_->metadata;
         project_->scan_data_root = scan_template_->scan_data_root;
+        project_->sequential_fit.data_dir = scan_template_->sequential_fit.data_dir;
     }
     const bool changed = edi::adopt_values(saved, staged);
     // A shown dataset is the template with that dataset's values over it, as a view builds it: built again over the
@@ -4801,13 +4855,12 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
     // The project works where the save was written, with the metadata it wrote, and reads its scan data from there.
     edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
     saved.metadata = metadata;
-    saved.path = directory.toStdString();
-    saved.metadata.path = saved.path;
-    saved.scan_data_root.clear();
+    edi::adopt_save_location(saved, directory.toStdString());
     if (scan_template_) {
         project_->path = scan_template_->path;
         project_->metadata = scan_template_->metadata;
         project_->scan_data_root = scan_template_->scan_data_root;
+        project_->sequential_fit.data_dir = scan_template_->sequential_fit.data_dir;
     }
     // The saved project then holds what its files hold, as a reopen reads them (values and correlations rounded by
     // the project's rule), calculated from that and written again (edi ADR-0052): not an edit, so it stays unmodified
