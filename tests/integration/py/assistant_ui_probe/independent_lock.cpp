@@ -65,7 +65,7 @@ private slots:
             }
         )", QUrl());
         QScopedPointer<QObject> root(component.create());
-        QVERIFY2(root, qPrintable(component.errorString()));
+        QVERIFY2(root, qPrintable(QStringLiteral("The link reference components must instantiate: ") + component.errorString()));
         auto* reference = root->findChild<QObject*>("aboutReference");
         auto* subject = root->findChild<QObject*>("downloadSubject");
         QVERIFY2(reference && subject, "The About-style reference and popup link must instantiate");

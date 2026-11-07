@@ -42,3 +42,16 @@ def build(root: Path) -> dict:
     index = {'schema': 'edi-data-index/1', 'entries': entries}
     (root / 'index.json').write_text(json.dumps(index))
     return index
+
+
+def refuse_archive(root: Path, index: dict) -> None:
+    """Replace the archive with a verified payload whose member escapes its destination."""
+    path = root / 'data/project.zip'
+    with zipfile.ZipFile(path, 'w') as archive:
+        archive.writestr('reference/project.edi', PROJECT)
+        archive.writestr('../outside.edi', PROJECT)
+    content = path.read_bytes()
+    index['entries'][2]['files'][0].update(
+        sha256=hashlib.sha256(content).hexdigest(), bytes=len(content)
+    )
+    (root / 'index.json').write_text(json.dumps(index))

@@ -58,3 +58,10 @@ target_link_libraries(assistant_independent_lock PRIVATE edi_app_module edi_app_
     edi_assistant_native ${_edi_test_gui_targets} Qt6::QuickTest Qt6::Test Qt6::Network)
 
 add_dependencies(edi_app_tests assistant_independent_lock)
+
+qt_add_executable(assistant_collection_probe collection_probe.cpp "${_edi_test_build_commit_cpp}")
+add_dependencies(assistant_collection_probe edi_app_build_commit)
+target_include_directories(assistant_collection_probe PRIVATE "${EDI_SOURCE}/app/src")
+target_link_libraries(assistant_collection_probe PRIVATE edi_app_module edi_app_moduleplugin
+    edi_assistant_native ${_edi_test_gui_targets} Qt6::Test Qt6::Network)
+add_dependencies(edi_app_tests assistant_collection_probe)
