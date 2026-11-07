@@ -49,3 +49,12 @@ add_dependencies(assistant_misfit_probe edi_app_build_commit)
 target_include_directories(assistant_misfit_probe PRIVATE "${EDI_SOURCE}/app/src")
 target_link_libraries(assistant_misfit_probe PRIVATE edi_app_module edi::core Qt6::Quick Qt6::Qml Qt6::Gui Qt6::Core)
 add_dependencies(edi_app_tests assistant_real_owner_probe assistant_misfit_probe)
+
+qt_add_executable(assistant_independent_lock independent_lock.cpp "${_edi_test_build_commit_cpp}")
+add_dependencies(assistant_independent_lock edi_app_build_commit)
+set_target_properties(assistant_independent_lock PROPERTIES AUTOMOC ON)
+target_include_directories(assistant_independent_lock PRIVATE "${EDI_SOURCE}/app/src")
+target_link_libraries(assistant_independent_lock PRIVATE edi_app_module edi_app_moduleplugin
+    edi_assistant_native ${_edi_test_gui_targets} Qt6::QuickTest Qt6::Test Qt6::Network)
+
+add_dependencies(edi_app_tests assistant_independent_lock)
