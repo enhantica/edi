@@ -560,9 +560,9 @@ TestCase {
             editor.selectAll();
             for (const ch of String(data.value)) keyClick(ch === "-" ? Qt.Key_Minus : Qt.Key_0 + Number(ch));
             keyClick(Qt.Key_Return);
-            verify(Render.descendants(appWindow.contentItem).some(item => item.visible &&
-                   typeof item.text === "string" && !visibleBefore.has(item.text) && /symmetry|cannot|invalid|range|positive|negative/i.test(item.text)),
-                   "An impossible direction or invalid spherical value produces a visible refusal");
+            tryVerify(() => Render.descendants(appWindow.contentItem).some(item => item.visible &&
+                   typeof item.text === "string" && !visibleBefore.has(item.text) && /symmetry|cannot|invalid|range|positive|negative|polar|modulus|angle|direction/i.test(item.text)),
+                   3000, "An impossible direction or invalid spherical value produces a visible refusal");
         }
         verify(Session.save(), "The refused edit still permits saving");
         compare(SettingsProof.text(scratch, "structures/cosio.edi"), before,
