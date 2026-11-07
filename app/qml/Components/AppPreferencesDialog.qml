@@ -75,7 +75,9 @@ AppDialog {
         validator: IntValidator {
             bottom: 1
         }
+        // The typed text sits on the row's line, level with its label, as every other box's text does.
         contentItem: TextInput {
+            topPadding: Math.max(0, dialog.lineOffset - numberBox.topPadding)
             leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
             rightPadding: EaStyle.Sizes.fontPixelSize
             text: numberBox.editText
@@ -83,7 +85,7 @@ AppDialog {
             color: numberBox.foregroundColor
             selectionColor: EaStyle.Colors.themeAccent
             selectedTextColor: EaStyle.Colors.themeBackground
-            verticalAlignment: Text.AlignVCenter
+            verticalAlignment: Text.AlignTop
             validator: numberBox.validator
             inputMethodHints: Qt.ImhDigitsOnly
             selectByMouse: true
