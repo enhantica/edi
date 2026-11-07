@@ -224,6 +224,8 @@ Item {
         function test_legacy_settings_carry_over_once_and_preserve_new_values() {
             const old = SettingsProof.legacy(location);
             verify(old !== location, "The migration fixture distinguishes the retained old file from the named new store");
+            for (const key of Object.keys(Preferences).filter(key => /^tooltips?(?:level|last.*level)$/i.test(key)))
+                SettingsProof.erase(location, "Edi.Preferences", key);
             SettingsProof.erase(location, "Edi.Preferences", "toolTips");
             SettingsProof.seed(old, "Edi.Preferences", "toolTips", false);
             const code = 'import QtQuick; import edi.app; QtObject { property var toolTips: { const k = Object.keys(Preferences).find(k => /^tooltips?level$/i.test(k)); return Preferences[k]; } }';
@@ -231,6 +233,7 @@ Item {
             verify(!first.error, "The migration runs through a fresh production engine setup");
             compare(first.toolTips, "Off", "The first engine carries an absent tooltip key from the old settings.ini");
             compare(SettingsProof.value(old, "Edi.Preferences", "toolTips"), false, "Migration leaves the old settings file and value intact");
+            TooltipSettings.setLevel(Preferences, "Off");
             TooltipSettings.setLevel(Preferences, "All");
             const second = SettingsProof.restart(code);
             verify(!second.error, "The second engine start reuses the production store");

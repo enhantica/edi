@@ -16,6 +16,7 @@ TestCase {
     name: "StatusFitControls"
     when: windowShown
     property var appWindow
+    property string savedTooltipLevel
     property var savedBooleans
     property int oldTheme
     Component {
@@ -81,6 +82,7 @@ TestCase {
     }
     function init() {
         Session.closeProject();
+        savedTooltipLevel = TooltipSettings.level(Preferences);
         savedBooleans = {};
         Object.keys(Preferences).forEach(key => {
             if (typeof Preferences[key] === "boolean")
@@ -112,6 +114,7 @@ TestCase {
         const scanStopCleared = SettingsProof.clearScanStop();
         Session.closeProject();
         Preferences.dialogShown = false;
+        TooltipSettings.setLevel(Preferences, savedTooltipLevel);
         Object.keys(savedBooleans).forEach(key => {
             if (Preferences[key] !== savedBooleans[key])
                 Preferences[key] = savedBooleans[key];
