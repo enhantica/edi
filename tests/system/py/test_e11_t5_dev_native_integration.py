@@ -2638,7 +2638,14 @@ def test_ordinary_measurement_picker_keeps_its_original_experiment_intent(
     data.write_text('21.5 17.25 .75\n22.75 31.75 1.25\n25.125 23.5 1.5\n')
     wait_positive_tab(actor, 'appBar.tab.experiment')
     actor.command('click', name='appBar.tab.experiment')
-    actor.command('click', name='experiments.loadData.0')
+    if _original_toolbar_pane_state(actor)['visible']:
+        actor.command('click', name='assistant.toggle')
+    actor.until(lambda _: not _original_toolbar_pane_state(actor)['visible'])
+    qml(actor, 'Session.project.currentExperimentIndex = 0')
+    actor.command('click', name='experiments.load')
+    action = 'experiments.load.dataFile'
+    actor.until(lambda row: _unique_input_control(row, action) is not None)
+    actor.command('click', name=action)
     if boundary == 'removed':
         qml(actor, 'Session.project.removeExperiment(0)')
     elif boundary == 'current_changes':

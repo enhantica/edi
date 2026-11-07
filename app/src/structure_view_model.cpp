@@ -29,6 +29,14 @@ const std::vector<edi::SpaceGroupSettingName>& space_group_settings() {
     static const std::vector<edi::SpaceGroupSettingName> settings = edi::space_group_settings();
     return settings;
 }
+// The categories as the Structure page shows them: the Atomic displacement group lists one row per atom site, of
+// any ADP type, so its count is the sites', not the anisotropic tensors' the core loop holds (the owner, 2026-11-04).
+std::vector<edi::Category> shown_categories(edi::Structure& structure) {
+    std::vector<edi::Category> categories = edi::structure_categories(structure);
+    for (edi::Category& category : categories)
+        if (category.id == "atom_site_aniso") category.rows = structure.atom_sites.size();
+    return categories;
+}
 }  // namespace
 
 QStringList SpaceGroupViewModel::names() const {
@@ -437,7 +445,7 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
       text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this,
                           [&structure] { return std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string(); }, {},
                           [saved, &structure] { return saved.discovered(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); })) {
-    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
+    categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
     captureScene();
 }
@@ -470,7 +478,7 @@ void StructureViewModel::sync() {
     atom_sites_->sync();
     atom_site_adps_->sync();
     scattering_lengths_->sync();
-    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
+    categories_->setCategories(shown_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
                                [this] { return edi::calculated_categories(structure_); });
 }
 

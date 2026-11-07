@@ -4817,23 +4817,10 @@ inline std::string declared_fitting_modes() {
 // the spellings that can be judged without one: empty, absolute, or carrying a `..` component.
 // Refusing here means an escaping declaration never crosses the boundary at all.
 inline void validate_sequential_data_dir(const std::string& data_dir, const std::string& where) {
+    // ADR-0069: a scan's folder may lie anywhere, relative to the project or absolute; only an
+    // empty declaration says nothing.
     if (data_dir.empty()) {
         throw std::invalid_argument("_sequential_fit.data_dir is empty" + where);
-    }
-    const std::filesystem::path declared(data_dir);
-    if (declared.is_absolute() || declared.has_root_name() || declared.has_root_directory()) {
-        throw std::invalid_argument("_sequential_fit.data_dir '" + data_dir +
-                                    "' is absolute - it is declared RELATIVE to the project "
-                                    "directory" +
-                                    where);
-    }
-    for (const std::filesystem::path& part : declared) {
-        if (part == "..") {
-            throw std::invalid_argument("_sequential_fit.data_dir '" + data_dir +
-                                        "' contains a '..' component - it is declared RELATIVE "
-                                        "to the project directory and may not leave it" +
-                                        where);
-        }
     }
 }
 

@@ -806,6 +806,10 @@ QString folding_read(const Object& row) {
     const auto tool=payload.value("tool").toString();
     return tool=="inspect_data" || tool=="inspect_project" || tool=="list_parameters" || tool=="diagnostics"?tool:QString{};
 }
+#ifdef __EMSCRIPTEN__
+// The web build has no native tools (app/CMakeLists.txt), so a step carries no native detail.
+QString assistant_native_detail(const Object&) { return {}; }
+#endif
 // What one step read, for its details: the rows or parts of a data read, else the purpose the assistant gave.
 QString step_detail(const Object& row) {
     const auto detail=assistant_native_detail(row);
@@ -2028,8 +2032,6 @@ struct AssistantViewModel::State {
             return trial->fit()->restoreAccepted(owner);
         }catch(...){return false;}
     }
-    // Clearing or rebinding the session ends its trial without a rollback: the candidate is dropped for good.
-    void retire_trial() noexcept {if(project)try{project->fit()->dropCandidate();}catch(...){}}
     // A failed startup reopen keeps its saved association: a later Open or Create does not forget it.
     bool startup_reopen_kept=false;
     void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
@@ -11571,7 +11573,7 @@ struct AssistantViewModel::State {
             }
             else if(structure_app_action(name)) {} // Final original structure control cue was appended above.
             else if(name=="load_structure")run->inputs.push_back({Kind::Navigate,"structures.load"});
-            else if(name=="load_data")run->inputs.push_back({Kind::Navigate,QString("experiments.loadData.%1").arg(individual_member_index(run))});
+            else if(name=="load_data")run->inputs.push_back({Kind::Navigate,QString("experiments.file.%1").arg(individual_member_index(run))});
             else if(name=="create_experiment")run->inputs.push_back({Kind::Navigate,"experiments.create"});
             else {
                 const auto axis=args.value("axis").toString(),token=args.value("token").toString();
@@ -11817,9 +11819,9 @@ struct AssistantViewModel::State {
         if (!originalCurrent || !run->ordinary || !run->project || !widget_input ||
             (!run->structure_source && !run->measurement_source))
             throw std::runtime_error("The admitted original file load is unavailable");
-        const bool measured=run->inputs.at(run->step).target.startsWith("experiments.loadData.");
+        const bool measured=run->inputs.at(run->step).target.startsWith("experiments.file.");
         const auto target_name=measured && !run->individual_tool.isEmpty()
-            ? QString("experiments.loadData.%1").arg(individual_member_index(run)) : measured?QString("experiments.loadData.0"):QString("structures.load");
+            ? QString("experiments.file.%1").arg(individual_member_index(run)) : measured?QString("experiments.file.0"):QString("structures.load");
         const QPointer<QQuickItem> load(create_widget_named(run,target_name));
         if(!receiver || receiver->state_.get()!=this)return;
         if (measured && !run->individual_tool.isEmpty() && (!individual_member_current(run) || run->project->currentExperiment()!=run->operation_view))
@@ -12233,7 +12235,7 @@ struct AssistantViewModel::State {
         if (step.target.startsWith("$value.") || step.target.startsWith("$background.") || step.target=="$background_names") { create_widget_child(run, step); return; }
         if((structure_app_action(run->individual_tool) || run->individual_tool=="edit_experiment") && step.kind==AssistantWidgetInput::Kind::FileLoadCue) {structure_cue(run,step);return;}
         if (step.target.startsWith("appBar.tab.")) run->page = step.target.mid(11);
-        if (step.target == "structures.load" || step.target.startsWith("experiments.loadData.")) { create_widget_load_structure(run); return; }
+        if (step.target == "structures.load" || step.target.startsWith("experiments.file.")) { create_widget_load_structure(run); return; }
         const QPointer<QQuickItem> target(create_widget_named(run, step.target));
         if (!run->individual_tool.isEmpty() && step.target.startsWith("experiments.row.")) {
             if(!target) { if(create_widget_missing_target(run,step))return;throw ActionRefusal("control_unavailable","experiment"); }
@@ -12517,7 +12519,7 @@ struct AssistantViewModel::State {
             }
             add(Kind::Navigate,"appBar.tab.experiment");add(Kind::Navigate,"sideBar.tab.basic");add(Kind::Navigate,"experiments.create");
             add(Kind::Choose,"experimentType.beamMode");add(Kind::Choose,"experimentType.radiationProbe");
-            add(Kind::Navigate,"experiments.loadData.0");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
+            add(Kind::Navigate,"experiments.file.0");add(Kind::Text,"experiments.name.0",QString::fromStdString(experiment.name.value()));
             for(const auto tier:{CategoryListModel::Basic,CategoryListModel::Extras})for(const auto* category:experiment_order) {
                 if(category_presentation(QString::fromStdString(category->id)).tier!=tier)continue;
                 if(category->id=="background") {
@@ -15347,6 +15349,8 @@ struct AssistantViewModel::State {
     }
 #endif
 
+    // Clearing or rebinding the session ends its trial without a rollback: the candidate is dropped for good.
+    void retire_trial() noexcept {if(project)try{project->fit()->dropCandidate();}catch(...){}}
     void retire_file_selection(FileProjection* continuation = nullptr) noexcept {
         if (continuation && !continuation->input_current()) return;
 #ifndef __EMSCRIPTEN__
@@ -16004,7 +16008,11 @@ struct AssistantViewModel::State {
     }
     void notify() {
         // The trial lock holds while the assistant works a turn (FitViewModel::trialOpen).
+#ifndef __EMSCRIPTEN__
         if(project)project->fit()->setAssistantBusy(generic_busy || generic_connecting);
+#else
+        if(project)project->fit()->setAssistantBusy(false);
+#endif
         QElapsedTimer elapsed;
         const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
         if(observeElapsed)elapsed.start();
@@ -16223,6 +16231,8 @@ struct AssistantViewModel::State {
             const auto elapsedObservation=qScopeGuard([&elapsed,observeElapsed]() noexcept {
                 if(observeElapsed)try { qCDebug(lcAssistantElapsed).nospace() << "stage=poll_sync elapsed_ns=" << elapsed.nsecsElapsed(); } catch(...) {}
             });
+            // While a slider is held the context waits for the release (the owner, 2026-11-04).
+            if (project && project->adjusting()) return;
             auto projection = file_projection();
             try {
                 if (controller) controller->poll();

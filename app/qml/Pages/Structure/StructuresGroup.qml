@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
@@ -98,23 +99,74 @@ SideBarGroup {
             }
         }
 
-        // Load and Create side by side, as easydiffractionbeta's Load and Define manually: Create adds
-        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). Under them Duplicate,
-        // and Load from COD, not available yet (the owner, 2026-10-11).
-        Grid {
-            columns: 2
+        // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-11-03): Create adds
+        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). The Load menu takes a
+        // structure from a file or from the web (COD or EasyDiffraction's collection).
+        Row {
+            id: buttons
+
+            readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - 2 * spacing) / 3
+
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
+                id: loadButton
                 objectName: "structures.load"
+                width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.canLoadStructure
                 fontIcon: "upload"
-                text: qsTr("Load structure from file")
-                // In the browser the files come through the page (edi ADR-0023).
-                onClicked: ApplicationInfo.loadFormFiles(false)
+                text: qsTr("Load")
+
+                // The menu's caret, from the icon font: the text fonts have no such character.
+                EaElements.Label {
+                    anchors.right: parent.right
+                    anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.75
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                    color: loadButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                    text: "caret-down"
+                }
+                EaElements.ToolTip {
+                    text: qsTr("Load a structure from a file or from the web")
+                    visible: loadButton.hovered && EaGlobals.Vars.showToolTips
+                }
+                onClicked: loadMenu.open()
+
+                EaElements.Menu {
+                    id: loadMenu
+                    objectName: "structures.load.menu"
+                    y: loadButton.height
+                    // Nothing below the last item (the owner, 2026-11-04).
+                    bottomPadding: 0
+                    width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 20)
+
+                    LoadMenuHeader {
+                        first: true
+                        text: qsTr("Structure")
+                    }
+                    LoadMenuItem {
+                        objectName: "structures.load.file"
+                        fontIcon: "file"
+                        text: qsTr("From file…")
+                        hint: ".cif .edi"
+                        toolTip: qsTr("Load a structure from a CIF or .edi file")
+                        // In the browser the files come through the page (edi ADR-0023).
+                        onTriggered: ApplicationInfo.loadFormFiles(false)
+                    }
+                    LoadMenuItem {
+                        objectName: "structures.load.web"
+                        fontIcon: "globe"
+                        text: qsTr("From web…")
+                        hint: "COD · EasyDiffraction"
+                        toolTip: qsTr("Search the Crystallography Open Database or EasyDiffraction's collection for a structure")
+                        onTriggered: onlineLoad.openFor("structure", null)
+                    }
+                }
             }
             EaElements.SideBarButton {
                 objectName: "structures.create"
+                width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "plus-circle"
                 text: qsTr("Create structure")
@@ -123,20 +175,19 @@ SideBarGroup {
             }
             EaElements.SideBarButton {
                 objectName: "structures.duplicate"
+                width: buttons.buttonWidth
                 enabled: group.project !== null && group.project.currentStructure !== null
                 fontIcon: "clone"
                 text: qsTr("Duplicate structure")
                 ToolTip.text: qsTr("Add a copy of the selected structure, linked to no experiment")
                 onClicked: group.project.duplicateStructure()
             }
-            EaElements.SideBarButton {
-                objectName: "structures.loadCod"
-                enabled: false
-                fontIcon: "cloud-download-alt"
-                text: qsTr("Load from COD")
-                ToolTip.text: qsTr("Loading from the Crystallography Open Database is not available yet")
-            }
         }
+    }
+
+    OnlineLoadDialog {
+        id: onlineLoad
+        project: group.project
     }
 
     property var pickerLife: ({

@@ -29,7 +29,8 @@ EaComponents.ListViewParameter {
     // auto-estimated background's points or terms (the owner, 2026-10-20). readOnly would grey it and hide the toggle.
     property bool locked: false
     activeFocusOnPress: !locked
-    activeFocusOnTab: !locked
+    // A cell locked while it has the focus keeps it until the focus moves: Qt refuses to take it from the focused item.
+    activeFocusOnTab: !locked || activeFocus
     // Why the last typed text was refused before reaching the core; the core's own refusal is the item's.
     property string typedRefusal: ""
     readonly property string refusal: typedRefusal !== "" ? typedRefusal : item !== null ? item.lastError : ""
@@ -201,16 +202,19 @@ EaComponents.ListViewParameter {
     onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.ParameterCellEditor)
     onEditTextChanged: refreshCleanText()
     function beginAssistantEdit() {
-        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterCellEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterCellEditor);
     }
     function allowAssistantCommit() {
-        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterCellEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterCellEditor);
     }
     function resetEditorText() {
         ApplicationInfo.parameterEditorReset();
     }
     function cancelAssistantEdit() {
-        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterCellEditor);
+        if (ApplicationInfo.assistantBuilt)
+            ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterCellEditor);
     }
     Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.ParameterCellEditor, event)
     // editingFinished owns Return as well as focus loss; accepted is the same

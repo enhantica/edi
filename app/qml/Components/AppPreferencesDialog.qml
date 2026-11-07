@@ -91,7 +91,8 @@ AppDialog {
     objectName: "preferences"
     visible: Preferences.dialogShown
     onClosed: ApplicationInfo.preferencesClosed()
-    onOpened: Session.assistant.refreshSkillSources()
+    onOpened: if (ApplicationInfo.assistantBuilt)
+        Session.assistant.refreshSkillSources()
 
     title: qsTr("Preferences")
     standardButtons: Dialog.Ok
@@ -362,37 +363,136 @@ AppDialog {
         }
 
         // Projects: only the defaults a new project takes. A project keeps its own: its s.u. rule on the Project
-        // page's Extra tab, its report's libraries on the Report page.
-        RowGrid {
-            RowLabel {
-                text: qsTr("New projects' uncertainties") + ":"
-            }
-            RowBox {
-                objectName: "preferences.newProjectSuRule"
-                model: [qsTr("IUCr recommendation"), qsTr("Always 2 digits")]
-                currentIndex: Preferences.newProjectSuRule === "iucr_99" ? 1 : 0
-                onActivated: index => ApplicationInfo.preferenceActivated(index, 7)
-                ToolTip.text: qsTr("How a new project writes values with a standard uncertainty: 1 digit, or 2 from 10 to 19, or always 2")
+        // page's Extra tab, its report's libraries on the Report page. The online sources table shares the page.
+        Column {
+            spacing: EaStyle.Sizes.fontPixelSize
+            RowGrid {
+                RowLabel {
+                    text: qsTr("New projects' uncertainties") + ":"
+                }
+                RowBox {
+                    objectName: "preferences.newProjectSuRule"
+                    model: [qsTr("IUCr recommendation"), qsTr("Always 2 digits")]
+                    currentIndex: Preferences.newProjectSuRule === "iucr_99" ? 1 : 0
+                    onActivated: index => ApplicationInfo.preferenceActivated(index, 7)
+                    ToolTip.text: qsTr("How a new project writes values with a standard uncertainty: 1 digit, or 2 from 10 to 19, or always 2")
+                }
+
+                RowLabel {
+                    text: qsTr("New reports' libraries") + ":"
+                }
+                RowBox {
+                    objectName: "preferences.newReportLibraries"
+                    model: [qsTr("Online"), qsTr("Embedded")]
+                    currentIndex: Preferences.newReportLibraries === "embedded" ? 1 : 0
+                    onActivated: index => ApplicationInfo.preferenceActivated(index, 8)
+                    ToolTip.text: qsTr("Whether a new project's HTML reports load plotly.js and three.js from the web or carry them, so they open offline")
+                }
             }
 
-            RowLabel {
-                text: qsTr("New reports' libraries") + ":"
-            }
-            RowBox {
-                objectName: "preferences.newReportLibraries"
-                model: [qsTr("Online"), qsTr("Embedded")]
-                currentIndex: Preferences.newReportLibraries === "embedded" ? 1 : 0
-                onActivated: index => ApplicationInfo.preferenceActivated(index, 8)
-                ToolTip.text: qsTr("Whether a new project's HTML reports load plotly.js and three.js from the web or carry them, so they open offline")
+            // The online sources Load ▾ From web… searches (ADR-0068): COD and EasyDiffraction's collection are built
+            // in; a row can be disabled, and user rows added, edited or removed. A run started with --online-source or
+            // EDI_ONLINE_SOURCES shows that URL in place of the stored one.
+            Column {
+                width: parent.width
+                spacing: AppSizes.unit
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("Online sources")
+                    font.bold: true
+                }
+                DataTable {
+                    id: onlineTable
+                    objectName: "preferences.online.sources"
+                    width: parent.width
+                    maxRowCountShow: 6
+                    sourceModel: Session.onlineSources
+                    defaultInfoText: qsTr("No online sources")
+                    columns: [numberColumnWidth, AppSizes.dataColumnWidth * 1.8, -1, AppSizes.dataColumnWidth * 1.6, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                    header: EaComponents.ListViewHeader {
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Name")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewLabel {
+                            text: qsTr("URL")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Holds")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {}
+                    }
+                    delegate: TableRow {
+                        id: onlineRow
+                        required property string name
+                        required property string url
+                        required property var kinds
+                        required property bool builtin
+                        required property var model
+                        required property bool overridden
+                        EaComponents.ListViewLabel {
+                            text: onlineRow.index + 1
+                            horizontalAlignment: Text.AlignHCenter
+                            marksCurrentRow: true
+                        }
+                        TextCell {
+                            objectName: "preferences.online.source.name." + onlineRow.model.id
+                            horizontalAlignment: Text.AlignLeft
+                            value: onlineRow.name
+                            enabled: !onlineRow.builtin
+                            onCommitted: text => Session.onlineSources.setName(onlineRow.model.id, text)
+                        }
+                        TextCell {
+                            objectName: "preferences.online.source.url." + onlineRow.model.id
+                            horizontalAlignment: Text.AlignLeft
+                            value: onlineRow.url
+                            enabled: !onlineRow.builtin && !onlineRow.overridden
+                            ToolTip.text: onlineRow.overridden ? qsTr("Set for this run by --online-source or EDI_ONLINE_SOURCES") : onlineRow.url
+                            onCommitted: text => Session.onlineSources.setUrl(onlineRow.model.id, text)
+                        }
+                        EaComponents.ListViewLabel {
+                            objectName: "preferences.online.source.kinds." + onlineRow.model.id
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideRight
+                            text: onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : k === "project" ? qsTr("projects") : qsTr("data")).join(", ")
+                        }
+                        EaComponents.ListViewButton {
+                            objectName: "preferences.online.source.enabled." + onlineRow.model.id
+                            fontIcon: onlineRow.model.enabled ? "toggle-on" : "toggle-off"
+                            ToolTip.text: onlineRow.model.enabled ? qsTr("Leave this source out of the From web… popup") : qsTr("Offer this source in the From web… popup")
+                            onClicked: Session.onlineSources.setEnabled(onlineRow.model.id, !onlineRow.model.enabled)
+                        }
+                        EaComponents.ListViewButton {
+                            objectName: "preferences.online.source.remove." + onlineRow.model.id
+                            fontIcon: "minus-circle"
+                            enabled: !onlineRow.builtin
+                            ToolTip.text: onlineRow.builtin ? qsTr("A built-in source cannot be removed, only disabled") : qsTr("Remove this source")
+                            onClicked: Session.onlineSources.remove(onlineRow.model.id)
+                        }
+                    }
+                }
+                EaElements.SideBarButton {
+                    objectName: "preferences.online.sources.add"
+                    width: dialog.controlWidth
+                    text: qsTr("Add online source")
+                    fontIcon: "plus-circle"
+                    ToolTip.text: qsTr("Add a collection to search: a URL holding an index.json and the files it names")
+                    onClicked: Session.onlineSources.add()
+                }
             }
         }
 
         ScrollView {
             id: aiPage
             implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height - bar.implicitHeight - AppSizes.unit * 8))
-            readonly property var original: Session.assistant
+            readonly property var original: ApplicationInfo.assistantBuilt ? Session.assistant : null
             property string copyError: ""
-            onOriginalChanged: ApplicationInfo.preferenceAssistantChanged()
+            onOriginalChanged: if (ApplicationInfo.assistantBuilt)
+                ApplicationInfo.preferenceAssistantChanged()
             function copyDiagnostics(button, report) {
                 ApplicationInfo.preferenceCopyDiagnostics(button, report);
             }
@@ -495,21 +595,21 @@ AppDialog {
                         width: (parent.width - parent.spacing) / 2
                         text: qsTr("Add skill source")
                         fontIcon: "plus-circle"
-                        enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel && !Session.assistant.skillSourceImporting
+                        enabled: ApplicationInfo.assistantAvailable && !(aiPage.original ? aiPage.original.canCancel : false) && !(aiPage.original ? aiPage.original.skillSourceImporting : false)
                         onClicked: ApplicationInfo.preferenceBeginSourceSelection(false)
                     }
                     EaElements.SideBarButton {
                         objectName: "preferences.ai.sources.web"
                         width: (parent.width - parent.spacing) / 2
-                        text: Session.assistant.skillSourceImporting ? qsTr("Cancel web import") : qsTr("Add skills from web")
-                        fontIcon: Session.assistant.skillSourceImporting ? "times-circle" : "globe"
-                        enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
+                        text: (aiPage.original ? aiPage.original.skillSourceImporting : false) ? qsTr("Cancel web import") : qsTr("Add skills from web")
+                        fontIcon: (aiPage.original ? aiPage.original.skillSourceImporting : false) ? "times-circle" : "globe"
+                        enabled: ApplicationInfo.assistantAvailable && !(aiPage.original ? aiPage.original.canCancel : false)
                         onClicked: ApplicationInfo.preferenceBeginSourceSelection(true)
                     }
                 }
                 EaElements.Label {
                     width: parent.width
-                    text: Session.assistant.skillSourceError
+                    text: (aiPage.original ? aiPage.original.skillSourceError : "")
                     visible: text.length > 0
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
@@ -612,15 +712,16 @@ AppDialog {
                 EaElements.SideBarButton {
                     objectName: "preferences.ai.clearCachedHistory"
                     width: parent.width
-                    text: Session.assistant.cachedHistoryClearing ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
+                    text: (aiPage.original ? aiPage.original.cachedHistoryClearing : false) ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
                     fontIcon: "eraser"
-                    enabled: !Session.assistant.canCancel && !Session.assistant.cachedHistoryClearing
+                    enabled: !(aiPage.original ? aiPage.original.canCancel : false) && !(aiPage.original ? aiPage.original.cachedHistoryClearing : false)
                     ToolTip.text: qsTr("Clear the app's saved chat display only. Projects, reports, runtime sessions and sign-in are kept.")
-                    onClicked: Session.assistant.clearCachedHistory()
+                    onClicked: if (aiPage.original)
+                        aiPage.original.clearCachedHistory()
                 }
                 EaElements.Label {
                     width: parent.width
-                    text: Session.assistant.cachedHistoryError
+                    text: (aiPage.original ? aiPage.original.cachedHistoryError : "")
                     visible: text.length > 0
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere

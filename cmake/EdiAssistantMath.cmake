@@ -1,37 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# ADR-0057: Pixi installs the original source dependency; this adapter builds only its native math subtargets.
+# ADR-0057: the assistant's formula renderer, JKQtMathText 5.0.0 (upstream 9e9f0af8), vendored under
+# third_party/jkqtmathtext and built here as static targets with edi's own compiler and Qt. Only the native
+# desktop build carries the assistant, so the web build never reaches this file.
 if(EMSCRIPTEN)
     return()
 endif()
-find_file(EDI_ASSISTANT_MATH_MANIFEST NAMES input.json
-    HINTS "$ENV{PIXI_ENVIRONMENT_PREFIX}" "$ENV{CONDA_PREFIX}"
-    PATH_SUFFIXES share/edi/assistant/mathtext/9e9f0af8b140192e3de7ff866a0013e7da5e1e93
-    NO_DEFAULT_PATH NO_CACHE REQUIRED)
-file(READ "${EDI_ASSISTANT_MATH_MANIFEST}" _edi_math)
-string(JSON _edi_math_schema GET "${_edi_math}" schema)
-string(JSON _edi_math_commit GET "${_edi_math}" commit)
-string(JSON _edi_math_relative_source GET "${_edi_math}" source)
-if(NOT _edi_math_schema STREQUAL "edi.assistant.math-package/1" OR
-   NOT _edi_math_commit STREQUAL "9e9f0af8b140192e3de7ff866a0013e7da5e1e93" OR
-   NOT _edi_math_relative_source STREQUAL "source")
-    message(FATAL_ERROR "Installed native math package is incompatible; install the locked app environment.")
-endif()
-get_filename_component(_edi_math_package "${EDI_ASSISTANT_MATH_MANIFEST}" DIRECTORY)
-set(EDI_ASSISTANT_MATH_SOURCE "${_edi_math_package}/source")
-if(NOT IS_DIRECTORY "${EDI_ASSISTANT_MATH_SOURCE}" OR IS_SYMLINK "${EDI_ASSISTANT_MATH_SOURCE}")
-    message(FATAL_ERROR "Native math package source identity changed.")
-endif()
-string(JSON _edi_math_count LENGTH "${_edi_math}" files)
-file(GLOB_RECURSE _edi_math_files LIST_DIRECTORIES false RELATIVE "${EDI_ASSISTANT_MATH_SOURCE}" "${EDI_ASSISTANT_MATH_SOURCE}/*")
-list(LENGTH _edi_math_files _edi_math_actual_count)
-if(NOT _edi_math_count EQUAL _edi_math_actual_count)
-    message(FATAL_ERROR "Native math source closure changed.")
-endif()
-foreach(_file IN LISTS _edi_math_files)
-    string(JSON _expected GET "${_edi_math}" files "${_file}")
-    file(SHA256 "${EDI_ASSISTANT_MATH_SOURCE}/${_file}" _actual)
-    if(IS_SYMLINK "${EDI_ASSISTANT_MATH_SOURCE}/${_file}" OR NOT _actual STREQUAL _expected)
-        message(FATAL_ERROR "Native math source changed: ${_file}")
+set(EDI_ASSISTANT_MATH_SOURCE "${PROJECT_SOURCE_DIR}/third_party/jkqtmathtext")
+foreach(_required "lib/jkqtcommon/CMakeLists.txt" "lib/jkqtmathtext/CMakeLists.txt"
+                  "lib/jkqtmathtext/resources/xits/OFL.txt" "LICENSE" "cmake/jkqtplotter_macros.cmake")
+    if(NOT EXISTS "${EDI_ASSISTANT_MATH_SOURCE}/${_required}")
+        message(FATAL_ERROR "third_party/jkqtmathtext is incomplete: ${_required} is missing")
     endif()
 endforeach()
 find_package(Qt6 REQUIRED GLOBAL COMPONENTS Widgets Xml)

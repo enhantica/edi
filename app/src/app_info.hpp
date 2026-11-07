@@ -160,6 +160,8 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(bool engineThreadsSelectable READ engineThreadsSelectable CONSTANT)
     Q_PROPERTY(int engineThreadsMaximum READ engineThreadsMaximum CONSTANT)
     Q_PROPERTY(bool assistantAvailable READ assistantAvailable CONSTANT)
+    /// Whether this build carries the AI assistant at all (EDI_APP_ASSISTANT, off for the web, ADR-0023 §6).
+    Q_PROPERTY(bool assistantBuilt READ assistantBuilt CONSTANT)
     Q_PROPERTY(QString assistantUnavailableReason READ assistantUnavailableReason CONSTANT)
 
    public:
@@ -235,6 +237,7 @@ class ApplicationInfo : public QObject {
     // was chosen (web), threads, the Qt version and graphics backend, edi's and crysta's versions with the crysta
     // SDK commit, and the feature switches; one "name: value" line each, to read and to copy.
     Q_INVOKABLE QString diagnostics() const;
+#if EDI_APP_ASSISTANT
     /// Original Panel projection/selection on the current QML thread; no cache or canonical lookup.
     /// Borrows actual Panel/engine values; original JS errors remain pending except the projection's explicit catch.
     Q_INVOKABLE QJSValue assistantUsageData(QObject* panel) const;
@@ -258,6 +261,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void refreshAssistantUsageClock(QObject* dialog) const;
     /// Apply the original connected-change close condition at its original current-owner read point.
     Q_INVOKABLE void assistantAccountConnectionChanged(QObject* panel, QObject* dialog) const;
+#endif
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
     Q_INVOKABLE QString fileSizeKilobytes(qint64 bytes) const;
@@ -286,6 +290,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void composerRefreshFilePresentation(QObject* composer, bool advanceRevision) const;
     /// Acknowledge the current message table in the original Composer function scope.
     Q_INVOKABLE void composerAcknowledgeVisiblePrompt() const;
+#if EDI_APP_ASSISTANT
     /// Original window focus procedures; view state and Qt's delayed queue retain ownership.
     Q_INVOKABLE bool assistantContainsItem(const QJSValue& ancestor, const QJSValue& item) const;
     Q_INVOKABLE QJSValue assistantWorkflowPage() const;
@@ -295,6 +300,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void restoreAssistantFocus() const;
     Q_INVOKABLE bool assistantHomeFocusCovered() const;
     Q_INVOKABLE void enforceAssistantHomeFocus() const;
+#endif
     /// Original consent and admission procedures, called in their retained QML function scope.
     Q_INVOKABLE QJSValue composerCaptureConsentDraft() const;
     Q_INVOKABLE bool composerOwnsConsentDraft(const QJSValue& draft) const;
@@ -351,10 +357,14 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void editorRefreshCleanText() const;
     Q_INVOKABLE void parameterFieldRefreshCleanText() const;
     Q_INVOKABLE void editorRememberDraft(EditorKind kind) const;
+#if EDI_APP_ASSISTANT
     Q_INVOKABLE void editorBeginAssistantEdit(EditorKind kind) const;
     Q_INVOKABLE void editorAllowAssistantCommit(EditorKind kind) const;
+#endif
     Q_INVOKABLE void parameterEditorReset() const;
+#if EDI_APP_ASSISTANT
     Q_INVOKABLE void editorCancelAssistantEdit(EditorKind kind) const;
+#endif
     Q_INVOKABLE void listTextInputEscape(const QJSValue& control, const QJSValue& event) const;
     Q_INVOKABLE void editorEscape(EditorKind kind, const QJSValue& event) const;
     Q_INVOKABLE void editorCommit(EditorKind kind) const;
@@ -458,6 +468,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void composerChoicesEnabledChanged() const;
     Q_INVOKABLE bool composerLocalWorkReport() const;
     Q_INVOKABLE bool composerHasDraft() const;
+#if EDI_APP_ASSISTANT
     /// Existing assistant choice, notice, conversation and message presentation procedures.
     Q_INVOKABLE QJSValue assistantEffortRank(const QJSValue& value) const;
     Q_INVOKABLE QJSValue assistantEffortLabel(const QJSValue& value) const;
@@ -481,6 +492,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void assistantChoiceActivateKey(const QJSValue& value, const QJSValue& event, bool model) const;
     Q_INVOKABLE void assistantChoiceModelNavigate(const QJSValue& index, int step, const QJSValue& event) const;
     Q_INVOKABLE void assistantChoiceEffortNavigate(const QJSValue& row, bool forward, bool wrap, const QJSValue& event) const;
+#endif
     Q_INVOKABLE void panelCaptureNotice() const;
     Q_INVOKABLE bool panelNoticeAnchorPresent() const;
     Q_INVOKABLE void panelNoticeOwnerChanged(int cause) const;
@@ -503,16 +515,20 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void conversationContentYChanged() const;
     Q_INVOKABLE void conversationMovementChanged(bool started) const;
     Q_INVOKABLE void conversationScrollChanged(bool position) const;
+#if EDI_APP_ASSISTANT
     Q_INVOKABLE QJSValue assistantMessageTableTone(const QJSValue& lift) const;
     Q_INVOKABLE QJSValue assistantSentFileLabel(const QJSValue& file) const;
     Q_INVOKABLE QJSValue assistantWidestSentFile() const;
+#endif
     Q_INVOKABLE void panelConnectionActivated() const;
     Q_INVOKABLE void conversationDetailsChanging() const;
     Q_INVOKABLE QJSValue connectionNaturalButtonsWidth() const;
     Q_INVOKABLE void connectionPresentationChanged(int cause) const;
     Q_INVOKABLE void composerReturnPressed(const QJSValue& event) const;
+#if EDI_APP_ASSISTANT
     Q_INVOKABLE void assistantChoicesKey(const QJSValue& event, bool released) const;
     Q_INVOKABLE void assistantMessageCopyKey(const QJSValue& event) const;
+#endif
     /// Shared table procedures; the original view maps, row ownership and model notifications remain authoritative.
     Q_INVOKABLE QJSValue tableColumnRowOwner(const QJSValue& row) const;
     Q_INVOKABLE void tableApplyWidths(const QJSValue& row) const;
@@ -575,7 +591,9 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue colourMapTitles() const;
     /// Preference actions use the existing view records and assistant selection authority.
     Q_INVOKABLE void preferencesClosed() const;
+#if EDI_APP_ASSISTANT
     Q_INVOKABLE void preferenceAssistantChanged() const;
+#endif
     Q_INVOKABLE void preferenceCopyDiagnostics(const QJSValue& button, const QJSValue& report) const;
     Q_INVOKABLE void preferenceSourceRevision() const;
     Q_INVOKABLE void preferenceSourceGesture(bool remove, bool pressed) const;
@@ -781,16 +799,20 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue parameterFieldValue(bool error) const;
     Q_INVOKABLE void parameterFieldMenu(const QJSValue& parent) const;
     Q_INVOKABLE void parameterFieldMouse(const QJSValue& mouse, bool hold) const;
+#if EDI_APP_ASSISTANT
     Q_INVOKABLE QJSValue assistantPlanDescription() const;
     Q_INVOKABLE QJSValue assistantSkillsIndex() const;
     Q_INVOKABLE void assistantSkillClicked() const;
+#endif
     Q_INVOKABLE QJSValue nativeListProjection(int kind) const;
     /// Window/page and original Create-intent procedures retain actual view tokens and native project authority.
     Q_INVOKABLE QJSValue workflowPagesCount(bool built) const;
     Q_INVOKABLE QJSValue workflowPageTurn(const QJSValue& loader) const;
     Q_INVOKABLE void workflowProjectChanging() const;
     Q_INVOKABLE QJSValue workflowPreparingTab() const;
+#if EDI_APP_ASSISTANT
     Q_INVOKABLE void windowAssistantAction(int kind, const QJSValue& page, const QJSValue& extra) const;
+#endif
     Q_INVOKABLE void windowWebSaved(const QJSValue& kind) const;
     Q_INVOKABLE void windowStorageUnavailable() const;
     Q_INVOKABLE void windowWebDownloaded(const QJSValue& name, const QJSValue& fromFile) const;
@@ -801,9 +823,11 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void windowAutomaticResults() const;
     Q_INVOKABLE void windowCompleted() const;
     Q_INVOKABLE void resetPatternProjectView() const;
+#if EDI_APP_ASSISTANT
     Q_INVOKABLE QJSValue prepareAssistantCreate(const QJSValue& id) const;
     Q_INVOKABLE QJSValue assistantCreateDialog(const QJSValue& id) const;
     Q_INVOKABLE void retireAssistantCreate(const QJSValue& id, bool manual) const;
+#endif
     Q_INVOKABLE QJSValue createProjectNameError(const QJSValue& name) const;
     Q_INVOKABLE QJSValue createProjectDefaults(const QJSValue& name, const QJSValue& description, const QJSValue& title) const;
     Q_INVOKABLE void chooseCreateProject() const;
@@ -817,10 +841,12 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void finishUiEvent(int kind, const QJSValue& value) const;
     /// Preserve the generic loaded text item's original dirty-property relation without narrowing its type.
     Q_INVOKABLE void workflowTextItemChanged() const;
+#if EDI_APP_ASSISTANT
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
     Q_INVOKABLE QJSValue assistantHistoryInputFiles(const QString& kind, const QJSValue& payload) const;
+#endif
     // Declaration-only members of existing global ApplicationInfo (QML singleton ApplicationInfo).
     /// Open the original session popup, then refresh through the actual current panel assistant.
     /// Borrows QML-thread controls; no new store/eligibility; property/call errors remain pending.
@@ -834,6 +860,7 @@ class ApplicationInfo : public QObject {
     /// Sum original visible button implicit widths and original count/spacing gaps for the live binding.
     /// Borrows actual QML-thread controls; no retained geometry; errors remain pending.
     Q_INVOKABLE qreal sessionBrowserButtonsWidth(QObject* panel, QObject* buttons) const;
+#if EDI_APP_ASSISTANT
     /// Stateless compact message presentation; no canonical/detail lookup or clipboard write.
     Q_INVOKABLE edi_app::assistant_presentation::ActivityPresentation assistantActivityPresentation(
         const QString& kind, const QString& status, const QJSValue& payload, QObject* assistant) const;
@@ -863,9 +890,11 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void assistantToolbarActivated(const QJSValue& window, const QJSValue& toggle,
         const QJSValue& panel, const QJSValue& session, const QJSValue& preferences,
         const QJSValue& desktopOnlyDialog) const;
+#endif
     /// Desktop availability captured before QML observation; not provider connection or permission.
     /// Read on the owning QObject thread. Browser builds remain unavailable.
     bool assistantAvailable() const;
+    bool assistantBuilt() const;
     /// Localized desktop-only explanation, or empty when available. No network access.
     QString assistantUnavailableReason() const;
     // How to cite the app, from the bundled CITATION.cff, the one place its citation is kept.
@@ -874,13 +903,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QList<Tutorial> tutorials() const;
     // The same tutorials as a list the Examples filters filter: by text and by the values of their tags.
     edi_app::ExampleListModel* tutorialCatalogue();
-    // Writes the tutorials' files (app/tutorials/files: lbco.cif, hrpt.xye) into `folder`; in the browser each goes to
-    // the browser to download instead. False if one could not be written.
-    Q_INVOKABLE bool saveTutorialFiles(const QUrl& folder) const;
-    // The same files in a temporary folder of their own, for Next on a step that loads one: a folder on the disk, or in
-    // the browser's memory, where its file chooser puts the files it opens. The folder as a local-file URL, as that
-    // chooser hands its files on; empty if one could not be written.
-    Q_INVOKABLE QUrl stageTutorialFiles() const;
     // What's new, newest first: the dated sections of the bundled changelog (website/surfaces/docs/changelog.md).
     Q_INVOKABLE QList<ChangeDay> changes() const;
     bool engineThreadsSelectable() const;

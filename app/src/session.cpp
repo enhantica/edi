@@ -13,9 +13,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QPair>
 #include <QPointer>
 #include <QUuid>
 #include <algorithm>
+#include <memory>
 #include <cmath>
 #include <exception>
 #include <string>
@@ -68,7 +70,6 @@ ResultDefinition result_definition(edi::Project& project) {
 }
 
 
-const QString kExamples = QStringLiteral(":/edi/examples");
 
 // A folder name for a project named `name`: no separators, never empty.
 QString folderNameFor(const QString& name) {
@@ -186,19 +187,39 @@ struct Session::PendingOpenSource {
 
 Session::Session(QObject* parent, AssistantWorkReportOptions options)
     : QObject(parent), work_report_options_(options), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
+    online_sources_ = new OnlineSourcesModel(this);
+    online_search_ = new OnlineSearch(online_sources_, this);
+    // The example projects come from the collections (ADR-0068); the bundled catalogue only lists them.
+    collection_examples_ = new CollectionExamples(online_sources_, this);
+    connect(collection_examples_, &CollectionExamples::itemsChanged, this,
+            [this] { examples_->replaceItems(collection_examples_->items()); });
+    examples_->replaceItems(collection_examples_->items());
+    connect(collection_examples_, &CollectionExamples::noticeChanged, this, &Session::examplesNoticeChanged);
+#if EDI_APP_ASSISTANT
     assistant_ = new AssistantViewModel(this, options);
+#endif
     initializeSession();
 }
-#ifndef __EMSCRIPTEN__
+#if EDI_APP_ASSISTANT && !defined(__EMSCRIPTEN__)
 Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject* parent,AssistantWorkReportOptions options)
     : QObject(parent),work_report_options_(options),examples_(new ExampleListModel(this)),warnings_(new WarningListModel(this)) {
+    online_sources_ = new OnlineSourcesModel(this);
+    online_search_ = new OnlineSearch(online_sources_, this);
+    // The example projects come from the collections (ADR-0068); the bundled catalogue only lists them.
+    collection_examples_ = new CollectionExamples(online_sources_, this);
+    connect(collection_examples_, &CollectionExamples::itemsChanged, this,
+            [this] { examples_->replaceItems(collection_examples_->items()); });
+    examples_->replaceItems(collection_examples_->items());
+    connect(collection_examples_, &CollectionExamples::noticeChanged, this, &Session::examplesNoticeChanged);
     assistant_=new AssistantViewModel(std::move(dependencies),this,options);
     initializeSession();
 }
 #endif
 void Session::initializeSession() {
+#if EDI_APP_ASSISTANT
     connect(assistant_, &AssistantViewModel::conversationRetired, this, &Session::retireAssistantIntent);
     connect(this, &Session::projectDirectoryUsed, assistant_, &AssistantViewModel::projectSaved);
+#endif
     // crysta's warnings reach Messages, never only the terminal (the owner, 2026-10-23).
     edi::collect_engine_warnings();
     // What a crash left in the temporary directory (edi ADR-0052).
@@ -213,8 +234,22 @@ void Session::initializeSession() {
     }
     // Commit the shared history lease only after this actual owner finished
     // every fallible initialization step (ADR-0057).
+#if EDI_APP_ASSISTANT
     assistant_->finishHistoryInitialization();
+#endif
 }
+
+#if EDI_APP_ASSISTANT
+bool Session::assistantRetainsProject(ProjectViewModel* project) const { return assistant_->retainsSessionProject(project); }
+bool Session::assistantPrepareRestore(ProjectViewModel* project, const QString& source, const std::function<bool()>& commit) {
+    return assistant_->prepareSessionProjectRestore(project, source, commit);
+}
+bool Session::assistantSaveNotified(ProjectViewModel* project) const { return assistant_->ordinarySaveNotification(project); }
+#else
+bool Session::assistantRetainsProject(ProjectViewModel*) const { return false; }
+bool Session::assistantPrepareRestore(ProjectViewModel*, const QString&, const std::function<bool()>&) { return true; }
+bool Session::assistantSaveNotified(ProjectViewModel*) const { return false; }
+#endif
 
 Session::~Session() {
     delete assistant_;assistant_=nullptr;
@@ -334,11 +369,13 @@ bool Session::openProject(const QUrl& location) {
         qCInfo(lcApp, "project opened");
         return true;
     }
+#if EDI_APP_ASSISTANT
     if(receiver && assistant_->sessionProjectRestorePending())return false;
+#endif
     // A stale outer Open neither reports its successor's error as its own nor
     // decorates that successor. False does not imply no partial adoption.
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
-    const auto message=last_error_.isEmpty()?tr("The project could not be opened"):last_error_;
+    const auto message=last_error_.isEmpty()?tr("The project at %1 could not be opened").arg(location.toLocalFile().isEmpty()?location.toString():location.toLocalFile()):last_error_;
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
     emit loadFailed(message);
     return false;
@@ -349,19 +386,19 @@ bool Session::openExample(const QString& exampleId) {
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
     if (openExampleNamed(exampleId)) {
-        qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
+        qCInfo(lcApp, "example requested: %s", qPrintable(exampleId));
         return true;
     }
     // A stale outer Open neither reports its successor's error as its own nor
     // decorates that successor. False does not imply no partial adoption.
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
-    const auto message=last_error_.isEmpty()?tr("The project could not be opened"):last_error_;
+    const auto message=last_error_.isEmpty()?tr("The example %1 could not be opened").arg(exampleId):last_error_;
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
     emit loadFailed(message);
     return false;
 }
 
-bool Session::openProjectAt(const QUrl& location) {
+bool Session::openProjectAt(const QUrl& location, const QString& example) {
     if (!location.isLocalFile()) {
         setLastError(QStringLiteral("cannot open %1: only local projects (file: URLs) can be opened")
                          .arg(location.toString()));
@@ -375,7 +412,7 @@ bool Session::openProjectAt(const QUrl& location) {
     if (given.isFile() && given.fileName() == QStringLiteral("project.edi")) {
         source = given.absolutePath();
     } else if (given.isFile() && edi::is_project_archive(source.toStdString())) {
-        return open(source,{},[this,given] {
+        return open(source,example,[this,given] {
         const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
         const auto binding=replacement_generation_;auto pathBinding=path_generation_;
         const auto current=[&]{return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
@@ -471,6 +508,12 @@ QString Session::projectLocation() const {
         if(!root.isEmpty())location.replace(0,root.size(),QStringLiteral("<temporary>"));
     }
     return location;
+}
+
+bool Session::locationExists(const QString& path) const {
+    if (path.isEmpty()) return false;
+    const QFileInfo info(QDir::cleanPath(path));
+    return info.exists() || info.isSymLink();
 }
 
 QString Session::existingParentFolder(const QString& path) const {
@@ -569,6 +612,8 @@ bool Session::save() {
         setLastError(QStringLiteral("this project has no directory of its own yet: save it as"));
         return false;
     }
+    // A linked scan's files go with the save, stay linked, or the user is asked first (edi ADR-0069).
+    if (!settleSaveData(project_->path(), [this] { save(); })) return false;
     if (!archive_location_.isEmpty()) {
         // The archive is written from a staged copy, and the open project then takes that snapshot and works in its
         // folder: a refused archive leaves the project as it was.
@@ -586,6 +631,37 @@ bool Session::save() {
     }
     emit projectDirectoryUsed(QFileInfo(project_->path()).absoluteFilePath());
     return logged("project saved");
+}
+
+bool Session::settleSaveData(const QString& directory, std::function<void()> again) {
+    const QString choice = std::exchange(save_data_choice_, QString());
+    if (project_ == nullptr) return true;
+    const QVariantMap plan = project_->saveDataPlan();
+    if (!plan.value(QStringLiteral("linked")).toBool()) return true;
+    bool include = false;
+    if (choice == QLatin1String("copy") || choice == QLatin1String("linked")) {
+        include = choice == QLatin1String("copy");
+    } else if (plan.value(QStringLiteral("ask")).toBool()) {
+        pending_save_ = std::move(again);
+        const qint64 bytes = plan.value(QStringLiteral("bytes")).toLongLong();
+        emit saveDataChoiceNeeded(bytes, plan.value(QStringLiteral("files")).toInt(), bytes > 100LL * 1024 * 1024);
+        return false;  // asked, not refused: no message
+    } else {
+        include = plan.value(QStringLiteral("mode")).toString() == QLatin1String("all");
+    }
+    if (!include) return true;
+    if (const QString refusal = project_->includeLinkedData(directory); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return false;
+    }
+    return true;
+}
+
+void Session::answerSaveData(const QString& choice) {
+    std::function<void()> again = std::exchange(pending_save_, {});
+    if (choice != QLatin1String("copy") && choice != QLatin1String("linked")) return;  // cancelled: nothing is saved
+    save_data_choice_ = choice;
+    if (again) again();
 }
 
 QString Session::writeBackReports() {
@@ -738,6 +814,11 @@ bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
         return false;
     }
     const QString where = target.toLocalFile();
+    // The linked data, if it goes with the project, is copied into the project's folder first; the save then
+    // carries it as it carries the rest (edi ADR-0069).
+    if (!project_->path().isEmpty() &&
+        !settleSaveData(project_->path(), [this, target, zip, copy] { saveProjectAs(target, zip, copy); }))
+        return false;
     if (copy) {
         return saveCopy(where, zip);
     }
@@ -872,31 +953,165 @@ bool Session::saveCopy(const QString& target, bool zip) {
     return true;
 }
 
+QString Session::examplesNotice() const { return collection_examples_->notice(); }
+
 bool Session::openExampleNamed(const QString& exampleId) {
-    const QString source = kExamples + QLatin1Char('/') + exampleId + QStringLiteral("/project");
-    if (!ExampleListModel::bundledIds().contains(exampleId) || !QFileInfo(source).isDir()) {
-        setLastError(QStringLiteral("no bundled example named '%1'").arg(exampleId));
+    // An example's project comes from the collections (ADR-0068): once the sources are read (again, after an
+    // outage), its zip is downloaded, checked and opened as any archive. The request keeps what it was made
+    // with: a tutorial's aside intent, and the project it was made against, so a later request, Close, Create
+    // or Open makes an older reply inert. The outcome arrives through loadFailed and exampleOpenFinished.
+    if (!collection_examples_->knows(exampleId) && !ExampleListModel::bundledIds().contains(exampleId) &&
+        !collection_examples_->loading()) {
+        setLastError(QStringLiteral("no example named '%1'").arg(exampleId));
         return false;
     }
-    QString copyRoot;
-    try { copyRoot=prepareCopyRoot("example"); }
-    catch(const std::exception& error) { setLastError(QString::fromUtf8(error.what()));return false; }
-    const QPointer<Session> copyOwner(this);
-    const auto cleanup=qScopeGuard([copyOwner,copyRoot]{if(copyOwner)copyOwner->releaseTemporaryRoots({copyRoot});});
-    // Resource files are copied into an independent native folder for each Open.
-    const QString target=QDir(copyRoot).filePath(exampleId+QStringLiteral("/project"));
-    QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
-    while (files.hasNext()) {
-        const QString file = files.next();
-        const QString destination = target + file.mid(source.size());
-        QDir().mkpath(QFileInfo(destination).absolutePath());
-        if (!QFile::copy(file, destination)) {
-            setLastError(QStringLiteral("cannot extract the example '%1'").arg(exampleId));
-            return false;
+    const QPointer<Session> receiver(this);
+    const bool aside = aside_next_;
+    const quint64 request = ++example_request_;
+    const auto binding = replacement_generation_;
+    const QPointer<ProjectViewModel> before(project_);
+    opening_example_ = true;
+    emit openingExampleChanged();
+    const auto finish = [receiver, exampleId](bool opened, const QString& message) {
+        receiver->opening_example_ = false;
+        emit receiver->openingExampleChanged();
+        if (!opened && !message.isEmpty()) {
+            receiver->setLastError(message);
+            emit receiver->loadFailed(message);
         }
-        QFile::setPermissions(destination, QFile::ReadOwner | QFile::WriteOwner);
-    }
-    return open(target, exampleId);
+        emit receiver->exampleOpenFinished(exampleId, opened);
+    };
+    // Still this request, against the project it was made for: a newer example request owns the outcome, and a
+    // project replaced in between is not replaced again.
+    const auto current = [receiver, request, binding, before] {
+        return receiver && receiver->example_request_ == request && receiver->replacement_generation_ == binding &&
+               receiver->project_ == before;
+    };
+    collection_examples_->whenRead(exampleId, [receiver, exampleId, aside, request, binding, before, finish, current] {
+        if (!receiver || receiver->example_request_ != request) return;
+        if (!current()) {
+            qCInfo(lcApp, "example %s not opened: the project changed meanwhile", qPrintable(exampleId));
+            finish(false, {});
+            return;
+        }
+        if (!receiver->collection_examples_->knows(exampleId)) {
+            const QString notice = receiver->collection_examples_->notice();
+            finish(false, !notice.isEmpty() ? notice : tr("No online source that answered holds the example '%1'").arg(exampleId));
+            return;
+        }
+        receiver->collection_examples_->fetchProject(exampleId, [receiver, exampleId, aside, request, finish, current](const QUrl& archive, const QString& error) {
+            if (!receiver || receiver->example_request_ != request) return;
+            if (!current()) {
+                qCInfo(lcApp, "example %s not opened: the project changed meanwhile", qPrintable(exampleId));
+                finish(false, {});
+                return;
+            }
+            if (!error.isEmpty()) {
+                qCWarning(lcApp, "example %s not fetched: %s", qPrintable(exampleId), qPrintable(error));
+                finish(false, error);
+                return;
+            }
+            if (aside && receiver->aside_) {
+                finish(false, QStringLiteral("a tutorial already holds a project aside"));
+                return;
+            }
+            receiver->aside_next_ = aside;
+            const bool opened = receiver->openProjectAt(archive, exampleId);
+            receiver->aside_next_ = false;
+            if (opened) qCInfo(lcApp, "example opened: %s", qPrintable(exampleId));
+            else qCWarning(lcApp, "example %s: %s could not be opened: %s", qPrintable(exampleId), qPrintable(archive.toLocalFile()), qPrintable(receiver->last_error_));
+            finish(opened, opened ? QString()
+                   : tr("The example %1, downloaded to %2, could not be opened%3")
+                         .arg(exampleId, archive.toLocalFile(), receiver->last_error_.isEmpty() ? QString() : QStringLiteral(": ") + receiver->last_error_));
+        });
+    });
+    return true;
+}
+
+namespace {
+// The tutorials' two inputs, by their ids in the collection and the names the tutorial text gives them.
+const QList<QPair<QString, QString>> kTutorialFiles{{QStringLiteral("tutorial-lbco"), QStringLiteral("lbco.cif")},
+                                                    {QStringLiteral("tutorial-hrpt"), QStringLiteral("hrpt.xye")}};
+}  // namespace
+
+// Downloads the tutorials' files one after the other; `done` gets every (name, bytes) pair or the first error.
+void Session::fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done) {
+    const QPointer<Session> receiver(this);
+    auto fetched = std::make_shared<QList<QPair<QString, QByteArray>>>();
+    auto step = std::make_shared<std::function<void(int)>>();
+    *step = [receiver, fetched, step, done](int index) {
+        if (!receiver) return;
+        if (index == kTutorialFiles.size()) {
+            done(*fetched, {});
+            return;
+        }
+        const QString id = kTutorialFiles[index].first, name = kTutorialFiles[index].second;
+        receiver->collection_examples_->whenRead(id, [receiver, fetched, step, done, index, id, name] {
+            if (!receiver) return;
+            receiver->collection_examples_->fetchBytes(id, [receiver, fetched, step, done, index, name](const QByteArray& bytes, const QString& error) {
+                if (!receiver) return;
+                if (!error.isEmpty()) {
+                    done({}, tr("%1 could not be fetched: %2").arg(name, error));
+                    return;
+                }
+                fetched->append({name, bytes});
+                (*step)(index + 1);
+            });
+        });
+    };
+    (*step)(0);
+}
+
+void Session::stageTutorialFiles() {
+    const QString folder = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).filePath(QStringLiteral("easydiffraction-tutorial"));
+    fetchTutorialFiles([this, folder](const QList<QPair<QString, QByteArray>>& files, const QString& error) {
+        if (!error.isEmpty()) {
+            emit tutorialFilesFailed(error);
+            return;
+        }
+        if (!QDir().mkpath(folder)) {
+            emit tutorialFilesFailed(tr("The folder %1 could not be made").arg(folder));
+            return;
+        }
+        for (const auto& [name, bytes] : files) {
+            QFile written(QDir(folder).filePath(name));
+            if (!written.open(QIODevice::WriteOnly | QIODevice::Truncate) || written.write(bytes) != bytes.size()) {
+                emit tutorialFilesFailed(tr("%1 could not be written").arg(written.fileName()));
+                return;
+            }
+        }
+        emit tutorialFilesStaged(QUrl::fromLocalFile(folder));
+    });
+}
+
+void Session::saveTutorialFiles(const QUrl& folder) {
+    const bool download = edi_app::WebFiles::available();
+    const QString target = folder.toLocalFile();
+    fetchTutorialFiles([this, download, target](const QList<QPair<QString, QByteArray>>& files, const QString& error) {
+        if (!error.isEmpty()) {
+            emit tutorialFilesFailed(error);
+            return;
+        }
+        if (!download && !QDir().mkpath(target)) {
+            emit tutorialFilesFailed(tr("The folder %1 could not be made").arg(target));
+            return;
+        }
+        for (const auto& [name, bytes] : files) {
+            if (download) {
+                if (!edi_app::WebFiles::download(bytes, name)) {
+                    emit tutorialFilesFailed(tr("%1 could not be downloaded").arg(name));
+                    return;
+                }
+                continue;
+            }
+            QFile written(QDir(target).filePath(name));
+            if (!written.open(QIODevice::WriteOnly | QIODevice::Truncate) || written.write(bytes) != bytes.size()) {
+                emit tutorialFilesFailed(tr("%1 could not be written").arg(written.fileName()));
+                return;
+            }
+        }
+        emit tutorialFilesSaved();
+    });
 }
 
 struct Session::ProjectCreationOutcome {
@@ -909,16 +1124,16 @@ struct Session::ProjectCreationOutcome {
 };
 bool Session::createProject(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries, const QString& assistantIntent) {
-    return createProjectWithOutcome(name,description,location,suRule,title,authors,reportLibraries,assistantIntent).success;
+                            bool reportLibraries, const QString& assistantIntent, bool replace) {
+    return createProjectWithOutcome(name,description,location,suRule,title,authors,reportLibraries,assistantIntent,replace).success;
 }
 edi_app::ProjectCreationResult Session::createProjectWithOutcome(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries, const QString& assistantIntent) {
+                            bool reportLibraries, const QString& assistantIntent, bool replace) {
     const QPointer<Session> receiver(this);
     ProjectCreationOutcome outcome;
     const bool success = createProjectImpl(name, description, location, suRule, title, authors,
-                                          reportLibraries, assistantIntent, &outcome);
+                                          reportLibraries, assistantIntent, &outcome, replace);
     if (!receiver) return {};
     const bool current = (!outcome.has_owner || outcome.owner) && project_ == outcome.owner &&
         replacement_generation_ == outcome.replacement;
@@ -926,7 +1141,9 @@ edi_app::ProjectCreationResult Session::createProjectWithOutcome(const QString& 
     result.success = success; result.current = current; result.error = outcome.error; result.saved = outcome.saved;
     result.path = outcome.path; result.owner = outcome.owner.data(); result.has_owner = outcome.has_owner;
     result.replacement = QString::number(outcome.replacement);
+#if EDI_APP_ASSISTANT
     assistant_->finishOrdinaryProjectCreationOutcome(assistantIntent,result);
+#endif
     return result;
 }
 bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outcome) const {
@@ -936,7 +1153,7 @@ bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outco
 }
 bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome) {
+                            bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome, bool replace) {
     const QPointer<Session> receiver(this);
     if (outcome) { outcome->owner = project_; outcome->has_owner = project_ != nullptr; outcome->replacement = replacement_generation_; }
     ProjectViewModel* created = nullptr;
@@ -959,6 +1176,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     }
     const QPointer<ProjectViewModel> originalCreated(created);
     const bool assistantCreation = !assistantIntent.isEmpty();
+#if EDI_APP_ASSISTANT
     try {
         if (assistantCreation && !assistant_->prepareOrdinaryProjectCreation(created, assistantIntent, location)) {
             if (originalCreated) originalCreated->deleteLater();
@@ -971,6 +1189,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
         if (originalCreated) originalCreated->deleteLater();
         return false;
     }
+#endif
     if (!receiver || !originalCreated) return false;
     bool committed = false;
     quint64 committedReplacement = 0;
@@ -978,7 +1197,9 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     if (outcome && committed) {
         outcome->owner = originalCreated; outcome->has_owner = true; outcome->replacement = committedReplacement;
     }
+#if EDI_APP_ASSISTANT
     if (receiver && assistantCreation) assistant_->finishOrdinaryProjectCreation(originalCreated, assistantIntent, committed);
+#endif
     const auto current = [&] { return receiver && originalCreated && project_ == originalCreated &&
         committed && replacement_generation_ == committedReplacement; };
     if (!presented || !current()) return false;
@@ -986,7 +1207,34 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     if (location.isEmpty()) {
         return true;
     }
-    const bool saved=saveProjectAsFresh(QUrl::fromLocalFile(location),false,false,false);
+    // Over a project folder already at the location, once the user chose Replace: the ordinary save writes into
+    // it, so a refused write leaves the old project as it was (the owner, 2026-11-04).
+    const QFileInfo existing(location);
+    const bool replacing = replace && (existing.exists() || existing.isSymLink());
+    bool saved = false;
+    if (!replacing) saved = saveProjectAsFresh(QUrl::fromLocalFile(location),false,false,false);
+    else if (!existing.isDir() || !QFileInfo::exists(existing.absoluteFilePath() + QStringLiteral("/project.edi")))
+        setLastError(tr("%1 exists and is not a project folder; nothing was replaced.").arg(existing.absoluteFilePath()));
+    else {
+        // Nothing of the old project survives (the owner, 2026-11-04): it moves aside, the new one is saved fresh in
+        // its place, and only then is the old one removed; a refused save puts it back as it was.
+        const QString place = existing.absoluteFilePath();
+        QString aside = place + QStringLiteral(".edi-replaced");
+        for (int n = 2; QFileInfo::exists(aside); ++n) aside = place + QStringLiteral(".edi-replaced-%1").arg(n);
+        if (!QDir().rename(place, aside)) {
+            setLastError(tr("The project %1 could not be replaced: it could not be moved aside").arg(existing.fileName()));
+        } else {
+            saved = saveProjectAsFresh(QUrl::fromLocalFile(place), false, false, false);
+            if (saved) {
+                QDir(aside).removeRecursively();
+            } else {
+                const QString why = last_error_;
+                QDir(place).removeRecursively();
+                QDir().rename(aside, place);
+                if (current()) setLastError(tr("The project %1 could not be replaced: %2").arg(existing.fileName(), why));
+            }
+        }
+    }
     const QString error=current()?(saved?QString{}:last_error_):QStringLiteral("The original Create save owner changed");
     if (outcome) { outcome->error = error; outcome->saved = error.isEmpty(); outcome->path = originalCreated ? originalCreated->path() : QString{}; }
     if (!current()) return false;
@@ -1007,8 +1255,13 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
 void Session::closeProject() {
     const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> original(project_);
     const auto binding=replacement_generation_;
+#if EDI_APP_ASSISTANT
     auto pending=assistant_->prepareProjectResetInputs();
     if(!receiver || !pending || project_!=original || replacement_generation_!=binding)return;
+#else
+    const std::shared_ptr<SessionResetInputs> pending;
+    if(!receiver || project_!=original || replacement_generation_!=binding)return;
+#endif
     replaceProject(nullptr, {}, {}, false, nullptr, nullptr, false, {}, pending);
 }
 
@@ -1017,10 +1270,12 @@ bool Session::openExampleAside(const QString& exampleId) {
         setLastError(QStringLiteral("a tutorial already holds a project aside"));
         return false;  // never a second one: the first would be lost
     }
+    // Started, not done: the download lands later, and the project is set aside as the example's opens
+    // (exampleOpenFinished tells, hasProjectSetAside then holds).
     aside_next_ = true;
-    const bool opened = openExample(exampleId);
+    const bool started = openExample(exampleId);
     aside_next_ = false;
-    return opened && aside_.has_value();
+    return started;
 }
 
 bool Session::createProjectAside(const QString& name, const QString& description) {
@@ -1180,7 +1435,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
         return false;
     }
     const auto cleanup=qScopeGuard([&] {
-        if(!*adopted && receiver && opened && project_!=opened && !assistant_->retainsSessionProject(opened))opened->deleteLater();
+        if(!*adopted && receiver && opened && project_!=opened && !assistantRetainsProject(opened))opened->deleteLater();
     });
     retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
     connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
@@ -1191,7 +1446,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
         if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
         return !afterOpen || afterOpen();
     };
-    if(!assistant_->prepareSessionProjectRestore(opened,directory,commit))return false;
+    if(!assistantPrepareRestore(opened,directory,commit))return false;
     return commit();
 }
 
@@ -1247,7 +1502,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
         return false;
     }
     const auto cleanup=qScopeGuard([&] {
-        if(!*adopted && receiver && opened && project_!=opened && !assistant_->retainsSessionProject(opened))opened->deleteLater();
+        if(!*adopted && receiver && opened && project_!=opened && !assistantRetainsProject(opened))opened->deleteLater();
     });
     retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
     connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
@@ -1258,7 +1513,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
         if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
         return !afterOpen || afterOpen();
     };
-    if(!assistant_->prepareSessionProjectRestore(opened,source,commit))return false;
+    if(!assistantPrepareRestore(opened,source,commit))return false;
     return commit();
 }
 
@@ -1280,7 +1535,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<AssistantViewModel::ProjectResetInputs>& resetInputs) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<SessionResetInputs>& resetInputs) {
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     const QPointer<ProjectViewModel> previous(project_);
@@ -1333,14 +1588,18 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     }
     if(!current())return false;
     if(!nativePrepared){emit projectAboutToChange();if(!current())return false;}
+#if EDI_APP_ASSISTANT
     if(nativePrepared && !assistant_->commitNativeProject(target))return false;
+#endif
     if(target)connect(target,&ProjectViewModel::pathChanged,this,[this,target] {
         if(target && project_==target && path_generation_!=UINT64_MAX)++path_generation_;
     });
     project_ = target;
     if(committed)*committed=true;
     if(committedReplacement)*committedReplacement=replacement;
+#if EDI_APP_ASSISTANT
     if(!nativePrepared && !assistant_->attachProject(target,false,ordinaryEmptyCreate && previous==nullptr,resetInputs))return false;
+#endif
     if(!current() || project_!=target)return false;
     opened_example_ = example;
     warnings_->setMessages(warnings);
@@ -1348,7 +1607,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if (project_ != nullptr) {
         connect(project_, &ProjectViewModel::projectEdited, this, [this] {
             auto* source=qobject_cast<ProjectViewModel*>(sender());
-            if(source!=project_ || assistant_->ordinarySaveNotification(source))return;
+            if(source!=project_ || assistantSaveNotified(source))return;
             retireAssistantIntent();
         });
         connect(project_, &ProjectViewModel::refused, this, &Session::setLastError);

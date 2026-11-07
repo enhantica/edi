@@ -3059,11 +3059,11 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
     text += "_experiment_type.radiation_probe \"" + type.radiation_probe + "\"\n";
     text += "_experiment_type.scattering_type \"" + type.scattering_type + "\"\n\n";
     // Starting values that give a readable pattern: a Thompson-Cox-Hastings pseudo-Voigt at about a
-    // diffractometer's resolution for constant wavelength (HRPT's neutron wavelength, Cu Kα for X-rays),
-    // Jorgensen's profile on a 90° bank for time-of-flight.
+    // diffractometer's resolution for constant wavelength, Jorgensen's profile on a 90° bank for
+    // time-of-flight. The wavelength starts at 1 Å, a value no instrument supplies: every experiment has
+    // its own and the user sets it, so an instrument's value is not carried over as a default.
     if (constant_wavelength) {
-        text += type.radiation_probe == "xray" ? "_instrument.setup_wavelength 1.54056\n"
-                                               : "_instrument.setup_wavelength 1.494\n";
+        text += "_instrument.setup_wavelength 1.\n";
         text += "_instrument.calib_twotheta_offset 0.\n\n"
                 "_peak.type cwl-tch-pseudo-voigt\n"
                 "_peak.broad_gauss_u 0.1\n_peak.broad_gauss_v -0.1\n_peak.broad_gauss_w 0.1\n"
@@ -4652,11 +4652,9 @@ void save_project_as(Project& project, const std::string& directory) {
         project.metadata.last_modified = previous;
         throw;
     }
-    project.path = directory;
-    project.metadata.path = directory;
-    // The saved project holds its scan data: it reads them from its own directory from now on.
-    project.scan_data_root.clear();
+    adopt_save_location(project, directory);
 }
+
 
 namespace {
 

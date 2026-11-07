@@ -149,6 +149,11 @@
    "file": "core/src/fit_inputs.hpp",
    "match": "settings << std::setprecision(17)",
    "reason": "an identity key of the fit settings, compared and never shown"
+  },
+  {
+   "file": "app/qml/Components/OnlineLoadDialog.qml",
+   "match": "row.cellA.toFixed(2), row.cellB.toFixed(2), row.cellC.toFixed(2), row.cellAlpha.toFixed(1), row.cellBeta.toFixed(1), row.cellGamma.toFixed(1)",
+   "reason": "the search results' compact cell column, lengths with two decimals and angles with one (the owner, 2026-11-04); a listing of entries found online, not a value of the project's items"
   }
  ],
  "names": [

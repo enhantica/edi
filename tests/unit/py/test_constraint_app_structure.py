@@ -102,20 +102,23 @@ def test_preview_projects_cannot_be_bundled_as_application_resources():
             )
     cmake = (ROOT / 'app/CMakeLists.txt').read_text()
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
-    bundled = [row['id'] for row in registry if row.get('user-facing') is True]
+    selected_ids = [row['id'] for row in registry if row.get('user-facing') is True]
     selected = json.loads(
         (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
     )['cases']
-    assert bundled == [row['id'] for row in selected], (
-        'The app must bundle the complete independent owner selection in its declared order'
+    assert selected_ids == [row['id'] for row in selected], (
+        'The collection catalogue retains the independent owner selection in order'
     )
     assert 'file(STRINGS ${_cli}/projects.yml' in cmake and 'user-facing:' in cmake, (
         'the app example selection must read the registry user-facing declarations'
     )
-    assert 'edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})' in cmake, (
-        'the registry-selected catalogue must reach the production bundle call'
+    assert 'edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})' not in cmake, (
+        'The downloaded example catalogue must not embed the selected project payloads'
     )
-    assert not any(re.search(r'(?i)(?:look|preview|demo)', case) for case in bundled), (
+    assert 'qt_add_resources(edi_app_module "edi_example_metadata"' in cmake, (
+        'The selected catalogue retains application metadata for the downloaded examples'
+    )
+    assert not any(re.search(r'(?i)(?:look|preview|demo)', case) for case in selected_ids), (
         'look-check and preview projects must not enter the shipped example catalogue'
     )
     assert 'constraint_samples' not in cmake, (

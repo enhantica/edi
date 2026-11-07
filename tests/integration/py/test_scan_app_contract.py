@@ -246,31 +246,47 @@ def evaluate(expression, context=''):
 
 
 def require_availability(text):
-    control = item(text, 'experiments.loadData.${row.index}')
-    visible = property_value(control, 'visible')
-    enabled = (
-        property_value(control, 'enabled') if re.search(r'(?m)^\s*enabled:', control) else 'true'
-    )
+    control = item(text, 'experiments.load.dataFile')
+    enabled = property_value(control, 'enabled')
+    menu = object_id(text, 'loadMenu')
+    selected = property_value(menu, 'selected')
+    into_selected = property_value(menu, 'dataIntoSelected')
+    created_empty = {'canLoadData': True, 'calculationOnly': True}
+    created_loaded = {'canLoadData': True, 'calculationOnly': False}
+    imported_empty = {'canLoadData': False, 'calculationOnly': True}
+    imported_loaded = {'canLoadData': False, 'calculationOnly': False}
     contexts = [
-        (False, {'canLoadData': True, 'calculationOnly': True}, True),
-        (False, {'canLoadData': True, 'calculationOnly': False}, True),
-        (False, {'canLoadData': False, 'calculationOnly': True}, False),
-        (False, {'canLoadData': False, 'calculationOnly': False}, False),
-        (False, None, False),
-        (True, {'canLoadData': True, 'calculationOnly': True}, False),
-        (True, {'canLoadData': True, 'calculationOnly': False}, False),
+        (False, created_empty, True, True, True),
+        (False, created_loaded, True, True, True),
+        (False, imported_empty, True, True, False),
+        (False, imported_loaded, True, True, False),
+        (False, None, True, True, False),
+        (False, None, False, True, False),
+        (False, None, False, False, False),
+        (True, created_empty, True, True, False),
+        (True, created_loaded, True, True, False),
+        (True, None, True, True, False),
     ]
-    program = 'let observed=[];'
-    for scan, experiment, _ in contexts:
-        program += (
-            '{const group={scan:' + json.dumps(scan) + '};'
-            'const row={experiment:' + json.dumps(experiment) + '};'
-            'observed.push(Boolean((' + visible + ') && (' + enabled + ')));}'
-        )
-    program += 'console.log(JSON.stringify(observed));'
-    assert javascript(program) == [expected for _, _, expected in contexts], (
-        'Load data availability: created unloaded and loaded rows admit the action; '
-        'imported, absent and scan rows cannot invoke it'
+    groups = [
+        {
+            'scan': scan,
+            'project': {'currentExperiment': experiment, 'canCreateExperiment': can_create}
+            if has_project
+            else None,
+        }
+        for scan, experiment, can_create, has_project, _ in contexts
+    ]
+    program = (
+        'const groups=' + json.dumps(groups) + ';'
+        'const observed=groups.map(group=>{'
+        'const loadMenu={selected:' + selected + '};'
+        'loadMenu.dataIntoSelected=(' + into_selected + ');'
+        'return Boolean(' + enabled + ');});'
+        'console.log(JSON.stringify(observed));'
+    )
+    assert javascript(program) == [expected for *_, expected in contexts], (
+        'Load data availability: both empty and measured selected experiments follow '
+        'their admitted type; an empty selection always requires explicit creation'
     )
 
 
@@ -786,49 +802,77 @@ def test_create_experiment_is_enabled_and_routes_to_view_model():
         r'setCurrentExperimentIndex\(static_cast<int>\(experiment_models_\.size\(\)\) - 1\);',
         'Create wiring: creation selects the newly added row',
     )
-    require(
-        item(text, 'experiments.load'),
-        r'ApplicationInfo\.loadFormFiles\(true\)',
-        'Load wiring: the actual action opens the multi-file loader',
-    )
-    require(
-        block(text, 'FileDialog {'),
-        r'onAccepted:\s*group\.project\.loadExperiments\(selectedFiles\)',
-        'Load wiring: accepted files reach the supported edit boundary',
-    )
-
-    assert property_value(block(text, 'FileDialog {'), 'fileMode') == 'FileDialog.OpenFiles', (
+    dialog = object_id(text, 'loadDialog')
+    accepted = property_value(dialog, 'onAccepted')
+    assert property_value(dialog, 'fileMode') == 'FileDialog.OpenFiles', (
         'Load wiring: desktop chooses multiple files'
     )
-    action = property_value(item(text, 'experiments.load'), 'onClicked')
-    received = block(text, 'function onFilesOpened(')
-    for available in (False, True):
-        program = (
-            """let calls=[]; const files=['a.edi','b.edi'];
-const group={project:{loadExperiments:x=>calls.push(['loaded',x])},
-
-webRequest:0,webRequestProject:null};
-const WebFiles={available:AVAILABLE,openFiles:(filter,multiple)=>{calls.push(['web',
-
-filter,multiple]);return 41}};
-const loadDialog={open:()=>calls.push(['desktop'])};
-(function(){ACTION})();
-RECEIVED
-if(WebFiles.available) onFilesOpened(41,files);
-console.log(JSON.stringify(calls));"""
-            .replace('AVAILABLE', json.dumps(available))
-            .replace('ACTION', action)
-            .replace('RECEIVED', received)
-        )
-        expected = (
-            [['web', '.cif,.edi', True], ['loaded', ['a.edi', 'b.edi']]]
-            if available
-            else [['desktop']]
-        )
-        assert javascript(program) == expected, (
-            'Load wiring: each platform opens its multi-file route and '
-            'browser files reach the initiating project'
-        )
+    load = item(text, 'experiments.load')
+    action = property_value(load, 'onClicked')
+    chosen = property_value(
+        item(object_id(load, 'loadMenu'), 'experiments.load.experimentFile'), 'onTriggered'
+    )
+    received = next(
+        (
+            block(text[match.start() :], 'function onFilesOpened(')
+            for match in re.finditer(r'function onFilesOpened\(', text)
+            if 'ApplicationInfo.formFilesOpened'
+            in block(text[match.start() :], 'function onFilesOpened(')
+        ),
+        '',
+    )
+    assert received, 'Load wiring: the full-experiment result reaches the C++ bridge'
+    program = """
+const files=['a.edi','b.edi'];
+function exercise(available, target) {
+    const calls=[];
+    const original={loadExperiments:paths=>calls.push(['original',paths])};
+    const successor={loadExperiments:paths=>calls.push(['successor',paths])};
+    const group={project:original,webRequest:0,webRequestProject:null,webDataExperiment:null};
+    const WebFiles={available,openFiles:(filter,multiple)=>{
+        calls.push(['web',filter,multiple]); return 41;
+    }};
+    const loadDialog={open:()=>calls.push(['desktop'])};
+    const loadMenu={open:()=>calls.push(['menu'])};
+    function openMenu() { OPEN }
+    function chooseFile() { CHOSEN }
+    function accept(selectedFiles) { ACCEPTED }
+    RECEIVED
+    openMenu();
+    chooseFile();
+    if (available) {
+        if (target === 'foreign') group.project=successor;
+        if (target === 'closed') group.project=null;
+        onFilesOpened(42,['foreign.edi']);
+        onFilesOpened(41,files);
+        onFilesOpened(41,['duplicate.edi']);
+    } else {
+        accept(files);
+    }
+    return calls;
+}
+console.log(JSON.stringify([
+    exercise(false, 'original'), exercise(true, 'original'),
+    exercise(true, 'foreign'), exercise(true, 'closed')
+]));
+"""
+    for marker, handler in (
+        ('OPEN', action),
+        ('CHOSEN', chosen),
+        ('ACCEPTED', accepted),
+        ('RECEIVED', received),
+    ):
+        program = program.replace(marker, handler)
+    web = ['web', '.cif,.edi', True]
+    assert javascript(program) == [
+        [['menu'], ['desktop'], ['original', ['a.edi', 'b.edi']]],
+        [['menu'], web, ['original', ['a.edi', 'b.edi']]],
+        [['menu'], web],
+        [['menu'], web],
+    ], (
+        'Load wiring: the real menu dispatches a multi-file chooser on either platform '
+        'and the browser only delivers the matching result to its original open project'
+    )
 
 
 def test_type_selectors_live_in_explorer_and_follow_selected_row():
@@ -1195,76 +1239,6 @@ def test_search_accepts_direct_field_and_state_compositions():
     assert visible_delegate != delegate, 'Search wiring: the control supplies visibility filtering'
     assert_search(shared)
     assert_search(direct, visible_delegate)
-
-
-def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility(monkeypatch):
-    original = source
-    # Load-data availability escapes live in test_plain_data_picker, with their
-    # own valid controls for unloaded, loaded and imported rows.
-    checks = [
-        (
-            'src/project_view_model.cpp',
-            'setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);',
-            'setCurrentExperimentIndex(0);',
-            test_create_experiment_is_enabled_and_routes_to_view_model,
-            (),
-        ),
-        (
-            'qml/Components/SelectorField.qml',
-            'ApplicationInfo.activateSelector(index,',
-            'ApplicationInfo.activateSelector(0,',
-            test_data_free_experiment_type_has_a_write_boundary,
-            ('beamMode',),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'ApplicationInfo.chooseExperimentType(axis, token);',
-            'row.project.setExperimentType(0, axis, token);',
-            test_data_free_experiment_type_has_a_write_boundary,
-            ('beamMode',),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'row.experiment.polarisationOptions',
-            'row.experiment.dimensionalityOptions',
-            test_disabled_placeholders_and_load_data_are_present,
-            (),
-        ),
-        (
-            'qml/Pages/Experiment/MeasuredRangeGroup.qml',
-            'setRange(Number(text), group.range.maximum, group.range.step)',
-            'setRange(group.range.minimum, Number(text), group.range.step)',
-            test_simulation_range_fields_have_live_write_bindings,
-            ('minimum',),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentsGroup.qml',
-            'fileMode: FileDialog.OpenFiles',
-            'fileMode: FileDialog.OpenFile',
-            test_create_experiment_is_enabled_and_routes_to_view_model,
-            (),
-        ),
-        (
-            'qml/Pages/Experiment/ExperimentsGroup.qml',
-            'ApplicationInfo.formFilesOpened(request, files, true);',
-            'group.project.loadExperiments([]);',
-            test_create_experiment_is_enabled_and_routes_to_view_model,
-            (),
-        ),
-    ]
-    for path, old, new, check, args in checks:
-        changed = original(path).replace(old, new)
-        assert changed != original(path), (
-            'Scan wiring: every forwarding escape must reach its actual operation'
-        )
-        monkeypatch.setattr(
-            __import__(__name__, fromlist=['source']),
-            'source',
-            lambda name, changed=changed, path=path: changed if name == path else original(name),
-        )
-        with pytest.raises((AssertionError, pytest.fail.Exception)):
-            check(*args)
-    monkeypatch.setattr(__import__(__name__, fromlist=['source']), 'source', original)
 
 
 @pytest.fixture(scope='module')

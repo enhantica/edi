@@ -20,9 +20,13 @@ EaElements.StatusBar {
     id: bar
 
     readonly property ProjectViewModel project: Session.project
+    // The assistant, in a build that carries it (ADR-0023 §6); null on the web, where its group never shows.
+    readonly property var assistant: ApplicationInfo.assistantBuilt ? Session.assistant : null
+    // Whether the assistant's working indicator is active; false without the assistant.
+    readonly property bool assistantWorking: assistantGroup.area ? assistantGroup.area.working : false
     property bool assistantChatShown: false
     property bool assistantManualTakeover: false
-    readonly property bool assistantStatusNeeded: assistantArea.working || Session.assistant.showingActions || assistantManualTakeover && Session.assistant.canCancel || visibleStop.pressed || visibleMode.pressed
+    readonly property bool assistantStatusNeeded: bar.assistantWorking || (bar.assistant ? bar.assistant.showingActions : false) || assistantManualTakeover && (bar.assistant ? bar.assistant.canCancel : false) || visibleStop.pressed || visibleMode.pressed
     // The pages built after a project opened, of those it shows (edi ADR-0052): while they build, the bar shows the
     // opening's progress in the fit area's place.
     property int pagesBuilt: 0
@@ -127,16 +131,16 @@ EaElements.StatusBar {
     Item {
         id: assistantGroup
         parent: bar
-        readonly property bool stopShown: assistantArea.working || Session.assistant.showingActions || bar.assistantManualTakeover && Session.assistant.canCancel || visibleMode.pressed
+        readonly property bool stopShown: bar.assistantWorking || (bar.assistant ? bar.assistant.showingActions : false) || bar.assistantManualTakeover && (bar.assistant ? bar.assistant.canCancel : false) || visibleMode.pressed
         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
         readonly property real buttonExtent: AppSizes.assistantIconExtent
-        readonly property real contentSpacing: Math.max(0, (assistantArea.visible ? 1 : 0) + (visibleMode.visible ? 1 : 0) + (visibleStop.visible ? 1 : 0) - 1) * gap
+        readonly property real contentSpacing: Math.max(0, (assistantAreaLoader.visible ? 1 : 0) + (visibleMode.visible ? 1 : 0) + (visibleStop.visible ? 1 : 0) - 1) * gap
         // Keep the original Stop receiver and its text slot in place through
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
-        implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) + (assistantArea.visible ? assistantArea.implicitWidth : 0) + (visibleMode.visible ? visibleMode.implicitWidth : 0) + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
+        implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) + (assistantAreaLoader.visible ? (assistantGroup.area ? assistantGroup.area.implicitWidth : 0) : 0) + (visibleMode.visible ? visibleMode.implicitWidth : 0) + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
-        height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
+        height: Math.max((assistantGroup.area ? assistantGroup.area.implicitHeight : 0), (assistantGroup.area ? assistantGroup.area.iconExtent : 0), visibleStop.implicitHeight)
         // After the fit area and before the tutorial strip (the owner, 2026-11-02).
         anchors.right: openingProgress.visible ? openingProgress.left : tutorialStrip.visible ? tutorialStrip.left : parent.right
         anchors.rightMargin: openingProgress.visible || tutorialStrip.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
@@ -152,13 +156,25 @@ EaElements.StatusBar {
             color: rule.color
             opacity: rule.opacity
         }
-        AssistantWorking {
-            id: assistantArea
-            objectName: "statusBar.assistant.working"
-            assistant: Session.assistant
-            presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
+        // The working indicator, loaded by file name with its required property: a build without the assistant has no
+        // such component. `area` is the loaded item as a var, null without it.
+        readonly property var area: assistantAreaLoader.item
+        Loader {
+            id: assistantAreaLoader
+            Component.onCompleted: {
+                if (ApplicationInfo.assistantBuilt)
+                    setSource("AssistantWorking.qml", {
+                        assistant: Session.assistant
+                    });
+            }
+            onLoaded: {
+                const area = assistantGroup.area;
+                area.objectName = "statusBar.assistant.working";
+                area.presented = Qt.binding(() => ApplicationInfo.assistantAvailable && !bar.assistantChatShown);
+                assistantAreaLoader.visible = Qt.binding(() => area.visible);
+            }
             width: visible ? Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) - (visibleStop.visible ? visibleStop.width : 0) - (visibleMode.visible ? visibleMode.width : 0) - assistantGroup.contentSpacing) : 0
-            height: Math.max(implicitHeight, iconExtent)
+            height: assistantGroup.area ? Math.max(assistantGroup.area.implicitHeight, assistantGroup.area.iconExtent) : 0
             anchors.left: parent.left
             anchors.leftMargin: assistantRule.visible ? assistantRule.width + fitArea.spacing : 0
             anchors.verticalCenter: parent.verticalCenter
@@ -166,10 +182,10 @@ EaElements.StatusBar {
         EaElements.ToolButton {
             id: visibleMode
             objectName: "assistant.statusShowActions"
-            visible: assistantArea.working || pressed
-            enabled: Session.assistant.connected
+            visible: bar.assistantWorking || pressed
+            enabled: (bar.assistant ? bar.assistant.connected : false)
             checkable: true
-            checked: Session.assistant.showActions
+            checked: (bar.assistant ? bar.assistant.showActions : false)
             implicitWidth: assistantGroup.buttonExtent
             implicitHeight: implicitWidth
             anchors.right: visibleStop.left
@@ -196,13 +212,14 @@ EaElements.StatusBar {
             Accessible.name: ToolTip.text
             Accessible.checkable: true
             Accessible.checked: checked
-            onToggled: Session.assistant.showActions = checked
+            onToggled: if (bar.assistant)
+                bar.assistant.showActions = checked
         }
         EaElements.ToolButton {
             id: visibleStop
             objectName: "assistant.stopVisibleAction"
             visible: assistantGroup.stopShown || pressed
-            enabled: Session.assistant.canCancel
+            enabled: (bar.assistant ? bar.assistant.canCancel : false)
             implicitWidth: assistantGroup.buttonExtent
             implicitHeight: implicitWidth
             anchors.right: parent.right
@@ -228,7 +245,8 @@ EaElements.StatusBar {
             }
             ToolTip.text: bar.assistantManualTakeover && !enabled ? qsTr("Manual control; open assistant to return") : qsTr("Stop assistant action")
             Accessible.name: ToolTip.text
-            onClicked: Session.assistant.cancel()
+            onClicked: if (bar.assistant)
+                bar.assistant.cancel()
         }
     }
     // The fit area, right-aligned outside the base's row of items and before the assistant's group: the last fit's

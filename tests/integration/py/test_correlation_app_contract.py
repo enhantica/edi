@@ -198,59 +198,49 @@ def test_wyckoff_open_list_and_closed_display_have_separate_formats():
 
 
 def test_experiment_data_header_and_link_are_declared():
+    """The data file column stays in place and the input action lives in Load."""
     source = text('Pages/Experiment/ExperimentsGroup.qml')
     assert 'qsTr("Data file")' in source, (
         'The experiments table must label its data column Data file'
     )
-    marker = source.index('id: loadData')
-    opening = source.rfind('EaComponents.ListViewLabel {', 0, marker)
-    assert opening >= 0, 'The load-data cell must be a plain table label'
-    cell = body(source[opening:], 'EaComponents.ListViewLabel')
-    assert 'id: loadData' in cell and 'horizontalAlignment: Text.AlignLeft' in cell, (
-        'The data-file link must use left-aligned plain text'
+    cell = item(source, 'experiments.file.${row.index}')
+    assert property_value(cell, 'horizontalAlignment') == 'Text.AlignLeft', (
+        'The data file column retains its left-aligned plain text'
     )
-    assert 'Qt.PointingHandCursor' in cell and 'HoverHandler' in cell, (
-        'The data-file link must offer a pointing-hand hover target'
+    assert not any(handler in cell for handler in ('TapHandler', 'HoverHandler', 'onClicked')), (
+        'The data file cell is passive because the menu owns measured-data input'
     )
-    assert (
-        'TapHandler' in cell and 'ApplicationInfo.experimentGestureTapped(eventPoint)' in cell
-    ), 'Pointer input on the data-file link must reach its production click signal'
-    assert 'onClicked: group.chooseData(row.experiment)' in cell, (
-        'The link click must load data into its own experiment'
+    menu_action = item(source, 'experiments.load.dataFile')
+    assert property_value(menu_action, 'onTriggered') == 'group.chooseDataForSelected()', (
+        'The measured-data file action dispatches to the selected experiment'
     )
-    assert 'Load another data file in place of this one' in cell and 'ToolTip' in cell, (
-        'The data-file link must explain in-place loading in its tooltip'
+    assert 'loadMenu.selected.name' in property_value(menu_action, 'toolTip'), (
+        'The file action explains which selected experiment receives the data'
     )
-    expressions = {
-        key: re.search(r'(?m)^\s*' + key + r':\s*([^\n]+)', cell).group(1)
-        for key in ('color', 'text', 'visible')
-    }
+
+    expressions = ','.join(property_value(cell, key) for key in ('color', 'text', 'ToolTip.text'))
     script = (
-        'const EaStyle={Colors:{themeAccent:"blue",themeForeground:"normal"}}; const qsTr=s=>s;'
-    )
-    script += 'let cases=[]; for(const empty of [false,true]) for(const hovered of [false,true]) {'
-    script += 'const row={file:"data.xy",experiment:{canLoadData:true}},group={scan:false};'
-    script += 'const loadDataHover={hovered};'
-    script += (
-        'cases.push(['
-        + expressions['color']
-        + ','
-        + expressions['text']
-        + ','
-        + expressions['visible']
+        'const EaStyle={Colors:{themeForegroundMinor:"muted",themeForeground:"normal"}};'
+        'const qsTr=s=>s;let cases=[];'
+        'for(const experiment of [{calculationOnly:false},{calculationOnly:true},null]) {'
+        'const row={file:"data.xy",experiment};const empty=('
+        + property_value(cell, 'empty')
+        + ');cases.push(['
+        + expressions
         + ']);}'
+        'process.stdout.write(JSON.stringify(cases));'
     )
-    script += 'process.stdout.write(JSON.stringify(cases));'
     result = run_javascript(script, timeout=3)
     assert result.returncode == 0, (
-        'The actual link colour, label and visibility expressions must evaluate'
+        'The actual filename, placeholder and tooltip bindings must evaluate'
     )
-    assert json.loads(result.stdout) == [
-        ['normal', 'data.xy', True],
-        ['blue', 'data.xy', True],
-        ['blue', 'Load data…', True],
-        ['blue', 'Load data…', True],
-    ], 'The existing filename must turn blue on hover and the empty link must stay blue'
+    loaded, empty, no_experiment = json.loads(result.stdout)
+    assert loaded == no_experiment == ['normal', 'data.xy', 'data.xy'], (
+        'A populated data label shows and describes the actual filename'
+    )
+    assert empty[:2] == ['muted', '— no data yet'] and re.search(
+        r'load measured data.*\bLoad\b', empty[2], re.IGNORECASE
+    ), 'The muted empty label points users to Load for measured data'
     widths = re.search(r'(?m)^\s*columns:\s*(\[[^\n]+\])', source)
     assert widths, 'The Experiments table must declare each column through the shared width rule'
     common = text('Components/DataTable.qml')

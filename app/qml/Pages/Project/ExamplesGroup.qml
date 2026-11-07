@@ -24,6 +24,14 @@ SideBarGroup {
         ExampleFilters {
             catalogue: Session.examples
         }
+        // Why no example can be opened: every online source holding the projects failed (ADR-0068).
+        EaElements.Label {
+            objectName: "examples.notice"
+            visible: Session.examplesNotice !== ""
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: Session.examplesNotice
+        }
         DataTable {
             id: table
             objectName: "examples.list"

@@ -31,6 +31,7 @@
 #include <variant>
 #include <vector>
 
+#include "edi/online_index.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
@@ -807,6 +808,59 @@ static nb::object registry_lookup(const nb::object& registry, const std::string&
 }
 
 static nb::object* g_bragg_experiment_cls = nullptr;
+
+
+// The data collection's index (ADR-0068), read by the core's one parser: entries as dicts for the Python surface.
+static nb::dict collection_entry(const edi::online::Entry& e) {
+    nb::dict out;
+    out["id"] = e.id;
+    out["kind"] = e.kind;
+    out["name"] = e.name;
+    out["description"] = e.description;
+    out["formula"] = e.formula;
+    nb::list elements;
+    for (const std::string& symbol : e.elements) elements.append(symbol);
+    out["elements"] = elements;
+    out["space_group"] = e.space_group;
+    nb::list cell;
+    for (double v : e.cell) cell.append(v);
+    out["cell"] = cell;
+    out["radiation"] = e.radiation;
+    out["technique"] = e.technique;
+    out["instrument"] = e.instrument;
+    out["facility"] = e.facility;
+    out["source"] = e.source;
+    for (const auto& [key, value] : {std::pair{"authors", &e.authors}, std::pair{"journal", &e.journal}, std::pair{"volume", &e.volume},
+                                     std::pair{"first_page", &e.first_page}, std::pair{"year", &e.year}, std::pair{"doi", &e.doi}})
+        out[key] = *value;
+    out["reference"] = edi::online::short_reference(e);
+    nb::list files;
+    for (const edi::online::File& f : e.files) {
+        nb::dict file;
+        file["path"] = f.path;
+        file["format"] = f.format;
+        file["sha256"] = f.sha256;
+        if (f.bytes >= 0) file["bytes"] = f.bytes;
+        else file["bytes"] = nb::none();
+        files.append(file);
+    }
+    out["files"] = files;
+    return out;
+}
+
+static edi::online::Query collection_query(const std::map<std::string, std::string>& fields) {
+    edi::online::Query q;
+    const auto take = [&fields](const char* key) { const auto it = fields.find(key); return it == fields.end() ? std::string() : it->second; };
+    q.id = take("id");
+    q.name = take("name");
+    q.formula = take("formula");
+    q.elements = take("elements");
+    q.space_group = take("space_group");
+    q.radiation = take("radiation");
+    q.technique = take("technique");
+    q.instrument = take("instrument");
+    return q;
+}
 
 static nb::list active_tags(const nb::object& registry) {
     std::vector<std::string> tags;
@@ -2073,6 +2127,22 @@ NB_MODULE(_edi, m) {
     // transcribed copy.
     // `python -m edi` renders its `--descent` choices and help default from these, so every edi
     // advertisement of the set has crysta's registry as its single source.
+    m.def("_collection_entries", [](const std::string& text) {
+        nb::list out;
+        for (const edi::online::Entry& e : edi::online::parse_index(text).entries) out.append(collection_entry(e));
+        return out;
+    }, "text"_a);
+    m.def("_collection_search", [](const std::string& text, const std::string& kind, const std::map<std::string, std::string>& fields) {
+        const edi::online::Index index = edi::online::parse_index(text);
+        nb::list out;
+        for (const edi::online::Entry* e : edi::online::search(index, kind, collection_query(fields))) out.append(collection_entry(*e));
+        return out;
+    }, "text"_a, "kind"_a, "fields"_a);
+    m.def("_collection_find", [](const std::string& text, const std::string& id) -> nb::object {
+        const edi::online::Index index = edi::online::parse_index(text);
+        const edi::online::Entry* e = edi::online::find(index, id);
+        return e == nullptr ? nb::none() : nb::object(collection_entry(*e));
+    }, "text"_a, "id"_a);
     m.def("_descent_ids", [] { return edi::descent_ids(); },
           "The registered descent ids, in crysta's `--list-descents` order.");
     m.def("_default_descent", [] { return edi::default_descent(); },

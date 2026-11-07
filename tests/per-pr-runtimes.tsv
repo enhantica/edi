@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-03T12:59:21Z
+# measured_utc = 2026-11-07T11:08:45Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 166283 banked, 0 stale row(s) dropped)
-# Collected tests: 211405; with a reported duration: 70529
-# Module-scoped fixture costs recorded: 111
+# Recorded from: measured test run (4 node(s) measured once, 166776 banked, 0 stale row(s) dropped)
+# Collected tests: 212120; with a reported duration: 70998
+# Module-scoped fixture costs recorded: 130
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 211405
+# inventory_python = 212120
 # inventory_cpp = 396
-# inventory_measured = 166289
-# inventory_unmeasured = 45512
+# inventory_measured = 166780
+# inventory_unmeasured = 45736
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 67980
+# inventory_pr_python = 68695
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -316,6 +316,12 @@ UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[recent_table_grows_when_sidebar_grows]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[six_links_have_icons_and_two_columns]
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_onboarding_views.py::test_production_onboarding_control[status_header_is_empty]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-experiment]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-measured]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_online_load.py::test_online_load_controls[from_web_opens_source_selector-structure]
+0.025	tests/integration/app/test_online_load.py::test_online_load_controls[new_experiment_wavelength-]
+0.400	tests/integration/app/test_online_structure_loading.py::test_cod_falls_back_to_easydiffraction
+UNMEASURED:failed-in-this-run	tests/integration/app/test_online_structure_loading.py::test_structure_matches_disk
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[independent]
 0.600	tests/integration/app/test_phase_scan_progress.py::test_app_converted_skip_live_population_matches_reopen[sequential]
 0.570	tests/integration/app/test_phase_scan_progress.py::test_app_incremental_notes_failure_invalidates_before_progress[index-foreign-independent]
@@ -145399,7 +145405,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[structure-Structure/StructuresGroup.qml-duplicateStructure]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[chebyshev]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_each_coefficient_background_has_a_table_layout[polynomial]
-0.300	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_link_are_declared
+0.720	tests/integration/py/test_correlation_app_contract.py::test_experiment_data_header_and_link_are_declared
 0.140	tests/integration/py/test_correlation_app_contract.py::test_save_asks_once_then_uses_the_existing_location
 0.000	tests/integration/py/test_correlation_app_contract.py::test_supported_only_selectors_are_disabled_and_explain_the_reason
 0.580	tests/integration/py/test_correlation_app_contract.py::test_workflow_pages_follow_structure_and_experiment_presence[analysisPageEnabled-True]
@@ -149501,37 +149507,41 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.430	tests/integration/py/test_plain_data_build.py::test_timeout_stops_the_build_descendant_and_preserves_output[False]
 0.430	tests/integration/py/test_plain_data_build.py::test_timeout_stops_the_build_descendant_and_preserves_output[True]
 0.000	tests/integration/py/test_plain_data_build.py::test_unset_budget_uses_detected_cores
-0.740	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-disabled]
-0.360	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-enabled]
-0.550	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[simulation-only]
-0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_availability_uses_ownership_after_first_load
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-accepted]
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-closed-project]
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-foreign-project]
-0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-reindexed]
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-retargeted-row]
-0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-accepted]
-0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-cancelled]
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-closed-project]
-0.130	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-failed]
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-cancel]
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-failure]
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-project]
-0.140	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-request]
-0.170	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-reindexed]
-0.150	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-retargeted-row]
-0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-click]
-0.280	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-accept]
-0.310	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-open]
-0.390	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[early-browser-return]
-0.270	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-project]
-0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-request]
-0.280	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-browser-row]
-0.280	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
-0.260	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
-0.300	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
-0.150	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
-0.160	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
+0.550	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-disabled]
+0.590	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-enabled]
+0.580	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[simulation-only]
+0.300	tests/integration/py/test_plain_data_picker.py::test_load_data_availability_uses_ownership_after_first_load
+0.620	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-accepted]
+0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-closed-project]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-create-target]
+0.450	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-foreign-project]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-reindexed]
+0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[False-retargeted-row]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-accepted]
+0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-cancelled]
+0.440	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-closed-project]
+0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-create-target]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-empty-cancelled]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-empty-failed]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-failed]
+0.460	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-cancel]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-failure]
+0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-project]
+0.470	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-foreign-request]
+0.450	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-reindexed]
+0.480	tests/integration/py/test_plain_data_picker.py::test_load_data_click_and_result_reach_the_initiating_row[True-retargeted-row]
+0.484	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-click]
+0.490	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-accept]
+0.470	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[disconnected-desktop-open]
+0.490	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[early-browser-return]
+0.470	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-project]
+0.470	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[foreign-request]
+0.490	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-browser-row]
+0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-chosen-row]
+0.470	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-desktop-row]
+0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
+0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
+0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[Clang]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[New design helper]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[diffraction-lib]
@@ -149947,12 +149957,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.310	tests/integration/py/test_reset_and_required.py::test_reset_observer_detects_wrong_destination_and_unclosed_project[open-project]
 0.160	tests/integration/py/test_reset_and_required.py::test_scan_rule_required_is_an_unlabelled_editable_icon_toggle
 0.010	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
-0.270	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
+0.480	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
 0.160	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
 0.170	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[radiationProbe]
 0.130	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[sampleForm]
 0.150	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[scatteringType]
-0.160	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
+0.360	tests/integration/py/test_scan_app_contract.py::test_disabled_placeholders_and_load_data_are_present
 0.160	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[block-delegate]
 0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-color]
 0.330	tests/integration/py/test_scan_app_contract.py::test_effective_consumers_reject_wrong_branches_and_disconnected_search[outcome-icon]
@@ -149967,7 +149977,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.340	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[iconColor-"red"]
 0.290	tests/integration/py/test_scan_app_contract.py::test_explorer_observer_rejects_untaken_mapping_branches[toolTip-"Failed"]
 0.000	tests/integration/py/test_scan_app_contract.py::test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers
-0.880	tests/integration/py/test_scan_app_contract.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
 0.130	tests/integration/py/test_scan_app_contract.py::test_javascript_uses_declared_runtime_with_empty_path
 0.600	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[AliasesGroup]
 0.660	tests/integration/py/test_scan_app_contract.py::test_long_parameter_pickers_use_shared_search_component[ConstraintsGroup]
@@ -149994,34 +150003,12 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract
 0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped]
 0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success]
 0.170	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded]
-0.010	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
-0.520	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
-0.370	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_empty_selectors_are_hidden_on_experiment_and_structure_pages
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[162]
 0.010	tests/integration/py/test_scan_extended_contract.py::test_example_gate_rejects_swapped_names_with_matching_local_provenance[324]
 0.330	tests/integration/py/test_scan_extended_contract.py::test_old_scan_results_are_retained_with_out_of_date_state
 0.780	tests/integration/py/test_scan_extended_contract.py::test_parameter_evolution_connects_rendered_errors_axis_and_point_selection
 0.920	tests/integration/py/test_scan_extended_contract.py::test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags
-0.550	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_accepts_a_separately_linked_example_library
-0.480	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[INTERFACE]
-0.430	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]
-0.440	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]
-0.480	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]
-0.660	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources["$<IF:$<BOOL:1>,resource.dat,source.cpp>"]
-0.500	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources[resource.dat]
-0.460	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_refuses_non_compilation_target_sources[resource.qrc]
-0.780	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_a_second_payload_at_the_index_address
-0.930	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
-0.560	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
-0.730	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
-0.700	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
-0.430	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
-0.450	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
-0.560	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
-0.440	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
-0.629	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
-0.510	tests/integration/py/test_scan_extended_contract.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[target]
 0.760	tests/integration/py/test_scan_extended_contract.py::test_scan_availability_and_joint_mode_follow_scan_declaration
 0.040	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[162]
 0.080	tests/integration/py/test_scan_extended_contract.py::test_scan_examples_have_exact_source_file_inventory_and_checksums[324]
@@ -150030,7 +150017,6 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract
 0.710	tests/integration/py/test_scan_extended_contract.py::test_scan_worker_routes_both_modes_to_existing_driver
 0.180	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 0.010	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
-0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[batlow]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[greys]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[inferno]
@@ -150920,10 +150906,15 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Soft]
 0.011	tests/system/py/test_approved_palettes.py::test_exact_catalogue_order_and_natural_default
 0.000	tests/system/py/test_approved_palettes.py::test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls
+0.180	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_compiles_after_an_unrelated_app_failure
+0.290	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_runs_wasm_compiler_task[app/src/assistant_view_model.cpp]
+0.300	tests/system/py/test_assistant_wasm_ci.py::test_assistant_pull_request_runs_wasm_compiler_task[app/src/assistant_work_report.hpp]
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[all-used-next-free]
 0.013	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[prefer-unused-rounded]
 0.000	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[redraw-rounded-special]
 0.010	tests/system/py/test_atom_position_contract.py::test_random_atom_obeys_general_position_and_injected_stream[redraw-special-origin]
+UNMEASURED:failed-in-this-run	tests/system/py/test_atomic_displacement_count.py::test_atomic_displacement_count_equals_visible_site_rows[biso]
+UNMEASURED:failed-in-this-run	tests/system/py/test_atomic_displacement_count.py::test_atomic_displacement_count_equals_visible_site_rows[mixed]
 0.621	tests/system/py/test_background_analysis_ownership.py::test_analysis_free_fixed_remains_a_real_permitted_auto_action[chebyshev]
 0.652	tests/system/py/test_background_analysis_ownership.py::test_analysis_free_fixed_remains_a_real_permitted_auto_action[line-segment]
 0.585	tests/system/py/test_background_analysis_ownership.py::test_analysis_free_fixed_remains_a_real_permitted_auto_action[polynomial]
@@ -151513,10 +151504,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py:
 UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[no-step-legacy]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[no-step-recorded]
 1.490	tests/system/py/test_c11_t43_rejection_classes.py::test_declared_mode_by_native_entry_matrix_is_exact
-0.010	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_lexical_escape_refuses_at_load[absolute]
-0.010	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_lexical_escape_refuses_at_load[parent]
-0.050	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_symlink_escape_refuses_before_conversion_or_save[fit]
-0.030	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_symlink_escape_refuses_before_conversion_or_save[save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_external_data_dir_loads_and_roundtrips[absolute]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_external_data_dir_loads_and_roundtrips[parent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_external_symlink_data_dir_allows_fit_and_save[fit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_external_symlink_data_dir_allows_fit_and_save[save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_missing_linked_scan_does_not_prevent_project_open[absolute]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_missing_linked_scan_does_not_prevent_project_open[parent]
 1.030	tests/system/py/test_c11_t43_rejection_classes.py::test_mode_contract_is_closed_across_edi_loader_setters_dispatch_native_and_save
 0.250	tests/system/py/test_c11_t43_rejection_classes.py::test_sequential_direct_callbacks_never_emit_orphaned_per_file_progress
 0.680	tests/system/py/test_c11_t43_rejection_classes.py::test_sequential_human_reporting_preserves_each_verbosity_contract[compact]
@@ -153899,9 +153892,37 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.140	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-7]
 0.150	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-8]
 0.140	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[catalogue-9]
+2.550	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-0]
+2.560	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-10]
+2.450	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-11]
+2.450	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-12]
+2.500	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-13]
+2.500	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-14]
+2.480	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-15]
+2.540	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-16]
+2.540	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-17]
+2.420	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-18]
+2.460	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-19]
+2.800	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-1]
+2.430	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-20]
+2.480	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-21]
+2.610	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-22]
+2.750	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-2]
+2.750	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-3]
+2.710	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-4]
+2.750	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-5]
+2.650	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-6]
+2.480	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-7]
+2.430	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-8]
+2.460	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[collection-9]
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-linux]
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-macos]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[diagnostics]
+2.470	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[linked-absolute]
+2.550	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[linked-fit]
+2.560	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[linked-parent]
+2.540	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[linked-save]
+2.340	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[native-forwarding-controls]
 0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[nightly-linux-pull_request]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[nightly-linux-push]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[nightly-linux-schedule]
@@ -153911,7 +153932,7 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.230	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[scan-independent]
 0.230	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[scan-sequential]
 3.300	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[status-results-banner]
-0.420	tests/system/py/test_ci_cadence.py::test_inventory_migrations_name_frozen_witnesses_and_available_successors
+0.450	tests/system/py/test_ci_cadence.py::test_inventory_migrations_name_frozen_witnesses_and_available_successors
 0.100	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[pull_request]
 0.090	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[push]
 0.100	tests/system/py/test_ci_cadence.py::test_linux_keeps_frozen_groups_and_gate_commands[schedule]
@@ -201914,6 +201935,217 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_frames.py::test_pu
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_frames.py::test_public_structure_accounting_uses_the_final_model_frame[symmetry-cli]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_frames.py::test_public_structure_accounting_uses_the_final_model_frame[two-blocks-app]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_frames.py::test_public_structure_accounting_uses_the_final_model_frame[two-blocks-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-experiment]
+0.910	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[digest-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[digest-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[digest-project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[digest-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[size-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[size-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[size-project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[size-structure]
+0.930	tests/system/py/test_collection_app_boundaries.py::test_downloaded_example_has_writable_copy_and_save_as
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_example_completion_keeps_request_ownership[close]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_example_completion_keeps_request_ownership[create]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_example_completion_keeps_request_ownership[old-error]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_example_completion_keeps_request_ownership[ordinary-open]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_example_completion_keeps_request_ownership[reverse]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_examples_retry_after_startup_outage
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_no_project_entries_explains_unavailability
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[both-fail-examples-file]
+1.720	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[both-fail-examples-index]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[both-fail-file]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[both-fail-index]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[fallback-examples-file]
+1.400	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[fallback-examples-index]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[fallback-file]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[fallback-index]
+2.110	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[missing-examples-file]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[missing-examples-index]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[missing-file]
+1.720	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[missing-index]
+1.990	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[primary-examples-file]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[primary-examples-index]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[primary-file]
+1.890	tests/system/py/test_collection_app_boundaries.py::test_one_logical_collection_uses_ordered_locations[primary-index]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_popup_rejects_partially_consumed_formula[cod]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_popup_rejects_partially_consumed_formula[collection]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_source_selector_has_no_separate_mirror
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[both-fail-file-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[both-fail-file-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[both-fail-index-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[both-fail-index-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[fallback-file-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[fallback-file-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[fallback-index-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[fallback-index-python]
+0.000	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[missing-file-cli]
+0.000	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[missing-file-python]
+0.000	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[missing-index-cli]
+0.000	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[missing-index-python]
+0.000	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[primary-file-cli]
+0.000	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[primary-file-python]
+0.010	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[primary-index-cli]
+0.000	tests/system/py/test_collection_location_fallback.py::test_collection_locations_are_one_ordered_source[primary-index-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_check_refuses_missing_composition_when_files_define_a_structure[both]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_check_refuses_missing_composition_when_files_define_a_structure[elements]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_check_refuses_missing_composition_when_files_define_a_structure[formula]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[La Co O3-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[La Co O3-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[La Co O3-project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[La Co O3-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[LaCoO3-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[LaCoO3-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[LaCoO3-project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[LaCoO3-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[O3 Co La-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[O3 Co La-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[O3 Co La-project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_collection_formula_matches_elements_and_ranks_exact_first[O3 Co La-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_committed_collection_fixture_carries_composition_for_every_kind
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_every_generated_kind_carries_its_sample_formula_and_elements[data-formula-sum]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_every_generated_kind_carries_its_sample_formula_and_elements[data-occupancies]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_every_generated_kind_carries_its_sample_formula_and_elements[experiment-formula-sum]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_every_generated_kind_carries_its_sample_formula_and_elements[experiment-occupancies]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_every_generated_kind_carries_its_sample_formula_and_elements[project-formula-sum]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_every_generated_kind_carries_its_sample_formula_and_elements[project-occupancies]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_every_generated_kind_carries_its_sample_formula_and_elements[structure-formula-sum]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_every_generated_kind_carries_its_sample_formula_and_elements[structure-occupancies]
+0.200	tests/system/py/test_collection_publication_and_formula.py::test_optional_publication_fields_survive_index_reads[cli-False]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_optional_publication_fields_survive_index_reads[cli-True]
+0.000	tests/system/py/test_collection_publication_and_formula.py::test_optional_publication_fields_survive_index_reads[python-False]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_optional_publication_fields_survive_index_reads[python-True]
+0.080	tests/system/py/test_collection_publication_and_formula.py::test_reference_sidecars_survive_the_actual_index_generator[False]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_publication_and_formula.py::test_reference_sidecars_survive_the_actual_index_generator[True]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_tutorial_inputs.py::test_interface_tour_waits_for_download_and_restores_edits
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_tutorial_inputs.py::test_tutorial_uses_injected_collection_files[next]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_tutorial_inputs.py::test_tutorial_uses_injected_collection_files[save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_tutorial_outage.py::test_tutorial_failure_never_substitutes_bundled_files[next]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_tutorial_outage.py::test_tutorial_failure_never_substitutes_bundled_files[save]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[bytes-bool]
+0.070	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[bytes-fraction]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[bytes-string]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[cell-bool]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[cell-nonfinite]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[cell-object]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[cell-string]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[description:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[description:number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[element-invalid]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[element-number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[elements-object]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[entries-object]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[entry-array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[facility:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[facility:number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[file-array]
+0.250	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[files-object]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[format-number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[formula-partial]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[formula:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[formula:number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[id:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[id:number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[instrument:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[instrument:number]
+0.070	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[kind:array]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[kind:number]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[missing-entries]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[missing-files]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[missing-format]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[missing-id]
+0.090	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[missing-kind]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[missing-path]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[name:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[name:number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[path-number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[radiation:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[radiation:number]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[sha256-invalid]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[sha256-number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[source:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[source:number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[space_group:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[space_group:number]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[technique:array]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_checker_and_shared_reader_refuse_invalid_schema[technique:number]
+0.220	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C..2-cli]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C..2-index-python]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C..2-search-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C0.5.25H2-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C0.5.25H2-index-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C0.5.25H2-search-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C1.2.3-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C1.2.3-index-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C1.2.3-search-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C2..-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C2..-index-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_formula_count_requires_complete_numeric_token[C2..-search-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[%252e%252e/outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[%2e%2e/outside.cif]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[../outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[..\\outside.cif]
+0.090	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[//host/outside.cif]
+0.070	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[/outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[C:/outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[C:\\outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[file:outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[https:outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[structures/%2E%2E/outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[structures/%2foutside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[structures/%5coutside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[structures/..%2foutside.cif]
+0.110	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[structures/../../outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_generator_check_refuses_existing_escaping_paths[structures\\..\\outside.cif]
+0.125	tests/system/py/test_collection_validation_boundaries.py::test_populated_output_is_accepted_by_reader_and_check
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[%252e%252e/outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[%2e%2e/outside.cif]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[../outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[..\\outside.cif]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[//host/outside.cif]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[/outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[C:/outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[C:\\outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[file:outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[https:outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[structures/%2E%2E/outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[structures/%2foutside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[structures/%5coutside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[structures/..%2foutside.cif]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[structures/../../outside.cif]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_portable_path_is_refused_before_actual_fetch[structures\\..\\outside.cif]
+0.220	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[absent-data-cli]
+0.010	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[absent-data-python]
+0.250	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[absent-experiment-cli]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[absent-experiment-python]
+0.250	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[absent-project-cli]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[absent-project-python]
+0.240	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[absent-structure-cli]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[absent-structure-python]
+0.230	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[digest-data-cli]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[digest-data-python]
+0.210	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[digest-experiment-cli]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[digest-experiment-python]
+0.220	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[digest-project-cli]
+0.010	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[digest-project-python]
+0.210	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[digest-structure-cli]
+0.010	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[digest-structure-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[size-data-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[size-data-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[size-experiment-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[size-experiment-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[size-project-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[size-project-python]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[size-structure-cli]
+UNMEASURED:failed-in-this-run	tests/system/py/test_collection_validation_boundaries.py::test_python_and_cli_verify_exact_download_bytes[size-structure-python]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_valid_fractional_formula_has_defined_hill_order[C1.25 H2.5-C1.25 H2.5]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_valid_fractional_formula_has_defined_hill_order[H2 C O-C H2 O]
+0.000	tests/system/py/test_collection_validation_boundaries.py::test_valid_fractional_formula_has_defined_hill_order[O3 Ba0.5 Co La0.5-Ba0.5 Co La0.5 O3]
+0.070	tests/system/py/test_collection_validation_boundaries.py::test_valid_nested_relative_path_remains_usable[nested/witness.cif]
+0.080	tests/system/py/test_collection_validation_boundaries.py::test_valid_nested_relative_path_remains_usable[structures/nested/witness.cif]
 0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = 1/0]
 0.000	tests/system/py/test_constraint_surfaces.py::test_cli_refuses_an_invalid_loaded_relation[b = a.__class__]
 0.180	tests/system/py/test_constraint_surfaces.py::test_cli_warns_and_ignores_a_loaded_dependent_free_flag
@@ -202243,6 +202475,26 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cwl_cli.py::test_each_cw_prof
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[copied-path]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retained_capture_exception_requires_exact_bytes_and_location[extra-token]
 0.000	tests/system/py/test_cwl_token_migration.py::test_retired_token_scan_detects_each_planted_spelling
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_copy_size_default_at_each_boundary[52428799]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_copy_size_default_at_each_boundary[52428800]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_copy_size_default_at_each_boundary[52428801]
+0.250	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[19]
+0.300	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[20]
+0.240	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[21]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[4]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[5]
+0.220	tests/system/py/test_dataset_load_contract.py::test_file_count_defaults_and_fit_wording[6]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_include_data_on_save_follows_copy_defaults[2-52428800]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_include_data_on_save_follows_copy_defaults[2-52428801]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_include_data_on_save_follows_copy_defaults[20-None]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_include_data_on_save_follows_copy_defaults[21-None]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_large_save_warning_boundary_and_choices[104857599]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_large_save_warning_boundary_and_choices[104857600]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_large_save_warning_boundary_and_choices[104857601]
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_missing_external_scan_opens_and_locate_restores_it
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_scan_links_external_files_and_stays_single
+UNMEASURED:failed-in-this-run	tests/system/py/test_dataset_load_contract.py::test_scan_template_choice_is_undoable
+0.990	tests/system/py/test_dataset_load_contract.py::test_separate_equals_individual_copies_and_switches_to_joint
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[absorption]
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[background]
 UNMEASURED:failed-in-this-run	tests/system/py/test_dictionary_app_display.py::test_actual_app_numeric_categories_follow_file_spelling[cell]
@@ -204282,6 +204534,17 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_usage_theme_ori
 0.250	tests/system/py/test_experiment_cif_refusal_cli.py::test_cli_discovers_experiment_cif_members[upper-suffix-underscore]
 0.240	tests/system/py/test_experiment_cif_refusal_cli.py::test_cli_discovers_experiment_cif_members[upper-suffix-upper]
 0.240	tests/system/py/test_experiment_cif_refusal_cli.py::test_cli_discovers_experiment_cif_members[upper-suffix-wrapped-row]
+1.610	tests/system/py/test_experiment_create_and_replace.py::test_both_replace_actions_keep_the_selected_experiment[file]
+UNMEASURED:failed-in-this-run	tests/system/py/test_experiment_create_and_replace.py::test_both_replace_actions_keep_the_selected_experiment[web]
+0.470	tests/system/py/test_experiment_create_and_replace.py::test_create_uses_default_type_and_its_editable_selectors
+0.490	tests/system/py/test_experiment_create_and_replace.py::test_measured_menu_requires_creation_and_names_load_or_replace[empty]
+0.290	tests/system/py/test_experiment_create_and_replace.py::test_measured_menu_requires_creation_and_names_load_or_replace[loaded]
+0.124	tests/system/py/test_experiment_create_and_replace.py::test_measured_menu_requires_creation_and_names_load_or_replace[none]
+1.190	tests/system/py/test_experiment_create_and_replace.py::test_replace_preserves_parameters_matches_fresh_and_undoes
+0.110	tests/system/py/test_experiment_create_and_replace.py::test_retired_new_experiment_type_group_is_absent[none]
+0.190	tests/system/py/test_experiment_create_and_replace.py::test_retired_new_experiment_type_group_is_absent[selected]
+1.990	tests/system/py/test_experiment_create_and_replace.py::test_wrong_type_data_is_refused_without_changing_the_target[powder-target]
+2.010	tests/system/py/test_experiment_create_and_replace.py::test_wrong_type_data_is_refused_without_changing_the_target[single-crystal-target]
 0.000	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[pattern]
 0.000	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[stacked]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_adaptive_is_retained]
@@ -204950,6 +205213,420 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_logging.py::test_r
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_logging.py::test_rounded_delta_and_padded_columns_align_messages[12345000-12345]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_logging.py::test_rounded_delta_and_padded_columns_align_messages[50647-50.65]
 UNMEASURED:failed-in-this-run	tests/system/py/test_onboarding_logging.py::test_rounded_delta_and_padded_columns_align_messages[9999-9.999]
+0.270	tests/system/py/test_online_collection.py::test_examples_loads_collection_archive
+0.010	tests/system/py/test_online_collection.py::test_fixture_index_matches_documented_schema_and_files[False]
+0.090	tests/system/py/test_online_collection.py::test_fixture_index_matches_documented_schema_and_files[True]
+1.200	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[absolute]
+0.710	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[bytes:-1]
+0.850	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[bytes:12.5]
+0.790	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[bytes:1e100]
+0.630	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[bytes:1e30]
+0.790	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[bytes:9007199254740994]
+0.880	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[bytes:9223372036854775808]
+0.710	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[cell-short]
+0.810	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[cell-type]
+0.720	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[duplicate]
+1.000	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[kind]
+0.720	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[no-files]
+0.920	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[parent]
+0.750	tests/system/py/test_online_collection.py::test_malformed_index_is_refused_cleanly[schema]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[500-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[500-index]
+0.259	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[500-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[501-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[501-index]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[501-search]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[502-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[502-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[502-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[503-download]
+0.350	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[503-index]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[503-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[504-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[504-index]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[504-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[505-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[505-index]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[505-search]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[506-download]
+0.360	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[506-index]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[506-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[507-download]
+0.400	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[507-index]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[507-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[508-download]
+0.320	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[508-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[508-search]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[509-download]
+0.320	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[509-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[509-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[510-download]
+0.310	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[510-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[510-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[511-download]
+0.330	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[511-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[511-search]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[512-download]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[512-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[512-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[513-download]
+0.560	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[513-index]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[513-search]
+0.350	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[514-download]
+0.330	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[514-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[514-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[515-download]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[515-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[515-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[516-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[516-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[516-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[517-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[517-index]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[517-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[518-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[518-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[518-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[519-download]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[519-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[519-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[520-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[520-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[520-search]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[521-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[521-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[521-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[522-download]
+0.350	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[522-index]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[522-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[523-download]
+0.340	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[523-index]
+0.120	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[523-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[524-download]
+0.320	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[524-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[524-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[525-download]
+0.390	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[525-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[525-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[526-download]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[526-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[526-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[527-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[527-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[527-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[528-download]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[528-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[528-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[529-download]
+0.310	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[529-index]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[529-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[530-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[530-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[530-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[531-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[531-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[531-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[532-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[532-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[532-search]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[533-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[533-index]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[533-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[534-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[534-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[534-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[535-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[535-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[535-search]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[536-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[536-index]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[536-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[537-download]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[537-index]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[537-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[538-download]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[538-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[538-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[539-download]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[539-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[539-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[540-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[540-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[540-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[541-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[541-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[541-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[542-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[542-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[542-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[543-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[543-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[543-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[544-download]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[544-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[544-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[545-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[545-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[545-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[546-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[546-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[546-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[547-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[547-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[547-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[548-download]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[548-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[548-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[549-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[549-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[549-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[550-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[550-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[550-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[551-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[551-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[551-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[552-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[552-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[552-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[553-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[553-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[553-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[554-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[554-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[554-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[555-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[555-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[555-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[556-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[556-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[556-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[557-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[557-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[557-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[558-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[558-index]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[558-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[559-download]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[559-index]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[559-search]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[560-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[560-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[560-search]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[561-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[561-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[561-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[562-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[562-index]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[562-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[563-download]
+0.370	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[563-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[563-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[564-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[564-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[564-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[565-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[565-index]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[565-search]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[566-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[566-index]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[566-search]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[567-download]
+0.310	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[567-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[567-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[568-download]
+0.320	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[568-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[568-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[569-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[569-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[569-search]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[570-download]
+0.490	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[570-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[570-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[571-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[571-index]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[571-search]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[572-download]
+0.350	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[572-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[572-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[573-download]
+0.310	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[573-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[573-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[574-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[574-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[574-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[575-download]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[575-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[575-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[576-download]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[576-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[576-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[577-download]
+0.320	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[577-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[577-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[578-download]
+0.320	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[578-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[578-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[579-download]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[579-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[579-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[580-download]
+0.370	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[580-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[580-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[581-download]
+0.350	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[581-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[581-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[582-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[582-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[582-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[583-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[583-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[583-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[584-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[584-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[584-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[585-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[585-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[585-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[586-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[586-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[586-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[587-download]
+0.370	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[587-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[587-search]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[588-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[588-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[588-search]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[589-download]
+0.300	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[589-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[589-search]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[590-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[590-index]
+0.150	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[590-search]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[591-download]
+0.290	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[591-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[591-search]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[592-download]
+0.370	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[592-index]
+0.140	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[592-search]
+0.200	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[593-download]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[593-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[593-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[594-download]
+0.250	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[594-index]
+0.160	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[594-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[595-download]
+0.240	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[595-index]
+0.170	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[595-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[596-download]
+0.460	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[596-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[596-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[597-download]
+0.600	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[597-index]
+0.120	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[597-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[598-download]
+0.270	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[598-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[598-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[599-download]
+0.400	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[599-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[599-search]
+0.230	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-102-download]
+0.280	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-102-index]
+0.130	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-102-search]
+0.220	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-199-download]
+0.480	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-199-index]
+0.190	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-199-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-401-download]
+0.320	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-401-index]
+0.120	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-401-search]
+0.210	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-499-download]
+0.260	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-499-index]
+0.180	tests/system/py/test_online_collection.py::test_outage_class_offers_alternative[error-499-search]
+0.000	tests/system/py/test_online_collection.py::test_representable_index_size_remains_exact[0]
+0.000	tests/system/py/test_online_collection.py::test_representable_index_size_remains_exact[12]
+0.210	tests/system/py/test_online_collection.py::test_representable_index_size_remains_exact[9007199254740992]
+0.610	tests/system/py/test_online_collection.py::test_same_index_entry_in_app_cli_python[lbco-hrpt-xye]
+0.610	tests/system/py/test_online_collection.py::test_same_index_entry_in_app_cli_python[lbco-hrpt]
+0.512	tests/system/py/test_online_collection.py::test_same_index_entry_in_app_cli_python[lbco]
+0.600	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[disabled_source-button]
+0.230	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[disabled_source-stale-dispatch]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-measured]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-removed-target]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[late_delivery-structure]
+0.620	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-local-cancel]
+0.170	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-local-corrupt]
+0.360	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-local-valid]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-web-corrupt]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-web-refused-probe]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_file_request_boundaries[new_target_import-web-valid]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_fixture_loading[experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_fixture_loading[measured]
+0.200	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-comma]
+0.210	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-extra-elements]
+0.210	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-semicolon]
+0.239	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[cod_http-spacegroup]
+0.170	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-absent-file]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-download-503]
+0.410	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-missing-entry]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_file_loading.py::test_online_http_request_and_reply[unavailable_http-service-503]
+0.530	tests/system/py/test_online_file_loading.py::test_online_load_actions[experiment]
+0.280	tests/system/py/test_online_file_loading.py::test_online_load_actions[structure]
+0.330	tests/system/py/test_online_popup_contract.py::test_cod_name_is_applied_and_exact_formula_query_is_retained[chemname]
+0.330	tests/system/py/test_online_popup_contract.py::test_cod_name_is_applied_and_exact_formula_query_is_retained[commonname]
+0.330	tests/system/py/test_online_popup_contract.py::test_cod_name_is_applied_and_exact_formula_query_is_retained[mineral]
+0.360	tests/system/py/test_online_popup_contract.py::test_cod_name_is_applied_and_exact_formula_query_is_retained[title]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_cod_publication_text_opens_its_injected_doi[multi]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_cod_publication_text_opens_its_injected_doi[single]
+0.350	tests/system/py/test_online_popup_contract.py::test_cod_publication_text_opens_its_injected_doi[unknown]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_complete_results_table_fits_the_popup[minimum-cod]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_complete_results_table_fits_the_popup[minimum-collection]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_complete_results_table_fits_the_popup[wide-cod]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_complete_results_table_fits_the_popup[wide-collection]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_each_popup_lists_only_its_kind[data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_each_popup_lists_only_its_kind[experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_each_popup_lists_only_its_kind[structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[False-menu-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[False-menu-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[False-menu-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[False-popup-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[False-popup-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[False-popup-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[True-menu-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[True-menu-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[True-menu-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[True-popup-data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[True-popup-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_load_tooltips_follow_the_preferences_switch[True-popup-structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_nonorthogonal_cell_values_are_visible_in_the_cell_column
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_fields_and_formula_guidance[cod]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_fields_and_formula_guidance[collection]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_fields_and_formula_guidance[data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_fields_and_formula_guidance[experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_formula_search_ignores_amounts_and_prioritizes_exact[data]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_formula_search_ignores_amounts_and_prioritizes_exact[experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_popup_formula_search_ignores_amounts_and_prioritizes_exact[structure]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_row_click_uses_the_ordinary_loader_and_one_undo[row-click]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_structure_columns_are_shared_without_kind[cod]
+UNMEASURED:failed-in-this-run	tests/system/py/test_online_popup_contract.py::test_structure_columns_are_shared_without_kind[collection]
+0.770	tests/system/py/test_online_search_continuation.py::test_case_free_formula_search_keeps_exact_match_first[LaCoO3]
+0.850	tests/system/py/test_online_search_continuation.py::test_case_free_formula_search_keeps_exact_match_first[la co o3]
+0.750	tests/system/py/test_online_search_continuation.py::test_case_free_formula_search_keeps_exact_match_first[laCoO3]
+0.461	tests/system/py/test_online_search_continuation.py::test_cell_rounding_at_nontrivial_values
+1.650	tests/system/py/test_online_search_continuation.py::test_cod_scroll_chunks_preserve_inventory_and_retry[retry]
+1.270	tests/system/py/test_online_search_continuation.py::test_cod_scroll_chunks_preserve_inventory_and_retry[success]
+0.470	tests/system/py/test_online_search_continuation.py::test_empty_collection_query_lists_every_entry_of_kind[data]
+0.560	tests/system/py/test_online_search_continuation.py::test_empty_collection_query_lists_every_entry_of_kind[experiment]
+0.620	tests/system/py/test_online_search_continuation.py::test_empty_collection_query_lists_every_entry_of_kind[structure]
+0.600	tests/system/py/test_online_search_continuation.py::test_field_placeholders_and_metadata_selectors[data]
+0.450	tests/system/py/test_online_search_continuation.py::test_field_placeholders_and_metadata_selectors[experiment]
+0.449	tests/system/py/test_online_search_continuation.py::test_field_placeholders_and_metadata_selectors[structure]
+0.848	tests/system/py/test_online_search_continuation.py::test_full_experiment_brings_or_reuses_its_structure_in_one_undo[missing]
+1.060	tests/system/py/test_online_search_continuation.py::test_full_experiment_brings_or_reuses_its_structure_in_one_undo[present]
+0.310	tests/system/py/test_online_search_continuation.py::test_journal_table_generator_uses_the_independent_local_csv
+0.560	tests/system/py/test_online_search_continuation.py::test_reopen_keeps_search_and_clear_discards_it[data]
+0.540	tests/system/py/test_online_search_continuation.py::test_reopen_keeps_search_and_clear_discards_it[experiment]
+0.530	tests/system/py/test_online_search_continuation.py::test_reopen_keeps_search_and_clear_discards_it[structure]
 3.690	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-chebyshev-chebyshev]
 1.180	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-line-segment-points]
 2.200	tests/system/py/test_parameter_loop_filters.py::test_background_filter_keeps_every_row_after_estimate_replaces_the_open_table[auto-polynomial-polynomial]
@@ -205714,6 +206391,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-folder-zip]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-zip-folder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_chooser_defaults.py::test_real_save_chooser_receives_project_name_and_current_folder[move-zip-zip]
+0.790	tests/system/py/test_project_creation_overwrite.py::test_cancel_keeps_old_bytes_and_every_form_value
+2.460	tests/system/py/test_project_creation_overwrite.py::test_failed_replace_keeps_old_bytes_and_explains_the_reason
+1.630	tests/system/py/test_project_creation_overwrite.py::test_fresh_creation_is_the_independent_overwrite_control
+3.220	tests/system/py/test_project_creation_overwrite.py::test_replace_equals_creation_in_an_empty_folder
 4.200	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-open]
 3.390	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[empty-recent]
 4.350	tests/system/py/test_project_dialog_lifecycle.py::test_web_zip_opens_from_real_controls_without_destroying_a_signal_handler[replace-open]
@@ -207550,6 +208231,29 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_save_mixed_backgrounds
 0.020	tests/system/py/test_scan_app_execution.py::test_unfitted_selection_uses_own_measurement_and_template_calculation[98]
 0.020	tests/system/py/test_scan_app_execution.py::test_unfitted_selection_uses_own_measurement_and_template_calculation[99]
 0.030	tests/system/py/test_scan_app_execution.py::test_unfitted_selection_uses_own_measurement_and_template_calculation[9]
+0.130	tests/system/py/test_scan_collection_delivery.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
+0.660	tests/system/py/test_scan_collection_delivery.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
+0.560	tests/system/py/test_scan_collection_delivery.py::test_effective_bundle_contains_selected_scan_payloads[web]
+0.380	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_accepts_a_separately_linked_example_library
+0.250	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_distinguishes_executable_and_library_interfaces[INTERFACE]
+0.370	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PRIVATE]
+0.370	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_distinguishes_executable_and_library_interfaces[PUBLIC]
+0.390	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_distinguishes_executable_and_library_interfaces[library-interface]
+0.500	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_refuses_non_compilation_target_sources["$<IF:$<BOOL:1>,resource.dat,source.cpp>"]
+0.520	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_refuses_non_compilation_target_sources[resource.dat]
+0.510	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_refuses_non_compilation_target_sources[resource.qrc]
+0.470	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_a_second_payload_at_the_index_address
+0.450	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_comment_only_and_inactive_bundle_calls
+0.650	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[alias]
+0.650	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[default]
+0.640	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_excluded_payload_in_the_live_qml_module[prefix]
+0.810	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[alias]
+0.450	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[hidden]
+0.140	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[index]
+0.940	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[metadata]
+0.610	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[prefix]
+0.150	tests/system/py/test_scan_collection_delivery.py::test_resource_observer_rejects_wrong_prefix_target_metadata_index_and_hidden_web_payload[target]
+0.020	tests/system/py/test_scan_collection_delivery.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
 0.000	tests/system/py/test_scan_correlation_save_stability.py::test_app_history_and_literal_cell_renames_survive_undo_and_reload[default-structure-False]
 0.000	tests/system/py/test_scan_correlation_save_stability.py::test_app_history_and_literal_cell_renames_survive_undo_and_reload[default-structure-True]
 0.000	tests/system/py/test_scan_correlation_save_stability.py::test_app_history_and_literal_cell_renames_survive_undo_and_reload[historical-experiment-False]
@@ -207582,6 +208286,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_save_mixed_backgrounds
 0.000	tests/system/py/test_scan_driver_resume.py::test_resumed_facade_csv_is_cell_identical_to_native_driver_consistency
 0.160	tests/system/py/test_scan_driver_resume.py::test_save_as_retains_scan_results_and_preserves_the_source_copy
 0.021	tests/system/py/test_scan_driver_resume.py::test_stop_retains_committed_rows_and_continue_visits_only_remaining_files
+0.340	tests/system/py/test_scan_forwarding_controls.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
 0.006	tests/system/py/test_scan_lazy_input.py::test_driver_opens_only_current_file_and_bounded_read_ahead
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-openat]
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-relative]
@@ -208090,6 +208795,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pat
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 3.870	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
 1.000	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[state]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scientific_tutorial_completion.py::test_actual_scientific_tutorial_reaches_its_end[fitting]
+0.328	tests/system/py/test_scientific_tutorial_completion.py::test_actual_scientific_tutorial_reaches_its_end[simulation]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scientific_tutorial_completion.py::test_completed_lesson_has_the_independent_scientific_state[fitting]
+0.280	tests/system/py/test_scientific_tutorial_completion.py::test_completed_lesson_has_the_independent_scientific_state[simulation]
+UNMEASURED:failed-in-this-run	tests/system/py/test_scientific_tutorial_completion.py::test_completed_lesson_returns_to_the_original_user_project[fitting]
+0.160	tests/system/py/test_scientific_tutorial_completion.py::test_completed_lesson_returns_to_the_original_user_project[simulation]
 4.670	tests/system/py/test_sequential_scan_lifecycle.py::test_sequential_scan_ends_and_stays_stopped_in_the_normal_app[2]
 4.530	tests/system/py/test_sequential_scan_lifecycle.py::test_sequential_scan_ends_and_stays_stopped_in_the_normal_app[3]
 0.000	tests/system/py/test_sequential_scan_lifecycle.py::test_terminal_oracle_accepts_a_completed_and_quiet_scan
@@ -208352,6 +209063,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_simulation_parameter_filters.
 0.030	tests/system/py/test_single_crystal_edges.py::test_unsupported_free_slots_refuse_instead_of_zero_columns[none-mosaic_spread]
 0.730	tests/system/py/test_single_crystal_taurine_converged.py::test_actual_taurine_fit_matches_all_fullprof_parameters_and_uncertainties
 0.040	tests/system/py/test_single_crystal_taurine_converged.py::test_converged_artifacts_and_parameter_conventions_are_independent
+UNMEASURED:failed-in-this-run	tests/system/py/test_slider_release_contract.py::test_held_adjustment_defers_text_context_and_one_undo[cell]
+UNMEASURED:failed-in-this-run	tests/system/py/test_slider_release_contract.py::test_held_adjustment_defers_text_context_and_one_undo[profile]
+UNMEASURED:failed-in-this-run	tests/system/py/test_slider_release_contract.py::test_held_adjustment_defers_text_context_and_one_undo[wavelength]
+UNMEASURED:failed-in-this-run	tests/system/py/test_slider_release_contract.py::test_real_analysis_slider_has_one_release_and_one_undo
 0.140	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-gpu-needle]
 0.490	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-gpu-peak]
 0.140	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-software-needle]
@@ -210106,7 +210821,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_catalogue_agreement_factors.py:
 0.000	tests/unit/py/test_constraint_app_structure.py::test_excluded_regions_are_in_the_basic_category_tier
 0.000	tests/unit/py/test_constraint_app_structure.py::test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order
 0.000	tests/unit/py/test_constraint_app_structure.py::test_load_warnings_reach_the_app_message_model
-0.000	tests/unit/py/test_constraint_app_structure.py::test_preview_projects_cannot_be_bundled_as_application_resources
+0.020	tests/unit/py/test_constraint_app_structure.py::test_preview_projects_cannot_be_bundled_as_application_resources
 0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[AliasesGroup]
 0.000	tests/unit/py/test_constraint_app_structure.py::test_relation_tables_expose_live_append_duplicate_and_remove_actions[ConstraintsGroup]
 0.000	tests/unit/py/test_corpus_parameter_paths.py::test_corpus_identity_mapping_refuses_incomplete_input_rows
@@ -211123,7 +211838,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e05_t1_input_declaration
 0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_grid_is_the_grid_that_is_calculated
 0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_declared_scattering_map_and_default_lookup_both_reach_calculation
 0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_project_calculation_accepts_no_second_source_of_truth
-0.030	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
+0.010	tests/unit/py/test_e09_t58_project_only_inputs.py::test_survey_is_complete_and_model_state_cannot_reenter_signatures
 0.020	tests/unit/py/test_e09_t58_start_state_roundtrip.py::test_start_value_and_uncertainty_round_trip_through_the_single_loader
 0.010	tests/unit/py/test_e09_t58_writer_delegation.py::test_e09_t58_edi_project_save_has_one_delegating_writer_and_no_local_serializer
 0.030	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_app_tokens_request_only_contents_read
@@ -211860,6 +212575,8 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 927.726	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 27.200	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
+# module-cost: 5.691	tests/integration/app/test_online_load.py
+# module-cost: 1.077	tests/integration/app/test_online_structure_loading.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
 # module-cost: 34.721	tests/integration/app/test_report_deferred_save.py
 # module-cost: 4.282	tests/integration/app/test_scan_axis_sync.py
@@ -211872,6 +212589,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
+# module-cost: 0.956	tests/integration/py/test_plain_data_picker.py
 # module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.555	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.373	tests/integration/py/test_scan_extended_contract.py
@@ -211883,6 +212601,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.705	tests/system/py/test_app_version_rebuild.py
 # module-cost: 1.669	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
+# module-cost: 8.499	tests/system/py/test_atomic_displacement_count.py
 # module-cost: 64.108	tests/system/py/test_backlogged_frames.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
@@ -211896,9 +212615,15 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 20.346	tests/system/py/test_chart_fonts.py
 # module-cost: 11.490	tests/system/py/test_chart_handover.py
 # module-cost: 3.683	tests/system/py/test_ci_native_modes.py
+# module-cost: 0.959	tests/system/py/test_collection_app_boundaries.py
+# module-cost: 0.020	tests/system/py/test_collection_publication_and_formula.py
+# module-cost: 5.069	tests/system/py/test_collection_tutorial_inputs.py
+# module-cost: 5.388	tests/system/py/test_collection_tutorial_outage.py
+# module-cost: 2.505	tests/system/py/test_collection_validation_boundaries.py
 # module-cost: 1.201	tests/system/py/test_correlation_selection.py
 # module-cost: 24.143	tests/system/py/test_current_row_input.py
 # module-cost: 1.269	tests/system/py/test_cwl_live_parameter_count.py
+# module-cost: 0.928	tests/system/py/test_dataset_load_contract.py
 # module-cost: 22.953	tests/system/py/test_e04_t10_latency.py
 # module-cost: 0.109	tests/system/py/test_e04_t12_public_release.py
 # module-cost: 110.331	tests/system/py/test_e04_t9_latency.py
@@ -211906,6 +212631,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 226.993	tests/system/py/test_element_contrast.py
+# module-cost: 0.886	tests/system/py/test_experiment_create_and_replace.py
 # module-cost: 687.412	tests/system/py/test_fast_chart_fit_timing.py
 # module-cost: 263.960	tests/system/py/test_fast_chart_redraws.py
 # module-cost: 0.018	tests/system/py/test_feedback_payload.py
@@ -211917,10 +212643,15 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 216.560	tests/system/py/test_legend_visibility.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
 # module-cost: 28.190	tests/system/py/test_onboarding_extra_tables.py
+# module-cost: 1.011	tests/system/py/test_online_collection.py
+# module-cost: 2.041	tests/system/py/test_online_file_loading.py
+# module-cost: 0.899	tests/system/py/test_online_popup_contract.py
+# module-cost: 1.061	tests/system/py/test_online_search_continuation.py
 # module-cost: 3.896	tests/system/py/test_pattern_owner_styles.py
 # module-cost: 27.704	tests/system/py/test_pattern_range.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 20.357	tests/system/py/test_project_archive_app.py
+# module-cost: 5.190	tests/system/py/test_project_creation_overwrite.py
 # module-cost: 64.280	tests/system/py/test_project_page_readiness.py
 # module-cost: 100.158	tests/system/py/test_project_tooltip_style.py
 # module-cost: 1.470	tests/system/py/test_project_transactions.py
@@ -211934,6 +212665,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.077	tests/system/py/test_report_temporary_aliases.py
 # module-cost: 2.368	tests/system/py/test_scan_accident_paths.py
 # module-cost: 717.517	tests/system/py/test_scan_app_execution.py
+# module-cost: 1.340	tests/system/py/test_scan_collection_delivery.py
 # module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
 # module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
@@ -211942,9 +212674,11 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 9.268	tests/system/py/test_scan_owner_additions.py
 # module-cost: 0.058	tests/system/py/test_scan_screen.py
 # module-cost: 241.876	tests/system/py/test_scan_update_modes.py
+# module-cost: 73.522	tests/system/py/test_scientific_tutorial_completion.py
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 71.426	tests/system/py/test_sidebar_defaults.py
 # module-cost: 13.305	tests/system/py/test_simulation_parameter_filters.py
+# module-cost: 5.308	tests/system/py/test_slider_release_contract.py
 # module-cost: 28.755	tests/system/py/test_stacked_line_quality.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 133.169	tests/system/py/test_status_fit_controls.py

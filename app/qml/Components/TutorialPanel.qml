@@ -47,6 +47,16 @@ Popup {
     property bool doneAhead: false
     // The tutorial's files were saved (a step's "Save tutorial files" link).
     property bool filesSaved: false
+    // The tutorial waiting for its example's project to open aside (start), if any.
+    property var pendingStart: null
+    // The tutorial's files staged from the collection, as a folder URL string; empty until staged.
+    property string stagedFolder: ""
+    // The step action to do again once the files are staged, if one waits for them.
+    // The action waiting for the tutorial's files, owned by the tutorial run, step and project that asked
+    // (`{run, step, project, check}`): an answer arriving after any of them changed is dropped.
+    property var afterStaging: null
+    // A new run on every start, Stop and close, so a late answer finds its owner gone.
+    property int run: 0
     // The fits and background estimates made before the step showed: a step asking for one waits for one more.
     property int fitsAtStep: 0
     property int resultsAtStep: 0
@@ -109,11 +119,23 @@ Popup {
         // back on Stop or Discard, or before anything else replaces the tutorial's project or quits
         // (AppState.afterChanges).
         if (temporary) {
-            const started = chosen.start === "aside" ? Session.setProjectAside() : chosen.start === "new" ? Session.createProjectAside("tutorial", chosen.title) : Session.openExampleAside(String(chosen.start).replace(/^example:/, ""));
+            if (chosen.start !== "aside" && chosen.start !== "new") {
+                // The example's project downloads first; the tutorial begins once it has opened aside.
+                if (Session.openExampleAside(String(chosen.start).replace(/^example:/, "")))
+                    panel.pendingStart = chosen;
+                return;
+            }
+            const started = chosen.start === "aside" ? Session.setProjectAside() : Session.createProjectAside("tutorial", chosen.title);
             if (!started)
                 return;
         }
+        panel.begin(chosen, temporary);
+    }
+    // The tutorial chosen, with its project in place.
+    function begin(chosen, temporary) {
         RunLog.note(`tutorial started: ${chosen.id}`);
+        ++panel.run;
+        panel.afterStaging = null;
         panel.temporary = temporary;
         panel.tutorial = chosen;
         panel.step = 0;
@@ -157,12 +179,20 @@ Popup {
             panel.show();
         }
     }
-    // The tutorial's files (app/tutorials/files) in a temporary folder of their own, for Next on a step that saves or
-    // loads them: on the disk, or in the browser's memory where its file chooser puts the files it opens, so Next loads
-    // them as a chosen file is loaded. The folder's URL, empty if they could not be written.
+    // The tutorial's files, fetched from the collection into a temporary folder of their own, for Next on a step that
+    // saves or loads them: on the disk, or in the browser's memory where its file chooser puts the files it opens, so
+    // Next loads them as a chosen file is loaded. The folder's URL, empty until Session.stageTutorialFiles has brought
+    // it (tutorialFilesStaged).
     function tutorialFolder() {
-        const folder = ApplicationInfo.stageTutorialFiles();
-        return folder.toString();
+        return panel.stagedFolder;
+    }
+    // Whether a step action reads the staged files, so it waits for them.
+    function needsFiles(name) {
+        if (name === "files-saved")
+            return !WebFiles.available;
+        if (name === "structure")
+            return panel.current.target === "structures.load";
+        return name === "data";
     }
     // A parameter path with its keys as dotted parts, as a step names it: atom_sites[La].adp_iso is atom_sites.La.adp_iso.
     function dotted(path) {
@@ -204,6 +234,17 @@ Popup {
         const colon = check.indexOf(":");
         const name = colon < 0 ? check : check.slice(0, colon);
         const argument = colon < 0 ? "" : check.slice(colon + 1);
+        // The files come from the collection: staged once, the action goes on when they have arrived.
+        if (panel.needsFiles(name) && panel.stagedFolder === "") {
+            panel.afterStaging = {
+                run: panel.run,
+                step: panel.step,
+                project: Session.project,
+                check: check
+            };
+            Session.stageTutorialFiles();
+            return;
+        }
         const project = Session.project;
         const structure = project ? project.currentStructure : null;
         const experiment = project ? project.currentExperiment : null;
@@ -647,7 +688,7 @@ Popup {
     }
     // Saves the tutorial's files where the user chose, or downloads them in the browser.
     function saveFiles(folder) {
-        panel.filesSaved = ApplicationInfo.saveTutorialFiles(folder) || panel.filesSaved;
+        Session.saveTutorialFiles(folder);
     }
     // The callout's outline, `w` by `h` with rounded corners, with the pointer on the side facing the control, as an
     // SVG path. Drawn on half pixels, so its 1 px border is sharp.
@@ -1181,6 +1222,8 @@ Popup {
             AppState.tutorialRunning = false;
     }
     onClosed: {
+        ++panel.run;
+        panel.afterStaging = null;
         outlineBox.visible = false;
         panel.tutorial = null;
         panel.temporary = false;
@@ -1191,6 +1234,39 @@ Popup {
         target: AppState
         function onTutorialEnded() {
             panel.close();
+        }
+    }
+    // The example a tutorial starts from has opened aside, or not; the files a step needs have arrived, or not.
+    Connections {
+        target: Session
+        function onExampleOpenFinished(exampleId, opened) {
+            const chosen = panel.pendingStart;
+            if (chosen === null)
+                return;
+            panel.pendingStart = null;
+            if (opened && Session.hasProjectSetAside)
+                panel.begin(chosen, true);
+            else
+                RunLog.note(`tutorial not started: ${chosen.id}, its example did not open`);
+        }
+        function onTutorialFilesStaged(folder) {
+            panel.stagedFolder = folder.toString();
+            const waiting = panel.afterStaging;
+            panel.afterStaging = null;
+            if (waiting === null)
+                return;
+            if (!panel.opened || panel.current === null || waiting.run !== panel.run || waiting.step !== panel.step || waiting.project !== Session.project) {
+                RunLog.note("tutorial files arrived after the tutorial moved on; nothing done with them");
+                return;
+            }
+            panel.perform(waiting.check);
+        }
+        function onTutorialFilesSaved() {
+            panel.filesSaved = true;
+        }
+        function onTutorialFilesFailed(message) {
+            panel.afterStaging = null;
+            RunLog.note(`tutorial files not available: ${message}`);
         }
     }
 
@@ -1340,6 +1416,9 @@ Popup {
     background: Item {
         Shape {
             anchors.fill: parent
+            // Drawn only while the callout shows: the curve renderer re-tessellates the outline on every change it
+            // sees, which cost a closed tutorial a large share of every slider step.
+            visible: panel.opened
             preferredRendererType: Shape.CurveRenderer
 
             ShapePath {
@@ -1348,7 +1427,7 @@ Popup {
                 strokeWidth: 1
 
                 PathSvg {
-                    path: panel.outline(pointer.parent.width, pointer.parent.height)
+                    path: panel.opened ? panel.outline(pointer.parent.width, pointer.parent.height) : ""
                 }
             }
         }

@@ -820,16 +820,11 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
         functionDeclaration:'function() { this.click(); }',userGesture:true});
       await frame(); await settleRenderedPage();
     };
-    const beginPicker = async regex => {
+    const beginPicker = async (regex, menu, action) => {
       lastEvents.delete('Page.fileChooserOpened');
       const opened=event('Page.fileChooserOpened');
-      // Before: synthetic click on Qt's accessibility element. Now: pointer
-      // input on the app control, including Qt's openFiles/Load data path.
-      const nativeObjectName = /Load structure/.test(regex.source) ? 'structures.load' :
-        /Load experiment/.test(regex.source) ? 'experiments.load' :
-        /Load data/.test(regex.source) ? 'experiments.loadData.0' : undefined;
-      const role = /Load data/.test(regex.source) ? 'StaticText' : 'button';
-      await click(regex, role, nativeObjectName);
+      if (menu) await click(/^Load\b/, 'button', menu);
+      await click(regex, menu ? 'menuitem' : 'button', action);
       if (/Open project/.test(regex.source)) {
         await waitNative('open.folder'); await click(/^Folder$/, 'radio'); await click(/^OK$/, 'button');
       }
@@ -884,7 +879,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const createWithStructure = async name => {
       await createEmpty(name);
       await click(/^Structure$/); await waitAX(/Structures \(0\)/);
-      const structure=await beginPicker(/^Load structure from file$/);
+      const structure=await beginPicker(/^From file…$/, 'structures.load', 'structures.load.file');
       await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure.edi')]});
       await waitAX(/Structures \(1\)/);
     };
@@ -968,12 +963,12 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     // stale receiver makes an unrelated refused call (a refusal can leave archive bytes unchanged).
     // Experiment needs a structure (ADR-0017); seed it before testing cancellation.
     await createWithStructure('routing_empty_c');
-    await beginPicker(/^Load structure from file$/);
+    await beginPicker(/^From file…$/, 'structures.load', 'structures.load.file');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must preserve the standalone single-file chooser contract');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    const experiment=await beginPicker(/^Load experiment$/);
+    const experiment=await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.experimentFile');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),true,
       'Experiment must retain its batch chooser contract');
     await send('DOM.setFileInputFiles',{...experiment,files:[join(inputs,'blocks/experiment-1.edi'),join(inputs,'blocks/experiment-2.edi')]});
@@ -983,10 +978,10 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     if (['all','cancel-experiment'].includes(fileRequestCase)) {
     await createWithStructure('routing_empty_d');
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
-    await beginPicker(/^Load experiment$/);
+    await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.experimentFile');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await click(/^Structure$/); await waitAX(/Structures \(1\)/);
-    const structure=await beginPicker(/^Load structure from file$/);
+    const structure=await beginPicker(/^From file…$/, 'structures.load', 'structures.load.file');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
       'Structure must keep a single-file chooser after Experiment cancellation');
     await send('DOM.setFileInputFiles',{...structure,files:[join(inputs,'blocks/structure-2.edi')]});
@@ -998,9 +993,9 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
     await click(/^Create experiment$/, 'button', 'experiments.create');
     await waitAX(/Experiments \(1\)/);
-    await beginPicker(/^Load data(?:…|\.\.\.)$/);
+    await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.dataFile');
     assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
-      'Load data must open a real single-file browser chooser through its experiment control');
+      'Measured data From file must open a real single-file browser chooser for the selected experiment');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await waitAX(/Experiments \(1\)/);
     }

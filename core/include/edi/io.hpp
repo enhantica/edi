@@ -167,6 +167,11 @@ void save_project(const Project& project, const std::string& directory);
 // Save and Save as go through it.
 void save_project_as(Project& project, const std::string& directory);
 
+/// Make `directory` the project's place after a save there succeeded: its path, metadata path and scan data base move
+/// together, and a linked scan folder takes the declaration the save wrote for it, so the next calculation and save
+/// read the same folder (edi ADR-0069). Save as, the app's staged and adopted saves and Python share it.
+void adopt_save_location(Project& project, const std::string& directory);
+
 // After a save, the open project takes what its saved files hold, exactly what a reopen of `directory` reads: each
 // parameter's value and s.u., which the IUCr rule rounds, and the coefficients of the correlation rows the save wrote,
 // rounded too; a scan's template then reads its pairs from those rows. Nothing is recalculated; whether anything

@@ -376,6 +376,7 @@ class PatternChartController : public QObject {
     QPointer<ReportViewModel> report_;
     QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
+    bool fills_cleared_ = false;  // a drag holds the filled areas empty until the release
     QString colour_scheme_ = QStringLiteral("earth");
     // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
     // project's experiments in the colour scheme.

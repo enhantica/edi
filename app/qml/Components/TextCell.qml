@@ -107,7 +107,8 @@ EaComponents.ListViewTextInput {
 
     readOnly: locked
     activeFocusOnPress: !locked
-    activeFocusOnTab: !locked
+    // A cell locked while it has the focus keeps it until the focus moves: Qt refuses to take it from the focused item.
+    activeFocusOnTab: !locked || activeFocus
     // The base's colours, with a locked cell kept in the normal colour rather than the read-only grey.
     color: enterFlash ? EaStyle.Colors.themeForeground : warned ? EaStyle.Colors.red : !enabled || (readOnly && !locked) || minored ? EaStyle.Colors.themeForegroundMinor : activeFocus || selected || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
 
@@ -155,6 +156,12 @@ EaComponents.ListViewTextInput {
     // a newer draft admitted during synchronous publication of this edit.
     // A genuine later Return or focus loss has its own editingFinished.
     onEditingFinished: commit()
+    // A double click selects the whole text, as the app's other text fields do (the owner, 2026-11-04).
+    TapHandler {
+        acceptedButtons: Qt.LeftButton
+        enabled: !cell.locked
+        onDoubleTapped: cell.selectAll()
+    }
 
     // The same original draft can emit only once while its model publishes.
     // Each genuine text/preedit event installs a new record, even identical text.

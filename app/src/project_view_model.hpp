@@ -17,6 +17,7 @@
 #include <QUrl>
 #include <QtQml/qqmllist.h>
 #include <QtQml/qqmlregistration.h>
+#include "edi/io.hpp"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -53,6 +54,7 @@
 #include "structure_view_options.hpp"
 
 namespace edi_app {
+class OptionListModel;
 
 struct ImmutableAssistantResult;
 
@@ -153,6 +155,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(QString authors READ authors WRITE setAuthors NOTIFY authorsChanged)
     // How values with a standard uncertainty are written and shown: "iucr_19" or "iucr_99".
     Q_PROPERTY(QString suRule READ suRule WRITE setSuRule NOTIFY suRuleChanged)
+    // edi ADR-0069: whether a save copies a linked scan's files into the project ("all"), keeps them linked
+    // ("linked") or asks ("ask"). Kept by the app for the project's folder; until chosen, all up to 20 files and
+    // 50 MB, linked above.
+    Q_PROPERTY(QString includeDataOnSave READ includeDataOnSave WRITE setIncludeDataOnSave NOTIFY includeDataOnSaveChanged)
     // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`: d-spacing, or the experiment's own.
     // The report's charts follow it. An undoable edit.
     Q_PROPERTY(bool patternDSpacing READ patternDSpacing WRITE setPatternDSpacing NOTIFY patternDSpacingChanged)
@@ -184,10 +190,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Create experiment adds an experiment without data, beside experiments with data too: a fit skips it, a
     // calculation covers it. A scan project keeps its one template experiment.
     Q_PROPERTY(bool canCreateExperiment READ canCreateExperiment NOTIFY canCreateExperimentChanged)
+    // The type a new experiment takes when measured data is loaded for one (no experiment selected): chosen on
+    // the Experiment page's selectors before the import, as the data fixes the type afterwards (ADR-0068).
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentSampleFormOptions READ newExperimentSampleFormOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentBeamModeOptions READ newExperimentBeamModeOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentRadiationProbeOptions READ newExperimentRadiationProbeOptions CONSTANT)
+    Q_PROPERTY(QString newExperimentSampleFormToken READ newExperimentSampleFormToken NOTIFY newExperimentSampleFormTokenChanged)
+    Q_PROPERTY(QString newExperimentBeamModeToken READ newExperimentBeamModeToken NOTIFY newExperimentBeamModeTokenChanged)
+    Q_PROPERTY(QString newExperimentRadiationProbeToken READ newExperimentRadiationProbeToken NOTIFY newExperimentRadiationProbeTokenChanged)
     // A scan project (sequential or independent mode over a declared scan): its experiment list is the scan's
     // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
     // rule, with its unit ("temperature (K)").
     Q_PROPERTY(bool scan READ scan NOTIFY scanChanged)
+    Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
     Q_PROPERTY(QStringList scanColumns READ scanColumns CONSTANT)
     // The template dataset's place among the datasets (`_sequential_fit.template_file`), or -1.
     Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
@@ -379,6 +394,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // D12: add blocks from `.edi` files; on a refusal nothing changes and `refused` names the reason.
     Q_INVOKABLE bool loadStructure(const QUrl& file);
     Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
+    /// A full experiment from the web with the structures it links (ADR-0068): each structure file whose name the
+    /// project does not hold yet is added, then the experiment, as one undoable change; `label` names the entry in a
+    /// refusal, which never names a temporary file.
+    Q_INVOKABLE bool loadExperimentWithStructures(const QUrl& file, const QList<QUrl>& structures, const QString& label);
     // A structure's removal takes every experiment's link to it (and texture row for it) with it, in one undoable
     // step, with a message naming the experiments.
     Q_INVOKABLE void removeStructure(int index);
@@ -435,6 +454,46 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Load data for the experiment a chooser was opened for, wherever its row is now: refused when that experiment
     // is no longer in the project (removed, or replaced by an Undo or a type change since).
     Q_INVOKABLE bool loadDataInto(edi_app::ExperimentViewModel* experiment, const QUrl& file);
+    /// Several measured data files at once (owner, 2026-11-04), as one undoable change. `asScan` false: one new
+    /// experiment per file, each a copy of `experiment`'s setup named after its file. `asScan` true: `experiment` becomes
+    /// a scan's template and the files its datasets, copied into `scans/<name>` in the saved project's folder (a scan's
+    /// data folder lies inside the project); the project must be saved and hold that one experiment.
+    Q_INVOKABLE bool loadDatasets(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan,
+                                  bool copy = true);
+    /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
+    Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
+    QString includeDataOnSave() const;
+    void setIncludeDataOnSave(const QString& mode);
+    /// What a save of the project writes (edi ADR-0069): `linked` (a scan reads files outside the project), their
+    /// `linkedFiles` and `linkedBytes`, the save's `files` and `bytes` when those are copied, the `mode`, and `ask`:
+    /// whether the user chooses first (the mode asks, or copying writes more than 100 MB).
+    Q_INVOKABLE QVariantMap saveDataPlan() const;
+    /// Copies a linked scan's files into `directory`'s scans/<name> and points the scan there, one undoable change;
+    /// empty, or the refusal.
+    QString includeLinkedData(const QString& directory);
+    /// Makes a scan's dataset its template (the owner, 2026-11-04): the template mark moves to its row, one undoable
+    /// change. A shown dataset becomes the template as shown; otherwise the template experiment takes that file's data.
+    /// A dataset still being read, or not shown, gives the template its file's data.
+    Q_INVOKABLE bool useAsTemplate(int dataset);
+    /// The scan's data folder when it cannot be found (ADR-0069), else empty: the Experiment page marks the experiment
+    /// "data not found" and offers Locate folder…; the project still opens.
+    QString missingDataFolder() const;
+    /// Points the scan at `folder` instead, relative to the project when it can be (one undoable change).
+    Q_INVOKABLE bool locateDataFolder(const QUrl& folder);
+    /// Measured data into a new experiment, made only once the file has been read: the type is the pending one
+    /// above unless a token is given; an impossible type or an unreadable file leaves the project untouched. One
+    /// Undo entry.
+    Q_INVOKABLE bool loadDataIntoNewExperiment(const QUrl& file, const QString& sampleForm = QString(),
+                                               const QString& beamMode = QString(), const QString& radiationProbe = QString());
+    /// One axis of the pending new-experiment type (sampleForm, beamMode, radiationProbe); a single crystal is
+    /// neutron and constant wavelength, as setExperimentType keeps it.
+    Q_INVOKABLE bool setNewExperimentType(const QString& axis, const QString& token);
+    OptionListModel* newExperimentSampleFormOptions() { ensureNewExperimentOptions(); return new_experiment_sample_form_options_; }
+    OptionListModel* newExperimentBeamModeOptions() { ensureNewExperimentOptions(); return new_experiment_beam_mode_options_; }
+    OptionListModel* newExperimentRadiationProbeOptions() { ensureNewExperimentOptions(); return new_experiment_radiation_probe_options_; }
+    QString newExperimentSampleFormToken() const;
+    QString newExperimentBeamModeToken() const;
+    QString newExperimentRadiationProbeToken() const;
     // One type axis ("sampleForm", "beamMode", "radiationProbe", "scatteringType") of an experiment without
     // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
     // within one beam mode, its range.
@@ -534,6 +593,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void descriptionChanged();
     void authorsChanged();
     void suRuleChanged();
+    void includeDataOnSaveChanged();
     void patternDSpacingChanged();
     void lastModifiedChanged();
     void currentStructureIndexChanged();
@@ -542,6 +602,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void currentExperimentChanged();
     void canLoadStructureChanged();
     void canCreateExperimentChanged();
+    void newExperimentSampleFormTokenChanged();
+    void newExperimentBeamModeTokenChanged();
+    void newExperimentRadiationProbeTokenChanged();
     void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
@@ -565,6 +628,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void missingDataFolderChanged();
     void colourSchemeChanged();
     void experimentColourPositionsChanged();
     void structureColourPositionsChanged();
@@ -729,6 +793,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     struct AddedExperiments {
         std::vector<const edi::ExperimentBase*> experiments;
     };
+    // A full experiment loaded from the web with the structures it brought: undone together.
+    struct AddedExperimentsWithStructures {
+        edi::StructuresUndo structures;
+        std::vector<const edi::ExperimentBase*> experiments;
+    };
     // A fresh scan run: the result files it replaced, as they were (absent: there was none, also recorded).
     // The fit records Reset fits clears: the model's and, while a dataset is shown, the template's.
     struct FitRecords {
@@ -776,7 +845,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::shared_ptr<const edi::Project> before;
     };
     struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
-    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, AddedExperimentsWithStructures, ScanRun, LoadedData,
                                     edi::StructuresUndo, edi::ExperimentControlsUndo, EmptyPopulationUndo, FreeFlags, PointIds, BackgroundPointUndo, BackgroundPoints, BlockName,
                                     edi::ReportSettingsState, AppliedText>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
@@ -809,6 +878,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::optional<TemplateState> fit_template_before_, fit_template_undo_;
     std::vector<UndoRecord> undo_history_;
     void noteAddedExperiments(std::size_t before);
+    /// The first free name of the form experiment1, experiment2, …
+    std::string freeExperimentName() const;
+    void ensureNewExperimentOptions();
+    OptionListModel* new_experiment_sample_form_options_ = nullptr;
+    OptionListModel* new_experiment_beam_mode_options_ = nullptr;
+    OptionListModel* new_experiment_radiation_probe_options_ = nullptr;
+    edi::ExperimentTypeTokens new_experiment_type_;
     bool can_undo_ = false;
     void syncUndo();
     BlockText* metadata_text_;
@@ -960,12 +1036,22 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     RecordedEdit* recording_ = nullptr; // stack owner, detached before any UI observer
     void finishRecordedEdit() noexcept;
+    // The Undo step a slider drag is making, trimmed to what the drag changed when it is let go (edi ADR-0070).
+    struct DragUndo {
+        std::size_t index = 0;
+        std::vector<const edi::Parameter*> targets;
+    };
+    std::optional<DragUndo> drag_undo_;
+    void closeDragUndo() noexcept;
     EditOutcome estimateBackgroundFor(const edi::ExperimentBase* expected,EditOutcome* receipt);
     EditOutcome* estimate_receipt_ = nullptr;
     EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
     QString editReadinessRefusal(bool restoring) const;
     bool calculating_ = false;
     bool adjusting_ = false;
+    std::optional<QString> include_data_on_save_;  // chosen before the project has a folder to key it by
+    bool adjusted_ = false;  // a drag step left the full publish for the release
+    edi::PreviewResult adjust_result_;  // the newest drag step's calculation, published in full on release
     bool modified_ = false;
     quint64 revision_ = 0;
     QString last_error_;

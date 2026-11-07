@@ -647,6 +647,7 @@ void ExperimentViewModel::sync() {
     };
     sync_description();
     update(name_, QString::fromStdString(experiment_.name), &ExperimentViewModel::nameChanged);
+    update(calculation_only_, static_cast<bool>(experiment_.calculation_only), &ExperimentViewModel::calculationOnlyChanged);
     const std::string default_profile = edi::default_peak_profile(experiment_.effective_beam_mode());
     update(peak_type_, QString::fromStdString(experiment_.peak.type.value_or(default_profile)),
            &ExperimentViewModel::peakTypeChanged);
@@ -735,12 +736,14 @@ void ExperimentViewModel::syncCategories() {
                                [this] { return edi::calculated_categories(experiment_); });
 }
 
-void ExperimentViewModel::capturePattern() {
+void ExperimentViewModel::capturePattern(bool categories) {
     // What the calculation publishes with the pattern: a single crystal's calculated F², a powder's reflections, and
     // the categories its file holds with them, with their counts.
     single_crystal_reflections_->sync();
-    reflections_->sync();
-    syncCategories();
+    if (categories) {
+        reflections_->sync();
+        syncCategories();
+    }
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {

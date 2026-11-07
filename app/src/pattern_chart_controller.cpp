@@ -853,8 +853,13 @@ void PatternChartController::refresh() {
     const bool band = measured_drawing_ == QLatin1String("band") && !report_;
     const bool line = report_ || measured_drawing_ == QLatin1String("line") || measured_drawing_ == QLatin1String("linePoints");
     const bool marks = report_ || measured_drawing_ == QLatin1String("points") || measured_drawing_ == QLatin1String("linePoints");
-    replace(measured_series_, measured != nullptr && line ? points_of(*measured) : QList<QPointF>());
-    if (measured_layer_) {
+    // While a value is dragged the measured series stand as drawn and a filled area waits for the release: Qt Graphs
+    // triangulates an area each time it changes, the largest part of a step (edi ADR-0070).
+    const bool held = !report_ && experiment_ && experiment_->adjusting();
+    const bool clear_fills = held && !fills_cleared_;
+    fills_cleared_ = held;
+    if (!held) replace(measured_series_, measured != nullptr && line ? points_of(*measured) : QList<QPointF>());
+    if (measured_layer_ && !held) {
         QList<QPointF> points;
         QList<double> low, high;
         if (measured != nullptr && marks) {
@@ -874,6 +879,7 @@ void PatternChartController::refresh() {
     // A band: its area and its two edges, each point's ends (the presentation gives a point without a finite s.u. its
     // ends at the point, so only a finite interval reaching below the log scale's domain takes the pane's bottom).
     const auto fill_band = [&](const edi::PatternSeries* series, std::size_t pane, double floor, double lift) {
+        if (held && pane == 0) return;
         const BandSeries& target = band_series_[pane];
         QList<QPointF> top, bottom;
         if (band && series != nullptr) {
@@ -891,14 +897,19 @@ void PatternChartController::refresh() {
                 bottom.append(QPointF(x, std::isfinite(low) ? low : floor));
             }
         }
-        std::vector<double> base;
-        base.reserve(static_cast<std::size_t>(bottom.size()));
-        for (const QPointF& point : bottom) {
-            base.push_back(point.y());
+        if (clear_fills) {
+            replace(target.upper, {});
+            replace(target.lower, {});
+        } else if (!held) {
+            std::vector<double> base;
+            base.reserve(static_cast<std::size_t>(bottom.size()));
+            for (const QPointF& point : bottom) {
+                base.push_back(point.y());
+            }
+            const AreaEdges area = area_edges(top, base, floor, lift);
+            replace(target.upper, area.upper);
+            replace(target.lower, area.lower);
         }
-        const AreaEdges area = area_edges(top, base, floor, lift);
-        replace(target.upper, area.upper);
-        replace(target.lower, area.lower);
         replace(target.top, top);
         replace(target.bottom, bottom);
     };
@@ -922,12 +933,15 @@ void PatternChartController::refresh() {
         // A background the log scale cannot show (zero or less) is below the axis: the fill reaches the axis there.
         const double lift = plot_height_ > 0.0 ? 0.05 * (shown_y_max_ - shown_y_min_) / plot_height_ : 0.0;
         const QList<QPointF> curve = points_of(series);
-        const AreaEdges area = area_edges(curve, series.bar_low, shown_y_min_, lift);
-        const QList<QPointF>& upper = area.upper;
-        const QList<QPointF>& lower = area.lower;
         const StructureSeries& target = structure_series_[static_cast<qsizetype>(index)];
-        replace(target.upper, upper);
-        replace(target.lower, lower);
+        if (clear_fills) {
+            replace(target.upper, {});
+            replace(target.lower, {});
+        } else if (!held) {
+            const AreaEdges area = area_edges(curve, series.bar_low, shown_y_min_, lift);
+            replace(target.upper, area.upper);
+            replace(target.lower, area.lower);
+        }
         replace(target.outline, curve);
     }
     for (qsizetype index = static_cast<qsizetype>(structure_curves.size()); index < structure_series_.size(); ++index) {

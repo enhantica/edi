@@ -14,6 +14,7 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QScopeGuard>
 #include <QThread>
 #include <QUrl>
 #include <atomic>
@@ -594,6 +595,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "6-develop", {"preferences.tab.develop"}});
         }
     }
+    // An example from an online collection (ADR-0068), opened from the Examples list, the list searched down to the
+    // rows that fit the sidebar. Run only when asked (`--demo-only collection-`), with EDI_ONLINE_SOURCES naming the
+    // fixture collections under tests/fixtures/online_sources.
+    if (only.startsWith(QLatin1String("collection-"))) {
+        steps_.push_back({"collection-1-list", start + QStringList{"appBar.tab.project", basic, "examples.search", "type:HRPT"}});
+        steps_.push_back({"collection-2-opened", {"examples.open.lbco-hrpt-project"}});
+    }
     // The Report page's sidebar, Main and Text, in both themes. Run only when asked (`--demo-only report-sidebar-`).
     if (only.startsWith(QLatin1String("report-sidebar-"))) {
         const QString report = QStringLiteral("appBar.tab.report");
@@ -619,6 +627,21 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         const QString kept = qEnvironmentVariable("EDI_DEMO_REPORT_DIR");
         steps_.push_back({"report-scan-2-saved", {"save-as:" + (kept.isEmpty() ? QStringLiteral("report-scan") : kept),
                                                   "report.writesPdf", "report.save"}});
+    }
+    // A scan opened from the file EDI_DEMO_SCAN_PROJECT names, its pages, then Fit and Reset, which stop the run when
+    // disabled. Run only when asked (`--demo-only scan-open-`).
+    if (only.startsWith(QLatin1String("scan-open-"))) {
+        steps_.push_back({"scan-open-1-opened",
+                          {"resize:1280x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT")}});
+        steps_.push_back({"scan-open-2-structure", {"appBar.tab.structure", basic}});
+        steps_.push_back({"scan-open-3-experiment", {"appBar.tab.experiment", basic}});
+        steps_.push_back({"scan-open-4-analysis", {analysis, basic}});
+        steps_.push_back({"scan-open-5-fitting", {"statusBar.fit.button", "wait-files:5", "capture-now"}});
+        steps_.push_back({"scan-open-6-stopped", {"statusBar.fit.button", "wait-fit"}});
+        steps_.push_back({"scan-open-7-reset", {"statusBar.fit.reset"}});
+        steps_.push_back({"scan-open-8-sequential",
+                          {QStringLiteral("sideBar.tab.extras"), "expand:group.fitting_mode", "reveal:fittingMode.type", "fittingMode.type",
+                           "choose:Sequential: each from the previous"}});
     }
     // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
     // (`--demo-only evolution-`).
@@ -1672,9 +1695,9 @@ bool DemoDriver::perform(const QString& action) {
         const QStringList parts = action.mid(17).split(QLatin1Char('|'));
         for (const QString& resource : parts.first().split(QLatin1Char(','))) {
             const QString target = loaded_files_.filePath(resource.section(QLatin1Char('/'), -1));
-            QFile source(QStringLiteral(":/edi/examples/") + resource);
+            QFile source(QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + u'/' + resource);
             if (!source.open(QIODevice::ReadOnly)) {
-                fail(QStringLiteral("step %1: no bundled file %2").arg(steps_[current_].image, resource));
+                fail(QStringLiteral("step %1: no example file %2").arg(steps_[current_].image, resource));
                 return false;
             }
             QString content = QString::fromUtf8(source.readAll());
@@ -1792,6 +1815,7 @@ void DemoDriver::park_pointer() {
 
 void DemoDriver::settle_then(std::function<void()> next) {
     settle_attempts_ = 0;
+    preparing_attempts_ = 0;
     previous_frame_ = QImage();
     auto poll = std::make_shared<std::function<void()>>();
     *poll = [this, next, poll] {
@@ -1801,6 +1825,8 @@ void DemoDriver::settle_then(std::function<void()> next) {
         auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         const bool calculating =
             session != nullptr && session->project() != nullptr && session->project()->calculating();
+        // An example fetched from an online collection opens once its download lands (ADR-0068).
+        const bool opening = session != nullptr && session->openingExample();
         // A page still being made after a project opened keeps its tab disabled, which no frame shows.
         bool preparing = false;
         for (const QString& tab : {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
@@ -1809,12 +1835,16 @@ void DemoDriver::settle_then(std::function<void()> next) {
             preparing = preparing || (item != nullptr && item->property("preparing").toBool());
         }
         const QImage frame = window_.grabWindow();
-        if (!calculating && !preparing && !previous_frame_.isNull() && frame == previous_frame_) {
+        if (!calculating && !opening && !preparing && !previous_frame_.isNull() && frame == previous_frame_) {
             next();
             return;
         }
         const int max_attempts = documentation_ && documentation_workflow_ == "reference"
                                      ? kSettleMaxAttempts * 10 : kSettleMaxAttempts;
+        // A large scan's pages take longer to prepare than any animation runs: the bound starts when they are ready.
+        if (preparing && ++preparing_attempts_ <= kSettleMaxAttempts * 20) {
+            settle_attempts_ = 0;
+        }
         if (++settle_attempts_ > max_attempts) {
             // The last two frames, to see what kept changing.
             previous_frame_.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-a.png")));
@@ -1823,8 +1853,9 @@ void DemoDriver::settle_then(std::function<void()> next) {
                      .arg(steps_[current_].image)
                      .arg(kSettleIntervalMs * max_attempts)
                      .arg(calculating ? QStringLiteral("a calculation is in flight")
-                                      : preparing ? QStringLiteral("a workflow page is preparing")
-                                                  : QStringLiteral("the window kept changing")));
+                          : opening   ? QStringLiteral("an example is being fetched")
+                          : preparing ? QStringLiteral("a workflow page is preparing")
+                                      : QStringLiteral("the window kept changing")));
             return;
         }
         previous_frame_ = frame;
@@ -2188,6 +2219,9 @@ bool DemoDriver::timed_slider(int count) {
     const double from = slider->property("from").toDouble(), to = slider->property("to").toDouble();
     const double centre = slider->property("value").toDouble();
     std::vector<double> shown, calculated;
+    // Held, as a drag holds the slider, and released after the last step.
+    project->setAdjusting(true);
+    const auto release = qScopeGuard([project] { project->setAdjusting(false); });
     for (int i = 0; i < count; ++i) {
         // Small steps either side of where the slider was, as a drag makes them.
         const double value = std::clamp(centre + (to - from) * 0.01 * static_cast<double>(i % 2 == 0 ? 1 : -1) *

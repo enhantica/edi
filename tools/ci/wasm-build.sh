@@ -98,7 +98,7 @@ build_kit() {
 
   echo "wasm-build: the app for $flavour"
   local args=(-S . -B "$out/app" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Release
-    -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF -DEDI_WORKER_OWNER_THREAD="$owner"
+    -DEDI_BUILD_APP=ON -DEDI_BUILD_BINDINGS=OFF -DEDI_APP_ASSISTANT=OFF -DEDI_WORKER_OWNER_THREAD="$owner"
     -DQT_HOST_PATH="$HOST" -DQT_HOST_PATH_CMAKE_DIR="$HOST/lib/cmake"
     -Dcrysta_DIR="$out/crysta-prefix/lib/cmake/crysta" -DEigen3_DIR="$EIGEN_DIR")
   # The multithread build starts its Web Workers with the page: Qt's four, the calculation worker and crysta's fill pool
@@ -113,6 +113,8 @@ build_kit() {
   # qt-cmake carries no exec bit in Qt's all_os archive.
   sh "$kit/bin/qt-cmake" "${args[@]}"
   cmake --build "$out/app" --target edi_app
+  # The web app carries no AI assistant (ADR-0023 §6): the linked kit is checked for its names.
+  bash "$ROOT/tools/ci/wasm-assistant-check.sh" "$out/app"
   printf '%s\n' "$SHA" >"$out/app/app/CRYSTA_SOURCE_SHA"
   ls -l "$out/app/app/edi_app.wasm"
 }

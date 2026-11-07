@@ -158,10 +158,11 @@
         },
         {
           "title": "Wavelength",
-          "text": "The wavelength is 1.494 Å, the default and the one this tutorial uses. For your own data set the instrument's wavelength here.",
+          "text": "A new experiment starts at 1 Å, because every experiment has its own wavelength. Set it to 1.494 Å, HRPT's, the one this tutorial uses.",
           "page": "experiment",
           "target": "instrument.setup_wavelength",
-          "expected": "The wavelength is 1.494 Å."
+          "expected": "The wavelength is 1.494 Å.",
+          "check": "param:instrument.setup_wavelength=1.494"
         },
         {
           "title": "Open Linked structures",
@@ -415,7 +416,7 @@
         },
         {
           "title": "Load the CIF",
-          "text": "On the Structure page, load the structure from lbco.cif with Load structure.",
+          "text": "On the Structure page, load the structure from lbco.cif: press Load, then From file….",
           "page": "structure",
           "target": "structures.load",
           "expected": "The structure lbco is in the list.",
@@ -453,9 +454,9 @@
         },
         {
           "title": "Load the data",
-          "text": "Load the measured pattern from hrpt.xye with Load data… in the experiment's row.",
+          "text": "Load the measured pattern from hrpt.xye: press Load, then From file… under Load measured data.",
           "page": "experiment",
-          "target": "experiments.loadData.0",
+          "target": "experiments.load",
           "expected": "The measured pattern is in the main area.",
           "check": "data"
         },
@@ -469,10 +470,11 @@
         },
         {
           "title": "Wavelength",
-          "text": "The wavelength is 1.494 Å, the default and HRPT's.",
+          "text": "A new experiment starts at 1 Å, because every experiment has its own wavelength. Set it to 1.494 Å, HRPT's.",
           "page": "experiment",
           "target": "instrument.setup_wavelength",
-          "expected": "The wavelength is 1.494 Å."
+          "expected": "The wavelength is 1.494 Å.",
+          "check": "param:instrument.setup_wavelength=1.494"
         },
         {
           "title": "Zero shift",

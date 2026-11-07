@@ -46,12 +46,37 @@ EaElements.Dialog {
 
     title: qsTr("Create project")
 
-    standardButtons: Dialog.Ok
+    // Whether the user chose Replace for a project already at the location (replaceAsked); reset at every opening.
+    property bool replaceExisting: false
+    signal replaceAsked(string name, string folder)
+    // OK: a location already taken asks first, "Replace it?", and the form stays as typed until the answer (the
+    // owner, 2026-11-04); Replace comes back through accept() with replaceExisting set.
+    function tryAccept() {
+        const location = projectLocationField.text;
+        if (showsLocation && !replaceExisting && location !== "" && Session.locationExists(location)) {
+            replaceAsked(projectName, Session.existingParentFolder(location));
+            return;
+        }
+        accept();
+    }
+
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: "createProject.accept"
+            highlighted: true
+            text: qsTr("OK")
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: dialog.tryAccept()
+        }
+    }
 
     onAccepted: projectLocation = projectLocationField.text
     // OK is named as the dialog starts to show, and the name field takes the keyboard as it opens: what the user
     // types goes into the name at once.
-    onAboutToShow: ApplicationInfo.projectDescriptionOpened(false)
+    onAboutToShow: {
+        replaceExisting = false;
+        ApplicationInfo.projectDescriptionOpened(false);
+    }
     onOpened: ApplicationInfo.projectDescriptionOpened(true)
 
     // Main layout
@@ -79,8 +104,8 @@ EaElements.Dialog {
                 }
                 placeholderText: qsTr("Enter project name here")
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                Keys.onReturnPressed: dialog.tryAccept()
+                Keys.onEnterPressed: dialog.tryAccept()
             }
         }
 
@@ -101,8 +126,8 @@ EaElements.Dialog {
                 horizontalAlignment: TextInput.AlignLeft
                 placeholderText: qsTr("Enter project title here (optional)")
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                Keys.onReturnPressed: dialog.tryAccept()
+                Keys.onEnterPressed: dialog.tryAccept()
             }
         }
 
@@ -123,8 +148,8 @@ EaElements.Dialog {
                 horizontalAlignment: TextInput.AlignLeft
                 placeholderText: qsTr("Enter authors here, separated by ; (optional)")
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                Keys.onReturnPressed: dialog.tryAccept()
+                Keys.onEnterPressed: dialog.tryAccept()
             }
         }
 
@@ -166,8 +191,8 @@ EaElements.Dialog {
                 placeholderText: qsTr("Enter project location here")
                 text: dialog.joinedPath(dialog.projectParentDirectory ? EaLogic.Utils.urlToLocalFile(dialog.projectParentDirectory) : dialog.defaultProjectParentDirectory, dialog.projectName)
 
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
+                Keys.onReturnPressed: dialog.tryAccept()
+                Keys.onEnterPressed: dialog.tryAccept()
 
                 EaElements.ToolButton {
                     id: chooseParentDirectoryButton
