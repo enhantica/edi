@@ -758,21 +758,23 @@ QString AtomSiteMomentListModel::setComponent(int row, const QString& form, int 
     if (moment == nullptr || k < 0 || k > 2) {
         refusal = tr("This site has no moment to edit");
     } else {
-        // The core decides what the symmetry admits; only the free components are written, the others follow.
-        const edi::MomentEdit edit =
-            edi::moment_edit(structure_, *moment, form.toStdString(), static_cast<std::size_t>(k), value);
-        refusal = QString::fromStdString(edit.refusal);
-        if (refusal.isEmpty()) {
-            const std::vector<edi::Parameter*> components = const_cast<edi::AtomSiteMoment*>(moment)->parameters();
-            std::vector<std::pair<edi::Parameter*, double>> writes;
-            for (std::size_t i = 0; i < components.size(); ++i) {
-                const ParameterItem* item = registry_.find(components[i]);
-                if (item != nullptr && item->isRefinable()) {
-                    writes.emplace_back(components[i], edit.crystal[i]);
+        // The core decides what the symmetry and the project's constraints admit, and which components to write.
+        const edi::Project* project = editor_.currentProject();
+        if (project == nullptr) {
+            refusal = tr("This site has no moment to edit");
+        } else {
+            const edi::MomentEdit edit = edi::moment_edit(*project, structure_, *moment, form.toStdString(),
+                                                          static_cast<std::size_t>(k), value);
+            refusal = QString::fromStdString(edit.refusal);
+            if (refusal.isEmpty()) {
+                const std::vector<edi::Parameter*> components =
+                    const_cast<edi::AtomSiteMoment*>(moment)->parameters();
+                std::vector<std::pair<edi::Parameter*, double>> writes;
+                for (const auto& [i, written] : edit.writes) {
+                    writes.emplace_back(components[i], written);
                 }
+                refusal = editor_.apply(edi::Edit::values(std::move(writes)), false);
             }
-            refusal = writes.empty() ? tr("The site symmetry fixes this moment")
-                                     : editor_.apply(edi::Edit::values(std::move(writes)), false);
         }
     }
     if (refusal != refusal_) {

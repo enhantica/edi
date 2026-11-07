@@ -370,8 +370,8 @@ std::vector<ParameterTie> structure_ties(const Structure& s) {
     return ties;
 }
 
-MomentEdit moment_edit(const Structure& s, const AtomSiteMoment& moment, const std::string& form,
-                       std::size_t k, double value) {
+MomentEdit moment_edit(const Project& project, const Structure& s, const AtomSiteMoment& moment,
+                       const std::string& form, std::size_t k, double value) {
     MomentEdit out;
     if (k > 2 || !std::isfinite(value)) {
         out.refusal = "That is not a value for this moment";
@@ -444,7 +444,57 @@ MomentEdit moment_edit(const Structure& s, const AtomSiteMoment& moment, const s
                       (form_text.empty() ? std::string() : " (" + form_text + ")");
         return out;
     }
-    out.crystal = kept;
+    // The write set is the independent components; the others follow their relations. The trial
+    // applies every relation of the project, declared constraints included, and must give back the
+    // moment asked for.
+    const std::array<const Parameter*, 3> components{&moment.crystalaxis_x, &moment.crystalaxis_y,
+                                                     &moment.crystalaxis_z};
+    std::vector<std::pair<std::size_t, double>> writes;
+    for (std::size_t i = 0; i < 3; ++i) {
+        if (components[i]->dependence == Dependence::Independent) {
+            writes.emplace_back(i, kept[i]);
+        }
+    }
+    if (writes.empty()) {
+        out.refusal = "The site symmetry and the constraints set every component of this moment";
+        return out;
+    }
+    Project trial = project;
+    AtomSiteMoment* copied = nullptr;
+    for (std::size_t si = 0; si < project.structures.size() && copied == nullptr; ++si) {
+        if (&*project.structures[si] != &s) {
+            continue;
+        }
+        Structure& target = *trial.structures[si];
+        for (std::size_t mi = 0; mi < s.atom_site_moment.size(); ++mi) {
+            if (&*s.atom_site_moment[mi] == &moment) {
+                copied = &*target.atom_site_moment[mi];
+            }
+        }
+    }
+    if (copied == nullptr) {
+        out.refusal = "This moment is not in the project";
+        return out;
+    }
+    const std::array<Parameter*, 3> trial_components{&copied->crystalaxis_x, &copied->crystalaxis_y,
+                                                     &copied->crystalaxis_z};
+    for (const auto& [i, written] : writes) {
+        trial_components[i]->value = written;
+    }
+    if (!apply_relations(trial)) {
+        out.refusal = "The constraints cannot hold with this value";
+        return out;
+    }
+    const std::array<double, 3> result{copied->crystalaxis_x.value, copied->crystalaxis_y.value,
+                                       copied->crystalaxis_z.value};
+    const std::array<double, 3> landed = crysta::moment_cartesian(cell, result);
+    const double moved =
+        std::hypot(asked[0] - landed[0], asked[1] - landed[1], asked[2] - landed[2]);
+    if (moved > 1e-9 * size) {
+        out.refusal = "A constraint on this moment does not allow this edit";
+        return out;
+    }
+    out.writes = std::move(writes);
     return out;
 }
 
