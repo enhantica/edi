@@ -40,9 +40,18 @@ def test_magnetic_examples_have_records_and_documentation(name, execution):
     quantities = record.get('quantities', {})
     assert quantities, 'Magnetic examples carry nonempty fit-result records'
     if name.endswith('_2k'):
-        assert all(value.get('kind') == 'reference' for value in quantities.values()), (
-            'The low-temperature example names independent FullProf reference quantities'
+        reference_quantities = record['variants']['form-factor-j0']['quantities']
+        assert all(value.get('kind') == 'reference' for value in reference_quantities.values()), (
+            'The j0 variant retains the independent FullProf reference quantities'
         )
+        assert quantities['n_free']['kind'] == 'reference', (
+            'The declared free-parameter count retains its reference provenance'
+        )
+        assert all(
+            value['kind'] == 'regression-pin'
+            for name, value in quantities.items()
+            if name != 'n_free'
+        ), 'Dipole fit outcomes are explicitly engine regression pins'
     else:
         assert any(value.get('kind') == 'regression-pin' for value in quantities.values()), (
             'The scan labels its engine-generated outcomes as regression pins'
@@ -92,7 +101,7 @@ def test_low_temperature_fit_record_has_independent_moment_sanity_bounds():
         row = re.search(r'^\s*' + site + r'_1\s+(.+)$', moments, re.MULTILINE)
         assert row, 'The independent FullProf summary contains each magnetic cobalt site'
         cobalt[site] = [float(value) for value in row[1].split()]
-    quantities = record['quantities']
+    quantities = record['variants']['form-factor-j0']['quantities']
     rwp = float(re.search(r'Rwp:\s+([\d.]+)', summary)[1]) / 100
     assert quantities['rwp']['value'] == pytest.approx(rwp, abs=0.00005, rel=0), (
         'The Rwp target comes from the rerun with both apertures held at 0.0619'
