@@ -7,7 +7,7 @@
     ],
     "id": "scan-correlations",
     "image": "scan-correlations.png",
-    "image_sha256": "0d2d1538769253b8587c82b6745fe7d984b2516c7b6e7bf05e28efa99a151647",
+    "image_sha256": "497b8d414a71a250b5763b2a0346217eabd1f9c18c298f2c8e315913d1f0bd1e",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -2510,7 +2510,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

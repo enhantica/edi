@@ -7,7 +7,7 @@
     ],
     "id": "guide-experiment-absorption",
     "image": "guide-experiment-absorption.png",
-    "image_sha256": "a6278b4e5438b5f47cf612233c526eb90b50ff9638394b4db7142b7cde00f50d",
+    "image_sha256": "53339a7cd2f94fc7e3b1b518eccc2998ce64ea2613a26cb0b83c2a696d7ce781",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 56
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 56
             ]
@@ -76,7 +76,7 @@
         "absorption.type": {
             "bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 56
             ],
@@ -100,7 +100,7 @@
             "uid": "absorption.type",
             "visible_bounds": [
                 784,
-                252,
+                252.00000000000693,
                 682,
                 56
             ]
@@ -805,7 +805,7 @@
         "group.absorption": {
             "bounds": [
                 770,
-                203,
+                203.00000000000693,
                 710,
                 119
             ],
@@ -814,7 +814,7 @@
             "label": "Absorption",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000693,
                 710,
                 119
             ]
@@ -839,7 +839,7 @@
         "group.data": {
             "bounds": [
                 770,
-                448,
+                448.0000000000045,
                 710,
                 42
             ],
@@ -848,7 +848,7 @@
             "label": "Measured data (3060)",
             "visible_bounds": [
                 770,
-                448,
+                448.0000000000045,
                 710,
                 42
             ]
@@ -856,7 +856,7 @@
         "group.data_source": {
             "bounds": [
                 770,
-                406,
+                406.0000000000045,
                 710,
                 42
             ],
@@ -865,7 +865,7 @@
             "label": "Data source",
             "visible_bounds": [
                 770,
-                406,
+                406.0000000000045,
                 710,
                 42
             ]
@@ -873,7 +873,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 42
             ],
@@ -882,7 +882,7 @@
             "label": "Peak cutoff",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 42
             ]
@@ -890,7 +890,7 @@
         "group.preferred_orientation": {
             "bounds": [
                 770,
-                322,
+                322.0000000000045,
                 710,
                 42
             ],
@@ -899,7 +899,7 @@
             "label": "Preferred orientations (0)",
             "visible_bounds": [
                 770,
-                322,
+                322.0000000000045,
                 710,
                 42
             ]
@@ -907,7 +907,7 @@
         "group.refln": {
             "bounds": [
                 770,
-                490,
+                490.0000000000045,
                 710,
                 42
             ],
@@ -916,15 +916,15 @@
             "label": "Reflections (194)",
             "visible_bounds": [
                 770,
-                490,
+                490.0000000000045,
                 710,
-                42
+                42.00000000000006
             ]
         },
         "group.scattering_source": {
             "bounds": [
                 770,
-                364,
+                364.0000000000045,
                 710,
                 42
             ],
@@ -933,7 +933,7 @@
             "label": "Scattering source",
             "visible_bounds": [
                 770,
-                364,
+                364.0000000000045,
                 710,
                 42
             ]
@@ -1246,7 +1246,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1418,7 +1418,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

@@ -48,6 +48,7 @@ NAMES = [
     'lightbulb',
     'list',
     'long-arrow-alt-right',
+    'magnet',
     'microscope',
     'robot',
     'ruler-combined',

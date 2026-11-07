@@ -8,7 +8,7 @@
     ],
     "id": "12-fit-profile",
     "image": "12-fit-profile.png",
-    "image_sha256": "e9d5dc8a41270573f1d9c6eefba9ef6441410acb37559c1048f504aa2760be2f",
+    "image_sha256": "3adb58ea1e561b3964ff110898f1cef383bdcf1969d7ebcceb85d39793f2b537",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -2152,7 +2152,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "10 0.054s 6.93→3.54",
+            "label": "10 0.052s 6.93→3.54",
             "visible_bounds": [
                 1178,
                 770,
@@ -2324,7 +2324,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

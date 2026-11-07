@@ -7,7 +7,7 @@
     ],
     "id": "15-project-examples",
     "image": "15-project-examples.png",
-    "image_sha256": "8264d06653f9814e9b2100a04f56475e0dae152505db907fe29e2ca5ce792db8",
+    "image_sha256": "9c2aba432e5483dd74d03c64ac8194e4c4b4c3ce83b1c475d4615061b745477d",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -892,7 +892,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1064,7 +1064,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

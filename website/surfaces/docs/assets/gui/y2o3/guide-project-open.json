@@ -7,7 +7,7 @@
     ],
     "id": "guide-project-open",
     "image": "guide-project-open.png",
-    "image_sha256": "1fa458bd07c42b1f6e5ad00c80c6807abb80a1159cf531e7e1fafdbe3b8e2d6e",
+    "image_sha256": "3a698d0fd10ba895f8699d1d427d18574363e9b1b183df8c94b66526a65de60a",
     "items": {
         "AppDialog": {
             "bounds": [
@@ -550,7 +550,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/docs-saved-project",
+            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/docs-saved-project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -864,7 +864,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1036,7 +1036,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

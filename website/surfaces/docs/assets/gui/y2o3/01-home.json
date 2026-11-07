@@ -9,7 +9,7 @@
     ],
     "id": "01-home",
     "image": "01-home.png",
-    "image_sha256": "3f0cf8f88de02dfb7ac6c571afe4fc02f6ad8dd854847b3a36be97cfcaa70113",
+    "image_sha256": "245f39cc72ad0dc1c8493f622811a1cad4c6b23c4bbd58c864529820e5015d34",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -543,7 +543,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

@@ -8,7 +8,7 @@
     ],
     "id": "joint-experiment-before",
     "image": "joint-experiment-before.png",
-    "image_sha256": "d0a06fd5a7aadffd5dd8514eb026c646bbfcd8bc288beaad37a6b70984b622b5",
+    "image_sha256": "3006582a21fa60368c87d71e5c6def6f2037fc46720d2cee7c3dffac6b0f4143",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1773,7 +1773,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 2,
         "fit_outcome": "",

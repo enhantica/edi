@@ -7,7 +7,7 @@
     ],
     "id": "guide-analysis-correlations",
     "image": "guide-analysis-correlations.png",
-    "image_sha256": "2b481092621e45411bdb13b6087be5976d622a8050de68205fb9eac3c5966789",
+    "image_sha256": "110ec75a74eb20912b3d9f9ae05dc21f121b58a8aa43b1f742036f2093ca9735",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -2288,7 +2288,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -2460,7 +2460,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

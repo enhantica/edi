@@ -8,7 +8,7 @@
     ],
     "id": "06-structure-import",
     "image": "06-structure-import.png",
-    "image_sha256": "18a3db57323385f5b1c1756e1ee0c00067d2ec9a5f701570568a7fd9bd11f18b",
+    "image_sha256": "c595280f443d04f4d705b09601f4c30f23c3a1e4a90e0f2d45f358d7af425748",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -905,7 +905,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

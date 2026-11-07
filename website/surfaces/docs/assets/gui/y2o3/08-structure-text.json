@@ -10,7 +10,7 @@
     ],
     "id": "08-structure-text",
     "image": "08-structure-text.png",
-    "image_sha256": "6f70aa5b817642323c2fe82bb3b652b5da54f282e7112e0179809e01d6bbe43d",
+    "image_sha256": "0c620259c072eb5f276fb38e24b6948d72c216ad9dec5ea3b246ba3a09a5a9f2",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -994,7 +994,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

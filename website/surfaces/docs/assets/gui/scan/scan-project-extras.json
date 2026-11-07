@@ -8,7 +8,7 @@
     ],
     "id": "scan-project-extras",
     "image": "scan-project-extras.png",
-    "image_sha256": "6f80123a83cb9d8a6f56999c39f2eaf0b399ff16785a1530c5fec02855069da1",
+    "image_sha256": "7f2ac674fde97ae18c3bbcc2cc9946de75bdaa4120dd082a7c3aa771561b4d20",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -436,7 +436,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-fBtegR/pd-neut-cwl_cosio-d20_scan-213f/project",
+            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-MTisfR/pd-neut-cwl_cosio-d20_scan-213f/project",
             "visible_bounds": [
                 183.4,
                 347.40000000000003,
@@ -905,7 +905,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

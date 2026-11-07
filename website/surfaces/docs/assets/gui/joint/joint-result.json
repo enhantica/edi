@@ -7,7 +7,7 @@
     ],
     "id": "joint-result",
     "image": "joint-result.png",
-    "image_sha256": "3b426e992b69beaa22f2845f2c2a38f9f2651dacd33b79bfb92c33a44ab783c3",
+    "image_sha256": "061ab0233e2508e0ba676f6e6c6e8e25e2d4e75a8f112c091e77555f544d9b8e",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -823,7 +823,7 @@
                 56
             ],
             "enabled": true,
-            "label": "0.523607",
+            "label": "0.526788",
             "visible_bounds": [
                 784,
                 490,
@@ -1158,7 +1158,7 @@
         "group.fitting_mode": {
             "bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 42
             ],
@@ -1167,7 +1167,7 @@
             "label": "Fitting mode",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000693,
                 710,
                 42
             ]
@@ -1530,7 +1530,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.52s 242.73→1.96",
+            "label": "12 0.53s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -1702,7 +1702,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

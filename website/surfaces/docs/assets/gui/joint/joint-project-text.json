@@ -8,7 +8,7 @@
     ],
     "id": "joint-project-text",
     "image": "joint-project-text.png",
-    "image_sha256": "525b20a11d01a782da36c5cec61126a077b1cd5148bb30b0266524fa020267b7",
+    "image_sha256": "c6ff72fb633fb05ef0a52f3ff4e51d5968ba960ca890eb465e44721942ea48a6",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -403,7 +403,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-TQaCzK/pd-neut-xray-cwl_pbso4-d1a-lab/project",
+            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-jwMrlv/pd-neut-xray-cwl_pbso4-d1a-lab/project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -650,7 +650,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.52s 242.73→1.96",
+            "label": "12 0.53s 242.73→1.96",
             "visible_bounds": [
                 1170,
                 770,
@@ -871,7 +871,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

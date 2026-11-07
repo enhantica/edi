@@ -7,7 +7,7 @@
     ],
     "id": "guide-experiment-exclusions",
     "image": "guide-experiment-exclusions.png",
-    "image_sha256": "4d341265038166d24b31ed617078340a4a46c0b361e60ae4505765fa24aa2700",
+    "image_sha256": "abbbac52938df3f3c0a84011fb2bec17b5379277eb561b9e7e6affa6f3934c28",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                336,
+                336.0000000000115,
                 682,
                 170
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                336,
+                336.0000000000115,
                 682,
                 170
             ]
@@ -773,7 +773,7 @@
         "currentRowBar": {
             "bounds": [
                 785,
-                414,
+                414.0000000000115,
                 2,
                 39
             ],
@@ -781,7 +781,7 @@
             "label": "",
             "visible_bounds": [
                 785,
-                414,
+                414.0000000000115,
                 2,
                 39
             ]
@@ -789,7 +789,7 @@
         "excludedRegion.end.0": {
             "bounds": [
                 913,
-                375,
+                375.0000000000115,
                 505,
                 39
             ],
@@ -797,7 +797,7 @@
             "label": "12",
             "visible_bounds": [
                 913,
-                375,
+                375.0000000000115,
                 505,
                 39
             ]
@@ -805,7 +805,7 @@
         "excludedRegion.end.1": {
             "bounds": [
                 913,
-                414,
+                414.0000000000115,
                 505,
                 39
             ],
@@ -813,7 +813,7 @@
             "label": "180",
             "visible_bounds": [
                 913,
-                414,
+                414.0000000000115,
                 505,
                 39
             ]
@@ -821,7 +821,7 @@
         "excludedRegion.id.0": {
             "bounds": [
                 815,
-                375,
+                375.0000000000115,
                 32,
                 39
             ],
@@ -829,7 +829,7 @@
             "label": "1",
             "visible_bounds": [
                 815,
-                375,
+                375.0000000000115,
                 32,
                 39
             ]
@@ -837,7 +837,7 @@
         "excludedRegion.id.1": {
             "bounds": [
                 815,
-                414,
+                414.0000000000115,
                 32,
                 39
             ],
@@ -845,7 +845,7 @@
             "label": "2",
             "visible_bounds": [
                 815,
-                414,
+                414.0000000000115,
                 32,
                 39
             ]
@@ -853,7 +853,7 @@
         "excludedRegion.remove.0": {
             "bounds": [
                 1422,
-                375,
+                375.0000000000115,
                 39,
                 39
             ],
@@ -862,7 +862,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                375,
+                375.0000000000115,
                 39,
                 39
             ]
@@ -870,7 +870,7 @@
         "excludedRegion.remove.1": {
             "bounds": [
                 1422,
-                414,
+                414.0000000000115,
                 39,
                 39
             ],
@@ -879,7 +879,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                414,
+                414.0000000000115,
                 39,
                 39
             ]
@@ -887,7 +887,7 @@
         "excludedRegion.start.0": {
             "bounds": [
                 851,
-                375,
+                375.0000000000115,
                 58,
                 39
             ],
@@ -895,7 +895,7 @@
             "label": "0",
             "visible_bounds": [
                 851,
-                375,
+                375.0000000000115,
                 58,
                 39
             ]
@@ -903,7 +903,7 @@
         "excludedRegion.start.1": {
             "bounds": [
                 851,
-                414,
+                414.0000000000115,
                 58,
                 39
             ],
@@ -911,7 +911,7 @@
             "label": "137.5",
             "visible_bounds": [
                 851,
-                414,
+                414.0000000000115,
                 58,
                 39
             ]
@@ -919,7 +919,7 @@
         "excludedRegions.append": {
             "bounds": [
                 784,
-                467,
+                467.0000000000115,
                 682,
                 39
             ],
@@ -928,7 +928,7 @@
             "label": "Append new region",
             "visible_bounds": [
                 784,
-                467,
+                467.0000000000115,
                 682,
                 39
             ]
@@ -936,7 +936,7 @@
         "excludedRegions.list": {
             "bounds": [
                 784,
-                336,
+                336.0000000000115,
                 682,
                 117
             ],
@@ -944,7 +944,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                336,
+                336.0000000000115,
                 682,
                 117
             ]
@@ -969,7 +969,7 @@
         "group.excluded_region": {
             "bounds": [
                 770,
-                287,
+                287.0000000000115,
                 710,
                 233
             ],
@@ -978,7 +978,7 @@
             "label": "Excluded regions (2)",
             "visible_bounds": [
                 770,
-                287,
+                287.0000000000115,
                 710,
                 233
             ]
@@ -1003,7 +1003,7 @@
         "group.instrument": {
             "bounds": [
                 770,
-                203,
+                203.00000000001145,
                 710,
                 42
             ],
@@ -1012,7 +1012,7 @@
             "label": "Instrument",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000001145,
                 710,
                 42
             ]
@@ -1020,7 +1020,7 @@
         "group.linked_structure": {
             "bounds": [
                 770,
-                520,
+                520.0000000000053,
                 710,
                 42
             ],
@@ -1029,7 +1029,7 @@
             "label": "Linked structures (1)",
             "visible_bounds": [
                 770,
-                520,
+                520.0000000000053,
                 710,
                 42
             ]
@@ -1037,7 +1037,7 @@
         "group.peak": {
             "bounds": [
                 770,
-                245,
+                245.00000000001145,
                 710,
                 42
             ],
@@ -1046,9 +1046,9 @@
             "label": "Peak profile",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000001145,
                 710,
-                42
+                42.00000000000003
             ]
         },
         "label": {
@@ -1359,7 +1359,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1531,7 +1531,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

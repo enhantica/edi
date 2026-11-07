@@ -7,7 +7,7 @@
     ],
     "id": "group-magn-operators",
     "image": "group-magn-operators.png",
-    "image_sha256": "c065ef8f5e4353ca3b6ca0b6d92867edb58d4215d39d63dce3126bcd31a4d07c",
+    "image_sha256": "491f7d4a6f5424d73e6d8f6b68c3a1d6742b2a4fba6b2e3369ff0abdce22e952",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -628,7 +628,7 @@
         "group.magnetic_form_factor": {
             "bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ],
@@ -637,7 +637,7 @@
             "label": "Magnetic form factors (1)",
             "visible_bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ]
@@ -662,7 +662,7 @@
         "group.space_group_symop": {
             "bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 42
             ],
@@ -671,7 +671,7 @@
             "label": "Symmetry operators (8)",
             "visible_bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 42
             ]
@@ -1368,7 +1368,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

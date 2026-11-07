@@ -7,7 +7,7 @@
     ],
     "id": "group-reflns",
     "image": "group-reflns.png",
-    "image_sha256": "f0462d58faed3d27063c3e42d6996a8d1703a412bb5c297bf074ae3bfaa84488",
+    "image_sha256": "4203f216061a90f4e9aae1abdec0cb287c8c080988d374ac9b6a03cebfb56d46",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1100,7 +1100,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "d5122f9a30b820ddb8e950bd218add712484af4ed386761370e29f6deabec864",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

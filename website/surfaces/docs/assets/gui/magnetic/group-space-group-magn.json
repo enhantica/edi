@@ -7,7 +7,7 @@
     ],
     "id": "group-space-group-magn",
     "image": "group-space-group-magn.png",
-    "image_sha256": "d5ff0128206799ddec91c4f95351389b5f5fa4440aac30cf3417293009b6172b",
+    "image_sha256": "58cf9e7273e2072dbc14a23f3c00920e7a757ce6699ef8c6aac6e27eaf081a51",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1208,7 +1208,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

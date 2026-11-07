@@ -85,7 +85,7 @@ The current [nuclear neutron](diffraction.md#eq-nuclear-structure-factor) and [X
 | --- | --- | --- |
 | Nuclear neutron Bragg | Current | [Structure factor](diffraction.md#eq-nuclear-structure-factor) |
 | X-ray Bragg | Current | [Structure factor](diffraction.md#eq-xray-structure-factor) |
-| Magnetic diffraction | Planned | [Scattering](diffraction.md#magnetic-diffraction) |
+| Magnetic neutron powder Bragg, commensurate | Current | [Magnetic structures](magnetic.md) |
 | Polarized diffraction | Planned | [Scattering](diffraction.md#polarized-diffraction) |
 | Total scattering and PDF | Planned | [Scattering](diffraction.md#total-scattering-and-pdf) |
 

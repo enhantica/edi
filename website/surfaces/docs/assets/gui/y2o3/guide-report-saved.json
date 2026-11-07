@@ -7,7 +7,7 @@
     ],
     "id": "guide-report-saved",
     "image": "guide-report-saved.png",
-    "image_sha256": "374e284ecfcf2fb8d2c1e08d537ad25e5e40008606ee3ab7c56e2587822439d4",
+    "image_sha256": "2671e453bc93273c8cd8a93221b1854d35857da6f1ca395c184a89e055a9c9e7",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -765,7 +765,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -937,7 +937,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

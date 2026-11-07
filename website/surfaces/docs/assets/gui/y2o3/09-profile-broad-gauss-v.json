@@ -7,7 +7,7 @@
     ],
     "id": "09-profile-broad-gauss-v",
     "image": "09-profile-broad-gauss-v.png",
-    "image_sha256": "864118b5969f688532e60beed1bd44a9055d6a8bc8ee5c985f596db154943c50",
+    "image_sha256": "0e095a167d978d0d7155e713253e3e7d49ba4ffa8304700f94a55364c9b32ac4",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -770,7 +770,7 @@
         "group.background": {
             "bounds": [
                 770,
-                161,
+                161.00000000000932,
                 710,
                 42
             ],
@@ -779,7 +779,7 @@
             "label": "Background (0)",
             "visible_bounds": [
                 770,
-                161,
+                161.00000000000932,
                 710,
                 42
             ]
@@ -787,7 +787,7 @@
         "group.excluded_region": {
             "bounds": [
                 770,
-                434,
+                434.00000000000466,
                 710,
                 42
             ],
@@ -796,7 +796,7 @@
             "label": "Excluded regions (0)",
             "visible_bounds": [
                 770,
-                434,
+                434.00000000000466,
                 710,
                 42
             ]
@@ -821,7 +821,7 @@
         "group.instrument": {
             "bounds": [
                 770,
-                203,
+                203.00000000000932,
                 710,
                 42
             ],
@@ -830,7 +830,7 @@
             "label": "Instrument",
             "visible_bounds": [
                 770,
-                203,
+                203.00000000000932,
                 710,
                 42
             ]
@@ -838,7 +838,7 @@
         "group.linked_structure": {
             "bounds": [
                 770,
-                476,
+                476.00000000000466,
                 710,
                 42
             ],
@@ -847,7 +847,7 @@
             "label": "Linked structures (1)",
             "visible_bounds": [
                 770,
-                476,
+                476.00000000000466,
                 710,
                 42
             ]
@@ -1437,7 +1437,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

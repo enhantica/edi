@@ -8,7 +8,7 @@
     ],
     "id": "scan-experiment-settings",
     "image": "scan-experiment-settings.png",
-    "image_sha256": "1e1c56e1c5daf769f379acd7827de2d5f08e365c159c4d85eb954bc02d05706f",
+    "image_sha256": "a129be9e68c2d08dcb7f47b0356cceeccacaa4d4a3d6660b81fb539bcd5029f3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1318,7 +1318,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

@@ -7,7 +7,7 @@
     ],
     "id": "group-expanded-atoms",
     "image": "group-expanded-atoms.png",
-    "image_sha256": "e6a54fce68a56615648d16585f3c68115ce0b532102ef1474a1cb6c44dd7dc6b",
+    "image_sha256": "414983354b337039cbf66b2840365f4d9a9e19ab0e2e6e77d61f3a78122111b3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -1588,7 +1588,7 @@
         "group.magnetic_form_factor": {
             "bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ],
@@ -1597,7 +1597,7 @@
             "label": "Magnetic form factors (1)",
             "visible_bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ]
@@ -1622,7 +1622,7 @@
         "group.space_group_symop": {
             "bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 42
             ],
@@ -1631,7 +1631,7 @@
             "label": "Symmetry operators (8)",
             "visible_bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 42
             ]
@@ -2328,7 +2328,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

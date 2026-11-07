@@ -7,7 +7,7 @@
     ],
     "id": "group-refine-ls",
     "image": "group-refine-ls.png",
-    "image_sha256": "43eda1a2582f82e02a3926a6b75be97cead38b80e1f3c50f30453571c4b572da",
+    "image_sha256": "32caa85285acfb9be48c0a10a6f0098fb0cf9ea415068e0be7424628677976b8",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                252.00000000000693,
+                252,
                 682,
                 56
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252.00000000000693,
+                252,
                 682,
                 56
             ]
@@ -431,7 +431,7 @@
         "group.alias": {
             "bounds": [
                 770,
-                322.0000000000045,
+                322,
                 710,
                 42
             ],
@@ -440,7 +440,7 @@
             "label": "Aliases (0)",
             "visible_bounds": [
                 770,
-                322.0000000000045,
+                322,
                 710,
                 42
             ]
@@ -448,7 +448,7 @@
         "group.constraint": {
             "bounds": [
                 770,
-                364.0000000000045,
+                364,
                 710,
                 42
             ],
@@ -457,7 +457,7 @@
             "label": "Constraints (0)",
             "visible_bounds": [
                 770,
-                364.0000000000045,
+                364,
                 710,
                 42
             ]
@@ -465,7 +465,7 @@
         "group.fitting_mode": {
             "bounds": [
                 770,
-                161.00000000000693,
+                161,
                 710,
                 42
             ],
@@ -474,7 +474,7 @@
             "label": "Fitting mode",
             "visible_bounds": [
                 770,
-                161.00000000000693,
+                161,
                 710,
                 42
             ]
@@ -499,7 +499,7 @@
         "group.refine_ls": {
             "bounds": [
                 770,
-                203.00000000000693,
+                203,
                 710,
                 119
             ],
@@ -508,7 +508,7 @@
             "label": "Fitted reflections",
             "visible_bounds": [
                 770,
-                203.00000000000693,
+                203,
                 710,
                 119
             ]
@@ -649,7 +649,7 @@
         "refine_ls.thresholdSigma": {
             "bounds": [
                 784,
-                252.00000000000693,
+                252,
                 339.25,
                 56
             ],
@@ -657,7 +657,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252.00000000000693,
+                252,
                 339.25,
                 56
             ]
@@ -1101,7 +1101,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "d5122f9a30b820ddb8e950bd218add712484af4ed386761370e29f6deabec864",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

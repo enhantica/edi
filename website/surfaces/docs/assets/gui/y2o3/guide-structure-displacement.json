@@ -7,7 +7,7 @@
     ],
     "id": "guide-structure-displacement",
     "image": "guide-structure-displacement.png",
-    "image_sha256": "2fe0aa068c2d112311b7a3dc0f0f8d03178409e0a231ec3cc3ab12e4342e057d",
+    "image_sha256": "d08bac6cb19be39c656e9735fc7e255200e46bd52dac25b4f1de8f7348533d8b",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -800,7 +800,7 @@
         "group.atom_site": {
             "bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ],
@@ -809,7 +809,7 @@
             "label": "Atom sites (3)",
             "visible_bounds": [
                 770,
-                245,
+                245.00000000000244,
                 710,
                 42
             ]
@@ -1174,7 +1174,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.025s 3.58→2.28",
+            "label": "3 0.026s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1576,7 +1576,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

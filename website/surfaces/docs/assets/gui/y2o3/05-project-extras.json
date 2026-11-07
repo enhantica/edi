@@ -10,7 +10,7 @@
     ],
     "id": "05-project-extras",
     "image": "05-project-extras.png",
-    "image_sha256": "09339d5eb75a387b29b25ac0db777c85b8eb62f4dad27a3e579c93ae48bc09df",
+    "image_sha256": "a683c306cd792fee08da38ce727d60993b8335f3148b229ec1833e281f53563a",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -422,7 +422,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-titmrb/pd-neut-cwl_y2o3-spodi",
+            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -756,7 +756,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "5e547c5641c39c2980a588b69b007bffeb75aeb9",
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
     "state": {
         "experiments": 0,
         "fit_outcome": "",
