@@ -507,6 +507,10 @@ def test_inventory_migrations_name_frozen_witnesses_and_available_successors():
         'status-results-banner',
         'native-forwarding-controls',
         *[f'collection-{index}' for index in range(len(SCAN_DELIVERY_NODES))],
+        'linked-absolute',
+        'linked-parent',
+        'linked-fit',
+        'linked-save',
     ],
 )
 def test_inventory_migration_refuses_every_dropped_successor(retired):

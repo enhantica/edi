@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-07T09:46:11Z
+# measured_utc = 2026-11-07T11:08:45Z
 #
-# Recorded from: measured test run (320 node(s) measured once, 166462 banked, 0 stale row(s) dropped)
-# Collected tests: 212114; with a reported duration: 70998
+# Recorded from: measured test run (4 node(s) measured once, 166776 banked, 0 stale row(s) dropped)
+# Collected tests: 212120; with a reported duration: 70998
 # Module-scoped fixture costs recorded: 130
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 212114
+# inventory_python = 212120
 # inventory_cpp = 396
 # inventory_measured = 166780
-# inventory_unmeasured = 45730
+# inventory_unmeasured = 45736
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 68689
+# inventory_pr_python = 68695
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -151504,10 +151504,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py:
 UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[no-step-legacy]
 UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python[no-step-recorded]
 1.490	tests/system/py/test_c11_t43_rejection_classes.py::test_declared_mode_by_native_entry_matrix_is_exact
-0.010	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_lexical_escape_refuses_at_load[absolute]
-0.010	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_lexical_escape_refuses_at_load[parent]
-0.050	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_symlink_escape_refuses_before_conversion_or_save[fit]
-0.030	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_data_dir_symlink_escape_refuses_before_conversion_or_save[save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_external_data_dir_loads_and_roundtrips[absolute]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_external_data_dir_loads_and_roundtrips[parent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_external_symlink_data_dir_allows_fit_and_save[fit]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_external_symlink_data_dir_allows_fit_and_save[save]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_missing_linked_scan_does_not_prevent_project_open[absolute]
+UNMEASURED:failed-in-this-run	tests/system/py/test_c11_t43_rejection_classes.py::test_edi_missing_linked_scan_does_not_prevent_project_open[parent]
 1.030	tests/system/py/test_c11_t43_rejection_classes.py::test_mode_contract_is_closed_across_edi_loader_setters_dispatch_native_and_save
 0.250	tests/system/py/test_c11_t43_rejection_classes.py::test_sequential_direct_callbacks_never_emit_orphaned_per_file_progress
 0.680	tests/system/py/test_c11_t43_rejection_classes.py::test_sequential_human_reporting_preserves_each_verbosity_contract[compact]
@@ -153916,6 +153918,10 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-linux]
 0.280	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[desktop-macos]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[diagnostics]
+2.470	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[linked-absolute]
+2.550	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[linked-fit]
+2.560	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[linked-parent]
+2.540	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[linked-save]
 2.340	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[native-forwarding-controls]
 0.130	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[nightly-linux-pull_request]
 0.120	tests/system/py/test_ci_cadence.py::test_inventory_migration_refuses_every_dropped_successor[nightly-linux-push]

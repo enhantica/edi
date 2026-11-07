@@ -161,3 +161,23 @@ MIGRATIONS.update({
     ]
     for node in SCAN_DELIVERY_NODES
 })
+
+
+# External scan sources supersede the former containment expectation.
+LINKED_SCANS = 'tests/system/py/test_c11_t43_rejection_classes.py::'
+MIGRATIONS.update({
+    LINKED_SCANS + old + f'[{argument}]': [LINKED_SCANS + new + f'[{argument}]']
+    for old, new, arguments in (
+        (
+            'test_edi_data_dir_lexical_escape_refuses_at_load',
+            'test_edi_external_data_dir_loads_and_roundtrips',
+            ('absolute', 'parent'),
+        ),
+        (
+            'test_edi_data_dir_symlink_escape_refuses_before_conversion_or_save',
+            'test_edi_external_symlink_data_dir_allows_fit_and_save',
+            ('fit', 'save'),
+        ),
+    )
+    for argument in arguments
+})

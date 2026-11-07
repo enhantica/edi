@@ -8,6 +8,7 @@ import io
 import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -553,6 +554,7 @@ def test_mode_contract_is_closed_across_edi_loader_setters_dispatch_native_and_s
     project = edi.Project.load(independent_dir)
     project.analysis.fitting_mode = 'independent'
     saved = tmp_path / 'independent-saved'
+    saved.parent.mkdir(parents=True, exist_ok=True)
     project.save_as(saved)
     reloaded = edi.Project.load(saved)
     if reloaded.analysis.fitting_mode != 'independent':
@@ -692,38 +694,106 @@ def test_cli_persistence_never_follows_a_retained_touched_document_symlink(
     )
 
 
-@pytest.mark.parametrize('escape', ['absolute', 'parent'])
-def test_edi_data_dir_lexical_escape_refuses_at_load(tmp_path: Path, escape: str) -> None:
-    project_dir = _copy_bounded_project(tmp_path, f'lexical-{escape}')
-    outside = tmp_path / 'outside-scan'
-    shutil.copytree(project_dir / 'experiments' / 'd20_scan', outside)
-    spelling = str(outside) if escape == 'absolute' else '../outside-scan'
-    _rewrite(
-        project_dir,
-        '_sequential_fit.data_dir experiments/d20_scan',
-        f'_sequential_fit.data_dir {spelling}',
+def _scan_input_bytes(folder: Path) -> dict[str, bytes]:
+    return {path.name: path.read_bytes() for path in folder.glob('*.dat')}
+
+
+def _assert_linked_scan_location(saved: Path, outside: Path) -> None:
+    text = (saved / 'analysis' / 'analysis.edi').read_text(encoding='utf-8')
+    line = next(line for line in text.splitlines() if line.startswith('_sequential_fit.data_dir '))
+    declared = Path(shlex.split(line)[1])
+    assert not declared.is_absolute(), (
+        'Linked scan paths use relative spelling when source and destination share a volume'
     )
-    with pytest.raises(ValueError, match=r'data_dir|relative|project'):
-        edi.Project.load(project_dir)
+    assert (saved / declared).samefile(outside), (
+        'Saving at another depth preserves the physical linked-data source, including symlinks'
+    )
 
 
-@pytest.mark.parametrize('operation', ['fit', 'save'])
-def test_edi_data_dir_symlink_escape_refuses_before_conversion_or_save(
-    tmp_path: Path, operation: str
-) -> None:
-    project_dir = _copy_bounded_project(tmp_path, f'symlink-{operation}')
-    outside = tmp_path / f'outside-{operation}'
+@pytest.mark.parametrize('spelling', ['absolute', 'parent'])
+def test_edi_external_data_dir_loads_and_roundtrips(tmp_path: Path, spelling: str) -> None:
+    name = f'linked-{spelling}'
+    project_dir = _copy_bounded_project(tmp_path, name)
+    outside = tmp_path / 'outside_scan'
     scan_dir = project_dir / 'experiments' / 'd20_scan'
     shutil.copytree(scan_dir, outside)
     shutil.rmtree(scan_dir)
+    before = _scan_input_bytes(outside)
+    source = str(outside) if spelling == 'absolute' else '../outside_scan'
+    _rewrite(
+        project_dir,
+        '_sequential_fit.data_dir experiments/d20_scan',
+        '_sequential_fit.data_dir ' + source,
+    )
+    project = edi.Project.load(project_dir)
+    assert project.fitting_mode == 'sequential', (
+        'Loading an outside source preserves the declared scan instead of refusing or clearing it'
+    )
+    saved = tmp_path / 'relocated' / 'deeper' / 'saved'
+    saved.parent.mkdir(parents=True, exist_ok=True)
+    project.save_as(saved)
+    _assert_linked_scan_location(saved, outside)
+    assert edi.Project.load(saved).fitting_mode == 'sequential', (
+        'The rebased external scan remains loadable through the ordinary project reader'
+    )
+    assert _scan_input_bytes(outside) == before, (
+        'Loading and saving a linked project never change the external measured files'
+    )
+
+
+@pytest.mark.parametrize('operation', ['fit', 'save'])
+def test_edi_external_symlink_data_dir_allows_fit_and_save(tmp_path: Path, operation: str) -> None:
+    name = f'symlink-{operation}'
+    project_dir = _copy_bounded_project(tmp_path, name)
+    outside = tmp_path / f'outside {operation}'
+    scan_dir = project_dir / 'experiments' / 'd20_scan'
+    shutil.copytree(scan_dir, outside)
+    before = _scan_input_bytes(outside)
+    shutil.rmtree(scan_dir)
     scan_dir.symlink_to(outside, target_is_directory=True)
     project = edi.Project.load(project_dir)
-
-    action = (
-        project.analysis.fit if operation == 'fit' else lambda: project.save_as(tmp_path / 'saved')
+    if operation == 'fit':
+        project.analysis.fit()
+        rows = _read_results(project_dir)
+        assert {Path(row['file_path']).name for row in rows} == set(before), (
+            'The fitting route reads every independently retained dataset through the outside link'
+        )
+        assert all(
+            (project_dir / Path(row['file_path'])).resolve().parent == outside.resolve()
+            for row in rows
+        ), 'Every fitted input names the actual external source rather than a project-local decoy'
+    else:
+        saved = tmp_path / 'relocated' / 'saved'
+        saved.parent.mkdir(parents=True, exist_ok=True)
+        project.save_as(saved)
+        _assert_linked_scan_location(saved, outside)
+        assert edi.Project.load(saved).fitting_mode == 'sequential', (
+            'A saved project can reopen its deliberately linked external symlink target'
+        )
+    assert _scan_input_bytes(outside) == before, (
+        'Fit and Save write project outputs without rewriting any linked measured file'
     )
-    with pytest.raises(ValueError, match=r'data_dir|symlink|outside|project'):
-        action()
+
+
+@pytest.mark.parametrize('spelling', ['absolute', 'parent'])
+def test_edi_missing_linked_scan_does_not_prevent_project_open(
+    tmp_path: Path, spelling: str
+) -> None:
+    name = f'missing-{spelling}'
+    project_dir = _copy_bounded_project(tmp_path, name)
+    source = tmp_path / 'missing_scan'
+    declared = str(source) if spelling == 'absolute' else '../missing_scan'
+    _rewrite(
+        project_dir,
+        '_sequential_fit.data_dir experiments/d20_scan',
+        '_sequential_fit.data_dir ' + declared,
+    )
+    project = edi.Project.load(project_dir)
+    assert project.fitting_mode == 'sequential', (
+        'Missing linked data never prevents opening the project or discards its scan declaration'
+    )
+    with pytest.raises(ValueError, match=r'scan|director|data_dir|missing|found'):
+        project.analysis.fit()
 
 
 def _iteration_numbers(output: str) -> list[int]:
