@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 from plan import markdown_note, note_interfaces
-from promote import digest, validate_cli
+from promote import digest, validate_cli, validate_wheel
 from publish_assets import check_existing, optional_api
 
 PLATFORMS = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
@@ -24,7 +24,7 @@ def prepare(
     """Validate all platform deliveries against their shared release history."""
     expected = PLATFORMS - {'windows-x86_64'} if mac_linux_only else PLATFORMS
     archives = {}
-    cli_archives = []
+    optional = {validator: [] for validator in (validate_cli, validate_wheel)}
     history = None
     for delivery in deliveries:
         payload = (delivery / 'preview-history.json').read_bytes()
@@ -59,9 +59,10 @@ def prepare(
         if metadata['zip_sha256'] != checksum:
             raise ValueError(f'Installer checksum differs for {platform}')
         archives[platform] = (archive, checksum)
-        cli = validate_cli(delivery, version, commit, platform)
-        if cli is not None:
-            cli_archives.append((cli, digest(cli)))
+        for validator, assets in optional.items():
+            asset = validator(delivery, version, commit, platform)
+            if asset is not None:
+                assets.append((asset, digest(asset)))
     if set(archives) != expected:
         raise ValueError('A qualified platform is missing')
     recorded = json.loads(history)
@@ -76,9 +77,13 @@ def prepare(
         )
     ):
         raise ValueError('Release history differs from the qualified installers')
-    if cli_archives and len(cli_archives) != len(expected):
-        raise ValueError('The prerelease must carry CLI ZIPs for all its platforms together')
-    return release, _preview_notes(release), [*archives.values(), *cli_archives]
+    if any(assets and len(assets) != len(expected) for assets in optional.values()):
+        raise ValueError('The prerelease must carry each asset family for all platforms together')
+    return (
+        release,
+        _preview_notes(release),
+        [*archives.values(), *(asset for assets in optional.values() for asset in assets)],
+    )
 
 
 def _preview_notes(release: dict) -> str:

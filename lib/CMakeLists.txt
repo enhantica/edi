@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # edi Python bindings (ADR-0009): the thin nanobind module `_edi` over edi_core, emitted into the
 # lib/edi package so the editable `import edi` resolves it. Build-time deps: Python + nanobind.
-find_package(Python 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
+option(EDI_RELEASE_WHEEL "Require the CPython stable ABI for release wheels" OFF)
+if(EDI_RELEASE_WHEEL)
+    find_package(Python 3.12 COMPONENTS Interpreter Development.Module Development.SABIModule REQUIRED)
+else()
+    find_package(Python 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
+endif()
 execute_process(
     COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
     OUTPUT_VARIABLE NB_CMAKE_DIR OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)

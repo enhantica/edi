@@ -145,3 +145,19 @@ def test_standalone_downloads_select_only_published_cli_zips():
     assert 'Latest version 2026.11.4 (5 Nov 2026)' in page
     assert base + 'EasyDiffraction-2026.11.4-linux-x86_64-cli.zip' in page
     assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page
+
+
+def test_preview_index_links_only_published_hashed_python_wheels(tmp_path):
+    index = load('website/render_package_index.py')
+    name = 'easydiffraction-2026.11.6-cp312-abi3-linux_x86_64.whl'
+    url = f'https://github.com/enhantica/edi/releases/download/v2026.11.6/{name}'
+    asset = {'name': name, 'state': 'uploaded', 'browser_download_url': url}
+    release = {'draft': False, 'tag_name': 'v2026.11.6', 'assets': [asset]}
+    page = tmp_path / 'pypi/simple/easydiffraction/index.html'
+    index.write_package_index(tmp_path, [[release]])
+    assert name not in page.read_text(encoding='utf-8')
+    asset['digest'] = 'sha256:' + 'a' * 64
+    index.write_package_index(tmp_path, [[{**release, 'draft': True}]])
+    assert name not in page.read_text(encoding='utf-8')
+    index.write_package_index(tmp_path, [[release]])
+    assert url + '#sha256=' + 'a' * 64 in page.read_text(encoding='utf-8')

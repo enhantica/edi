@@ -6,3 +6,5 @@ _build/
 **/.preview-*.yml
 
 _build-checks/
+
+/surfaces/docs/assets/tutorials/

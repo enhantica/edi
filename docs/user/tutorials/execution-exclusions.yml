@@ -58,3 +58,5 @@ excluded:
     unblocked_by: tutorial-runner
   - notebook: sc-neut-tof_taurine-senju.ipynb
     unblocked_by: tutorial-runner
+  - notebook: pd-neut-cwl_yap-spodi_3k.ipynb
+    unblocked_by: tutorial-runner

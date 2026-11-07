@@ -113,3 +113,16 @@ The history feed and bundled notes share one source. Managed calendar installati
 independently of optional update notifications. The red Update button follows the existing unsaved-work
 guard and starts the maintenance tool. On the updated app's next launch, What's new includes every
 release since the user's previous version. Ordinary developer builds retain their git version.
+
+## Python preview distribution
+
+Each versioned native build also produces a CPython 3.12+ stable-ABI wheel.
+The wheel uses the same release version and native engine as the standalone
+CLI and includes the JavaScript needed for offline reports. Qualification
+installs the wheel in a fresh virtual environment without a package index,
+then checks the import, command line, refinement and offline report.
+
+The preview and stable GitHub release jobs attach the qualified wheels as
+individual assets. The docs build generates a static Simple API index from
+published GitHub release assets, linking the original wheels by SHA-256.
+See the Python setup page for the Pixi and pip routes.

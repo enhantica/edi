@@ -161,22 +161,52 @@ def validate_cli(folder: Path, version: str, commit: str, platform: str) -> Path
     return archive
 
 
-def stage_cli_assets(output: Path, assets: Path, attempt: int, release: dict) -> None:
-    """Add the complete set of standalone archives when the build provides them."""
-    archives = [
-        validate_cli(
-            output / f'installer-{platform}-{attempt}',
-            release['version'],
-            release['commit'],
-            target,
-        )
-        for platform, target in PLATFORMS.items()
-    ]
-    qualified = [archive for archive in archives if archive is not None]
-    if qualified and len(qualified) != len(PLATFORMS):
-        raise ValueError('The release must carry CLI ZIPs for all platforms together')
-    for archive in qualified:
-        shutil.copy2(archive, assets / archive.name)
+def validate_wheel(folder: Path, version: str, commit: str, platform: str) -> Path | None:
+    """Require the exact Python wheel qualified on this release platform."""
+    tags = {
+        'linux-x86_64': 'linux_x86_64',
+        'windows-x86_64': 'win_amd64',
+        'macos-arm64': 'macosx_14_0_arm64',
+    }
+    name = f'easydiffraction-{version}-cp312-abi3-{tags[platform]}.whl'
+    wheel = folder / name
+    receipt = folder / 'wheel-qualification.json'
+    if not receipt.exists() and not list(folder.glob('*.whl')):
+        return None
+    evidence = json.loads(receipt.read_text(encoding='utf-8'))
+    expected = {
+        'passed': True,
+        'version': version,
+        'commit': commit,
+        'platform': platform,
+        'wheel': name,
+    }
+    if evidence.get('passed') is not True or any(
+        evidence.get(key) != value for key, value in expected.items()
+    ):
+        raise ValueError('Qualified Python wheel identity differs')
+    if wheel.is_symlink() or digest(wheel) != evidence.get('sha256'):
+        raise ValueError('Qualified Python wheel bytes differ')
+    return wheel
+
+
+def stage_optional_assets(output: Path, assets: Path, attempt: int, release: dict) -> None:
+    """Add complete sets of standalone ZIPs and wheels when the build provides them."""
+    for validator in (validate_cli, validate_wheel):
+        archives = [
+            validator(
+                output / f'installer-{platform}-{attempt}',
+                release['version'],
+                release['commit'],
+                target,
+            )
+            for platform, target in PLATFORMS.items()
+        ]
+        qualified = [archive for archive in archives if archive is not None]
+        if qualified and len(qualified) != len(PLATFORMS):
+            raise ValueError('The release must carry each asset family for all platforms together')
+        for archive in qualified:
+            shutil.copy2(archive, assets / archive.name)
 
 
 def validate_repository(
@@ -284,7 +314,7 @@ def stage(repo: str, identity: int, output: Path) -> None:
             raise ValueError('Qualified components must contain exactly their stable platform')
         validate_repository(components / 'stable' / target, release['version'])
         shutil.copytree(components / 'stable' / target, incoming / 'repository/stable' / target)
-    stage_cli_assets(output, assets, attempt, release)
+    stage_optional_assets(output, assets, attempt, release)
     if len(engine_sources) != 1 or not re.fullmatch(r'[0-9a-f]{40}', next(iter(engine_sources))):
         raise ValueError('All qualified platforms must build the same exact engine source')
     for name in ['release.json', 'release-history.json']:

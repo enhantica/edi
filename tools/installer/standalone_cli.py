@@ -11,6 +11,7 @@ import zipfile
 from pathlib import Path
 
 from package import ROOT, SYSTEM, run, sha256
+from python_wheel import build_wheel
 
 
 def verify_dependencies(binary: Path) -> None:
@@ -89,16 +90,23 @@ def build_cli(
     run(['cmake', '--install', engine, '--prefix', prefix])
     options = [
         '-DEDI_BUILD_APP=OFF',
-        '-DEDI_BUILD_BINDINGS=OFF',
+        '-DEDI_BUILD_BINDINGS=ON',
+        '-DEDI_RELEASE_WHEEL=ON',
         '-DEDI_BUILD_ASSISTANT_NATIVE=OFF',
         f'-DEDI_RELEASE_VERSION={version}',
         f'-DCMAKE_PREFIX_PATH={prefix.as_posix()}',
         '-DCMAKE_SKIP_RPATH=ON',
     ]
     if SYSTEM == 'linux':
-        options.append('-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc')
+        options.extend([
+            '-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc',
+            '-DCMAKE_MODULE_LINKER_FLAGS=-static-libstdc++ -static-libgcc',
+        ])
     if SYSTEM == 'macos':
-        options.append('-DCMAKE_EXE_LINKER_FLAGS=-Wl,-headerpad_max_install_names')
+        options.extend([
+            '-DCMAKE_EXE_LINKER_FLAGS=-Wl,-headerpad_max_install_names',
+            '-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-headerpad_max_install_names',
+        ])
     run(['cmake', '-S', ROOT, '-B', cli, *flags, *options])
     run(['cmake', '--build', cli, '--target', 'easydiffraction', '--parallel', '4'])
 
@@ -127,6 +135,7 @@ def build_cli(
             archive.write(notice, 'licenses/' + notice.name)
 
     qualify_cli(asset, executable, version)
+    build_wheel(cli, work, version, commit, platform)
     (work / 'cli-qualification.json').write_text(
         json.dumps({
             'version': version,

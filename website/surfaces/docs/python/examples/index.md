@@ -63,3 +63,14 @@ project.report.save_html('refinement.html', offline=True)
 ```
 
 The starting files stay unchanged until you save. See [load and save](../projects.md) for other input and output forms.
+
+
+## More examples
+
+Each ZIP contains a notebook, its starting project, and data provenance.
+Extract the ZIP and open the notebook from the extracted folder. Select your
+edi kernel. The final cell opens the same interactive report used by the
+application, with plots and structure views where the project provides them.
+
+<!-- python-tutorials -->
+<!-- /python-tutorials -->

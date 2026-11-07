@@ -26,9 +26,11 @@ from render_downloads import render as render_downloads
 from render_experiments import render as render_experiments
 from render_interfaces import render as render_interfaces
 from render_learning import render as render_learning
+from render_package_index import write_package_index
 from render_parameter_reference import anchor
 from render_parameter_reference import render as render_parameter_reference
 from render_release_notes import render as render_release_notes
+from render_tutorials import render_tutorials
 from render_workflow import render as render_workflow
 
 ROOT = Path(__file__).resolve().parent
@@ -309,13 +311,17 @@ def _check_application_groups(config_data: dict) -> None:
     if placed - categories:
         raise SystemExit(f'Add these app categories to the menu: {sorted(placed - categories)}')
     # Every group a capture actually saw needs an entry, including groups built at run time.
-    names = {entry.get('category') for entry in entries} | {entry.get('app_group') for entry in entries}
+    names = {entry.get('category') for entry in entries} | {
+        entry.get('app_group') for entry in entries
+    }
     names.update(groups['undocumented']['categories'])
     for sidecar in (ROOT / 'surfaces/docs/assets/gui').glob('*/*.json'):
         items = json.loads(sidecar.read_text(encoding='utf-8')).get('items', {})
         seen = {key[6:] for key in items if key.startswith('group.') and key.count('.') == 1}
         if seen - names:
-            raise SystemExit(f'{sidecar.name}: add these groups to the menu: {sorted(seen - names)}')
+            raise SystemExit(
+                f'{sidecar.name}: add these groups to the menu: {sorted(seen - names)}'
+            )
     print('Application menu follows the app sidebar: PASS', flush=True)
 
 
@@ -491,8 +497,16 @@ def main() -> None:
     changelog = ROOT / 'surfaces/docs/changelog.md'
     desktop = ROOT / 'surfaces/docs/application/desktop.md'
     cli = ROOT / 'surfaces/docs/cli/standalone.md'
-    originals = {path: path.read_text(encoding='utf-8') for path in (changelog, desktop, cli)}
+    examples = ROOT / 'surfaces/docs/python/examples/index.md'
+    originals = {
+        path: path.read_text(encoding='utf-8') for path in (changelog, desktop, cli, examples)
+    }
     try:
+        if 'surfaces' in names:
+            examples.write_text(
+                render_tutorials(ROOT / 'surfaces/docs/assets/tutorials', originals[examples]),
+                encoding='utf-8',
+            )
         if args.github_releases:
             releases = json.loads(args.github_releases.read_bytes())
             changelog.write_text(render_release_notes(releases), encoding='utf-8')
@@ -503,9 +517,10 @@ def main() -> None:
         for name in names:
             _build_concept(name, shared_controls, args.base_url, output)
     finally:
-        if args.github_releases:
-            for path, original in originals.items():
-                path.write_text(original, encoding='utf-8')
+        for path, original in originals.items():
+            path.write_text(original, encoding='utf-8')
+    if 'surfaces' in names:
+        write_package_index(output, releases if args.github_releases else [])
     _check_links(output.resolve(), args.base_url)
     command = f'python -m http.server 8873 --bind 127.0.0.1 --directory {output}'
     print(f'Preview: {command}', flush=True)

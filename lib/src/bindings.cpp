@@ -2418,7 +2418,7 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "id", [](const edi::AtomSiteMoment& self) { return self.id.value(); },
             [](edi::AtomSiteMoment& self, std::string value) { self.id = std::move(value); })
-        .def_prop_ro("symmform", [](const edi::AtomSiteMoment& self) { return self.symmform; });
+        .def_prop_ro("symmform", [](const edi::AtomSiteMoment& self) { return self.symmform.value(); });
     def_parameter_walks(atom_site_moment);
     def_parameter_field(atom_site_moment, "crystalaxis_x", &edi::AtomSiteMoment::crystalaxis_x);
     def_parameter_field(atom_site_moment, "crystalaxis_y", &edi::AtomSiteMoment::crystalaxis_y);

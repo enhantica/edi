@@ -23,6 +23,7 @@ import subprocess as _subprocess  # aliased: a bare name stays off the surface (
 from collections.abc import (
     Callable as _Callable,  # aliased: a bare name stays off the surface (I1)
 )
+from importlib import import_module as _import_module
 from importlib import util as _importlib_util
 from pathlib import Path as _Path
 from typing import ClassVar as _ClassVar  # aliased: a bare name would join the public surface (I1)
@@ -546,7 +547,9 @@ from edi import _project_output as _output  # noqa: E402 - after the extension's
 
 # edi's data folder, beside the package in a source checkout: the report's vendored chart
 # libraries are there.
-_DATA_DIR = _Path(__file__).resolve().parent.parent.parent / 'data'
+_DATA_DIR = _here / 'data'
+if not _DATA_DIR.is_dir():
+    _DATA_DIR = _here.parent.parent / 'data'
 
 
 class Report:
@@ -1412,8 +1415,13 @@ class ExperimentFactory:
         return experiment
 
 
-# The verification-page helpers stay out of `__all__` (internal, register row D51) but are always
-# reachable as `edi.verification`: a submodule that is an attribute only after someone imports it
-# would make the surface universe depend on import order. Last, on purpose — the module imports
-# `edi` back and touches it only inside its functions.
-from edi import verification as verification  # noqa: E402
+# Keep the verification module reachable without loading its optional numerical tools
+# when someone imports edi to fit a project.
+def __getattr__(name: str):
+    if name == 'verification':
+        return _import_module('.verification', __name__)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+
+
+def __dir__():
+    return sorted({*globals(), 'verification'})

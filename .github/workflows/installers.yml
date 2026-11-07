@@ -272,6 +272,11 @@ jobs:
               cli = json.loads(cli_receipt.read_text())
               shutil.copy2(cli_receipt, delivery / cli_receipt.name)
               os.link(cli_receipt.parent / cli['zip'], delivery / cli['zip'])
+          wheel_receipt = Path('build/installer/wheel-qualification.json')
+          if wheel_receipt.is_file():
+              wheel = json.loads(wheel_receipt.read_text())
+              shutil.copy2(wheel_receipt, delivery / wheel_receipt.name)
+              os.link(wheel_receipt.parent / wheel['wheel'], delivery / wheel['wheel'])
           preview_history = Path('build/installer/preview-history.json')
           if preview_history.is_file():
               shutil.copy2(preview_history, delivery / 'preview-history.json')
