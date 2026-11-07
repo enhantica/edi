@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import "TooltipSettings.js" as TooltipSettings
 import "ApprovedPalette.js" as Approved
 import QtQuick.Window
 import QtCore
