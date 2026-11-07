@@ -33,7 +33,12 @@ def images(tmp_path_factory):
     )
     temporary = tmp_path_factory.mktemp('docs-image-reference')
     output = temporary / 'observed.json'
-    interpreter = os.environ.get('EDI_DOCS_BROWSER_PYTHON', sys.executable)
+    browser_environment = ROOT / 'tools/installer/.pixi/envs/default'
+    declared_python = browser_environment / ('python.exe' if os.name == 'nt' else 'bin/python')
+    interpreter = os.environ.get(
+        'EDI_DOCS_BROWSER_PYTHON',
+        str(declared_python) if declared_python.is_file() else sys.executable,
+    )
     log = temporary / 'browser.log'
     with log.open('w', encoding='utf-8') as stream:
         result = subprocess.run(
