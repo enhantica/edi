@@ -11,8 +11,8 @@ The command line operates on that saved experiment. It does not create an experi
 ## Choose the run
 
 - [Calculate](calculate.md) evaluates the model, including experiments with simulation ranges.
-- [Refine](fit.md) uses measured observations and the fitting mode saved in the project.
+- [Fit](fit.md) uses measured observations and the fitting mode saved in the project.
 
-Use `--dry` when you want to calculate or fit without writing project changes. It still executes the calculation or refinement.
+Use `--dry` when you want to calculate or fit without writing project changes. It still executes the calculation or fit.
 
 The shared [Experiment](../user-guide/analysis-workflow/experiment.md) stage explains the model, and [fitting modes](../user-guide/analysis-workflow/analysis.md#fitting-modes) explains single, joint and scan analyses.

@@ -19,7 +19,7 @@ Follow these stages from a terminal. Commands run on saved projects, so most of 
 | [<span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true">:fa5-archive:</span><span class="ed-icon-text">Project</span></span>](../files.md) | Prepare the input files and find the output files |
 | [<span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true">:fa5-layer-group:</span><span class="ed-icon-text">Structure</span></span>](../structures.md) | Use the structures prepared in a project |
 | [<span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true">:fa5-microscope:</span><span class="ed-icon-text">Experiment</span></span>](../experiments.md) | Use the experiments prepared in a project |
-| [<span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true">:fa5-calculator:</span><span class="ed-icon-text">Analysis</span></span>](../calculate.md) | Calculate a pattern, refine a project and run batches |
+| [<span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true">:fa5-calculator:</span><span class="ed-icon-text">Analysis</span></span>](../calculate.md) | Calculate a pattern, fit a project and run batches |
 | [<span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true">:fa5-clipboard-list:</span><span class="ed-icon-text">Report</span></span>](../reports.md) | Generate a report and check it |
 
 </div>

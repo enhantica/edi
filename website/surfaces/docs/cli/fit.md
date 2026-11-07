@@ -1,4 +1,4 @@
-# :fa5-calculator: Run a refinement
+# :fa5-calculator: Run a fit
 
 The command line loads a complete project and runs the analysis its settings declare. Use it for a single pattern, joint experiments, or a scan.
 
@@ -16,38 +16,38 @@ The command line loads a complete project and runs the analysis its settings dec
     python -m edi fit path/to/project
     ```
 
-For a folder or its `project.edi`, this command refines **and saves** the project back to that folder when the run succeeds. Keep the initial model separately when you want to compare it with the result.
+For a folder or its `project.edi`, this command fits **and saves** the project back to that folder when the run succeeds. Keep the initial model separately when you want to compare it with the result.
 
 ## Choose the output
 
 === "Standalone executable"
 
     ```console
-    edi fit path/to/project --output refined-project
+    edi fit path/to/project --output fitted-project
     edi fit path/to/project --dry
     ```
 
 === "Python package"
 
     ```console
-    python -m edi fit path/to/project --output refined-project
+    python -m edi fit path/to/project --output fitted-project
     python -m edi fit path/to/project --dry
     ```
 
-`--output DIR` keeps the result in another folder. With the standalone executable, choose a new folder and use either `--output` or `--dry`. A dry run still performs the refinement and leaves the input files unchanged. It keeps no scan progress.
+`--output DIR` keeps the result in another folder. With the standalone executable, choose a new folder and use either `--output` or `--dry`. A dry run still performs the fit and leaves the input files unchanged. It keeps no scan progress.
 
 For an archive:
 
 === "Standalone executable"
 
     ```console
-    edi fit project.zip --output refined-project
+    edi fit project.zip --output fitted-project
     ```
 
 === "Python package"
 
     ```console
-    python -m edi fit project.zip --output refined-project
+    python -m edi fit project.zip --output fitted-project
     ```
 
 Without an output folder, `fit` leaves the input archive unchanged and warns that the results are not written back. See [files and output](files.md).
@@ -66,7 +66,7 @@ Without an output folder, `fit` leaves the input archive unchanged and warns tha
     python -m edi fit path/to/project --verbosity full
     ```
 
-Full output includes the refined parameter table. The Python CLI also reports per-bank agreement factors for a joint fit.
+Full output includes the fitted parameter table. The Python CLI also reports per-bank agreement factors for a joint fit.
 
 ## Follow progress
 

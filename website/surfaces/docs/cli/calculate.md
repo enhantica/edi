@@ -35,7 +35,7 @@ Unlike `fit`, `calc` defaults to machine output. Ask for a readable summary with
 python -m edi calc path/to/project --report human --dry
 ```
 
-`--verbosity off` suppresses the report. For calculation, `compact` and `full` carry the same detail because there are no refinement iterations or fitted-parameter table.
+`--verbosity off` suppresses the report. For calculation, `compact` and `full` carry the same detail because there are no fit iterations or fitted-parameter table.
 
 ## Prepare a document
 

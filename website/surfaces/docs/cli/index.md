@@ -7,7 +7,7 @@ hide:
 
 # Start here
 
-Run saved projects from a terminal or shell script. The standalone executable supports refinement with `edi fit`. The Python package also supports calculation, export, undo, collections, reports, and live fit progress. Both run directly from a terminal.
+Run saved projects from a terminal or shell script. The standalone executable fits projects with `edi fit`. The Python package also supports calculation, export, undo, collections, reports, and live fit progress. Both run directly from a terminal.
 
 === ":fa5-terminal: Standalone executable"
 

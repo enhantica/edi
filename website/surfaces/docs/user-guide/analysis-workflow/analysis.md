@@ -107,4 +107,4 @@ Single-crystal examples fit reflection observations rather than a powder profile
 
 - [Application: free-parameter controls and refinement](../../application/analysis/index.md), [mode selection](../../application/analysis/fitting-mode.md) and [scan controls](../../application/scans.md).
 - [Python: calculation](../../python/calculate.md), [refinement](../../python/fit.md) and [result objects](../../python/results.md).
-- [Command Line: calculation](../../cli/calculate.md) and [refinement commands](../../cli/fit.md).
+- [Command Line: calculation](../../cli/calculate.md) and [fit commands](../../cli/fit.md).

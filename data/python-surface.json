@@ -964,6 +964,15 @@
     }
    },
    "Collection": {
+    "download": {
+     "need": {
+      "by": "deviation",
+      "ref": "D93",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "entries": {
      "need": {
       "by": "deviation",
@@ -983,6 +992,24 @@
      "verdict": "public"
     },
     "find": {
+     "need": {
+      "by": "deviation",
+      "ref": "D93",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "listing": {
+     "need": {
+      "by": "deviation",
+      "ref": "D93",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "resolve": {
      "need": {
       "by": "deviation",
       "ref": "D93",
@@ -6780,6 +6807,33 @@
     "reason": "C",
     "verdict": "public"
    },
+   "download_all_tutorials": {
+    "need": {
+     "by": "counterpart",
+     "ref": "download_all_tutorials",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "download_data": {
+    "need": {
+     "by": "counterpart",
+     "ref": "download_data",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "download_tutorial": {
+    "need": {
+     "by": "counterpart",
+     "ref": "download_tutorial",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "error_report": {
     "need": {
      "by": "deviation",
@@ -6793,6 +6847,24 @@
     "need": {
      "by": "deviation",
      "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "list_data": {
+    "need": {
+     "by": "counterpart",
+     "ref": "list_data",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "list_tutorials": {
+    "need": {
+     "by": "counterpart",
+     "ref": "list_tutorials",
      "verdict": "keep"
     },
     "reason": "C",
@@ -7060,9 +7132,12 @@
   "Collection": {
    "kind": "class",
    "members": [
+    "download",
     "entries",
     "fetch",
     "find",
+    "listing",
+    "resolve",
     "search",
     "source"
    ]
@@ -7981,10 +8056,25 @@
     "value"
    ]
   },
+  "download_all_tutorials": {
+   "kind": "function"
+  },
+  "download_data": {
+   "kind": "function"
+  },
+  "download_tutorial": {
+   "kind": "function"
+  },
   "error_report": {
    "kind": "function"
   },
   "iteration_line": {
+   "kind": "function"
+  },
+  "list_data": {
+   "kind": "function"
+  },
+  "list_tutorials": {
    "kind": "function"
   },
   "load_collection": {

@@ -11,7 +11,7 @@ The same complete project is used by the application, Python and Command Line. C
     ```console
     edi fit path/to/project
     edi fit path/to/project/project.edi
-    edi fit project.zip --output refined-project
+    edi fit project.zip --output fitted-project
     ```
 
 === "Python package"
@@ -19,7 +19,7 @@ The same complete project is used by the application, Python and Command Line. C
     ```console
     python -m edi fit path/to/project
     python -m edi fit path/to/project/project.edi
-    python -m edi fit project.zip --output refined-project
+    python -m edi fit project.zip --output fitted-project
     ```
 
 A folder holds `project.edi`, `structures/`, `experiments/`, `analysis/` and `reports/`. Its entry file opens that complete folder. A zip packages the project files together.
@@ -46,7 +46,7 @@ The zip rule differs from Python: `Project.save()` can rewrite an archive opened
 python -m edi export path/to/project --output shared-project.zip
 ```
 
-The short spelling is `-o`. Export packages the project folder as last saved; it is not a refinement or a substitute for saving in-memory Python edits. The archive can be opened by another edi interface.
+The short spelling is `-o`. Export packages the project folder as last saved; it is not a fit or a substitute for saving in-memory Python edits. The archive can be opened by another edi interface.
 
 ## Keep logs separate from project output
 

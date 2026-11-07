@@ -14,6 +14,6 @@ The command-line interface does not provide a separate structure editor. Its `fi
 python -m edi calc path/to/project --dry
 ```
 
-This evaluates the saved model without writing changes. Inspect the output and any errors before starting a refinement. See [calculate a pattern](calculate.md) for output options.
+This evaluates the saved model without writing changes. Inspect the output and any errors before starting a fit. See [calculate a pattern](calculate.md) for output options.
 
 For the common scientific model, read [Structure](../user-guide/analysis-workflow/structure.md). Continue with [Experiments](experiments.md).

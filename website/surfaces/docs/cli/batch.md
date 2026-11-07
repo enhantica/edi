@@ -42,7 +42,7 @@ This loop is a shell example, not a new edi API. It stops on a failed command an
 
 ## Run without keeping model changes
 
-Add `--dry` to execute refinements without writing project changes. A dry run does real numerical work. In scan mode it keeps no resumable progress, so use an ordinary output folder for a scan you intend to continue.
+Add `--dry` to execute fits without writing project changes. A dry run does real numerical work. In scan mode it keeps no resumable progress, so use an ordinary output folder for a scan you intend to continue.
 
 ## A scan is a project workflow
 

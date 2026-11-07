@@ -17,7 +17,7 @@ python -m edi --help
 Pass a saved project directly:
 
 ```console
-python -m edi fit path/to/project --output refined-project
+python -m edi fit path/to/project --output fitted-project
 ```
 
-The Python CLI also provides `calc`, `export`, `undo`, `collection`, and `report`, plus live fit progress. Use [Run a refinement](fit.md) for the options, or [Run an example](examples/index.md) to try a complete case.
+The Python CLI also provides `calc`, `export`, `undo`, `collection`, `report` and the [data and tutorial downloads](data.md), plus live fit progress. Use [Run a fit](fit.md) for the options, or [Run an example](examples/index.md) to try a complete case.

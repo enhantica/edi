@@ -17,7 +17,7 @@ Saving a project does not automatically save its report. A report can become out
 ## Write an HTML file elsewhere
 
 ```console
-python -m edi report path/to/project --output refinement.html --offline
+python -m edi report path/to/project --output report.html --offline
 ```
 
 `--output PATH` writes one HTML report without changing the project's saved-report list. `--offline` embeds chart libraries; `--online` makes the HTML load them from the web. Both are overrides for this run.
