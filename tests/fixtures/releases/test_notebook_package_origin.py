@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""The notebook setup cell installs easydiffraction only from our index, offline.
+"""The notebook setup cell's contract (website ADR-0018), offline.
+
+The wheel comes only from our index by URL and sha256; an edi already imported in the kernel
+always ends in a restart request; a first import is admitted only for a file the installed
+wheel's RECORD lists. A package planted on a deliberately prepended path is out of scope.
 
 Two local PEP 503 indexes stand in for ours and for PyPI. The PyPI stand-in offers the same
 version and a higher one with different content, and it is offered to pip every way pip takes
@@ -212,52 +216,84 @@ def test_the_dependency_pass_cannot_reselect_the_package(indexes, python, tmp_pa
     )
 
 
-def test_an_imported_wrong_package_refuses_until_the_kernel_restarts(indexes, python, tmp_path):
-    ours, pypi = indexes
-    env = environment(pypi)
-    pip_install(python, env, f'easydiffraction=={VERSION}')
-    cell = tmp_path / 'setup_cell.py'
-    cell.write_text(PREPARE.setup_source('case', index=ours.as_uri()))
-    kernel = f'import edi\nexec(open({str(cell)!r}).read())\n'
-    result = subprocess.run(
-        [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
-    )
-    assert result.returncode != 0, 'An imported wrong package refuses until the kernel restarts.'
-    assert 'Restart the kernel' in result.stderr, (
-        'An imported wrong package refuses until the kernel restarts.'
-    )
-    assert installed(python, env, tmp_path) == ['pypi', VERSION], (
-        'An imported wrong package refuses until the kernel restarts.'
-    )
-    assert run_setup(python, ours, env, tmp_path).returncode == 0, (
-        'An imported wrong package refuses until the kernel restarts.'
-    )
-    rerun = subprocess.run(
-        [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
-    )
-    assert rerun.returncode == 0, (
-        'An imported wrong package refuses until the kernel restarts.',
-        rerun.stderr,
-    )
-    assert installed(python, env, tmp_path) == ['ours', VERSION], (
-        'An imported wrong package refuses until the kernel restarts.'
+def run_in_kernel(python, env, cwd, *steps):
+    """Run steps then the setup cell in one interpreter, as one notebook kernel does."""
+    cell = cwd / 'setup_cell.py'
+    kernel = '\n'.join([*steps, f'exec(open({str(cell)!r}).read())', ''])
+    return subprocess.run(
+        [python, '-c', kernel], env=env, cwd=cwd, capture_output=True, text=True, check=False
     )
 
 
-def test_an_edi_shadowing_the_installed_one_on_the_kernel_path_refuses(indexes, python, tmp_path):
+def write_cell(ours, cwd):
+    (cwd / 'setup_cell.py').write_text(PREPARE.setup_source('case', index=ours.as_uri()))
+
+
+def our_wheel(ours):
+    (path,) = (ours / 'easydiffraction').glob('*.whl')
+    return (
+        f'easydiffraction @ {path.as_uri()}#sha256={hashlib.sha256(path.read_bytes()).hexdigest()}'
+    )
+
+
+def test_an_imported_wrong_package_asks_for_a_restart_and_works_after_it(
+    indexes, python, tmp_path
+):
     ours, pypi = indexes
     env = environment(pypi)
     pip_install(python, env, f'easydiffraction=={VERSION}')
-    shadow = tmp_path / 'shadow'
-    (shadow / 'edi').mkdir(parents=True)
-    (shadow / 'edi/__init__.py').write_text("ORIGIN = 'shadow'\n")
-    cell = tmp_path / 'setup_cell.py'
-    cell.write_text(PREPARE.setup_source('case', index=ours.as_uri()))
-    kernel = f'import sys\nsys.path.insert(0, {str(shadow)!r})\nexec(open({str(cell)!r}).read())\n'
-    result = subprocess.run(
-        [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
+    write_cell(ours, tmp_path)
+    result = run_in_kernel(python, env, tmp_path, 'import edi')
+    assert result.returncode != 0 and 'Restart the runtime' in result.stderr
+    # Setup installed what was needed, so the restarted kernel imports ours.
+    assert installed(python, env, tmp_path) == ['ours', VERSION]
+    after_restart = run_setup(python, ours, env, tmp_path)
+    assert after_restart.returncode == 0, after_restart.stderr
+
+
+def test_a_live_kernel_upgraded_underneath_still_asks_for_a_restart(indexes, python, tmp_path):
+    ours, pypi = indexes
+    env = environment(pypi)
+    pip_install(python, env, f'easydiffraction=={VERSION}')
+    write_cell(ours, tmp_path)
+    pip = 'import edi, subprocess, sys\nsubprocess.check_call([sys.executable, "-m", "pip", '
+    upgrade = pip + f'"install", "-q", "--no-deps", "--force-reinstall", {our_wheel(ours)!r}])'
+    result = run_in_kernel(python, env, tmp_path, upgrade)
+    assert result.returncode != 0 and 'Restart the runtime' in result.stderr
+
+
+def test_rerunning_setup_with_our_edi_imported_asks_for_a_restart(indexes, python, tmp_path):
+    ours, pypi = indexes
+    env = environment(pypi)
+    assert run_setup(python, ours, env, tmp_path).returncode == 0
+    result = run_in_kernel(python, env, tmp_path, 'import edi')
+    assert result.returncode != 0 and 'Restart the runtime' in result.stderr
+
+
+def test_a_package_uninstalled_under_a_live_kernel_asks_for_a_restart(indexes, python, tmp_path):
+    ours, pypi = indexes
+    env = environment(pypi)
+    pip_install(python, env, f'easydiffraction=={VERSION}')
+    write_cell(ours, tmp_path)
+    pip = 'import edi, subprocess, sys\nsubprocess.check_call([sys.executable, "-m", "pip", '
+    uninstall = pip + '"uninstall", "-y", "-q", "easydiffraction"])'
+    result = run_in_kernel(python, env, tmp_path, uninstall)
+    assert result.returncode != 0 and 'Restart the runtime' in result.stderr
+
+
+def test_an_interrupted_dependency_install_is_completed_on_the_next_run(indexes, python, tmp_path):
+    ours, pypi = indexes
+    env = environment(pypi)
+    dependency = pypi / 'edi-test-dependency'
+    hidden = tmp_path / 'hidden-dependency'
+    dependency.rename(hidden)
+    try:
+        first = run_setup(python, ours, env, tmp_path)
+    finally:
+        hidden.rename(dependency)
+    assert first.returncode != 0
+    assert run_setup(python, ours, env, tmp_path).returncode == 0
+    check = subprocess.run(
+        [python, '-c', 'import edi_test_dependency'], env=env, capture_output=True, check=False
     )
-    assert result.returncode != 0, 'An edi shadowing the installed one on the kernel path refuses.'
-    assert 'is not the wheel from' in result.stderr, (
-        'An edi shadowing the installed one on the kernel path refuses.'
-    )
+    assert check.returncode == 0

@@ -13,62 +13,38 @@ import sys
 import urllib.parse
 import urllib.request
 
-ORIGIN_CHECK = """
-import importlib.metadata as m, importlib.util as u, json, pathlib, sys
-url, digest, imported = sys.argv[1:4]
-try:
-    dist = m.distribution("easydiffraction")
-except m.PackageNotFoundError:
-    sys.exit(print("false"))
-info = json.loads(dist.read_text("direct_url.json") or "{}")
-archive = info.get("archive_info", {})
-hashed = digest in (archive.get("hashes", {}).get("sha256"), archive.get("hash", "")[7:])
-root = pathlib.Path(dist.locate_file("")).resolve()
-spec = u.find_spec("edi")
-paths = [spec.origin if spec else "", imported or (spec.origin if spec else "")]
-inside = all(path and pathlib.Path(path).resolve().is_relative_to(root) for path in paths)
-owners = m.packages_distributions().get("edi")
-print(json.dumps(info.get("url") == url and hashed and inside and owners == ["easydiffraction"]))
-"""
+RESTART = 'edi is already imported in this kernel. Restart the runtime, then run this cell again.'
 
 
 def install_edi(index: str) -> None:
-    """Make ``import edi`` load the wheel EasyDiffraction's index lists, and prove it did.
+    """Install the wheel EasyDiffraction's index lists, and admit ``import edi`` only for it.
 
-    pip never chooses the package: the wheel's URL and sha256 come from our index page and are
-    installed as a direct reference, so other indexes, find-links or pip configuration cannot
-    supply it, and an unreachable index stops here. Its dependencies are then installed by name
-    with the usual pip settings, which cannot reselect the package itself. An edi that no pip
-    distribution owns is a source build and is used as it is.
+    The wheel is installed by its URL and sha256 with pip's settings ignored, so another index or
+    pip configuration cannot supply it, and an unreachable index stops here. Its dependencies are
+    installed on every run, by name, with the usual pip settings. If edi is already imported in
+    this kernel, setup installs what is needed and asks for a restart; it never vouches for a
+    loaded module. Otherwise ``import edi`` is admitted when the file it would load is one the
+    installed wheel's RECORD lists. An edi no pip distribution owns is a source build, used as is.
     """
-    spec = importlib.util.find_spec('edi')
-    if spec is not None and not importlib.metadata.packages_distributions().get('edi'):
+    owned = bool(importlib.metadata.packages_distributions().get('edi'))
+    if 'edi' in sys.modules and not owned:
+        raise RuntimeError(RESTART)
+    spec = None if 'edi' in sys.modules else importlib.util.find_spec('edi')
+    if spec is not None and not owned:
         print('Using edi from', spec.origin, '(a source build, not installed by pip)')
         return
     url, digest = _wheel(index)
-    if _ours(url, digest, _kernel_edi()):
-        return
-    if 'edi' in sys.modules:
-        raise RuntimeError(
-            'A different edi is already imported. Restart the kernel and run this cell first.'
-        )
-    _pip('--no-deps', '--force-reinstall', f'easydiffraction @ {url}#sha256={digest}')
-    requires = subprocess.check_output(
-        [
-            sys.executable,
-            '-c',
-            (
-                'import importlib.metadata as m, json; '
-                "print(json.dumps(m.requires('easydiffraction') or []))"
-            ),
-        ],
-        text=True,
-    )
-    if json.loads(requires):
-        _pip(*json.loads(requires), settings=True)
+    if not _installed_from(url, digest):
+        _pip('--no-deps', '--force-reinstall', f'easydiffraction @ {url}#sha256={digest}')
     importlib.invalidate_caches()
-    if not _ours(url, digest, _kernel_edi()):
-        raise RuntimeError('The installed easydiffraction is not the wheel from ' + index)
+    requires = importlib.metadata.requires('easydiffraction') or []
+    if requires:
+        _pip(*requires, settings=True)
+    if 'edi' in sys.modules:
+        raise RuntimeError(RESTART)
+    importlib.invalidate_caches()
+    if not _admitted(url, digest):
+        raise RuntimeError('import edi would not load the wheel from ' + index)
 
 
 def _wheel(index: str) -> tuple[str, str]:
@@ -110,23 +86,29 @@ def _wheel(index: str) -> tuple[str, str]:
     return url, digest
 
 
-def _kernel_edi() -> str:
-    """Where this kernel's ``import edi`` loads from, which its own sys.path decides."""
-    module = sys.modules.get('edi')
-    if module is not None:
-        return getattr(module, '__file__', '') or ''
-    spec = importlib.util.find_spec('edi')
-    return (spec.origin or '') if spec else ''
-
-
-def _ours(url: str, digest: str, imported: str) -> bool:
-    result = subprocess.run(
-        [sys.executable, '-c', ORIGIN_CHECK, url, digest, imported],
-        capture_output=True,
-        text=True,
-        check=True,
+def _installed_from(url: str, digest: str) -> bool:
+    """Whether the installed easydiffraction came from this wheel URL and sha256."""
+    try:
+        dist = importlib.metadata.distribution('easydiffraction')
+    except importlib.metadata.PackageNotFoundError:
+        return False
+    info = json.loads(dist.read_text('direct_url.json') or '{}')
+    archive = info.get('archive_info', {})
+    hashes = (
+        archive.get('hashes', {}).get('sha256'),
+        archive.get('hash', '').removeprefix('sha256='),
     )
-    return json.loads(result.stdout)
+    return info.get('url') == url and digest in hashes
+
+
+def _admitted(url: str, digest: str) -> bool:
+    """Whether the file ``import edi`` would load is one the installed wheel's RECORD lists."""
+    spec = importlib.util.find_spec('edi')
+    if spec is None or not spec.origin or not _installed_from(url, digest):
+        return False
+    dist = importlib.metadata.distribution('easydiffraction')
+    origin = os.path.realpath(spec.origin)
+    return any(os.path.realpath(dist.locate_file(file)) == origin for file in dist.files or ())
 
 
 def _pip(*arguments: str, settings: bool = False) -> None:
