@@ -129,7 +129,7 @@ def render_tutorials(output: Path, source: str, published: Path) -> str:
         )
     # What list_tutorials and download_tutorial read, in Python and python -m edi (ADR-0075).
     index = {'schema': 'edi-data-index/1', 'entries': entries}
-    (output / 'index.json').write_text(
+    (published / 'index.json').write_text(
         json.dumps(index, ensure_ascii=False, indent=1) + '\n', 'utf-8'
     )
     before, rest = source.split(START, 1)
