@@ -828,10 +828,11 @@ void FitViewModel::scanFrame(const std::string& file, const edi::FitFrame& frame
     frame_shown_ = false;
     follow_clock_.start();
     const std::uint64_t token = handOver(file);
-    if (owner_.patternShown() || pattern_updates_ != kEveryPattern) {
+    if (owner_.patternShown() || !owner_.scanViewShown()) {
         owner_.followScanFrame(file, frame, token);
     } else {
-        // Every pattern on a Stacked view or Map: the file is shown as the current dataset (edi ADR-0029, 8).
+        // On a Stacked view or Map the file is shown as the current dataset (edi ADR-0029, 8), in every update mode,
+        // so the view moves with the scan as each file finishes (the owner, 2026-11-04).
         owner_.followScanSelection(file, token);
     }
 }
@@ -843,12 +844,12 @@ bool FitViewModel::waitsForView(int mode) const {
 }
 
 bool FitViewModel::viewReady() const {
-    // A pattern chart once the last view asked for is applied; with every pattern and no pattern chart, a Stacked view
-    // or Map with no dataset read pending.
+    // A pattern chart once the last view asked for is applied; with no pattern chart, a Stacked view or Map with no
+    // dataset read pending, in every update mode.
     if (owner_.patternShown()) {
         return owner_.followReady();
     }
-    return pattern_updates_ == kEveryPattern && owner_.scanViewShown() && owner_.viewSettled();
+    return owner_.scanViewShown() && owner_.viewSettled();
 }
 
 std::uint64_t FitViewModel::handOver(const std::string& file) {
