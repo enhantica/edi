@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references, of the <j0> variant); edi (regression pins)",
+    "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/cosio.sum",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 42.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 6.245734584,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 57.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "param.Co.j2_coefficient.value": {
+      "value": 0.5894931888,
+      "kind": "regression-pin",
+      "tol_abs": 0.0001,
+      "tol_rel": null
+    }
+  },
+  "variants": {
+    "form-factor-j0": {
+      "quantities": {
+        "rwp": {
+          "value": 0.0491,
+          "kind": "reference",
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Co1.crystalaxis_x.value": {
+          "value": 0.9827,
+          "kind": "reference",
+          "tol_abs": 0.15,
+          "tol_rel": null
+        },
+        "param.Co1.crystalaxis_y.value": {
+          "value": 3.0748,
+          "kind": "reference",
+          "tol_abs": 0.15,
+          "tol_rel": null
+        },
+        "param.Co2.crystalaxis_y.value": {
+          "value": 2.7469,
+          "kind": "reference",
+          "tol_abs": 0.15,
+          "tol_rel": null
+        }
+      }
+    }
+  }
+}

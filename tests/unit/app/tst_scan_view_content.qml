@@ -2128,6 +2128,169 @@ Rectangle {
                 }
             }
         }
+        function test_evolution_error_bars_and_range_survive_reload() {
+            Style.Colors.theme = Style.Colors.LightTheme;
+            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));
+            const rows = SettingsProof.text(root, "analysis/results.csv").trim().split(/\r?\n/);
+            const header = rows[0].split(",");
+            const valueColumn = header.indexOf("bank.background.P1.intensity");
+            const suColumn = header.indexOf("bank.background.P1.intensity.uncertainty");
+            verify(rows.length === 4 && valueColumn >= 0 && suColumn >= 0,
+                   "The saved scan has three fitted rows and the named value and s.u. columns");
+            const values = [2, 4, 8];
+            for (let i = 0; i < values.length; ++i) {
+                const cells = rows[i + 1].split(",");
+                cells[valueColumn] = values[i];
+                cells[suColumn] = i === 1 ? 1000 : 0.1;
+                rows[i + 1] = cells.join(",");
+            }
+            verify(SettingsProof.write(root, "analysis/results.csv", rows.join("\n") + "\n"),
+                   "The private scan has independent values and one plus-or-minus 1000 uncertainty");
+
+            let layer, axes, bars, range;
+            function openChart() {
+                verify(Session.openProject(root), "The saved fitted scan opens in the real app");
+                chart = evolutionFactory.createObject(surface, {
+                    project: Session.project,
+                    width: Math.min(1100, surface.Window.window.width),
+                    height: Math.min(760, surface.Window.window.height)
+                });
+                verify(chart !== null, "The production Evolution chart opens");
+                const evolution = Session.project.evolution;
+                verify(evolution.xModes.length > 1, "The witness offers the recorded temperature x axis");
+                evolution.xMode = 0;
+                Session.project.currentExperimentIndex = 0;
+                tryCompare(evolution, "yTitle", "bank.background.P1.intensity", 3000,
+                           "Evolution shows the independently authored parameter column");
+                layer = findChild(chart, "evolution.points");
+                axes = findChild(chart, "evolution.view");
+                verify(layer && axes, "Evolution exposes the actual points layer and plotted axes");
+                tryCompare(layer, "count", 3, 3000, "Evolution renders the three fitted points");
+                chart.Window.window.update();
+                verify(waitForRendering(chart), "The fitted points and toolbar reach a rendered frame");
+                const toggles = Render.descendants(chart).filter(item => item.visible && typeof item.checked === "boolean");
+                bars = toggles.find(item => item.objectName === "evolution.toolbar.errorBars");
+                range = toggles.find(item => item.objectName === "evolution.toolbar.range");
+            }
+            function valuesOnly() {
+                return axes.axisY.min <= 2 && axes.axisY.max >= 8 &&
+                       axes.axisY.min >= -4 && axes.axisY.max <= 14;
+            }
+            function valuesAndBars() {
+                return axes.axisY.min <= -996 && axes.axisY.max >= 1004;
+            }
+            function hasInk(value) {
+                chart.Window.window.update();
+                verify(waitForRendering(chart), "The Evolution drawing is updated before inspecting its pixels");
+                const image = logicalImage(chart);
+                const plotX = (311.75 - layer.xMin) / (layer.xMax - layer.xMin) * layer.width;
+                const plotY = (layer.yMax - value) / (layer.yMax - layer.yMin) * layer.height;
+                const sample = layer.mapToItem(chart, plotX, plotY);
+                const x = Math.round(sample.x), y = Math.round(sample.y);
+                verify(plotX > 2 && plotX < layer.width - 3 && plotY > 2 && plotY < layer.height - 3,
+                       "The independent marker or bar sample is inside the rendered layer");
+                for (let dy = -1; dy <= 1; ++dy)
+                    for (let dx = -2; dx <= 2; ++dx) {
+                        const pixel = image.pixel(x + dx, y + dy);
+                        const color = layer.color;
+                        if (pixel.a > .4 && Math.abs(pixel.r - color.r) < .08 &&
+                            Math.abs(pixel.g - color.g) < .08 && Math.abs(pixel.b - color.b) < .08)
+                            return true;
+                    }
+                return false;
+            }
+            function toggle(control, label) {
+                const point = Ui.clickPoint(control);
+                verify(control.enabled && point !== null, "The " + label + " toggle accepts real pointer input");
+                const checked = control.checked;
+                mouseClick(control, point.x, point.y);
+                tryCompare(control, "checked", !checked, 2000, "The " + label + " toggle changes state");
+            }
+
+            openChart();
+            const defaultBarSample = valuesAndBars() ? 500 : 6;
+            const missing = [];
+            if (!bars) missing.push("Error bars control missing");
+            if (!range) missing.push("Range control missing");
+            if (!valuesOnly()) missing.push("default y range [" + axes.axisY.min + ", " + axes.axisY.max + "]");
+            compare(missing.length, 0, "Evolution offers both toggles and defaults to values only: " + missing.join("; "));
+            tryVerify(() => hasInk(defaultBarSample), 3000,
+                      "The default error bar is drawn at the independent in-range sample");
+            toggle(range, "Range");
+            tryVerify(valuesAndBars, 2000, "Values plus s.u. covers both ends of the 1000-unit bar");
+            tryVerify(() => hasInk(500), 3000, "The expanded y range shows the bar well beyond all three fitted values");
+            toggle(bars, "Error bars");
+            tryVerify(() => valuesAndBars() && !hasInk(500) && hasInk(4), 3000,
+                      "Hiding bars keeps the chosen range and the point marker while removing bar ink");
+
+            verify(Session.save(), "The expanded range and hidden error bars save with the project");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
+            openChart();
+            verify(bars && range, "Both toolbar toggles are available after reopening the saved project");
+            compare(bars.checked, false, "Hidden error bars survive save and reload");
+            compare(range.checked, true, "The uncertainty-inclusive range survives save and reload");
+            tryVerify(() => valuesAndBars() && !hasInk(500) && hasInk(4), 3000,
+                      "The expanded range and hidden bars both survive save and reload");
+            toggle(bars, "Error bars");
+            tryVerify(() => hasInk(500), 3000, "Showing error bars again restores their actual drawing");
+            toggle(range, "Range");
+            tryVerify(valuesOnly, 2000, "Values only restores the fitted values' y range");
+            tryVerify(() => hasInk(6), 3000, "The long error bar remains visible inside the clipped values-only plot");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
+            const runningRoot = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project"));
+            verify(Session.openProject(runningRoot), "The real 213-file scan supplies a running-fit interval");
+            chart = evolutionFactory.createObject(surface, {project: Session.project,
+                width: Math.min(1100, surface.Window.window.width), height: Math.min(760, surface.Window.window.height)});
+            const liveBars = findChild(chart, "evolution.toolbar.errorBars");
+            const liveRange = findChild(chart, "evolution.toolbar.range");
+            verify(liveBars && liveRange, "Both live-fit controls belong to the actual Evolution chart");
+            Session.project.fit.start();
+            tryCompare(Session.project.fit, "running", true, 3000, "The actual scan starts before changing chart settings");
+            verify(liveBars.enabled && liveRange.enabled, "Both Evolution toggles remain enabled during a real fit");
+            toggle(liveBars, "Live Error bars");
+            compare(Session.project.evolutionErrorBars, liveBars.checked,
+                    "The live error-bar click changes the project view setting immediately");
+            toggle(liveRange, "Live Range");
+            compare(Session.project.evolutionRangeWithSu, liveRange.checked,
+                    "The live range click changes the project view setting immediately");
+            verify(Session.project.fit.running, "The view changes are complete while the scan is still running");
+            Session.project.fit.cancel();
+            tryCompare(Session.project.fit, "running", false, 15000, "The real scan stops cleanly after the live-control checks");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
+            const templateRoot = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));
+            verify(SettingsProof.write(templateRoot, "analysis/results.csv", ""),
+                   "The fitted-template witness has no scan result rows");
+            verify(Session.openProject(templateRoot), "A fitted template opens before any scan has run");
+            chart = evolutionFactory.createObject(surface, {project: Session.project,
+                width: Math.min(1100, surface.Window.window.width), height: Math.min(760, surface.Window.window.height)});
+            const templateLayer = findChild(chart, "evolution.points");
+            const templateAxes = findChild(chart, "evolution.view");
+            const evolution = Session.project.evolution;
+            evolution.xMode = 1;
+            tryCompare(templateLayer, "count", 1, 3000,
+                       "The fitted template supplies one point without results.csv");
+            compare(evolution.yTitle, "bank.background.P1.intensity",
+                    "The fitted-template point uses the independently held P1 parameter");
+            verify(templateAxes.axisX.min <= 1 && templateAxes.axisX.max >= 1 &&
+                   templateAxes.axisY.min <= 4 && templateAxes.axisY.max >= 4,
+                   "File-index axes contain the independent template coordinate (1,4)");
+            evolution.xMode = 0;
+            tryCompare(templateLayer, "count", 1, 3000,
+                       "Switching to the extracted temperature retains the fitted-template point");
+            verify(templateAxes.axisX.min <= 293.15 && templateAxes.axisX.max >= 293.15 &&
+                   templateAxes.axisY.min <= 4 && templateAxes.axisY.max >= 4,
+                   "Temperature axes contain TEMP 293.15 and the held P1 value 4");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
+        }
+
         function test_scan_axis_fonts_data() {
             return test_owner_indicator_data();
         }

@@ -38,6 +38,7 @@
 #include "assistant_project_io.hpp"  // edi-only logic: core/src-private, never installed
 #include "import_symmetry.hpp"
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
+#include "crysta/magnetic.hpp"
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
 #include "crysta/background_estimate.hpp"
@@ -225,6 +226,7 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                      s.geom.min_bond_distance_cutoff.get();
                                  built.geom.bond_distance_inc = s.geom.bond_distance_inc.get();
                                  built.atom_site_aniso = detail::to_crysta_atom_site_aniso(s);
+                                 detail::to_crysta_magnetic(s, built);
                              });
 }
 
@@ -331,7 +333,169 @@ std::vector<ParameterTie> structure_ties(const Structure& s) {
         }
         ties.insert(ties.end(), rows.begin(), rows.end());
     }
+    // The magnetic moments: crysta's ties from the magnetic site symmetry (edi ADR-0070).
+    if (!s.atom_site_moment.empty()) {
+        // Each site's ties, or none when crysta refuses the structure or an operator.
+        std::map<std::string, std::vector<crysta::MomentTie>> site_ties;
+        try {
+            const crysta::Structure engine = to_crysta_structure(s);
+            for (const crysta::AtomSiteMoment& candidate : engine.atom_site_moment) {
+                site_ties[candidate.site_id.value()] = crysta::moment_ties(engine, candidate);
+            }
+        } catch (const std::exception&) {
+            site_ties.clear();
+        }
+        for (const auto& moment : s.atom_site_moment) {
+            const std::vector<Parameter*> components = const_cast<AtomSiteMoment&>(*moment).parameters();
+            std::vector<ParameterTie> rows;
+            for (const Parameter* component : components) {
+                rows.push_back({component});
+            }
+            const auto found = site_ties.find(moment->id.value());
+            if (found != site_ties.end()) {
+                for (const crysta::MomentTie& tie : found->second) {
+                    ParameterTie& row = rows[tie.component];
+                    if (tie.fixed) {
+                        row.kind = TieKind::Fixed;
+                        row.fixed_value = 0.0;
+                    } else {
+                        row.kind = TieKind::Follows;
+                        row.leader = components[tie.terms.front().first];
+                    }
+                }
+            }
+            ties.insert(ties.end(), rows.begin(), rows.end());
+        }
+    }
     return ties;
+}
+
+MomentEdit moment_edit(const Project& project, const Structure& s, const AtomSiteMoment& moment,
+                       const std::string& form, std::size_t k, double value) {
+    MomentEdit out;
+    if (k > 2 || !std::isfinite(value)) {
+        out.refusal = "That is not a value for this moment";
+        return out;
+    }
+    const std::array<double, 6> cell{s.cell.length_a.value, s.cell.length_b.value,
+                                     s.cell.length_c.value, s.cell.angle_alpha.value,
+                                     s.cell.angle_beta.value, s.cell.angle_gamma.value};
+    const std::array<double, 3> current{moment.crystalaxis_x.value, moment.crystalaxis_y.value,
+                                        moment.crystalaxis_z.value};
+    const bool cartesian = form == "cartesian";
+    const bool spherical = form == "spherical";
+    std::array<double, 3> values = current;
+    if (cartesian) {
+        values = crysta::moment_cartesian(cell, current);
+    } else if (spherical) {
+        values = crysta::moment_spherical(crysta::moment_cartesian(cell, current));
+    }
+    values[k] = value;
+    if (spherical && values[0] < 0.0) {
+        out.refusal = "The modulus |M| cannot be negative";
+        return out;
+    }
+    if (spherical && (values[1] < 0.0 || values[1] > 180.0)) {
+        out.refusal = "The polar angle must lie between 0 and 180 degrees";
+        return out;
+    }
+    std::array<double, 3> wanted = values;
+    if (cartesian) {
+        wanted = crysta::moment_crystal_axis(cell, values);
+    } else if (spherical) {
+        wanted = crysta::moment_crystal_axis(cell, crysta::moment_from_spherical(values));
+    }
+    std::vector<crysta::MomentTie> ties;
+    try {
+        const crysta::Structure engine = to_crysta_structure(s);
+        for (const crysta::AtomSiteMoment& candidate : engine.atom_site_moment) {
+            if (candidate.site_id.value() == moment.id.value()) {
+                ties = crysta::moment_ties(engine, candidate);
+            }
+        }
+    } catch (const std::exception& error) {
+        out.refusal = std::string("The magnetic symmetry cannot be resolved: ") + error.what();
+        return out;
+    }
+    // The moment the symmetry keeps: its fixed components at 0, its tied ones from the free ones.
+    std::array<double, 3> kept = wanted;
+    for (const crysta::MomentTie& tie : ties) {
+        if (!tie.fixed && tie.terms.empty()) {
+            continue;
+        }
+        double sum = 0.0;
+        for (const auto& [component, coefficient] : tie.terms) {
+            sum += coefficient * wanted[component];
+        }
+        kept[tie.component] = tie.fixed ? 0.0 : sum;
+        if (!cartesian && !spherical && tie.component == k) {
+            out.refusal = "The site symmetry sets this component";
+            return out;
+        }
+    }
+    const std::array<double, 3> asked = crysta::moment_cartesian(cell, wanted);
+    const std::array<double, 3> allowed = crysta::moment_cartesian(cell, kept);
+    const double size = std::max(1.0, std::hypot(asked[0], asked[1], asked[2]));
+    const double off =
+        std::hypot(asked[0] - allowed[0], asked[1] - allowed[1], asked[2] - allowed[2]);
+    if (off > 1e-9 * size) {
+        const std::string& form_text = moment.symmform.value();
+        out.refusal = "The site symmetry does not allow this direction" +
+                      (form_text.empty() ? std::string() : " (" + form_text + ")");
+        return out;
+    }
+    // The write set is the independent components; the others follow their relations. The trial
+    // applies every relation of the project, declared constraints included, and must give back the
+    // moment asked for.
+    const std::array<const Parameter*, 3> components{&moment.crystalaxis_x, &moment.crystalaxis_y,
+                                                     &moment.crystalaxis_z};
+    std::vector<std::pair<std::size_t, double>> writes;
+    for (std::size_t i = 0; i < 3; ++i) {
+        if (components[i]->dependence == Dependence::Independent) {
+            writes.emplace_back(i, kept[i]);
+        }
+    }
+    if (writes.empty()) {
+        out.refusal = "The site symmetry and the constraints set every component of this moment";
+        return out;
+    }
+    Project trial = project;
+    AtomSiteMoment* copied = nullptr;
+    for (std::size_t si = 0; si < project.structures.size() && copied == nullptr; ++si) {
+        if (&*project.structures[si] != &s) {
+            continue;
+        }
+        Structure& target = *trial.structures[si];
+        for (std::size_t mi = 0; mi < s.atom_site_moment.size(); ++mi) {
+            if (&*s.atom_site_moment[mi] == &moment) {
+                copied = &*target.atom_site_moment[mi];
+            }
+        }
+    }
+    if (copied == nullptr) {
+        out.refusal = "This moment is not in the project";
+        return out;
+    }
+    const std::array<Parameter*, 3> trial_components{&copied->crystalaxis_x, &copied->crystalaxis_y,
+                                                     &copied->crystalaxis_z};
+    for (const auto& [i, written] : writes) {
+        trial_components[i]->value = written;
+    }
+    if (!apply_relations(trial)) {
+        out.refusal = "The constraints cannot hold with this value";
+        return out;
+    }
+    const std::array<double, 3> result{copied->crystalaxis_x.value, copied->crystalaxis_y.value,
+                                       copied->crystalaxis_z.value};
+    const std::array<double, 3> landed = crysta::moment_cartesian(cell, result);
+    const double moved =
+        std::hypot(asked[0] - landed[0], asked[1] - landed[1], asked[2] - landed[2]);
+    if (moved > 1e-9 * size) {
+        out.refusal = "A constraint on this moment does not allow this edit";
+        return out;
+    }
+    out.writes = std::move(writes);
+    return out;
 }
 
 namespace {
@@ -696,6 +860,20 @@ void complete_atom_site_aniso(Structure& s) {
             }
         }
     }
+}
+
+void set_propagation_vectors(Structure& s, std::vector<std::pair<std::string, std::string>> rows) {
+    std::set<std::string> ids;
+    for (const auto& [id, k] : rows) {
+        if (id.empty() || !ids.insert(id).second) {
+            throw std::invalid_argument("a propagation vector needs an id of its own; '" + id + "' is empty or taken");
+        }
+    }
+    Structure trial = s;
+    trial.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = rows; });
+    const crysta::Structure engine = to_crysta_structure(trial);
+    crysta::check_propagation_vectors(engine, engine.propagation_vectors.get());
+    s.magnetic.modify([&rows](MagneticDescription& magnetic) { magnetic.propagation_vectors = std::move(rows); });
 }
 
 void change_adp_type(Structure& s, AtomSite& site, const std::string& adp_type) {
@@ -2228,6 +2406,8 @@ void copy_report_settings(const Project& model, crysta::Project& cproject) {
     cproject.correlation_threshold = model.correlation_threshold;
     cproject.refine_ls_threshold_sigma = model.refine_ls_threshold_sigma;
     cproject.pattern_x_axis = model.pattern_x_axis;
+    cproject.evolution_error_bars = model.evolution_error_bars;
+    cproject.evolution_range = model.evolution_range;
 }
 #endif
 
@@ -2242,6 +2422,10 @@ void check_report_setting(const std::string& tag, const std::string& value) {
         (void)detail::read_correlation_threshold(value);
     } else if (name == "_pattern_chart.x_axis") {
         (void)detail::read_pattern_x_axis(value);
+    } else if (name == "_evolution_chart.error_bars") {
+        (void)detail::read_evolution_error_bars(value);
+    } else if (name == "_evolution_chart.range") {
+        (void)detail::read_evolution_range(value);
     } else {
         throw std::invalid_argument(tag + " is not a report setting");
     }
@@ -2337,6 +2521,9 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     // The declared descent and chi-square tolerance round-trip the same way.
     cproject.minimizer_descent = model.descent;
     cproject.minimizer_chi_square_tolerance = model.minimizer_chi_square_tolerance;
+    cproject.minimizer_stop_rule = model.minimizer_stop_rule;
+    cproject.minimizer_shift_tolerance = model.minimizer_shift_tolerance;
+    cproject.minimizer_moments_near_zero = model.minimizer_moments_near_zero;
     cproject.minimizer_type = model.minimizer_type;
     // The last fit's result rides the save (crysta writes `_fit_result` iff one is held).
     {
@@ -2763,6 +2950,8 @@ void read_report_item(std::string_view item, const std::string& value, Project& 
 }
 double read_correlation_threshold(const std::string& value) { return crysta::read_correlation_threshold(value); }
 std::string read_pattern_x_axis(const std::string& value) { return crysta::read_pattern_x_axis(value); }
+bool read_evolution_error_bars(const std::string& value) { return crysta::read_evolution_error_bars(value); }
+std::string read_evolution_range(const std::string& value) { return crysta::read_evolution_range(value); }
 std::string read_report_file_format(const std::string& value) { return crysta::read_report_file_format(value); }
 #else
 namespace {
@@ -2773,6 +2962,8 @@ namespace {
 void read_report_item(std::string_view, const std::string&, Project&) { needs_newer_crysta(); }
 double read_correlation_threshold(const std::string&) { needs_newer_crysta(); }
 std::string read_pattern_x_axis(const std::string&) { needs_newer_crysta(); }
+bool read_evolution_error_bars(const std::string&) { needs_newer_crysta(); }
+std::string read_evolution_range(const std::string&) { needs_newer_crysta(); }
 std::string read_report_file_format(const std::string&) { needs_newer_crysta(); }
 #endif
 
@@ -2812,6 +3003,45 @@ crysta::Cell to_crysta_cell(const Cell& c) {
 }
 
 // The anisotropic sites' tensors, in their declared types.
+void to_crysta_magnetic(const Structure& s, crysta::Structure& built) {
+    const MagneticDescription& magnetic = s.magnetic;
+    if (!magnetic.empty()) {
+        if (!magnetic.group.empty()) {
+            built.magnetic_group = magnetic.group;
+        }
+        if (!magnetic.parent.empty()) {
+            built.parent_space_group = magnetic.parent;
+        }
+        built.magnetic_transforms = magnetic.transforms;
+        built.magnetic_operations = magnetic.operations;
+        built.magnetic_centerings = magnetic.centerings;
+        built.propagation_vectors = magnetic.propagation_vectors;
+    }
+    std::vector<crysta::MagneticFormFactor> form_factors;
+    form_factors.reserve(s.magnetic_form_factors.size());
+    for (const auto& item : s.magnetic_form_factors) {
+        const MagneticFormFactor& f = *item;
+        form_factors.emplace_back(
+            f.id.value(), f.ion.value(), f.approximation.value(),
+            std::array<crysta::Parameter, 3>{param(f.j2_coefficient, crysta::MAGNETIC_FORM_FACTOR, "j2_coefficient"),
+                                             param(f.j4_coefficient, crysta::MAGNETIC_FORM_FACTOR, "j4_coefficient"),
+                                             param(f.j6_coefficient, crysta::MAGNETIC_FORM_FACTOR, "j6_coefficient")});
+    }
+    built.magnetic_form_factors = std::move(form_factors);
+    std::vector<crysta::AtomSiteMoment> rows;
+    rows.reserve(s.atom_site_moment.size());
+    for (const auto& item : s.atom_site_moment) {
+        const AtomSiteMoment& m = *item;
+        crysta::AtomSiteMoment& row = rows.emplace_back(
+            m.id.value(), std::array<crysta::Parameter, 3>{
+                              param(m.crystalaxis_x, crysta::MAGNETIC_MOMENT, "crystalaxis_x"),
+                              param(m.crystalaxis_y, crysta::MAGNETIC_MOMENT, "crystalaxis_y"),
+                              param(m.crystalaxis_z, crysta::MAGNETIC_MOMENT, "crystalaxis_z")});
+        row.symmform = m.symmform;
+    }
+    built.atom_site_moment = std::move(rows);
+}
+
 std::vector<crysta::AtomSiteAniso> to_crysta_atom_site_aniso(const Structure& s) {
     std::vector<crysta::AtomSiteAniso> rows;
     rows.reserve(s.atom_site_aniso.size());
@@ -3434,6 +3664,12 @@ StructureGeometry structure_geometry(const Structure& structure, const ViewWindo
     out.window = window;
     out.space_group_symop.operation_xyz = shared_column(computed.space_group_symop.operation_xyz);
     const crysta::ExpandedAtomSites& atoms = computed.expanded_atom_sites;
+    const crysta::ExpandedAtomSiteMoments& moments = computed.expanded_atom_site_moments;
+    out.expanded_atom_site_moments.atom_site_id = shared_column(moments.atom_site_id);
+    out.expanded_atom_site_moments.site_symmetry = shared_column(moments.site_symmetry);
+    out.expanded_atom_site_moments.crystalaxis_x = shared_column(moments.crystalaxis_x);
+    out.expanded_atom_site_moments.crystalaxis_y = shared_column(moments.crystalaxis_y);
+    out.expanded_atom_site_moments.crystalaxis_z = shared_column(moments.crystalaxis_z);
     out.expanded_atom_sites.atom_site_id = shared_column(atoms.atom_site_id);
     out.expanded_atom_sites.site_symmetry = shared_column(atoms.site_symmetry);
     out.expanded_atom_sites.fract_x = shared_column(atoms.fract_x);
@@ -4236,6 +4472,8 @@ void Project::publish_calculation(DueEstimates due) {
         columns.intensity_bkg = shared_column(computed.intensity_bkg);
         columns.calc_status = status_column(computed.calc_status);
         columns.component_intensities_net = shared_column(computed.component_intensities_net);
+        columns.component_intensities_magnetic = shared_column(computed.component_intensities_magnetic);
+        columns.component_intensities_nuclear = shared_column(computed.component_intensities_nuclear);
         columns.component_order = shared_column(computed.component_order);
         columns.residual = shared_column(crysta::residual(engine.experiments[index]));
         data.push_back(std::move(columns));
@@ -4250,6 +4488,8 @@ void Project::publish_calculation(DueEstimates due) {
         rows.index_l = shared_column(refln.index_l);
         rows.f_calc = shared_column(refln.f_calc);
         rows.f_squared_calc = shared_column(refln.f_squared_calc);
+        rows.f_m_perp_squared_calc = shared_column(refln.f_m_perp_squared_calc);
+        rows.f_squared_total_calc = shared_column(refln.f_squared_total_calc);
         rows.position = shared_column(refln.position);
         reflections.push_back(std::move(rows));
     }
@@ -4268,6 +4508,8 @@ void Project::publish_calculation(DueEstimates due) {
         target.intensity_bkg = std::move(data[index].intensity_bkg);
         target.calc_status = std::move(data[index].calc_status);
         target.component_intensities_net = std::move(data[index].component_intensities_net);
+        target.component_intensities_magnetic = std::move(data[index].component_intensities_magnetic);
+        target.component_intensities_nuclear = std::move(data[index].component_intensities_nuclear);
         target.component_order = std::move(data[index].component_order);
         target.residual = std::move(data[index].residual);
         bank.refln = std::move(reflections[index]);
@@ -4456,6 +4698,8 @@ CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, s
             columns.intensity_bkg = computed.intensity_bkg;
             columns.calc_status = computed.calc_status;
             columns.component_intensities_net = computed.component_intensities_net;
+            columns.component_intensities_magnetic = computed.component_intensities_magnetic;
+            columns.component_intensities_nuclear = computed.component_intensities_nuclear;
             columns.component_order = computed.component_order;
             columns.residual = computed.residual;
         }
@@ -4588,6 +4832,8 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
         target.intensity_bkg = std::move(result.data[index].intensity_bkg);
         target.calc_status = std::move(result.data[index].calc_status);
         target.component_intensities_net = std::move(result.data[index].component_intensities_net);
+        target.component_intensities_magnetic = std::move(result.data[index].component_intensities_magnetic);
+        target.component_intensities_nuclear = std::move(result.data[index].component_intensities_nuclear);
         target.component_order = std::move(result.data[index].component_order);
         target.residual = std::move(result.data[index].residual);
         bank.refln = std::move(result.refln[index]);
@@ -4676,6 +4922,21 @@ crysta::IterationCallback to_engine_callback(const IterationCallback& subscriber
         }
         subscriber(record);
     };
+}
+
+// What the fit will start away from 0 (crysta's zero-start table), one message each, for the preamble.
+template <typename Provider>
+std::vector<std::string> zero_start_messages(Provider& provider) {
+    std::vector<std::string> messages;
+    // The starts the fit takes: none for a moment whose structure has a fixed non-zero component.
+    std::vector<bool> carried;
+    if constexpr (requires { provider.moments_carried(); }) {
+        carried = provider.moments_carried();
+    }
+    for (const crysta::ZeroStart& start : crysta::zero_starts(provider.labels(), provider.values(), carried)) {
+        messages.push_back(start.message);
+    }
+    return messages;
 }
 
 // The engine's parameter columns by edi identity path, through the resolver the fit's result is
@@ -5031,6 +5292,7 @@ std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
 std::string default_descent() { return crysta::kDefaultDescent; }
 double default_chi_square_tolerance() { return crysta::kDefaultChiSquareTolerance; }
+double default_shift_tolerance() { return crysta::kDefaultShiftTolerance; }
 
 // Validate a descent id at EDI's boundary — against the linked crysta registry (never a
 // transcribed set), naming the registered ids on refusal. edi never passes an unknown id
@@ -5058,18 +5320,26 @@ namespace {
 
 // The project's declared minimization conditions as one crysta request — the descent
 // (`_minimizer.descent`, empty -> crysta's default), the bounded iteration budget and the
-// chi-square stop (`_minimizer.chi_square_tolerance`, 0 -> crysta's default).
-crysta::DescentRequest declared_request(const std::string& descent, int max_iterations,
-                                        double chi_square_tolerance) {
+// chi-square stop (`_minimizer.chi_square_tolerance`, 0 -> crysta's default), the stop rule and the moment-zero
+// option (crysta's own reading of the declared items).
+crysta::DescentRequest declared_request(const Project& project) {
     crysta::DescentRequest request;
-    if (!descent.empty()) {
-        request.descent = descent;
+    if (!project.descent.empty()) {
+        request.descent = project.descent;
     }
-    request.max_iterations = detail::bounded_max_iterations(max_iterations);
-    if (chi_square_tolerance > 0.0) {
-        request.chi_square_tolerance = chi_square_tolerance;
+    request.max_iterations = detail::bounded_max_iterations(project.minimizer_max_iterations);
+    if (project.minimizer_chi_square_tolerance > 0.0) {
+        request.chi_square_tolerance = project.minimizer_chi_square_tolerance;
     }
+    request.stop = crysta::declared_stop_test(project.minimizer_stop_rule, project.minimizer_shift_tolerance);
+    request.moment_zero_trial = crysta::declared_moment_zero_trial(project.minimizer_moments_near_zero);
     return request;
+}
+
+// Whether the project declares none of the conditions: its fit keeps the historical direct call.
+bool declares_no_conditions(const Project& project) {
+    return project.descent.empty() && project.minimizer_chi_square_tolerance <= 0.0 &&
+           project.minimizer_stop_rule.empty() && project.minimizer_moments_near_zero.empty();
 }
 
 }  // namespace
@@ -5192,7 +5462,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // crossing. Single-bank path: `banks` empty, mode single (mirrors crysta).
             if (on_start) {
                 on_start(FitPreamble{/*joint=*/false, /*banks=*/{}, n_points_loaded, provider.n_data(),
-                                     provider.n_free(), pre_fit});
+                                     provider.n_free(), pre_fit, zero_start_messages(provider)});
             }
             const std::vector<std::string> paths =
                 identity_paths(on_iteration, provider.labels(), [this](const std::string& label) {
@@ -5210,10 +5480,10 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // seed/polish pair mirrors `separable_linear=true` exactly (crysta descent.hpp: the
             // ordinary provider overloads set both from it).
             crysta::DescentRequest request =
-                declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
+                declared_request(*this);
             const crysta::FitResultBase result = [&] {
                 if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
-                  if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                  if (declares_no_conditions(*this)) {
                     return crysta::fit_problem(
                         provider, /*separable_linear=*/true, request.max_iterations,
                         collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
@@ -5561,11 +5831,13 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     }
     source.phases = group_reflections(view.refln.structure_id.values(), view.refln.position.values(),
                                       view.refln.index_h.values(), view.refln.index_k.values(),
-                                      view.refln.index_l.values(), names);
+                                      view.refln.index_l.values(), names, view.refln.f_squared_calc.values(),
+                                      view.refln.f_m_perp_squared_calc.values());
     // Each structure's curve, which crysta's snapshot leaves out, from the fit's own computed columns.
     const crysta::ComputedData& computed = fitted.experiment().computed().data();
     source.components = structure_components(computed.component_order.values(), computed.component_intensities_net.values(),
-                                             view.data.axis.size(), names);
+                                             view.data.axis.size(), names, computed.component_intensities_magnetic.values(),
+                                             computed.component_intensities_nuclear.values());
     return source;
 }
 
@@ -5647,6 +5919,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // tolerance and records them per row in analysis/results-provenance.csv.
         cproject.minimizer_descent = descent;
         cproject.minimizer_chi_square_tolerance = minimizer_chi_square_tolerance;
+        cproject.minimizer_stop_rule = minimizer_stop_rule;
+        cproject.minimizer_shift_tolerance = minimizer_shift_tolerance;
+        cproject.minimizer_moments_near_zero = minimizer_moments_near_zero;
         cproject.minimizer_type = minimizer_type;
         fill_crysta_sequential(sequential_fit, cproject.sequential_fit);
         cproject.path = path;
@@ -5995,7 +6270,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                     bank_names.push_back(bank_item->name);
                 }
                 on_start(FitPreamble{/*joint=*/true, std::move(bank_names), n_points_loaded,
-                                     provider.n_data(), provider.n_free(), pre_fit});
+                                     provider.n_data(), provider.n_free(), pre_fit, zero_start_messages(provider)});
             }
             const std::vector<std::string> paths =
                 identity_paths(on_iteration, provider.labels(), [this](const std::string& label) {
@@ -6006,10 +6281,10 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             // (F-bound) /: the same declared conditions and the same registry-or-historical
             // split as the single-bank path above.
             crysta::DescentRequest request =
-                declared_request(descent, minimizer_max_iterations, minimizer_chi_square_tolerance);
+                declared_request(*this);
             const crysta::FitResultBase result = [&] {
                 if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
-                    if (descent.empty() && minimizer_chi_square_tolerance <= 0.0) {
+                    if (declares_no_conditions(*this)) {
                         return crysta::fit_problem(
                             provider, /*separable_linear=*/true, request.max_iterations,
                             collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
@@ -6221,6 +6496,10 @@ EngineThreading engine_threading() noexcept {
 void set_engine_threads(int count) noexcept { crysta::threading::set_thread_count(count); }
 
 int engine_threads_setting() noexcept { return crysta::threading::thread_count_setting(); }
+
+void set_scan_workers(int count) noexcept { crysta::threading::set_scan_workers(count); }
+
+int scan_workers_setting() noexcept { return crysta::threading::scan_workers_setting(); }
 
 namespace {
 

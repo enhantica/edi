@@ -191,7 +191,7 @@ def test_absent_conditions_equal_explicit_engine_defaults(tmp_path):
 
 
 def test_scan_inner_fits_and_provenance_match_declared_conditions(tmp_path):
-    chosen = ('fast_descent', 1e-4, 1)
+    chosen = ('fast_descent', 1e-4, 2)
     project = copy_case(
         tmp_path, descent=chosen[0], chi_square_tolerance=chosen[1], max_iterations=chosen[2]
     )

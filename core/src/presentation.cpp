@@ -329,10 +329,11 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
                                                 : colour_positions(scheme, experiments, structures);
     const std::vector<std::size_t> spare_measured =
         free_positions(scheme, FigureKind::Experiment, measured_rows - experiments, held);
-    std::vector<std::size_t> taken = held;
-    taken.insert(taken.end(), spare_measured.begin(), spare_measured.end());
+    // The structure rows past the project's own (a magnetic structure's magnetic part, edi ADR-0070) take the
+    // positions further structures would: the next ones after those held, in palette order, as a second phase's
+    // contribution would (the owner, 2026-11-03).
     const std::vector<std::size_t> spare_structure =
-        free_positions(scheme, FigureKind::Structure, structure_rows - structures, taken);
+        free_positions(scheme, FigureKind::Structure, structure_rows - structures, held);
     // Shades past the palette spread over the positions the project itself uses.
     const std::size_t count = held.empty() ? 0 : *std::max_element(held.begin(), held.end()) + 1;
     const auto colour = [&](std::size_t position, bool dark) { return figure_colour(scheme, position, count, dark); };
@@ -505,9 +506,11 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     }
     source.phases = group_reflections(refln.structure_id.values(), refln.position.values(),
                                       refln.index_h.values(), refln.index_k.values(),
-                                      refln.index_l.values(), names);
+                                      refln.index_l.values(), names, refln.f_squared_calc.values(),
+                                      refln.f_m_perp_squared_calc.values());
     source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
-                                              data.axis().size(), names);
+                                              data.axis().size(), names, data.component_intensities_magnetic.values(),
+                                              data.component_intensities_nuclear.values());
     if (axis == PatternAxis::DSpacing) {
         to_d_axis(source, data, refln);
     }
@@ -516,11 +519,22 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
 
 std::vector<PatternSource::Component> structure_components(std::span<const std::string> order,
                                                            std::span<const double> net, std::size_t points,
-                                                           std::span<const std::string> structure_names) {
+                                                           std::span<const std::string> structure_names,
+                                                           std::span<const double> magnetic,
+                                                           std::span<const double> nuclear) {
     std::vector<PatternSource::Component> components;
     if (order.empty() || net.size() != points * order.size()) {
         return components;
     }
+    const bool split = magnetic.size() == net.size() && nuclear.size() == net.size();
+    const auto column = [&](std::span<const double> table, std::size_t k) {
+        std::vector<double> values(points);
+        for (std::size_t row = 0; row < points; ++row) {
+            values[row] = table[row * order.size() + k];
+        }
+        return values;
+    };
+    std::vector<PatternSource::Component> magnetic_parts;
     for (std::size_t k = 0; k < order.size(); ++k) {
         PatternSource::Component component;
         component.structure_id = order[k];
@@ -531,14 +545,28 @@ std::vector<PatternSource::Component> structure_components(std::span<const std::
                 component.place = place;
             }
         }
-        std::vector<double> values(points);
-        for (std::size_t row = 0; row < points; ++row) {
-            values[row] = net[row * order.size() + k];
+        std::vector<double> magnetic_values = split ? column(magnetic, k) : std::vector<double>();
+        const bool has_magnetic = std::any_of(magnetic_values.begin(), magnetic_values.end(),
+                                              [](double value) { return value != 0.0 && !std::isnan(value); });
+        if (has_magnetic) {
+            PatternSource::Component part = component;
+            part.magnetic = true;
+            part.place = std::max(structure_names.size(), order.size()) + magnetic_parts.size();
+            part.net = std::make_shared<const std::vector<double>>(std::move(magnetic_values));
+            magnetic_parts.push_back(std::move(part));
+            component.net = std::make_shared<const std::vector<double>>(column(nuclear, k));
+        } else {
+            component.net = std::make_shared<const std::vector<double>>(column(net, k));
         }
-        component.net = std::make_shared<const std::vector<double>>(std::move(values));
         components.push_back(std::move(component));
     }
+    components.insert(components.end(), std::make_move_iterator(magnetic_parts.begin()),
+                      std::make_move_iterator(magnetic_parts.end()));
     return components;
+}
+
+std::string bragg_series_id(const PatternSource::Phase& phase) {
+    return "bragg/" + phase.structure_id + (phase.magnetic ? "/magnetic" : "");
 }
 
 std::vector<PatternSource::Phase> group_reflections(std::span<const std::string> structure_id,
@@ -546,7 +574,9 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
                                                     std::span<const std::int32_t> index_h,
                                                     std::span<const std::int32_t> index_k,
                                                     std::span<const std::int32_t> index_l,
-                                                    std::span<const std::string> structure_names) {
+                                                    std::span<const std::string> structure_names,
+                                                    std::span<const double> f_squared,
+                                                    std::span<const double> m_perp_squared) {
     struct Building {
         PatternSource::Phase phase;
         std::vector<double> position;
@@ -555,26 +585,45 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
     std::vector<Building> building;
     const std::size_t rows = std::min({structure_id.size(), position.size(), index_h.size(),
                                        index_k.size(), index_l.size()});
-    for (std::size_t row = 0; row < rows; ++row) {
-        const std::string& id = structure_id[row];
+    const bool magnetic = m_perp_squared.size() >= rows && f_squared.size() >= rows && rows > 0;
+    std::size_t magnetic_places = 0;
+    const auto phase_of = [&](const std::string& key, const std::string& id, bool magnetic_phase) {
         auto found = std::find_if(building.begin(), building.end(),
-                                  [&](const Building& b) { return b.phase.structure_id == id; });
+                                  [&](const Building& b) { return b.phase.structure_id == key; });
         if (found == building.end()) {
             Building next;
-            next.phase.structure_id = id;
+            next.phase.structure_id = key;
             next.phase.label = id;
+            next.phase.magnetic = magnetic_phase;
             next.phase.place = building.size();
             for (std::size_t place = 0; place < structure_names.size(); ++place) {
                 if (structure_names[place] == id) {
                     next.phase.place = place;
                 }
             }
+            if (magnetic_phase) {
+                next.phase.place = std::max(structure_names.size(), building.size()) + magnetic_places++;
+            }
             building.push_back(std::move(next));
             found = building.end() - 1;
         }
-        found->position.push_back(position[row]);
-        found->hkl.push_back({index_h[row], index_k[row], index_l[row]});
-        found->phase.rows.push_back(row);
+        return found;
+    };
+    for (std::size_t row = 0; row < rows; ++row) {
+        const std::string& id = structure_id[row];
+        const bool nuclear = !magnetic || f_squared[row] > 0.0;
+        if (nuclear) {
+            auto found = phase_of(id, id, false);
+            found->position.push_back(position[row]);
+            found->hkl.push_back({index_h[row], index_k[row], index_l[row]});
+            found->phase.rows.push_back(row);
+        }
+        if (magnetic && m_perp_squared[row] > 0.0) {
+            auto found = phase_of(id + "/magnetic", id, true);
+            found->position.push_back(position[row]);
+            found->hkl.push_back({index_h[row], index_k[row], index_l[row]});
+            found->phase.rows.push_back(row);
+        }
     }
     std::vector<PatternSource::Phase> phases;
     phases.reserve(building.size());
@@ -582,7 +631,7 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
         b.phase.position = std::make_shared<const std::vector<double>>(std::move(b.position));
         b.phase.hkl =
             std::make_shared<const std::vector<std::array<std::int32_t, 3>>>(std::move(b.hkl));
-        if (building.size() == 1) {
+        if (building.size() == 1 && b.phase.rows.size() == rows) {
             b.phase.rows.clear();  // rows 0, 1, 2, …
         }
         phases.push_back(std::move(b.phase));
@@ -783,7 +832,7 @@ PatternPresentation present_pattern(const PatternSource& given, const PatternVie
             PatternSeries series;
             series.kind = SeriesKind::StructureCurve;
             series.pane = Pane::Main;
-            series.id = "structure/" + component.structure_id;
+            series.id = "structure/" + component.structure_id + (component.magnetic ? "/magnetic" : "");
             series.label = component.label;
             series.style = style_key("structure", component.place);
             fill_points(series, decimate(x, kept_low, display, out.x.min, out.x.max, view.columns, crossing), x,
@@ -856,11 +905,11 @@ PatternPresentation present_pattern(const PatternSource& given, const PatternVie
         PatternSeries series;
         series.kind = SeriesKind::BraggTicks;
         series.pane = Pane::Bragg;
-        series.id = "bragg/" + phase.structure_id;
+        series.id = bragg_series_id(phase);
         series.label = phase.label;
         series.style = style_key("bragg", phase.place);
         const double row_bottom = static_cast<double>(phases.size() - k - 1);
-        out.bragg_labels.push_back({phase.label, series.style, row_bottom + 0.5});
+        out.bragg_labels.push_back({phase.label, series.style, row_bottom + 0.5, phase.magnetic});
         std::vector<char> taken(binned ? static_cast<std::size_t>(view.columns) : 0, 0);
         for (std::size_t r = 0; r < phase.position->size(); ++r) {
             const double position = (*phase.position)[r];
@@ -940,7 +989,7 @@ std::string hover_text(const PatternSource& source, const PatternSeries& series,
     const std::size_t row = series.rows[point];
     if (series.kind == SeriesKind::BraggTicks) {
         for (const PatternSource::Phase& phase : source.phases) {
-            if ("bragg/" + phase.structure_id != series.id || !phase.hkl) {
+            if (bragg_series_id(phase) != series.id || !phase.hkl) {
                 continue;
             }
             // The tick's place among this phase's reflections.
@@ -982,7 +1031,7 @@ std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternS
     const std::size_t row = series.rows[point];
     if (series.kind == SeriesKind::BraggTicks) {
         for (const PatternSource::Phase& phase : source.phases) {
-            if ("bragg/" + phase.structure_id != series.id || !phase.hkl || !phase.position) {
+            if (bragg_series_id(phase) != series.id || !phase.hkl || !phase.position) {
                 continue;
             }
             std::size_t index = row;

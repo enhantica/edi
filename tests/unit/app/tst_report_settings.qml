@@ -80,8 +80,8 @@ Item {
             Preferences.dialogShown = true;
             tryCompare(dialog, "opened", true, 2000, "The real Preferences dialog opens before measuring its tabs");
             verify(SettingsProof.beginAnimationClock(), "The public Qt animation clock settles each actual Preferences slide before geometric measurements");
-            const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Experimental", "Develop"];
-            const labels = [["Enable tool tips:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Structures:", "Patterns:", "Stacked:", "Map:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
+            const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Performance", "Experimental", "Develop"];
+            const labels = [["Enable tool tips:", "Show fit results after fitting:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Palette:", "Stacked:", "Map:", "When a curve is hidden:", "Moment colours:", "Sidebar:", "One sidebar group open at a time:", "Text tab shows:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Threads per calculation:", "Parallel fits in a scan:"], ["Zoom:", "Language:"], ["Logging level:", "Feedback address:", "Graphics:", "Scan views:", "Diagnostics:", "Settings:"]];
             const failures = [], labelWidths = [], boxWidths = [], boxXs = [], labelXs = [];
             function inkTop(item) {
                 const at = item.mapToItem(dialog.contentItem, 0, 0);
@@ -204,6 +204,45 @@ Item {
                 }).map(item => item.text.replace(/:$/, ""));
             }
             tryVerify(() => visibleTexts().includes("New projects' uncertainties") && visibleTexts().includes("New reports' libraries"), 2000, "The opened preferences.tab.projects finishes sliding its two default labels into view; initial visible text " + JSON.stringify(visibleTexts()));
+            const performance = findChild(dialog, "preferences.tab.performance");
+            verify(performance !== null, "Preferences has a Performance tab for machine-local run counts");
+            mouseClick(performance, performance.width / 2, performance.height / 2);
+            verify(SettingsProof.beginAnimationClock(), "The Qt clock controls the Performance slide");
+            wait(0);
+            verify(SettingsProof.stepAnimationClock(2000), "Performance finishes sliding before input");
+            wait(0);
+            verify(SettingsProof.stepAnimationClock(2000), "Queued Performance layout settles");
+            SettingsProof.endAnimationClock();
+            surface.Window.window.update();
+            const workers = findChild(dialog, "preferences.scanWorkers");
+            const threads = findChild(dialog, "preferences.engineThreads");
+            verify(workers && threads, "Performance offers both scan parallelism and calculation threads");
+            const oldWorkers = Preferences.scanWorkers;
+            const oldThreads = Preferences.engineThreads;
+            if (ApplicationInfo.engineThreadsSelectable) {
+                choose(threads, Math.min(2, ApplicationInfo.engineThreadsMaximum));
+                tryVerify(() => workers.visible && workers.width > 0, 2000,
+                          "The editable scan count is visible before typing");
+                mouseClick(workers.contentItem, workers.contentItem.width / 2, workers.contentItem.height / 2);
+                tryCompare(workers.contentItem, "activeFocus", true, 2000,
+                           "Pointer input focuses the editable scan count before typing");
+                keyClick(Qt.Key_A, Qt.ControlModifier);
+                keyClick(Qt.Key_2);
+                keyClick(Qt.Key_Return);
+                compare(Preferences.scanWorkersApplied, Math.min(2, workers.maximum),
+                        "Typing and accepting the scan count changes the engine run option");
+                if (workers.maximum > 1)
+                    verify(threads.displayText.includes("1 per scan fit"),
+                           "Parallel scan fits disclose their single-thread calculation policy");
+            } else {
+                verify(!workers.enabled && !threads.enabled,
+                       "The single-thread browser disables both machine-local counts");
+            }
+            Preferences.scanWorkers = oldWorkers;
+            Preferences.engineThreads = oldThreads;
+            mouseClick(projects, projects.width / 2, projects.height / 2);
+            tryVerify(() => visibleTexts().includes("New projects' uncertainties"), 2000,
+                      "Returning to Projects restores its own defaults");
             const texts = visibleTexts();
             verify(!texts.includes("Colour scheme"), "The opened preferences.tab.projects keeps Colour scheme on Appearance; visible text " + JSON.stringify(texts));
         }
@@ -294,6 +333,8 @@ Item {
             verify(entry !== null, "The selected setting token has a real popup delegate");
             mouseClick(entry, entry.width / 2, entry.height / 2);
             tryCompare(control, "currentIndex", index, 1000, "Actual pointer input selects the declared setting token");
+            tryCompare(control.popup, "visible", false, 2000,
+                       "The setting popup finishes closing before input to another control");
         }
         function test_analysis_log_axis_and_scan_updates_are_page_settings_without_model_edits() {
             verify(Examples.fixture(Session, "pd-neut-cwl_cosio-d20_scan-3f"), "The declared scan opens for Analysis view settings");
@@ -318,6 +359,56 @@ Item {
             verify(findChild(page, "settings.chart.yScale") === null, "Analysis Settings no longer duplicates the y-axis selector kept on the chart");
             tryVerify(() => SettingsProof.value(location, "PatternChart", "yScale") === "log", 2000, "The chart y-axis selector index 2 reads log at QSettings PatternChart/yScale in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "PatternChart", "yScale")));
             tryVerify(() => SettingsProof.value(location, "Analysis", "scanPatternUpdates") === 0, 2000, "Preferences.scanPatternUpdates=0 reads zero at QSettings Analysis/scanPatternUpdates in " + SettingsProof.localPath(location) + "; initial read " + JSON.stringify(SettingsProof.settingFacts(location, "Analysis", "scanPatternUpdates")));
+            const dialog = createTemporaryObject(dialogFactory, surface);
+            for (const factory of [null, experimentFactory]) {
+                const currentPage = factory ? createTemporaryObject(factory, surface,
+                    {width: surface.width, height: 800, current: true}) : page;
+                verify(currentPage !== null, "The real workflow page supplies its Settings link");
+                const settings = findChild(currentPage, "sideBar.tab.settings");
+                mouseClick(settings, settings.width / 2, settings.height / 2);
+                tryCompare(settings, "checked", true, 2000, "Settings opens through its actual tab");
+                verify(SettingsProof.beginAnimationClock(), "The Qt clock controls the Settings slide");
+                wait(0);
+                verify(SettingsProof.stepAnimationClock(2000), "Settings finishes sliding before link input");
+                wait(0);
+                verify(SettingsProof.stepAnimationClock(2000), "Queued Settings layout settles");
+                const group = findChild(currentPage, "group.performance");
+                verify(group !== null, "Analysis and Experiment Settings show Performance");
+                group.collapsed = false;
+                wait(0);
+                verify(SettingsProof.stepAnimationClock(2000), "The expanded Performance group settles");
+                const line = findChild(group, "performance.line");
+                verify(line && line.text.includes("Preferences") && line.text.includes("href="),
+                       "The run count is a read-only line with a Preferences link");
+                verify(!Render.descendants(group).some(item => item.editable === true),
+                       "Page Settings never duplicates the editable machine preference");
+                SettingsProof.endAnimationClock();
+                surface.Window.window.update();
+                verify(waitForRendering(line), "The Preferences link is rendered before pointer input");
+                let linkX = -1, linkY = -1;
+                for (let y = 1; y < line.height && linkX < 0; y += 2)
+                    for (let x = 1; x < line.width; x += 2)
+                        if (line.linkAt(x, y) === "preferences") {
+                            linkX = x;
+                            linkY = y;
+                            break;
+                        }
+                verify(linkX >= 0, "The rendered read-only count contains a clickable Preferences span");
+                if (line.linkAt(linkX + 4, linkY + 4) === "preferences") {
+                    linkX += 4;
+                    linkY += 4;
+                }
+                mouseMove(line, linkX, linkY);
+                tryCompare(line, "hoveredLink", "preferences", 2000,
+                           "The actual pointer reaches the Preferences link; point=" +
+                           JSON.stringify(line.mapToItem(surface, linkX, linkY)));
+                mouseClick(line, linkX, linkY);
+                tryCompare(dialog, "opened", true, 2000, "The actual Settings link opens Preferences");
+                tryCompare(findChild(dialog, "preferences.tab.performance"), "checked", true, 2000,
+                           "The Settings link selects Performance directly");
+                Preferences.dialogShown = false;
+                tryCompare(dialog, "opened", false, 2000, "Preferences closes before the next page link");
+            }
             compare(Session.project.analysis.text.text, original, "Changing page settings leaves the analysis model text unchanged");
             compare(Session.project.modified, modified, "Changing y scale and scan redraw policy never modifies the project");
             const restored = SettingsProof.restart('import QtQuick; import QtCore; import EasyApplication.Gui.Style as EaStyle

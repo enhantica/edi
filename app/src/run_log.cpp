@@ -412,6 +412,25 @@ QString run_log_directory() {
 #endif
 }
 
+namespace {
+
+// The offset as "UTC+01:00". The WebAssembly Qt kits are built without time-zone support,
+// so there the name is formed from the plain UTC offset.
+QString utc_offset_name(const QDateTime& when) {
+#if QT_CONFIG(timezone)
+    return when.timeZone().displayName(when, QTimeZone::OffsetName);
+#else
+    const int offset = when.offsetFromUtc();
+    const int minutes = qAbs(offset) / 60;
+    return QStringLiteral("UTC%1%2:%3")
+        .arg(QChar(offset < 0 ? u'-' : u'+'))
+        .arg(minutes / 60, 2, 10, QLatin1Char('0'))
+        .arg(minutes % 60, 2, 10, QLatin1Char('0'));
+#endif
+}
+
+}  // namespace
+
 RunLog::Header run_log_header() {
     const ApplicationInfo info;
     const QSettings settings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
@@ -423,13 +442,14 @@ RunLog::Header run_log_header() {
     const int threads = settings.value(QStringLiteral("develop/engineThreads"), 0).toInt();
     const QStringList preferences{
         QStringLiteral("logging level ") + value("develop/loggingLevel", QStringLiteral("Info")),
-        QStringLiteral("engine threads ") + (threads > 0 ? QString::number(threads) : QStringLiteral("Auto")),
+        QStringLiteral("threads per calculation ") + (threads > 0 ? QString::number(threads) : QStringLiteral("Auto")),
+        QStringLiteral("parallel fits ") + value("develop/scanWorkers", 1),
         QStringLiteral("colour scheme ") + value("Appearance/colourScheme", QStringLiteral("earth")),
         QStringLiteral("sidebar ") + value("Edi.Preferences/sideBarSide", QStringLiteral("Right")),
         QStringLiteral("tooltips ") + value("Edi.Preferences/toolTips", true)};
     return {
         {QStringLiteral("date"), now.toString(QStringLiteral("yyyy-MM-dd")) + QStringLiteral(" (") +
-                                     now.timeZone().displayName(now, QTimeZone::OffsetName) + QStringLiteral(")")},
+                                     utc_offset_name(now) + QStringLiteral(")")},
         {QStringLiteral("app"), info.version() + QStringLiteral(" (commit ") +
                                     QString::fromLatin1(edi::build_commit()) + QStringLiteral(")")},
         {QStringLiteral("crysta"), QStringLiteral(EDI_APP_CRYSTA_VERSION " (commit " EDI_APP_CRYSTA_COMMIT ")")},

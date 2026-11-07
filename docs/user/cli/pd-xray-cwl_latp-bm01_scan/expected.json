@@ -20,13 +20,13 @@
       "tol_rel": 0.05
     },
     "iterations": {
-      "value": 5.0,
+      "value": 7.0,
       "kind": "regression-pin",
       "tol_abs": 0.0,
       "tol_rel": null
     },
     "reduced_chi_square": {
-      "value": 142232098.8,
+      "value": 142228766.8,
       "kind": "regression-pin",
       "tol_abs": 1e-06,
       "tol_rel": null
@@ -156,19 +156,19 @@
           "tol_rel": null
         },
         "iterations": {
-          "value": 27.0,
+          "value": 24.0,
           "kind": "regression-pin",
           "tol_abs": 0.0,
           "tol_rel": null
         },
         "reduced_chi_square": {
-          "value": 152635133.0,
+          "value": 152451074.4,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
         }
       },
-      "status": "max_iter"
+      "status": "done"
     }
   }
 }

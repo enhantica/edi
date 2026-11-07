@@ -34,3 +34,7 @@ Chebyshev background. The example catalogue's CeCoAl₃ case, started the way a 
 `python -m edi fit <copy> --dry --report machine`: converged in 5 iterations, `n_free=32`, `n_points_fitted=3692`,
 reduced χ² 2.8695, Rwp 2.088 %, under a second. That is the source project's minimum (reduced χ² 2.8695, Rwp
 2.088 %); FullProf's least-squares fit of the same model prints χ² 2.85 and Rwp 2.08.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 5 → 6.

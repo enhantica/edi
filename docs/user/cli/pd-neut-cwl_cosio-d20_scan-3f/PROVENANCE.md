@@ -21,6 +21,12 @@ unchanged at its 1e-6 bound). `n_free` stays the independent reference it was. U
 defaults (`ladder`, 1e-6) the same project reproduces the pins it carried before the extension:
 4.783623, 4.381669 and 3.887557, at 5, 8 and 16 iterations.
 
+**Re-pinned 2026-11-04.** The fast descent now sets its damping from how well each step's predicted
+χ² drop matched the real one, instead of trying three smaller dampings after each accepted step. The
+three per-file reduced chi-squares were re-pinned from `python -m edi fit --report machine` of this
+project with `OMP_NUM_THREADS=1`, linked against crysta `ca4b68bd`: 4.82405862, 4.42856768 and
+3.88870096 (the last 0.00047 above the previous pin); the iteration counts are unchanged at 4, 6 and 12.
+
 The expected values keep the `kind` their source gave them: crysta-produced fit outputs are
 **regression pins** — they gate drift, not correctness — and only values marked `reference` come
 from outside every engine under test. The source case's own `PROVENANCE.md` in crysta says which
@@ -53,3 +59,8 @@ title and description name the sample and scan, and `_metadata.purpose`, `.dimen
 **Excluded rows rewritten ([ADR-0044](../../../dev/adrs/0044-pattern-charts-and-excluded-regions.md)).** Each excluded `_data` row now has the d-spacing computed from the
 file's own instrument, written like the file's other d values, and `.` for `intensity_calc` and `intensity_bkg`
 instead of `0.`. Included rows are unchanged, and the recorded hashes of these files moved with them.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: results[299.394].fit_result.reduced_chi_square 4.428567680931095 →
+4.428563830815897; results[299.394].fit_result.iterations 6 → 7.

@@ -19,3 +19,8 @@ Built by `tools/cli_projects/build_sc_projects.py`: Uani on every site from an i
 ## Result from this start (local diagnostic)
 
 From this start edi converges in 12 iterations to reduced χ² 1.33 over the 220 reflections (R(F²) 2.42 %), with the scale 5.899(35), the domain radius 3.0(18) μm and the mosaic spread 2732(93) rad⁻¹. FullProf 8.40 from the same start has no Becker-Coppens model and fits its own empirical extinction instead: 15 cycles to χ² 1.41, RF2w 2.98 %, the scale 6.00(4). The models differ, so its values are a comparison, not a reference.
+
+**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
+change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
+machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 12 → 10; reduced_chi_square 1.333277337 →
+1.333279243.

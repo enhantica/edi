@@ -226,6 +226,8 @@ class Session : public QObject {
     Q_INVOKABLE QString optionTooltip(const QString& uid, const QString& token) const;
     Q_INVOKABLE QUrl documentationUrl(const QString& uid) const;
     Q_INVOKABLE QString categoryTitle(const QString& id) const;
+    // A category's Font Awesome icon name from crysta's dictionary; empty for an id it does not hold.
+    Q_INVOKABLE QString categoryIcon(const QString& id) const;
     // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
     Q_INVOKABLE QString written(const QString& uid, double value) const;
     Q_INVOKABLE QString display(const QString& uid, double value, const QString& variant = QString()) const;

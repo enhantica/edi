@@ -25,3 +25,7 @@ Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_cw_cases.p
   background points.
 - **Left out:** the tutorial's automatic background estimate (a flat background stands in for it), its cryspy and
   CrysFML calculator switches and its lmfit minimizer choice; edi uses crysta.
+
+**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
+change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
+machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 8 → 7.

@@ -191,7 +191,7 @@ def main() -> int:
     )
     (TARGET / 'experiments' / 'spodi.edi').write_text(experiment())
     (TARGET / 'analysis' / 'analysis.edi').write_text(
-        '_edi.schema_version 3\n_minimizer.max_iterations 150\n'
+        '_edi.schema_version 3\n_minimizer.max_iterations 150\n_minimizer.stop_rule shift_su\n'
         '_minimizer.chi_square_tolerance 1e-8\n_fitting_mode.type single\n'
     )
     edi.Project.load(str(TARGET))  # the loader's refusals, before anything is kept

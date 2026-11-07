@@ -39,11 +39,12 @@ if(EDI_BUILD_ASSISTANT_NATIVE AND NOT EMSCRIPTEN)
 endif()
 if(EDI_BUILD_APP)
     # CorePrivate: the project archive (app/src/web_files.cpp); the browser build also reads the browser's files
-    # through GuiPrivate's header. Qt warns that a private module ties the build to its Qt version: edi pins that
+    # through GuiPrivate's header. QuickPrivate and QmlModelsPrivate: a table rebuilds a list view that stopped filling
+    # (app/src/view_rows.cpp). Qt warns that a private module ties the build to its Qt version: edi pins that
     # version exactly (ADR-0023 §5), so the warning is off.
     set(QT_NO_PRIVATE_MODULE_WARNING ON)
     find_package(Qt6 REQUIRED COMPONENTS Gui Qml Quick QuickControls2 QuickTest Graphs Quick3D ShaderTools CorePrivate
-                 Concurrent)
+                 QuickPrivate QmlModelsPrivate Concurrent)
     if(EMSCRIPTEN)
         find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
     endif()

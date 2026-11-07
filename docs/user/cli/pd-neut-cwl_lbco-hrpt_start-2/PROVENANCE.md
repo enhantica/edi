@@ -35,3 +35,18 @@ category in manual mode, with the `arpls` method, so the project carries the set
 use while its saved points, fit and pins stay as they were. The crysta source case was extended in the same
 change: `project/experiments/hrpt.edi` is byte-identical to the source case's (blob
 `a0c89b17ab39d54caf873dcc3ec416bf83497abd`), and `expected.json` did not change.
+
+**Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
+change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
+machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 1.299300158 → 1.299498821;
+ladder iterations 18 → 12; ladder rwp 0.07233610852 → 0.07234163841; fast-descent reduced_chi_square 1.299300158 →
+1.297847483; fast-descent iterations 18 → 11; fast-descent rwp 0.07233610852 → 0.07229565973; multistart-prune
+reduced_chi_square 1.299300158 → 1.297849659; multistart-prune iterations 8 → 1; multistart-prune rwp 0.07233610852 →
+0.07229572035.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 1.299498821 → 1.299300158; ladder iterations
+12 → 18; ladder rwp 0.07234163841 → 0.07233610852; fast-descent iterations 11 → 12; fast-descent rwp 0.07229565973 →
+0.07229565675; multistart-prune reduced_chi_square 1.297849659 → 1.297847388; multistart-prune iterations 1 → 3;
+multistart-prune rwp 0.07229572035 → 0.07229565707.

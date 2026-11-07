@@ -14,6 +14,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "edi/model.hpp"
@@ -38,6 +39,22 @@ struct ParameterTie {
 // site it cannot place, reports that part independent: the calculation refuses such a structure
 // with its own message, and a page that could not edit the offending field could not repair it.
 std::vector<ParameterTie> structure_ties(const Structure& structure);
+
+// An edit of one component of a site's moment in a display form (edi ADR-0070): `form` is
+// "crystal_axes", "cartesian" or "spherical", component `k` takes `value` and the other two keep
+// theirs. The edit is tried on a copy of `project` (which holds `structure` and its `moment`): the
+// independent components are written, every relation of the project is applied, and the moment
+// that results must be the one asked for. On success `writes` lists the components to write (0, 1,
+// 2 for a, b, c) with their values; otherwise `refusal` says why and nothing is to be written: a
+// direction the site symmetry or a declared constraint does not allow, a component they set, a
+// negative modulus or a polar angle outside 0 to 180 degrees.
+struct MomentEdit {
+    std::vector<std::pair<std::size_t, double>> writes;
+    std::string refusal;
+};
+MomentEdit moment_edit(const Project& project, const Structure& structure,
+                       const AtomSiteMoment& moment, const std::string& form, std::size_t k,
+                       double value);
 
 // One Wyckoff position of a structure's space group, from crysta's table: its letter, its multiplicity, its
 // representative coordinates as the table spells them ("0,0,0", "1/2,y,z") and the coordinates it gives with x, y and
@@ -65,6 +82,10 @@ AtomSite new_atom_site(const Structure& structure, const std::function<double()>
 // gets a tensor row holding the tensor of its current values, and a row it no longer needs is
 // removed. Throws std::invalid_argument for a type that is not Biso, Uiso, Bani, Uani or beta.
 void change_adp_type(Structure& structure, AtomSite& site, const std::string& adp_type);
+// The structure's propagation vectors replaced by `rows` (id, `kx,ky,kz`), each id given and
+// unique, once crysta's rule admits them all (I7: a vector the cell and the signed group can carry,
+// no two alike); a refusal throws its reason and leaves the vectors as they were (edi ADR-0070).
+void set_propagation_vectors(Structure& structure, std::vector<std::pair<std::string, std::string>> rows);
 
 // One tensor row for each anisotropic site and none for any other (diffraction-lib's
 // _sync_atom_site_aniso): a missing row holds the tensor of the site's isotropic value, through

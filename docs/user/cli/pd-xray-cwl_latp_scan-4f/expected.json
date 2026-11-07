@@ -13,7 +13,7 @@
       "tol_rel": null
     },
     "results[latp_312.dat].fit_result.reduced_chi_square": {
-      "value": 142232098.7639063,
+      "value": 142228766.76932976,
       "kind": "regression-pin",
       "tol_abs": null,
       "tol_rel": 1e-05
@@ -25,7 +25,7 @@
       "tol_rel": null
     },
     "results[latp_304.dat].fit_result.reduced_chi_square": {
-      "value": 143767296.62559643,
+      "value": 143756510.3957395,
       "kind": "regression-pin",
       "tol_abs": null,
       "tol_rel": 1e-05
@@ -37,7 +37,7 @@
       "tol_rel": null
     },
     "results[latp_296.dat].fit_result.reduced_chi_square": {
-      "value": 147601939.75607044,
+      "value": 147598849.9391444,
       "kind": "regression-pin",
       "tol_abs": null,
       "tol_rel": 1e-05
@@ -49,13 +49,13 @@
       "tol_rel": null
     },
     "results[latp_288.dat].fit_result.reduced_chi_square": {
-      "value": 141240883.16532645,
+      "value": 140761031.9166891,
       "kind": "regression-pin",
       "tol_abs": null,
       "tol_rel": 1e-05
     },
     "results[latp_288.dat].latp.cell.length_c": {
-      "value": 20.85029308919547,
+      "value": 20.849933243047367,
       "kind": "regression-pin",
       "tol_abs": 0.0001,
       "tol_rel": null

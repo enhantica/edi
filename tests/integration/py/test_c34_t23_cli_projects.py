@@ -145,7 +145,7 @@ def restore_seed_pin(project_id, live_directory, path):
 
 
 @pytest.mark.parametrize('project_id', sorted(SOURCE['projects']))
-def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):
+def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):  # noqa: PLR0915 — one atomic source-byte witness per seed
     expected = SOURCE['projects'][project_id]
     directory = CLI / PROJECT_IDS[project_id]
     assert (directory / 'project').is_dir(), ' must seed every existing crysta fitting project'
@@ -195,6 +195,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                     and not line.startswith((
                         '_minimizer.descent ',
                         '_minimizer.chi_square_tolerance ',
+                        '_minimizer.stop_rule ',
                     ))
                 ]
 
@@ -213,11 +214,18 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                     for line in expected_lines
                 ]
             contents = path.read_bytes()
+            assert [
+                line.strip()
+                for line in contents.decode().splitlines()
+                if line.startswith('_minimizer.stop_rule ')
+            ] == ['_minimizer.stop_rule shift_su'], (
+                'Each retained seed declares the owner-selected Shift/s.u. rule exactly once'
+            )
             if project_id == 'cosio-d20-scan-3f':
                 contents = legacy_seed('analysis/analysis.edi', contents)
             assert retained_lines(contents.decode()) == expected_lines, (
                 ' seed adaptation changes only the seven declared minimizers to crysta; '
-                ' descent/tolerance additions remain the only other permitted changes'
+                ' descent/tolerance and the declared Shift/s.u. rule are the permitted additions'
             )
             continue
         if project_id == 'cosio-d20-scan-3f' and name == 'expected.json':

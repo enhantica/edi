@@ -71,6 +71,7 @@ qt_add_qml_module(edi_app_module
         src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
         src/run_log.hpp src/run_log.cpp
         src/item_locator.hpp src/item_locator.cpp
+        src/view_rows.hpp src/view_rows.cpp
         src/user_action_log.hpp src/user_action_log.cpp
         src/build_version.hpp
         src/test_observer.hpp src/test_observer.cpp
@@ -130,6 +131,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
         qml/Components/SideBarGroup.qml
+        qml/Components/PerformanceGroup.qml
         qml/Components/ComboCell.qml
         qml/Components/CrashDialog.qml
         qml/Components/DiagnosticsDialog.qml
@@ -255,6 +257,10 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Report/ReportTable.qml
         qml/Pages/Structure/AppearanceGroup.qml
         qml/Pages/Structure/AtomSiteAdpGroup.qml
+        qml/Pages/Structure/AtomSiteMomentGroup.qml
+        qml/Pages/Structure/MagneticFormFactorsGroup.qml
+        qml/Pages/Structure/MagneticSpaceGroupGroup.qml
+        qml/Pages/Structure/PropagationVectorsGroup.qml
         qml/Pages/Structure/AtomSitesGroup.qml
         qml/Pages/Structure/CellGroup.qml
         qml/Pages/Structure/ScatteringLengthsGroup.qml
@@ -276,7 +282,7 @@ target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR}
 target_compile_definitions(edi_app_module PUBLIC QT_MESSAGELOGCONTEXT)  # file and line in the run log (ADR-0062)
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
-    PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
+    PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate Qt6::QuickPrivate Qt6::QmlModelsPrivate)
 find_package(Qt6QmlPrivate REQUIRED)
 target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
 if(NOT EMSCRIPTEN)

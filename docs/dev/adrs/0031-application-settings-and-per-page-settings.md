@@ -52,7 +52,12 @@ to know where Qt puts it.
    A choice made on a chart lives on the chart only, never also in Settings (the owner, 2026-10-21): each choice has
    one place. The pattern chart's y-axis type (linear, square root or log) and the Experiment chart's x axis are on the
    chart's own selectors. The chart still keeps them in the app-settings store under the page's name (7), so the chosen
-   scale is kept. The Experiment page has no other view options, so its Settings tab is disabled.
+   scale is kept.
+
+   Extras holds what the `.edi` project saves; Settings holds how the app runs and shows it (the owner, 2026-11-04).
+   So each page's Settings tab also has a read-only Performance group naming the Preferences count that applies there,
+   with a link that opens Preferences on its Performance tab (ADR-0017 §12): "Parallel fits: N" on the Analysis page,
+   for a scan, and "Threads per calculation: …" on the Experiment page, whose Settings tab holds only this group.
 3. **One ini file on the desktop.** The store is `QSettings` in `IniFormat` on every desktop platform, one file named
    after the organisation and the application: `~/.config/EasyScience/EasyDiffraction.ini` on Linux and macOS,
    `%APPDATA%\EasyScience\EasyDiffraction.ini` on Windows. Not the native formats (a property list on macOS, the

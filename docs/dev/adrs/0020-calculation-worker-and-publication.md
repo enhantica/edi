@@ -176,8 +176,9 @@ The app does not edit the project while a fit runs: the door refuses an edit the
 
 ### 10. The engine's thread count
 
-The Develop preference "Engine threads" (ADR-0017 §12) sets how many threads crysta uses for every fit and
-calculation in the process.
+The Performance preference "Threads per calculation" (ADR-0017 §12; Develop's "Engine threads" until 2026-11-04)
+sets how many threads crysta uses for every fit and calculation in the process. While "Parallel fits in a scan" is
+above 1, each fit of a scan's group runs on one thread instead.
 
 - **Auto** (0, the default) keeps the engine's own thread policy, which honours `OMP_NUM_THREADS` when it is set.
   **A count N** replaces that policy and the environment: the user chose it, so the environment does not override it.

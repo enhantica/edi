@@ -239,3 +239,12 @@ sites:
     why: Disposable copies of the corresponding CLI extinction project freeze main saved bytes under both uncertainty rules.
     assertion_feed: Labelled main regression pin plus the nonzero propagated uncertainty of the constrained crystal radius.
     audit: 2026-10-26; the visible generator and hidden observation use the same constrained-radius corpus case.
+
+  - file: tests/integration/py/test_magnetic_boundaries.py
+    case: cosio-d20-s4
+    why: The pinned CoSiO D20 observations and frozen experiment recipe carry independently authored magnetic admission variants with one iteration.
+    assertion_feed: Refusal before trial mutation and exact post-fit propagation and calculated-profile retention; no fitted magnetic value is an accuracy oracle.
+    audit: 2026-11-03; both fit entries stage the declared measured experiment, with only the structure and bounded analysis recipe replaced to exercise magnetic boundaries.
+
+  - file: tests/integration/py/test_magnetic_review_boundaries.py
+    case: cosio-d20-s1

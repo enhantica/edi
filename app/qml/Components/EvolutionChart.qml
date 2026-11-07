@@ -135,13 +135,41 @@ Item {
         visible: !chart.fromReport
         x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
         y: xBox.y + (xBox.height - height) / 2
-        width: Math.max(0, chart.width - x - chart.toolbarRightInset)
+        width: Math.max(0, viewButtons.x - x - AppSizes.toolbarSpacing * 4)
         backgroundColor: chart.colors.chartBackground
         blocks: chart.evolution ? chart.evolution.parameters : null
         blocksTextRole: "label"
         blockKind: "parameter"
         blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
         onBlockActivated: index => chart.evolution.currentParameter = index
+    }
+
+    // The project's two view settings, as on the pattern chart's toolbar (the owner, 2026-11-03): the error bars, and
+    // whether the y range fits the values with their error bars or the values only, longer bars then clipped.
+    Row {
+        id: viewButtons
+
+        visible: !chart.fromReport
+        x: chart.width - chart.toolbarRightInset - width
+        y: xBox.y + (xBox.height - height) / 2
+        spacing: AppSizes.toolbarSpacing
+
+        ChartToolButton {
+            objectName: "evolution.toolbar.errorBars"
+            fontIcon: "arrows-alt-v"
+            toolTip: qsTr("Show error bars")
+            enabled: chart.project !== null
+            checked: chart.project !== null && chart.project.evolutionErrorBars
+            onClicked: chart.project.evolutionErrorBars = !chart.project.evolutionErrorBars
+        }
+        ChartToolButton {
+            objectName: "evolution.toolbar.range"
+            fontIcon: "expand"
+            toolTip: qsTr("Fit the range to the error bars too")
+            enabled: chart.project !== null
+            checked: chart.project !== null && chart.project.evolutionRangeWithSu
+            onClicked: chart.project.evolutionRangeWithSu = !chart.project.evolutionRangeWithSu
+        }
     }
 
     // A report's chart is titled with its parameter's name and units, where the tab has its selectors.

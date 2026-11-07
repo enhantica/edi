@@ -1,6 +1,6 @@
 {
   "program": "edi",
-  "crysta_sdk": "build-e25adc97e4151b76b8e5f5b08b4fa7470b010977",
+  "crysta_sdk": "build-baeb5984b282e727b2366cbddc0938f1ddb88cb9",
   "banks": [
     "pearl"
   ],
@@ -8,8 +8,8 @@
   "status": "done",
   "converged": true,
   "iterations": 5,
-  "rwp": 0.052932869424714486,
-  "reduced_chi_square": 3.8772554631302087,
+  "rwp": 0.0529328694247148,
+  "reduced_chi_square": 3.8772554631302536,
   "cells": {
     "ceo2": {
       "a": [
