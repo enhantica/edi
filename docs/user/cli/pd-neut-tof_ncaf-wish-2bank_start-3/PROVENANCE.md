@@ -43,3 +43,9 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 | ladder | `rwp` | 0.08189529811 | 0.08189545944 |
 | fast-descent-linear-snap | `reduced_chi_square` | 15.69263662 | 15.69269845 |
 | fast-descent-linear-snap | `rwp` | 0.08189528941 | 0.08189545075 |
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 15.69270178 → 15.69269593; ladder iterations 6
+→ 7; ladder rwp 0.08189545944 → 0.08189544416; fast-descent-linear-snap reduced_chi_square 15.69269845 → 15.69269578;
+fast-descent-linear-snap iterations 5 → 6; fast-descent-linear-snap rwp 0.08189545075 → 0.08189544377.

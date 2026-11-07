@@ -59,3 +59,8 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 | default | `iterations` | 4.0 | 3.0 |
 | default | `reduced_chi_square` | 2.869451006 | 2.852896023 |
 | default | `rwp` | 0.02088086078 | 0.02082053872 |
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 3 → 4; reduced_chi_square 2.852896023 → 2.85288916; rwp
+0.02082053872 → 0.02082051368.

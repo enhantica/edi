@@ -40,3 +40,7 @@ a 3.89027 Å, Si a 5.43249 Å and scales 42.5 and 0.309. diffraction-lib's own t
 R<sub>wp</sub> 4.59 %, reduced χ² 3.45, a 3.89045 and 5.43284 Å and scales 39.7 and 0.331. The scales
 differ by about 7 % because the fixed displacements differ. Started from the tutorial's own values, edi
 reaches R<sub>wp</sub> 4.58 % and scales 39.70 and 0.331.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 24 → 23.

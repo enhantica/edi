@@ -1,6 +1,6 @@
 {
   "program": "edi",
-  "crysta_sdk": "crysta 609586d9, built locally before its SDK build",
+  "crysta_sdk": "build-baeb5984b282e727b2366cbddc0938f1ddb88cb9",
   "banks": [
     "hrpt"
   ],

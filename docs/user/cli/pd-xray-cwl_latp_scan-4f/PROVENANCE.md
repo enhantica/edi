@@ -43,3 +43,11 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 | default | `results[latp_296.dat].fit_result.reduced_chi_square` | 147618082.77915654 | 147601939.75607044 |
 | default | `results[latp_288.dat].fit_result.reduced_chi_square` | 140897373.7295963 | 141240883.16532645 |
 | default | `results[latp_288.dat].latp.cell.length_c` | 20.850068 | 20.85029308919547 |
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: results[latp_312.dat].fit_result.reduced_chi_square 142232098.7639063 →
+142228766.76932976; results[latp_304.dat].fit_result.reduced_chi_square 143767296.62559643 → 143756510.3957395;
+results[latp_296.dat].fit_result.reduced_chi_square 147601939.75607044 → 147598849.9391444;
+results[latp_288.dat].fit_result.reduced_chi_square 141240883.16532645 → 140761031.9166891;
+results[latp_288.dat].latp.cell.length_c 20.85029308919547 → 20.849933243047367.

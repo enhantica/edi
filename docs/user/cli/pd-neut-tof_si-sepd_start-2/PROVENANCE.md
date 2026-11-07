@@ -44,3 +44,8 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: fast-descent iterations 12 → 11; fast-descent rwp
 0.06941005489 → 0.06941004614.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 3.610947358 → 3.610941091; ladder iterations
+12 → 13; ladder rwp 0.06941010775 → 0.06941004752.

@@ -38,3 +38,8 @@
   (`knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/`, S/L and D/L both held at 0.0619): Rwp within 5 % of
   FullProf's 4.91 %, and the three well-determined moment components within 0.15 μB of FullProf's, about four of its
   standard deviations. Co1's Mz is not compared: powder data barely determine it.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: reduced_chi_square 6.248741768 → 6.245734584; iterations 22 → 57;
+param.Co.j2_coefficient.value 0.6028460903 → 0.5894931888.

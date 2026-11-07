@@ -30,3 +30,12 @@ fast-descent-linear-snap reduced_chi_square 1.297269339 → 1.297270929; fast-de
 fast-descent-linear-snap rwp 0.07229128433 → 0.07229132862; fast-descent-guarded-linear-snap reduced_chi_square
 1.297269339 → 1.297270929; fast-descent-guarded-linear-snap iterations 7 → 6; fast-descent-guarded-linear-snap rwp
 0.07229128433 → 0.07229132862.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 1.297275389 → 1.297269332; ladder iterations 7
+→ 9; ladder rwp 0.07229145291 → 0.07229128414; fast-descent iterations 9 → 10; fast-descent rwp 0.07229128849 →
+0.07229128492; fast-descent-linear-snap reduced_chi_square 1.297270929 → 1.297269331; fast-descent-linear-snap
+iterations 6 → 8; fast-descent-linear-snap rwp 0.07229132862 → 0.07229128411; fast-descent-guarded-linear-snap
+reduced_chi_square 1.297270929 → 1.297269331; fast-descent-guarded-linear-snap iterations 6 → 8;
+fast-descent-guarded-linear-snap rwp 0.07229132862 → 0.07229128411.

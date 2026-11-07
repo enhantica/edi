@@ -33,3 +33,7 @@ So `expected.json` compares the full model with FullProf's on R<sub>wp</sub>, wi
 of free parameters only. Every other fitted value is compared on a second fit of both programs with the four
 coefficients fixed at 0: the record's `asymmetry-off` variant against FullProf's fit in
 `knowledge/fitting/fullprof/pd-neut-cwl_yalo3-al2o3-spodi/asymmetry-off/`.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 36 → 38; reduced_chi_square 9.731270484 → 9.731254057.

@@ -39,3 +39,8 @@ coefficient within 0.20.
 | `iterations`, `reduced_chi_square`, `rwp` | regression pin | the check run above |
 
 The regression pins for iterations, reduced_chi_square, rwp were retaken with `python -m edi fit <project> --report machine` using crysta `2b75771b` and its continuous axial-offset FCJ quadrature.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 3 → 4; reduced_chi_square 8.821324976 → 8.821296592; rwp
+0.08166139131 → 0.08166125993.

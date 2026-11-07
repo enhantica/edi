@@ -9,19 +9,19 @@
     "ladder": {
       "quantities": {
         "reduced_chi_square": {
-          "value": 1.297275389,
+          "value": 1.297269332,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
         },
         "iterations": {
-          "value": 7.0,
+          "value": 9.0,
           "kind": "regression-pin",
           "tol_abs": 0.0,
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.07229145291,
+          "value": 0.07229128414,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null
@@ -37,13 +37,13 @@
           "tol_rel": null
         },
         "iterations": {
-          "value": 9.0,
+          "value": 10.0,
           "kind": "regression-pin",
           "tol_abs": 0.0,
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.07229128849,
+          "value": 0.07229128492,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null
@@ -53,19 +53,19 @@
     "fast-descent-linear-snap": {
       "quantities": {
         "reduced_chi_square": {
-          "value": 1.297270929,
+          "value": 1.297269331,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
         },
         "iterations": {
-          "value": 6.0,
+          "value": 8.0,
           "kind": "regression-pin",
           "tol_abs": 0.0,
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.07229132862,
+          "value": 0.07229128411,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null
@@ -75,19 +75,19 @@
     "fast-descent-guarded-linear-snap": {
       "quantities": {
         "reduced_chi_square": {
-          "value": 1.297270929,
+          "value": 1.297269331,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
         },
         "iterations": {
-          "value": 6.0,
+          "value": 8.0,
           "kind": "regression-pin",
           "tol_abs": 0.0,
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.07229132862,
+          "value": 0.07229128411,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null

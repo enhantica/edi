@@ -43,3 +43,10 @@ ladder iterations 18 → 12; ladder rwp 0.07233610852 → 0.07234163841; fast-de
 1.297847483; fast-descent iterations 18 → 11; fast-descent rwp 0.07233610852 → 0.07229565973; multistart-prune
 reduced_chi_square 1.299300158 → 1.297849659; multistart-prune iterations 8 → 1; multistart-prune rwp 0.07233610852 →
 0.07229572035.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 1.299498821 → 1.299300158; ladder iterations
+12 → 18; ladder rwp 0.07234163841 → 0.07233610852; fast-descent iterations 11 → 12; fast-descent rwp 0.07229565973 →
+0.07229565675; multistart-prune reduced_chi_square 1.297849659 → 1.297847388; multistart-prune iterations 1 → 3;
+multistart-prune rwp 0.07229572035 → 0.07229565707.

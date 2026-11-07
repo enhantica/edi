@@ -46,3 +46,7 @@ reduced χ² 9.4978, Rwp 7.695 % (banks 1/10 to 5/6: 4.66, 6.44, 7.89, 8.10, 8.2
 reaches reduced χ² 9.4975 and Rwp 7.694 % from its own start; FullProf's global χ² for the same five banks is 9.96.
 Each of the 16 independent positions and Biso values lies within 0.05 of its FullProf standard uncertainty of
 FullProf's value.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 15 → 16; reduced_chi_square 9.496662872 → 9.496660898.

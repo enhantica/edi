@@ -30,3 +30,7 @@ diamond case: what `pd-neut-tof_diamond-dream_basic` checks with the scale alone
 reduced χ² 17.92, Rwp 16.75 %, under a second. The scale-only project pins reduced χ² 18.24 and Rwp 16.96 %, and
 FullProf's own fit of the same model with 15 parameters free prints Rwp 16.9 and χ² 18.1. On one bank the zero and
 the cell are strongly correlated: the fit ends at zero −56 µs and a 3.5692 Å, where the simulation used 3.567 Å.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 10 → 9.

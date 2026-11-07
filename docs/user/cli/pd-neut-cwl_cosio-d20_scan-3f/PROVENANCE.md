@@ -59,3 +59,8 @@ title and description name the sample and scan, and `_metadata.purpose`, `.dimen
 **Excluded rows rewritten ([ADR-0044](../../../dev/adrs/0044-pattern-charts-and-excluded-regions.md)).** Each excluded `_data` row now has the d-spacing computed from the
 file's own instrument, written like the file's other d values, and `.` for `intensity_calc` and `intensity_bkg`
 instead of `0.`. Included rows are unchanged, and the recorded hashes of these files moved with them.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: results[299.394].fit_result.reduced_chi_square 4.428567680931095 →
+4.428563830815897; results[299.394].fit_result.iterations 6 → 7.
