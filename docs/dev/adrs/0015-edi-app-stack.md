@@ -43,7 +43,7 @@ original could. Three facts shape the decision:
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
 2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `10dc5828020c90666a1ef015835475936d56e819` and declares its own QML modules under the upstream URIs
+   `c61bcb8578094bbf2009606ac1f2b5b635e3dce6` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
    declared replacement seams: ParamTextField for parameter menu terminology and units (ADR-0029), TextInput for its
@@ -520,3 +520,19 @@ digests were derived from the published immutable archive and compared with ever
 tracked src file. Render-thread benefit depends on the actual render loop and
 does not establish that GUI blocking or all pointer hitching is fixed; native
 consuming qualification follows the grouped build.
+
+## Containers drawn through layers (2026-11-07)
+
+The base pin advances from 10dc5828 to c61bcb85, which is the `edi` branch. In the web build on Windows, a clipped
+item that crosses the edge of an enclosing clip loses its own clip, so rows scrolled out of a table and the content
+of a folded group show outside their area. The shapes-app `wasm/prototype` pages reproduce it and found that content
+drawn inside a layer keeps its clip. So the sidebar's scroll area, every list, and the tab views of the sidebar and
+the main area draw through a layer. A group box uses one only while it folds, because a layer redrawn on every frame
+of a size change makes text jiggle. The clips stay: Qt uses them for input as well as drawing, and edi's item
+locator treats a clipping ancestor as one that hides what lies outside it.
+
+On the Linux software renderer, frames cost about a third of what they did, since each layer is a cached texture
+and a change in one area no longer redraws the others. On a GPU the gain is smaller and each layer costs one
+texture's memory. Text drawn through a layer is not blurred at a scale of 1 or 1.25, and its glyphs are a little
+heavier. No automated test sees the Windows fault: only a look at the web app on a Windows machine with a GPU shows
+whether it is gone.
