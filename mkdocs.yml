@@ -107,6 +107,7 @@ nav:
           - dev/adrs/0072-calendar-releases-and-application-updates.md
           - dev/adrs/0073-portable-utc-timestamps.md
           - dev/adrs/0074-portable-bundled-text.md
+          - dev/adrs/0075-one-collection-download-implementation.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

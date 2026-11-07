@@ -99,6 +99,7 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0073](0073-portable-utc-timestamps.md) | Portable UTC timestamps | Accepted | 🟡 | Medium | One private conversion path preserves project and report formats across native platforms; early compiler checks cover UTC boundaries. |
 
 | [0074](0074-portable-bundled-text.md) | Portable bundled text | Accepted | 🟡 | Medium | One byte-preserving static serializer covers all product resources; early native compilation checks large UTF-8 data without an engine dependency. |
+| [0075](0075-one-collection-download-implementation.md) | One collection download implementation | Accepted | ⬜ | High | locations, fallback, id and number resolution, size and digest checks, destination and archive unpacking live once in the core; interfaces supply a transport; downloads follow the collection's main; tutorials are indexed by the docs site. |
 
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
