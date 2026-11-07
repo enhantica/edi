@@ -73,7 +73,7 @@ separate static file tree on GitHub Pages. Production uses `repository/<platform
 Preview installers use `repository/testing/<platform>/` so their component updates
 stay separate.
 
-`data/distribution.json` declares the primary Pages base and `https://downloads.easydiffraction.org/`
+`data/distribution.json` declares the primary Pages base and `https://download.easydiffraction.org/`
 as the future mirror. Both use identical relative paths and immutable archive bytes. Settings
 shows both full URLs. Qt stores the repositories in a set, so the row order can vary.
 Production installers enable the mirror by default. Preview installers list it unchecked.

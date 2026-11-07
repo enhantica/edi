@@ -131,7 +131,7 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     assert repositories[0].findtext('Enabled') == '1'
     tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
     assert repositories[0].findtext('Url') == f'https://enhantica.github.io/edi/{tail}'
-    assert repositories[1].findtext('Url') == f'https://downloads.easydiffraction.org/{tail}'
+    assert repositories[1].findtext('Url') == f'https://download.easydiffraction.org/{tail}'
     assert repositories[1].find('DisplayName') is None
     assert repositories[1].findtext('Enabled') == ('1' if channel == 'stable' else '0')
 
