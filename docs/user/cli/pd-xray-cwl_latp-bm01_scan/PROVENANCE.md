@@ -63,4 +63,5 @@ values), so the variant's expected status is `max_iter`.
 **Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
 χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
 against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 5 → 7; reduced_chi_square 142232098.8 → 142228766.8;
-asymmetry-off iterations 27 → 24; asymmetry-off reduced_chi_square 152635133.0 → 152451074.4.
+asymmetry-off iterations 27 → 24; asymmetry-off reduced_chi_square 152635133.0 → 152451074.4. The `asymmetry-off` fit
+now converges, so its expected status is `done`.

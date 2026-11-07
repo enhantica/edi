@@ -168,7 +168,7 @@
           "tol_rel": null
         }
       },
-      "status": "max_iter"
+      "status": "done"
     }
   }
 }
