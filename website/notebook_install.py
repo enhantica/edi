@@ -24,15 +24,32 @@ def install_edi(index: str) -> None:
     installed on every run, by name, with the usual pip settings. If edi is already imported in
     this kernel, setup installs what is needed and asks for a restart; it never vouches for a
     loaded module. Otherwise ``import edi`` is admitted when the file it would load is one the
-    installed wheel's RECORD lists. An edi no pip distribution owns is a source build, used as is.
+    installed wheel's RECORD lists. A source build is used only when ``EDI_SOURCE_BUILD=1`` asks
+    for it; a folder or file that merely happens to be called edi never counts as one.
     """
-    owned = bool(importlib.metadata.packages_distributions().get('edi'))
-    if 'edi' in sys.modules and not owned:
+    if 'edi' in sys.modules:
+        if importlib.metadata.packages_distributions().get('edi'):
+            _install(index)
         raise RuntimeError(RESTART)
-    spec = None if 'edi' in sys.modules else importlib.util.find_spec('edi')
-    if spec is not None and not owned:
-        print('Using edi from', spec.origin, '(a source build, not installed by pip)')
+    if os.environ.get('EDI_SOURCE_BUILD') == '1':
+        spec = importlib.util.find_spec('edi')
+        if spec is None or not spec.origin:
+            raise RuntimeError('EDI_SOURCE_BUILD is set, but no edi source build can be imported')
+        print('Using the edi source build at', spec.origin)
         return
+    url, digest = _install(index)
+    importlib.invalidate_caches()
+    if not _admitted(url, digest):
+        spec = importlib.util.find_spec('edi')
+        found = (spec.origin or 'a folder without __init__.py') if spec else 'nothing'
+        raise RuntimeError(
+            f'import edi would load {found}, not the wheel from {index}; '
+            'move or rename that edi and run this cell again'
+        )
+
+
+def _install(index: str) -> tuple[str, str]:
+    """Install the approved wheel when it is not installed, then its declared dependencies."""
     url, digest = _wheel(index)
     if not _installed_from(url, digest):
         _pip('--no-deps', '--force-reinstall', f'easydiffraction @ {url}#sha256={digest}')
@@ -40,11 +57,7 @@ def install_edi(index: str) -> None:
     requires = importlib.metadata.requires('easydiffraction') or []
     if requires:
         _pip(*requires, settings=True)
-    if 'edi' in sys.modules:
-        raise RuntimeError(RESTART)
-    importlib.invalidate_caches()
-    if not _admitted(url, digest):
-        raise RuntimeError('import edi would not load the wheel from ' + index)
+    return url, digest
 
 
 def _wheel(index: str) -> tuple[str, str]:

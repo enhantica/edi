@@ -43,11 +43,14 @@ keeps this contract and claims nothing beyond it:
    of the files the installed wheel's RECORD lists, and the installed
    distribution records that URL and digest.
 
-An `edi` that no pip distribution owns is a source build and is used as it is,
-with a message naming its path. The pip instructions give the same URL and
-digest. The threat considered is an accident: a package of the same name on
-another index, a missing index, or a kernel that imported `edi` before setup
-ran again. A package deliberately planted on a prepended path is out of scope.
-Published release wheels
-must be publicly downloadable before the index can expose them; draft assets are
-excluded.
+A source build is used only when `EDI_SOURCE_BUILD=1` asks for it. Without that,
+a folder or file that happens to be called `edi`, such as a repository checkout
+in the working directory, never counts as one: setup installs the wheel, and if
+that `edi` would still be imported instead, it stops and names it.
+
+The pip instructions give the same URL and digest. The threat considered is an
+accident: a package of the same name on another index, a missing index, a
+folder or file called `edi` in the working directory, or a kernel that imported
+`edi` before setup ran again. A package deliberately planted on a prepended path
+is out of scope. Published release wheels must be publicly downloadable before
+the index can expose them; draft assets are excluded.

@@ -163,12 +163,12 @@ def test_a_pip_installed_wrong_package_is_replaced(indexes, python, tmp_path):
     )
 
 
-def test_a_source_build_is_kept_without_installing(indexes, python, tmp_path):
+def test_an_explicit_source_build_is_kept_without_installing(indexes, python, tmp_path):
     _, pypi = indexes
     source = tmp_path / 'source'
     (source / 'edi').mkdir(parents=True)
     (source / 'edi/__init__.py').write_text("ORIGIN = 'source'\n")
-    env = environment(pypi, PYTHONPATH=str(source))
+    env = environment(pypi, PYTHONPATH=str(source), EDI_SOURCE_BUILD='1')
     result = run_setup(python, tmp_path / 'missing-index', env, tmp_path)
     assert result.returncode == 0, ('A source build is kept without installing.', result.stderr)
     code = 'import edi, importlib.util as u; print(edi.ORIGIN, u.find_spec("easydiffraction"))'
@@ -297,3 +297,35 @@ def test_an_interrupted_dependency_install_is_completed_on_the_next_run(indexes,
         [python, '-c', 'import edi_test_dependency'], env=env, capture_output=True, check=False
     )
     assert check.returncode == 0
+
+
+def test_a_folder_named_edi_in_the_working_directory_does_not_stop_the_install(
+    indexes, python, tmp_path
+):
+    ours, pypi = indexes
+    env = environment(pypi)
+    (tmp_path / 'edi').mkdir()  # a checkout or work folder: a namespace package, no metadata
+    result = run_setup(python, ours, env, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert installed(python, env, tmp_path) == ['ours', VERSION]
+
+
+def test_a_local_edi_module_that_would_shadow_the_wheel_is_refused_by_name(
+    indexes, python, tmp_path
+):
+    ours, pypi = indexes
+    env = environment(pypi)
+    (tmp_path / 'edi.py').write_text("ORIGIN = 'local'\n")
+    result = run_setup(python, ours, env, tmp_path)
+    assert result.returncode != 0
+    assert 'edi.py' in result.stderr and 'move or rename' in result.stderr
+
+
+def test_a_source_build_without_the_opt_in_is_not_taken_for_one(indexes, python, tmp_path):
+    _, pypi = indexes
+    source = tmp_path / 'source'
+    (source / 'edi').mkdir(parents=True)
+    (source / 'edi/__init__.py').write_text("ORIGIN = 'source'\n")
+    env = environment(pypi, PYTHONPATH=str(source))
+    result = run_setup(python, tmp_path / 'missing-index', env, tmp_path)
+    assert result.returncode != 0
