@@ -1022,6 +1022,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     RecordedEdit* recording_ = nullptr; // stack owner, detached before any UI observer
     void finishRecordedEdit() noexcept;
+    // The Undo step a slider drag is making, trimmed to what the drag changed when it is let go (edi ADR-0070).
+    struct DragUndo {
+        std::size_t index = 0;
+        std::vector<const edi::Parameter*> targets;
+    };
+    std::optional<DragUndo> drag_undo_;
+    void closeDragUndo() noexcept;
     EditOutcome estimateBackgroundFor(const edi::ExperimentBase* expected,EditOutcome* receipt);
     EditOutcome* estimate_receipt_ = nullptr;
     EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
@@ -1029,6 +1036,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool calculating_ = false;
     bool adjusting_ = false;
     bool adjusted_ = false;  // a drag step left the full publish for the release
+    edi::PreviewResult adjust_result_;  // the newest drag step's calculation, published in full on release
     bool modified_ = false;
     quint64 revision_ = 0;
     QString last_error_;

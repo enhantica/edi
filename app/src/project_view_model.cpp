@@ -286,11 +286,12 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     hooks.edited = [this] {
         if (retired_) return;
         if (fit_) fit_->invalidateFitUndo(); // Actual edit, before any model/Qt publication.
-        try { completeSymmetry(); }
+        // What a fit can vary waits for the release of a drag (edi ADR-0070); the values symmetry ties follow each step.
+        try { if (adjusting_) edi::apply_relations(*project_); else completeSymmetry(); }
         catch (...) { finishRecordedEdit(); throw; }
         finishRecordedEdit();
         publish(pending_structural_);
-        if (retired_) return;
+        if (retired_ || adjusting_) return;
         // An admitted edit, whatever it wrote: every pattern shows a calculation of the state before it, and
         // says so until the newest request publishes. A refused edit never gets here.
         for (ExperimentViewModel* experiment : experiment_models_) {
@@ -3371,17 +3372,34 @@ void ProjectViewModel::setAdjusting(bool adjusting) {
         return;
     }
     adjusting_ = adjusting;
+    // Released after a drag: everything the steps left runs once, now, before the charts draw their full view
+    // (edi ADR-0070). A calculation still running publishes its part when it arrives.
+    if (!adjusting && std::exchange(adjusted_, false) && !retired_) {
+        const PublicationScope publication(*this);
+        const QPointer<ProjectViewModel> self(this);
+        closeDragUndo();
+        try {
+            syncUndo();
+            if (retired_) return;
+            completeSymmetry();
+            publish(false);
+            if (retired_) return;
+            if (!preview_->busy()) {
+                published(adjust_result_);
+                if (retired_) return;
+            }
+            notifyProjectEdited();
+            if (retired_) return;
+        } catch (...) {
+            // The drag's values and its Undo step stand; what follows them could not be shown.
+            if (self) holdPublicationFailure(tr("The edit was applied, but its presentation could not be completed. Undo or reopen the project before further changes."));
+            return;
+        }
+    }
     for (ExperimentViewModel* experiment : experiment_models_) {
         experiment->setAdjusting(adjusting);
     }
     emit adjustingChanged();
-    // Released after a drag: everything the steps left waits once, now.
-    if (!adjusting && std::exchange(adjusted_, false) && !retired_) {
-        const PublicationScope publication(*this);
-        publish(false);
-        if (retired_) return;
-        for (ExperimentViewModel* experiment : experiment_models_) experiment->capturePattern();
-    }
 }
 
 void ProjectViewModel::scanCaughtUp() {
@@ -3742,7 +3760,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
         publishCalculating();
         if (!self || retired_) { result.message = applied_warning; return result; }
         edit_publication_failed_ = false;
-        notifyProjectEdited();
+        if (!adjusting_ || structural) notifyProjectEdited();  // a drag tells them once, on release
         if (!self || retired_) { result.message = applied_warning; return result; }
         result.published = true;
         result.message.clear();
@@ -3903,21 +3921,36 @@ QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool re
     }
 }
 
-void ProjectViewModel::finishRecordedEdit() noexcept {
-    RecordedEdit* record = recording_;
-    if (record == nullptr) return;
-    recording_ = nullptr; // no UI observer can reuse this stack receipt
-    auto& states = std::get<edi::RelationsUndo>(undo_history_[record->index]).parameters;
+namespace {
+// An edit's Undo keeps only the parameters it changed. Shrinks only; strings move, no map, traversal or allocation.
+void keep_changed(auto& states, const std::vector<const edi::Parameter*>& targets) noexcept {
     std::size_t kept = 0;
     for (std::size_t i = 0; i < states.size(); ++i) {
-        const edi::Parameter& now = *record->targets[i];
+        const edi::Parameter& now = *targets[i];
         const auto& before = states[i];
         if (now.value.get() != before.value || now.uncertainty.get() != before.uncertainty || now.free.get() != before.free) {
             if (kept != i) states[kept] = std::move(states[i]);
             ++kept;
         }
     }
-    states.resize(kept); // shrink only; strings move, no map/traversal/allocation after write
+    states.resize(kept);
+}
+}  // namespace
+
+void ProjectViewModel::finishRecordedEdit() noexcept {
+    RecordedEdit* record = recording_;
+    if (record == nullptr) return;
+    recording_ = nullptr; // no UI observer can reuse this stack receipt
+    keep_changed(std::get<edi::RelationsUndo>(undo_history_[record->index]).parameters, record->targets);
+}
+
+void ProjectViewModel::closeDragUndo() noexcept {
+    const std::optional<DragUndo> drag = std::exchange(drag_undo_, std::nullopt);
+    if (!drag || drag->index + 1 != undo_history_.size()) return;  // an Undo during the drag took its step
+    auto* relations = std::get_if<edi::RelationsUndo>(&undo_history_[drag->index]);
+    if (relations == nullptr) return;
+    keep_changed(relations->parameters, drag->targets);
+    if (relations->parameters.empty()) undo_history_.pop_back();  // let go where it started: nothing to undo
 }
 
 ProjectViewModel::EditOutcome ProjectViewModel::applyRecordedEdit(const edi::Edit& change, bool structural) {
@@ -3926,6 +3959,10 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyRecordedEdit(const edi::Edi
         return {false, false, pending};
     const QPointer<ProjectViewModel> self(this);
     const QString warning = tr("The edit was applied and Undo retained, but its presentation could not be completed");
+    // One drag is one Undo step (edi ADR-0070): its first step records the project as the drag found it, the rest add
+    // nothing, and the release trims that record to what the whole drag changed.
+    const bool dragging = adjusting_ && !structural;
+    if (dragging && drag_undo_ && drag_undo_->index + 1 == undo_history_.size()) return applyEdit(change, false);
     edi::RelationsUndo before = edi::capture_relations(*project_);
     // These closed relation/value/free operations preserve parameter membership/names.
     // Resolve the exact before-state pointers BEFORE writing, not after publication.
@@ -3940,7 +3977,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyRecordedEdit(const edi::Edi
         if (self && self->recording_ == &record) self->recording_ = nullptr;
     });
     undo_history_.emplace_back(std::move(before)); // complete owner exists before the first live write
-    recording_ = &record;
+    recording_ = dragging ? nullptr : &record;
     EditOutcome result;
     try { result = applyEdit(change, structural); }
     catch (...) {
@@ -3956,6 +3993,8 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyRecordedEdit(const edi::Edi
     if (!result.applied) {
         recording_ = nullptr;
         undo_history_.pop_back();
+    } else if (dragging) {
+        drag_undo_ = DragUndo{record.index, std::move(record.targets)};
     } else finishRecordedEdit();
     try { syncUndo(); }
     catch (...) {
@@ -4224,6 +4263,7 @@ void ProjectViewModel::finishFitUndo(const std::shared_ptr<FitUndoInput>& input)
 void ProjectViewModel::undo() {
     const PublicationScope publication(*this);
     if (fit_undo_invoking_) return; // A completed/retired prearm never becomes a nested manual Undo.
+    drag_undo_.reset();
     const auto input = fit_undo_input_;
     if (input) {
         if (input->consumed || fit_undo_invoking_ || !fitUndoAvailable() || input->attempt != fit_->undo_attempt_) return;
@@ -4873,14 +4913,17 @@ void ProjectViewModel::publishTemplate() {
 
 void ProjectViewModel::publish(bool structural) {
     if (structural) {
+        drag_undo_.reset();  // the parameters it names may be gone; its full record still restores them by name
         registry_->rebuild(*project_);
         syncBlocks();
         showStructureView();  // an apply or an undo can change what the structure saved
     }
-    // During a slider drag only the values, the calculation and the charts follow each step; the rest (the save
-    // spelling, the texts, the categories, the report) once on release (the owner, 2026-11-04; setAdjusting).
+    // During a slider drag only the values, the calculation and the charts follow each step; the rest once on release
+    // (edi ADR-0070). A Save in between still writes the newest values: its files are made when read.
     if (adjusting_ && !structural) {
         registry_->publishValues();
+        saved_files_.reset();
+        discovered_files_.reset();
         adjusted_ = true;
         return;
     }
@@ -5189,14 +5232,11 @@ void ProjectViewModel::published(const edi::PreviewResult& result) {
     const PublicationScope publication(*this);
     if (retired_) return;
     if (adjusting_) {
-        // A drag step: the values and the charts only.
+        // A drag step: the values and the charts only (edi ADR-0070).
         registry_->publishValues();
-        const QString error = QString::fromStdString(result.refusal);
-        for (ExperimentViewModel* experiment : experiment_models_) {
-            experiment->pattern()->calculated(error);
-            experiment->capturePattern(false);
-        }
-        for (StructureViewModel* structure : structure_models_) structure->captureScene();
+        for (ExperimentViewModel* experiment : experiment_models_) experiment->capturePattern(false);
+        saved_files_.reset();  // a save writes the calculated pattern too
+        adjust_result_ = result;
         adjusted_ = true;
         publishCalculating();
         if (retired_) return;

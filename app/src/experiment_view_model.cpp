@@ -740,8 +740,10 @@ void ExperimentViewModel::capturePattern(bool categories) {
     // What the calculation publishes with the pattern: a single crystal's calculated F², a powder's reflections, and
     // the categories its file holds with them, with their counts.
     single_crystal_reflections_->sync();
-    reflections_->sync();
-    if (categories) syncCategories();
+    if (categories) {
+        reflections_->sync();
+        syncCategories();
+    }
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {
