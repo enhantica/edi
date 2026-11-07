@@ -2637,6 +2637,8 @@ void ProjectViewModel::showScanResults() {
     syncDatasets();
     evolution_->setTemplate(&scanTemplateOrModel());
     evolution_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
+    // The template's point needs its file's extracted values even when its row is not on screen.
+    scan_session_->want(templateIndex());
     scan_views_->setScan(scan_session_, project_.get(), scan_columns_.value(0));
     const ScanSession::Run& provenance = scan_session_->run();
     if (!scan_session_->index().error.empty()) {
@@ -4492,6 +4494,9 @@ void ProjectViewModel::publish(bool structural) {
     analysis_->sync();
     if (retired_) return;
     evolution_->setTemplate(&scanTemplateOrModel());
+    if (scan_session_ != nullptr && scan_) {
+        scan_session_->want(templateIndex());  // the template may have changed to a file not read yet
+    }
     evolution_->syncParameters();
     if (retired_) return;
     syncCorrelations();
