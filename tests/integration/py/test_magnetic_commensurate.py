@@ -108,6 +108,28 @@ def test_named_magnetic_cif_imports_preserve_moments_and_iso_loops(tmp_path, nam
                 'Every imported ISODISTORT token survives the native save'
             )
 
+    # P3d's taken declarations must survive, even when the importer can count the sites.
+    for key, values in original.items():
+        if key.startswith(('_space_group_magn.', '_space_group_magn_transforms.',
+                           '_space_group_symop_magn_operation.',
+                           '_space_group_symop_magn_centering.')) and values != ['?']:
+            assert saved.get(key) == values, (
+                'Every supplied magnetic group descriptor and signed operator is retained'
+            )
+    factory = api.StructureFactory.from_cif_str(text)
+    for index, label in enumerate(original['_atom_site_moment.label']):
+        assert factory.atom_site_moment[label].symmform.replace(' ', '') == (
+            'Mx,My,Mz' if index == 0 else '0,My,0'
+        ), 'The magCIF factory derives the independently known Pnma axial subspaces'
+    restored = api.Project.load(tmp_path / 'saved')
+    restored.save_as(tmp_path / 'saved-again')
+    again = ref.columns((tmp_path / 'saved-again/structures/cosio.edi').read_text())
+    for key, values in saved.items():
+        if key.startswith(('_iso_', '_space_group_magn', '_atom_site_moment.')):
+            assert again.get(key) == values, (
+                'A second load and save keeps imported magnetic declarations and opaque iso data'
+            )
+
 
 def test_invalid_cell_edit_is_atomic_and_loading_rederives_moment_ties(tmp_path):
     # R=(x+y,-y,z), gamma=60 degrees, a=b: invariance of axial M requires Mx=-My/2.
@@ -119,6 +141,11 @@ def test_invalid_cell_edit_is_atomic_and_loading_rederives_moment_ties(tmp_path)
         '_parent_space_group.derived false', '_parent_space_group.derived true'
     )
     model = api.Project.load(ref.project(tmp_path / 'input', source))
+    marked = source.replace('_cell.length_b 4', '_cell.length_b 4()')
+    loaded_free = api.Project.load(ref.project(tmp_path / 'free-cell', marked))
+    assert not loaded_free.structure.cell.length_b.free, (
+        'An operator-defined magnetic metric clears a forbidden free cell flag at load'
+    )
     moment = model.structure.atom_site_moment['A']
     assert moment.crystalaxis_x.value == pytest.approx(-0.5), (
         'The initial metric-dependent axial tie equals the hand stabiliser solution'
