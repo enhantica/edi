@@ -89,6 +89,7 @@ TestCase {
         ];
     }
     function test_migration(data) {
+        SettingsProof.erase(Globals.Vars.settingsFile, "Edi.Preferences", levelKey());
         SettingsProof.seed(Globals.Vars.settingsFile, "Edi.Preferences", "toolTips", data.old);
         compare(freshValue(fresh(), /^tooltips?level$/i), data.level, "The saved legacy flag migrates to the declared level");
     }
@@ -121,12 +122,14 @@ TestCase {
             y: 200,
             enabled: data.enabled
         });
-        const names = Object.keys(button).filter(k => /self.?explanatory/i.test(k));
-        compare(names.length, 1, "A tooltip use can declare its control self-explanatory");
-        button[names[0]] = data.self;
-        mouseMove(button, 40, 20);
         const tips = SettingsProof.tooltipObjects(button).filter(t => t.text === button.ToolTip.text);
         verify(tips.length > 0, "The real shared control owns an actual tooltip");
+        for (const tip of tips) {
+            const names = Object.keys(tip).filter(k => /self.?explanatory/i.test(k));
+            compare(names.length, 1, "A tooltip use can declare its control self-explanatory");
+            tip[names[0]] = data.self;
+        }
+        mouseMove(button, 40, 20);
         const shown = data.level !== "Off" && (data.level === "All" || !data.self || !data.enabled);
         compare(tips.some(t => t.visible), shown, "Off hides all; Important includes unexplained and disabled controls; All includes every control");
         if (!data.enabled && shown) {
@@ -136,14 +139,17 @@ TestCase {
     }
     function test_disabled_app_control() {
         start();
-        setLevel("Important");
         Preferences[delayKey()] = 0;
         const save = findChild(app, "appBar.button.save");
         verify(save !== null && !save.enabled, "A new application has an actual disabled Save control");
-        mouseMove(save, save.width / 2, save.height / 2);
-        const tips = SettingsProof.tooltipObjects(save).filter(t => t.visible);
-        verify(tips.length > 0, "Important displays the actual disabled control's tooltip");
-        verify(tips.some(t => /no project|unchanged|no changes|nothing to save/i.test(t.text) && /open|create|change|edit/i.test(t.text)), "Disabled Save names its reason and an action that enables saving");
+        for (const level of ["Important", "All"]) {
+            mouseMove(app.contentItem, 600, 400);
+            setLevel(level);
+            mouseMove(save, save.width / 2, save.height / 2);
+            const tips = SettingsProof.tooltipObjects(app).filter(t => t.visible && /sav/i.test(t.text));
+            verify(tips.length > 0, level + " displays the actual disabled Save control's tooltip");
+            verify(tips.some(t => /no project|unchanged|no changes|nothing to save/i.test(t.text) && /open|create|change|edit/i.test(t.text)), "Disabled Save names its reason and an action that enables saving");
+        }
     }
     function test_delay_clock() {
         start();

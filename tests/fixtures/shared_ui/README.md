@@ -3,6 +3,17 @@ All, Important and Off; Important initially; a 1500 ms delay; and migration of t
 saved boolean to Off or Important. The nondefault persistence witness uses 2371 ms.
 Tooltip property discovery allows spelling differences without replacing those rules.
 
+The level matrix previously required the declaration on the button. It now discovers
+it on the tooltip use, as the shared rule permits. Migration previously seeded only
+the old boolean; it now removes the new level first, so it exercises a legacy store.
+The disabled application witness is Save in a new application with no project. At
+Important and All, hovering Save must show why saving is unavailable and how to
+enable it. The tooltip may be hosted by an enabled wrapper to receive hover input.
+
+The container census previously rejected a retained clip even with its own layer.
+It now accepts that boundary: a clipped child crossing an enclosing clip needs a
+layer between them. Plain nested clips and an unrelated child's layer still fail.
+
 The tooltip timer observer reads Qt's actual registered delay timer and delivers its
 expiry event on an injected clock. It neither changes the production delay nor sleeps.
 The original 1000 ms fade is checked separately. The restart observer creates another
