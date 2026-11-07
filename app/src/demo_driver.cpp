@@ -639,6 +639,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"scan-open-5-fitting", {"statusBar.fit.button", "wait-files:5", "capture-now"}});
         steps_.push_back({"scan-open-6-stopped", {"statusBar.fit.button", "wait-fit"}});
         steps_.push_back({"scan-open-7-reset", {"statusBar.fit.reset"}});
+        steps_.push_back({"scan-open-8-sequential",
+                          {QStringLiteral("sideBar.tab.extras"), "expand:group.fitting_mode", "reveal:fittingMode.type", "fittingMode.type",
+                           "choose:Sequential: each from the previous"}});
     }
     // The Evolution tab of a scan before and after its fit, with the parameter list open. Run only when asked
     // (`--demo-only evolution-`).
