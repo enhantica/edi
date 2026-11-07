@@ -2,7 +2,10 @@
 #include "fit_view_model.hpp"
 
 #include <utility>
+#include <QFile>
+#include <QDir>
 #include <QFileInfo>
+#include <QSaveFile>
 #include <QPointer>
 #include <QScopeGuard>
 #include <exception>
@@ -14,6 +17,7 @@
 #include "edi/display.hpp"
 #include "edi/duration_text.hpp"
 #include "edi/edit.hpp"
+#include "edi/io.hpp"
 #include "edi/selectors.hpp"
 #include "project_view_model.hpp"
 #include "run_log.hpp"
@@ -431,6 +435,7 @@ void FitViewModel::close() {
     accepted_fit_.reset();
     starting_ = undo_target_ = {};
     candidate_ = stop_rollback_ = manual_since_accepted_ = false;
+    trial_files_.clear();
     pending_accept_.reset();
     latest_attempt_ = submitted_attempt_ = finished_attempt_ = native_attempt_ = 0;
     catch_up_.clear();
@@ -622,6 +627,7 @@ bool FitViewModel::undo() {
         accepted_fit_ = target.attempt ? std::make_shared<const edi::Project>(project_) : nullptr;
         undo_target_ = {};
         candidate_ = manual_since_accepted_ = false;
+        trial_files_.clear();
         setProgress(QString(), QString(), QString());
         setElapsed(QString());
         results_->setRecord(project_);
@@ -637,11 +643,22 @@ bool FitViewModel::restoreAccepted(quint64 owner) {
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
     const auto restoration = qScopeGuard([self] { if (self) self->restoring_ = false; });
+    // The reports the trial saved: rows the accepted project does not list. Their files go with the rollback.
+    std::vector<std::string> trial_reports;
+    for (const auto& row : project_.report_files) {
+        const std::string name = row->name.value();
+        if (std::none_of(accepted->report_files.begin(), accepted->report_files.end(),
+                         [&name](const auto& kept) { return kept->name.value() == name; }))
+            trial_reports.push_back(name);
+    }
+    const bool reports_changed = trial_reports.size() + accepted->report_files.size() != project_.report_files.size() ||
+                                 !trial_reports.empty();
     const QString refusal = owner_.restoreProject(*accepted);
     if (!self) return false;
     restoring_ = false;
     if (!refusal.isEmpty() || owner_.retired_) return false;
     // The rejected trial leaves no Undo step behind: Undo continues from the accepted fit, never into the trial.
+    restoreTrialFiles(trial_reports, reports_changed);
     candidate_ = stop_rollback_ = false;
     dropTrialHistory();
     manual_since_accepted_ = false;
@@ -654,6 +671,46 @@ void FitViewModel::saved() {
     accepted_fit_ = std::make_shared<const edi::Project>(project_);
     accepted_history_depth_ = owner_.undo_history_.size();
     candidate_ = stop_rollback_ = manual_since_accepted_ = false;
+    trial_files_.clear();
+}
+
+void FitViewModel::noteTrialFile(const QString& path) {
+    // Only what the assistant itself writes after an accepted fit belongs to a trial a rollback can undo; a file the
+    // user saves is never touched. Its first write may come before any edit opens the candidate.
+    if (owner_.assistant_edit_ == 0 || !accepted_fit_ || manual_since_accepted_ || restoring_) return;
+    if (trial_files_.count(path) != 0) return;
+    QFile file(path);
+    if (!file.exists()) {
+        trial_files_.emplace(path, std::nullopt);
+    } else if (file.open(QIODevice::ReadOnly)) {
+        trial_files_.emplace(path, file.readAll());
+    }
+    // A file that exists but cannot be read is left out: a rollback must never remove what it could not put back.
+}
+
+void FitViewModel::restoreTrialFiles(const std::vector<std::string>& trial_reports, bool reports_changed) {
+    auto files = std::exchange(trial_files_, {});
+    const QDir reports(QDir(QString::fromStdString(project_.path)).filePath(QStringLiteral("reports")));
+    // A report the trial added is removed unless its earlier bytes were noted, which are put back instead.
+    for (const auto& name : trial_reports) files.try_emplace(reports.filePath(QString::fromStdString(name)), std::nullopt);
+    for (const auto& [path, before] : files) {
+        if (path == reports.filePath(QStringLiteral("report.edi"))) continue;
+        if (!before) {
+            if (QFile::exists(path) && !QFile::remove(path)) qWarning("The trial's file %s could not be removed", qPrintable(path));
+            continue;
+        }
+        QSaveFile file(path);
+        if (!file.open(QIODevice::WriteOnly) || file.write(*before) != before->size() || !file.commit())
+            qWarning("The file %s could not be put back as the accepted state left it", qPrintable(path));
+    }
+    // reports/report.edi lists the accepted rows again, as the accepted state's last Save report wrote them.
+    if ((reports_changed || files.count(reports.filePath(QStringLiteral("report.edi"))) != 0) && !project_.path.empty()) {
+        try {
+            edi::save_report_settings(project_, project_.path);
+        } catch (const std::exception& error) {
+            qWarning("reports/report.edi could not be rewritten: %s", error.what());
+        }
+    }
 }
 
 void FitViewModel::dropTrialHistory() noexcept {
@@ -1143,6 +1200,7 @@ void FitViewModel::ended(const edi::FitReport& report) {
         accepted_fit_ = std::make_shared<const edi::Project>(project_);
         accepted_history_depth_ = owner_.undo_history_.size();
         candidate_ = stop_rollback_ = manual_since_accepted_ = false;
+        trial_files_.clear();
     }
     const bool stopped = std::exchange(stop_rollback_, false);
     const auto stopped_owner = stop_owner_;

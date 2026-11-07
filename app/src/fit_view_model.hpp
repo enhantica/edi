@@ -2,6 +2,7 @@
 #ifndef EDI_APP_FIT_VIEW_MODEL_HPP
 #define EDI_APP_FIT_VIEW_MODEL_HPP
 
+#include <QByteArray>
 #include <QElapsedTimer>
 #include <QList>
 #include <QObject>
@@ -12,9 +13,11 @@
 #include <deque>
 #include <memory>
 #include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "edi/fit_job.hpp"
 #include "edi/model.hpp"
@@ -274,8 +277,15 @@ class FitViewModel : public QObject {
         candidate_owner_ = owner;
     }
     void dropCandidate() noexcept {
-        if (!restoring_) { candidate_ = stop_rollback_ = false; manual_since_accepted_ = true; }
+        if (!restoring_) {
+            candidate_ = stop_rollback_ = false;
+            manual_since_accepted_ = true;
+            trial_files_.clear();
+        }
     }
+    // A file the open trial is about to write outside the project model (a saved report and its reports/report.edi),
+    // noted once with what it held, so that rolling the trial back puts the folder back as the accepted state left it.
+    void noteTrialFile(const QString& path);
     bool restoreAccepted(quint64 owner);
     // A Save ends the trial: what was saved is the new accepted baseline, and nothing before it is rolled back.
     void saved();
@@ -289,7 +299,11 @@ class FitViewModel : public QObject {
     }
     // Whether the assistant is working a turn: the lock holds a candidate only then. Between turns the user may act,
     // and a manual edit ends the trial for good (dropCandidate), a Save makes the saved state the baseline (saved).
-    void setAssistantBusy(bool busy) noexcept { assistant_busy_ = busy; }
+    void setAssistantBusy(bool busy) noexcept {
+        assistant_busy_ = busy;
+        // A turn that ended without changing the project leaves no trial: what it wrote stays as written.
+        if (!busy && !candidate_) trial_files_.clear();
+    }
     // Whether this fit view is putting a state back (a rollback or a fit Undo), which the trial lock admits.
     bool restoring() const noexcept { return restoring_; }
     // Whether this fit view is writing its own fit (its start state, its adopted result), which the lock admits too.
@@ -370,6 +384,10 @@ class FitViewModel : public QObject {
     // The project's Undo depth when the accepted fit was taken: a whole-project restore drops the trial's own Undo
     // entries above it, so a later ordinary Undo cannot bring back a fragment of the trial.
     std::size_t accepted_history_depth_ = 0;
+    // The files the open trial wrote (noteTrialFile): each path with its bytes before the trial, or none when the
+    // trial created it. Rolling back restores or removes them; any other end of the trial keeps them as they are.
+    std::map<QString, std::optional<QByteArray>> trial_files_;
+    void restoreTrialFiles(const std::vector<std::string>& trial_reports, bool reports_changed);
     // The project as an adopted fit left it, accepted only once its presentation completes.
     std::shared_ptr<const edi::Project> pending_accept_;
     void dropTrialHistory() noexcept;

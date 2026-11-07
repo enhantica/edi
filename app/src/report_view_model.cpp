@@ -381,6 +381,7 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
         const QString name = base + QLatin1Char('.') + QLatin1String(format);
         // Through the core's writer, as the command line writes: nothing behind a link in reports/ is written.
         bool stored = !bytes.isEmpty();
+        if (stored && project_.fit() != nullptr) project_.fit()->noteTrialFile(reports.filePath(name));
         if (stored) {
             try {
                 edi::write_report_file(project.path, name.toStdString(), bytes.toStdString());
@@ -437,6 +438,7 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     }
     // The rows, in reports/report.edi alone; the project's other files are left as they are.
     if (!rows.empty()) {
+        if (project_.fit() != nullptr) project_.fit()->noteTrialFile(reports.filePath(QStringLiteral("report.edi")));
         try {
             project_.recordReportFiles(std::move(rows), true);
         } catch (const std::exception& error) {
