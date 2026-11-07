@@ -121,9 +121,15 @@ def test_all_generated_resources_avoid_oversized_string_literals(generated):
     build, _ = generated
     for path in build.glob('*_data.cpp'):
         text = path.read_text(encoding='utf-8')
-        assert max(map(len, text.splitlines()), default=0) <= 8000, path.name
+        assert max(map(len, text.splitlines()), default=0) <= 8000, (
+            'All generated resources avoid oversized string literals.',
+            path.name,
+        )
         matches = re.findall(r'R"([^ ()\\\t\r\n]{0,16})\((.*?)\)\1"', text, re.DOTALL)
-        assert all(len(content.encode()) <= 8000 for _, content in matches), path.name
+        assert all(len(content.encode()) <= 8000 for _, content in matches), (
+            'All generated resources avoid oversized string literals.',
+            path.name,
+        )
 
 
 def test_all_resource_families_keep_exact_bytes_after_native_compilation(generated):
@@ -134,4 +140,7 @@ def test_all_resource_families_keep_exact_bytes_after_native_compilation(generat
         result = subprocess.run(
             [str(executable), str(index)], capture_output=True, check=True, timeout=5
         )
-        assert result.stdout == data, index
+        assert result.stdout == data, (
+            'All resource families keep exact bytes after native compilation.',
+            index,
+        )

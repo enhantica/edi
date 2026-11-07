@@ -84,15 +84,23 @@ def test_preparation_uses_actual_ancestry_and_retry_identity(repository):
         for path in (root / 'first').iterdir():
             stream.write(path, path.name)
     download.unpack_plan(archive.getvalue(), root / 'downloaded')
-    assert (root / 'downloaded/notes.md').read_bytes() == (root / 'first/notes.md').read_bytes()
+    assert (root / 'downloaded/notes.md').read_bytes() == (root / 'first/notes.md').read_bytes(), (
+        'Preparation uses actual ancestry and retry identity.'
+    )
     recorded = json.loads((root / 'first/release-history.json').read_text())
     PLAN.validate_history(recorded)
     reserve.assert_called_once_with(
         'enhantica/edi', head, datetime.date(2026, 11, 5), prerelease=False
     )
-    assert first['release']['version'] == '2026.11.1'
-    assert first['release']['commit'] == head
-    assert first['release']['notes']['Fixed'][0]['title'] == request['title']
+    assert first['release']['version'] == '2026.11.1', (
+        'Preparation uses actual ancestry and retry identity.'
+    )
+    assert first['release']['commit'] == head, (
+        'Preparation uses actual ancestry and retry identity.'
+    )
+    assert first['release']['notes']['Fixed'][0]['title'] == request['title'], (
+        'Preparation uses actual ancestry and retry identity.'
+    )
     with (
         mock.patch.object(PREPARE, 'ROOT', root),
         mock.patch.object(PREPARE, 'published_history', return_value=recorded),
@@ -100,9 +108,13 @@ def test_preparation_uses_actual_ancestry_and_retry_identity(repository):
         mock.patch.object(PREPARE, 'calendar_tags', return_value=['2026.11.0', '2026.11.1']),
     ):
         retry = PREPARE.prepare('enhantica/edi', head, root / 'retry', datetime.date(2026, 12, 1))
-    assert retry['reused']
-    assert retry['release'] == first['release']
-    assert json.loads((root / 'retry/release-history.json').read_text()) == recorded
+    assert retry['reused'], 'Preparation uses actual ancestry and retry identity.'
+    assert retry['release'] == first['release'], (
+        'Preparation uses actual ancestry and retry identity.'
+    )
+    assert json.loads((root / 'retry/release-history.json').read_text()) == recorded, (
+        'Preparation uses actual ancestry and retry identity.'
+    )
 
 
 def test_preparation_refuses_a_candidate_behind_the_published_baseline(repository):
@@ -114,7 +126,9 @@ def test_preparation_refuses_a_candidate_behind_the_published_baseline(repositor
         pytest.raises(subprocess.CalledProcessError),
     ):
         PREPARE.prepare('enhantica/edi', base, root / 'rejected', datetime.date(2026, 11, 5))
-    assert not (root / 'rejected').exists()
+    assert not (root / 'rejected').exists(), (
+        'Preparation refuses a candidate behind the published baseline.'
+    )
 
 
 def test_api_failure_is_not_treated_as_a_first_release():

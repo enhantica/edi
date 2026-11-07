@@ -120,30 +120,43 @@ def test_ours_wins_over_equal_and_higher_versions_and_dependencies_come_from_pyp
     ours, pypi = indexes
     env = environment(pypi)
     result = run_setup(python, ours, env, tmp_path)
-    assert result.returncode == 0, result.stderr
-    assert installed(python, env, tmp_path) == ['ours', VERSION]
+    assert result.returncode == 0, (
+        'Ours wins over equal and higher versions and dependencies come from PyPI.',
+        result.stderr,
+    )
+    assert installed(python, env, tmp_path) == ['ours', VERSION], (
+        'Ours wins over equal and higher versions and dependencies come from PyPI.'
+    )
     dependency = subprocess.run(
         [python, '-c', 'import edi_test_dependency'], env=env, capture_output=True, check=False
     )
-    assert dependency.returncode == 0
+    assert dependency.returncode == 0, (
+        'Ours wins over equal and higher versions and dependencies come from PyPI.'
+    )
 
 
 def test_unreachable_index_refuses_instead_of_falling_back(indexes, python, tmp_path):
     _, pypi = indexes
     env = environment(pypi)
     result = run_setup(python, tmp_path / 'missing-index', env, tmp_path)
-    assert result.returncode != 0
-    assert installed(python, env, tmp_path) == []
+    assert result.returncode != 0, 'Unreachable index refuses instead of falling back.'
+    assert installed(python, env, tmp_path) == [], (
+        'Unreachable index refuses instead of falling back.'
+    )
 
 
 def test_a_pip_installed_wrong_package_is_replaced(indexes, python, tmp_path):
     ours, pypi = indexes
     env = environment(pypi)
     pip_install(python, env, f'easydiffraction=={VERSION}')
-    assert installed(python, env, tmp_path) == ['pypi', VERSION]
+    assert installed(python, env, tmp_path) == ['pypi', VERSION], (
+        'A pip installed wrong package is replaced.'
+    )
     result = run_setup(python, ours, env, tmp_path)
-    assert result.returncode == 0, result.stderr
-    assert installed(python, env, tmp_path) == ['ours', VERSION]
+    assert result.returncode == 0, ('A pip installed wrong package is replaced.', result.stderr)
+    assert installed(python, env, tmp_path) == ['ours', VERSION], (
+        'A pip installed wrong package is replaced.'
+    )
 
 
 def test_a_source_build_is_kept_without_installing(indexes, python, tmp_path):
@@ -153,12 +166,12 @@ def test_a_source_build_is_kept_without_installing(indexes, python, tmp_path):
     (source / 'edi/__init__.py').write_text("ORIGIN = 'source'\n")
     env = environment(pypi, PYTHONPATH=str(source))
     result = run_setup(python, tmp_path / 'missing-index', env, tmp_path)
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, ('A source build is kept without installing.', result.stderr)
     code = 'import edi, importlib.util as u; print(edi.ORIGIN, u.find_spec("easydiffraction"))'
     out = subprocess.run(
         [python, '-c', code], env=env, capture_output=True, text=True, check=False
     ).stdout
-    assert out.split() == ['source', 'None']
+    assert out.split() == ['source', 'None'], 'A source build is kept without installing.'
 
 
 def configure_pip(python, pypi):
@@ -176,8 +189,13 @@ def test_configuration_files_and_find_links_cannot_supply_the_package(indexes, p
     configure_pip(python, pypi)
     env = environment(pypi)
     result = run_setup(python, ours, env, tmp_path)
-    assert result.returncode == 0, result.stderr
-    assert installed(python, env, tmp_path) == ['ours', VERSION]
+    assert result.returncode == 0, (
+        'Configuration files and find links cannot supply the package.',
+        result.stderr,
+    )
+    assert installed(python, env, tmp_path) == ['ours', VERSION], (
+        'Configuration files and find links cannot supply the package.'
+    )
 
 
 def test_the_dependency_pass_cannot_reselect_the_package(indexes, python, tmp_path):
@@ -185,8 +203,13 @@ def test_the_dependency_pass_cannot_reselect_the_package(indexes, python, tmp_pa
     configure_pip(python, pypi)
     env = environment(pypi, PIP_FORCE_REINSTALL='1', PIP_IGNORE_INSTALLED='1')
     result = run_setup(python, ours, env, tmp_path)
-    assert result.returncode == 0, result.stderr
-    assert installed(python, env, tmp_path) == ['ours', VERSION]
+    assert result.returncode == 0, (
+        'The dependency pass cannot reselect the package.',
+        result.stderr,
+    )
+    assert installed(python, env, tmp_path) == ['ours', VERSION], (
+        'The dependency pass cannot reselect the package.'
+    )
 
 
 def test_an_imported_wrong_package_refuses_until_the_kernel_restarts(indexes, python, tmp_path):
@@ -199,15 +222,26 @@ def test_an_imported_wrong_package_refuses_until_the_kernel_restarts(indexes, py
     result = subprocess.run(
         [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
     )
-    assert result.returncode != 0
-    assert 'Restart the kernel' in result.stderr
-    assert installed(python, env, tmp_path) == ['pypi', VERSION]
-    assert run_setup(python, ours, env, tmp_path).returncode == 0
+    assert result.returncode != 0, 'An imported wrong package refuses until the kernel restarts.'
+    assert 'Restart the kernel' in result.stderr, (
+        'An imported wrong package refuses until the kernel restarts.'
+    )
+    assert installed(python, env, tmp_path) == ['pypi', VERSION], (
+        'An imported wrong package refuses until the kernel restarts.'
+    )
+    assert run_setup(python, ours, env, tmp_path).returncode == 0, (
+        'An imported wrong package refuses until the kernel restarts.'
+    )
     rerun = subprocess.run(
         [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
     )
-    assert rerun.returncode == 0, rerun.stderr
-    assert installed(python, env, tmp_path) == ['ours', VERSION]
+    assert rerun.returncode == 0, (
+        'An imported wrong package refuses until the kernel restarts.',
+        rerun.stderr,
+    )
+    assert installed(python, env, tmp_path) == ['ours', VERSION], (
+        'An imported wrong package refuses until the kernel restarts.'
+    )
 
 
 def test_an_edi_shadowing_the_installed_one_on_the_kernel_path_refuses(indexes, python, tmp_path):
@@ -223,5 +257,7 @@ def test_an_edi_shadowing_the_installed_one_on_the_kernel_path_refuses(indexes, 
     result = subprocess.run(
         [python, '-c', kernel], env=env, cwd=tmp_path, capture_output=True, text=True, check=False
     )
-    assert result.returncode != 0
-    assert 'is not the wheel from' in result.stderr
+    assert result.returncode != 0, 'An edi shadowing the installed one on the kernel path refuses.'
+    assert 'is not the wheel from' in result.stderr, (
+        'An edi shadowing the installed one on the kernel path refuses.'
+    )

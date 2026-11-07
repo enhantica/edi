@@ -54,20 +54,28 @@ def select(jobs_by_attempt, retained):
 
 def test_a_draft_only_retry_keeps_the_complete_earlier_attempt():
     draft_only = [{'name': 'Create or update the prerelease draft', 'conclusion': 'success'}]
-    assert select({1: installer_jobs(), 2: draft_only}, artifacts(1)) == 1
+    assert select({1: installer_jobs(), 2: draft_only}, artifacts(1)) == 1, (
+        'A draft only retry keeps the complete earlier attempt.'
+    )
 
 
 def test_platforms_are_never_combined_across_attempts():
     partial = installer_jobs('Windows')
-    assert select({1: installer_jobs(), 2: partial}, artifacts(1, 2)) == 1
+    assert select({1: installer_jobs(), 2: partial}, artifacts(1, 2)) == 1, (
+        'Platforms are never combined across attempts.'
+    )
     with pytest.raises(ValueError, match='built and kept every platform'):
         select({1: installer_jobs('Linux'), 2: installer_jobs('Windows')}, artifacts(1, 2))
 
 
 def test_the_newest_complete_attempt_wins_and_expired_artifacts_do_not_count():
-    assert select({1: installer_jobs(), 2: installer_jobs()}, artifacts(1, 2)) == 2
+    assert select({1: installer_jobs(), 2: installer_jobs()}, artifacts(1, 2)) == 2, (
+        'The newest complete attempt wins and expired artifacts do not count.'
+    )
     expired = [{**item, 'expired': item['name'].endswith('-2')} for item in artifacts(1, 2)]
-    assert select({1: installer_jobs(), 2: installer_jobs()}, expired) == 1
+    assert select({1: installer_jobs(), 2: installer_jobs()}, expired) == 1, (
+        'The newest complete attempt wins and expired artifacts do not count.'
+    )
 
 
 def test_a_run_without_calendar_identity_cannot_be_recovered(tmp_path):

@@ -40,10 +40,14 @@ def plan_with_labels(*labels):
 
 def test_interface_labels_render_once():
     release = plan_with_labels('[interface] web', '[interface] desktop')
-    assert release['notes']['Fixed'][0]['interfaces'] == ['desktop', 'web']
+    assert release['notes']['Fixed'][0]['interfaces'] == ['desktop', 'web'], (
+        'Interface labels render once.'
+    )
     github = PLAN.markdown_notes(release)
-    assert 'Improve plot zoom' in github
-    assert github.rstrip().endswith('`desktop` `web` <!-- interfaces: desktop,web -->')
+    assert 'Improve plot zoom' in github, 'Interface labels render once.'
+    assert github.rstrip().endswith('`desktop` `web` <!-- interfaces: desktop,web -->'), (
+        'Interface labels render once.'
+    )
     published = {
         'draft': False,
         'prerelease': True,
@@ -53,16 +57,20 @@ def test_interface_labels_render_once():
         'body': github,
     }
     page = DOCS.render([[published, {**published, 'draft': True, 'name': 'Private draft'}]])
-    assert page.count('.ed-release-interface') == 2
-    assert ':fa5-desktop: Desktop app' in page
-    assert ':fa5-globe: Web app' in page
-    assert '`desktop`' not in page
-    assert 'Private draft' not in page
-    assert page.index('Improve plot zoom') < page.index(':fa5-desktop: Desktop app')
+    assert page.count('.ed-release-interface') == 2, 'Interface labels render once.'
+    assert ':fa5-desktop: Desktop app' in page, 'Interface labels render once.'
+    assert ':fa5-globe: Web app' in page, 'Interface labels render once.'
+    assert '`desktop`' not in page, 'Interface labels render once.'
+    assert 'Private draft' not in page, 'Interface labels render once.'
+    assert page.index('Improve plot zoom') < page.index(':fa5-desktop: Desktop app'), (
+        'Interface labels render once.'
+    )
 
 
 def test_notes_without_interfaces_keep_their_existing_text():
-    assert PLAN.markdown_note({'title': 'Improve plot zoom'}) == '- Improve plot zoom'
+    assert PLAN.markdown_note({'title': 'Improve plot zoom'}) == '- Improve plot zoom', (
+        'Notes without interfaces keep their existing text.'
+    )
 
 
 def test_unknown_interface_fails_instead_of_losing_the_label():
@@ -80,7 +88,9 @@ def test_one_note_can_affect_every_interface():
     release = plan_with_labels(
         *(f'[interface] {PLAN.INTERFACES[key][2]}' for key in reversed(interfaces))
     )
-    assert release['notes']['Fixed'][0]['interfaces'] == interfaces
+    assert release['notes']['Fixed'][0]['interfaces'] == interfaces, (
+        'One note can affect every interface.'
+    )
 
 
 def test_desktop_downloads_link_only_published_platform_assets():
@@ -110,15 +120,27 @@ def test_desktop_downloads_link_only_published_platform_assets():
 
     preview = release('2026.11.0', prerelease=True, platforms=('macos-arm64', 'linux-x86_64'))
     draft = release('2026.11.1', draft=True)
-    assert downloads.render(source, [[draft]]) == source
+    assert downloads.render(source, [[draft]]) == source, (
+        'Desktop downloads link only published platform assets.'
+    )
     page = downloads.render(source, [[preview, draft]])
-    assert 'Latest version 2026.11.0 (5 Nov 2026)' in page
-    assert 'macos-arm64-online.zip' in page and 'linux-x86_64-online.zip' in page
-    assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page
+    assert 'Latest version 2026.11.0 (5 Nov 2026)' in page, (
+        'Desktop downloads link only published platform assets.'
+    )
+    assert 'macos-arm64-online.zip' in page and 'linux-x86_64-online.zip' in page, (
+        'Desktop downloads link only published platform assets.'
+    )
+    assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page, (
+        'Desktop downloads link only published platform assets.'
+    )
     stable = release('2026.10.2')
     page = downloads.render(source, [[preview, draft, stable]])
-    assert 'Latest version 2026.10.2 (5 Nov 2026)' in page
-    assert 'EasyDiffraction-2026.10.2-windows-x86_64-online.zip' in page
+    assert 'Latest version 2026.10.2 (5 Nov 2026)' in page, (
+        'Desktop downloads link only published platform assets.'
+    )
+    assert 'EasyDiffraction-2026.10.2-windows-x86_64-online.zip' in page, (
+        'Desktop downloads link only published platform assets.'
+    )
 
 
 def test_standalone_downloads_select_only_published_cli_zips():
@@ -139,12 +161,20 @@ def test_standalone_downloads_select_only_published_cli_zips():
             )
         ],
     }
-    assert downloads.render(source, [[release]], kind='cli') == source
+    assert downloads.render(source, [[release]], kind='cli') == source, (
+        'Standalone downloads select only published CLI zips.'
+    )
     release['draft'] = False
     page = downloads.render(source, [[release]], kind='cli')
-    assert 'Latest version 2026.11.4 (5 Nov 2026)' in page
-    assert base + 'EasyDiffraction-2026.11.4-linux-x86_64-cli.zip' in page
-    assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page
+    assert 'Latest version 2026.11.4 (5 Nov 2026)' in page, (
+        'Standalone downloads select only published CLI zips.'
+    )
+    assert base + 'EasyDiffraction-2026.11.4-linux-x86_64-cli.zip' in page, (
+        'Standalone downloads select only published CLI zips.'
+    )
+    assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page, (
+        'Standalone downloads select only published CLI zips.'
+    )
 
 
 def test_preview_index_links_only_published_hashed_python_wheels(tmp_path):
@@ -155,9 +185,15 @@ def test_preview_index_links_only_published_hashed_python_wheels(tmp_path):
     release = {'draft': False, 'tag_name': 'v2026.11.6', 'assets': [asset]}
     page = tmp_path / 'pypi/simple/easydiffraction/index.html'
     index.write_package_index(tmp_path, [[release]])
-    assert name not in page.read_text(encoding='utf-8')
+    assert name not in page.read_text(encoding='utf-8'), (
+        'Preview index links only published hashed python wheels.'
+    )
     asset['digest'] = 'sha256:' + 'a' * 64
     index.write_package_index(tmp_path, [[{**release, 'draft': True}]])
-    assert name not in page.read_text(encoding='utf-8')
+    assert name not in page.read_text(encoding='utf-8'), (
+        'Preview index links only published hashed python wheels.'
+    )
     index.write_package_index(tmp_path, [[release]])
-    assert url + '#sha256=' + 'a' * 64 in page.read_text(encoding='utf-8')
+    assert url + '#sha256=' + 'a' * 64 in page.read_text(encoding='utf-8'), (
+        'Preview index links only published hashed python wheels.'
+    )

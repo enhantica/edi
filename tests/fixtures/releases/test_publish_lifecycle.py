@@ -92,7 +92,10 @@ class GitHub:
             release['assets'] = [a for a in release['assets'] if a['name'] != path.name]
             release['assets'].append({'name': path.name, 'digest': digest})
             return 0, b''
-        assert args[0] == 'api', args
+        assert args[0] == 'api', (
+            'The recorded release API must receive only the expected requests.',
+            args,
+        )
         method = args[args.index('--method') + 1] if '--method' in args else 'GET'
         path = next(a for a in args[1:] if a.startswith('repos/'))[len(f'repos/{REPO}/') :]
         if method == 'POST' and path == 'releases':
@@ -164,12 +167,14 @@ def test_first_stable_publication_creates_uploads_and_finalizes_its_own_draft(gi
     assert release['draft'] and [a['name'] for a in release['assets']] == [
         'installer.zip',
         'release-history.json',
-    ]
+    ], 'First stable publication creates uploads and finalizes its own draft.'
     PUBLISH.publish(REPO, folder, finalize=True)
     assert (
         not release['draft'] and release['make_latest'] == 'true' and 'v2026.11.0' in github.tags
+    ), 'First stable publication creates uploads and finalizes its own draft.'
+    assert len(github.releases) == 1, (
+        'First stable publication creates uploads and finalizes its own draft.'
     )
-    assert len(github.releases) == 1
 
 
 def test_a_retry_after_creation_resumes_the_same_draft(github, folder):
@@ -180,13 +185,15 @@ def test_a_retry_after_creation_resumes_the_same_draft(github, folder):
     PUBLISH.publish(REPO, folder)
     PUBLISH.publish(REPO, folder)
     (release,) = github.releases.values()
-    assert len(release['assets']) == 2 and release['draft']
+    assert len(release['assets']) == 2 and release['draft'], (
+        'A retry after creation resumes the same draft.'
+    )
 
 
 def test_finalizing_without_a_draft_refuses(github, folder):
     with pytest.raises(ValueError, match='Create and verify the draft'):
         PUBLISH.publish(REPO, folder, finalize=True)
-    assert github.releases == {}
+    assert github.releases == {}, 'Finalizing without a draft refuses.'
 
 
 def test_a_tag_without_its_release_and_duplicate_drafts_refuse(github, folder):
@@ -210,7 +217,9 @@ def test_preview_drafts_are_found_through_the_same_lookup(github, tmp_path):
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
     (release,) = github.releases.values()
-    assert release['draft'] and release['prerelease'] and len(release['assets']) == 1
+    assert release['draft'] and release['prerelease'] and len(release['assets']) == 1, (
+        'Preview drafts are found through the same lookup.'
+    )
 
 
 TODAY = datetime.date(2026, 11, 7)
@@ -222,19 +231,33 @@ def reserve(commit, *, prerelease=True, today=TODAY):
 
 def test_a_retry_of_the_same_source_keeps_its_reserved_version_and_date(github):
     github.tags.add('v2026.11.0')
-    assert reserve('a' * 40) == ('2026.11.1', TODAY)
+    assert reserve('a' * 40) == ('2026.11.1', TODAY), (
+        'A retry of the same source keeps its reserved version and date.'
+    )
     later = datetime.date(2026, 11, 9)
-    assert reserve('a' * 40, today=later) == ('2026.11.1', TODAY)
-    assert reserve('c' * 40)[0] == '2026.11.2'
-    assert reserve('a' * 40, prerelease=False)[0] == '2026.11.3'
-    assert len(github.releases) == 3
+    assert reserve('a' * 40, today=later) == ('2026.11.1', TODAY), (
+        'A retry of the same source keeps its reserved version and date.'
+    )
+    assert reserve('c' * 40)[0] == '2026.11.2', (
+        'A retry of the same source keeps its reserved version and date.'
+    )
+    assert reserve('a' * 40, prerelease=False)[0] == '2026.11.3', (
+        'A retry of the same source keeps its reserved version and date.'
+    )
+    assert len(github.releases) == 3, (
+        'A retry of the same source keeps its reserved version and date.'
+    )
 
 
 def test_a_simultaneous_allocator_keeps_the_number_and_the_later_one_moves_on(github):
     github.rival_before_create = 'd' * 40
-    assert reserve('a' * 40)[0] == '2026.11.1'
+    assert reserve('a' * 40)[0] == '2026.11.1', (
+        'A simultaneous allocator keeps the number and the later one moves on.'
+    )
     owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
-    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}
+    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}, (
+        'A simultaneous allocator keeps the number and the later one moves on.'
+    )
 
 
 def test_a_lost_creation_response_is_settled_on_the_retry(github):
@@ -243,9 +266,13 @@ def test_a_lost_creation_response_is_settled_on_the_retry(github):
     with pytest.raises(subprocess.CalledProcessError):
         reserve('a' * 40)
     github.fail_after_create = False
-    assert reserve('a' * 40) == ('2026.11.1', TODAY)
+    assert reserve('a' * 40) == ('2026.11.1', TODAY), (
+        'A lost creation response is settled on the retry.'
+    )
     owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
-    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}
+    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}, (
+        'A lost creation response is settled on the retry.'
+    )
 
 
 def test_a_published_preview_is_not_rebuilt_under_a_new_number(github, tmp_path):
@@ -257,23 +284,33 @@ def test_a_published_preview_is_not_rebuilt_under_a_new_number(github, tmp_path)
         REPO, preview, 'Notes\n', [(archive, hashlib.sha256(b'preview installer').hexdigest())]
     )
     (release,) = github.releases.values()
-    assert PLAN.release_date(release['body']) == date.isoformat() and release['assets']
-    assert reserve('a' * 40) == (version, date)
+    assert PLAN.release_date(release['body']) == date.isoformat() and release['assets'], (
+        'A published preview is not rebuilt under a new number.'
+    )
+    assert reserve('a' * 40) == (version, date), (
+        'A published preview is not rebuilt under a new number.'
+    )
     github.run(['gh', 'api', '--method', 'PATCH', f'repos/{REPO}/releases/{release["id"]}'])
     with pytest.raises(ValueError, match=f'already published as v{version}'):
         reserve('a' * 40, today=datetime.date(2026, 11, 8))
-    assert len(github.releases) == 1
+    assert len(github.releases) == 1, 'A published preview is not rebuilt under a new number.'
 
 
 def test_publishers_claim_their_reservation_and_refuse_another_source_or_date(
     github, folder, tmp_path
 ):
     version, date = reserve(RELEASE['commit'], prerelease=False, today=datetime.date(2026, 11, 5))
-    assert (version, date.isoformat()) == (RELEASE['version'], RELEASE['date'])
+    assert (version, date.isoformat()) == (RELEASE['version'], RELEASE['date']), (
+        'Publishers claim their reservation and refuse another source or date.'
+    )
     PUBLISH.publish(REPO, folder)
     (release,) = github.releases.values()
-    assert release['body'] == PLAN.release_body(PLAN.markdown_notes(RELEASE), RELEASE['date'])
-    assert len(release['assets']) == 2
+    assert release['body'] == PLAN.release_body(PLAN.markdown_notes(RELEASE), RELEASE['date']), (
+        'Publishers claim their reservation and refuse another source or date.'
+    )
+    assert len(release['assets']) == 2, (
+        'Publishers claim their reservation and refuse another source or date.'
+    )
 
     github.releases.clear()
     reserve(RELEASE['commit'], prerelease=False)

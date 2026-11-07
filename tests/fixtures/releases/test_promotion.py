@@ -31,7 +31,9 @@ with mock.patch.dict(sys.modules, {'plan': PLAN}):
 
 def test_cli_delivery_requires_the_executed_identity_and_unchanged_zip(tmp_path):
     version, commit, platform = '2026.11.4', 'a' * 40, 'linux-x86_64'
-    assert PROMOTE.validate_cli(tmp_path, version, commit, platform) is None
+    assert PROMOTE.validate_cli(tmp_path, version, commit, platform) is None, (
+        'CLI delivery requires the executed identity and unchanged ZIP.'
+    )
     archive = tmp_path / f'EasyDiffraction-{version}-{platform}-cli.zip'
     archive.write_bytes(b'qualified zip')
     evidence = {
@@ -43,7 +45,9 @@ def test_cli_delivery_requires_the_executed_identity_and_unchanged_zip(tmp_path)
         'sha256': PROMOTE.digest(archive),
     }
     (tmp_path / 'cli-qualification.json').write_text(json.dumps(evidence), encoding='utf-8')
-    assert PROMOTE.validate_cli(tmp_path, version, commit, platform) == archive
+    assert PROMOTE.validate_cli(tmp_path, version, commit, platform) == archive, (
+        'CLI delivery requires the executed identity and unchanged ZIP.'
+    )
     archive.write_bytes(b'different zip')
     with pytest.raises(ValueError, match='CLI identity or ZIP bytes differ'):
         PROMOTE.validate_cli(tmp_path, version, commit, platform)
@@ -51,12 +55,18 @@ def test_cli_delivery_requires_the_executed_identity_and_unchanged_zip(tmp_path)
 
 def test_preview_notes_use_canonical_interfaces_and_recover_early_cli_drafts():
     notes = json.loads((ROOT / 'data/installer-preview-notes.json').read_text(encoding='utf-8'))
-    assert all(PLAN.note_interfaces(entry) for entries in notes.values() for entry in entries)
+    assert all(PLAN.note_interfaces(entry) for entries in notes.values() for entry in entries), (
+        'Preview notes use canonical interfaces and recover early CLI drafts.'
+    )
     expected = PREVIEW._preview_notes({'notes': notes})
     cli = next(entry for entry in notes['Added'] if entry['interfaces'] == ['cli-standalone'])
     cli['interfaces'] = ['cli']
-    assert PREVIEW._preview_notes({'notes': notes}) == expected
-    assert cli['interfaces'] == ['cli']
+    assert PREVIEW._preview_notes({'notes': notes}) == expected, (
+        'Preview notes use canonical interfaces and recover early CLI drafts.'
+    )
+    assert cli['interfaces'] == ['cli'], (
+        'Preview notes use canonical interfaces and recover early CLI drafts.'
+    )
 
 
 @pytest.mark.parametrize('damage', ['none', 'branch', 'workflow', 'job', 'attempt', 'expired'])
@@ -93,7 +103,9 @@ def test_promotion_requires_every_platform_from_one_successful_main_attempt(dama
     elif damage == 'expired':
         artifacts[0]['expired'] = True
     if damage == 'none':
-        assert set(PROMOTE.qualified_artifacts(run, artifacts, jobs)) == set(names)
+        assert set(PROMOTE.qualified_artifacts(run, artifacts, jobs)) == set(names), (
+            'Promotion requires every platform from one successful main attempt.'
+        )
     else:
         with pytest.raises(ValueError, match=r'qualification|platform|artifacts'):
             PROMOTE.qualified_artifacts(run, artifacts, jobs)
@@ -153,7 +165,9 @@ def test_delivery_compares_zip_and_executed_app_to_prepared_identity(tmp_path, d
     ]:
         (tmp_path / filename).write_text(json.dumps(value))
     if damage == 'none':
-        assert PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform).name == name
+        assert PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform).name == name, (
+            'Delivery compares ZIP and executed app to prepared identity.'
+        )
     else:
         with pytest.raises(ValueError, match=r'identity|bytes'):
             PROMOTE.validate_delivery(tmp_path, release, 'b' * 64, platform)
@@ -179,7 +193,7 @@ def test_release_retry_never_overwrites_an_existing_identity(damage):
     if damage == 'none':
         assert PUBLISH.check_existing(
             existing, release, 'User notes', {'installer.zip': 'b' * 64}
-        ) == {'installer.zip'}
+        ) == {'installer.zip'}, 'Release retry never overwrites an existing identity.'
     else:
         with pytest.raises(ValueError, match=r'different|cannot'):
             PUBLISH.check_existing(existing, release, 'User notes', {'installer.zip': 'b' * 64})
@@ -216,7 +230,7 @@ def test_only_preview_drafts_can_replace_a_known_installer():
             replace_draft_assets=True,
         )
         == set()
-    )
+    ), 'Only preview drafts can replace a known installer.'
     for change in ({'draft': False}, {'target_commitish': 'd' * 40}, {'body': 'Edited notes'}):
         with pytest.raises(ValueError, match='different'):
             PUBLISH.check_existing(

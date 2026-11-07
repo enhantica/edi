@@ -37,7 +37,9 @@ def test_prepared_artifact_is_bound_to_source_and_successful_attempt(damage):
     elif damage == 'attempt':
         artifacts[0]['name'] = 'release-plan-1'
     if damage == 'none':
-        assert DOWNLOAD.select_plan(run, artifacts, 'a' * 40) == 19
+        assert DOWNLOAD.select_plan(run, artifacts, 'a' * 40) == 19, (
+            'Prepared artifact is bound to source and successful attempt.'
+        )
     else:
         with pytest.raises(ValueError, match=r'preparation|artifact'):
             DOWNLOAD.select_plan(run, artifacts, 'a' * 40)
@@ -55,8 +57,12 @@ def test_prepared_archive_is_bounded_and_contains_only_regular_metadata(tmp_path
             archive.writestr(info, b'x' * (1024 * 1024 + 1) if damage == 'oversized' else b'{}')
     if damage == 'none':
         DOWNLOAD.unpack_plan(stream.getvalue(), tmp_path / 'inputs')
-        assert (tmp_path / 'inputs/plan.json').read_bytes() == b'{}'
+        assert (tmp_path / 'inputs/plan.json').read_bytes() == b'{}', (
+            'Prepared archive is bounded and contains only regular metadata.'
+        )
     else:
         with pytest.raises(ValueError, match='artifact'):
             DOWNLOAD.unpack_plan(stream.getvalue(), tmp_path / 'inputs')
-        assert not (tmp_path / 'inputs').exists()
+        assert not (tmp_path / 'inputs').exists(), (
+            'Prepared archive is bounded and contains only regular metadata.'
+        )

@@ -22,7 +22,9 @@ def _calls(parameters):
     profile = [p['path'] for p in parameters if p['category'] == 'peak']
     adps = [p for p in parameters if p['field'] == 'adp_iso']
     independent = [p['path'] for p in adps if p['row_label'] in {'Ba', 'Co', 'O'}]
-    assert len(profile) == 5 and len(adps) == 4 and len(independent) == 3
+    assert len(profile) == 5 and len(adps) == 4 and len(independent) == 3, (
+        'Grouped flag scenarios must cover all profile and independent site members.'
+    )
 
     def flags(paths, free):
         return [{'path': path, 'free': free} for path in paths]
@@ -97,7 +99,9 @@ def _project_actor(tmp_path, monkeypatch, show_actions):
     binary = ROOT / 'build/app/assistant-ui-probe/assistant_real_owner_probe'
     actor = DRIVER.MainActor(binary, tmp_path, {'turns': [[]]}, show_actions)
     try:
-        assert actor.command('open', path=str(project))['reply']['opened']
+        assert actor.command('open', path=str(project))['reply']['opened'], (
+            'The grouped flag scenario must open its project before native actions.'
+        )
         actor.until(lambda row: not row['ui']['project']['calculating'])
         yield actor
     finally:
@@ -131,16 +135,31 @@ def test_grouped_adp_flags_after_fit_and_relation(tmp_path, monkeypatch, show_ac
     with _project_actor(tmp_path, monkeypatch, show_actions) as actor:
         calls = _calls(actor.last['ui']['project']['parameters'])
         results = _run(actor, calls)
-        assert results[4]['adopted'] and results[5]['status'] == 'edited'
-        assert results[6]['status'] == 'edited', results[6]
-        assert results[7]['adopted']
-        assert results[8]['status'] == 'edited', results[8]
-        assert results[9]['committed'], results[9]
-        assert results[10]['adopted']
-        assert all(r['result']['success'] for r in actor.responses()), results
+        assert results[4]['adopted'] and results[5]['status'] == 'edited', (
+            'Grouped adp flags after fit and relation.'
+        )
+        assert results[6]['status'] == 'edited', (
+            'Grouped adp flags after fit and relation.',
+            results[6],
+        )
+        assert results[7]['adopted'], 'Grouped adp flags after fit and relation.'
+        assert results[8]['status'] == 'edited', (
+            'Grouped adp flags after fit and relation.',
+            results[8],
+        )
+        assert results[9]['committed'], ('Grouped adp flags after fit and relation.', results[9])
+        assert results[10]['adopted'], 'Grouped adp flags after fit and relation.'
+        assert all(r['result']['success'] for r in actor.responses()), (
+            'Grouped adp flags after fit and relation.',
+            results,
+        )
         parameters = actor.last['ui']['project']['parameters']
-        assert all(not p['free'] for p in parameters if p['field'] == 'adp_iso')
-        assert any(c['id'] == 'shared_site' for c in actor.last['ui']['project']['constraints'])
+        assert all(not p['free'] for p in parameters if p['field'] == 'adp_iso'), (
+            'Grouped adp flags after fit and relation.'
+        )
+        assert any(c['id'] == 'shared_site' for c in actor.last['ui']['project']['constraints']), (
+            'Grouped adp flags after fit and relation.'
+        )
 
 
 @pytest.mark.parametrize('show_actions', [False, True], ids=['normal', 'shown'])
@@ -173,6 +192,9 @@ def test_prepared_controls_after_fit(tmp_path, monkeypatch, show_actions):
             DRIVER.tool_call('create_structure', 'append-structure-after-fit'),
         ]
         results = _run(actor, calls)
-        assert results[0]['adopted']
-        assert all(r['result']['success'] for r in actor.responses()), results
-        assert actor.last['ui']['project']['structures'] == 2
+        assert results[0]['adopted'], 'Prepared controls after fit.'
+        assert all(r['result']['success'] for r in actor.responses()), (
+            'Prepared controls after fit.',
+            results,
+        )
+        assert actor.last['ui']['project']['structures'] == 2, 'Prepared controls after fit.'

@@ -53,4 +53,6 @@ def test_checkout_preserves_every_committed_byte_with_autocrlf_enabled(tmp_path)
         ],
         check=True,
     )
-    assert {name: (target / name).read_bytes() for name in inputs} == inputs
+    assert {name: (target / name).read_bytes() for name in inputs} == inputs, (
+        'Checkout preserves every committed byte with autocrlf enabled.'
+    )

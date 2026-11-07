@@ -44,19 +44,27 @@ def make_plan(releases=(), today=datetime.date(2026, 11, 5), requests=None):
 )
 def test_release_calendar(versions, date, expected):
     releases = [{'version': version, 'commit': 'b' * 40} for version in versions]
-    assert make_plan(releases, datetime.date.fromisoformat(date))['version'] == expected
+    assert make_plan(releases, datetime.date.fromisoformat(date))['version'] == expected, (
+        'Calendar versions must use the numeric sequence for their calendar month.'
+    )
 
 
 def test_retry_on_another_day_reuses_the_published_identity_and_notes():
     original = make_plan()
-    assert make_plan([original], datetime.date(2026, 12, 1)) == original
+    assert make_plan([original], datetime.date(2026, 12, 1)) == original, (
+        'Retry on another day reuses the published identity and notes.'
+    )
 
 
 def test_labels_group_notes_without_changing_the_version_rule():
     for label, group in PLAN.GROUPS.items():
         result = make_plan(requests=[request(labels=[label, '[interface] desktop'])])
-        assert result['version'] == '2026.11.0'
-        assert result['notes'][group][0]['title'] == request()['title']
+        assert result['version'] == '2026.11.0', (
+            'Labels group notes without changing the version rule.'
+        )
+        assert result['notes'][group][0]['title'] == request()['title'], (
+            'Labels group notes without changing the version rule.'
+        )
 
 
 @pytest.mark.parametrize(
@@ -81,7 +89,9 @@ def test_skipped_versions_are_all_included_in_whats_new():
     ]
     assert [
         release['version'] for release in PLAN.notes_since(releases, '2026.11.0', '2026.11.10')
-    ] == ['2026.11.10', '2026.11.9', '2026.11.2']
+    ] == ['2026.11.10', '2026.11.9', '2026.11.2'], (
+        'Skipped versions are all included in whats new.'
+    )
 
 
 def test_calendar_regression_and_duplicate_published_identity_fail_closed():
@@ -106,7 +116,9 @@ def test_cmake_embeds_the_selected_calendar_identity(tmp_path, version):
         ],
         check=True,
     )
-    assert 'return "' + version + '";' in output.read_text()
+    assert 'return "' + version + '";' in output.read_text(), (
+        'Cmake embeds the selected calendar identity.'
+    )
 
 
 @pytest.mark.parametrize(
@@ -127,8 +139,8 @@ def test_invalid_release_identity_cannot_generate_cpp(tmp_path, version):
         text=True,
         check=False,
     )
-    assert result.returncode != 0
-    assert not output.exists()
+    assert result.returncode != 0, 'Invalid release identity cannot generate C++.'
+    assert not output.exists(), 'Invalid release identity cannot generate C++.'
 
 
 def test_persisted_history_validates_note_groups_dates_and_identities():

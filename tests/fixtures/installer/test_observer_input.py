@@ -109,7 +109,7 @@ def test_pipe_preserves_every_byte_and_stops_at_eof(binary):
         'closed': 1,
         'active_at_end': False,
         'retired': False,
-    }
+    }, 'Pipe preserves every byte and stops at EOF.'
 
 
 def test_retired_receiver_cannot_consume_input_or_eof(binary):
@@ -130,27 +130,30 @@ def test_retired_receiver_cannot_consume_input_or_eof(binary):
                 f'report: {process.stdout.read()!r}'
             )
         stdout = process.stdout.read()
-        assert returncode == 0, process.stderr.read()
+        assert returncode == 0, (
+            'Retired receiver cannot consume input or EOF.',
+            process.stderr.read(),
+        )
     assert json.loads(stdout) == {
         'bytes': '',
         'closed': 0,
         'active_at_end': False,
         'retired': True,
-    }
+    }, 'Retired receiver cannot consume input or EOF.'
 
 
 def test_nonpipe_input_is_refused(binary):
     result = subprocess.run(
         [str(binary)], stdin=subprocess.DEVNULL, capture_output=True, check=False, timeout=5
     )
-    assert result.returncode == 2
+    assert result.returncode == 2, 'Nonpipe input is refused.'
 
 
 @pytest.mark.skipif(os.name != 'nt', reason='Only Windows polls an empty open pipe')
 def test_windows_idle_pipe_never_waits_for_input_or_eof(binary):
     with subprocess.Popen([str(binary), 'idle'], stdin=subprocess.PIPE) as process:
         try:
-            assert process.wait(timeout=5) == 0
+            assert process.wait(timeout=5) == 0, 'Windows idle pipe never waits for input or EOF.'
         finally:
             if process.poll() is None:
                 process.kill()

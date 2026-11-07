@@ -33,8 +33,10 @@ def test_manifest_preserves_relative_links(tmp_path):
     (tmp_path / 'real').write_bytes(b'library')
     (tmp_path / 'link').symlink_to('real')
     manifest = PACKAGE.payload_manifest(tmp_path)
-    assert manifest['link'] == {'link': 'real'}
-    assert manifest['real']['sha256'] == PACKAGE.sha256(tmp_path / 'real')
+    assert manifest['link'] == {'link': 'real'}, 'Manifest preserves relative links.'
+    assert manifest['real']['sha256'] == PACKAGE.sha256(tmp_path / 'real'), (
+        'Manifest preserves relative links.'
+    )
 
 
 @pytest.mark.parametrize('target', ['../elsewhere', '/etc/passwd', 'missing'])
@@ -64,9 +66,13 @@ def test_clean_environment_removes_developer_paths(tmp_path):
         },
     ):
         env = PACKAGE.clean_environment(tmp_path)
-    assert not any('/developer' in value for value in env.values())
-    assert env['CODEX_HOME'] == str(tmp_path / 'codex')
-    assert env['HOME'] == str(tmp_path)
+    assert not any('/developer' in value for value in env.values()), (
+        'Clean environment removes developer paths.'
+    )
+    assert env['CODEX_HOME'] == str(tmp_path / 'codex'), (
+        'Clean environment removes developer paths.'
+    )
+    assert env['HOME'] == str(tmp_path), 'Clean environment removes developer paths.'
 
 
 @pytest.mark.parametrize(
@@ -96,7 +102,9 @@ def test_dependency_check_allows_packaged_and_system_libraries(tmp_path):
         '',
     )
     with mock.patch.object(PACKAGE.subprocess, 'run', return_value=result):
-        assert 'app' in PACKAGE.check_linux_dependencies(tmp_path, {})
+        assert 'app' in PACKAGE.check_linux_dependencies(tmp_path, {}), (
+            'Dependency check allows packaged and system libraries.'
+        )
 
 
 def test_installer_workspace_preserves_the_app_toolchain_pins():
@@ -104,17 +112,21 @@ def test_installer_workspace_preserves_the_app_toolchain_pins():
     app = tomllib.loads((root / 'pixi.toml').read_text(encoding='utf-8'))['feature']['app']
     installer = tomllib.loads((root / 'tools/installer/pixi.toml').read_text(encoding='utf-8'))
     for module in ['qt6-main', 'qt6-graphs', 'qt6-quick3d', 'libvulkan-headers']:
-        assert installer['dependencies'][module] == app['dependencies'][module]
+        assert installer['dependencies'][module] == app['dependencies'][module], (
+            'Installer workspace preserves the app toolchain pins.'
+        )
     for platform in ['linux-64', 'osx-arm64']:
         for name, specification in app['target'][platform]['dependencies'].items():
-            assert installer['target'][platform]['dependencies'][name] == specification
+            assert installer['target'][platform]['dependencies'][name] == specification, (
+                'Installer workspace preserves the app toolchain pins.'
+            )
 
 
 @pytest.mark.parametrize('version', ['../escape', '2026.11.0\n', '1;command', ''])
 def test_invalid_version_cannot_escape_installer_output(tmp_path, version):
     with pytest.raises(RuntimeError, match='numeric components'):
         PACKAGE.package_app(tmp_path, tmp_path, tmp_path / 'output', version)
-    assert not (tmp_path / 'output').exists()
+    assert not (tmp_path / 'output').exists(), 'Invalid version cannot escape installer output.'
 
 
 @pytest.mark.parametrize(('channel', 'prefix'), [('stable', ''), ('testing', 'testing/')])
@@ -128,12 +140,18 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     )
     xml = ElementTree.parse(config / 'config.xml')
     repositories = xml.findall('RemoteRepositories/Repository')
-    assert repositories[0].findtext('Enabled') == '1'
+    assert repositories[0].findtext('Enabled') == '1', 'Mirror is enabled only for production.'
     tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
-    assert repositories[0].findtext('Url') == f'https://enhantica.github.io/edi/{tail}'
-    assert repositories[1].findtext('Url') == f'https://download.easydiffraction.org/{tail}'
-    assert repositories[1].find('DisplayName') is None
-    assert repositories[1].findtext('Enabled') == ('1' if channel == 'stable' else '0')
+    assert repositories[0].findtext('Url') == f'https://enhantica.github.io/edi/{tail}', (
+        'Mirror is enabled only for production.'
+    )
+    assert repositories[1].findtext('Url') == f'https://download.easydiffraction.org/{tail}', (
+        'Mirror is enabled only for production.'
+    )
+    assert repositories[1].find('DisplayName') is None, 'Mirror is enabled only for production.'
+    assert repositories[1].findtext('Enabled') == ('1' if channel == 'stable' else '0'), (
+        'Mirror is enabled only for production.'
+    )
 
 
 def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):
@@ -147,11 +165,17 @@ def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):
     (runtime / 'lib/library.so').write_bytes(b'portable dependency')
     archive = PACKAGE.archive_installer(installer, runtime)
     unpacked = PACKAGE.unpack_installer(archive, tmp_path / 'download')
-    assert unpacked.read_bytes() == b'installer'
-    assert unpacked.stat().st_mode & 0o111 == 0o111
+    assert unpacked.read_bytes() == b'installer', (
+        'Download archive keeps bootstrap libraries and permissions.'
+    )
+    assert unpacked.stat().st_mode & 0o111 == 0o111, (
+        'Download archive keeps bootstrap libraries and permissions.'
+    )
     assert (
         unpacked.parent / 'installer-runtime/lib/library.so'
-    ).read_bytes() == b'portable dependency'
+    ).read_bytes() == b'portable dependency', (
+        'Download archive keeps bootstrap libraries and permissions.'
+    )
 
 
 def test_installer_runtime_refuses_an_unavailable_dependency(tmp_path):
@@ -173,8 +197,10 @@ def test_installer_runtime_leaves_the_system_c_library_on_the_host(tmp_path):
                 tmp_path / 'base', tmp_path, None, 'patchelf', {}
             )
             == {}
-        )
-    assert not list(tmp_path.iterdir())
+        ), 'Installer runtime leaves the system c library on the host.'
+    assert not list(tmp_path.iterdir()), (
+        'Installer runtime leaves the system c library on the host.'
+    )
 
 
 @pytest.mark.parametrize('damage', ['replace', 'add', 'remove', 'link'])
@@ -236,11 +262,15 @@ def test_pinned_license_acquisition_is_independent_of_the_package_cache(
     ):
         if fault == 'none':
             PACKAGE.acquire_package_licenses(metadata, tmp_path, target)
-            assert (target / 'LICENSE').read_bytes() == b'licence text'
+            assert (target / 'LICENSE').read_bytes() == b'licence text', (
+                'Pinned license acquisition is independent of the package cache.'
+            )
         else:
             with pytest.raises(RuntimeError, match=r'checksum|unsafe'):
                 PACKAGE.acquire_package_licenses(metadata, tmp_path, target)
-    assert not (tmp_path / 'escape').exists()
+    assert not (tmp_path / 'escape').exists(), (
+        'Pinned license acquisition is independent of the package cache.'
+    )
 
 
 @pytest.mark.parametrize('recovered', [False, True])
@@ -259,7 +289,9 @@ def test_packaging_uses_acquired_licenses_when_the_original_cache_is_absent(tmp_
         (acquired / 'portable').mkdir(parents=True)
         (acquired / 'portable/LICENSE').write_text('portable licence')
         PACKAGE.installer_runtime_notices({'portable.so': str(source)}, prefix, notices, acquired)
-        assert (notices / 'portable/LICENSE').read_text(encoding='utf-8') == 'portable licence'
+        assert (notices / 'portable/LICENSE').read_text(encoding='utf-8') == 'portable licence', (
+            'Packaging uses acquired licenses when the original cache is absent.'
+        )
     else:
         with pytest.raises(RuntimeError, match='No dependency licence'):
             PACKAGE.installer_runtime_notices(
@@ -281,8 +313,12 @@ def test_bundle_audit_counts_one_library_and_keeps_required_widgets(tmp_path):
     library.write_bytes(b'\x7fELFmath text dependency')
     (tmp_path / 'alias').symlink_to(library.name)
     result = AUDIT.audit_bundle(tmp_path)
-    assert result['regular_file_bytes'] == library.stat().st_size
-    assert result['qt_modules'] == [library.name]
+    assert result['regular_file_bytes'] == library.stat().st_size, (
+        'Bundle audit counts one library and keeps required widgets.'
+    )
+    assert result['qt_modules'] == [library.name], (
+        'Bundle audit counts one library and keeps required widgets.'
+    )
 
 
 def test_windows_clean_environment_accepts_uppercase_systemroot(tmp_path):
@@ -291,7 +327,9 @@ def test_windows_clean_environment_accepts_uppercase_systemroot(tmp_path):
         mock.patch.dict(os.environ, {'SYSTEMROOT': str(tmp_path)}, clear=True),
     ):
         env = PACKAGE.clean_environment(tmp_path / 'home')
-    assert env['PATH'] == str(tmp_path / 'System32') + os.pathsep + str(tmp_path)
+    assert env['PATH'] == str(tmp_path / 'System32') + os.pathsep + str(tmp_path), (
+        'Windows clean environment accepts uppercase SystemRoot.'
+    )
 
 
 @pytest.mark.parametrize('name', ['libgcc', 'libstdcxx', 'libgomp', 'libfreetype6'])
@@ -301,23 +339,35 @@ def test_split_runtime_packages_retain_the_exact_upstream_licenses(tmp_path, nam
     )
     package = policy['packages'][name]
     metadata = {'name': name, 'version': package['version'], 'license': package['license']}
-    assert PACKAGE.bundled_runtime_licenses(metadata, tmp_path / 'notices')
+    assert PACKAGE.bundled_runtime_licenses(metadata, tmp_path / 'notices'), (
+        'Split runtime packages retain the exact upstream licenses.'
+    )
     for filename in package['files']:
         assert (
             PACKAGE.sha256(tmp_path / 'notices' / filename) == policy['files'][filename]['sha256']
-        )
+        ), 'Split runtime packages retain the exact upstream licenses.'
     metadata['version'] = '999.0.0'
-    assert not PACKAGE.bundled_runtime_licenses(metadata, tmp_path / 'wrong-version')
-    assert not (tmp_path / 'wrong-version').exists()
+    assert not PACKAGE.bundled_runtime_licenses(metadata, tmp_path / 'wrong-version'), (
+        'Split runtime packages retain the exact upstream licenses.'
+    )
+    assert not (tmp_path / 'wrong-version').exists(), (
+        'Split runtime packages retain the exact upstream licenses.'
+    )
 
 
 def test_installation_lifecycles_have_distinct_real_temp_directories(tmp_path):
     offline = PACKAGE.clean_environment(tmp_path / 'offline')
     online = PACKAGE.clean_environment(tmp_path / 'online')
-    assert offline['TEMP'] != online['TEMP']
+    assert offline['TEMP'] != online['TEMP'], (
+        'Installation lifecycles have distinct real temp directories.'
+    )
     for env in [offline, online]:
-        assert env['TEMP'] == env['TMP'] == env['TMPDIR']
-        assert Path(env['TEMP']).is_dir()
+        assert env['TEMP'] == env['TMP'] == env['TMPDIR'], (
+            'Installation lifecycles have distinct real temp directories.'
+        )
+        assert Path(env['TEMP']).is_dir(), (
+            'Installation lifecycles have distinct real temp directories.'
+        )
 
 
 @pytest.mark.parametrize('damage', ['none', 'source', 'history', 'version', 'reused'])
@@ -351,7 +401,9 @@ def test_prepared_release_inputs_share_one_identity(tmp_path, damage):
     ]:
         (tmp_path / name).write_text(PACKAGE.json.dumps(value))
     if damage == 'none':
-        assert PACKAGE.read_release_plan(tmp_path, 'a' * 40) == release
+        assert PACKAGE.read_release_plan(tmp_path, 'a' * 40) == release, (
+            'Prepared release inputs share one identity.'
+        )
     else:
         with pytest.raises(RuntimeError, match=r'match|uniquely|disagree|already exists'):
             PACKAGE.read_release_plan(tmp_path, 'c' * 40 if damage == 'source' else 'a' * 40)
@@ -371,7 +423,9 @@ def test_deployed_licenses_follow_runtime_paths_instead_of_compiler_copies():
     ]
     assert build.deployed_package_names(
         [Path('lib/libgcc_s.so.1'), Path('bin/Qt6Core.dll')], records
-    ) == {'runtime', 'windows'}
+    ) == {'runtime', 'windows'}, (
+        'Deployed licenses follow runtime paths instead of compiler copies.'
+    )
     records.append({'name': 'conflict', 'files': ['lib/libgcc_s.so.1']})
     with pytest.raises(RuntimeError, match='Ambiguous'):
         build.deployed_package_names([Path('lib/libgcc_s.so.1')], records)
@@ -414,16 +468,22 @@ def test_windows_runtime_uses_locked_dlls_and_refuses_invalid_inventory(tmp_path
         )
     if damage == 'none':
         build.copy_windows_compiler_runtime(prefix, stage)
-        assert (stage / 'bin/msvcp140.dll').read_bytes() == b'vc14_runtime'
-        assert (stage / 'bin/vcomp140.dll').read_bytes() == b'vcomp14'
+        assert (stage / 'bin/msvcp140.dll').read_bytes() == b'vc14_runtime', (
+            'Windows runtime uses locked DLLs and refuses invalid inventory.'
+        )
+        assert (stage / 'bin/vcomp140.dll').read_bytes() == b'vcomp14', (
+            'Windows runtime uses locked DLLs and refuses invalid inventory.'
+        )
         assert sorted(path.name for path in (stage / 'bin').iterdir()) == [
             'msvcp140.dll',
             'vcomp140.dll',
-        ]
+        ], 'Windows runtime uses locked DLLs and refuses invalid inventory.'
     else:
         with pytest.raises(RuntimeError, match='runtime'):
             build.copy_windows_compiler_runtime(prefix, stage)
-    assert assistant.read_bytes() == b'official helper'
+    assert assistant.read_bytes() == b'official helper', (
+        'Windows runtime uses locked DLLs and refuses invalid inventory.'
+    )
 
 
 @pytest.mark.parametrize('different', [False, True])
@@ -447,6 +507,11 @@ def test_windows_runtime_only_coalesces_identical_copies(tmp_path, different):
         encoding='utf-8',
     )
     result = subprocess.run(['cmake', '-P', script], capture_output=True, text=True, check=False)
-    assert (result.returncode != 0) is different, result.stderr
+    assert (result.returncode != 0) is different, (
+        'Windows runtime only coalesces identical copies.',
+        result.stderr,
+    )
     if different:
-        assert 'Different Windows runtime copies found' in result.stderr
+        assert 'Different Windows runtime copies found' in result.stderr, (
+            'Windows runtime only coalesces identical copies.'
+        )

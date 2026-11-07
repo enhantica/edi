@@ -89,7 +89,9 @@ def test_product_windows_headers_use_the_shared_sdk_boundary():
             if path.suffix in {'.cpp', '.hpp', '.h'}
             and direct.search(path.read_text(encoding='utf-8'))
         )
-    assert actual == ['core/src/windows_sdk.hpp']
+    assert actual == ['core/src/windows_sdk.hpp'], (
+        'Product windows headers use the shared sdk boundary.'
+    )
 
 
 def test_linked_executable_keeps_the_generated_build_marker(tmp_path):
@@ -135,4 +137,6 @@ def test_linked_executable_keeps_the_generated_build_marker(tmp_path):
     )
     subprocess.run(['cmake', '--build', str(output), '--parallel', '4'], check=True, timeout=30)
     binary = output / ('probe.exe' if os.name == 'nt' else 'probe')
-    assert f'edi-build-commit:{commit}\n'.encode() in binary.read_bytes()
+    assert f'edi-build-commit:{commit}\n'.encode() in binary.read_bytes(), (
+        'Linked executable keeps the generated build marker.'
+    )

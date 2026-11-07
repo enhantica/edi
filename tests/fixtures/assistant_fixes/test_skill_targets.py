@@ -12,7 +12,10 @@ SPEC.loader.exec_module(MODULE)
 
 
 def test_bundled_targets_exist():
-    assert MODULE.check_targets(ROOT / 'data/assistant/skills', ROOT / 'app/qml') == []
+    assert MODULE.check_targets(ROOT / 'data/assistant/skills', ROOT / 'app/qml') == [], (
+        'All bundled skill targets must exist in the current app.',
+        'Bundled targets exist.',
+    )
 
 
 def test_skill_naming_a_missing_element_is_rejected(tmp_path):
@@ -22,7 +25,9 @@ def test_skill_naming_a_missing_element_is_rejected(tmp_path):
     with guide.open('a') as stream:
         stream.write('\nClick `ui:missing.assistant.control`.\n')
     errors = MODULE.check_targets(skills, ROOT / 'app/qml')
-    assert any('missing.assistant.control' in error for error in errors)
+    assert any('missing.assistant.control' in error for error in errors), (
+        'Skill naming a missing element is rejected.'
+    )
 
 
 def test_removing_a_real_control_is_rejected(tmp_path):
@@ -30,16 +35,22 @@ def test_removing_a_real_control_is_rejected(tmp_path):
     shutil.copytree(ROOT / 'app/qml', qml)
     original = qml / 'Pages/Experiment/ExperimentsGroup.qml'
     text = original.read_text()
-    assert 'objectName: "experiments.load.dataFile"' in text
+    assert 'objectName: "experiments.load.dataFile"' in text, (
+        'Removing a real control is rejected.'
+    )
     original.write_text(
         text.replace('objectName: "experiments.load.dataFile"', 'objectName: "renamed.dataFile"')
     )
     errors = MODULE.check_targets(ROOT / 'data/assistant/skills', qml)
-    assert any('experiments.load.dataFile' in error for error in errors)
+    assert any('experiments.load.dataFile' in error for error in errors), (
+        'Removing a real control is rejected.'
+    )
 
 
 def test_file_cell_route_is_rejected(tmp_path):
     guide = tmp_path / 'guide/SKILL.md'
     guide.parent.mkdir()
     guide.write_text('Click experiments.file.0 to load data.')
-    assert any('retired' in error for error in MODULE.check_targets(tmp_path, ROOT / 'app/qml'))
+    assert any('retired' in error for error in MODULE.check_targets(tmp_path, ROOT / 'app/qml')), (
+        'File cell route is rejected.'
+    )

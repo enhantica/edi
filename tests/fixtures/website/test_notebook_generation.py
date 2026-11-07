@@ -33,26 +33,38 @@ def test_colab_and_zip_notebooks_share_the_report_and_the_committed_file_is_gene
 ):
     colab = prepare_notebooks.notebook_from_source(source)
     committed = json.loads(source.with_suffix('.ipynb').read_text(encoding='utf-8'))
-    assert committed == colab
-    assert colab['cells'][-1]['source'] == REPORT
-    assert text(colab['cells'][-2]).startswith('## Explore the interactive report')
+    assert committed == colab, (
+        'Colab and ZIP notebooks share the report and the committed file is generated.'
+    )
+    assert colab['cells'][-1]['source'] == REPORT, (
+        'Colab and ZIP notebooks share the report and the committed file is generated.'
+    )
+    assert text(colab['cells'][-2]).startswith('## Explore the interactive report'), (
+        'Colab and ZIP notebooks share the report and the committed file is generated.'
+    )
 
     archive = tmp_path / f'{source.stem}.zip'
     render_tutorials.tutorial_bundle(source, archive)
     with zipfile.ZipFile(archive) as bundle:
         portable = json.loads(bundle.read(source.with_suffix('.ipynb').name))
-    assert portable['cells'][-1]['source'] == REPORT
+    assert portable['cells'][-1]['source'] == REPORT, (
+        'Colab and ZIP notebooks share the report and the committed file is generated.'
+    )
     path = re.compile(r'\.\./cli/[\w.-]+/project')
     shared = [
         (cell['cell_type'], path.sub('project', text(cell)))
         for cell in colab['cells'][1:]
         if not text(cell).startswith('> This tutorial is not run')
     ]
-    assert [(cell['cell_type'], text(cell)) for cell in portable['cells'][1:]] == shared
+    assert [(cell['cell_type'], text(cell)) for cell in portable['cells'][1:]] == shared, (
+        'Colab and ZIP notebooks share the report and the committed file is generated.'
+    )
     for notebook in (colab, portable):
         assert [cell['id'] for cell in notebook['cells']] == [
             str(i) for i in range(len(notebook['cells']))
-        ]
+        ], 'Colab and ZIP notebooks share the report and the committed file is generated.'
         for cell in notebook['cells']:
             if cell['cell_type'] == 'code':
-                assert cell['outputs'] == [] and cell['execution_count'] is None
+                assert cell['outputs'] == [] and cell['execution_count'] is None, (
+                    'Colab and ZIP notebooks share the report and the committed file is generated.'
+                )
