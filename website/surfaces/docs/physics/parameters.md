@@ -1,4 +1,5 @@
 ---
+icon: fa5/th-list
 template: physics.html
 ---
 

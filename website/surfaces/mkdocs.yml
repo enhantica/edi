@@ -111,10 +111,10 @@ nav:
       - Scattering lengths: application/structure/scattering-lengths.md
       - Magnetic form factors: application/structure/magnetic-form-factors.md
       - Symmetry operators: application/structure/symmetry-operators.md
-      - Magnetic operators: application/structure/magnetic-operators.md
       - Atoms in the cell: application/structure/atoms-in-the-cell.md
-      - Moments in the cell: application/structure/moments-in-the-cell.md
       - Bonds: application/structure/bonds.md
+      - Magnetic operators: application/structure/magnetic-operators.md
+      - Moments in the cell: application/structure/moments-in-the-cell.md
       - Appearance: application/structure/appearance.md
     - Experiment:
       - application/experiment/index.md
@@ -131,6 +131,7 @@ nav:
       - Preferred orientations: application/experiment/preferred-orientations.md
       - Observed reflections: application/experiment/observed-reflections.md
       - Scattering source: application/experiment/scattering-source.md
+      - Fitted reflections: application/experiment/fitted-reflections.md
       - Data source: application/experiment/data-source.md
       - Measured data: application/experiment/measured-data.md
       - Reflections: application/experiment/reflections.md

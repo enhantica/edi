@@ -451,6 +451,7 @@ def _explanation_entry(item: dict, category: dict, scientific: dict) -> list[str
 def _explanations(categories: list, items: list, glyphs: dict, scientific: dict) -> list[str]:
     details = [
         '---',
+        'icon: fa5/th-list',
         'template: physics.html',
         '---',
         '',

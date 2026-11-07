@@ -188,6 +188,20 @@
         "category": "space_group_symop"
       },
       {
+        "page": "application/structure/atoms-in-the-cell.md",
+        "title": "Atoms in the cell",
+        "tab": "Extra",
+        "icon": "braille",
+        "category": "expanded_atom_site"
+      },
+      {
+        "page": "application/structure/bonds.md",
+        "title": "Bonds",
+        "tab": "Extra",
+        "icon": "grip-lines",
+        "category": "geom_bond"
+      },
+      {
         "page": "application/structure/magnetic-operators.md",
         "title": "Magnetic operators",
         "tab": "Extra",
@@ -201,13 +215,6 @@
         }
       },
       {
-        "page": "application/structure/atoms-in-the-cell.md",
-        "title": "Atoms in the cell",
-        "tab": "Extra",
-        "icon": "braille",
-        "category": "expanded_atom_site"
-      },
-      {
         "page": "application/structure/moments-in-the-cell.md",
         "title": "Moments in the cell",
         "tab": "Extra",
@@ -219,13 +226,6 @@
             "neutron"
           ]
         }
-      },
-      {
-        "page": "application/structure/bonds.md",
-        "title": "Bonds",
-        "tab": "Extra",
-        "icon": "grip-lines",
-        "category": "geom_bond"
       },
       {
         "page": "application/structure/appearance.md",
@@ -435,6 +435,22 @@
         "components": [
           "ScatteringSourceGroup"
         ]
+      },
+      {
+        "page": "application/experiment/fitted-reflections.md",
+        "title": "Fitted reflections",
+        "tab": "Extra",
+        "icon": "cut",
+        "category": "refine_ls",
+        "when": "Single crystal",
+        "tags": {
+          "sampleForm": [
+            "single crystal"
+          ],
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/experiment/data-source.md",

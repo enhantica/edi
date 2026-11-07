@@ -220,5 +220,6 @@
   },
   "application/experiment/reflections.md": {
     "Use this group": "group-refln"
-  }
+  },
+  "application/experiment/fitted-reflections.md": {}
 }
