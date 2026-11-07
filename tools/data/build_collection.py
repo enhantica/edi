@@ -375,40 +375,62 @@ def index(output: Path) -> int:
     return 0
 
 
+# The reader's grammar for a file path inside a collection: segments of letters, digits, '.', '_',
+# '~' and '-', each starting with a letter or digit, joined by single slashes; no drive, scheme,
+# backslash, percent-encoding, '.' or '..'.
+RELATIVE_PATH = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._~-]*(/[A-Za-z0-9][A-Za-z0-9._~-]*)*$')
+
+
+def _listed_files(entry: dict) -> list[dict]:
+    """The entry's file objects whose path is text, whatever shape the rest of the entry has."""
+    files = entry.get('files')
+    if not isinstance(files, list):
+        return []
+    return [f for f in files if isinstance(f, dict) and isinstance(f.get('path'), str)]
+
+
 def _defined_formula(output: Path, entry: dict) -> str:
     """The formula the entry's own files define: a structure file's, or a project's structures'."""
-    files = entry.get('files') or []
-    if not files or not isinstance(files[0], dict):
+    files = _listed_files(entry)
+    if not files or not RELATIVE_PATH.fullmatch(files[0]['path']):
         return ''
-    path = output / str(files[0].get('path', ''))
+    path = output / files[0]['path']
     if not path.is_file():
         return ''
     if entry.get('kind') == 'structure':
         return structure_facts(path.read_text(errors='replace')).get('formula', '')
     if entry.get('kind') == 'project' and path.suffix == '.zip':
-        with zipfile.ZipFile(path) as archive:
-            texts = [
-                archive.read(name).decode('utf-8', errors='replace')
-                for name in archive.namelist()
-                if '/structures/' in name and name.endswith(('.edi', '.cif'))
-            ]
+        try:
+            with zipfile.ZipFile(path) as archive:
+                texts = [
+                    archive.read(name).decode('utf-8', errors='replace')
+                    for name in archive.namelist()
+                    if '/structures/' in name and name.endswith(('.edi', '.cif'))
+                ]
+        except (zipfile.BadZipFile, OSError):
+            return ''  # its digest or size check reports the damaged file
         return sample_facts(texts).get('formula', '')
     return ''
 
 
 def _entry_problems(output: Path, entry: dict, seen: set) -> list[str]:
-    where = f'entry {entry.get("id")!r}'
+    entry_id = entry.get('id')
+    where = f'entry {entry_id!r}'
     problems = []
     # Every entry carries its sample formula where its files define one (the owner, 2026-11-04).
     if not entry.get('formula') and _defined_formula(output, entry):
         problems.append(f'{where} has no formula although its files define one')
-    if not entry.get('id'):
+    if not entry_id:
         problems.append('an entry has no id')
-    elif entry['id'] in seen:
+    elif not isinstance(entry_id, str):
+        problems.append(f'{where} has an id that is not text')
+    elif entry_id in seen:
         problems.append(f'{where} appears twice')
-    seen.add(entry.get('id'))
-    if entry.get('kind') not in KINDS:
-        problems.append(f'{where} has the kind {entry.get("kind")!r}')
+    else:
+        seen.add(entry_id)
+    kind = entry.get('kind')
+    if not isinstance(kind, str) or kind not in KINDS:
+        problems.append(f'{where} has the kind {kind!r}')
     cell = entry.get('cell')
     if cell is not None and (not isinstance(cell, list) or len(cell) != 6):
         problems.append(f'{where} has a cell without six values')
@@ -424,19 +446,16 @@ def _entry_problems(output: Path, entry: dict, seen: set) -> list[str]:
     return problems
 
 
-# The reader's grammar for a file path inside a collection: segments of letters, digits, '.', '_',
-# '~' and '-', each starting with a letter or digit, joined by single slashes; no drive, scheme,
-# backslash, percent-encoding, '.' or '..'.
-RELATIVE_PATH = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._~-]*(/[A-Za-z0-9][A-Za-z0-9._~-]*)*$')
-
-
 def _file_problems(output: Path, where: str, file: dict) -> list[str]:
     rel = file.get('path', '')
-    if not isinstance(rel, str) or not RELATIVE_PATH.match(rel):
+    if not isinstance(rel, str) or not RELATIVE_PATH.fullmatch(rel):
         return [f'{where}: {rel!r} is not a relative path inside the collection']
     on_disk = output / rel
-    if not on_disk.is_file():
-        return [f'{where}: {rel} is missing']
+    try:
+        if not on_disk.is_file():
+            return [f'{where}: {rel} is missing']
+    except OSError as problem:
+        return [f'{where}: {rel} cannot be read: {problem}']
     problems = []
     if file.get('sha256') and file['sha256'] != sha256_of(on_disk):
         problems.append(f'{where}: {rel} does not match its sha256')
@@ -468,7 +487,7 @@ def _index_document(path: Path) -> tuple[dict, list[dict], list[str]]:
     problems: list[str] = []
     try:
         document = json.loads(path.read_text(encoding='utf-8'))
-    except json.JSONDecodeError as problem:
+    except (ValueError, RecursionError) as problem:  # bad UTF-8 as well as bad JSON
         return {}, [], [f'index.json is not JSON: {problem}']
     if not isinstance(document, dict):
         return {}, [], ['index.json is not an object']
@@ -495,7 +514,7 @@ def check(output: Path) -> int:
     seen: set = set()
     for entry in entries:
         problems.extend(_entry_problems(output, entry, seen))
-    listed = {f.get('path') for e in entries for f in e.get('files') or [] if isinstance(f, dict)}
+    listed = {f['path'] for e in entries for f in _listed_files(e)}
     for folder in FOLDERS.values():
         for file in sorted((output / folder).glob('*')):
             missing = file.is_file() and not file.name.endswith('.meta.json')
