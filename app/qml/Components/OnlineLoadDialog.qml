@@ -268,6 +268,8 @@ AppDialog {
                 id: sourceBox
                 objectName: "onlineLoad.source"
                 width: column.cellWidth
+                ToolTip.text: qsTr("Where to search: the online sources enabled in Preferences")
+                ToolTip.visible: sourceBox.hovered && EaGlobals.Vars.showToolTips
                 textRole: "name"
                 valueRole: "key"
                 model: dialog.search.sources
@@ -282,11 +284,6 @@ AppDialog {
                     dialog.lastSource = remembered;
                     dialog.recall();
                     dialog.search.prepare();
-                }
-                // The base combo box has no tool tip of its own; this one follows the preference as the others do.
-                EaElements.ToolTip {
-                    text: qsTr("Where to search: the online sources enabled in Preferences")
-                    visible: sourceBox.hovered && EaGlobals.Vars.showToolTips
                 }
             }
             FieldSlot {
@@ -473,10 +470,8 @@ AppDialog {
                 required property string referenceStyled
                 required property string referenceUrl
                 objectName: `onlineLoad.row.${row.index}`
-                // A click selects the row through the table's own selection (remembered for the next opening); a
-                // double click loads it. Beneath the cells, so the reference's link keeps its own click.
                 // A click loads the row's entry (the owner, 2026-11-04); in the measured-data popup Ctrl or Shift selects
-                // several rows instead, for Load N.
+                // several rows instead, for Load N. Beneath the cells, so the reference's link keeps its own click.
                 MouseArea {
                     parent: row
                     anchors.fill: parent
