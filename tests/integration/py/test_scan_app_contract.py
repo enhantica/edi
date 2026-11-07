@@ -248,7 +248,9 @@ def evaluate(expression, context=''):
 def require_availability(text):
     control = item(text, 'experiments.load.dataFile')
     enabled = property_value(control, 'enabled')
-    selected = property_value(object_id(text, 'loadMenu'), 'selected')
+    menu = object_id(text, 'loadMenu')
+    selected = property_value(menu, 'selected')
+    into_selected = property_value(menu, 'dataIntoSelected')
     created_empty = {'canLoadData': True, 'calculationOnly': True}
     created_loaded = {'canLoadData': True, 'calculationOnly': False}
     imported_empty = {'canLoadData': False, 'calculationOnly': True}
@@ -258,29 +260,33 @@ def require_availability(text):
         (False, created_loaded, True, True, True),
         (False, imported_empty, True, True, False),
         (False, imported_loaded, True, True, False),
-        (False, None, True, True, True),
+        (False, None, True, True, False),
         (False, None, False, True, False),
         (False, None, False, False, False),
         (True, created_empty, True, True, False),
         (True, created_loaded, True, True, False),
         (True, None, True, True, False),
     ]
-    program = 'let observed=[];'
-    for scan, experiment, can_create, has_project, _ in contexts:
-        project = {'currentExperiment': experiment, 'canCreateExperiment': can_create}
-        program += (
-            '{const group={scan:'
-            + json.dumps(scan)
-            + ',project:'
-            + json.dumps(project if has_project else None)
-            + '};'
-            'const loadMenu={selected:' + selected + '};'
-            'observed.push(Boolean(' + enabled + '));}'
-        )
-    program += 'console.log(JSON.stringify(observed));'
+    groups = [
+        {
+            'scan': scan,
+            'project': {'currentExperiment': experiment, 'canCreateExperiment': can_create}
+            if has_project
+            else None,
+        }
+        for scan, experiment, can_create, has_project, _ in contexts
+    ]
+    program = (
+        'const groups=' + json.dumps(groups) + ';'
+        'const observed=groups.map(group=>{'
+        'const loadMenu={selected:' + selected + '};'
+        'loadMenu.dataIntoSelected=(' + into_selected + ');'
+        'return Boolean(' + enabled + ');});'
+        'console.log(JSON.stringify(observed));'
+    )
     assert javascript(program) == [expected for *_, expected in contexts], (
-        'Load data availability: the menu uses the selected experiment ownership after '
-        'first load and permits an empty selection only when creation is available'
+        'Load data availability: both empty and measured selected experiments follow '
+        'their admitted type; an empty selection always requires explicit creation'
     )
 
 

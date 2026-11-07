@@ -48,8 +48,9 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     )
     require(
         loader,
-        r'openProjectAt\(archive\)',
-        'Working-copy wiring: the downloaded archive reaches the ordinary project opener',
+        r'openProjectAt\(archive,\s*exampleId\)',
+        'Working-copy wiring: the downloaded archive reaches the ordinary opener '
+        'with its example identity',
     )
     download = block(
         source('src/collection_examples.cpp'), 'void CollectionExamples::fetchProject('
@@ -72,8 +73,9 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     )
     require(
         opened,
-        r'open\(source,\s*\{\}',
-        'Working-copy wiring: the downloaded archive enters the common model opener',
+        r'open\(source,\s*example,',
+        'Working-copy wiring: the archive enters the common model opener '
+        'preserving its example identity',
     )
     copied = block(session, 'bool Session::copyTree(')
     require(
@@ -673,20 +675,28 @@ def test_resource_observer_refuses_non_compilation_target_sources(
 def test_working_copy_observer_rejects_copy_to_an_unrelated_destination(monkeypatch):
     original = source
     current = original('src/session.cpp')
-    changed = current.replace(
-        'const QString destination = target + file.mid(source.size());',
-        'const QString destination = source + file.mid(source.size());',
-    )
-    assert current != changed, (
-        'Working-copy wiring: the escape must alter the effective copy destination'
-    )
-    monkeypatch.setattr(
-        __import__(__name__, fromlist=['source']),
-        'source',
-        lambda path: changed if path == 'src/session.cpp' else original(path),
-    )
-    with pytest.raises(AssertionError):
-        test_bundled_project_load_and_save_as_use_the_writable_copy_routes()
+    mutations = [
+        current.replace(
+            'const QString destination = target + file.mid(source.size());',
+            'const QString destination = source + file.mid(source.size());',
+        ),
+        re.sub(
+            r'openProjectAt\(archive,\s*exampleId\)', 'openProjectAt(archive)', current, count=1
+        ),
+        re.sub(r'open\(source,\s*example,', 'open(source, {},', current, count=1),
+    ]
+    for changed in mutations:
+        assert current != changed, (
+            'Working-copy wiring: each escape alters the actual copy destination '
+            'or example identity forwarding'
+        )
+        monkeypatch.setattr(
+            __import__(__name__, fromlist=['source']),
+            'source',
+            lambda path, changed=changed: changed if path == 'src/session.cpp' else original(path),
+        )
+        with pytest.raises(AssertionError):
+            test_bundled_project_load_and_save_as_use_the_writable_copy_routes()
 
 
 def test_resource_observer_accepts_a_separately_linked_example_library(

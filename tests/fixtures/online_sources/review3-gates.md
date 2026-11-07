@@ -50,3 +50,27 @@ cost corresponds to the one host that module starts. The archive controls pay bo
 shared producer/resource fixtures together, matching the runtime writer's cost
 accounting. Failed product gates remain explicit `UNMEASURED:failed-in-this-run`
 rows rather than receiving the duration of their early refusal.
+
+The writable-copy source witness previously matched a one-argument archive open
+and an empty origin argument. It now requires the downloaded archive to pass its
+example identity into the ordinary project opener and preserve that identity in
+the common model opener. Temporary storage, writable-copy permissions, path
+preservation, fresh independent roots, and the common Save As writer checks
+remain. These expressions prove wiring; archive byte and reopen controls prove
+the resulting writable project independently.
+
+The destination-mutation control also removes each origin-forwarding argument in
+turn. Its former one-escape check now proves that all three broken routes are
+rejected after the positive current-source witness passes.
+
+The selected-data availability witness now executes the menu's actual derived
+availability binding as well as its selected-target binding. Before, its mock
+menu omitted that derived property and allowed implicit creation with no
+selection. After, no selection always disables measured-data loading, even when
+creation is possible; selected empty/measured targets, unsupported targets, scan
+state and absent-project controls retain their original coverage.
+
+The availability vector retains all ten original input contexts and evaluates
+one copy of the actual predicate over them. This removes repeated source-block
+parsing and repeated JavaScript declarations from the measurement path without
+dropping an ownership, type or empty-selection control.

@@ -59,3 +59,10 @@ aside, as well as an explicit permission or write failure.
 Continuation gates now cover the popup, datasets and drag contracts. A failed
 prerequisite does not prove the downstream save-warning, relocation or fit-time
 fetch branches; those require a successful replay after the product repairs.
+
+The lesson wavelength witness records the real transition from the neutral
+one-angstrom creation value to HRPT's 1.494 angstrom value during the walk. It
+previously required the final wavelength to remain 1.494, which falsely rejected
+a later simulation demonstration that intentionally changes it. Completion,
+scientific model/data checks and owner-project restoration remain independent
+requirements.

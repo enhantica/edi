@@ -125,7 +125,13 @@ PopupContractSession {
         verify(project.loadExperiments([fixture({file:"easydiffraction/experiments/lbco_hrpt.edi"})]), "The disk reference loads the independent full experiment");
         const expected = {structure:project.currentStructure.text.inputText, experiment:project.currentExperiment.text.inputText};
         resetProject(false);
-        if (data.tag === "present") verify(Session.project.loadStructure(fixture({file:"easydiffraction/structures/lbco.cif"})), "The reuse control already holds the linked structure by name");
+        if (data.tag === "present") {
+            verify(Session.project.loadStructure(fixture({file:"easydiffraction/structures/lbco.cif"})), "The reuse control already holds the linked structure by name");
+            Session.project.currentStructure.cell.lengthA.value = 3.93;
+            settle();
+            tryVerify(() => !Session.project.calculating, 5000, "The held reuse structure settles before its input snapshot");
+            expected.structure = Session.project.currentStructure.text.inputText;
+        }
         const before = Session.project.structures.count;
         const doc = sourceDocument();
         const entry = doc.entries.find(row => row.kind === "experiment");
@@ -135,11 +141,13 @@ PopupContractSession {
         verify(headers().includes("Description"), "Full experiment results expose the index description as a column");
         compare(Probe.rows(search.results)[0].description, entry.description, "The result description comes from the independent index");
         // Both ordinary inputs are available whichever order the dependency fetches use.
-        if (data.tag === "missing") verify(OnlineHttpFixture.enqueueFile(200, fixture({file:"easydiffraction/structures/lbco.cif"})), "The missing dependency receives its saved CIF");
+        verify(OnlineHttpFixture.enqueueFile(200, fixture({file:"easydiffraction/structures/lbco.cif"})), "The dependency transport receives the independent saved CIF");
         verify(OnlineHttpFixture.enqueueFile(200, fixture({file:"easydiffraction/experiments/lbco_hrpt.edi"})), "The full experiment receives its saved input");
-        click(onlineControl("id.0"));
+        onlineControl("results").selectWithModifiers(0, Qt.NoModifier);
+        onlineDialog.loadSelected();
         tryCompare(Session.project.experiments, "count", 1, 3000, "A full experiment brings the structure it needs before adoption");
         compare(Session.project.structures.count, 1, "A present same-name structure is reused without duplication");
+        if (data.tag === "present") compare(Session.project.currentStructure.cell.lengthA.value, 3.93, "Reusing a same-name structure preserves the independently chosen existing cell value");
         compare(Session.project.currentStructure.text.inputText, expected.structure, "Online structure equals the ordinary disk loader state");
         compare(Session.project.currentExperiment.text.inputText, expected.experiment, "Online full experiment equals the ordinary disk loader state");
         Session.project.undo();

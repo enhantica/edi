@@ -213,7 +213,7 @@ PopupContractSession {
         launchTutorial(data.tag);
         const panel = tutorialPanel();
         tryCompare(panel, "opened", true, 3000, "The scientific tutorial opens before its actual Next walk");
-        let changes = 0;
+        let changes = 0, sawNeutralWavelength = false, sawHrptSetting = false;
         for (let attempt = 0; attempt < 100 && !panel.atEnd; ++attempt) {
             const dialog = SettingsProof.creationDialog(app);
             if (dialog && dialog.visible) dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
@@ -225,13 +225,20 @@ PopupContractSession {
                 tryCompare(Session.project.fit, "running", false, 15000, "Tutorial fits finish through the ordinary worker");
                 tryCompare(Session.project, "calculating", false, 15000, "Tutorial model changes finish calculating before the next action");
             }
+            if (Session.project && Session.project.currentExperiment) {
+                const wavelength = Session.project.currentExperiment.instrument.parameterNamed("setup_wavelength");
+                if (wavelength !== null) {
+                    if (wavelength.value === 1) sawNeutralWavelength = true;
+                    if (sawNeutralWavelength && wavelength.value === 1.494) sawHrptSetting = true;
+                }
+            }
             ++changes;
         }
         const project = Session.project;
         const experiment = project ? project.currentExperiment : null;
         const pattern = experiment ? Probe.rows(experiment.pattern) : [];
         const observation = {
-            atEnd:panel.atEnd, changes:changes, structure:project && project.currentStructure !== null,
+            atEnd:panel.atEnd, changes:changes, hrptSettingSeen:sawHrptSetting, structure:project && project.currentStructure !== null,
             experiment:experiment !== null, fits:lessonFits,
             calculated:pattern.some(row => Number.isFinite(row.intensityCalc) && row.intensityCalc > 0),
             measured:experiment ? measured(experiment) : [],
@@ -261,7 +268,7 @@ PopupContractSession {
         const result = lessonObservations[data.tag];
         verify(result !== undefined && result.structure && result.experiment && result.calculated,
                "The completed lesson contains its actual scientific model and a nonzero calculated pattern");
-        compare(result.wavelength, 1.494, "The written HRPT lessons reach their independent 1.494 angstrom instrument setting");
+        verify(result.hrptSettingSeen, "Each written HRPT lesson explicitly moves its new one-angstrom experiment to the independent 1.494 angstrom setting");
         if (data.tag === "fitting") {
             verify(!result.calculationOnly && result.fits >= 2, "The completed fitting lesson runs both actual fitting stages with measured data");
             const file = SettingsProof.fileObservation(fixture({file:"easydiffraction/data/"}), "lbco_hrpt.xye");

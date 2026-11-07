@@ -74,3 +74,10 @@ collection source; ordered-location fallback remains in its dedicated injected
 location actors. Menu tooltip actors exclude section headings, which are
 non-actionable labels. Remembered-source checks activate the actual selector
 handler before closing the popup.
+
+Dependency-adoption cases invoke the shipped selected-row handler so pointer
+loading failures do not mask their download and transaction checks. Both cases
+supply the structure reply: reusing an existing structure forbids replacing or
+duplicating it, not fetching its entry. The reuse control first changes a cell
+length and requires that held structure to survive unchanged. Actual pointer
+row loading remains a separate gate.
