@@ -1,3 +1,4 @@
+import "TooltipSettings.js" as TooltipSettings
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -14,7 +15,7 @@ TestCase {
     name: "MeasuredDataControls"
     when: windowShown
     property var appWindow
-    property bool oldToolTips
+    property string oldToolTips
     property int oldTheme
     ProjectTextProof {
         id: reference
@@ -25,9 +26,9 @@ TestCase {
     }
 
     function init() {
-        oldToolTips = Globals.Vars.showToolTips;
+        oldToolTips = TooltipSettings.level(Preferences);
         oldTheme = Style.Colors.theme;
-        Globals.Vars.showToolTips = true;
+        TooltipSettings.setLevel(Preferences, "All");
         Session.closeProject();
         appWindow = application.createObject(null, {
             width: 1300,
@@ -48,7 +49,7 @@ TestCase {
         if (appWindow)
             appWindow.destroy();
         appWindow = null;
-        Globals.Vars.showToolTips = oldToolTips;
+        TooltipSettings.setLevel(Preferences, oldToolTips);
         Style.Colors.theme = oldTheme;
     }
     function ready() {

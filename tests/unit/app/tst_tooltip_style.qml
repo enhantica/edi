@@ -1,3 +1,4 @@
+import "TooltipSettings.js" as TooltipSettings
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Templates as T
@@ -18,7 +19,7 @@ TestCase {
     when: windowShown
     property var app
     property bool savedAutoCollapse
-    property bool savedPreference
+    property string savedPreference
     Component {
         id: factory
         Main {}
@@ -94,10 +95,10 @@ TestCase {
         verify(waitForRendering(app.contentItem), "The tooltip route input reaches an actual rendered frame");
     }
     function init() {
-        savedPreference = Globals.Vars.showToolTips;
+        savedPreference = TooltipSettings.level(Preferences);
         savedAutoCollapse = Globals.Vars.autoCollapseSideBarGroups;
         Globals.Vars.autoCollapseSideBarGroups = false;
-        Globals.Vars.showToolTips = true;
+        TooltipSettings.setLevel(Preferences, "All");
     }
     function cleanup() {
         SettingsProof.endAnimationClock();
@@ -107,7 +108,7 @@ TestCase {
         }
         app = null;
         Session.closeProject();
-        Globals.Vars.showToolTips = savedPreference;
+        TooltipSettings.setLevel(Preferences, savedPreference);
         Globals.Vars.autoCollapseSideBarGroups = savedAutoCollapse;
     }
     function test_counterexamples() {

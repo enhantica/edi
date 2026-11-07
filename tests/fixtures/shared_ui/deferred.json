@@ -1,0 +1,38 @@
+{
+  "measurement": "git diff --name-only origin/main...HEAD -- app core, at the recorded heads; unit 5 defers these QML files to unit 6",
+  "heads": {
+    "magnetic_structures": "c4a0d1f2110f4c0698dddf5966a6313d6a97894e",
+    "online_data": "e2ca272cecf28ac04b394d900b74bb4108b5ab5e"
+  },
+  "files": [
+    "app/qml/Base/Gui/Components/ProjectDescriptionDialog.qml",
+    "app/qml/Base/Gui/Style/Fonts.qml",
+    "app/qml/Components/AppPreferencesDialog.qml",
+    "app/qml/Components/ChartLegend.qml",
+    "app/qml/Components/DataTable.qml",
+    "app/qml/Components/EvolutionChart.qml",
+    "app/qml/Components/ExampleFilters.qml",
+    "app/qml/Components/HeaderLabel.qml",
+    "app/qml/Components/ParameterCell.qml",
+    "app/qml/Components/ParameterField.qml",
+    "app/qml/Components/PatternChart.qml",
+    "app/qml/Components/StatusBar.qml",
+    "app/qml/Components/StructureToolbar.qml",
+    "app/qml/Components/StructureView.qml",
+    "app/qml/Components/TextCell.qml",
+    "app/qml/Components/ToolbarComboBox.qml",
+    "app/qml/Components/TutorialPanel.qml",
+    "app/qml/Globals/Preferences.qml",
+    "app/qml/Main.qml",
+    "app/qml/Pages/Analysis/AnalysisPage.qml",
+    "app/qml/Pages/Analysis/MinimizerGroup.qml",
+    "app/qml/Pages/Experiment/ExperimentPage.qml",
+    "app/qml/Pages/Experiment/ExperimentsGroup.qml",
+    "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/qml/Pages/Project/ExamplesGroup.qml",
+    "app/qml/Pages/Project/GetStartedGroup.qml",
+    "app/qml/Pages/Structure/AppearanceGroup.qml",
+    "app/qml/Pages/Structure/StructurePage.qml",
+    "app/qml/Pages/Structure/StructuresGroup.qml"
+  ]
+}

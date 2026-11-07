@@ -1,3 +1,4 @@
+import "TooltipSettings.js" as TooltipSettings
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
 import QtQuick.Controls
@@ -18,7 +19,7 @@ TestCase {
     id: test
     name: "TableOwnerBehaviours"
     when: windowShown
-    property bool savedTooltips
+    property string savedTooltips
     property var appWindow
     Component {
         id: application
@@ -51,8 +52,8 @@ TestCase {
     function init() {
         failOnWarning(/.*/);
         Session.closeProject();
-        savedTooltips = Globals.Vars.showToolTips;
-        Globals.Vars.showToolTips = true;
+        savedTooltips = TooltipSettings.level(Preferences);
+        TooltipSettings.setLevel(Preferences, "All");
         appWindow = application.createObject(null);
         verify(appWindow !== null, "Owner-note gates run the production application");
         verify(waitForRendering(appWindow.contentItem), "The owner-note application renders before interaction");
@@ -62,7 +63,7 @@ TestCase {
         Globals.Vars.showAppAboutDialog = false;
         Session.closeProject();
         appWindow.destroy();
-        Globals.Vars.showToolTips = savedTooltips;
+        TooltipSettings.setLevel(Preferences, savedTooltips);
     }
     function open() {
         verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "The independently named scientific example opens");

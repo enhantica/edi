@@ -81,7 +81,7 @@ Item {
             tryCompare(dialog, "opened", true, 2000, "The real Preferences dialog opens before measuring its tabs");
             verify(SettingsProof.beginAnimationClock(), "The public Qt animation clock settles each actual Preferences slide before geometric measurements");
             const tabs = ["Prompts", "Updates", "Appearance", "Projects", "Experimental", "Develop"];
-            const labels = [["Enable tool tips:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Structures:", "Patterns:", "Stacked:", "Map:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
+            const labels = [["Tooltip level:", "Tooltip delay:", "Enable user guides:"], ["Check on application start:"], ["Theme:", "Structures:", "Patterns:", "Stacked:", "Map:", "Sidebar:", "Auto collapse:"], ["New projects' uncertainties:", "New reports' libraries:"], ["Zoom:", "Language:"], ["Logging to:", "Logging level:", "Engine threads:", "Diagnostics:", "Settings:"]];
             const failures = [], labelWidths = [], boxWidths = [], boxXs = [], labelXs = [];
             function inkTop(item) {
                 const at = item.mapToItem(dialog.contentItem, 0, 0);
@@ -225,15 +225,15 @@ Item {
             verify(old !== location, "The migration fixture distinguishes the retained old file from the named new store");
             SettingsProof.erase(location, "Edi.Preferences", "toolTips");
             SettingsProof.seed(old, "Edi.Preferences", "toolTips", false);
-            const code = 'import QtQuick; import edi.app; QtObject { property bool toolTips: Preferences.toolTips }';
+            const code = 'import QtQuick; import edi.app; QtObject { property var toolTips: { const k = Object.keys(Preferences).find(k => /^tooltips?level$/i.test(k)); return Preferences[k]; } }';
             const first = SettingsProof.restart(code);
             verify(!first.error, "The migration runs through a fresh production engine setup");
-            compare(first.toolTips, false, "The first engine carries an absent tooltip key from the old settings.ini");
+            compare(first.toolTips, "Off", "The first engine carries an absent tooltip key from the old settings.ini");
             compare(SettingsProof.value(old, "Edi.Preferences", "toolTips"), false, "Migration leaves the old settings file and value intact");
-            SettingsProof.seed(location, "Edi.Preferences", "toolTips", true);
+            TooltipSettings.setLevel(Preferences, "All");
             const second = SettingsProof.restart(code);
             verify(!second.error, "The second engine start reuses the production store");
-            compare(second.toolTips, true, "A second start never overwrites a new-store key with the old value");
+            compare(second.toolTips, "All", "A second start never overwrites a new-store key with the old value");
         }
         function test_window_geometry_restores_and_relocates_an_offscreen_position() {
             for (const entry of [["x", 60], ["y", 40], ["width", 1100], ["height", 700]])

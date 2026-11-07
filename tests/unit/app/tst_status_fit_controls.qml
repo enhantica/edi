@@ -1,3 +1,4 @@
+import "TooltipSettings.js" as TooltipSettings
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -34,8 +35,7 @@ TestCase {
         compare(item.focusPolicy, Qt.StrongFocus, "An available status action retains main's keyboard focus policy");
         compare(item.Accessible.role, Accessible.Button, "The actual clickable status consumer declares Button");
         const facts = StatusAccessibilityProof.observe(item);
-        verify(facts.valid && facts.button && facts.press && facts.focusable && !facts.disabled && !facts.invisible,
-            "The actual current status consumer advertises a live native Press action");
+        verify(facts.valid && facts.button && facts.press && facts.focusable && !facts.disabled && !facts.invisible, "The actual current status consumer advertises a live native Press action");
         compare(facts.name, expected, "Its native accessible name is the exact current caption");
         compare(facts.description, item.ToolTip.text, "Its native description is the actual current tooltip");
         return facts.id;
@@ -54,8 +54,7 @@ TestCase {
         verify(item.enabled, "Unavailability does not disable the original hover/tooltip Control");
         compare(item.Accessible.focusable, false, "Unavailable roots retire Button's sticky focusable metadata");
         const facts = StatusAccessibilityProof.observe(item);
-        verify(facts.valid && !facts.button && !facts.press && !facts.focusable,
-            "An unavailable root advertises no Press, including through Qt's connected-signal discovery");
+        verify(facts.valid && !facts.button && !facts.press && !facts.focusable, "An unavailable root advertises no Press, including through Qt's connected-signal discovery");
         clickedSpy.target = item;
         verify(clickedSpy.valid, "The unavailable-door witness observes actual clicked publication");
         clickedSpy.clear();
@@ -244,8 +243,13 @@ TestCase {
             box = siblings.slice(siblings.indexOf(label) + 1).find(item => typeof item.checked === "boolean");
         }
         verify(box !== undefined && typeof box.toggled === "function", "The fit-results preference is an actual user-toggleable checkbox");
-        const toolTips = findChild(dialog.contentItem, "preferences.toolTips");
-        verify(toolTips !== null && Ui.exposed(toolTips) && Ui.exposed(box), "Prompts shows fit results beside Enable tool tips");
+        const toolTips = View.descendants(dialog.contentItem).find(item => typeof item.textAt === "function" && item.count === 3 && ["All", "Important", "Off"].every(text => {
+                for (let i = 0; i < item.count; ++i)
+                    if (item.textAt(i) === text)
+                        return true;
+                return false;
+            }));
+        verify(toolTips !== undefined && Ui.exposed(toolTips) && Ui.exposed(box), "Prompts shows fit results beside the tooltip level chooser");
         compare(box.parent, toolTips.parent, "Both prompt choices belong to the same preferences grid");
         const tabs = View.descendants(dialog.contentItem).filter(item => item.objectName.startsWith("preferences.tab."));
         for (const tab of tabs) {
@@ -349,8 +353,12 @@ TestCase {
             {
                 tag: "analysis"
             },
-            {tag: "pointer-status"},
-            {tag: "pointer-analysis"}
+            {
+                tag: "pointer-status"
+            },
+            {
+                tag: "pointer-analysis"
+            }
         ];
     }
     function test_running_action(data) {
@@ -393,10 +401,8 @@ TestCase {
             const ended = SettingsProof.scanStopFacts(Session.project);
             console.info("E11_SCAN_STOP_AFTER", JSON.stringify(ended));
             compare(Session.project.fit.outcome, "stopped", "The status action stops the actual fit worker from Analysis and other pages");
-            verify(ended.owner_current && !ended.native_running && ended.entered === 1 && ended.exited === 1 && !ended.blocked && ended.released && !ended.expired && ended.distinct_thread && ended.file_owned && ended.starts.length > 0,
-                "The single actual callback exited without watchdog expiry after the real worker finished");
-            verify(ended.run_identity_matches && !ended.run_invalid && ended.run_error === "" && ended.run_outcome === "stopped",
-                "The actual current persisted run records the uniquely core-CANCELLED-derived stopped outcome");
+            verify(ended.owner_current && !ended.native_running && ended.entered === 1 && ended.exited === 1 && !ended.blocked && ended.released && !ended.expired && ended.distinct_thread && ended.file_owned && ended.starts.length > 0, "The single actual callback exited without watchdog expiry after the real worker finished");
+            verify(ended.run_identity_matches && !ended.run_invalid && ended.run_error === "" && ended.run_outcome === "stopped", "The actual current persisted run records the uniquely core-CANCELLED-derived stopped outcome");
             fitState(Session.project.fit.continuable ? "Continue" : "Fit");
         } finally {
             SettingsProof.releaseScanStop();
@@ -473,8 +479,8 @@ TestCase {
         tryVerify(() => (label === undefined || colorsMatch(label.color, oldInk)) && glyphs.some(glyph => colorsMatch(glyph.color, oldIcon)), 1500, "Leaving a secondary status action restores its normal caption and visible icon colours");
     }
     function test_button_style(data) {
-        const originalToolTips = EaGlobals.Vars.showToolTips;
-        EaGlobals.Vars.showToolTips = false;
+        const originalToolTips = TooltipSettings.level(Preferences);
+        TooltipSettings.setLevel(Preferences, "Off");
         try {
             open("single");
             Session.project.fit.start();
@@ -506,7 +512,7 @@ TestCase {
             normalButtonStyle(status, data.tag === "light", true);
             rightmostFitAction();
         } finally {
-            EaGlobals.Vars.showToolTips = originalToolTips;
+            TooltipSettings.setLevel(Preferences, originalToolTips);
         }
     }
     function footerGeometryReady(requestedWidth) {
@@ -516,25 +522,18 @@ TestCase {
         // FIRST StatusBar fitArea is parented directly to bar; bar fills the
         // statusBarContainer, which spans the appContainer's anchored width.
         const bar = group.parent, container = bar.parent, host = container.parent;
-        return host.parent === appWindow.contentItem && appWindow.width === requestedWidth
-            && appWindow.contentItem.width === Math.max(0, appWindow.width - appWindow.leftPadding - appWindow.rightPadding)
-            && host.width === appWindow.contentItem.width && container.width === host.width
-            && bar.width === container.width && bar.mapToItem(appWindow.contentItem, 0, 0).x === 0
-            && !isPolishScheduled(appWindow);
+        return host.parent === appWindow.contentItem && appWindow.width === requestedWidth && appWindow.contentItem.width === Math.max(0, appWindow.width - appWindow.leftPadding - appWindow.rightPadding) && host.width === appWindow.contentItem.width && container.width === host.width && bar.width === container.width && bar.mapToItem(appWindow.contentItem, 0, 0).x === 0 && !isPolishScheduled(appWindow);
     }
     function resultsPresentationReady() {
         const candidates = dialogs();
         if (candidates.length !== 1)
             return false;
         const dialog = candidates[0], content = dialog.contentItem;
-        if (!dialog.visible || !dialog.opened || dialog.opacity !== 1 || !content
-            || content.width <= 0 || content.height <= 0 || isPolishScheduled(appWindow))
+        if (!dialog.visible || !dialog.opened || dialog.opacity !== 1 || !content || content.width <= 0 || content.height <= 0 || isPolishScheduled(appWindow))
             return false;
         const table = findChild(content, "fit.results.list");
         const expected = Session.project.fit.results.count;
-        if (!table || !table.visible || table.width <= 0 || table.height <= 0
-            || table.count !== expected || expected <= 0 || !table.headerItem
-            || table.headerItem.width <= 0 || table.headerItem.height <= 0)
+        if (!table || !table.visible || table.width <= 0 || table.height <= 0 || table.count !== expected || expected <= 0 || !table.headerItem || table.headerItem.width <= 0 || table.headerItem.height <= 0)
             return false;
         let bottom = 0;
         for (let index = 0; index < expected; ++index) {
@@ -547,8 +546,7 @@ TestCase {
             bottom = top + row.height;
             const metric = findChild(row, "fit.results.metric." + index);
             const value = findChild(row, "fit.results.value." + index);
-            if (!metric || !value || !metric.visible || !value.visible
-                || metric.width <= 0 || value.width <= 0 || metric.height <= 0 || value.height <= 0)
+            if (!metric || !value || !metric.visible || !value.visible || metric.width <= 0 || value.width <= 0 || metric.height <= 0 || value.height <= 0)
                 return false;
         }
         return true;
@@ -638,11 +636,9 @@ TestCase {
         verify(Session.project.fit.canReset && actionable(reset), "Retained real scan results enable Reset");
         if (viaAccessibility) {
             const outcome = findChild(appWindow, "statusBar.fit.outcome");
-            verify(outcome !== null && outcome.visible && outcome.clickable,
-                "Real retained scan results expose the shared outcome action");
+            verify(outcome !== null && outcome.visible && outcome.clickable, "Real retained scan results expose the shared outcome action");
             pressAction(outcome);
-            tryVerify(() => dialogs().length === 1, 1000,
-                "Accessible outcome activation opens the same retained results window");
+            tryVerify(() => dialogs().length === 1, 1000, "Accessible outcome activation opens the same retained results window");
             dialogs().forEach(dialog => dialog.close());
         }
         if (viaAccessibility)
@@ -714,7 +710,7 @@ TestCase {
     }
     function test_fit_tooltip(data) {
         open("single");
-        Preferences.toolTips = data.enabled;
+        TooltipSettings.setLevel(Preferences, data.enabled ? "All" : "Off");
         const button = shortcut();
         compare(button.ToolTip.text, "Fit the free parameters", "The Fit tooltip uses the owner's exact text");
         mouseMove(appWindow.contentItem, 1, 1);
@@ -727,9 +723,9 @@ TestCase {
             tryVerify(() => tips().some(tip => tip.visible && tip.opened && tip.opacity >= .99), 3000, "Hovering Fit displays its exact tooltip when app tooltips are enabled");
         else {
             verify(tips().every(tip => !tip.visible && !tip.opened), "Hovering Fit keeps its tooltip closed when app tooltips are disabled");
-            Preferences.toolTips = true;
+            TooltipSettings.setLevel(Preferences, "All");
             tryVerify(() => tips().some(tip => tip.visible && tip.opened && tip.opacity >= .99), 3000, "The same held hover opens the real tooltip after enabling it");
-            Preferences.toolTips = false;
+            TooltipSettings.setLevel(Preferences, "Off");
             tryVerify(() => tips().every(tip => !tip.visible && !tip.opened), 1000, "Disabling tooltips closes the actual open Fit popup");
         }
     }
@@ -821,17 +817,16 @@ TestCase {
             if (i === 3 && notesAbsent) {
                 if (f.regular !== false || f.readable !== false || bytes[i] !== "")
                     errors.push("Absent notes require precise supported-root absence");
-            } else if (f.exists !== true || f.regular !== true || f.readable !== true ||
-                       !(f.bytes > 0) || bytes[i].length === 0) {
+            } else if (f.exists !== true || f.regular !== true || f.readable !== true || !(f.bytes > 0) || bytes[i].length === 0) {
                 errors.push(names[i] + " requires actual nonempty regular readable bytes");
             }
         }
         const csv = (index, prefix, completeHeader) => {
             const lines = bytes[index].split(/\r?\n/);
-            if (lines[lines.length - 1] === "") lines.pop();
+            if (lines[lines.length - 1] === "")
+                lines.pop();
             const header = (lines.shift() ?? "").split(",");
-            if (JSON.stringify(header.slice(0, prefix.length)) !== JSON.stringify(prefix) ||
-                (completeHeader && header.length !== prefix.length))
+            if (JSON.stringify(header.slice(0, prefix.length)) !== JSON.stringify(prefix) || (completeHeader && header.length !== prefix.length))
                 errors.push(names[index] + " does not carry its declared header");
             const rows = lines.map(line => line.split(","));
             if (rows.some(row => row.length !== header.length))
@@ -851,8 +846,7 @@ TestCase {
             notes = csv(3, ["file_path", "negative_points", "skipped_dataset", "refusal"], true);
             const seen = [];
             for (const row of notes) {
-                if (!paths.includes(row[0]) || seen.includes(row[0]) || !/^\d{1,12}$/.test(row[1]) ||
-                    !["True", "False"].includes(row[2]))
+                if (!paths.includes(row[0]) || seen.includes(row[0]) || !/^\d{1,12}$/.test(row[1]) || !["True", "False"].includes(row[2]))
                     errors.push("Notes retain their declared unique four-cell domain");
                 seen.push(row[0]);
             }
@@ -862,10 +856,7 @@ TestCase {
                 errors.push("Each refused dataset requires its own non-skipped note");
         try {
             const run = JSON.parse(bytes[2]);
-            if (!run || Array.isArray(run) || typeof run.template !== "string" || !run.template ||
-                run.last !== "scan" || typeof run.mixed !== "boolean" ||
-                !["", "success", "maxIterations", "noStep", "notConverged", "stopped", "failed"].includes(run.outcome) ||
-                (run.seconds !== undefined && (typeof run.seconds !== "number" || !isFinite(run.seconds) || run.seconds < 0)))
+            if (!run || Array.isArray(run) || typeof run.template !== "string" || !run.template || run.last !== "scan" || typeof run.mixed !== "boolean" || !["", "success", "maxIterations", "noStep", "notConverged", "stopped", "failed"].includes(run.outcome) || (run.seconds !== undefined && (typeof run.seconds !== "number" || !isFinite(run.seconds) || run.seconds < 0)))
                 errors.push("The run record retains its declared scan identity and field types");
         } catch (error) {
             errors.push("The run record must be actual JSON");
@@ -900,20 +891,33 @@ TestCase {
         const facts = names.map(name => SettingsProof.fileFacts(path, "analysis/" + name));
         const bytes = names.map((name, index) => facts[index].exists && facts[index].readable ? SettingsProof.text(path, "analysis/" + name) : "");
         const problems = resultFileProblems(bytes, facts);
-        compare(problems.length, 0, "Concrete result/provenance identities precede byte comparison: " + JSON.stringify({problems, facts}));
+        compare(problems.length, 0, "Concrete result/provenance identities precede byte comparison: " + JSON.stringify({
+            problems,
+            facts
+        }));
         return bytes;
     }
     function test_result_file_admission_guards() {
-        const bytes = [
-            "file_path,fit_result.reduced_chi_square,fit_result.success,fit_result.iterations\nexperiments/scan/01.xy,1,True,1\nexperiments/scan/02.xy,1,True,1\n",
-            "file_path,descent,chi_square_tolerance,max_iterations,termination\nexperiments/scan/01.xy,qr,0,1,chi_converged\nexperiments/scan/02.xy,qr,0,1,chi_converged\n",
-            '{"template":"independent-control","last":"scan","mixed":false,"outcome":"success"}', ""
-        ];
-        const facts = bytes.map(text => text ? {exists:true, regular:true, readable:true, bytes:text.length} : {exists:false, regular:false, readable:false});
+        const bytes = ["file_path,fit_result.reduced_chi_square,fit_result.success,fit_result.iterations\nexperiments/scan/01.xy,1,True,1\nexperiments/scan/02.xy,1,True,1\n", "file_path,descent,chi_square_tolerance,max_iterations,termination\nexperiments/scan/01.xy,qr,0,1,chi_converged\nexperiments/scan/02.xy,qr,0,1,chi_converged\n", '{"template":"independent-control","last":"scan","mixed":false,"outcome":"success"}', ""];
+        const facts = bytes.map(text => text ? {
+                exists: true,
+                regular: true,
+                readable: true,
+                bytes: text.length
+            } : {
+                exists: false,
+                regular: false,
+                readable: false
+            });
         compare(resultFileProblems(bytes, facts).length, 0, "Notes may genuinely be absent for this independently positive-input scan");
         const present = bytes.slice(), presentFacts = facts.slice();
         present[3] = "file_path,negative_points,skipped_dataset,refusal\nexperiments/scan/01.xy,1,False,\n";
-        presentFacts[3] = {exists:true, regular:true, readable:true, bytes:present[3].length};
+        presentFacts[3] = {
+            exists: true,
+            regular: true,
+            readable: true,
+            bytes: present[3].length
+        };
         compare(resultFileProblems(present, presentFacts).length, 0, "Present notes retain a concrete valid schema");
         const refused = present.slice(), refusedFacts = presentFacts.map(item => Object.assign({}, item));
         refused[1] = refused[1].replace("chi_converged", "refused");
@@ -922,21 +926,41 @@ TestCase {
         compare(resultFileProblems(refused, refusedFacts).length, 0, "A refused dataset is admitted only with its own declared non-skipped note");
         for (const kind of ["header-only-refusal-note", "other-dataset-refusal-note", "refusal-note-marked-skipped"]) {
             const b = refused.slice(), f = refusedFacts.map(item => Object.assign({}, item));
-            if (kind === "header-only-refusal-note") b[3] = b[3].split("\n")[0] + "\n";
-            if (kind === "other-dataset-refusal-note") b[3] = b[3].replace("01.xy", "02.xy");
-            if (kind === "refusal-note-marked-skipped") b[3] = b[3].replace(",False,", ",True,");
+            if (kind === "header-only-refusal-note")
+                b[3] = b[3].split("\n")[0] + "\n";
+            if (kind === "other-dataset-refusal-note")
+                b[3] = b[3].replace("01.xy", "02.xy");
+            if (kind === "refusal-note-marked-skipped")
+                b[3] = b[3].replace(",False,", ",True,");
             f[3].bytes = b[3].length;
             verify(resultFileProblems(b, f).includes("Each refused dataset requires its own non-skipped note"), "The actual missing relation is reached and refused: " + kind);
         }
         for (const kind of ["missing-result", "unreadable-notes", "directory", "wrong-header", "malformed-run", "duplicate-path", "refusal-without-notes"]) {
             const b = bytes.slice(), f = facts.map(item => Object.assign({}, item));
-            if (kind === "missing-result") { b[0] = ""; f[0] = {exists:false, regular:false, readable:false}; }
-            if (kind === "unreadable-notes") f[3] = {exists:true, regular:true, readable:false};
-            if (kind === "directory") f[0].regular = false;
-            if (kind === "wrong-header") b[1] = b[1].replace("termination", "unknown");
-            if (kind === "malformed-run") b[2] = "{";
-            if (kind === "duplicate-path") b[0] = b[0].replace("02.xy", "01.xy");
-            if (kind === "refusal-without-notes") b[1] = b[1].replace("chi_converged", "refused");
+            if (kind === "missing-result") {
+                b[0] = "";
+                f[0] = {
+                    exists: false,
+                    regular: false,
+                    readable: false
+                };
+            }
+            if (kind === "unreadable-notes")
+                f[3] = {
+                    exists: true,
+                    regular: true,
+                    readable: false
+                };
+            if (kind === "directory")
+                f[0].regular = false;
+            if (kind === "wrong-header")
+                b[1] = b[1].replace("termination", "unknown");
+            if (kind === "malformed-run")
+                b[2] = "{";
+            if (kind === "duplicate-path")
+                b[0] = b[0].replace("02.xy", "01.xy");
+            if (kind === "refusal-without-notes")
+                b[1] = b[1].replace("chi_converged", "refused");
             verify(resultFileProblems(b, f).length > 0, "The concrete admission escape is armed and refused: " + kind);
         }
     }
@@ -1098,10 +1122,16 @@ TestCase {
         finish();
     }
     function test_accessible_scan_controls_data() {
-        return [{tag: "scan"}, {tag: "independent"}];
+        return [
+            {
+                tag: "scan"
+            },
+            {
+                tag: "independent"
+            }
+        ];
     }
     function test_accessible_scan_controls(data) {
         test_scan_controls(data, true);
     }
-
 }

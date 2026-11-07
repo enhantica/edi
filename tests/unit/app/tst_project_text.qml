@@ -1,3 +1,4 @@
+import "TooltipSettings.js" as TooltipSettings
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -32,7 +33,7 @@ Item {
         when: windowShown
         property var tab
         property int oldTheme
-        property bool oldToolTips
+        property string oldToolTips
         ProjectTextProof {
             id: proof
         }
@@ -47,8 +48,8 @@ Item {
         }
         function init() {
             oldTheme = Style.Colors.theme;
-            oldToolTips = Globals.Vars.showToolTips;
-            Globals.Vars.showToolTips = true;
+            oldToolTips = TooltipSettings.level(Preferences);
+            TooltipSettings.setLevel(Preferences, "All");
             Session.closeProject();
             verify(Session.openProject(proof.project()), "The independently authored two-structure text witness opens");
         }
@@ -59,7 +60,7 @@ Item {
             reportSaved.target = null;
             Session.closeProject();
             Style.Colors.theme = oldTheme;
-            Globals.Vars.showToolTips = oldToolTips;
+            TooltipSettings.setLevel(Preferences, oldToolTips);
         }
         function openText(block) {
             tab = textFactory.createObject(parent, {
