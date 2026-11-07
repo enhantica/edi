@@ -540,6 +540,34 @@ TestCase {
         verify(Session.openProject(scratch), "The saved monoclinic project reopens");
         tryCompare(momentSelector().box, "currentText", "Spherical", 3000, "The form choice persists as a project view preference");
     }
+    function test_converted_forbidden_direction_refuses_data() {
+        return [{tag: "polar", form: "Spherical", axis: 1, value: 0},
+                {tag: "cartesian", form: "Cartesian", axis: 2, value: 1},
+                {tag: "negative-modulus", form: "Spherical", axis: 0, value: -1},
+                {tag: "polar-range", form: "Spherical", axis: 1, value: 181}];
+    }
+    function test_converted_forbidden_direction_refuses(data) {
+        const {moments, table} = momentFormView(data.form);
+        const row = table.itemAtIndex(1);
+        const editor = findChild(row, "atomSiteMoment.form." + data.axis + ".1");
+        verify(editor && editor.visible, "The symmetry-restricted cobalt row has its converted editor");
+        verify(Session.save(), "The pre-edit model saves its exact moment state");
+        const before = SettingsProof.text(scratch, "structures/cosio.edi");
+        const visibleBefore = new Set(Render.descendants(appWindow.contentItem).filter(item => item.visible && typeof item.text === "string").map(item => item.text));
+        if (editor.enabled && !editor.readOnly) {
+            Ui.scrollIntoView(editor);
+            mouseClick(editor);
+            editor.selectAll();
+            for (const ch of String(data.value)) keyClick(ch === "-" ? Qt.Key_Minus : Qt.Key_0 + Number(ch));
+            keyClick(Qt.Key_Return);
+            verify(Render.descendants(appWindow.contentItem).some(item => item.visible &&
+                   typeof item.text === "string" && !visibleBefore.has(item.text) && /symmetry|cannot|invalid|range|positive|negative/i.test(item.text)),
+                   "An impossible direction or invalid spherical value produces a visible refusal");
+        }
+        verify(Session.save(), "The refused edit still permits saving");
+        compare(SettingsProof.text(scratch, "structures/cosio.edi"), before,
+                "Refusing a converted edit preserves all canonical moment values and flags");
+    }
     function test_symmetry_form_column_has_room_and_a_gap_after_mz() {
         const moments = group("atom_site_moment");
         const form = findChild(moments, "atomSiteMoment.symmform.0");

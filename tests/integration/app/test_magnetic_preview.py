@@ -8,6 +8,10 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
+    'converted_forbidden_direction_refuses:polar',
+    'converted_forbidden_direction_refuses:cartesian',
+    'converted_forbidden_direction_refuses:negative-modulus',
+    'converted_forbidden_direction_refuses:polar-range',
     'sidebar_categories_follow_crysta_dictionary_order',
     'extra_groups_are_single_ordered_and_human_readable',
     'main_order_all_sites_ids_ions_and_symmetry_form',
