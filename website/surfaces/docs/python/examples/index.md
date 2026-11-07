@@ -72,5 +72,9 @@ Extract the ZIP and open the notebook from the extracted folder. Select your
 edi kernel. The final cell opens the same interactive report used by the
 application, with plots and structure views where the project provides them.
 
+Choose **Open in Colab** to run an example in your browser. Run its first cell
+once to install EasyDiffraction from our preview index and fetch the starting
+project. Colab requires a published Linux wheel and an internet connection.
+
 <!-- python-tutorials -->
 <!-- /python-tutorials -->

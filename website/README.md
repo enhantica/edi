@@ -58,3 +58,18 @@ Playwright, which the pixi environment does not install. They write their report
 The site's symbols are Font Awesome 5.15.4, the same set as the application, as `:fa5-name:` in text and `fa5/name` in
 front matter and `mkdocs.yml`. Add a new one with `render_fa5_icons.py`; the build refuses other sets. See
 [ADR-0014](adrs/0014-font-awesome-icons.md).
+
+### Tutorial notebook generation
+
+Edit tutorial `.py` sources. Their generated `.ipynb` files are committed beside
+them on the same branch, with no outputs or execution counts and sequential
+cell IDs. The first cell installs `easydiffraction` from the preview index if
+needed and prepares the project in Colab. Regenerate them with:
+
+```console
+pixi run python website/prepare_notebooks.py
+```
+
+`pixi run notebook-convert` and the public docs build use the same converter.
+The docs add a Colab link to each notebook on the branch's source commit and
+publish notebook-and-project ZIPs for local use.

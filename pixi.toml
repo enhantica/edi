@@ -420,7 +420,7 @@ python-surface-check = { cmd = ["python", "tools/checks/python_surface.py", "--c
 notebook-tests = { cmd = ["python", "-m", "pytest", "--nbmake", "docs/dev/verification/", "--nbmake-timeout=600", "--color=yes", "-v"], depends-on = ["core-build", "notebook-prepare"] }
 notebook-exec-ci = { cmd = ["python", "-m", "pytest", "--nbmake", "docs/dev/verification/", "--nbmake-timeout=600", "--overwrite", "--color=yes", "-v"], depends-on = ["core-build"] }
 verification-exec = { depends-on = ["notebook-exec-ci"] }
-notebook-convert = "jupytext docs/dev/verification/*.py docs/user/tutorials/*.py --from py:percent --to ipynb"
+notebook-convert = "jupytext docs/dev/verification/*.py --from py:percent --to ipynb && python website/prepare_notebooks.py"
 notebook-strip = "nbstripout docs/dev/verification/*.ipynb docs/user/tutorials/*.ipynb"
 notebook-prepare = { depends-on = ["notebook-convert", "notebook-strip"] }
 notebook-lint-check = "ruff check docs/dev/verification/"
