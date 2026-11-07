@@ -20,45 +20,57 @@ def stage(repo: str, branch: str, run_id: int, output: Path) -> None:
         or run['head_repository']['full_name'] != repo
     ):
         raise ValueError('Preview requires a completed desktop installer run on this branch')
-    attempt = run['run_attempt']
-    jobs = api(repo, f'actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100')['jobs']
     artifacts = api(repo, f'actions/runs/{run_id}/artifacts?per_page=100')['artifacts']
-    calendar = any(
-        job['name'] == 'preview-version' and job['conclusion'] == 'success' for job in jobs
-    )
-    platforms = tuple(PLATFORMS) if calendar else ('Linux', 'macOS')
-    version = f'0.0.{run["run_number"]}.{attempt}'
+    attempt = qualified_attempt(repo, run_id, run['run_attempt'], artifacts)
     history = None
     output.mkdir(parents=True)
     with tempfile.TemporaryDirectory(prefix='edi-installer-preview-') as temporary:
         scratch = Path(temporary)
-        for platform in platforms:
-            if [job['conclusion'] for job in jobs if job['name'] == f'installer · {platform}'] != [
-                'success'
-            ]:
-                raise ValueError(f'Preview requires a successful {platform} job in this attempt')
+        for platform in PLATFORMS:
             delivery = recover_artifact(
                 repo, artifacts, f'installer-{platform}-{attempt}', scratch
             )
             components = recover_artifact(
                 repo, artifacts, f'installer-components-{platform}-{attempt}', scratch
             )
-            if calendar:
-                payload = (delivery / 'preview-history.json').read_bytes()
-                if history is not None and payload != history:
-                    raise ValueError('Preview release histories differ')
-                history = payload
-                record = json.loads(payload)
-                (release,) = record['releases']
-                if record['sequence'] != 'calendar' or release['commit'] != run['head_sha']:
-                    raise ValueError('Preview history differs from the qualified source')
-                version = release['version']
+            recorded = delivery / 'preview-history.json'
+            if not recorded.is_file():
+                raise ValueError('Only a calendar preview can be recovered for publication')
+            payload = recorded.read_bytes()
+            if history is not None and payload != history:
+                raise ValueError('Preview release histories differ')
+            history = payload
+            record = json.loads(payload)
+            (release,) = record['releases']
+            if record['sequence'] != 'calendar' or release['commit'] != run['head_sha']:
+                raise ValueError('Preview history differs from the qualified source')
+            version = release['version']
             copy_preview(
                 delivery, components, output, PLATFORMS[platform], version, run['head_sha']
             )
-    if history is not None:
-        (output / 'components/testing/feed.json').write_bytes(history)
-    print(f'Qualified preview {version} from {run["head_sha"]}')
+    (output / 'components/testing/feed.json').write_bytes(history)
+    print(f'Qualified preview {version} from {run["head_sha"]}, attempt {attempt}')
+
+
+def qualified_attempt(repo: str, run_id: int, latest: int, artifacts: list[dict]) -> int:
+    """The newest attempt that built and kept every platform itself.
+
+    A rerun of only the draft job makes a later attempt with no installers, so the last attempt
+    is not necessarily the qualified one; platforms are never combined across attempts.
+    """
+    retained = {item['name'] for item in artifacts if not item['expired']}
+    for attempt in range(latest, 0, -1):
+        jobs = api(repo, f'actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100')['jobs']
+        built = all(
+            [job['conclusion'] for job in jobs if job['name'] == f'installer · {platform}']
+            == ['success']
+            and {f'installer-{platform}-{attempt}', f'installer-components-{platform}-{attempt}'}
+            <= retained
+            for platform in PLATFORMS
+        )
+        if built:
+            return attempt
+    raise ValueError('No attempt of this run built and kept every platform')
 
 
 def recover_artifact(repo: str, artifacts: list[dict], name: str, scratch: Path) -> Path:
