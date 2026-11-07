@@ -24,3 +24,8 @@ when needed, and prepares the project in a temporary workspace on Colab.
 The public docs build and `pixi run notebook-convert` use this converter.
 The Examples table links to each notebook at the documentation's source
 commit. Downloadable ZIPs carry the same tutorial with project-relative paths.
+
+Use pip’s `--extra-index-url` for notebook setup and pip installation instructions.
+Keep PyPI available for Python dependencies while selecting the higher calendar
+version of `easydiffraction` from our index. Published release wheels must be
+publicly downloadable before the index can expose them; draft assets are excluded.

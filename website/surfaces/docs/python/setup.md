@@ -54,7 +54,7 @@ Linux x86-64. The wheels are attached to the matching GitHub release.
     `.\.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install and verify:
 
     ```console
-    python -m pip install --index-url https://enhantica.github.io/edi/pypi/simple/ "easydiffraction==VERSION"
+    python -m pip install --extra-index-url https://enhantica.github.io/edi/pypi/simple/ "easydiffraction==VERSION"
     python -c "import edi; print(edi.Project)"
     python -m edi --help
     ```

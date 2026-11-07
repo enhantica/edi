@@ -27,7 +27,7 @@ def setup_source(case: str, *, portable: bool = False) -> str:
         'if importlib.util.find_spec("edi") is None:\n'
         '    subprocess.check_call([\n'
         '        sys.executable, "-m", "pip", "install", "--only-binary=:all:",\n'
-        '        "--index-url", "https://enhantica.github.io/edi/pypi/simple/",\n'
+        '        "--extra-index-url", "https://enhantica.github.io/edi/pypi/simple/",\n'
         '        "easydiffraction",\n'
         '    ])\n\n'
         'if "google.colab" in sys.modules:\n'

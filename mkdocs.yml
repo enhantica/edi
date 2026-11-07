@@ -201,6 +201,7 @@ nav:
           - user/tutorials/pd-neut-cwl_lmo-echidna.ipynb
           - user/tutorials/pd-neut-cwl_y2o3-spodi.ipynb
           - user/tutorials/pd-neut-cwl_yalo3-al2o3-spodi.ipynb
+          - user/tutorials/pd-neut-cwl_yap-spodi_3k.ipynb
           - user/tutorials/pd-neut-tof_si-sepd.ipynb
           - user/tutorials/pd-neut-tof_cecoal-polaris.ipynb
           - user/tutorials/pd-neut-tof_ceo2-pearl.ipynb
