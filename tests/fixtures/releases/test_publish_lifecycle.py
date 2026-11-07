@@ -74,7 +74,8 @@ class GitHub:
             'id': self.next_id,
             'assets': [],
             'html_url': 'u',
-            'created_at': '2026-11-05T10:00:00Z',
+            # GitHub's created_at is the date of the source commit, not of the draft.
+            'created_at': '2026-10-20T08:00:00Z',
         }
         self.releases[self.next_id] = release
         self.next_id += 1
@@ -215,14 +216,15 @@ def test_preview_drafts_are_found_through_the_same_lookup(github, tmp_path):
 TODAY = datetime.date(2026, 11, 7)
 
 
-def reserve(commit, *, prerelease=True):
-    return PREPARE.reserve_identity(REPO, commit, TODAY, prerelease=prerelease)
+def reserve(commit, *, prerelease=True, today=TODAY):
+    return PREPARE.reserve_identity(REPO, commit, today, prerelease=prerelease)
 
 
 def test_a_retry_of_the_same_source_keeps_its_reserved_version_and_date(github):
     github.tags.add('v2026.11.0')
-    assert reserve('a' * 40) == ('2026.11.1', datetime.date(2026, 11, 5))
-    assert reserve('a' * 40) == ('2026.11.1', datetime.date(2026, 11, 5))
+    assert reserve('a' * 40) == ('2026.11.1', TODAY)
+    later = datetime.date(2026, 11, 9)
+    assert reserve('a' * 40, today=later) == ('2026.11.1', TODAY)
     assert reserve('c' * 40)[0] == '2026.11.2'
     assert reserve('a' * 40, prerelease=False)[0] == '2026.11.3'
     assert len(github.releases) == 3
@@ -235,16 +237,52 @@ def test_a_simultaneous_allocator_keeps_the_number_and_the_later_one_moves_on(gi
     assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}
 
 
-def test_publishers_claim_their_reservation_and_refuse_another_sources(github, folder, tmp_path):
-    version, _ = reserve(RELEASE['commit'], prerelease=False)
-    assert version == RELEASE['version']
+def test_a_lost_creation_response_is_settled_on_the_retry(github):
+    github.rival_before_create = 'd' * 40
+    github.fail_after_create = True
+    with pytest.raises(subprocess.CalledProcessError):
+        reserve('a' * 40)
+    github.fail_after_create = False
+    assert reserve('a' * 40) == ('2026.11.1', TODAY)
+    owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
+    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}
+
+
+def test_a_published_preview_is_not_rebuilt_under_a_new_number(github, tmp_path):
+    version, date = reserve('a' * 40)
+    preview = {**RELEASE, 'version': version, 'commit': 'a' * 40, 'date': date.isoformat()}
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'preview installer')
+    PREVIEW.publish(
+        REPO, preview, 'Notes\n', [(archive, hashlib.sha256(b'preview installer').hexdigest())]
+    )
+    (release,) = github.releases.values()
+    assert PLAN.release_date(release['body']) == date.isoformat() and release['assets']
+    assert reserve('a' * 40) == (version, date)
+    github.run(['gh', 'api', '--method', 'PATCH', f'repos/{REPO}/releases/{release["id"]}'])
+    with pytest.raises(ValueError, match=f'already published as v{version}'):
+        reserve('a' * 40, today=datetime.date(2026, 11, 8))
+    assert len(github.releases) == 1
+
+
+def test_publishers_claim_their_reservation_and_refuse_another_source_or_date(
+    github, folder, tmp_path
+):
+    version, date = reserve(RELEASE['commit'], prerelease=False, today=datetime.date(2026, 11, 5))
+    assert (version, date.isoformat()) == (RELEASE['version'], RELEASE['date'])
     PUBLISH.publish(REPO, folder)
     (release,) = github.releases.values()
-    assert release['body'] == PLAN.markdown_notes(RELEASE) and len(release['assets']) == 2
+    assert release['body'] == PLAN.release_body(PLAN.markdown_notes(RELEASE), RELEASE['date'])
+    assert len(release['assets']) == 2
+
+    github.releases.clear()
+    reserve(RELEASE['commit'], prerelease=False)
+    with pytest.raises(ValueError, match='another date'):
+        PUBLISH.publish(REPO, folder)
 
     github.releases.clear()
     preview = {**RELEASE, 'commit': 'e' * 40}
-    reserve('f' * 40)
+    reserve('f' * 40, today=datetime.date(2026, 11, 5))
     archive = tmp_path / 'installer.zip'
     archive.write_bytes(b'preview installer')
     with pytest.raises(ValueError, match='another source'):

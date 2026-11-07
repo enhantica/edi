@@ -129,6 +129,28 @@ def _new_identity(
     return identity
 
 
+RELEASE_DATE = re.compile(r'<!-- edi release date ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->')
+
+
+def release_body(notes: str, date: str) -> str:
+    """A GitHub release's text: its notes, then the release date kept as a hidden comment.
+
+    The date is chosen when the version is reserved and must survive into publication, and no
+    GitHub field records it (``created_at`` is the source commit's date).
+    """
+    return (
+        f'{notes}\n<!-- edi release date {date} -->\n'
+        if notes
+        else f'<!-- edi release date {date} -->\n'
+    )
+
+
+def release_date(body: str | None) -> str | None:
+    """The release date a release body records, if any."""
+    match = RELEASE_DATE.search(body or '')
+    return match[1] if match else None
+
+
 def release_plan(
     pull_requests: list[dict],
     releases: list[dict],

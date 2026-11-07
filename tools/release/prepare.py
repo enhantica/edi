@@ -15,6 +15,8 @@ from pathlib import Path
 from plan import (
     markdown_notes,
     next_calendar_version,
+    release_body,
+    release_date,
     release_plan,
     validate_history,
     version_key,
@@ -113,47 +115,57 @@ def list_releases(repo: str) -> list[dict]:
 def reserve_identity(
     repo: str, commit: str, today: datetime.date, *, prerelease: bool, attempts: int = 5
 ) -> tuple[str, datetime.date]:
-    """The calendar version and date of this source in its channel, held by an empty draft.
+    """The calendar version and date of this source in its channel, held by a draft.
 
-    A retry finds the draft already made for the same commit and channel and keeps its version
-    and date. A new version is reserved at once by creating an empty draft, so other allocators
-    skip it while this source is built; if two take the same number at the same moment, the
-    later draft is withdrawn and the next number tried.
+    A new version is reserved at once by a draft whose text is only the release date, so other
+    allocators skip the number while this source is built. A retry finds that draft for the same
+    commit and channel and keeps its version and the date it records. Either way the draft must
+    be the first release with its tag; otherwise it is withdrawn and the next number tried, which
+    also settles a creation whose response was lost. A source already published in this channel
+    is refused: a published release is never rebuilt under a new number.
     """
     for _ in range(attempts):
         own = [
             item
             for item in list_releases(repo)
-            if item['draft']
-            and item['target_commitish'] == commit
+            if item['target_commitish'] == commit
             and item['prerelease'] == prerelease
             and CALENDAR_TAG.fullmatch(item['tag_name'])
         ]
+        published = [item['tag_name'] for item in own if not item['draft']]
+        if published:
+            raise ValueError(f'This source is already published as {published[0]}')
         if len(own) > 1:
             raise ValueError('Several drafts claim this source')
         if own:
-            return own[0]['tag_name'][1:], datetime.date.fromisoformat(own[0]['created_at'][:10])
-        version = next_calendar_version(calendar_tags(repo), today)
-        payload = {
-            'tag_name': 'v' + version,
-            'target_commitish': commit,
-            'name': 'edi ' + version,
-            'body': '',
-            'draft': True,
-            'prerelease': prerelease,
-            'make_latest': 'false',
-        }
-        created = json.loads(
-            subprocess.check_output(
-                ['gh', 'api', '--method', 'POST', f'repos/{repo}/releases', '--input', '-'],
-                input=json.dumps(payload).encode(),
+            draft, recorded = own[0], release_date(own[0]['body'])
+            if recorded is None:
+                raise ValueError('The draft for this source records no release date')
+            date = datetime.date.fromisoformat(recorded)
+        else:
+            date, version = today, next_calendar_version(calendar_tags(repo), today)
+            payload = {
+                'tag_name': 'v' + version,
+                'target_commitish': commit,
+                'name': 'edi ' + version,
+                'body': release_body('', today.isoformat()),
+                'draft': True,
+                'prerelease': prerelease,
+                'make_latest': 'false',
+            }
+            draft = json.loads(
+                subprocess.check_output(
+                    ['gh', 'api', '--method', 'POST', f'repos/{repo}/releases', '--input', '-'],
+                    input=json.dumps(payload).encode(),
+                )
             )
-        )
-        rivals = [item['id'] for item in list_releases(repo) if item['tag_name'] == 'v' + version]
-        if min(rivals) == created['id']:
-            return version, datetime.date.fromisoformat(created['created_at'][:10])
+        rivals = [
+            item['id'] for item in list_releases(repo) if item['tag_name'] == draft['tag_name']
+        ]
+        if min(rivals) == draft['id']:
+            return draft['tag_name'][1:], date
         subprocess.run(
-            ['gh', 'api', '--method', 'DELETE', f'repos/{repo}/releases/{created["id"]}'],
+            ['gh', 'api', '--method', 'DELETE', f'repos/{repo}/releases/{draft["id"]}'],
             check=True,
             capture_output=True,
         )

@@ -75,12 +75,15 @@ release-range selection consume these recorded entries. Release preparation and 
 separate: creating a plan does not tag, publish, merge or alter an online component repository.
 Its one change on GitHub is the version reservation described below.
 
-A version is reserved when it is chosen, for previews and stable releases alike: an empty draft
-release at the source commit, named `edi VERSION`. Other allocators see it among the drafts and
-skip the number. A retry of the same commit in the same channel finds that draft and keeps its
-version and date, the date being the draft's creation day. If two allocators take one number at the
-same moment, the earlier draft keeps it and the later one is deleted and takes the next number.
-Publication fills in the reserved draft's notes; a reservation made for another commit refuses. An
+A version is reserved when it is chosen, for previews and stable releases alike: a draft release
+at the source commit, named `edi VERSION`, whose text is only the release date as a hidden comment
+(`<!-- edi release date YYYY-MM-DD -->`). Publication keeps that comment under the notes, because no
+GitHub field records the date (`created_at` is the source commit's). Other allocators see the draft
+and skip the number. A retry of the same commit in the same channel finds it and keeps its version
+and recorded date. A reserved or reused draft must be the first release with its tag, otherwise it
+is deleted and the next number taken; this also settles a creation whose response was lost. A
+source already published in the channel is refused rather than rebuilt under a new number.
+Publication fills in the reserved draft's notes; a reservation made for another commit or date refuses. An
 abandoned reservation leaves a gap in the month's sequence, which is harmless.
 
 Release builds supply `EDI_RELEASE_VERSION` to the existing C++ version generator; ordinary developer

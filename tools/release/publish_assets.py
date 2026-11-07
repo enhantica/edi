@@ -7,7 +7,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from plan import markdown_notes, validate_history
+from plan import markdown_notes, release_body, release_date, validate_history
 from prepare import published_history
 
 
@@ -63,15 +63,19 @@ def create_draft(repo: str, payload: dict) -> dict:
     return existing
 
 
-def claim_reservation(repo: str, existing: dict, commit: str, notes: str) -> dict:
-    """Give the empty draft that reserved this version its notes, then read it back.
+def claim_reservation(repo: str, existing: dict, commit: str, body: str) -> dict:
+    """Give the draft that reserved this version its full text, then read it back.
 
-    Any other draft or release is returned unchanged for the ordinary identity checks.
+    A reservation is a draft with no assets whose text is only its release date. Any other
+    draft or release is returned unchanged for the ordinary identity checks.
     """
-    if not existing['draft'] or existing['body'] or existing['assets']:
+    date = release_date(existing['body'])
+    if not existing['draft'] or existing['assets'] or existing['body'] != release_body('', date):
         return existing
     if existing['target_commitish'] != commit:
         raise ValueError('The reserved version belongs to another source')
+    if date != release_date(body):
+        raise ValueError('The reserved version was reserved on another date')
     subprocess.run(
         [
             'gh',
@@ -82,12 +86,12 @@ def claim_reservation(repo: str, existing: dict, commit: str, notes: str) -> dic
             '--input',
             '-',
         ],
-        input=json.dumps({'body': notes}).encode(),
+        input=json.dumps({'body': body}).encode(),
         check=True,
         capture_output=True,
     )
     claimed = optional_api(repo, f'releases/{existing["id"]}')
-    if claimed is None or claimed['body'] != notes:
+    if claimed is None or claimed['body'] != body:
         raise RuntimeError('The reserved draft could not be updated')
     return claimed
 
@@ -162,6 +166,7 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
     notes = (folder / 'notes.md').read_text()
     if notes != markdown_notes(release):
         raise ValueError('Release notes differ from the qualified titles')
+    body = release_body(notes, release['date'])
     assets = {}
     for path in (folder / 'assets').iterdir():
         if not path.is_file() or path.is_symlink():
@@ -181,17 +186,17 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
                 'tag_name': tag,
                 'target_commitish': release['commit'],
                 'name': 'edi ' + release['version'],
-                'body': notes,
+                'body': body,
                 'prerelease': False,
                 'make_latest': 'false',
             },
         )
-    existing = claim_reservation(repo, existing, release['commit'], notes)
+    existing = claim_reservation(repo, existing, release['commit'], body)
     if existing['prerelease'] or existing['name'] != 'edi ' + release['version']:
         raise ValueError('Release tag already names a different release')
-    found = check_existing(existing, release, notes, assets)
+    found = check_existing(existing, release, body, assets)
     if finalize:
-        publish_draft(repo, existing, release, notes, assets)
+        publish_draft(repo, existing, release, body, assets)
     else:
         for name in sorted(set(assets) - found):
             subprocess.run(
@@ -199,7 +204,7 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
                 check=True,
             )
         verified = optional_api(repo, f'releases/{existing["id"]}')
-        if verified is None or check_existing(verified, release, notes, assets) != set(assets):
+        if verified is None or check_existing(verified, release, body, assets) != set(assets):
             raise RuntimeError('Uploaded release assets could not be verified')
 
 

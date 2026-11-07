@@ -8,7 +8,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from plan import markdown_note, note_interfaces
+from plan import markdown_note, note_interfaces, release_body
 from promote import digest, validate_cli, validate_wheel
 from publish_assets import (
     check_existing,
@@ -112,6 +112,7 @@ def _preview_notes(release: dict) -> str:
 
 def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str]]) -> None:
     """Create the draft and attach only assets missing from a matching release."""
+    notes = release_body(notes, release['date'])
     version = release['version']
     tag = 'v' + version
     title = 'edi ' + version
