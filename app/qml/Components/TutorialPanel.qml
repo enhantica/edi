@@ -52,7 +52,11 @@ Popup {
     // The tutorial's files staged from the collection, as a folder URL string; empty until staged.
     property string stagedFolder: ""
     // The step action to do again once the files are staged, if one waits for them.
-    property string afterStaging: ""
+    // The action waiting for the tutorial's files, owned by the tutorial run, step and project that asked
+    // (`{run, step, project, check}`): an answer arriving after any of them changed is dropped.
+    property var afterStaging: null
+    // A new run on every start, Stop and close, so a late answer finds its owner gone.
+    property int run: 0
     // The fits and background estimates made before the step showed: a step asking for one waits for one more.
     property int fitsAtStep: 0
     property int resultsAtStep: 0
@@ -130,6 +134,8 @@ Popup {
     // The tutorial chosen, with its project in place.
     function begin(chosen, temporary) {
         RunLog.note(`tutorial started: ${chosen.id}`);
+        ++panel.run;
+        panel.afterStaging = null;
         panel.temporary = temporary;
         panel.tutorial = chosen;
         panel.step = 0;
@@ -230,7 +236,12 @@ Popup {
         const argument = colon < 0 ? "" : check.slice(colon + 1);
         // The files come from the collection: staged once, the action goes on when they have arrived.
         if (panel.needsFiles(name) && panel.stagedFolder === "") {
-            panel.afterStaging = check;
+            panel.afterStaging = {
+                run: panel.run,
+                step: panel.step,
+                project: Session.project,
+                check: check
+            };
             Session.stageTutorialFiles();
             return;
         }
@@ -1211,6 +1222,8 @@ Popup {
             AppState.tutorialRunning = false;
     }
     onClosed: {
+        ++panel.run;
+        panel.afterStaging = null;
         outlineBox.visible = false;
         panel.tutorial = null;
         panel.temporary = false;
@@ -1238,16 +1251,21 @@ Popup {
         }
         function onTutorialFilesStaged(folder) {
             panel.stagedFolder = folder.toString();
-            const again = panel.afterStaging;
-            panel.afterStaging = "";
-            if (again !== "")
-                panel.perform(again);
+            const waiting = panel.afterStaging;
+            panel.afterStaging = null;
+            if (waiting === null)
+                return;
+            if (!panel.opened || panel.current === null || waiting.run !== panel.run || waiting.step !== panel.step || waiting.project !== Session.project) {
+                RunLog.note("tutorial files arrived after the tutorial moved on; nothing done with them");
+                return;
+            }
+            panel.perform(waiting.check);
         }
         function onTutorialFilesSaved() {
             panel.filesSaved = true;
         }
         function onTutorialFilesFailed(message) {
-            panel.afterStaging = "";
+            panel.afterStaging = null;
             RunLog.note(`tutorial files not available: ${message}`);
         }
     }
