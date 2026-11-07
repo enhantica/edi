@@ -41,7 +41,7 @@ Here $Z_pM_p$ is the cell formula mass and $V_p$ its volume; a cell-mass represe
 
 ## Magnetic diffraction {#magnetic-diffraction}
 
-**Planned.** Magnetic diffraction is planned. Magnetic scattering involves vector contributions beyond the scalar nuclear/X-ray model above.
+Commensurate magnetic structures are available for unpolarised neutron powder data. Magnetic scattering involves vector contributions beyond the scalar nuclear and X-ray models above; see [Magnetic structures](magnetic.md).
 
 ## Polarized diffraction {#polarized-diffraction}
 

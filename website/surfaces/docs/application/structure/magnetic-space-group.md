@@ -6,7 +6,7 @@ template: gui.html
 # <span class="ed-reference-icon" aria-hidden="true">&#61558;</span> Magnetic space group
 
 <!-- group-tags -->
-<p class="ed-group-tags"><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a></p>
+<p class="ed-group-tags"><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a></p>
 
 Shown: magnetic structure.
 <!-- /group-tags -->
@@ -15,7 +15,7 @@ Shown: magnetic structure.
 
 On **Structure → Main**, expand **Magnetic space group**. For a magnetic structure, it shows the magnetic space group as the file names it: its BNS number, BNS symbol and UNI symbol. These values are read-only for now. Below them, the parent group is shown when it is not the space group itself, as in a supercell or a lower family group.
 
-See [magnetic diffraction](../../physics/diffraction.md#magnetic-diffraction) for the model.
+See [Magnetic structures](../../physics/magnetic.md) for the model.
 
 <!-- gui-guide:use-this-group -->
 <div class="gui-viewer" markdown="1">

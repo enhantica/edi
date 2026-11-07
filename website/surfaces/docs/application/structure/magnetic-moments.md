@@ -6,14 +6,14 @@ template: gui.html
 # <span class="ed-reference-icon" aria-hidden="true">&#61732;</span> Magnetic moments
 
 <!-- group-tags -->
-<p class="ed-group-tags"><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a></p>
+<p class="ed-group-tags"><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a></p>
 
 Shown: magnetic structure.
 <!-- /group-tags -->
 
 ## Use this group
 
-On **Structure → Main**, expand **Magnetic moments**. Choose how the moments are expressed in **moments as**. The table has one row per atom site. Choose the magnetic ion for a site, or **none** for a site without a moment. The ion belongs to the atom type, so sites of one type share it. Edit the three components along the cell axes; those the site symmetry leaves free are editable, and the symmetry form is shown read-only.
+On **Structure → Main**, expand **Magnetic moments**. Choose how the moments are shown in **moments as**: crystal axes, Cartesian or spherical. The table has one row per atom site. Choose the magnetic ion for a site, or **none** for a site without a moment. The ion belongs to the atom type, so sites of one type share it. Edit the three components along the cell axes; those the site symmetry leaves free are editable, and the symmetry form is shown read-only.
 
 <!-- gui-guide:use-this-group -->
 <div class="gui-viewer" markdown="1">

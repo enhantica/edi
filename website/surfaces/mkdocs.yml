@@ -211,6 +211,7 @@ nav:
       - Rietveld refinement: physics/rietveld.md
       - Crystallography: physics/crystallography.md
       - Scattering and structure factors: physics/diffraction.md
+      - Magnetic structures: physics/magnetic.md
       - Atomic displacement: physics/displacement.md
     - Peak profiles:
       - physics/profiles/index.md

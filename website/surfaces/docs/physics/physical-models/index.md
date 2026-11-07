@@ -11,6 +11,7 @@ These pages explain the models behind every calculation, from the diffraction it
 | [Rietveld refinement](../rietveld.md) | How do structures, profiles and corrections form a powder pattern? What does the fit minimise? |
 | [Crystallography](../crystallography.md) | How do the cell, symmetry, reflection indices and multiplicities determine the diffraction geometry? |
 | [Scattering and structure factors](../diffraction.md) | How do radiation, atomic positions, occupancy and scattering-data sources affect intensity? |
+| [Magnetic structures](../magnetic.md) | How are magnetic symmetry, moments, form factors and the magnetic intensity calculated? |
 | [Atomic displacement parameters](../displacement.md) | What do Biso, Uiso, Bani, Uani and beta mean? |
 | [Constant-wavelength profiles](../profiles/cw.md) | Gaussian, Lorentzian, pseudo-Voigt, TCH and the two asymmetry models |
 | [Time-of-flight profiles](../profiles/tof.md) | Symmetric pseudo-Voigt, Jorgensen and Jorgensen–Von Dreele |

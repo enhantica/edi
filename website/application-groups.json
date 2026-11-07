@@ -112,6 +112,9 @@
         ],
         "when": "Magnetic structure",
         "tags": {
+          "sampleForm": [
+            "powder"
+          ],
           "probe": [
             "neutron"
           ]
@@ -128,6 +131,9 @@
         ],
         "when": "Magnetic structure",
         "tags": {
+          "sampleForm": [
+            "powder"
+          ],
           "probe": [
             "neutron"
           ]
@@ -144,6 +150,9 @@
         ],
         "when": "Magnetic structure",
         "tags": {
+          "sampleForm": [
+            "powder"
+          ],
           "probe": [
             "neutron"
           ]
@@ -175,6 +184,9 @@
         ],
         "when": "Magnetic structure",
         "tags": {
+          "sampleForm": [
+            "powder"
+          ],
           "probe": [
             "neutron"
           ]
@@ -209,6 +221,9 @@
         "category": "space_group_symop_magn_operation",
         "when": "Magnetic structure",
         "tags": {
+          "sampleForm": [
+            "powder"
+          ],
           "probe": [
             "neutron"
           ]
@@ -222,6 +237,9 @@
         "category": "expanded_atom_site_moment",
         "when": "Magnetic structure",
         "tags": {
+          "sampleForm": [
+            "powder"
+          ],
           "probe": [
             "neutron"
           ]
