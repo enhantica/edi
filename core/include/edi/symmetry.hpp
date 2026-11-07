@@ -40,6 +40,19 @@ struct ParameterTie {
 // with its own message, and a page that could not edit the offending field could not repair it.
 std::vector<ParameterTie> structure_ties(const Structure& structure);
 
+// An edit of one component of a site's moment in a display form (edi ADR-0070): `form` is
+// "crystal_axes", "cartesian" or "spherical", component `k` takes `value` and the other two keep
+// theirs. On success `crystal` holds the crystal-axis components to write: the moment asked for,
+// which the site's magnetic symmetry admits. Otherwise `refusal` says why and nothing is written:
+// a direction the symmetry does not allow, a component it sets, a negative modulus or a polar
+// angle outside 0 to 180 degrees.
+struct MomentEdit {
+    std::array<double, 3> crystal{};
+    std::string refusal;
+};
+MomentEdit moment_edit(const Structure& structure, const AtomSiteMoment& moment,
+                       const std::string& form, std::size_t k, double value);
+
 // One Wyckoff position of a structure's space group, from crysta's table: its letter, its multiplicity, its
 // representative coordinates as the table spells them ("0,0,0", "1/2,y,z") and the coordinates it gives with x, y and
 // z at 0, a point on the position.

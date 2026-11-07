@@ -753,29 +753,33 @@ QVariantList AtomSiteMomentListModel::components(int row, const QString& form) c
 
 QString AtomSiteMomentListModel::setComponent(int row, const QString& form, int k, double value) {
     const auto* site = static_cast<const edi::AtomSite*>(keyAt(row));
-    auto* moment = const_cast<edi::AtomSiteMoment*>(moment_of(structure_, site));
-    if (moment == nullptr || k < 0 || k > 2 || !std::isfinite(value)) {
-        return tr("This site has no moment to edit");
-    }
-    const std::array<double, 6> cell = cell_of(structure_);
-    const std::array<double, 3> crystal{moment->crystalaxis_x.value, moment->crystalaxis_y.value,
-                                        moment->crystalaxis_z.value};
-    std::array<double, 3> values = in_form(cell, crystal, form);
-    values[static_cast<std::size_t>(k)] = value;
-    const std::array<double, 3> wanted = from_form(cell, values, form);
-    // The components the site symmetry leaves free (the registry's refinable marks); the others follow them.
-    const std::vector<edi::Parameter*> components = moment->parameters();
-    std::vector<std::pair<edi::Parameter*, double>> writes;
-    for (std::size_t i = 0; i < components.size(); ++i) {
-        const ParameterItem* item = registry_.find(components[i]);
-        if (item != nullptr && item->isRefinable()) {
-            writes.emplace_back(components[i], wanted[i]);
+    const edi::AtomSiteMoment* moment = moment_of(structure_, site);
+    QString refusal;
+    if (moment == nullptr || k < 0 || k > 2) {
+        refusal = tr("This site has no moment to edit");
+    } else {
+        // The core decides what the symmetry admits; only the free components are written, the others follow.
+        const edi::MomentEdit edit =
+            edi::moment_edit(structure_, *moment, form.toStdString(), static_cast<std::size_t>(k), value);
+        refusal = QString::fromStdString(edit.refusal);
+        if (refusal.isEmpty()) {
+            const std::vector<edi::Parameter*> components = const_cast<edi::AtomSiteMoment*>(moment)->parameters();
+            std::vector<std::pair<edi::Parameter*, double>> writes;
+            for (std::size_t i = 0; i < components.size(); ++i) {
+                const ParameterItem* item = registry_.find(components[i]);
+                if (item != nullptr && item->isRefinable()) {
+                    writes.emplace_back(components[i], edit.crystal[i]);
+                }
+            }
+            refusal = writes.empty() ? tr("The site symmetry fixes this moment")
+                                     : editor_.apply(edi::Edit::values(std::move(writes)), false);
         }
     }
-    if (writes.empty()) {
-        return tr("The site symmetry fixes this moment");
+    if (refusal != refusal_) {
+        refusal_ = refusal;
+        emit refusalChanged();
     }
-    return editor_.apply(edi::Edit::values(std::move(writes)), false);
+    return refusal;
 }
 
 // ---- PropagationVectorListModel -----------------------------------------------------------------

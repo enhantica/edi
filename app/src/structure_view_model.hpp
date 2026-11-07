@@ -192,6 +192,8 @@ class AtomSiteMomentListModel : public RowTableModel {
     QML_UNCREATABLE("Belongs to a structure")
     // Counts the structure's syncs: what components() reads (the cell as well as the moments) may have changed.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
+    // Why the last component edit was not made, until one is.
+    Q_PROPERTY(QString refusal READ refusal NOTIFY refusalChanged)
 
    public:
     AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
@@ -205,17 +207,20 @@ class AtomSiteMomentListModel : public RowTableModel {
     // their s.u. (NaN where the components have none) and the modulus |M| with its s.u.; empty for a site without
     // a moment.
     Q_INVOKABLE QVariantList components(int row, const QString& form) const;
-    // Sets component `k` of the row's moment in `form`, the other two kept: the moment is converted to crystal axes
-    // and only the components the site symmetry leaves free are written, in one edit. Returns why it was refused,
-    // or an empty text.
+    // Sets component `k` of the row's moment in `form`, the other two kept: the core converts it to crystal axes and
+    // refuses a moment the site symmetry does not admit (edi::moment_edit); otherwise the free components are written
+    // in one edit. Returns why it was refused, or an empty text, which `refusal` also holds.
     Q_INVOKABLE QString setComponent(int row, const QString& form, int k, double value);
     int revision() const { return revision_; }
+    QString refusal() const { return refusal_; }
 
    signals:
     void revisionChanged();
+    void refusalChanged();
 
    private:
     edi::Structure& structure_;
+    QString refusal_;
     ProjectEditor& editor_;
     ParameterRegistry& registry_;
     int revision_ = 0;

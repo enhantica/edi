@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -407,5 +408,15 @@ Column {
                 value: formRow.symmform
             }
         }
+    }
+
+    // Why the last converted edit was not made, until one is: a direction the site symmetry does not allow, say.
+    EaElements.Label {
+        objectName: "atomSiteMoment.refusal"
+        visible: group.moments !== null && group.moments.refusal !== ""
+        width: EaStyle.Sizes.sideBarContentWidth
+        wrapMode: Text.WordWrap
+        color: EaStyle.Colors.red
+        text: group.moments ? group.moments.refusal : ""
     }
 }

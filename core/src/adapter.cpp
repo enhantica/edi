@@ -370,6 +370,84 @@ std::vector<ParameterTie> structure_ties(const Structure& s) {
     return ties;
 }
 
+MomentEdit moment_edit(const Structure& s, const AtomSiteMoment& moment, const std::string& form,
+                       std::size_t k, double value) {
+    MomentEdit out;
+    if (k > 2 || !std::isfinite(value)) {
+        out.refusal = "That is not a value for this moment";
+        return out;
+    }
+    const std::array<double, 6> cell{s.cell.length_a.value, s.cell.length_b.value,
+                                     s.cell.length_c.value, s.cell.angle_alpha.value,
+                                     s.cell.angle_beta.value, s.cell.angle_gamma.value};
+    const std::array<double, 3> current{moment.crystalaxis_x.value, moment.crystalaxis_y.value,
+                                        moment.crystalaxis_z.value};
+    const bool cartesian = form == "cartesian";
+    const bool spherical = form == "spherical";
+    std::array<double, 3> values = current;
+    if (cartesian) {
+        values = crysta::moment_cartesian(cell, current);
+    } else if (spherical) {
+        values = crysta::moment_spherical(crysta::moment_cartesian(cell, current));
+    }
+    values[k] = value;
+    if (spherical && values[0] < 0.0) {
+        out.refusal = "The modulus |M| cannot be negative";
+        return out;
+    }
+    if (spherical && (values[1] < 0.0 || values[1] > 180.0)) {
+        out.refusal = "The polar angle must lie between 0 and 180 degrees";
+        return out;
+    }
+    std::array<double, 3> wanted = values;
+    if (cartesian) {
+        wanted = crysta::moment_crystal_axis(cell, values);
+    } else if (spherical) {
+        wanted = crysta::moment_crystal_axis(cell, crysta::moment_from_spherical(values));
+    }
+    std::vector<crysta::MomentTie> ties;
+    try {
+        const crysta::Structure engine = to_crysta_structure(s);
+        for (const crysta::AtomSiteMoment& candidate : engine.atom_site_moment) {
+            if (candidate.site_id.value() == moment.id.value()) {
+                ties = crysta::moment_ties(engine, candidate);
+            }
+        }
+    } catch (const std::exception& error) {
+        out.refusal = std::string("The magnetic symmetry cannot be resolved: ") + error.what();
+        return out;
+    }
+    // The moment the symmetry keeps: its fixed components at 0, its tied ones from the free ones.
+    std::array<double, 3> kept = wanted;
+    for (const crysta::MomentTie& tie : ties) {
+        if (!tie.fixed && tie.terms.empty()) {
+            continue;
+        }
+        double sum = 0.0;
+        for (const auto& [component, coefficient] : tie.terms) {
+            sum += coefficient * wanted[component];
+        }
+        kept[tie.component] = tie.fixed ? 0.0 : sum;
+        if (!cartesian && !spherical && tie.component == k) {
+            out.refusal = "The site symmetry sets this component";
+            return out;
+        }
+    }
+    const std::array<double, 3> asked = crysta::moment_cartesian(cell, wanted);
+    const std::array<double, 3> allowed = crysta::moment_cartesian(cell, kept);
+    const double size = std::max(1.0, std::hypot(asked[0], asked[1], asked[2]));
+    const double off =
+        std::hypot(asked[0] - allowed[0], asked[1] - allowed[1], asked[2] - allowed[2]);
+    if (off > 1e-9 * size) {
+        const std::string& form_text = moment.symmform.value();
+        out.refusal = "The site symmetry does not allow this direction" +
+                      (form_text.empty() ? std::string() : " (" + form_text + ")");
+        return out;
+    }
+    out.crystal = kept;
+    return out;
+}
+
 namespace {
 // The cell the calculation uses: the model's cell completed by its space group's ties (a cubic
 // structure declares only a), or the cell as written when the group does not resolve.
