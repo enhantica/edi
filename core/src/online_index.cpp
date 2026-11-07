@@ -44,7 +44,8 @@ std::string text_member(const json::Value& object, const char* key) {
     return value.string(key);
 }
 
-const char* kKinds[] = {"structure", "experiment", "data", "project"};
+// "tutorial" is the docs site's tutorials index (ADR-0075); the data collection holds the other four.
+const char* kKinds[] = {"structure", "experiment", "data", "project", "tutorial"};
 
 bool known_kind(const std::string& kind) {
     return std::find(std::begin(kKinds), std::end(kKinds), kind) != std::end(kKinds);

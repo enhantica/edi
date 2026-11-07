@@ -31,6 +31,7 @@
 #include <variant>
 #include <vector>
 
+#include "edi/online_fetch.hpp"
 #include "edi/online_index.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
@@ -2158,6 +2159,67 @@ NB_MODULE(_edi, m) {
         const edi::online::Entry* e = edi::online::find(index, id);
         return e == nullptr ? nb::none() : nb::object(collection_entry(*e));
     }, "text"_a, "id"_a);
+    // Downloads from a collection (ADR-0075): the core resolves, falls back, checks and places; Python supplies only
+    // `transport(url) -> (bytes | None, message, outage)`.
+    m.def("_collection_listing", [](const std::string& text, const std::string& kind) {
+        const edi::online::Index index = edi::online::parse_index(text);
+        nb::list out;
+        for (const edi::online::Entry* e : edi::online::listing(index, kind)) out.append(collection_entry(*e));
+        return out;
+    }, "text"_a, "kind"_a = "");
+    m.def("_collection_resolve", [](const std::string& text, const std::string& name, const std::string& kind) {
+        const edi::online::Index index = edi::online::parse_index(text);
+        return collection_entry(edi::online::resolve(index, name, kind));
+    }, "text"_a, "name"_a, "kind"_a = "");
+    const auto drive = [](edi::online::FileRead read, const nb::callable& transport) {
+        while (!read.done()) {
+            const nb::tuple answer = nb::cast<nb::tuple>(transport(read.url()));
+            if (answer[0].is_none()) {
+                read.failed(nb::cast<std::string>(answer[1]), nb::cast<bool>(answer[2]));
+            } else {
+                const nb::bytes bytes(answer[0]);
+                read.answered(std::string(bytes.c_str(), bytes.size()));
+            }
+        }
+        // Every location unreachable is a RuntimeError, an answer or a failed check a ValueError.
+        if (!read.ok()) {
+            if (read.unreachable()) throw std::runtime_error(read.error());
+            throw std::invalid_argument(read.error());
+        }
+        return nb::make_tuple(nb::bytes(read.bytes().data(), read.bytes().size()), read.served_by());
+    };
+    // An entry's file: its first, or its first of `format` (a tutorial has an ipynb and a py file).
+    const auto entry_file = [](const std::string& text, const std::string& id, const std::string& format) {
+        const edi::online::Index index = edi::online::parse_index(text);
+        const edi::online::Entry* entry = edi::online::find(index, id);
+        if (entry == nullptr) throw std::invalid_argument("No entry '" + id + "' in the collection");
+        for (const edi::online::File& file : entry->files)
+            if (format.empty() || file.format == format) return std::pair{*entry, file};
+        throw std::invalid_argument("Entry '" + id + "' has no " + format + " file");
+    };
+    m.def("_collection_read", [drive, entry_file](const std::vector<std::string>& bases, const std::string& text,
+                                                  const std::string& id, const nb::callable& transport,
+                                                  const std::string& format) {
+        return drive(edi::online::FileRead(bases, entry_file(text, id, format).second), transport);
+    }, "bases"_a, "text"_a, "id"_a, "transport"_a, "format"_a = "");
+    m.def("_collection_read_path", [drive](const std::vector<std::string>& bases, const std::string& path,
+                                           const nb::callable& transport) {
+        return drive(edi::online::FileRead(bases, path), transport);
+    }, "bases"_a, "path"_a, "transport"_a);
+    m.def("_collection_stored", [entry_file](const std::string& text, const std::string& id, const std::string& destination,
+                                             const std::string& format) -> nb::object {
+        const auto [entry, file] = entry_file(text, id, format);
+        const std::string path = edi::online::stored(edi::online::placement(destination, entry, file), file);
+        return path.empty() ? nb::none() : nb::object(nb::str(path.c_str()));
+    }, "text"_a, "id"_a, "destination"_a, "format"_a = "");
+    m.def("_collection_store", [entry_file](const std::string& text, const std::string& id, const std::string& destination,
+                                            const nb::bytes& bytes, bool overwrite, const std::string& format) {
+        const auto [entry, file] = entry_file(text, id, format);
+        return edi::online::store(edi::online::placement(destination, entry, file), file,
+                                  std::string_view(bytes.c_str(), bytes.size()), overwrite);
+    }, "text"_a, "id"_a, "destination"_a, "bytes"_a, "overwrite"_a = false, "format"_a = "");
+    m.def("_sha256_hex", [](const nb::bytes& bytes) { return edi::online::sha256_hex(std::string_view(bytes.c_str(), bytes.size())); },
+          "bytes"_a);
     m.def("_descent_ids", [] { return edi::descent_ids(); },
           "The registered descent ids, in crysta's `--list-descents` order.");
     m.def("_default_descent", [] { return edi::default_descent(); },

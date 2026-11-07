@@ -20,7 +20,7 @@ struct File {
 /// One item: a structure, a full experiment, a measured data set or a whole project.
 struct Entry {
     std::string id;           ///< stable within the collection
-    std::string kind;         ///< structure, experiment, data or project
+    std::string kind;         ///< structure, experiment, data or project; tutorial in the docs' tutorials index
     std::string name;         ///< a short title, may be empty
     std::string description;  ///< a sentence more, may be empty
     std::string formula;      ///< Hill notation, may be empty

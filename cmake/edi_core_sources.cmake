@@ -14,6 +14,7 @@ function(edi_core_sources root out)
         ${root}/core/src/validation.cpp
         ${root}/core/src/report.cpp
         ${root}/core/src/json.cpp
+        ${root}/core/src/online_fetch.cpp
         ${root}/core/src/online_index.cpp
         ${root}/core/src/assistant.cpp
         ${root}/core/src/assistant_skills.cpp

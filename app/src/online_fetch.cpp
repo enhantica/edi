@@ -13,6 +13,12 @@
 #include <QNetworkRequest>
 #include <QTimer>
 
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "edi/online_fetch.hpp"
+
 namespace edi_app {
 namespace {
 Q_LOGGING_CATEGORY(lcOnline, "edi.online")
@@ -28,13 +34,20 @@ bool unreachable_error(QNetworkReply::NetworkError error, int status) {
 
 }  // namespace
 
+// The check is the core's (ADR-0075); the app keeps its translated wording for each kind of mismatch.
 QString content_problem(const QByteArray& bytes, long long expected_bytes, const QString& sha256, const QString& name) {
-    if (expected_bytes >= 0 && bytes.size() != expected_bytes)
-        return QCoreApplication::translate("OnlineSearch", "%1 has %2 bytes, not the %3 the index records")
-            .arg(name).arg(bytes.size()).arg(expected_bytes);
-    if (!sha256.isEmpty() &&
-        QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()).compare(sha256, Qt::CaseInsensitive) != 0)
-        return QCoreApplication::translate("OnlineSearch", "%1 does not match the digest the index records").arg(name);
+    edi::online::File expected;
+    expected.bytes = expected_bytes;
+    expected.sha256 = sha256.toStdString();
+    switch (edi::online::content_mismatch(std::string_view(bytes.constData(), static_cast<std::size_t>(bytes.size())), expected)) {
+        case edi::online::Mismatch::size:
+            return QCoreApplication::translate("OnlineSearch", "%1 has %2 bytes, not the %3 the index records")
+                .arg(name).arg(bytes.size()).arg(expected_bytes);
+        case edi::online::Mismatch::digest:
+            return QCoreApplication::translate("OnlineSearch", "%1 does not match the digest the index records").arg(name);
+        case edi::online::Mismatch::none:
+            break;
+    }
     return {};
 }
 
@@ -46,20 +59,39 @@ QUrl joined_url(const QString& base, const QString& path) {
     return url;
 }
 
+namespace {
+// One step of a core read (ADR-0075): fetch the location the core names, report the result, and go on while the core
+// names another. The core decides fallback; this file only transports.
+void fetch_step(QObject* owner, QNetworkAccessManager*& manager, const std::shared_ptr<edi::online::FileRead>& read,
+                FetchDone done, FetchProgress progress) {
+    const QString location = QString::fromStdString(read->url());
+    QUrl url(location);
+    if (url.scheme().isEmpty()) url = QUrl::fromLocalFile(location);
+    fetch_url(owner, manager, url,
+              [owner, &manager, read, done, progress](const QByteArray& bytes, const QString& error, bool unreachable) {
+                  if (error.isEmpty()) {
+                      done(bytes, {}, false);
+                      return;
+                  }
+                  read->failed(error.toStdString(), unreachable);
+                  if (!read->done()) {
+                      fetch_step(owner, manager, read, done, progress);
+                      return;
+                  }
+                  done({}, error, unreachable);
+              }, progress);
+}
+}  // namespace
+
 void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases, const QString& path, FetchDone done, FetchProgress progress) {
     if (bases.isEmpty()) {
         done({}, QCoreApplication::translate("OnlineSearch", "No location to read %1 from").arg(path), true);
         return;
     }
-    const QStringList rest = bases.mid(1);
-    fetch_url(owner, manager, joined_url(bases.constFirst(), path),
-              [owner, &manager, rest, path, done, progress](const QByteArray& bytes, const QString& error, bool unreachable) {
-                  if (!error.isEmpty() && unreachable && !rest.isEmpty()) {
-                      fetch_from(owner, manager, rest, path, done, progress);
-                      return;
-                  }
-                  done(bytes, error, unreachable);
-              }, progress);
+    std::vector<std::string> locations;
+    for (const QString& base : bases) locations.push_back(base.toStdString());
+    fetch_step(owner, manager, std::make_shared<edi::online::FileRead>(std::move(locations), path.toStdString()),
+               std::move(done), std::move(progress));
 }
 
 void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done, FetchProgress progress) {
