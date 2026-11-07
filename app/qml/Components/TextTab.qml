@@ -144,7 +144,7 @@ EaComponents.SideBarColumn {
                 }
                 EaElements.ToolTip {
                     text: applyButton.toolTip
-                    visible: !applyButton.enabled && applyHover.hovered && EaGlobals.Vars.showToolTips
+                    requested: !applyButton.enabled && applyHover.hovered
                 }
             }
         }

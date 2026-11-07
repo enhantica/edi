@@ -39,6 +39,6 @@ Item {
     }
     EaElements.ToolTip {
         text: cell.toolTip
-        visible: text !== "" && hover.hovered && EaGlobals.Vars.showToolTips
+        requested: hover.hovered
     }
 }

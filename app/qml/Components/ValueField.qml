@@ -53,10 +53,13 @@ EaElements.ParamTextField {
     readOnly: !editable
     warned: refusal !== "" || !typedAdmitted
     ToolTip.text: uid !== "" ? Session.tooltip(uid, variant) : ""
-    ToolTip.visible: ToolTip.text !== "" && hovered && refusal === "" && EaGlobals.Vars.showToolTips
+    EaElements.ToolTip {
+        text: field.ToolTip.text
+        requested: field.hovered && field.refusal === ""
+    }
     WarningToolTip {
         text: field.refusal
-        visible: text !== "" && (field.hovered || field.activeFocus)
+        requested: field.hovered || field.activeFocus
     }
 
     onFieldValueChanged: refusal = ""

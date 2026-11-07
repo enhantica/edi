@@ -94,7 +94,7 @@ Item {
         id: hover
     }
     EaElements.ToolTip {
-        visible: hover.hovered && EaGlobals.Vars.showToolTips && text !== ""
+        requested: hover.hovered
         text: [identityLabel.truncated ? identityLabel.text : "", tagRow.width > cell.width ? cell.tagLabels.join(", ") : "", detailLabel.truncated ? cell.detail : ""].filter(line => line !== "").join("\n")
     }
 }

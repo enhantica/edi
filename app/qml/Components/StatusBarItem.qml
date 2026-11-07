@@ -116,6 +116,6 @@ Control {
 
     EaElements.ToolTip {
         text: control.ToolTip.text
-        visible: text !== "" && hover.hovered && EaGlobals.Vars.showToolTips
+        requested: hover.hovered
     }
 }

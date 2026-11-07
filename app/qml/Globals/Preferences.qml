@@ -24,7 +24,39 @@ QtObject {
     property bool assistantCopyTechnicalDetails: false
     property real assistantWidth: AppSizes.assistantDefaultWidth
 
+    // Tooltips: the level, "All", "Important" or "Off", and how long the pointer rests on a control before one opens, in
+    // ms, read from the settings file once it is loaded. With no level stored, the on/off flag stored before levels
+    // decides it: off is Off, on or unset Important; that flag itself is kept as it was.
     property bool toolTips: true
+    property string toolTipLevel: "Important"
+    property int toolTipDelay: 1500
+    // The level the app bar's switch turns back on: the last one that was not Off.
+    property string toolTipLastLevel: "Important"
+    property bool toolTipsLoaded: false
+    function loadToolTips() {
+        const level = String(settings.value("toolTipLevel", ""));
+        toolTipLevel = ["All", "Important", "Off"].includes(level) ? level : toolTips ? "Important" : "Off";
+        toolTipDelay = Number(settings.value("toolTipDelay", 1500));
+        const last = String(settings.value("toolTipLastLevel", "Important"));
+        toolTipLastLevel = last === "All" ? "All" : "Important";
+        toolTipsLoaded = true;
+    }
+    // A choice is written at once, so a window opened next, or the next start, finds it.
+    onToolTipLevelChanged: {
+        if (!toolTipsLoaded)
+            return;
+        if (toolTipLevel !== "Off")
+            toolTipLastLevel = toolTipLevel;
+        settings.setValue("toolTipLevel", toolTipLevel);
+        settings.setValue("toolTipLastLevel", toolTipLastLevel);
+        settings.sync();
+    }
+    onToolTipDelayChanged: {
+        if (!toolTipsLoaded)
+            return;
+        settings.setValue("toolTipDelay", toolTipDelay);
+        settings.sync();
+    }
     property bool autoCollapse: true
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
     property string sideBarSide: "Right"
@@ -43,7 +75,10 @@ QtObject {
     property string feedbackAffiliation: ""
     // The newest changelog date the user has seen in What's new (edi ADR-0067), empty before the first start.
     property string whatsNewSeen: ""
-    Component.onCompleted: RunLog.level = loggingLevel
+    Component.onCompleted: {
+        RunLog.level = loggingLevel;
+        loadToolTips();
+    }
     // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
@@ -230,6 +265,22 @@ QtObject {
         property alias renderer: preferences.scanRenderer
     }
 
+    property Binding toolTipLevelShared: Binding {
+        target: EaGlobals.Vars
+        property: "toolTipLevel"
+        value: preferences.toolTipLevel
+    }
+    // Until every tooltip asks the level, the older on/off switch follows it.
+    property Binding toolTipSwitchShared: Binding {
+        target: EaGlobals.Vars
+        property: "showToolTips"
+        value: preferences.toolTipLevel !== "Off"
+    }
+    property Binding toolTipDelayShared: Binding {
+        target: EaGlobals.Vars
+        property: "toolTipDelay"
+        value: preferences.toolTipDelay
+    }
     property Binding fitPatternUpdates: Binding {
         target: Session.project ? Session.project.fit : null
         property: "patternUpdates"
@@ -257,7 +308,6 @@ QtObject {
         when: Session.project !== null
     }
 
-    onToolTipsChanged: EaGlobals.Vars.showToolTips = toolTips
     // A stored palette no longer offered becomes the one it reads as, so the chosen palette and the one drawn agree
     // and the settings file keeps the one shown.
     onColourSchemeChanged: ApplicationInfo.preferencesColourChanged()

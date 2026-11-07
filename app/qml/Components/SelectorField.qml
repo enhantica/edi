@@ -48,15 +48,14 @@ EaElements.ParamComboBox {
     enabled: writable && options !== null && options.count > 0
     currentIndex: options ? options.indexOf(token) : -1
     ToolTip.text: uid !== "" ? Session.optionTooltip(uid, token) : ""
-    ToolTip.visible: ToolTip.text !== "" && hovered && refusal === "" && EaGlobals.Vars.showToolTips
     WarningToolTip {
         text: selector.refusal
-        visible: text !== "" && selector.hovered
+        requested: selector.hovered
     }
     // The app's tooltip, never the attached one Qt draws in its own style.
     EaElements.ToolTip {
         text: selector.ToolTip.text
-        visible: selector.helpToolTip && text !== "" && selector.refusal === "" && selector.hovered && EaGlobals.Vars.showToolTips
+        requested: selector.refusal === "" && selector.hovered
     }
 
     onTokenChanged: refusal = ""

@@ -55,7 +55,7 @@ Column {
 
             EaElements.ToolTip {
                 text: holder.toolTip
-                visible: disabledHover.hovered && !estimate.enabled && EaGlobals.Vars.showToolTips && text !== ""
+                requested: disabledHover.hovered && !estimate.enabled
             }
         }
         HoverHandler {

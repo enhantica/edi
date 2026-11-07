@@ -241,7 +241,7 @@ Item {
         }
         EaElements.ToolTip {
             text: box.toolTip
-            visible: text !== "" && box.hovered && EaGlobals.Vars.showToolTips
+            requested: box.hovered
         }
     }
 
@@ -356,8 +356,8 @@ Item {
 
                     EaElements.ToolTip {
                         objectName: "correlations.toolTip"
-                        visible: pointer.containsMouse && !isNaN(pointer.value)
-                        text: visible ? qsTr("%1\n%2\ncorrelation: %3").arg(chart.labels[pointer.column]).arg(chart.labels[pointer.row]).arg(Session.display("fit_parameter_correlation.correlation", pointer.value)) : ""
+                        requested: pointer.containsMouse && !isNaN(pointer.value)
+                        text: requested ? qsTr("%1\n%2\ncorrelation: %3").arg(chart.labels[pointer.column]).arg(chart.labels[pointer.row]).arg(Session.display("fit_parameter_correlation.correlation", pointer.value)) : ""
                     }
                 }
             }

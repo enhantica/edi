@@ -47,7 +47,7 @@ EaElements.GroupRow {
         }
         EaElements.ToolTip {
             text: qsTr("Not available yet")
-            visible: autoHover.hovered && EaGlobals.Vars.showToolTips
+            requested: autoHover.hovered
         }
     }
 }

@@ -48,6 +48,6 @@ Rectangle {
     }
     EaElements.ToolTip {
         text: button.toolTip
-        visible: text !== "" && hover.hovered && EaGlobals.Vars.showToolTips
+        requested: hover.hovered
     }
 }

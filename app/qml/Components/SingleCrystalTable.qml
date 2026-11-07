@@ -46,7 +46,7 @@ DataTable {
         }
         EaElements.ToolTip {
             text: title.uid !== "" ? Session.tooltip(title.uid) : ""
-            visible: title.uid !== "" && title.hovered && EaGlobals.Vars.showToolTips
+            requested: title.uid !== "" && title.hovered
         }
     }
 

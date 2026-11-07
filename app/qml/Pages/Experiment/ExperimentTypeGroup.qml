@@ -76,7 +76,7 @@ Grid {
         }
         EaElements.ToolTip {
             text: qsTr("Single crystals are neutron only for now")
-            visible: row.singleCrystal && row.editable && radiationProbeHover.hovered && EaGlobals.Vars.showToolTips
+            requested: row.singleCrystal && row.editable && radiationProbeHover.hovered
         }
     }
     // Disabled while edi computes one choice only, with a tool tip saying so (the owner, 2026-10-08, note 44);
@@ -100,7 +100,7 @@ Grid {
         }
         EaElements.ToolTip {
             text: qsTr("Only Bragg scattering is supported for now")
-            visible: scatteringTypeHover.hovered && EaGlobals.Vars.showToolTips
+            requested: scatteringTypeHover.hovered
         }
     }
     // One admitted value each, so the boxes show it and take no choice: the dimensionality, and the polarisation of

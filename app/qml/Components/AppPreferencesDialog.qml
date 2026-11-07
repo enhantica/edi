@@ -30,7 +30,7 @@ AppDialog {
         }
         EaElements.ToolTip {
             text: qsTr("Not available yet")
-            visible: hover.hovered && EaGlobals.Vars.showToolTips
+            requested: hover.hovered
         }
     }
 
@@ -175,13 +175,33 @@ AppDialog {
 
         // Prompts, as the base's
         RowGrid {
+            // Tooltip level and delay (the owner, 2026-11-01): Important shows a tooltip where a control's label or icon
+            // does not say what it does, and on every disabled control.
             RowLabel {
-                text: qsTr("Enable tool tips") + ":"
+                text: qsTr("Tooltips") + ":"
             }
-            RowCheckBox {
-                objectName: "preferences.toolTips"
-                checked: Preferences.toolTips
-                onToggled: Preferences.toolTips = checked
+            RowBox {
+                readonly property var levels: ["All", "Important", "Off"]
+
+                objectName: "preferences.toolTipLevel"
+                model: [qsTr("All"), qsTr("Important"), qsTr("Off")]
+                currentIndex: Math.max(0, levels.indexOf(Preferences.toolTipLevel))
+                onActivated: index => Preferences.toolTipLevel = levels[index]
+                ToolTip.text: qsTr("All: every control. Important: controls whose label does not say what they do, and disabled ones. Off: none")
+            }
+            RowLabel {
+                text: qsTr("Tooltip delay (ms)") + ":"
+            }
+            EaElements.SpinBox {
+                objectName: "preferences.toolTipDelay"
+                width: dialog.controlWidth
+                from: 0
+                to: 10000
+                stepSize: 100
+                editable: true
+                value: Preferences.toolTipDelay
+                onValueModified: Preferences.toolTipDelay = value
+                ToolTip.text: qsTr("How long the pointer rests on a control before its tooltip opens")
             }
 
             // Fitting works from every page's status bar, so whether a fit opens its results is an app preference
@@ -751,7 +771,7 @@ AppDialog {
                     }
                     EaElements.ToolTip {
                         text: settingsPath.text
-                        visible: pathHover.hovered && settingsPath.truncated && EaGlobals.Vars.showToolTips
+                        requested: pathHover.hovered && settingsPath.truncated
                     }
                 }
                 RowButton {

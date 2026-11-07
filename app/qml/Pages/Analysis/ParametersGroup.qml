@@ -268,7 +268,7 @@ SideBarGroup {
                     }
                     EaElements.ToolTip {
                         text: variabilityPicker.ToolTip.text
-                        visible: !variabilityPicker.enabled && variabilityHover.hovered && EaGlobals.Vars.showToolTips
+                        requested: !variabilityPicker.enabled && variabilityHover.hovered
                     }
                 }
             }
@@ -447,7 +447,7 @@ SideBarGroup {
                     }
                     EaElements.ToolTip {
                         text: row.path
-                        visible: nameHover.hovered && EaGlobals.Vars.showToolTips
+                        requested: nameHover.hovered
                     }
                 }
                 ParameterCell {
@@ -505,7 +505,7 @@ SideBarGroup {
                     }
                     EaElements.ToolTip {
                         text: freeBox.ToolTip.text
-                        visible: text !== "" && freeHover.hovered && EaGlobals.Vars.showToolTips
+                        requested: freeHover.hovered
                     }
                 }
             }

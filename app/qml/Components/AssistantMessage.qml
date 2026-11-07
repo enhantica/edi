@@ -247,7 +247,7 @@ Rectangle {
                 ToolTip.text: row.compactPresentation.explanation + " · " + text
                 EaElements.ToolTip {
                     text: commandDisclosure.ToolTip.text
-                    visible: commandDisclosure.visible && commandDisclosure.hovered && EaGlobals.Vars.showToolTips && text !== ""
+                    requested: commandDisclosure.visible && commandDisclosure.hovered
                 }
                 Accessible.name: ToolTip.text
                 Accessible.checkable: true

@@ -44,6 +44,6 @@ EaComponents.ListViewLabel {
     }
     EaElements.ToolTip {
         text: label.full
-        visible: label.shown !== label.number && label.hovered && EaGlobals.Vars.showToolTips
+        requested: label.shown !== label.number && label.hovered
     }
 }

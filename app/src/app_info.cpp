@@ -4404,7 +4404,7 @@ void ApplicationInfo::resetPreferences() const {
     const auto f = panelUsageEngine(this);
     projectWrite(f, "preferences", "assistantWidth", assistantContextField(f, "AppSizes", "assistantDefaultWidth"));
     const std::pair<const char*, QJSValue> defaults[] = {
-        {"toolTips", QJSValue(true)}, {"autoCollapse", QJSValue(true)}, {"sideBarSide", QJSValue(QStringLiteral("Right"))},
+        {"toolTipLevel", QJSValue(QStringLiteral("Important"))}, {"toolTipDelay", QJSValue(1500)}, {"autoCollapse", QJSValue(true)}, {"sideBarSide", QJSValue(QStringLiteral("Right"))},
         {"engineThreads", QJSValue(0)}, {"loggingLevel", QJSValue(QStringLiteral("Info"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
         {"analysisShowBySymmetry", QJSValue(false)}, {"analysisShowByConstraint", QJSValue(false)}, {"analysisShowFixedSettings", QJSValue(false)},
         {"showFitResults", QJSValue(true)}, {"scanRenderer", QJSValue(QStringLiteral("auto"))}, {"newProjectSuRule", QJSValue(QStringLiteral("iucr_99"))},
@@ -4421,8 +4421,6 @@ void ApplicationInfo::resetPreferences() const {
 void ApplicationInfo::applyPreferences() const {
     const auto f = panelUsageEngine(this);
     auto globals = assistantContextField(f, "EaGlobals", "Vars");
-    assistantMemberWrite(f, globals, "showToolTips", assistantContextField(f, "preferences", "toolTips"));
-    globals = assistantContextField(f, "EaGlobals", "Vars");
     assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", assistantContextField(f, "preferences", "autoCollapse"));
     projectInvoke(f, "ApplicationInfo", "setEngineThreads", {assistantContextField(f, "preferences", "engineThreads")});
     globals = assistantContextField(f, "EaGlobals", "Vars");

@@ -32,6 +32,6 @@ EaElements.GroupRow {
     }
     EaElements.ToolTip {
         text: !row.onlyMode ? "" : row.analysis.fittingMode === "joint" ? qsTr("A project with several experiments fits them all at once") : qsTr("A project with one experiment fits it on its own")
-        visible: text !== "" && hover.hovered && EaGlobals.Vars.showToolTips
+        requested: hover.hovered
     }
 }

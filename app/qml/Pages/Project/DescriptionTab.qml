@@ -67,7 +67,7 @@ Rectangle {
                 // In the warning's style, as every refused value's.
                 WarningToolTip {
                     text: nameInput.refusal
-                    visible: nameInput.warned && (nameInput.hovered || nameInput.activeFocus)
+                    requested: nameInput.warned && (nameInput.hovered || nameInput.activeFocus)
                 }
                 onAccepted: commit()
                 onEditingFinished: commit()

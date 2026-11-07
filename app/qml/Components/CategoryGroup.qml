@@ -50,7 +50,7 @@ SideBarGroup {
     EaElements.ToolTip {
         parent: group.titleArea
         text: group.model.toolTip
-        visible: text !== "" && group.titleArea.hovered && EaGlobals.Vars.showToolTips
+        requested: group.titleArea.hovered
     }
 
     Loader {
