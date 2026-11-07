@@ -103,8 +103,9 @@ EaComponents.ApplicationWindow {
             enabled: Session.project !== null && Session.project.modified
             highlighted: true
             fontIcon: "save"
-            ToolTip.text: qsTr("Save current state of the project")
-            Accessible.name: ToolTip.text
+            // A disabled control's tooltip says why and how to enable it (the owner, 2026-11-02).
+            ToolTip.text: enabled ? qsTr("Save current state of the project") : Session.project === null ? qsTr("No project to save: open or create one first") : qsTr("Nothing to save: the project has no unsaved changes")
+            Accessible.name: qsTr("Save current state of the project")
             onClicked: window.saveProject()
         },
         // Undo: the newest recorded change, an edit of the aliases or constraints or a fit, in the order they
@@ -113,16 +114,16 @@ EaComponents.ApplicationWindow {
             objectName: "appBar.button.undo"
             enabled: Session.project !== null && Session.project.canUndo
             fontIcon: "undo"
-            ToolTip.text: qsTr("Undo the last change")
-            Accessible.name: ToolTip.text
+            ToolTip.text: enabled ? qsTr("Undo the last change") : qsTr("Nothing to undo: edit the project, its aliases or constraints, or run a fit first")
+            Accessible.name: qsTr("Undo the last change")
             onClicked: Session.project.undo()
         },
         EaElements.ToolButton {
             objectName: "appBar.button.redo"
             enabled: false
             fontIcon: "redo"
-            ToolTip.text: qsTr("Redo the last undone change")
-            Accessible.name: ToolTip.text
+            ToolTip.text: qsTr("Redo is not available yet")
+            Accessible.name: qsTr("Redo the last undone change")
         },
         EaElements.ToolButton {
             objectName: "appBar.button.reset"
