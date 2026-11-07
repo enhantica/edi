@@ -153,3 +153,16 @@ The complete inventory is the committed native `walkthrough.js` plus `manifest.j
 Run the native `app/docs/workflow-reference.js` with its default scan id, then copy it and change only `EXAMPLE_ID` to a joint-fit example for the joint views. These explicitly declared reference runs open bundled projects; they do not replace the creation walkthrough. Import both with `--reference-bundle /path/to/scan --joint-bundle /path/to/joint`. Reference validation requires post-fit closed dialogs; scans also require a fitted result for every dataset and no failed datasets. `GUI-SCENES.md` includes action-only steps such as fitting as well as images and intentional skips.
 
 The documentation build checks every practical subsection in every Project–Report navigation topic against the capture registry, the rendered image and current native selector choices. Adding a heading without its illustration, referring to an absent scene or keeping stale option prose refuses the build.
+
+## Group and dark captures
+
+[ADR-0015](adrs/0015-application-menu-follows-the-sidebar.md) adds `app/docs/group-reference.js` for conditional groups, and [ADR-0017](adrs/0017-dark-theme-screenshots.md) adds a dark run of every script. Import them all together:
+
+```sh
+python website/import_gui_captures.py LIGHT/y2o3 --reference-bundle LIGHT/scan --joint-bundle LIGHT/joint \\
+  --group-bundle sc=LIGHT/sc --group-bundle magnetic=LIGHT/magnetic \\
+  --dark-bundle y2o3=DARK/y2o3 --dark-bundle scan=DARK/scan --dark-bundle joint=DARK/joint \\
+  --dark-bundle sc=DARK/sc --dark-bundle magnetic=DARK/magnetic
+```
+
+Change `EXAMPLE_ID` and `GROUPS` together in a copy of the script, and pass it with `--docs-script`.

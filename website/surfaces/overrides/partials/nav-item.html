@@ -25,8 +25,8 @@
     </span>
   {% elif ref.title in workflow_icons %}
     {% include ".icons/fa5/" ~ workflow_icons[ref.title] ~ ".svg" %}
-  {% elif nav_item.children and nav_item.title in config.extra.section_icons %}
-    {% include ".icons/fa5/" ~ config.extra.section_icons[nav_item.title] ~ ".svg" %}
+  {% elif ref.children and ref.title in config.extra.section_icons %}
+    {% include ".icons/fa5/" ~ config.extra.section_icons[ref.title] ~ ".svg" %}
   {% elif nav_item.meta and nav_item.meta.category_glyph %}
     <span class="ed-reference-icon ed-nav-category" aria-hidden="true">{{ nav_item.meta.category_glyph }}</span>
   {% elif nav_item.meta and nav_item.meta.icon %}

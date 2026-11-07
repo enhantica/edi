@@ -1,4 +1,5 @@
 ---
+icon: fa5/chart-area
 template: physics.html
 ---
 
@@ -16,7 +17,7 @@ $$
 
 Here $p$ labels a linked phase, $s_p$ its scale, $h$ a reflection, $m_h$ multiplicity, $L_h$ the geometry-dependent Lorentz factor, $P_h$ polarization where applicable, $A_h$ absorption, $O_h$ preferred orientation, $F_h$ the structure factor, $\Omega$ the selected peak profile and $b$ the background. This is a model decomposition: factors that do not apply to the selected experiment are unity, and instrument-specific intensity-unit conventions are carried with its scale.
 
-Follow the terms to [crystallography](crystallography.md), [scattering](diffraction.md), [profiles](profiles.md), [absorption](corrections/absorption.md), [orientation](corrections/orientation.md), [Lorentz/polarization](corrections/intensity.md) and [background](background.md). Single-crystal reflection calculations use the corresponding integrated-intensity model, not a powder-profile sum.
+Follow the terms to [crystallography](crystallography.md), [scattering](diffraction.md), [profiles](profiles/index.md), [absorption](corrections/absorption.md), [orientation](corrections/orientation.md), [Lorentz/polarization](corrections/intensity.md) and [background](background.md). Single-crystal reflection calculations use the corresponding integrated-intensity model, not a powder-profile sum.
 
 ## Least-squares objective {#eq-weighted-residual}
 

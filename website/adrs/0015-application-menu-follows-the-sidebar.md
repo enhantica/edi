@@ -17,11 +17,17 @@ Each stage also has an overview page, which opens from the stage row and lists t
 
 Python and Command Line have no sidebar, so they keep their task pages under the same stages. The User guide is unchanged.
 
-## Known gaps
+## Experiment type labels
 
-- The magnetic groups (Magnetic space group, Propagation vectors, Magnetic moments, Magnetic form factors) have no pages. Their categories are not in the published parameter dictionary and no capture shows them, so nothing could be written from evidence yet. They are listed under `undocumented`.
-- Calculation range, Extinction, Observed reflections, Data source, Performance and Fitted reflections are short text pages without a screenshot, because the capture runs do not reach those groups. Their text comes from the dictionary's descriptions and the app's source.
-- Read-only output tables that the app does not show as groups, such as symmetry operators, have no pages.
+Each group page shows, under its title, the labels of the experiment types it applies to, and the stage overview repeats them. `application-groups.json` records only the limits, and they follow `experiment_categories` and `analysis_categories` in `core/include/edi/categories.hpp`: for example, a single crystal has no profile, background, excluded regions or absorption, and preferred orientation is for constant-wavelength powder. A group with no limit lists every sample form, beam mode and probe. Purpose and fitting-mode labels appear only when a group needs them.
+
+The glossary's Experiment types and labels section is the one place these labels are defined.
+
+## Conditional groups
+
+`app/docs/group-reference.js` captures groups only some projects show: single-crystal groups from a Tb₂Ti₂O₇ example and magnetic groups from a Co₂SiO₄ example, each with `validate_bundle(groups=True)`, which skips the full-page coverage of a scan or joint run. The native capture refuses an example without measured data, so Calculation range is captured during the creation walkthrough before data are loaded.
+
+The magnetic categories are not in the published parameter dictionary yet, so their pages do not link to the parameter reference.
 
 ## Validation
 

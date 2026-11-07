@@ -196,10 +196,10 @@ def _check_figures(result: dict) -> None:
             figure,
         )
         for region in figure['regions']:
-            padding = -2 if region['inset'] else 1.5
+            padding = -1
             require(abs(region['paddingX'] - padding) < 0.05, region)
             require(abs(region['paddingY'] - padding) < 0.05, region)
-            require(region['square'], region)
+            require(not region['square'], region)
             require(region['area'] in {'navigation', 'main', 'sidebar', 'status'}, region)
 
 

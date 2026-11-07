@@ -129,3 +129,4 @@
 .ed-interface-trio .ed-interface-tag{color:var(--md-default-fg-color--light);white-space:nowrap}
 .ed-interface-trio img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;object-position:center;border-radius:var(--ed-screenshot-radius);border:1px solid #d6d6d6}
 @media (max-width:720px){.ed-interface-trio{grid-template-columns:1fr;max-width:28rem}}
+.md-typeset p.ed-group-tags {margin-block:-.4rem .8rem}

@@ -1,4 +1,5 @@
 ---
+icon: fa5/wave-square
 template: physics.html
 ---
 

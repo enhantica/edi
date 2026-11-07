@@ -1,5 +1,5 @@
 {
-  "user-guide/introduction/": "user-guide/foundations/",
+  "user-guide/introduction/": "user-guide/",
   "learn/fit-quality/": "user-guide/analysis-workflow/analysis/",
   "learn/fitting-modes/": "user-guide/analysis-workflow/analysis/",
   "learn/glossary/": "user-guide/glossary/",
@@ -33,5 +33,6 @@
   "application/fitting-modes/": "application/analysis/fitting-mode/",
   "application/minimizer/": "application/analysis/minimizer/",
   "application/display/": "application/analysis/parameters-shown/",
-  "application/reports/": "application/report/"
+  "application/reports/": "application/report/",
+  "user-guide/foundations/": "user-guide/"
 }

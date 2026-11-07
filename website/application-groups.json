@@ -1,18 +1,11 @@
 {
   "undocumented": {
-    "components": [
-      "MagneticSpaceGroupGroup",
-      "PropagationVectorsGroup",
-      "AtomSiteMomentGroup",
-      "MagneticFormFactorsGroup"
-    ],
+    "components": [],
     "categories": [
-      "space_group_magn",
-      "parent_propagation_vector",
-      "atom_site_moment",
       "metadata",
       "experiment_type"
-    ]
+    ],
+    "app_groups": []
   },
   "stages": {
     "project": [
@@ -23,7 +16,8 @@
         "icon": "rocket",
         "components": [
           "GetStartedGroup"
-        ]
+        ],
+        "app_group": "getStarted"
       },
       {
         "page": "application/project/examples.md",
@@ -32,7 +26,8 @@
         "icon": "database",
         "components": [
           "ExamplesGroup"
-        ]
+        ],
+        "app_group": "examples"
       },
       {
         "page": "application/project/recent-projects.md",
@@ -41,7 +36,8 @@
         "icon": "archive",
         "components": [
           "RecentProjectsGroup"
-        ]
+        ],
+        "app_group": "recentProjects"
       },
       {
         "page": "application/project/standard-uncertainties.md",
@@ -62,7 +58,8 @@
         "icon": "layer-group",
         "components": [
           "StructuresGroup"
-        ]
+        ],
+        "app_group": "structures"
       },
       {
         "page": "application/structure/space-group.md",
@@ -105,6 +102,54 @@
         ]
       },
       {
+        "page": "application/structure/magnetic-space-group.md",
+        "title": "Magnetic space group",
+        "tab": "Main",
+        "icon": "magnet",
+        "category": "space_group_magn",
+        "components": [
+          "MagneticSpaceGroupGroup"
+        ],
+        "when": "Magnetic structure",
+        "tags": {
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
+        "page": "application/structure/propagation-vectors.md",
+        "title": "Propagation vectors",
+        "tab": "Main",
+        "icon": "long-arrow-alt-right",
+        "category": "parent_propagation_vector",
+        "components": [
+          "PropagationVectorsGroup"
+        ],
+        "when": "Magnetic structure",
+        "tags": {
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
+        "page": "application/structure/magnetic-moments.md",
+        "title": "Magnetic moments",
+        "tab": "Main",
+        "icon": "location-arrow",
+        "category": "atom_site_moment",
+        "components": [
+          "AtomSiteMomentGroup"
+        ],
+        "when": "Magnetic structure",
+        "tags": {
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
         "page": "application/structure/scattering-lengths.md",
         "title": "Scattering lengths",
         "tab": "Extra",
@@ -112,7 +157,75 @@
         "category": "scattering_length",
         "components": [
           "ScatteringLengthsGroup"
-        ]
+        ],
+        "tags": {
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
+        "page": "application/structure/magnetic-form-factors.md",
+        "title": "Magnetic form factors",
+        "tab": "Extra",
+        "icon": "atom",
+        "category": "magnetic_form_factor",
+        "components": [
+          "MagneticFormFactorsGroup"
+        ],
+        "when": "Magnetic structure",
+        "tags": {
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
+        "page": "application/structure/symmetry-operators.md",
+        "title": "Symmetry operators",
+        "tab": "Extra",
+        "icon": "sync-alt",
+        "category": "space_group_symop"
+      },
+      {
+        "page": "application/structure/magnetic-operators.md",
+        "title": "Magnetic operators",
+        "tab": "Extra",
+        "icon": "sync-alt",
+        "category": "space_group_symop_magn_operation",
+        "when": "Magnetic structure",
+        "tags": {
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
+        "page": "application/structure/atoms-in-the-cell.md",
+        "title": "Atoms in the cell",
+        "tab": "Extra",
+        "icon": "braille",
+        "category": "expanded_atom_site"
+      },
+      {
+        "page": "application/structure/moments-in-the-cell.md",
+        "title": "Moments in the cell",
+        "tab": "Extra",
+        "icon": "location-arrow",
+        "category": "expanded_atom_site_moment",
+        "when": "Magnetic structure",
+        "tags": {
+          "probe": [
+            "neutron"
+          ]
+        }
+      },
+      {
+        "page": "application/structure/bonds.md",
+        "title": "Bonds",
+        "tab": "Extra",
+        "icon": "grip-lines",
+        "category": "geom_bond"
       },
       {
         "page": "application/structure/appearance.md",
@@ -122,7 +235,8 @@
         "category": "structure_view",
         "components": [
           "AppearanceGroup"
-        ]
+        ],
+        "app_group": "appearance"
       }
     ],
     "experiment": [
@@ -133,7 +247,8 @@
         "icon": "microscope",
         "components": [
           "ExperimentsGroup"
-        ]
+        ],
+        "app_group": "experiments"
       },
       {
         "page": "application/experiment/calculation-range.md",
@@ -144,7 +259,15 @@
         "components": [
           "MeasuredRangeGroup"
         ],
-        "when": "Without measured data"
+        "when": "Without measured data",
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ],
+          "purpose": [
+            "simulation"
+          ]
+        }
       },
       {
         "page": "application/experiment/background.md",
@@ -154,7 +277,12 @@
         "category": "background",
         "components": [
           "BackgroundGroup"
-        ]
+        ],
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ]
+        }
       },
       {
         "page": "application/experiment/instrument.md",
@@ -175,7 +303,12 @@
         "components": [
           "PeakGroup",
           "PeakExtrasGroup"
-        ]
+        ],
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ]
+        }
       },
       {
         "page": "application/experiment/excluded-regions.md",
@@ -186,7 +319,15 @@
         "components": [
           "ExcludedRegionsGroup"
         ],
-        "when": "With measured data"
+        "when": "With measured data",
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ],
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/experiment/extinction.md",
@@ -197,7 +338,12 @@
         "components": [
           "ExtinctionGroup"
         ],
-        "when": "Single crystal"
+        "when": "Single crystal",
+        "tags": {
+          "sampleForm": [
+            "single crystal"
+          ]
+        }
       },
       {
         "page": "application/experiment/linked-structures.md",
@@ -218,7 +364,15 @@
         "components": [
           "BackgroundExtrasGroup"
         ],
-        "when": "With measured data"
+        "when": "With measured data",
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ],
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/experiment/absorption.md",
@@ -228,7 +382,12 @@
         "category": "absorption",
         "components": [
           "AbsorptionGroup"
-        ]
+        ],
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ]
+        }
       },
       {
         "page": "application/experiment/preferred-orientations.md",
@@ -238,7 +397,15 @@
         "category": "preferred_orientation",
         "components": [
           "PreferredOrientationGroup"
-        ]
+        ],
+        "tags": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ]
+        }
       },
       {
         "page": "application/experiment/observed-reflections.md",
@@ -249,7 +416,15 @@
         "components": [
           "ReflectionsGroup"
         ],
-        "when": "Single crystal"
+        "when": "Single crystal",
+        "tags": {
+          "sampleForm": [
+            "single crystal"
+          ],
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/experiment/scattering-source.md",
@@ -267,7 +442,12 @@
         "tab": "Extra",
         "icon": "file-import",
         "category": "data_source",
-        "when": "With measured data"
+        "when": "With measured data",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/experiment/measured-data.md",
@@ -275,7 +455,19 @@
         "tab": "Extra",
         "icon": "arrows-alt-h",
         "category": "data",
-        "when": "With measured data"
+        "when": "With measured data",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        }
+      },
+      {
+        "page": "application/experiment/reflections.md",
+        "title": "Reflections",
+        "tab": "Extra",
+        "icon": "list",
+        "category": "refln"
       },
       {
         "page": "application/experiment/performance.md",
@@ -284,7 +476,8 @@
         "icon": "tachometer-alt",
         "components": [
           "PerformanceGroup"
-        ]
+        ],
+        "app_group": "performance"
       }
     ],
     "analysis": [
@@ -295,7 +488,8 @@
         "icon": "th-list",
         "components": [
           "ParametersGroup"
-        ]
+        ],
+        "app_group": "parameters"
       },
       {
         "page": "application/analysis/minimizer.md",
@@ -306,7 +500,12 @@
         "components": [
           "MinimizerGroup"
         ],
-        "when": "With measured data"
+        "when": "With measured data",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/analysis/fitting-mode.md",
@@ -317,7 +516,12 @@
         "components": [
           "FittingModeGroup"
         ],
-        "when": "With measured data"
+        "when": "With measured data",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/analysis/fitted-reflections.md",
@@ -328,7 +532,15 @@
         "components": [
           "RefinementGroup"
         ],
-        "when": "Single crystal"
+        "when": "Single crystal",
+        "tags": {
+          "sampleForm": [
+            "single crystal"
+          ],
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/analysis/aliases.md",
@@ -359,7 +571,15 @@
         "components": [
           "JointFitGroup"
         ],
-        "when": "Joint fit"
+        "when": "Joint fit",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "joint"
+          ]
+        }
       },
       {
         "page": "application/analysis/sequential-fit.md",
@@ -370,7 +590,16 @@
         "components": [
           "SequentialFitGroup"
         ],
-        "when": "Scan"
+        "when": "Scan",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "sequential",
+            "independent"
+          ]
+        }
       },
       {
         "page": "application/analysis/scan-extraction-rules.md",
@@ -381,7 +610,16 @@
         "components": [
           "SequentialExtractGroup"
         ],
-        "when": "Scan"
+        "when": "Scan",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "sequential",
+            "independent"
+          ]
+        }
       },
       {
         "page": "application/analysis/fit-start-values.md",
@@ -392,7 +630,12 @@
         "components": [
           "FitStartGroup"
         ],
-        "when": "After a fit"
+        "when": "After a fit",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/analysis/fit-result.md",
@@ -400,7 +643,12 @@
         "tab": "Extra",
         "icon": "check-circle",
         "category": "fit_result",
-        "when": "Recorded fit"
+        "when": "Recorded fit",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/analysis/experiment-fit-result.md",
@@ -408,7 +656,12 @@
         "tab": "Extra",
         "icon": "check",
         "category": "fit_result_bank",
-        "when": "Recorded fit"
+        "when": "Recorded fit",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/analysis/structure-fit-result.md",
@@ -416,7 +669,12 @@
         "tab": "Extra",
         "icon": "check",
         "category": "fit_result_phase",
-        "when": "Recorded fit"
+        "when": "Recorded fit",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        }
       },
       {
         "page": "application/analysis/parameters-shown.md",
@@ -426,7 +684,13 @@
         "components": [
           "ShownParametersGroup"
         ],
-        "when": "With measured data"
+        "when": "With measured data",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ]
+        },
+        "app_group": "shownParameters"
       },
       {
         "page": "application/analysis/pattern-updates.md",
@@ -436,7 +700,17 @@
         "components": [
           "PatternUpdatesGroup"
         ],
-        "when": "With measured data"
+        "when": "With measured data",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "sequential",
+            "independent"
+          ]
+        },
+        "app_group": "patternUpdates"
       },
       {
         "page": "application/analysis/performance.md",
@@ -446,7 +720,17 @@
         "components": [
           "PerformanceGroup"
         ],
-        "when": "Scan"
+        "when": "Scan",
+        "tags": {
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "sequential",
+            "independent"
+          ]
+        },
+        "app_group": "performance"
       }
     ],
     "report": [
@@ -457,7 +741,8 @@
         "icon": "download",
         "components": [
           "ExportGroup"
-        ]
+        ],
+        "app_group": "reportExport"
       },
       {
         "page": "application/report/contents.md",
@@ -466,7 +751,8 @@
         "icon": "list",
         "components": [
           "ContentsGroup"
-        ]
+        ],
+        "app_group": "reportContents"
       },
       {
         "page": "application/report/saved-reports.md",

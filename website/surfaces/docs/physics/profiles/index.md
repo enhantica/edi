@@ -6,10 +6,10 @@ template: physics.html
 
 A profile turns an integrated reflection contribution into intensity over a powder-pattern axis. Its width and asymmetry are part of the experiment model.
 
-- [Constant wavelength](profiles/cw.md): Gaussian, Lorentzian, direct pseudo-Voigt, TCH, Bérar–Baldinozzi and Finger–Cox–Jephcoat.
-- [Time of flight](profiles/tof.md): symmetric pseudo-Voigt, Jorgensen and Jorgensen–Von Dreele.
+- [Constant wavelength](cw.md): Gaussian, Lorentzian, direct pseudo-Voigt, TCH, Bérar–Baldinozzi and Finger–Cox–Jephcoat.
+- [Time of flight](tof.md): symmetric pseudo-Voigt, Jorgensen and Jorgensen–Von Dreele.
 
-The [catalogue](models.md#peak-profiles) lists the exact supported type tokens. A similarly named type from another program is not sufficient to establish matching width, mixing or asymmetry conventions.
+The [catalogue](../models.md#peak-profiles) lists the exact supported type tokens. A similarly named type from another program is not sufficient to establish matching width, mixing or asymmetry conventions.
 
 ## Width and normalisation {#profile-normalisation}
 

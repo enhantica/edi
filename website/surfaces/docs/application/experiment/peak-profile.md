@@ -20,7 +20,7 @@ The choices shown for this experiment link to their equations:
 - [Thompson-Cox-Hastings pseudo-Voigt (TCH) + Finger-Cox-Jephcoat asymmetry (FCJ)](../../physics/profiles/cw/#eq-fcj)
 <!-- /gui-options -->
 
-Compare peak widths and shapes across the pattern before choosing parameters to refine. See [peak profiles](../../physics/profiles.md) for the full models.
+Compare peak widths and shapes across the pattern before choosing parameters to refine. See [peak profiles](../../physics/profiles/index.md) for the full models.
 
 <!-- gui-guide:choose-a-profile -->
 <div class="gui-viewer" markdown="1">

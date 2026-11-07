@@ -1,4 +1,5 @@
 ---
+icon: fa5/compass
 template: physics.html
 ---
 

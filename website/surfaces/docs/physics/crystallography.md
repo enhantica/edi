@@ -1,4 +1,5 @@
 ---
+icon: fa5/cube
 template: physics.html
 ---
 

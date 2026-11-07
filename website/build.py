@@ -270,6 +270,9 @@ def _check_navigation(config_data: dict) -> None:
         found = [next(iter(entry)) for entry in groups['Analysis workflow'][1:]]
         if found != stages:
             raise SystemExit(f'{interface}: Analysis workflow must contain {stages}')
+    physics = next(entry['Physics'] for entry in config_data['nav'] if 'Physics' in entry)
+    if [next(iter(entry)) for entry in physics] != ['Start here', 'Physical models']:
+        raise SystemExit('Physics: groups must be Start here and Physical models')
     print('Shared interface workflow navigation: PASS', flush=True)
 
 
@@ -305,6 +308,14 @@ def _check_application_groups(config_data: dict) -> None:
     placed = set(re.findall(r'QStringLiteral\("(\w+)"\), \{T::', model))
     if placed - categories:
         raise SystemExit(f'Add these app categories to the menu: {sorted(placed - categories)}')
+    # Every group a capture actually saw needs an entry, including groups built at run time.
+    names = {entry.get('category') for entry in entries} | {entry.get('app_group') for entry in entries}
+    names.update(groups['undocumented']['categories'])
+    for sidecar in (ROOT / 'surfaces/docs/assets/gui').glob('*/*.json'):
+        items = json.loads(sidecar.read_text(encoding='utf-8')).get('items', {})
+        seen = {key[6:] for key in items if key.startswith('group.') and key.count('.') == 1}
+        if seen - names:
+            raise SystemExit(f'{sidecar.name}: add these groups to the menu: {sorted(seen - names)}')
     print('Application menu follows the app sidebar: PASS', flush=True)
 
 
@@ -339,6 +350,22 @@ def _check_icons(config_data: dict) -> None:
     print('App icon set: PASS', flush=True)
 
 
+def _check_dark(bundle: Path) -> None:
+    """Every captured scene needs its dark image, unchanged since it was imported."""
+    hashes = bundle / 'dark/hashes.json'
+    if not hashes.is_file():
+        return
+    expected = json.loads(hashes.read_text(encoding='utf-8'))
+    manifest = json.loads((bundle / 'manifest.json').read_text(encoding='utf-8'))
+    scenes = {scene['image'] for scene in manifest['scenes'] if scene['status'] == 'captured'}
+    if scenes - set(expected):
+        raise SystemExit(f'{bundle.name}: no dark image for {sorted(scenes - set(expected))[:3]}')
+    for image, digest in expected.items():
+        if hashlib.sha256((bundle / 'dark' / image).read_bytes()).hexdigest() != digest:
+            raise SystemExit(f'{bundle.name}: dark image changed: {image}')
+    print(f'Dark {bundle.name} images: PASS', flush=True)
+
+
 def _check_captures(config_data: dict) -> None:
     scenes = []
     capture = ROOT / 'surfaces/docs/assets/gui/y2o3'
@@ -352,6 +379,14 @@ def _check_captures(config_data: dict) -> None:
             _, captured = validate_bundle(reference, workflow='reference')
             scenes.extend(captured)
             print(f'Native {folder} reference bundle: PASS', flush=True)
+    for folder in ('sc', 'magnetic'):
+        reference = ROOT / 'surfaces/docs/assets/gui' / folder
+        if (reference / 'manifest.json').exists():
+            _, captured = validate_bundle(reference, workflow='reference', groups=True)
+            scenes.extend(captured)
+            print(f'Native {folder} group bundle: PASS', flush=True)
+    for folder in ('y2o3', 'scan', 'joint', 'sc', 'magnetic'):
+        _check_dark(ROOT / 'surfaces/docs/assets/gui' / folder)
     if scenes:
         validate_topics(ROOT, config_data, scenes)
         print('Workflow topics and native illustration coverage: PASS', flush=True)

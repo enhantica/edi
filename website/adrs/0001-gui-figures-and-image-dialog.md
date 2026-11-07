@@ -42,3 +42,7 @@ Image URLs include their image hash. The generated GUI CSS/JavaScript URLs inclu
 2026-10-31 clarification: each app area owns a restrained highlight colour: blue navigation, teal main view, amber sidebar, violet status bar. Classify every generated highlight from its captured native region/bounds; use the same semantic colours in the walkthrough, all guide/tab views, layout overview and enlarged dialog. The layout selectors include matching coloured area icons, with text/position retained so colour is never the only cue. Fills remain light enough to read the screenshot controls. The workflow-direction arrows use the current documentation background colour, partially transparent so the original controls remain visible, instead of blue. The prior single amber overlay is superseded.
 
 2026-10-31 selector refinement: main-view and sidebar selector icons inherit the same teal/amber area colours as their highlights while tab text stays neutral. The Main regions selector uses dock-top, monitor, dock-right and dock-bottom area icons instead of generic square swatches. Keep those area symbols distinct from workflow/category icons in page navigation.
+
+## Highlights inside their area — 2026-11-07
+
+Highlights now sit inside their area, inset by half their stroke, with slightly rounded corners, instead of expanding beyond it with square corners. Neighbouring areas such as the main view and the sidebar no longer overlap. `region_path` in `import_gui_captures.py` and `gui-capture.js` draw the same shape.

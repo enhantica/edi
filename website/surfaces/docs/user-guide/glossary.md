@@ -6,8 +6,6 @@ icon: fa5/book
 
 These terms are shared by the application, Python library and command line. The interface changes how you work with them, rather than changing their scientific meaning.
 
-The coloured measurement labels — such as <a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a>, <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="probe" data-ed-token="xray" href="../user-guide/glossary/#x-ray-diffraction" title="X-ray diffraction">xray</a>, <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> and <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> — are catalogued under [Experiment types and labels](#experiment-types-and-labels) at the end of this page. That catalogue is generated from the experiment registry, so its chips always match the measurements the application supports.
-
 ## Project and model
 
 | Term | Meaning |
@@ -17,56 +15,6 @@ The coloured measurement labels — such as <a class="ed-tag ed-tag--technique" 
 | Experiment | The observation or simulation associated with an instrument model, profile, background and contributing structures. |
 | Parameter | A model quantity such as a cell length, atom coordinate, scale or profile coefficient. A refinable parameter may be free or fixed. |
 | Constraint | A declared relationship that reduces independent freedom between model quantities. A tied value is not another independently refined parameter. |
-
-## Diffraction
-
-**Powder diffraction** <!-- glossary-label:powder --><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a><!-- /glossary-label --> describes diffraction from a sample containing many crystallite orientations. The measured signal is commonly an intensity profile in which reflections can overlap.
-
-**Single-crystal diffraction** <!-- glossary-label:single-crystal --><a class="ed-tag ed-tag--neutral" data-ed-tag="sampleForm" data-ed-token="single crystal" href="../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a><!-- /glossary-label --> measures individual reflections from an oriented crystal. Its observations and fit assessment differ from those of a powder profile.
-
-**Constant wavelength (CWL)** <!-- glossary-label:constant-wavelength --><a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a><!-- /glossary-label --> describes a measurement using a specified wavelength, with a powder pattern commonly expressed against the scattering angle 2θ.
-
-**Time of flight (TOF)** <!-- glossary-label:time-of-flight --><a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a><!-- /glossary-label --> separates neutron wavelengths through arrival time. The instrument calibration relates time of flight to the diffraction geometry.
-
-**Reflection** refers to diffraction associated with a set of lattice planes. A **Bragg-position mark** indicates where that reflection is expected in the pattern.
-
-**Background** is the slowly varying contribution under diffraction peaks, represented by the background model chosen for the experiment.
-
-## Analysis
-
-| Term | Meaning |
-| --- | --- |
-| Calculation or simulation | Evaluation of the model with its present parameter values. A simulation may use a calculation range without measured observations. |
-| Refinement or fit | Optimisation of the chosen free parameters against measured observations. |
-| Residual | The difference between observed and calculated signal. Its pattern can reveal systematic disagreement that a single agreement factor hides. |
-| Joint fit | One simultaneous fit using several experiments and their shared model quantities. |
-| Sequential fit | Fitting a scan in order, starting each dataset from the preceding fit's parameter values. |
-| Independent fit | Fitting the datasets of a scan from the same template starting values. |
-| Standard uncertainty | The uncertainty reported with an estimated parameter or observation. A fitted uncertainty reflects the assumptions of the fit, rather than every possible systematic error. |
-
-## Crystallographic quantities
-
-**Unit cell** is the repeating geometry described by cell lengths and angles. **Fractional coordinates** express a position relative to that cell.
-
-**Space group** describes crystallographic symmetry. Its **setting** identifies the coordinate convention used to describe that symmetry and the atom positions.
-
-**Occupancy** describes occupation of an atom site. **Atomic displacement parameters (ADPs)** describe displacement around its average position; isotropic and anisotropic representations use different quantities and conventions.
-
-**Scale factor** weights a structure's contribution to an experiment's calculated intensity. Its scientific interpretation depends on the experiment model and phase conventions.
-
-## Files and labels
-
-**Edi (`.edi`)** is EasyDiffraction's saved project format. It uses readable CIF-like syntax with keys that describe the project model.
-
-**CIF** means Crystallographic Information File, a scientific exchange format with dictionaries maintained by the IUCr. A structural CIF and a complete Edi project serve different purposes.
-
-The **coreCIF** dictionary defines general crystallographic quantities; **pdCIF** defines powder-diffraction quantities; **magCIF** covers magnetic structures. Edi project keys are EasyDiffraction's persistence vocabulary and should not all be assumed to be IUCr dictionary items.
-
-The catalogue uses <a class="ed-tag ed-tag--technique" href="../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> for powder, <a class="ed-tag ed-tag--neutral" href="../user-guide/glossary/#single-crystal-diffraction" title="Single-crystal diffraction">sc</a> for single crystal, <a class="ed-tag ed-tag--technique" href="../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a> for neutron, <a class="ed-tag ed-tag--neutral" href="../user-guide/glossary/#x-ray-diffraction" title="X-ray diffraction">xray</a> for X-ray, <a class="ed-tag ed-tag--neutral" href="../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> for constant wavelength and <a class="ed-tag ed-tag--technique" href="../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> for time of flight.
-
-These labels identify measurement types and scientific terms. Current feature availability and model coverage are described by the interface guides and checked examples.
-
-
 
 ## Experiment types and labels
 
@@ -118,3 +66,33 @@ An experiment combines one label from each family below. For example, the first 
 | --- | --- |
 | <span id="bragg-diffraction"></span><a class="ed-tag ed-tag--technique" data-ed-tag="scatteringType" data-ed-token="bragg" href="../user-guide/glossary/#bragg-diffraction" title="Bragg diffraction">Bragg</a> | Model the crystalline contribution from lattice reflections. |
 <!-- /experiment-type-tables -->
+
+## Analysis
+
+| Term | Meaning |
+| --- | --- |
+| Calculation or simulation | Evaluation of the model with its present parameter values. A simulation may use a calculation range without measured observations. |
+| Refinement or fit | Optimisation of the chosen free parameters against measured observations. |
+| Residual | The difference between observed and calculated signal. Its pattern can reveal systematic disagreement that a single agreement factor hides. |
+| Standard uncertainty | The uncertainty reported with an estimated parameter or observation. A fitted uncertainty reflects the assumptions of the fit, rather than every possible systematic error. |
+
+## Patterns and crystallographic quantities
+
+| Term | Meaning |
+| --- | --- |
+| Reflection | Diffraction associated with a set of lattice planes. A Bragg-position mark indicates where that reflection is expected in the pattern. |
+| Background | The slowly varying contribution under diffraction peaks, represented by the background model chosen for the experiment. |
+| Unit cell | The repeating geometry described by cell lengths and angles. |
+| Fractional coordinates | A position expressed relative to the unit cell. |
+| Space group | The crystallographic symmetry. Its setting identifies the coordinate convention used to describe that symmetry and the atom positions. |
+| Occupancy | The occupation of an atom site. |
+| Atomic displacement parameters (ADPs) | Displacement around an atom's average position. Isotropic and anisotropic representations use different parameters. |
+| Scale factor | The weight of a structure's contribution to an experiment's calculated intensity. Its scientific interpretation depends on the experiment model and phase conventions. |
+
+## Files and dictionaries
+
+| Term | Meaning |
+| --- | --- |
+| Edi (`.edi`) | EasyDiffraction's saved project format. It uses readable CIF-like syntax with keys that describe the project model. |
+| CIF | Crystallographic Information File, a scientific exchange format with dictionaries maintained by the IUCr. A structural CIF and a complete Edi project serve different purposes. |
+| coreCIF, pdCIF, magCIF | Dictionaries of general crystallographic, powder-diffraction and magnetic-structure quantities. Edi project keys are EasyDiffraction's project names, mapped to these where one applies. |

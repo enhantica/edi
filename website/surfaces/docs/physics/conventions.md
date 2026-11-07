@@ -1,4 +1,5 @@
 ---
+icon: fa5/ruler-combined
 template: physics.html
 ---
 

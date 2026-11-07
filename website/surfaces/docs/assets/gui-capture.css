@@ -13,7 +13,7 @@
 .gui-image-link:focus-visible { outline: 2px solid var(--md-accent-fg-color); outline-offset: 5px; }
 .md-typeset .gui-capture, .gui-lightbox .gui-capture { display: block; width: 100%; height: auto; overflow: visible; border: 0; border-radius: 0; background: transparent; }
 .gui-image-frame { fill: none; stroke: #d6d6d6; stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
-.gui-capture [data-gui-region] { fill: var(--gui-area-colour); fill-opacity: 0; stroke: var(--gui-area-colour); stroke-width: 0; stroke-linejoin: miter; vector-effect: non-scaling-stroke; pointer-events: none; transition: fill-opacity .15s; }
+.gui-capture [data-gui-region] { fill: var(--gui-area-colour); fill-opacity: 0; stroke: var(--gui-area-colour); stroke-width: 0; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; transition: fill-opacity .15s; }
 .gui-capture [data-gui-region].is-active { fill-opacity: .12; stroke-width: 2; }
 .gui-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .md-typeset .gui-viewer .gui-figure { margin: .7rem 0 1.6rem; }
@@ -36,7 +36,7 @@ html.gui-lightbox-open { overflow: hidden; }
 .gui-direction { display: none; fill: var(--md-default-bg-color); fill-opacity: .55; pointer-events: none; }
 .gui-direction.is-active { display: block; }
 
-.gui-capture [data-gui-navigation] { fill: var(--gui-area-colour); fill-opacity: .12; stroke: var(--gui-area-colour); stroke-width: 2; stroke-linejoin: miter; vector-effect: non-scaling-stroke; pointer-events: none; }
+.gui-capture [data-gui-navigation] { fill: var(--gui-area-colour); fill-opacity: .12; stroke: var(--gui-area-colour); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
 
 @font-face { font-family: "edi-gui-icons"; src: url("gui-icons/fontawesome-5-solid.otf") format("opentype"); font-style: normal; font-weight: 900; font-display: block; }
 .gui-fa { display: inline-block; font-family: "edi-gui-icons"; font-weight: 900; font-style: normal; line-height: 1; min-width: 1em; text-align: center; margin-right: .3em; }

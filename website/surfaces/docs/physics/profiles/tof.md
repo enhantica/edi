@@ -1,4 +1,5 @@
 ---
+icon: fa5/stopwatch
 template: physics.html
 ---
 

@@ -9,19 +9,29 @@
     const radius = svg.viewBox.baseVal.width * percent / 100;
     svg.querySelectorAll('clipPath rect, .gui-image-frame').forEach(frame => frame.setAttribute('rx', radius));
     svg.querySelectorAll('[data-gui-region], [data-gui-navigation]').forEach(region => {
-      const padding = (region.hasAttribute('data-gui-inset') ? -Number(region.dataset.guiInset) : 1.5) / scale;
+      // The outline sits inside its area, so neighbouring areas never overlap.
+      const inset = 1 / scale, radius = 4 / scale;
       const parts = JSON.parse(region.dataset.guiParts);
       const [x, y, width, height] = parts[0];
-      const left = x - padding, top = y - padding;
-      const right = x + width + padding, bottom = y + height + padding;
+      const left = x + inset, top = y + inset;
+      const right = x + width - inset, bottom = y + height - inset;
       const points = [[left, top]];
       if (parts.length === 2) {
         const [tx, ty, tw] = parts[1];
-        points.push([tx - padding, top], [tx - padding, ty - padding],
-          [tx + tw + padding, ty - padding], [tx + tw + padding, top]);
+        points.push([tx + inset, top], [tx + inset, ty + inset],
+          [tx + tw - inset, ty + inset], [tx + tw - inset, top]);
       }
       points.push([right, top], [right, bottom], [left, bottom]);
-      region.setAttribute('d', 'M' + points.map(point => point.join(' ')).join(' L') + ' Z');
+      const path = points.map((point, number) => {
+        const [before, after] = [points.at(number - 1), points[(number + 1) % points.length]];
+        const [start, end] = [before, after].map(other => {
+          const length = Math.hypot(other[0] - point[0], other[1] - point[1]);
+          const share = Math.min(radius, length / 2) / length;
+          return [point[0] + (other[0] - point[0]) * share, point[1] + (other[1] - point[1]) * share];
+        });
+        return `${number ? 'L' : 'M'}${start.join(' ')} Q${point.join(' ')} ${end.join(' ')}`;
+      });
+      region.setAttribute('d', path.join(' ') + ' Z');
     });
   };
   const descriptionHeight = viewer => {
@@ -108,6 +118,19 @@
       descriptionHeight(viewer);
     });
   };
+  // Dark screenshots sit in dark/ beside the light ones and share their highlights.
+  const syncTheme = () => {
+    const dark = document.body.dataset.mdColorScheme === 'slate';
+    document.querySelectorAll('[data-gui-dark]').forEach(element => {
+      element.dataset.guiLight ||= element.getAttribute('href');
+      const light = element.dataset.guiLight;
+      element.setAttribute('href', dark
+        ? light.replace(/\/([^/?]+)\?v=.*$/, `/dark/$1?v=${element.dataset.guiDark}`)
+        : light);
+    });
+  };
+  new MutationObserver(syncTheme).observe(document.body, {attributes: true, attributeFilter: ['data-md-color-scheme']});
+  syncTheme();
   if (typeof document$ !== 'undefined') document$.subscribe(initialize);
   else initialize();
 })();

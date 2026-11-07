@@ -18,7 +18,7 @@ For powder text input, verify the independent variable, its units, intensity and
 
 ## Instrument and peak profile
 
-[Instrument settings](../../physics/calibration.md) describe the measurement geometry and calibration, such as wavelength or the relationship between time of flight and diffraction spacing. The [peak profile](../../physics/profiles.md) describes reflection shapes and broadening.
+[Instrument settings](../../physics/calibration.md) describe the measurement geometry and calibration, such as wavelength or the relationship between time of flight and diffraction spacing. The [peak profile](../../physics/profiles/index.md) describes reflection shapes and broadening.
 
 Check peak positions and widths before changing structural parameters to compensate for disagreement. A profile appropriate to one instrument or measurement need not describe another.
 

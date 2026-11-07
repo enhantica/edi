@@ -1,4 +1,5 @@
 ---
+icon: fa5/gem
 template: physics.html
 ---
 

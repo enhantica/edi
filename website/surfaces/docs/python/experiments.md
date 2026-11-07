@@ -15,7 +15,7 @@ for experiment in project.experiments:
     print(experiment.name)
 ```
 
-Keep experimental settings with the measurement they describe. Structural parameters belong to a structure, while [wavelength and zero shift](../physics/calibration.md) and [profile parameters](../physics/profiles.md) belong to the experiment model.
+Keep experimental settings with the measurement they describe. Structural parameters belong to a structure, while [wavelength and zero shift](../physics/calibration.md) and [profile parameters](../physics/profiles/index.md) belong to the experiment model.
 
 ## Read a measured powder pattern
 

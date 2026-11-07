@@ -17,7 +17,7 @@ A parameter's value needs its name, units and place in the model to be meaningfu
 | [Unit cell](../physics/crystallography.md#eq-cell-metric) | Lengths and angles | Units, symmetry and plausible geometry |
 | [Atom sites](../physics/diffraction.md#eq-nuclear-structure-factor) | Fractional coordinates and occupancies | Site meaning, symmetry restrictions and composition |
 | [Displacements](../physics/displacement.md) | Isotropic or anisotropic displacement parameters | Convention, units and physical interpretation |
-| [Instrument](../physics/calibration.md) and [profile](../physics/profiles.md) | Calibration shifts and peak-width terms | Instrument geometry and profile definition |
+| [Instrument](../physics/calibration.md) and [profile](../physics/profiles/index.md) | Calibration shifts and peak-width terms | Instrument geometry and profile definition |
 | [Background](../physics/background.md) and [scale](../physics/diffraction.md#phase-fractions) | Background points or terms, phase scales | Baseline behaviour and how phases contribute |
 
 The [project model](analysis-workflow/project.md) keeps structure quantities separate from experiment quantities. They may still be correlated in a fit.

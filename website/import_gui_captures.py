@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
+import math
 import re
 import shutil
 from itertools import starmap
@@ -331,21 +333,33 @@ def region_parts(meta: dict, target: str) -> list[list[float]]:
     return _sidebar_parts(meta, bounds)
 
 
-def region_path(parts: list[list[float]], padding: float = 2) -> str:
-    """Trace a square outline; the browser adjusts padding to display pixels."""
+def region_path(parts: list[list[float]], inset: float = 1, radius: float = 4) -> str:
+    """Trace a rounded outline inside the area; the browser keeps it at display pixels."""
     x, y, width, height = parts[0]
-    left, top, right, bottom = x - padding, y - padding, x + width + padding, y + height + padding
+    left, top, right, bottom = x + inset, y + inset, x + width - inset, y + height - inset
     points = [(left, top)]
     if len(parts) == 2:
         tx, ty, tw, _ = parts[1]
         points += [
-            (tx - padding, top),
-            (tx - padding, ty - padding),
-            (tx + tw + padding, ty - padding),
-            (tx + tw + padding, top),
+            (tx + inset, top),
+            (tx + inset, ty + inset),
+            (tx + tw - inset, ty + inset),
+            (tx + tw - inset, top),
         ]
     points += [(right, top), (right, bottom), (left, bottom)]
-    return 'M' + ' L'.join(f'{px:.3f} {py:.3f}' for px, py in points) + ' Z'
+    commands = []
+    for number, (px, py) in enumerate(points):
+        before, after = points[number - 1], points[(number + 1) % len(points)]
+        steps = []
+        for ox, oy in (before, after):
+            length = math.hypot(ox - px, oy - py)
+            share = min(radius, length / 2) / length
+            steps.append((px + (ox - px) * share, py + (oy - py) * share))
+        commands.append(
+            f'{"L" if commands else "M"}{steps[0][0]:.3f} {steps[0][1]:.3f} '
+            f'Q{px:.3f} {py:.3f} {steps[1][0]:.3f} {steps[1][1]:.3f}'
+        )
+    return ' '.join(commands) + ' Z'
 
 
 def gui_icon(item: dict) -> str:
@@ -505,16 +519,15 @@ def _region_paths(
 ) -> list[str]:
     paths = []
     for number, target in enumerate(targets, 1):
-        inset = view in {'layout', 'flow'}
-        parts = [meta['items'][target]['visible_bounds']] if inset else region_parts(meta, target)
+        plain = view in {'layout', 'flow'}
+        parts = [meta['items'][target]['visible_bounds']] if plain else region_parts(meta, target)
         key = f'{identity}-{number}'
         data = html.escape(json.dumps(parts, separators=(',', ':')), quote=True)
         area = highlight_area(meta, target, scene['page'])
         active = 'is-active' if number == 1 or view in {'layout', 'flow', 'workflow'} else ''
         paths.append(
             (f'<path class="{active}" data-gui-region="{key}" data-gui-area="{area}" ')
-            + ('data-gui-inset="2" ' if inset else '')
-            + f'data-gui-parts="{data}" d="{region_path(parts, -2 if inset else 2)}" />'
+            + f'data-gui-parts="{data}" d="{region_path(parts)}" />'
         )
     return paths
 
@@ -584,6 +597,8 @@ def figure(
         + '?v='
         + meta['image_sha256'][:12]
     )
+    # The browser swaps to this image in the dark theme; it sits in the same folder's dark/.
+    dark = f' data-gui-dark="{scene["dark_sha256"][:12]}"' if scene.get('dark_sha256') else ''
     description = html.escape(description or scene['description'], quote=True)
     identity = f'{scene["id"]}-{view}' + (f'-{instance}' if instance else '')
     if selection:
@@ -606,13 +621,14 @@ def figure(
             if explanation
             else ''
         )
-        + f'<a class="gui-image-link" href="{image}" data-gui-open aria-haspopup="dialog" '
+        + f'<a class="gui-image-link" href="{image}"{dark} data-gui-open '
+        'aria-haspopup="dialog" '
         f'aria-label="Enlarge screenshot: {description}">'
         f'<svg class="gui-capture" data-gui-view="{view}" viewBox="0 0 1480 800" '
         f'width="1480" height="800" role="img" aria-label="{description}">'
         f'<title>{description}</title><defs><clipPath id="{clip}"><rect width="1480" '
         f'height="800" rx="{screenshot_radius(1480):g}" /></clipPath></defs>'
-        f'<image href="{image}" width="1480" height="800" clip-path="url(#{clip})" />'
+        f'<image href="{image}"{dark} width="1480" height="800" clip-path="url(#{clip})" />'
         '<rect class="gui-image-frame" width="1480" height="800" '
         f'rx="{screenshot_radius(1480):g}" />'
         + ''.join(paths)
@@ -758,7 +774,7 @@ def capture_inventory() -> None:
         'their declared example to illustrate controls specific to that project type.',
         '',
     ]
-    for folder in ('y2o3', 'scan', 'joint'):
+    for folder in BUNDLES:
         directory = DOCS / 'assets/gui' / folder
         if not (directory / 'manifest.json').is_file():
             continue
@@ -1419,11 +1435,23 @@ def _write_application_introduction(by_id: dict) -> None:
     introduction.write_text(text)
 
 
-def render(bundle: Path, reference: Path | None = None, joint: Path | None = None) -> None:
+def render(
+    bundle: Path,
+    reference: Path | None = None,
+    joint: Path | None = None,
+    groups: dict[str, Path] | None = None,
+    dark: dict[str, Path] | None = None,
+) -> None:
     manifest, scenes = validate_bundle(bundle)
     copy_bundle(bundle, manifest, scenes, 'y2o3')
     by_id = {scene['id']: scene for scene in scenes}
     _import_references(reference, joint, by_id)
+    for folder, source in (groups or {}).items():
+        group_manifest, group_scenes = validate_bundle(source, workflow='reference', groups=True)
+        copy_bundle(source, group_manifest, group_scenes, folder)
+    for folder, source in (dark or {}).items():
+        copy_dark(source, folder)
+    by_id = {s['id']: s for folder in BUNDLES for s in load_scenes(folder)}
     _write_first_refinement(manifest, by_id)
     _write_workspace(manifest, scenes, by_id)
     if '15-project-examples' in by_id:
@@ -1434,13 +1462,55 @@ def render(bundle: Path, reference: Path | None = None, joint: Path | None = Non
     print(json.dumps({'imported': len(scenes), 'source': manifest['source_revision']}))
 
 
+BUNDLES = ('y2o3', 'scan', 'joint', 'sc', 'magnetic')
+
+
+def load_scenes(folder: str) -> list[dict]:
+    """Return a committed bundle's scenes, each knowing its folder and dark image."""
+    root = DOCS / 'assets/gui' / folder
+    kind = {'y2o3': {}, 'scan': {'workflow': 'reference'}, 'joint': {'workflow': 'reference'}}
+    options = kind.get(folder, {'workflow': 'reference', 'groups': True})
+    _, scenes = validate_bundle(root, **options)
+    hashes = root / 'dark/hashes.json'
+    dark = json.loads(hashes.read_text()) if hashes.is_file() else {}
+    place = {'asset_folder': folder} if folder != 'y2o3' else {}
+    return [{**scene, **place, 'dark_sha256': dark.get(scene['image'], '')} for scene in scenes]
+
+
+def copy_dark(bundle: Path, folder: str) -> None:
+    """Keep only a dark bundle's images, with hashes for cache-busting and checks."""
+    manifest = json.loads((bundle / 'manifest.json').read_text())
+    target = DOCS / 'assets/gui' / folder / 'dark'
+    target.mkdir(parents=True, exist_ok=True)
+    hashes = {}
+    for scene in manifest['scenes']:
+        if scene['status'] != 'captured':
+            continue
+        data = (bundle / scene['image']).read_bytes()
+        (target / scene['image']).write_bytes(data)
+        hashes[scene['image']] = hashlib.sha256(data).hexdigest()
+    (target / 'hashes.json').write_text(json.dumps(hashes, indent=2, sort_keys=True) + '\n')
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('bundle', type=Path)
     parser.add_argument('--reference-bundle', type=Path)
     parser.add_argument('--joint-bundle', type=Path)
+    parser.add_argument('--group-bundle', action='append', default=[], metavar='FOLDER=PATH')
+    parser.add_argument('--dark-bundle', action='append', default=[], metavar='FOLDER=PATH')
     args = parser.parse_args()
-    render(args.bundle.resolve(), args.reference_bundle, args.joint_bundle)
+
+    def named(values: list[str]) -> dict[str, Path]:
+        return {key: Path(path).resolve() for key, path in (v.split('=', 1) for v in values)}
+
+    render(
+        args.bundle.resolve(),
+        args.reference_bundle,
+        args.joint_bundle,
+        named(args.group_bundle),
+        named(args.dark_bundle),
+    )
 
 
 if __name__ == '__main__':

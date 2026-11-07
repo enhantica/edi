@@ -34,7 +34,7 @@ theme:
 extra_css:
   - assets/brand-colors.css?v=1
   - assets/wordmark.css?v=header-2
-  - assets/site-components.css?v=interface-nav-2
+  - assets/site-components.css?v=interface-nav-3
   - assets/experiment-tags.css?v=2
   - assets/parameter-reference.css?v=3
 extra_javascript:
@@ -53,12 +53,11 @@ extra:
     Python scripts: [simple/python]
     Jupyter notebooks: [simple/jupyter]
   section_icons:
-    Analysis workflow: route
-    Peak profiles: chart-area
+    Diffraction model: atom
+    Peak profiles: shapes
     Intensity corrections: sliders-h
     Experiment model: microscope
-    Refinement and statistics: chart-line
-    Reference: book
+    Refinement and statistics: calculator
   workflow_icons:
     Project: archive
     Structure: layer-group
@@ -68,9 +67,8 @@ extra:
 nav:
 - Home: index.md
 - User guide:
-  - user-guide/index.md
   - Foundations:
-    - user-guide/foundations/index.md
+    - user-guide/index.md
     - Features: user-guide/features.md
     - Concept: user-guide/concepts.md
     - Data formats: user-guide/data-formats.md
@@ -107,7 +105,16 @@ nav:
       - Cell: application/structure/cell.md
       - Atom sites: application/structure/atom-sites.md
       - Atomic displacement: application/structure/atomic-displacement.md
+      - Magnetic space group: application/structure/magnetic-space-group.md
+      - Propagation vectors: application/structure/propagation-vectors.md
+      - Magnetic moments: application/structure/magnetic-moments.md
       - Scattering lengths: application/structure/scattering-lengths.md
+      - Magnetic form factors: application/structure/magnetic-form-factors.md
+      - Symmetry operators: application/structure/symmetry-operators.md
+      - Magnetic operators: application/structure/magnetic-operators.md
+      - Atoms in the cell: application/structure/atoms-in-the-cell.md
+      - Moments in the cell: application/structure/moments-in-the-cell.md
+      - Bonds: application/structure/bonds.md
       - Appearance: application/structure/appearance.md
     - Experiment:
       - application/experiment/index.md
@@ -126,6 +133,7 @@ nav:
       - Scattering source: application/experiment/scattering-source.md
       - Data source: application/experiment/data-source.md
       - Measured data: application/experiment/measured-data.md
+      - Reflections: application/experiment/reflections.md
       - Performance: application/experiment/performance.md
     - Analysis:
       - application/analysis/index.md
@@ -190,32 +198,37 @@ nav:
   - Examples:
     - cli/examples/index.md
 - Physics:
-  - physics/index.md
-  - Diffraction model:
-    - Rietveld refinement: physics/rietveld.md
-    - Crystallography: physics/crystallography.md
-    - Scattering and structure factors: physics/diffraction.md
-    - Atomic displacement: physics/displacement.md
-  - Peak profiles:
-    - physics/profiles.md
-    - Constant wavelength: physics/profiles/cw.md
-    - Time of flight: physics/profiles/tof.md
-  - Intensity corrections:
-    - Absorption: physics/corrections/absorption.md
-    - Extinction: physics/corrections/extinction.md
-    - Preferred orientation: physics/corrections/orientation.md
-    - Lorentz and polarization: physics/corrections/intensity.md
-  - Experiment model:
-    - Calibration and peak positions: physics/calibration.md
-    - Background: physics/background.md
-  - Refinement and statistics:
-    - physics/refinement.md
-    - Minimization and uncertainty: physics/minimization.md
-    - Reliability factors: physics/reliability.md
-  - Reference:
+  - Start here:
+    - physics/index.md
     - Conventions: physics/conventions.md
     - Model catalogue: physics/models.md
     - Parameter explanations: physics/parameters.md
+  - Physical models:
+    - physics/physical-models/index.md
+    - Diffraction model:
+      - physics/diffraction-model/index.md
+      - Rietveld refinement: physics/rietveld.md
+      - Crystallography: physics/crystallography.md
+      - Scattering and structure factors: physics/diffraction.md
+      - Atomic displacement: physics/displacement.md
+    - Peak profiles:
+      - physics/profiles/index.md
+      - Constant wavelength: physics/profiles/cw.md
+      - Time of flight: physics/profiles/tof.md
+    - Intensity corrections:
+      - physics/corrections/index.md
+      - Absorption: physics/corrections/absorption.md
+      - Extinction: physics/corrections/extinction.md
+      - Preferred orientation: physics/corrections/orientation.md
+      - Lorentz and polarization: physics/corrections/intensity.md
+    - Experiment model:
+      - physics/experiment-model/index.md
+      - Calibration and peak positions: physics/calibration.md
+      - Background: physics/background.md
+    - Refinement and statistics:
+      - physics/refinement/index.md
+      - Minimization and uncertainty: physics/minimization.md
+      - Reliability factors: physics/reliability.md
 - About:
   - about/index.md
   - Get in touch: about/community.md

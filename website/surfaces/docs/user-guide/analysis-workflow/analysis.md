@@ -74,7 +74,7 @@ Compare the measured and calculated intensities over the full range, then inspec
 | What you see | Check first | Learn more |
 | --- | --- | --- |
 | Peaks shifted across the pattern | Cell, wavelength and instrument calibration | [Cell and symmetry](../../physics/crystallography.md), [calibration](../../physics/calibration.md) |
-| Widths or tails disagree | Profile function and its coefficients | [Peak profiles](../../physics/profiles.md) |
+| Widths or tails disagree | Profile function and its coefficients | [Peak profiles](../../physics/profiles/index.md) |
 | Baseline follows the residual | Background model and excluded regions | [Background](../../physics/background.md) |
 | Extra measured peaks | Missing phases, impurities or measurement artefacts | [Structure model](structure.md) |
 | Unstable values or large uncertainties | Free parameters, bounds and correlations | [Minimization](../../physics/minimization.md) |
@@ -83,7 +83,7 @@ Reflection marks show where the structures predict Bragg positions. They help co
 
 ### Read the agreement factors
 
-R<sub>p</sub> and R<sub>wp</sub> summarise the powder-profile mismatch. R<sub>exp</sub> and reduced χ² connect that mismatch with the observation uncertainties and independent parameter count. The [refinement and statistics](../../physics/refinement.md) chapter gives their equations and conventions.
+R<sub>p</sub> and R<sub>wp</sub> summarise the powder-profile mismatch. R<sub>exp</sub> and reduced χ² connect that mismatch with the observation uncertainties and independent parameter count. The [refinement and statistics](../../physics/refinement/index.md) chapter gives their equations and conventions.
 
 !!! note "A small R factor is only part of the assessment"
 

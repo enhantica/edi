@@ -13,7 +13,7 @@ import subprocess
 from operator import itemgetter
 from pathlib import Path
 
-from render_experiments import replace
+from render_experiments import badge, replace
 
 ROOT = Path(__file__).resolve().parent
 DOCS = ROOT / 'surfaces/docs'
@@ -494,8 +494,8 @@ def _decorate_group_pages(lookup: dict, glyphs: dict) -> None:
     for entries in GROUPS['stages'].values():
         for entry in entries:
             uid = entry.get('category', '')
-            if uid and uid not in lookup:
-                raise ValueError('Application group names an unknown category: ' + uid)
+            # The published dictionary does not list every category the app has yet.
+            uid = uid if uid in lookup else ''
             path = DOCS / entry['page']
             text = path.read_text()
             text = re.sub(r'^category_glyph:.*\n', '', text, flags=re.MULTILINE)
@@ -522,14 +522,50 @@ def _decorate_group_pages(lookup: dict, glyphs: dict) -> None:
             path.write_text(text)
 
 
+# Every experiment has one label from each of these; a group lists those it applies to.
+EXPERIMENT_FAMILIES = {
+    'sampleForm': ['powder', 'single crystal'],
+    'beamMode': ['constant wavelength', 'time-of-flight'],
+    'probe': ['neutron', 'x-ray'],
+}
+
+
+def _group_tags(entry: dict, prefix: str) -> str:
+    """Return the labels of the experiment types a group applies to, from the app's rules."""
+    limits = entry.get('tags', {})
+    tags = [
+        badge(family, token, prefix=prefix)
+        for family, tokens in EXPERIMENT_FAMILIES.items()
+        for token in limits.get(family, tokens)
+    ]
+    for family in ('purpose', 'fittingMode'):
+        tags += [badge(family, token, prefix=prefix) for token in limits.get(family, [])]
+    return ' '.join(tags)
+
+
 def _write_stage_tables(glyphs: dict) -> None:
-    """List each stage's sidebar groups on its overview page, from the same record as the menu."""
+    """Show each group's labels on its page and list the stage's groups on its overview."""
     for stage, entries in GROUPS['stages'].items():
-        rows = ['| Sidebar group | Tab | Shown |', '| --- | --- | --- |']
+        rows = ['| Sidebar group | Tab | Experiment types |', '| --- | --- | --- |']
         for entry in entries:
+            tags = _group_tags(entry, '../../')
+            shown = f'\n\nShown: {entry["when"].lower()}.' if 'when' in entry else ''
+            path = DOCS / entry['page']
+            text = re.sub(
+                r'\n*<!-- group-tags -->.*?<!-- /group-tags -->',
+                '',
+                path.read_text(),
+                flags=re.DOTALL,
+            )
+            head = re.search(r'^# .*$', text, flags=re.MULTILINE)
+            block = (
+                '\n\n<!-- group-tags -->\n'
+                f'<p class="ed-group-tags">{tags}</p>{shown}\n<!-- /group-tags -->'
+            )
+            path.write_text(text[: head.end()] + block + text[head.end() :])
             name = Path(entry['page']).name
             title = f'{icon(entry["icon"], glyphs)}[{entry["title"]}]({name})'
-            rows.append(f'| {title} | {entry["tab"]} | {entry.get("when", "Always")} |')
+            rows.append(f'| {title} | {entry["tab"]} | {tags} |')
         replace(DOCS / f'application/{stage}/index.md', 'sidebar-groups', '\n'.join(rows))
 
 

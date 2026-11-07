@@ -1,4 +1,5 @@
 ---
+icon: fa5/check-circle
 template: physics.html
 ---
 

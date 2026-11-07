@@ -1,4 +1,5 @@
 ---
+icon: fa5/adjust
 template: physics.html
 ---
 

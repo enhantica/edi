@@ -199,29 +199,6 @@ def _write_experiment_types(registry: dict) -> None:
     replace(DOCS / 'user-guide/glossary.md', 'experiment-type-tables', '\n\n'.join(blocks))
 
 
-def _write_glossary_labels() -> None:
-    glossary = DOCS / 'user-guide/glossary.md'
-    text = glossary.read_text()
-    for phrase, family, token in [
-        ('**Powder diffraction**', 'sampleForm', 'powder'),
-        ('**Single-crystal diffraction**', 'sampleForm', 'single crystal'),
-        ('**Constant wavelength (CWL)**', 'beamMode', 'constant wavelength'),
-        ('**Time of flight (TOF)**', 'beamMode', 'time-of-flight'),
-    ]:
-        marker = '<!-- glossary-label:' + token.replace(' ', '-') + ' -->'
-        text = re.sub(' ?' + re.escape(marker) + r'.*?<!-- /glossary-label -->', '', text)
-        text = text.replace(
-            phrase, phrase + ' ' + marker + badge(family, token) + '<!-- /glossary-label -->', 1
-        )
-    text = re.sub(
-        r'\nFor linked definitions of .*?see \[Experiment types and '
-        r'labels\]\(experiment-types.md\)\.\n?',
-        '\n',
-        text,
-    )
-    glossary.write_text(text.rstrip() + '\n')
-
-
 def _badge_models_table(source: str, relative: str) -> str:
     """Replace beam-mode abbreviations in the model table with labels."""
     lines = source.splitlines()
@@ -398,7 +375,6 @@ def render() -> None:
     metadata = json.loads((ASSETS / 'examples.json').read_text())['examples']
     _write_tag_css(registry)
     _write_experiment_types(registry)
-    _write_glossary_labels()
     _write_page_labels(registry)
     _write_example_catalogue(registry, metadata)
 

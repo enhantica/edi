@@ -49,7 +49,9 @@
     "Select or create an experiment": "guide-experiment-create",
     "Load a powder pattern": "guide-experiment-data"
   },
-  "application/experiment/calculation-range.md": {},
+  "application/experiment/calculation-range.md": {
+    "Use this group": "guide-experiment-calculation-range"
+  },
   "application/experiment/background.md": {
     "Choose a background representation": "guide-experiment-background",
     "Estimate the background": "guide-experiment-background",
@@ -65,7 +67,9 @@
   "application/experiment/excluded-regions.md": {
     "Exclude an interval": "guide-experiment-exclusions"
   },
-  "application/experiment/extinction.md": {},
+  "application/experiment/extinction.md": {
+    "Use this group": "group-extinction"
+  },
   "application/experiment/linked-structures.md": {
     "Choose the contributing phases": "guide-experiment-links"
   },
@@ -78,15 +82,21 @@
   "application/experiment/preferred-orientations.md": {
     "Set preferred orientation": "guide-experiment-orientation"
   },
-  "application/experiment/observed-reflections.md": {},
+  "application/experiment/observed-reflections.md": {
+    "Use this group": "group-reflns"
+  },
   "application/experiment/scattering-source.md": {
     "Choose the experiment's reference table": "guide-experiment-scattering"
   },
-  "application/experiment/data-source.md": {},
+  "application/experiment/data-source.md": {
+    "Use this group": "guide-experiment-data-source"
+  },
   "application/experiment/measured-data.md": {
     "Inspect the range and points": "guide-experiment-data-settings"
   },
-  "application/experiment/performance.md": {},
+  "application/experiment/performance.md": {
+    "Use this group": "11-experiment-settings"
+  },
   "application/analysis/index.md": {
     "Load or prepare the project": "guide-project-actions",
     "Compare the starting pattern": "10-experiment-loaded",
@@ -112,7 +122,9 @@
     "Fit a scan": "scan-mode",
     "Fit the shown scan dataset on its own": "scan-mode"
   },
-  "application/analysis/fitted-reflections.md": {},
+  "application/analysis/fitted-reflections.md": {
+    "Use this group": "group-refine-ls"
+  },
   "application/analysis/aliases.md": {
     "Name parameters with aliases": "guide-analysis-aliases"
   },
@@ -146,7 +158,9 @@
   "application/analysis/pattern-updates.md": {
     "Choose updates during a scan": "guide-analysis-pattern-updates"
   },
-  "application/analysis/performance.md": {},
+  "application/analysis/performance.md": {
+    "Use this group": "scan-performance-analysis"
+  },
   "application/report/index.md": {
     "Review the document": "14-report-basic",
     "Save the project too": "guide-project-save"
@@ -176,5 +190,35 @@
       "Correlations": "scan-correlations"
     },
     "Save the scan": "scan-report-basic"
+  },
+  "application/structure/magnetic-space-group.md": {
+    "Use this group": "group-space-group-magn"
+  },
+  "application/structure/propagation-vectors.md": {
+    "Use this group": "group-propagation"
+  },
+  "application/structure/magnetic-moments.md": {
+    "Use this group": "group-moments"
+  },
+  "application/structure/magnetic-form-factors.md": {
+    "Use this group": "group-form-factors"
+  },
+  "application/structure/symmetry-operators.md": {
+    "Use this group": "group-symop"
+  },
+  "application/structure/magnetic-operators.md": {
+    "Use this group": "group-magn-operators"
+  },
+  "application/structure/atoms-in-the-cell.md": {
+    "Use this group": "group-expanded-atoms"
+  },
+  "application/structure/moments-in-the-cell.md": {
+    "Use this group": "group-expanded-moments"
+  },
+  "application/structure/bonds.md": {
+    "Use this group": "group-bonds"
+  },
+  "application/experiment/reflections.md": {
+    "Use this group": "group-refln"
   }
 }

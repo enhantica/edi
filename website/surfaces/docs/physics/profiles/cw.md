@@ -1,4 +1,5 @@
 ---
+icon: fa5/long-arrow-alt-right
 template: physics.html
 ---
 
