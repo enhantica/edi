@@ -287,7 +287,7 @@ AppDialog {
         // A tab shows at once, without the swipe's slide.
         Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
-        // Appearance: the theme, then the structure view's arrows, then the charts' colours and behaviour. Rows with
+        // Appearance: the theme, then the structure view's arrows, then the charts' behaviour and colours. Rows with
         // colour strips pair up.
         TabColumn {
             width: dialog.contentRowWidth
@@ -340,6 +340,19 @@ AppDialog {
                 text: qsTr("Charts")
             }
             TabRow {
+                Field {
+                    label: qsTr("When a legend click hides a curve")
+                    FieldBox {
+                        readonly property list<string> choices: ["keep", "fit"]
+
+                        objectName: "preferences.hiddenRange"
+                        model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
+                        currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
+                    }
+                }
+            }
+            TabRow {
                 // The figure palette of experiments and structures, the Pattern and Stacked views alike (ADR-0084).
                 Field {
                     label: qsTr("Palette")
@@ -380,19 +393,6 @@ AppDialog {
                         dark: EaStyle.Colors.isDarkPalette
                         barWidth: dialog.columnWidth
                         barHeight: Math.round(EaStyle.Sizes.fontPixelSize * 0.4)
-                    }
-                }
-            }
-            TabRow {
-                Field {
-                    label: qsTr("When a legend click hides a curve")
-                    FieldBox {
-                        readonly property list<string> choices: ["keep", "fit"]
-
-                        objectName: "preferences.hiddenRange"
-                        model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
-                        currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
-                        onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
                     }
                 }
             }
@@ -606,16 +606,22 @@ AppDialog {
                                     }
                                 }
                             }
-                            EaElements.Label {
+                            // What it holds, as tags in the Examples list's style, one per kind with its icon.
+                            Row {
                                 objectName: "preferences.online.source.kinds." + onlineRow.model.id
-                                width: parent.width
                                 height: dialog.onlineLineHeight
                                 leftPadding: nameCell.leftPadding
-                                rightPadding: nameCell.rightPadding
-                                verticalAlignment: Text.AlignVCenter
-                                elide: Text.ElideRight
-                                color: EaStyle.Colors.themeForegroundMinor
-                                text: qsTr("Holds %1").arg(onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : k === "project" ? qsTr("projects") : qsTr("data")).join(", "))
+                                spacing: AppSizes.fieldSpacing / 2
+
+                                Repeater {
+                                    model: ApplicationInfo.sourceKindTags(onlineRow.kinds)
+                                    delegate: TagChip {
+                                        required property var modelData
+                                        label: modelData.label
+                                        icon: modelData.icon
+                                        ink: EaStyle.Colors.isDarkPalette ? modelData.dark : modelData.light
+                                    }
+                                }
                             }
                             Item {
                                 width: parent.width
@@ -645,12 +651,15 @@ AppDialog {
                     }
                     EaComponents.ListViewButton {
                         objectName: "preferences.online.source.enabled." + onlineRow.model.id
+                        // Square, as in a one-line row, centred in the taller row.
+                        height: EaStyle.Sizes.tableRowHeight
                         fontIcon: onlineRow.model.enabled ? "toggle-on" : "toggle-off"
                         ToolTip.text: onlineRow.model.enabled ? qsTr("Leave this source out of the From web… popup") : qsTr("Offer this source in the From web… popup")
                         onClicked: Session.onlineSources.setEnabled(onlineRow.model.id, !onlineRow.model.enabled)
                     }
                     EaComponents.ListViewButton {
                         objectName: "preferences.online.source.remove." + onlineRow.model.id
+                        height: EaStyle.Sizes.tableRowHeight
                         fontIcon: "minus-circle"
                         enabled: !onlineRow.builtin
                         ToolTip.text: onlineRow.builtin ? qsTr("A built-in source cannot be removed, only disabled") : qsTr("Remove this source")

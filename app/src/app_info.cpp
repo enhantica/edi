@@ -18,6 +18,7 @@
 #include "user_action_log.hpp"
 #include "web_files.hpp"
 #include "engine_setup.hpp"
+#include "edi/display.hpp"
 #include "edi/model.hpp"
 #include "edi/palette.hpp"
 #include "edi/assistant_files.hpp"
@@ -748,6 +749,35 @@ bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name, 
     QBuffer buffer(&data);
     if (picture.isNull() || !buffer.open(QIODevice::WriteOnly) || !picture.save(&buffer, "PNG")) return false;
     return edi_app::WebFiles::download(data, name);
+}
+
+QVariantList ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
+    // The tones of the Examples list's tags.
+    static const QJsonObject tones = [] {
+        QFile file(QStringLiteral(":/edi/examples/tags.json"));
+        return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()).object().value("tones").toObject() : QJsonObject();
+    }();
+    struct Kind {
+        const char* token;
+        QString label;
+        QString icon;
+        const char* tone;
+    };
+    // The icons of the app bar's Project, Structure and Experiment pages and of the Measured data group.
+    const Kind known[] = {{"structure", tr("Structures"), QStringLiteral("layer-group"), "structure"},
+                          {"experiment", tr("Experiments"), QStringLiteral("microscope"), "technique"},
+                          {"data", tr("Measured data"), QString::fromStdString(edi::category_icon("data")), "neutral"},
+                          {"project", tr("Projects"), QStringLiteral("archive"), "mode"}};
+    QVariantList tags;
+    for (const QString& kind : kinds) {
+        for (const Kind& k : known) {
+            if (kind != QLatin1String(k.token)) continue;
+            const QJsonObject tone = tones.value(QLatin1String(k.tone)).toObject();
+            tags.append(QVariantMap{{"label", k.label}, {"icon", k.icon}, {"light", tone.value("light").toString()},
+                                    {"dark", tone.value("dark").toString()}});
+        }
+    }
+    return tags;
 }
 
 QUrl ApplicationInfo::imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const {

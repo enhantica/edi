@@ -169,6 +169,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ComboCell.qml
         qml/Components/CrashDialog.qml
         qml/Components/DiagnosticsDialog.qml
+        qml/Components/TagChip.qml
         qml/Components/FeedbackDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml

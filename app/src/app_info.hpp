@@ -969,6 +969,9 @@ class ApplicationInfo : public QObject {
         const QString home = QDir::toNativeSeparators(QDir::homePath());
         return path.startsWith(home + QDir::separator()) ? QStringLiteral("~") + path.mid(home.size()) : path;
     }
+    // An online source's kinds as tags (Preferences' online sources): one {label, icon, light, dark} per kind, in the
+    // order given, with the icon the app uses for that kind and a tone of app/examples/tags.json.
+    Q_INVOKABLE QVariantList sourceKindTags(const QStringList& kinds) const;
     // A local path given as text, shown as shownPath shows it.
     Q_INVOKABLE QString shownLocalPath(const QString& path) const { return shownPath(QUrl::fromLocalFile(path)); }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {

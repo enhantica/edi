@@ -455,10 +455,12 @@ one selected row, and the row's number in the first column, bold in the accent c
   tab; every colour selector has a strip of its colours under it (ADR-0084); tables are framed with their header
   inside; tabs span the bar evenly; a read-only value is plain text on a box's row height, never drawn like an input
   (the owner, 2026-11-10); long values end with "…", paths are cut in the middle with the home folder as `~`.
-  Appearance: General (Theme), Structure view (Magnetic moment arrows), then Charts (Palette | Map colours, then When
-  a legend click hides a curve; the owner, 2026-11-10). Parallel fits in a scan is a plain list of every count up to the
-  machine's cores, opened by a click. Each online source is a row of three lines, as the Examples list's rows: its
-  name, what it holds and its URL, without a header.
+  Appearance: General (Theme), Structure view (Magnetic moment arrows), then Charts (When a legend click hides a curve,
+  then Palette | Map colours, so the rows with colour strips end the group; the owner, 2026-11-10). Parallel fits in a
+  scan is a plain list of every count up to the machine's cores, opened by a click. Each online source is a row of
+  three lines, as the Examples list's rows: its name, a tag per kind it holds (the Examples list's tags, each with the
+  icon the app uses for structures, experiments, measured data or projects) and its URL, without a header; its
+  switch and remove buttons stay square, centred in the row.
   Interface: tooltips, the fit's end and the sidebar and Text tab choices. Performance: the thread counts, the scan
   view drawing and the detected graphics. Advanced: the message level, Diagnostics and the settings file. Removed:
   Enable user guides, the Experimental tab, the feedback address (kept in the settings file, ADR-0063) and the
