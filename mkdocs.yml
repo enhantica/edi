@@ -183,6 +183,8 @@ nav:
           - user/cli/pd-neut-cwl_cosio-d20_scan-213f/index.md
           - user/cli/pd-xray-cwl_latp-bm01_scan/index.md
           - user/cli/sc-neut-cwl_tb2ti2o7-heidi/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/index.md
+          - user/cli/sc-neut-cwl_cosio-heidi/index.md
           - user/cli/sc-neut-cwl_pr2nio4-5c2/index.md
           - user/cli/sc-neut-tof_taurine-senju/index.md
       - Guides:
@@ -219,6 +221,8 @@ nav:
           - user/tutorials/pd-neut-cwl_cosio-d20_scan-213f.ipynb
           - user/tutorials/pd-xray-cwl_latp-bm01_scan.ipynb
           - user/tutorials/sc-neut-cwl_tb2ti2o7-heidi.ipynb
+          - user/tutorials/sc-neut-cwl_tb2ti2o7-heidi_simulation.ipynb
+          - user/tutorials/sc-neut-cwl_cosio-heidi.ipynb
           - user/tutorials/sc-neut-cwl_pr2nio4-5c2.ipynb
           - user/tutorials/sc-neut-tof_taurine-senju.ipynb
 
