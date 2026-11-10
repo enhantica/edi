@@ -5709,7 +5709,7 @@
     {
       "member": "FitResultRecord::undefined_su",
       "type": "std::vector<std::string>",
-      "not_storage": "the free parameters whose s.u. the fit could not compute, not saved"
+      "not_storage": "the free parameters without a computed s.u., not saved"
     },
     {
       "member": "FitResultRecord::prof_wr_factor",
