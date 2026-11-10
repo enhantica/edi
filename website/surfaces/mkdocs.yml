@@ -73,9 +73,9 @@ extra:
     Multiple datasets: layer-group
     Diffraction model: atom
     Peak profiles: shapes
-    Intensity corrections: sliders-h
+    Corrections: sliders-h
     Experiment model: microscope
-    Fitting and statistics: calculator
+    Fitting: calculator
   workflow_icons:
     Project: archive
     Structure: layer-group
@@ -88,7 +88,7 @@ nav:
   - Foundations:
     - user-guide/index.md
     - Features: user-guide/features.md
-    - From measurement to analysis: user-guide/concepts.md
+    - Concepts: user-guide/concepts.md
     - Data formats: user-guide/data-formats.md
     - Online sources: user-guide/online-sources.md
     - Parameters: user-guide/parameters.md
@@ -172,7 +172,7 @@ nav:
       - Experiment fit result: application/analysis/experiment-fit-result.md
       - Structure fit result: application/analysis/structure-fit-result.md
       - Parameters shown: application/analysis/parameters-shown.md
-      - Pattern updates during a scan: application/analysis/pattern-updates.md
+      - Pattern updates: application/analysis/pattern-updates.md
       - Performance: application/analysis/performance.md
     - Report:
       - application/report/index.md
@@ -233,26 +233,26 @@ nav:
       - physics/diffraction-model/index.md
       - Rietveld method: physics/rietveld.md
       - Crystallography: physics/crystallography.md
-      - Scattering and structure factors: physics/diffraction.md
+      - Structure factors: physics/diffraction.md
       - Magnetic structures: physics/magnetic.md
       - Atomic displacement: physics/displacement.md
     - Peak profiles:
       - physics/profiles/index.md
       - Constant wavelength: physics/profiles/cw.md
       - Time of flight: physics/profiles/tof.md
-    - Intensity corrections:
+    - Corrections:
       - physics/corrections/index.md
       - Absorption: physics/corrections/absorption.md
       - Extinction: physics/corrections/extinction.md
       - Preferred orientation: physics/corrections/orientation.md
-      - Lorentz and polarization: physics/corrections/intensity.md
+      - Lorentz–polarization: physics/corrections/intensity.md
     - Experiment model:
       - physics/experiment-model/index.md
-      - Calibration and peak positions: physics/calibration.md
+      - Calibration: physics/calibration.md
       - Background: physics/background.md
-    - Fitting and statistics:
+    - Fitting:
       - physics/fitting/index.md
-      - Minimization and uncertainty: physics/minimization.md
+      - Minimization: physics/minimization.md
       - Reliability factors: physics/reliability.md
 - About:
   - about/index.md
