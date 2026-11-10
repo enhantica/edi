@@ -226,7 +226,7 @@ table.correlations td {
 }
 /* The fitted parameters' column notes: one term to a line, the explanations aligned. */
 .column-notes { list-style: disc; margin: 0 0 9.5pt; padding-left: 1.4em; font-size: 0.92em; }
-.column-notes .term { display: inline-block; min-width: 3.6em; font-weight: 700; }
+.column-notes .term { display: inline-block; min-width: 4.4em; margin-right: 0.5em; font-weight: 700; }
 /* A pattern chart's tick-row label: the structure's icon and name, as the app's chart writes them. */
 .pattern-row-label {
   position: absolute;
@@ -1135,13 +1135,20 @@ ReportLibraries read_report_libraries(const std::filesystem::path& data_dir) {
 
 namespace {
 
-// The view's page: the report's paper, no page shell round it.
+// The view's page: the report's paper, no page shell round it. It sets its own fonts, the app's (Noto Sans, then the
+// system's sans), as it is shown in pages that set none of theirs, a notebook in Colab for one (the owner, 2026-11-10).
 constexpr const char* kViewStyle = R"css(
-html, body { background: var(--paper); padding: 0; }
+:root {
+  --body-font: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --head-font: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+html, body { background: var(--paper); padding: 0; font-family: var(--body-font); }
 .report-view { padding: 8px 12px; }
 .report-view > h3:first-child { margin-top: 0; }
 /* A notebook page's tables fill its width, as the site's do (owner record 2026-11-09); a saved report keeps its own. */
 .report-view table { width: 100%; }
+/* The correlations sized to their content: the names beside the matrix, not the matrix at the far right. */
+.report-view table.correlations { width: auto; }
 .report-view td.wrap { white-space: normal; }
 )css";
 
