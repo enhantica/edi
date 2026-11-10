@@ -1263,7 +1263,7 @@
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-analysis_model.png"
+   "path": "assets/concepts/dark/data-analysis_model.png"
   },
   {
    "theme": "light",
@@ -1271,7 +1271,7 @@
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-analysis_refinement.png"
+   "path": "assets/concepts/dark/data-analysis_refinement.png"
   },
   {
    "theme": "light",
@@ -1279,7 +1279,7 @@
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-reduction_1d-pattern.png"
+   "path": "assets/concepts/dark/data-reduction_1d-pattern.png"
   }
  ]
 }

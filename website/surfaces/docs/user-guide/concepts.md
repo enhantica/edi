@@ -28,7 +28,7 @@ Record the detector response while the sample scatters the incident beam. This e
 Apply the relevant corrections and turn detector measurements into observations with uncertainties. For powder diffraction, these are often a one-dimensional intensity profile.
 
 <div class="ed-concept-figures ed-concept-figures--single">
-<figure><figcaption>Reduced diffraction pattern</figcaption><img src="../assets/concepts/data-reduction_1d-pattern.png" alt="A reduced one-dimensional diffraction pattern with intensity peaks" width="1631" height="931" loading="lazy"></figure>
+<figure><figcaption>Reduced diffraction pattern of Co₂SiO₄ at 2.3 K</figcaption><img src="../assets/concepts/data-reduction_1d-pattern.png#only-light" alt="The measured neutron powder pattern of Co₂SiO₄ at 2.3 K from D20, intensity against 2θ, as EasyDiffraction draws it" width="892" height="728" loading="lazy"><img src="../assets/concepts/dark/data-reduction_1d-pattern.png#only-dark" alt="The measured neutron powder pattern of Co₂SiO₄ at 2.3 K from D20, intensity against 2θ, as EasyDiffraction draws it" width="892" height="728" loading="lazy"></figure>
 </div>
 
 ### :fa5-calculator: Analysis
@@ -36,13 +36,13 @@ Apply the relevant corrections and turn detector measurements into observations 
 Compare a calculated pattern with the observations, fit the model and inspect the result. **EasyDiffraction focuses on this stage.**
 
 <div class="ed-concept-figures">
-<figure><figcaption>Measured, calculated and residual patterns</figcaption><img src="../assets/concepts/data-analysis_refinement.png" alt="Measured intensity in blue, calculated intensity in red and their residual in grey" width="1631" height="931" loading="lazy"></figure>
-<figure><figcaption>Crystal structure model</figcaption><img src="../assets/concepts/data-analysis_model.png" alt="A crystal structure represented by atoms and bonds inside a unit cell" width="1142" height="684" loading="lazy"></figure>
+<figure><figcaption>Measured, calculated and residual patterns of Co₂SiO₄ at 2.3 K</figcaption><img src="../assets/concepts/data-analysis_refinement.png#only-light" alt="The Co₂SiO₄ pattern at 2.3 K fitted in EasyDiffraction: measured and calculated intensities with the background, Bragg ticks of the nuclear and the magnetic phase, and the residual below" width="895" height="728" loading="lazy"><img src="../assets/concepts/dark/data-analysis_refinement.png#only-dark" alt="The Co₂SiO₄ pattern at 2.3 K fitted in EasyDiffraction: measured and calculated intensities with the background, Bragg ticks of the nuclear and the magnetic phase, and the residual below" width="895" height="728" loading="lazy"></figure>
+<figure><figcaption>Magnetic structure model of Co₂SiO₄</figcaption><img src="../assets/concepts/data-analysis_model.png#only-light" alt="The Co₂SiO₄ unit cell in the EasyDiffraction structure view: cobalt, silicon and oxygen atoms with bonds, arrows for the magnetic moments on the cobalt atoms, and the atom legend" width="705" height="496" loading="lazy"><img src="../assets/concepts/dark/data-analysis_model.png#only-dark" alt="The Co₂SiO₄ unit cell in the EasyDiffraction structure view: cobalt, silicon and oxygen atoms with bonds, arrows for the magnetic moments on the cobalt atoms, and the atom legend" width="705" height="496" loading="lazy"></figure>
 </div>
 
 ??? info "Illustration credits"
 
-    These illustrations are reused from the [earlier EasyDiffraction concept guide](https://docs.easydiffraction.org/lib/latest/user-guide/concept/). Its detector and diffraction example is credited to [Bish et al., Science (2013)](https://doi.org/10.1126/science.1238932). They illustrate the processing stages; the tutorials use their own measured examples.
+    The instrument and detector illustrations are reused from the [earlier EasyDiffraction concept guide](https://docs.easydiffraction.org/lib/latest/user-guide/concept/). Its detector and diffraction example is credited to [Bish et al., Science (2013)](https://doi.org/10.1126/science.1238932). The reduced pattern, the fitted pattern and the structure model are rendered by EasyDiffraction from its Co₂SiO₄ example: neutron powder data at 2.3 K from D20 at the ILL.
 
 Keep the reduction history and experimental context with the project: they affect how uncertainties and agreement factors should be interpreted.
 
