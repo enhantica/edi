@@ -19,30 +19,6 @@ import edi.app
 AppDialog {
     id: dialog
 
-    // A licence text, plain and read-only, scrolling within the space it is given.
-    component LicenceText: Flickable {
-        id: flickable
-
-        property alias text: textArea.text
-        property alias textObjectName: textArea.objectName
-
-        contentHeight: textArea.implicitHeight
-        clip: true
-        ScrollBar.vertical: EaElements.ScrollBar {
-            policy: ScrollBar.AsNeeded
-        }
-
-        EaElements.TextArea {
-            id: textArea
-
-            width: flickable.width
-            readOnly: true
-            wrapMode: TextEdit.Wrap
-            textFormat: TextEdit.PlainText
-            font.family: EaStyle.Fonts.monoFontFamily
-        }
-    }
-
     objectName: "about"
     visible: EaGlobals.Vars.showAppAboutDialog
     // As soon as closing starts: a close before the opening has finished emits no closed(), and the flag would show
@@ -133,8 +109,8 @@ AppDialog {
         }
     }
 
-    // One of edi's own licences as plain text (LICENSE, COPYING).
-    AppDialog {
+    // One of edi's own licences as plain text (LICENSE, COPYING), an information window (InfoDialog).
+    InfoDialog {
         id: licencePopup
 
         property string licence: ""
@@ -143,13 +119,10 @@ AppDialog {
         parent: Overlay.overlay
         standardButtons: Dialog.Ok
         contentWidth: AppSizes.aboutWidth
-        contentHeight: AppSizes.aboutHeight
-
-        LicenceText {
-            anchors.fill: parent
-            textObjectName: "about.licence.text"
-            text: licencePopup.licence
-        }
+        maximumTextHeight: AppSizes.aboutHeight
+        monospace: true
+        textObjectName: "about.licence.text"
+        text: licence
     }
 
     // The third-party components this build bundles: component, version and licence. The table is as wide as its

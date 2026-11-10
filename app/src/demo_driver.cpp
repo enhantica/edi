@@ -1293,13 +1293,19 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"rows-5-parameters-down-row-3", {"key:Down"}});
         steps_.push_back({"rows-6-parameters-free-row-4", {"reveal:parameters.free.3", "parameters.free.3"}});
     }
-    // The About window and its two popups, in both themes. Run only when asked (`--demo-only about-`).
+    // The About window and its two popups, then How to cite and Diagnostics, in both themes. Run only when asked
+    // (`--demo-only about-`).
     if (only.startsWith(QLatin1String("about-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString first = theme == QLatin1String("light") ? QStringLiteral("resize:1280x960") : QStringLiteral("key:Escape");
             steps_.push_back({"about-" + theme + "-1-window", {first, "theme:" + theme, "appBar.tab.home", "home.about"}});
             steps_.push_back({"about-" + theme + "-2-bsd", {"about.licence.BSD-3-Clause"}});
             steps_.push_back({"about-" + theme + "-3-third-party", {"key:Escape", "about.thirdParty"}});
+            // The other information windows (InfoDialog): How to cite and Diagnostics.
+            steps_.push_back({"about-" + theme + "-4-citation", {"key:Escape", "key:Escape", "home.cite"}});
+            steps_.push_back({"about-" + theme + "-5-diagnostics", {"key:Escape", "appBar.button.preferences",
+                                                                    "preferences.tab.advanced", "preferences.diagnostics"}});
+            steps_.push_back({"about-" + theme + "-6-closed", {"key:Escape", "key:Escape"}});
         }
     }
     if (only.startsWith(QLatin1String("perf-"))) {

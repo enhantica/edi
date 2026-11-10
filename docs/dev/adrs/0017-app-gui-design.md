@@ -58,6 +58,11 @@ The decisions it rests on, unchanged here:
 - **Online documentation** opens `https://docs.easydiffraction.org/app/` (`ApplicationInfo.docsUrl`, idea 4),
   from Home and from the app bar. **Amended 2026-11-02 (ADR-0065):** the documentation is `https://enhantica.github.io/edi/`, and Home's links
   are two columns, Learn and Contact and about.
+- **Information windows** (the owner, 2026-11-10) share one style, `InfoDialog`: the text in the app's white panel
+  with a light border, selectable and scrolling when long, and one bottom row of background-less buttons, the
+  window's own actions left of its standard button. How to cite (DOI with the external-link icon, Copy as text, Copy
+  as BibTeX, Close), Diagnostics (Copy as text, OK) and About's licence texts use it; Fit results' Show evolution is a
+  bottom-row button the same way.
 
 ### 2. The main area and the Experiment type group
 
