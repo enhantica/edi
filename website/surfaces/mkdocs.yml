@@ -43,7 +43,7 @@ extra_javascript:
   # Written by build.py from the app's settings.
   - assets/feedback-form.js
   - assets/contact-form.js?v=1
-  - assets/survey/survey.js?v=2
+  - assets/survey/survey.js?v=4
 extra:
   interface_icons:
     Application: [fa5/desktop]

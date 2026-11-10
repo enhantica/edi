@@ -7,12 +7,16 @@
   // Read while the script runs: events.json sits beside it.
   const eventsUrl = new URL('events.json', document.currentScript ? document.currentScript.src : window.location.href).href;
 
-  // A 1-5 (or 0-10) rating as select options, the ends named.
-  const rating = (low, high, lowWord, highWord) =>
-    Array.from({ length: high - low + 1 }, (_, i) => {
-      const n = low + i;
-      return { value: String(n), text: n === low ? `${n} — ${lowWord}` : n === high ? `${n} — ${highWord}` : String(n) };
-    });
+  // A rating as select options, each named so it reads without the column header: the number, then its words; a
+  // longer scale names only some points. The value stored is the number.
+  const scale = (start, words) =>
+    words.map((word, i) => ({ value: String(start + i), text: word ? `${start + i} ${word}` : String(start + i) }));
+  const interest = scale(1, ['Not interested at all', 'Slightly interested', 'Moderately interested', 'Very interested', 'Extremely interested']);
+  const ease = scale(1, ['Very hard', 'Hard', 'Neither hard nor easy', 'Easy', 'Very easy']);
+  const helpful = scale(1, ['Not helpful at all', 'Slightly helpful', 'Moderately helpful', 'Very helpful', 'Extremely helpful']);
+  const fit = scale(1, ['Fits very poorly', 'Fits poorly', 'Fits somewhat', 'Fits well', 'Fits very well']);
+  const likely = scale(0, ['Not at all likely', '', '', '', '', 'Neither likely nor unlikely', '', '', '', '', 'Extremely likely']);
+  const quality = scale(1, ['Very poor', 'Poor', 'Fair', 'Good', 'Very good']);
   const interfaces = [
     ['web', 'Web application'],
     ['desktop', 'Desktop application'],
@@ -42,10 +46,10 @@
     {
       title: 'Your experience so far',
       questions: [
-        { key: 'install', kind: 'rating', text: 'Installing and starting it', choices: rating(1, 5, 'hard', 'easy'), skip: 'Not tried' },
-        { key: 'docs', kind: 'rating', text: 'Documentation and tutorials', choices: rating(1, 5, 'not helpful', 'very helpful'), skip: 'Not read' },
-        { key: 'features', kind: 'rating', text: 'How well the features fit your work', choices: rating(1, 5, 'poorly', 'well'), skip: 'Not sure' },
-        { key: 'likely', kind: 'rating', text: 'How likely you are to use it for your work', choices: rating(0, 10, 'not at all', 'certainly') },
+        { key: 'install', kind: 'rating', text: 'Installing and starting it', choices: ease, skip: 'Not tried' },
+        { key: 'docs', kind: 'rating', text: 'Documentation and tutorials', choices: helpful, skip: 'Not read' },
+        { key: 'features', kind: 'rating', text: 'How well the features fit your work', choices: fit, skip: 'Not sure' },
+        { key: 'likely', kind: 'rating', text: 'How likely you are to use it for your work', choices: likely },
         { key: 'missing', kind: 'texts', count: 3, text: 'Up to three missing features you would need' },
         { key: 'wishes', kind: 'texts', count: 3, text: 'Up to three features that would be nice to have' },
       ],
@@ -54,11 +58,11 @@
       title: 'AI help',
       key: 'ai',
       questions: [
-        { key: 'ai_interest', kind: 'rating', text: 'Your interest in AI help for diffraction', choices: rating(1, 5, 'low', 'high'), skip: 'Not interested' },
+        { key: 'ai_interest', kind: 'rating', text: 'Your interest in AI help for diffraction', choices: interest, skip: 'Not interested, skip this section' },
         { key: 'ai_access', kind: 'one', text: 'How you would prefer to get access', choices: ['Sign in with my existing subscription', 'My own API key (pay per use)', 'Provided by my institution', 'Only if free', 'Not sure'] },
         { key: 'ai_data', kind: 'one', text: 'Sending your data to an AI provider is', choices: ['Fine', 'Fine without the measured data', 'Not allowed for my work', 'Not sure'] },
-        { key: 'ai_assistant', kind: 'rating', text: "The app's built-in assistant, if you tried it", choices: rating(1, 5, 'poor', 'very good'), skip: "Didn't try" },
-        { key: 'ai_uses', kind: 'many', text: 'How you would like to use it', choices: ["The app's built-in assistant", 'My own assistant writing notebooks or projects', 'Converting projects from other programs', 'Explaining fit results or suggesting a fit strategy', 'Other'] },
+        { key: 'ai_assistant', kind: 'rating', text: "The app's built-in assistant, if you tried it", choices: quality, skip: "Didn't try" },
+        { key: 'ai_uses', kind: 'many', text: 'How you would like to use it', choices: ["The app's built-in assistant", 'My own assistant writes notebooks', "Converting other programs' projects", 'Explaining fits or suggesting a strategy', 'Other'] },
         { key: 'ai_providers', kind: 'many', text: 'Providers you use or could use', choices: ['None', 'ChatGPT (OpenAI)', 'Claude (Anthropic)', 'GitHub Copilot', 'Gemini (Google)', 'A local or self-hosted model', 'A service from my institution', 'Other'] },
         { key: 'ai_assistant_note', kind: 'text', text: 'What worked or did not in the built-in assistant', wide: true },
       ],
@@ -149,8 +153,8 @@
     return [...titles, ...q.rows.flatMap(([key, label]) => {
       const heading = element('p', { class: 'ed-survey-subhead ed-survey-wide', text: label });
       const pair = [
-        ['interest', 'Interest', rating(1, 5, 'low', 'high')],
-        ['ease', 'Ease of use', [...rating(1, 5, 'hard', 'easy'), { value: 'skip', text: 'Not tried' }]],
+        ['interest', 'Interest', interest],
+        ['ease', 'Ease of use', [...ease, { value: 'skip', text: 'Not tried' }]],
       ].map(([what, title, options]) => {
         const box = select(`${what}_${key}`, options);
         box.id = id(`${what}_${key}`);
