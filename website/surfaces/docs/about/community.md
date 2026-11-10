@@ -6,6 +6,8 @@ icon: fa5/comments
 
 Send a question, feedback, a problem or an idea with the form below. It reaches the same people as the app's Help and feedback.
 
+Have 15 minutes? The [survey](survey.md) asks how you work and what you need, and it shapes what we build next.
+
 <form class="ed-contact-form" action="#" method="post" aria-label="Get in touch">
 <select name="reason" aria-label="Reason"></select>
 <div class="ed-contact-row">

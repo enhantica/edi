@@ -43,7 +43,7 @@ application built from it under the
 - 🧪 [Tutorials](https://enhantica.github.io/edi/user-guide/tutorials/)
 - ⬇️ [Releases](https://github.com/enhantica/edi/releases)
 - 💬 [Get in Touch](https://enhantica.github.io/edi/about/community/)
-- 🧾 [Citation](https://enhantica.github.io/edi/about/citation/)
+- 🧾 [How to cite](https://enhantica.github.io/edi/about/citation/)
 
 ### For Contributors
 

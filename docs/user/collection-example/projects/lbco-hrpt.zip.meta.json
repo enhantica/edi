@@ -1,0 +1,17 @@
+{
+ "id": "lbco-hrpt-project",
+ "elements": [
+  "Ba",
+  "Co",
+  "La",
+  "O"
+ ],
+ "formula": "Ba Co La O",
+ "name": "La₀.₅Ba₀.₅CoO₃ project",
+ "description": "A whole project: structure, experiment and analysis settings",
+ "radiation": "neutron",
+ "technique": "powder constant wavelength",
+ "instrument": "HRPT",
+ "facility": "PSI",
+ "source": "EasyDiffraction"
+}

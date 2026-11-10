@@ -43,6 +43,7 @@ extra_javascript:
   # Written by build.py from the app's settings.
   - assets/feedback-form.js
   - assets/contact-form.js?v=1
+  - assets/survey/survey.js?v=1
 extra:
   interface_icons:
     Application: [fa5/desktop]
@@ -89,6 +90,7 @@ nav:
     - Features: user-guide/features.md
     - Concept: user-guide/concepts.md
     - Data formats: user-guide/data-formats.md
+    - Online sources: user-guide/online-sources.md
     - Parameters: user-guide/parameters.md
     - Glossary: user-guide/glossary.md
   - Analysis workflow:
@@ -255,8 +257,9 @@ nav:
 - About:
   - about/index.md
   - Get in touch: about/community.md
+  - Survey: about/survey.md
   - Licence: about/licence.md
-  - Citation: about/citation.md
+  - How to cite: about/citation.md
   - What's new: changelog.md
 plugins:
   - search
