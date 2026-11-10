@@ -11,15 +11,15 @@ import edi.app
 
 // The one main view of the Structure, Experiment and Analysis pages (the owner, 2026-11-10; edi ADR-0017 §2): it stays
 // where it is while the app bar's pages change only the sidebar beside it. Its tabs are every view those pages had,
-// once: Structure, Pattern, Correlations, Stacked, Map and Evolution. Opening a page keeps the shown tab, and switches
-// only when that tab cannot show anything yet. The block selector above the views lists the structures on the
-// Structure tab and the experiments on the others.
+// once: Structure, Pattern, Correlations, Stacked, Map and Evolution. A page's first visit opens its own tab; later the
+// shown tab stays. The block selector above the views lists the structures on the Structure tab and the experiments on
+// the others.
 EaComponents.MainContent {
     id: view
 
     // On screen: one of the three pages is shown.
     property bool shown: false
-    // The page whose sidebar is shown, an AppState.Page value: the tab it opens on when the shown one cannot show.
+    // The page whose sidebar is shown, an AppState.Page value: its first visit opens its own tab.
     property int page: -1
 
     readonly property ProjectViewModel project: Session.project
@@ -44,25 +44,23 @@ EaComponents.MainContent {
         if (bar)
             bar.currentIndex = index;
     }
-    // The shown tab stays while it can show something; else the page's own: Structure on the Structure page, Pattern
-    // on the others, or whichever of the two can show.
-    function keepShowable() {
-        if (!bar || !shown)
+    // The first visit to a page in a project selects the page's own tab, Structure on the Structure page and Pattern on
+    // the others, even with nothing to show yet; after that the tab the user is on stays across page switches until
+    // they pick another, and the view never switches by itself (the owner, 2026-11-11; edi ADR-0017 §2).
+    property var visitedPages: ({})
+    function openOwnTabOnFirstVisit() {
+        if (!bar || !shown || page < 0 || visitedPages[page])
             return;
-        const tab = bar.itemAt(bar.currentIndex);
-        if (tab && tab.enabled && tab.visible)
-            return;
-        const wanted = page === AppState.Page.Structure ? 0 : 1;
-        const other = wanted === 0 ? 1 : 0;
-        showMainTab(bar.itemAt(wanted) && bar.itemAt(wanted).enabled ? wanted : other);
+        visitedPages[page] = true;
+        showMainTab(page === AppState.Page.Structure ? 0 : 1);
     }
-    onPageChanged: keepShowable()
-    onShownChanged: keepShowable()
-    onHasStructuresChanged: Qt.callLater(keepShowable)
-    onHasExperimentsChanged: Qt.callLater(keepShowable)
-    onScanModeChanged: Qt.callLater(keepShowable)
-    onPatternViewsChanged: Qt.callLater(keepShowable)
-    onMeasuredChanged: Qt.callLater(keepShowable)
+    onProjectChanged: {
+        visitedPages = {};
+        openOwnTabOnFirstVisit();
+    }
+    onPageChanged: openOwnTabOnFirstVisit()
+    onShownChanged: openOwnTabOnFirstVisit()
+    onBarChanged: openOwnTabOnFirstVisit()
 
     Connections {
         target: AppState
@@ -118,6 +116,8 @@ EaComponents.MainContent {
 
             structure: view.project ? view.project.currentStructure : null
             options: view.project ? view.project.structureViewOptions : null
+            // With no structure the tab shows only its empty state, no view and no toolbar.
+            visible: view.hasStructures
             shown: view.shown && SwipeView.isCurrentItem
         },
         ProjectPatternChart {
@@ -126,6 +126,7 @@ EaComponents.MainContent {
             experiment: view.project ? view.project.currentExperiment : null
             axisProject: view.project
             settingsPage: "pattern"
+            visible: view.hasExperiments
             shown: view.shown && SwipeView.isCurrentItem
         },
         CorrelationChart {
@@ -206,10 +207,11 @@ EaComponents.MainContent {
         value: blockSelector.reservedHeight
     }
 
-    // Before the project has a structure or an experiment, the area says so, as the pages did.
+    // The Structure and Pattern tabs' empty states, as the pages had them: on the shown tab, when it has nothing to draw.
     EmptyStateLabel {
+        objectName: "mainArea.emptyState"
         anchors.centerIn: parent
-        visible: !view.hasStructures && !view.hasExperiments
-        text: qsTr("No structures defined")
+        visible: (view.tabIndex === 0 && !view.hasStructures) || (view.tabIndex === 1 && !view.hasExperiments)
+        text: view.tabIndex === 0 ? qsTr("No structures defined") : qsTr("No pattern")
     }
 }

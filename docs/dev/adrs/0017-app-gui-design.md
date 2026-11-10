@@ -70,12 +70,23 @@ The decisions it rests on, unchanged here:
   and Analysis pages share one main view, `MainView`, with the tabs Structure, Pattern, Correlations, Stacked, Map and
   Evolution (`mainArea.tab.structure`, `.pattern`, `.correlations`, `.stacked`, `.map`, `.evolution`). It is drawn over
   those pages' main area in the pages' view, which stays put while the pages slide, so the app bar's pages change only
-  the sidebar. Opening a page keeps the shown tab and switches only when that tab cannot show anything yet: to
-  Structure on the Structure page, to Pattern on the others. A tab that cannot show is disabled, as before (Correlations
-  before a fit, Stacked and Map without a scan or a joint fit, Evolution outside the scan modes). The block selector
-  above the views lists the structures on the Structure tab and the experiments on the others. Project and Report keep
-  their own main views. Each view exists once, so a structure edited on the Analysis page's slider redraws in the
-  Structure tab beside it.
+  the sidebar. Which tab is shown (the owner, 2026-11-11):
+
+  | When                                       | Shown tab                                                  |
+  | ------------------------------------------ | ---------------------------------------------------------- |
+  | first visit to Structure in this project   | Structure                                                  |
+  | first visit to Experiment in this project  | Pattern                                                    |
+  | first visit to Analysis in this project    | Pattern                                                    |
+  | any later page switch                      | the tab already shown, until the user picks another         |
+  | a project is opened or created             | first visits start again                                   |
+
+  The view never switches tabs by itself. A shown tab with nothing to draw shows its empty state, with no view and no
+  toolbar: Structure says "No structures defined", Pattern "No pattern". The tabs the user cannot pick are disabled
+  (Structure without a structure, Pattern without an experiment, Correlations before a fit, Stacked and Map without a
+  scan or a joint fit, Evolution outside a scan). The divider between the main view and the sidebar belongs to the
+  main view, so it stays put while the pages slide. The block selector above the views lists the structures on the
+  Structure tab and the experiments on the others. Project and Report keep their own main views. Each view exists
+  once, so a structure edited on the Analysis page's slider redraws in the Structure tab beside it.
 - **The supported minimum app size** (the owner, 2026-10-25) is 1024 × 640 logical pixels, `AppSizes.minimumAppWidth`
   and `minimumAppHeight`, one value for both of its uses. It was checked on every page at that size (`edi_app --demo
   <dir> --demo-only minimum-`): every page's sidebar reaches each input by scrolling, a group's fields stay on one row,
