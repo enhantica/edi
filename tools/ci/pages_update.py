@@ -67,9 +67,15 @@ def deployed_base(artifacts, read_jobs) -> dict:
     )
 
 
-def overlay_component(site: Path, incoming: Path, component: str) -> None:
-    """Replace only the built component in a disposable copy of the deployed site."""
-    if not (site / 'index.html').is_file() or not (site / 'webapp/index.html').is_file():
+def overlay_component(site: Path, incoming: Path, component: str, *, first: bool = False) -> None:
+    """Replace only the built component in a disposable copy of the deployed site.
+
+    The very first deployment starts from an empty site with the documentation, and the web app
+    joins it next, so only the release components need both parts already deployed.
+    """
+    if not first and not (site / 'index.html').is_file():
+        raise RuntimeError('The deployed base must contain documentation')
+    if component in {'release', 'installers'} and not (site / 'webapp/index.html').is_file():
         raise RuntimeError('The deployed base must contain documentation and the web app')
     if component == 'docs':
         if not (incoming / 'index.html').is_file() or any(
@@ -89,7 +95,7 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
                 child.unlink()
         shutil.copytree(incoming, site, dirs_exist_ok=True)
     elif component == 'wasm':
-        shutil.rmtree(site / 'webapp')
+        shutil.rmtree(site / 'webapp', ignore_errors=True)
         subprocess.run(
             ['bash', str(Path(__file__).with_name('docs-webapp.sh')), str(incoming), str(site)],
             check=True,
@@ -394,7 +400,7 @@ def main() -> None:
             raise
         print('No Pages deployment yet: starting from an empty site')
         args.site.mkdir(parents=True)
-        overlay_component(args.site, args.incoming, args.component)
+        overlay_component(args.site, args.incoming, args.component, first=True)
         check_site_size(args.site)
         return
     print(
