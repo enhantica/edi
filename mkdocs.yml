@@ -246,6 +246,7 @@ exclude_docs: |
 # already offers it for download.
 hooks:
   - tools/docs/features_projection_hook.py
+  - tools/docs/notebook_frames_hook.py
 
 plugins:
   - search
