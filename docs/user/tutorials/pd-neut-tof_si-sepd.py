@@ -83,9 +83,9 @@ project.display.pattern('sepd')
 # %% [markdown]
 # ### Gaussian widths
 #
-# The background stays free while the widths join. diffraction-lib fixes it for this step and leaves
-# it fixed; here the fit reaches the same result with it free, as every other case does. The
-# Gaussian terms come first.
+# The background stays free while the widths join. diffraction-lib fixes it for this step and
+# leaves it fixed; here the fit reaches the same result with it free, as every other case does.
+# The Gaussian terms come first.
 
 # %%
 experiment.peak.broad_gauss_sigma_0.free = True

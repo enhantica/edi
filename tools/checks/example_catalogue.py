@@ -302,8 +302,8 @@ def fetched(source: str) -> list[str]:
 def check_tutorial(root: Path, case: str, problems: list[str]) -> str | None:
     """A tutorial builds its case from the collection's entries, or loads the case's project.
 
-    The owner's tutorials (2026-11-08) build the case from its structures and data; a tutorial about
-    loading a project loads its case's. Either way every file comes from the case's own entries.
+    A tutorial builds the case from its structures and data; a tutorial about loading a project
+    loads its case's. Either way every file comes from the case's own entries.
     """
     source = root / TUTORIALS_DIR / f'{case}.py'
     notebook = root / TUTORIALS_DIR / f'{case}.ipynb'

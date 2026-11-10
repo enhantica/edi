@@ -35,19 +35,41 @@ structure.cell.length_a = 3.88
 
 # %%
 structure.atom_sites.create(
-    id='La', type_symbol='La', fract_x=0, fract_y=0, fract_z=0, wyckoff_letter='a',
-    occupancy=0.5, adp_iso=0.5,
-)
-structure.atom_sites.create(
-    id='Ba', type_symbol='Ba', fract_x=0, fract_y=0, fract_z=0, wyckoff_letter='a',
-    occupancy=0.5, adp_iso=0.5,
-)
-structure.atom_sites.create(
-    id='Co', type_symbol='Co', fract_x=0.5, fract_y=0.5, fract_z=0.5, wyckoff_letter='b',
+    id='La',
+    type_symbol='La',
+    fract_x=0,
+    fract_y=0,
+    fract_z=0,
+    wyckoff_letter='a',
+    occupancy=0.5,
     adp_iso=0.5,
 )
 structure.atom_sites.create(
-    id='O', type_symbol='O', fract_x=0, fract_y=0.5, fract_z=0.5, wyckoff_letter='c',
+    id='Ba',
+    type_symbol='Ba',
+    fract_x=0,
+    fract_y=0,
+    fract_z=0,
+    wyckoff_letter='a',
+    occupancy=0.5,
+    adp_iso=0.5,
+)
+structure.atom_sites.create(
+    id='Co',
+    type_symbol='Co',
+    fract_x=0.5,
+    fract_y=0.5,
+    fract_z=0.5,
+    wyckoff_letter='b',
+    adp_iso=0.5,
+)
+structure.atom_sites.create(
+    id='O',
+    type_symbol='O',
+    fract_x=0,
+    fract_y=0.5,
+    fract_z=0.5,
+    wyckoff_letter='c',
     adp_iso=0.5,
 )
 
