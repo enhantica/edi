@@ -90,6 +90,9 @@ def test_stacked_uses_palette_while_map_retains_its_selector():
     assert '"preferences.mapColours"' in source, (
         'Map must retain its independent colour map selector'
     )
+    assert 'scanStackedPalette' not in source, (
+        'Stacked must follow the single shared palette without storing a separate selection'
+    )
     location = source.find('"preferences.stackedColours"')
     if location >= 0:
         end = source.find('\n            }', location)
