@@ -624,7 +624,7 @@ class Report:
     replacing it for that call only; none of them
     changes a setting. Two more keywords are choices of the call alone, as the app makes them
     from its Preferences and its Analysis page: ``colour_scheme``, a figure palette's token
-    (by default ``'earth'``; ``'classic'``, ``'soft'``, ``'natural'`` and ``'colourBlindSafe'``,
+    (by default ``'main'``, or ``'colourBlindSafe'``;
     ``data/palettes/PROVENANCE.md``), and
     ``correlation_experiment``, the name of the experiment whose parameters the correlation chart
     shows in a fit of several (by default the first). ``check`` judges every saved report with

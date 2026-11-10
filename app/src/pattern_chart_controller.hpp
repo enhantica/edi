@@ -379,7 +379,7 @@ class PatternChartController : public QObject {
     QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
     bool fills_cleared_ = false;  // a drag holds the filled areas empty until the release
-    QString colour_scheme_ = QStringLiteral("earth");
+    QString colour_scheme_ = QStringLiteral("main");
     // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
     // project's experiments in the colour scheme.
     std::vector<edi::SeriesStyle> styles() const;

@@ -53,7 +53,7 @@ function(edi_core_sources root out)
 
     # The figure palettes (data/palettes, PROVENANCE.md beside them) are embedded the same way, one per
     # edi::ColourScheme in its order; a change reconfigures.
-    set(EDI_PALETTES earth classic soft natural colour-blind-safe)
+    set(EDI_PALETTES main colour-blind-safe)
     set(EDI_PALETTE_TABLES "")
     set(EDI_PALETTE_DECLARATIONS "")
     set(EDI_PALETTE_N 0)
