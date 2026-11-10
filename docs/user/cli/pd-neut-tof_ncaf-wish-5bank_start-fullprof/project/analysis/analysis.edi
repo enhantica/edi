@@ -3,7 +3,6 @@ _edi.schema_version 2
 _fitting_mode.type joint
 
 _minimizer.chi_square_tolerance 1e-4
-_minimizer.stop_rule shift_su
 
 loop_
 _joint_fit.experiment_id

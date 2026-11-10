@@ -4657,6 +4657,11 @@ struct FitResultBase {
     double reduced_chi_square = 0.0;  // reduced chi-square (goodness-of-fit)
     int iterations = 0;
     bool converged = false;
+    // What stopped the fit (a stop rule's token, max_iterations, or another stop), its value, and the last step's
+    // largest shift over its s.u., as crysta reports them.
+    std::string stopping_rule;
+    double stopping_value = std::numeric_limits<double>::quiet_NaN();
+    double last_shift_su = std::numeric_limits<double>::quiet_NaN();
     // . Both point counts, named — reporting only one of them under a `pts` heading is: `loaded`
     // is what the project carried, `fitted` is what entered the residual (after each bank's
     // excluded regions), and reduced chi-square is normalised by the FITTED count. On the
@@ -4987,6 +4992,11 @@ struct FitResultRecord {
     // The descent that produced the result, so a reopened result names its own minimizer rather than the
     // one selected since; empty in a record written before it.
     std::string descent;
+    // What stopped the fit, its value and the last step's largest shift/s.u.; empty or none in a
+    // record written before them.
+    std::string stopping_rule;
+    std::optional<double> stopping_value;
+    std::optional<double> last_shift_su;
     // The free parameters' correlations from the fit's covariance, every pair of the upper triangle in the
     // fit's column order (diffraction-lib's `_store_correlation_projection`); empty when the fit had fewer
     // than two free parameters or no usable covariance. A scan holds no result but keeps each file's pairs,
@@ -5263,7 +5273,7 @@ class Project : public detail::ProjectAnchor {
     double minimizer_chi_square_tolerance = 0.0;
     // The declared stop rule, `chi_square_change` or `shift_su` (empty = not declared -> the χ² change), and the
     // Shift/s.u. value (0 = not declared -> crysta's default, 0.1).
-    std::string minimizer_stop_rule;
+    std::string minimizer_stop_rules;
     double minimizer_shift_tolerance = 0.0;
     // Whether a fit tries free magnetic moments at exactly zero: `try_exact_zero` or `keep_free` (empty = not
     // declared -> try_exact_zero).
@@ -5873,11 +5883,11 @@ struct MinimizerCategory {
                                                &Project::minimizer_max_iterations,
                                                &Project::descent,
                                                &Project::minimizer_chi_square_tolerance,
-                                               &Project::minimizer_stop_rule,
+                                               &Project::minimizer_stop_rules,
                                                &Project::minimizer_shift_tolerance,
                                                &Project::minimizer_moments_near_zero};
     static constexpr std::array items{"type",      "max_iterations",  "descent",          "chi_square_tolerance",
-                                      "stop_rule", "shift_tolerance", "moments_near_zero"};
+                                      "stop_rules", "shift_tolerance", "moments_near_zero"};
 };
 static_assert(detail::one_entry_per_column(MinimizerCategory::columns, MinimizerCategory::items));
 
@@ -5894,13 +5904,15 @@ struct FitResultCategory {
         &FitResultRecord::covariance_available, &FitResultRecord::exit_reason, &FitResultRecord::prof_wr_factor,
         &FitResultRecord::prof_r_factor, &FitResultRecord::prof_wr_expected, &FitResultRecord::prof_cr_factor,
         &FitResultRecord::prof_cwr_factor, &FitResultRecord::profile_function, &FitResultRecord::background_function,
-        &FitResultRecord::descent};
+        &FitResultRecord::descent, &FitResultRecord::stopping_rule, &FitResultRecord::stopping_value,
+        &FitResultRecord::last_shift_su};
     static constexpr std::array items{"result_kind", "success", "message", "iterations", "fitting_time",
                                       "reduced_chi_square", "objective_name", "objective_value", "n_data_points",
                                       "n_parameters", "n_free_parameters", "degrees_of_freedom",
                                       "covariance_available", "exit_reason", "prof_wr_factor", "prof_r_factor",
                                       "prof_wr_expected", "prof_cr_factor", "prof_cwr_factor", "profile_function",
-                                      "background_function", "descent"};
+                                      "background_function", "descent", "stopping_rule", "stopping_value",
+                                      "last_shift_su"};
 };
 static_assert(detail::one_entry_per_column(FitResultCategory::columns, FitResultCategory::items));
 

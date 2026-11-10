@@ -3631,9 +3631,7 @@ Project empty_project(const std::string& name, const std::string& description) {
     project.experiments.clear();
     project.metadata.name = validated_project_name(name);
     project.metadata.description = description;
-    // A new project stops a fit on Shift/s.u. 0.1 (the owner, 2026-11-04); a file that declares no rule keeps the
-    // chi-square change.
-    project.minimizer_stop_rule = "shift_su";
+    // A new project declares no stop rules and takes crysta's default set, the one every project shares.
     return project;
 }
 
@@ -3931,13 +3929,30 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             }
             project.minimizer_chi_square_tolerance = value;
         }
-        // The stop rule, its Shift/s.u. value and the moment-zero option, as crysta reads them.
-        if (const std::string* rule = block.find("_minimizer.stop_rule")) {
-            if (*rule != "chi_square_change" && *rule != "shift_su") {
-                throw IoError("unknown _minimizer.stop_rule '" + *rule + "' (chi_square_change or shift_su): " +
+        // The stop rules, their Shift/s.u. value and the moment-zero option, as crysta reads them. An older file's
+        // single `_minimizer.stop_rule` reads as the set it meant: `shift_su` also stopped on the chi-square change.
+        const std::string* rules = block.find("_minimizer.stop_rules");
+        const std::string* old_rule = block.find("_minimizer.stop_rule");
+        if (rules != nullptr && old_rule != nullptr) {
+            throw IoError("_minimizer.stop_rules and the older _minimizer.stop_rule are both declared; keep "
+                          "_minimizer.stop_rules: " + analysis_file.string());
+        }
+        if (rules != nullptr) {
+            std::string text = *rules;
+            if (text.size() >= 2 && (text.front() == '"' || text.front() == '\'') && text.back() == text.front()) {
+                text = text.substr(1, text.size() - 2);
+            }
+            try {
+                set_minimizer_stop_rules(project, text);
+            } catch (const std::invalid_argument& error) {
+                throw IoError(std::string(error.what()) + ": " + analysis_file.string());
+            }
+        } else if (old_rule != nullptr) {
+            if (*old_rule != "chi_square_change" && *old_rule != "shift_su") {
+                throw IoError("unknown _minimizer.stop_rule '" + *old_rule + "' (chi_square_change or shift_su): " +
                               analysis_file.string());
             }
-            project.minimizer_stop_rule = *rule;
+            project.minimizer_stop_rules = *old_rule == "shift_su" ? "chi_square_change shift_su" : "chi_square_change";
         }
         if (const std::string* shift = block.find("_minimizer.shift_tolerance")) {
             double value = 0.0;
@@ -4138,6 +4153,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             result.profile_function = text("_fit_result.profile_function");
             result.background_function = text("_fit_result.background_function");
             result.descent = text("_fit_result.descent");
+            result.stopping_rule = text("_fit_result.stopping_rule");
+            result.stopping_value = factor("_fit_result.stopping_value");
+            result.last_shift_su = factor("_fit_result.last_shift_su");
             // A result cell: '.' or a column written before it existed is not recorded.
             const auto cell = [&where](const Loop& loop, const std::vector<std::string>& row,
                                        const std::string& tag) -> std::optional<double> {

@@ -178,7 +178,6 @@ def analysis(mode: str = 'single', *, weights=(), aliases=(), constraints=(), ex
         [
             '_minimizer.type crysta',
             '_minimizer.max_iterations 1000',
-            '_minimizer.stop_rule shift_su',
             *extra,
         ],
     ]

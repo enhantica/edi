@@ -113,7 +113,6 @@ def pd_neut_cwl_hs_hrpt() -> dict[str, str]:
             [
                 '_minimizer.type crysta',
                 '_minimizer.max_iterations 1000',
-                '_minimizer.stop_rule shift_su',
             ],
         ),
         'structures/hs.edi': structure('hs', cell, 'R -3 m', sites, system='h'),
@@ -179,7 +178,6 @@ def pd_neut_cwl_lmo_echidna() -> dict[str, str]:
         [
             '_minimizer.type crysta',
             '_minimizer.max_iterations 1000',
-            '_minimizer.stop_rule shift_su',
         ],
         aliases_and_constraints(
             [
@@ -313,7 +311,6 @@ def pd_xray_cwl_lam7o3_p021() -> dict[str, str]:
             # from the owner's fitted ones; the fast descent reaches the tutorial's minimum.
             [
                 '_minimizer.type crysta',
-                '_minimizer.stop_rule shift_su',
                 '_minimizer.max_iterations 1000',
                 '_minimizer.descent fast_descent',
             ],
@@ -395,7 +392,6 @@ def pd_neut_tof_lbco_si_mcstas() -> dict[str, str]:
             [
                 '_minimizer.type crysta',
                 '_minimizer.max_iterations 1000',
-                '_minimizer.stop_rule shift_su',
             ],
         ),
         'structures/lbco.edi': structure(

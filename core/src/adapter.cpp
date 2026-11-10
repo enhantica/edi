@@ -2842,7 +2842,7 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     // The declared descent and chi-square tolerance round-trip the same way.
     cproject.minimizer_descent = model.descent;
     cproject.minimizer_chi_square_tolerance = model.minimizer_chi_square_tolerance;
-    cproject.minimizer_stop_rule = model.minimizer_stop_rule;
+    cproject.minimizer_stop_rules = model.minimizer_stop_rules;
     cproject.minimizer_shift_tolerance = model.minimizer_shift_tolerance;
     cproject.minimizer_moments_near_zero = model.minimizer_moments_near_zero;
     cproject.minimizer_type = model.minimizer_type;
@@ -2872,6 +2872,9 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
         to.profile_function = from.profile_function;
         to.background_function = from.background_function;
         to.descent = from.descent;
+        to.stopping_rule = from.stopping_rule;
+        to.stopping_value = from.stopping_value;
+        to.last_shift_su = from.last_shift_su;
         // A scan's per-file pairs are held with no result, so they cross whether or not one is held.
         std::vector<crysta::FitParameterCorrelation> rows;
         rows.reserve(from.correlations.size());
@@ -5648,6 +5651,9 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     }
     record.message = record.exit_reason;
     record.iterations = outcome.iterations;
+    record.stopping_rule = outcome.stopping_rule;
+    record.stopping_value = finite_factor(outcome.stopping_value);
+    record.last_shift_su = finite_factor(outcome.last_shift_su);
     record.fitting_time = outcome.elapsed_ms / 1000.0;
     record.reduced_chi_square = finite_factor(outcome.reduced_chi_square);
     const std::size_t n_free = outcome.values.size();
@@ -5843,7 +5849,7 @@ crysta::DescentRequest declared_request(const Project& project) {
     if (project.minimizer_chi_square_tolerance > 0.0) {
         request.chi_square_tolerance = project.minimizer_chi_square_tolerance;
     }
-    request.stop = crysta::declared_stop_test(project.minimizer_stop_rule, project.minimizer_shift_tolerance);
+    request.stop = crysta::declared_stop_test(project.minimizer_stop_rules, project.minimizer_shift_tolerance);
     request.moment_zero_trial = crysta::declared_moment_zero_trial(project.minimizer_moments_near_zero);
     return request;
 }
@@ -5851,7 +5857,7 @@ crysta::DescentRequest declared_request(const Project& project) {
 // Whether the project declares none of the conditions: its fit keeps the historical direct call.
 bool declares_no_conditions(const Project& project) {
     return project.descent.empty() && project.minimizer_chi_square_tolerance <= 0.0 &&
-           project.minimizer_stop_rule.empty() && project.minimizer_moments_near_zero.empty();
+           project.minimizer_stop_rules.empty() && project.minimizer_moments_near_zero.empty();
 }
 
 }  // namespace
@@ -6037,6 +6043,9 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             outcome.reduced_chi_square = result.reduced_chi_square;
             outcome.iterations = result.iterations;
             outcome.converged = result.converged;
+            outcome.stopping_rule = result.stopping_rule;
+            outcome.stopping_value = result.stopping_value;
+            outcome.last_shift_su = result.last_shift_su;
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();
             outcome.iterations_history = to_edi(collector.history());
@@ -6441,7 +6450,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // tolerance and records them per row in analysis/results-provenance.csv.
         cproject.minimizer_descent = descent;
         cproject.minimizer_chi_square_tolerance = minimizer_chi_square_tolerance;
-        cproject.minimizer_stop_rule = minimizer_stop_rule;
+        cproject.minimizer_stop_rules = minimizer_stop_rules;
         cproject.minimizer_shift_tolerance = minimizer_shift_tolerance;
         cproject.minimizer_moments_near_zero = minimizer_moments_near_zero;
         cproject.minimizer_type = minimizer_type;
@@ -6615,6 +6624,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         outcome.iterations = recovered ? result.iterations
                                        : static_cast<int>(outcome.iterations_history.size());
         outcome.converged = result.converged;
+        outcome.stopping_rule = result.stopping_rule;
+        outcome.stopping_value = result.stopping_value;
+        outcome.last_shift_su = result.last_shift_su;
         outcome.elapsed_ms = solved ? elapsed_ms : 0.0;
         outcome.status = to_edi(crysta::classify_fit_status(result));
         outcome.unevaluable_trials = result.unevaluable_trials;
@@ -6855,6 +6867,9 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             outcome.reduced_chi_square = result.reduced_chi_square;
             outcome.iterations = result.iterations;
             outcome.converged = result.converged;
+            outcome.stopping_rule = result.stopping_rule;
+            outcome.stopping_value = result.stopping_value;
+            outcome.last_shift_su = result.last_shift_su;
             outcome.banks = std::move(bank_metrics);
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();

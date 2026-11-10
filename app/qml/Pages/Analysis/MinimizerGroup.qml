@@ -35,33 +35,34 @@ Grid {
         token: row.analysis ? row.analysis.descent : ""
         onSelected: token => row.analysis.descent = token
     }
-    // What ends a fit as converged (the owner, 2026-11-04): the χ² change, the rule of a project that declares
-    // none, or Shift/s.u., FullProf's criterion.
+    // What ends a fit as converged: the χ² change, Shift/s.u. (FullProf's criterion), or either; a project that
+    // declares none takes both.
     SelectorField {
         objectName: "minimizer.stopRule"
         width: row.fieldWidth
-        uid: "minimizer.stop_rule"
+        uid: "minimizer.stop_rules"
         options: row.analysis ? row.analysis.stopRuleOptions : null
         token: row.analysis ? row.analysis.stopRule : ""
         onSelected: token => row.analysis.stopRule = token
     }
-    // The stop rule's value beside its selector (the owner, 2026-11-04): the χ² change's tolerance or the Shift/s.u.
-    // value, whichever rule is chosen.
+    // Each selected rule's value beside the selector: the declared value, or crysta's default when none is declared.
     ValueField {
-        readonly property bool shift: row.analysis !== null && row.analysis.stopRule === "shift_su"
-
         objectName: "minimizer.chiSquareTolerance"
+        visible: row.analysis !== null && row.analysis.stopRule.indexOf("chi_square_change") >= 0
         width: row.fieldWidth
-        uid: shift ? "minimizer.shift_tolerance" : "minimizer.chi_square_tolerance"
-        // The declared value of the chosen rule, or crysta's default when none is declared: the value the fit uses.
-        fieldValue: !row.analysis ? "" : shift ? (row.analysis.hasShiftTolerance ? row.analysis.shiftTolerance : row.analysis.defaultShiftTolerance) : (row.analysis.hasChiSquareTolerance ? row.analysis.chiSquareTolerance : row.analysis.defaultChiSquareTolerance)
+        uid: "minimizer.chi_square_tolerance"
+        fieldValue: !row.analysis ? "" : row.analysis.hasChiSquareTolerance ? row.analysis.chiSquareTolerance : row.analysis.defaultChiSquareTolerance
         accepts: "number"
-        onCommitted: text => {
-            if (shift)
-                row.analysis.shiftTolerance = Number(text);
-            else
-                row.analysis.chiSquareTolerance = Number(text);
-        }
+        onCommitted: text => row.analysis.chiSquareTolerance = Number(text)
+    }
+    ValueField {
+        objectName: "minimizer.shiftTolerance"
+        visible: row.analysis !== null && row.analysis.stopRule.indexOf("shift_su") >= 0
+        width: row.fieldWidth
+        uid: "minimizer.shift_tolerance"
+        fieldValue: !row.analysis ? "" : row.analysis.hasShiftTolerance ? row.analysis.shiftTolerance : row.analysis.defaultShiftTolerance
+        accepts: "number"
+        onCommitted: text => row.analysis.shiftTolerance = Number(text)
     }
     ValueField {
         objectName: "minimizer.maxIterations"

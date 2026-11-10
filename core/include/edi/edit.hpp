@@ -744,8 +744,8 @@ class Edit {
     static Edit chi_square_tolerance(Project& project, double tolerance) {
         return Edit([&project, tolerance] { set_minimizer_chi_square_tolerance(project, tolerance); });
     }
-    static Edit stop_rule(Project& project, std::string rule) {
-        return Edit([&project, rule = std::move(rule)] { set_minimizer_stop_rule(project, rule); });
+    static Edit stop_rules(Project& project, std::string rules) {
+        return Edit([&project, rules = std::move(rules)] { set_minimizer_stop_rules(project, rules); });
     }
     static Edit shift_tolerance(Project& project, double tolerance) {
         return Edit([&project, tolerance] { set_minimizer_shift_tolerance(project, tolerance); });
