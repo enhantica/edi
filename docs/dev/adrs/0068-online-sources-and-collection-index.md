@@ -37,6 +37,11 @@ no database server.
   mirror `https://data.easydiffraction.org` (the owner, 2026-11-04): a request uses the first and falls back to the
   next only when it is unavailable, by the same outage classes as a source, and "cannot be reached" is said only
   when every location failed. The index, the examples, the tutorials, Python and the CLI share the rule.
+  **The desktop app adds a third location, its offline copy** (the owner, 2026-11-10): the installers bundle a copy of
+  the collection (about 14 MB, `EDI_BUNDLED_COLLECTION`, fetched from `enhantica/edi-data` `main` when the installer is
+  built) beside the app, and the built-in source lists it last. It is read only after the online locations are out,
+  so the examples and tutorials work offline while the online collection stays the source of updates. The web app,
+  Python and the CLI have no copy.
   A row can be disabled; user rows, a name and a URL, can be added, edited and removed. The table persists in the
   settings file (`Online/sources`); a built-in row's name and URL come from the program, so an update can move them.
 - **The index.** A collection is plain files in a git repository behind one base URL, with one generated

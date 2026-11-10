@@ -9,6 +9,10 @@ from is an **online source**. Two are built in: the Crystallography Open Databas
 EasyDiffraction's own collection, which holds the examples and the tutorial data. You can add your own collection, for
 example your group's shared data.
 
+The desktop application installs a copy of EasyDiffraction's collection with itself, so the examples and tutorials
+open without an internet connection. When the connection works, the application reads the online collection, which
+has the newest entries.
+
 ## Use an online source
 
 - **Application:** on the Structure or Experiment page, open **Load** and choose **From web…**. Pick a source, search,

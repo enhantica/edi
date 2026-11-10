@@ -554,6 +554,27 @@ if(NOT EMSCRIPTEN)
 endif()
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT desktop)
 
+# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app as its offline
+# copy: the built-in source's last location, read when the online ones are out (edi ADR-0068). The online collection
+# stays the source of updates. Empty installs none.
+set(EDI_BUNDLED_COLLECTION "" CACHE PATH "A copy of the edi-data collection to install as the app's offline copy")
+if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
+    if(NOT EXISTS "${EDI_BUNDLED_COLLECTION}/index.json")
+        message(FATAL_ERROR "EDI_BUNDLED_COLLECTION ${EDI_BUNDLED_COLLECTION} has no index.json")
+    endif()
+    if(APPLE AND EDI_DEPLOY_APP)
+        set(edi_collection_destination EasyDiffraction.app/Contents/Resources/collection)
+        set(edi_collection_from_binary ../Resources/collection)
+    else()
+        set(edi_collection_destination ${CMAKE_INSTALL_DATADIR}/edi/collection)
+        set(edi_collection_from_binary ../${CMAKE_INSTALL_DATADIR}/edi/collection)
+    endif()
+    install(DIRECTORY "${EDI_BUNDLED_COLLECTION}/" DESTINATION ${edi_collection_destination} COMPONENT desktop
+            PATTERN ".git" EXCLUDE PATTERN ".github" EXCLUDE)
+    set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+                 "EDI_APP_BUNDLED_COLLECTION=\"${edi_collection_from_binary}\"")
+endif()
+
 if(TARGET edi_assistant_native AND EDI_APP_ASSISTANT)
     target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
     # C++ observers include Session's native interface, as the real Main probe does.
