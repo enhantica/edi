@@ -253,6 +253,9 @@ class PatternChartController : public QObject {
     void setHiddenFitsRange(bool on);
     // Hides the curve of a legend entry's key, or shows it again.
     Q_INVOKABLE void toggleSeries(const QString& key);
+    // Every legend entry hidden but the measured data's, as clicks on each would hide them: with the residual and
+    // every Bragg row hidden, their panes go too (the documentation's reduced-pattern figure).
+    Q_INVOKABLE void hideAllButMeasured();
 
     // A style key's colour in the current theme, with the table's opacity.
     Q_INVOKABLE QColor color(const QString& styleKey) const;

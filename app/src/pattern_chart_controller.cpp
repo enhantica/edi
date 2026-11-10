@@ -652,6 +652,18 @@ void PatternChartController::toggleSeries(const QString& key) {
     invalidate();
 }
 
+void PatternChartController::hideAllButMeasured() {
+    QStringList keys;
+    for (const ChartLegendModel::Entry& entry : legend_->entries()) {
+        if (!entry.key.startsWith(QLatin1String("meas"))) {
+            keys.append(entry.key);
+        }
+    }
+    hidden_ = keys;
+    emit hiddenSeriesChanged();
+    invalidate();
+}
+
 void PatternChartController::setHiddenFitsRange(bool on) {
     if (on != hidden_fits_range_) {
         hidden_fits_range_ = on;
@@ -750,7 +762,7 @@ void PatternChartController::refresh() {
         legend.back().hidden = hidden_.contains(legend.back().key);
         legend.back().magnetic = bragg && series.id.ends_with("/magnetic");
     };
-    int rows = 0;
+    int rows = 0, shown_rows = 0;
     for (const edi::PatternSeries& series : shown_.series) {
         switch (series.kind) {
             case edi::SeriesKind::Measured: measured = &series; break;
@@ -767,6 +779,7 @@ void PatternChartController::refresh() {
                     ticks[place] += points_of(series);
                 }
                 ++rows;
+                shown_rows += hiddenId(series.id) ? 0 : 1;
                 break;
             }
         }
@@ -987,9 +1000,11 @@ void PatternChartController::refresh() {
     }
     excluded_bands_->setBands(bands);
     legend_->setEntries(legend);
-    publish(bragg_rows_, rows, &PatternChartController::braggRowsChanged);
+    // A pane whose every series is hidden goes with them: the tick rows when all are hidden, the residual's pane when
+    // it is.
+    publish(bragg_rows_, shown_rows > 0 ? rows : 0, &PatternChartController::braggRowsChanged);
     publish(bragg_height_, bragg_height, &PatternChartController::braggHeightChanged);
-    publish(has_residual_, residual != nullptr, &PatternChartController::hasResidualChanged);
+    publish(has_residual_, residual != nullptr && !hiddenId(residual->id), &PatternChartController::hasResidualChanged);
     publish(has_data_, measured != nullptr || calculated != nullptr, &PatternChartController::hasDataChanged);
     publish(current_, shown_.current, &PatternChartController::currentChanged);
     publish(d_available_, report_ != nullptr || (experiment_ && experiment_->patternSource().d_available),
@@ -997,16 +1012,30 @@ void PatternChartController::refresh() {
     publish(x_title_, QString::fromStdString(shown_.x.title), &PatternChartController::xTitleChanged);
     // A y title as its coloured pieces, each series' word in its colour (the legend box being hidden by default);
     // the plain title when it has none.
-    const auto styled = [&colour_of](const edi::AxisDescription& axis) {
+    // A curve hidden by its legend entry leaves the title too, with the separator before it.
+    const auto hidden_style = [this](const std::string& style) {
+        return std::any_of(shown_.series.begin(), shown_.series.end(), [&](const edi::PatternSeries& series) {
+            return series.style == style && hiddenId(series.id);
+        });
+    };
+    const auto styled = [&colour_of, &hidden_style](const edi::AxisDescription& axis) {
         if (axis.segments.empty()) {
             return QString::fromStdString(axis.title).toHtmlEscaped();
         }
-        QString text;
+        QString text, separator;
         for (const edi::TitleSegment& segment : axis.segments) {
             const QString piece = QString::fromStdString(segment.text).toHtmlEscaped();
-            text += segment.style.empty() ? piece
-                                          : QStringLiteral("<font color=\"%1\">%2</font>")
-                                                .arg(colour_of(segment.style).name(QColor::HexRgb), piece);
+            if (segment.style.empty()) {
+                separator = piece;
+                continue;
+            }
+            if (hidden_style(segment.style)) {
+                separator.clear();
+                continue;
+            }
+            text += (text.isEmpty() ? QString() : separator) + QStringLiteral("<font color=\"%1\">%2</font>")
+                                                                   .arg(colour_of(segment.style).name(QColor::HexRgb), piece);
+            separator.clear();
         }
         return text;
     };

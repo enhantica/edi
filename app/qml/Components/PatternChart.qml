@@ -40,6 +40,10 @@ Item {
     // rule). A chart not shown keeps its last drawing and refreshes once, with the latest result, when it
     // is shown again; a chart no page hides is shown.
     property bool shown: true
+    // Every curve hidden but the measured data, with the panes left empty (PatternChartController).
+    function hideAllButMeasured() {
+        controller.hideAllButMeasured();
+    }
 
     readonly property real em: EaStyle.Sizes.fontPixelSize
     readonly property real sideMargin: em
