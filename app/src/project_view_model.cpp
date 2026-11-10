@@ -4923,7 +4923,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
                 scan_template_->descent = project_->descent;
                 scan_template_->minimizer_max_iterations = project_->minimizer_max_iterations;
                 scan_template_->minimizer_chi_square_tolerance = project_->minimizer_chi_square_tolerance;
-                scan_template_->minimizer_stop_rule = project_->minimizer_stop_rule;
+                scan_template_->minimizer_stop_rules = project_->minimizer_stop_rules;
                 scan_template_->minimizer_shift_tolerance = project_->minimizer_shift_tolerance;
                 scan_template_->minimizer_moments_near_zero = project_->minimizer_moments_near_zero;
                 scan_template_->su_rule = project_->su_rule;

@@ -48,3 +48,8 @@ code path, which the machine selects (37 and 38 on CI hosts, 38 locally with SIM
 tolerance moves it. The project therefore declares `_minimizer.stop_rule chi_square_change`, the one example that does,
 under which every path stops at 36 iterations with reduced χ² 9.731270484: iterations 37 → 36; reduced_chi_square
 9.731261117 → 9.731270484.
+
+**Re-pinned 2026-11-11.** The default descent now runs fast descent and the ladder for three iterations each from the
+start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
+linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 36 → 33; asymmetry-off iterations 18 → 16;
+asymmetry-off reduced_chi_square 12.88691907 → 12.88658333. No `reference` value moved.

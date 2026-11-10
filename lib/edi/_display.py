@@ -8,7 +8,6 @@ shows. Delegation only (ADR-0009).
 
 from __future__ import annotations
 
-import html as _html
 from dataclasses import dataclass as _dataclass
 from pathlib import Path as _Path
 from typing import TYPE_CHECKING
@@ -42,13 +41,20 @@ class View:
     html: str
     height: int
 
+    def __repr__(self) -> str:
+        # A notebook stores this beside the HTML: the document again would double every page.
+        return f'View(html=<{len(self.html):,} characters>, height={self.height})'
+
     def _repr_html_(self) -> str:  # noqa: PLW3201 - IPython's rich display hook
         # A frame of its own keeps the report's styles and scripts inside it. It takes its
         # content's height once loaded and follows it, so no view is cut or leaves a gap; the
         # fixed height stands where scripts do not run.
+        # The document goes in single quotes: its model is JSON, whose every double quote would
+        # otherwise become six characters.
+        document = self.html.replace('&', '&amp;').replace("'", '&#39;')
         return (
             f'<iframe style="width: 100%; height: {self.height}px; border: none" '
-            f'onload="{_FIT_FRAME}" srcdoc="' + _html.escape(self.html, quote=True) + '"></iframe>'
+            f'onload="{_FIT_FRAME}" srcdoc=\'' + document + "'></iframe>"
         )
 
 

@@ -3561,8 +3561,7 @@ NB_MODULE(_edi, m) {
         },
         "Link a structure from keyword attributes (structure_id, scale, enabled) and add it.");
 
-    // The absorption category — the FullProf ABSCOR pair, presence-tracked (parity doc records
-    // why the spellings stay).
+    // The absorption category, presence-tracked; ABSCOR1 keeps FullProf's spelling (parity doc).
     nb::class_<edi::views::AbsorptionNode> absorption(m, "AbsorptionBase");
     absorption.def("__setattr__", renewing_setattr<edi::views::AbsorptionNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
     absorption.def_prop_rw(
@@ -3572,7 +3571,7 @@ NB_MODULE(_edi, m) {
             // family body, a typed token initialises it, anything else refuses. None spells
             // the loader's absent-means-none state. The vocabulary is beam-scoped exactly as
             // at the loader — a CW experiment spells none/cylinder-hewat/ cylinder-lobanov
-            // (the mu_r body); a TOF one none/cylinder (the ABSCOR pair), with the
+            // (the mu_r body); a TOF one none/cylinder (ABSCOR1), with the
             // "cylinder-hewat" inventory token mapping to its TOF file token. The rule is
             // edi::select_absorption's, on crysta's own
             // vocabulary (the adapter asks it); nothing is listed or mapped here.
@@ -3585,11 +3584,8 @@ NB_MODULE(_edi, m) {
     def_view_optional_parameter_field(cylinder_hewat_absorption, "abscor1",
                                       &edi::AbsorptionBase::abscor1,
                                       edi::spec::absorption_abscor1);
-    def_view_optional_parameter_field(cylinder_hewat_absorption, "abscor2",
-                                      &edi::AbsorptionBase::abscor2,
-                                      edi::spec::absorption_abscor2);
     // The CW face of the same lens — muR = mu * R (cylinder radius) at the reflection's
-    // Bragg theta, beside the TOF pair on the one cylinder-Hewat node (crysta's D9/R46
+    // Bragg theta, beside the TOF ABSCOR1 on the one cylinder-Hewat node (crysta's D9/R46
     // shape); each member resolves against the experiment's own family block.
     def_view_optional_parameter_field(cylinder_hewat_absorption, "mu_r",
                                       &edi::AbsorptionBase::mu_r,
@@ -3821,7 +3817,7 @@ NB_MODULE(_edi, m) {
                 const edi::AbsorptionBase& a = self.absorption;
                 std::string token =
                     a.type ? *a.type
-                           : ((a.abscor1 || a.abscor2 || a.mu_r) ? std::string("cylinder-hewat")
+                           : ((a.abscor1 || a.mu_r) ? std::string("cylinder-hewat")
                                                                  : std::string("none"));
                 if (a.type) {
                     // The declared file spelling classifies as its registry token, which is
@@ -4461,6 +4457,12 @@ NB_MODULE(_edi, m) {
         .def_ro("_structure_factor_evaluations",
                 &edi::FitResultBase::structure_factor_evaluations)
         .def_ro("converged", &edi::FitResultBase::converged)
+        .def_ro("stopping_rule", &edi::FitResultBase::stopping_rule,
+                "What stopped the fit: chi_square_change, shift_su, max_iterations, or another stop.")
+        .def_ro("stopping_value", &edi::FitResultBase::stopping_value,
+                "The stopping rule's value: the relative χ² change, the largest shift/s.u., or the iteration count.")
+        .def_ro("last_shift_su", &edi::FitResultBase::last_shift_su,
+                "The largest move of a free parameter in the last step, over its s.u.")
         .def_ro("status", &edi::FitResultBase::status)
         // The three cheap absorb projections of data already carried.
         .def_prop_ro(
@@ -5135,6 +5137,19 @@ NB_MODULE(_edi, m) {
             "Carries the same scan-event subscribers as `fit_sequential`. `should_cancel` is polled between iterations; true, or a "
             "KeyboardInterrupt raised in any callback, stops the fit cleanly with a CANCELLED "
             "result.")
+        // The stop rules are model state too, as crysta reads them; the setter validates the list.
+        .def_prop_rw(
+            "stop_rules",
+            [](const edi::Project& self) {
+                return self.minimizer_stop_rules.empty() ? std::string("chi_square_change shift_su")
+                                                         : self.minimizer_stop_rules;
+            },
+            [](edi::Project& self, const std::optional<std::string>& value) {
+                edi::set_minimizer_stop_rules(self, value.value_or(std::string{}));
+            },
+            "What ends a fit as converged: 'chi_square_change', 'shift_su' or both, separated by a space "
+            "(project analysis.edi _minimizer.stop_rules). Reading gives the rules the fit uses (both when "
+            "none are declared); assigning None restores that default.")
         // The descent selection is MODEL STATE, public on the engine Project exactly as
         // `fitting_mode` is; the analysis facade's `descent` property (lib/edi) delegates here.
         // The setter validates fail-closed against the linked crysta registry, naming the

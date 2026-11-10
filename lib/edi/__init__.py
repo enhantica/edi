@@ -491,6 +491,21 @@ class Analysis:
     def descent(self, value: str | None) -> None:
         self._project.descent = value
 
+    @property
+    def stop_rules(self) -> str:
+        """What ends a fit as converged: 'chi_square_change', 'shift_su' or both, space-separated.
+
+        Model state, as the descent is (``_minimizer.stop_rules`` in analysis.edi). The fit
+        stops at the first rule met: the chi-square change on its first hold, Shift/s.u. on
+        two iterations in a row. Reading gives the rules the fit uses (both when none are
+        declared); assigning None restores that default.
+        """
+        return self._project.stop_rules
+
+    @stop_rules.setter
+    def stop_rules(self, value: str | None) -> None:
+        self._project.stop_rules = value
+
     def fit(
         self,
         *,

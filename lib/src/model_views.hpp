@@ -178,16 +178,16 @@ class AbsorptionFactory {
         return true;
     }
     // Token resolution mirrors the writer's own rule (io.cpp): an engaged `_absorption.type`
-    // names the correction; otherwise an engaged ABSCOR pair is the cylinder correction and a
+    // names the correction; otherwise an engaged ABSCOR1 is the cylinder correction and a
     // bare block is none. An engaged token no class registered fails closed, naming it.
     static std::unique_ptr<AbsorptionNode> make(edi::ExperimentBase* experiment) {
         const edi::AbsorptionBase& a = experiment->absorption;
         // An untyped block with an engaged mu_r body classifies as the Hewat cylinder, the CW
-        // mirror of the ABSCOR-pair rule (canonical states always carry the type; this is the
+        // mirror of the ABSCOR1 rule (canonical states always carry the type; this is the
         // hand-built-model fallback only).
         const std::string token =
             a.type ? *a.type
-                   : ((a.abscor1 || a.abscor2) ? std::string("cylinder")
+                   : (a.abscor1 ? std::string("cylinder")
                       : a.mu_r                 ? std::string("cylinder-hewat")
                                                : std::string("none"));
         const auto& all = table();

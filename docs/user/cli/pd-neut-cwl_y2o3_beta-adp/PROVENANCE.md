@@ -26,3 +26,9 @@ folder), run once at authoring time; no gate runs FullProf.
 
 - `fullprof/scale-fit.inp` `bb0d4dff3143705b3e6fc1f08348e9aa54e9dcc14d80d66c2d60d6b570513790`
 - `fullprof/scale-fit.out` `62792bce9c6d712fa69c36ac33f9a3608630df143b6e5bb3cb1f2669b6120f37`
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; the default descent now
+runs fast descent and the ladder for three iterations each from the start and continues with the one at the lower χ².
+Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `edab5435`,
+`OMP_NUM_THREADS=4`: iterations 3 → 1. No `reference` value moved.

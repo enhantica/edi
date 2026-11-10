@@ -97,7 +97,7 @@ void visit_supported_peak_profiles(BeamModeEnum mode, const std::function<void(c
 // The profile a new experiment of this beam mode gets: the TCH pseudo-Voigt for constant wavelength.
 std::string default_peak_profile(BeamModeEnum mode);
 // The absorption families of a beam mode, as a file spells them: CW none / cylinder-hewat /
-// cylinder-lobanov (the mu_r body), TOF none / cylinder (the ABSCOR pair). Read from crysta's
+// cylinder-lobanov (the mu_r body), TOF none / cylinder (ABSCOR1). Read from crysta's
 // vocabulary table (ADR-0017).
 // FIRST capacity contract carried from assistant77ba02de selectors.hpp: the
 // unchanged integrated058166 Crysta tokens.cpp AbsorptionType table has CW3 /

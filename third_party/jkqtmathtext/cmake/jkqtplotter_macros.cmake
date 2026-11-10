@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: BSD-3-Clause
 include(CMakePackageConfigHelpers)
 
 function(jkqtplotter_add_library lib_name)

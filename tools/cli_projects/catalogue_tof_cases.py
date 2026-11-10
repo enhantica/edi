@@ -136,7 +136,6 @@ def cylinder(*, is_free: bool = True) -> list[str]:
         '',
         '_absorption.type cylinder',
         f'_absorption.abscor1 {maybe_free(0, is_free=is_free)}',
-        '_absorption.abscor2 0',
     ]
 
 
@@ -179,7 +178,6 @@ def analysis(mode: str = 'single', *, weights=(), aliases=(), constraints=(), ex
         [
             '_minimizer.type crysta',
             '_minimizer.max_iterations 1000',
-            '_minimizer.stop_rule shift_su',
             *extra,
         ],
     ]

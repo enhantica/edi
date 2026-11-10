@@ -2327,6 +2327,12 @@ void DemoDriver::wait_scan_then(std::function<void()> next, const QString& mode,
 }
 
 void DemoDriver::wait_assistant_then(std::function<void()> next, int waited_ms, int idle_polls) {
+#if !EDI_APP_ASSISTANT
+    // A build without the assistant has no turn to wait for.
+    (void)waited_ms;
+    (void)idle_polls;
+    next();
+#else
     QQmlEngine* engine = qmlEngine(window_.contentItem());
     auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
     auto* assistant = session ? session->assistant() : nullptr;
@@ -2346,6 +2352,7 @@ void DemoDriver::wait_assistant_then(std::function<void()> next, int waited_ms, 
     QTimer::singleShot(500, this, [this, next, waited_ms, idle_polls] {
         wait_assistant_then(next, waited_ms + 500, idle_polls);
     });
+#endif
 }
 
 void DemoDriver::wait_online_then(std::function<void()> next, int waited_ms) {

@@ -314,20 +314,6 @@
       "status": "implemented"
     },
     {
-      "id": "fast_descent_linear_snap",
-      "category": "descent",
-      "scope": "least-squares; selected strategies have bound restrictions",
-      "explanation_url": "minimization/#eq-lm",
-      "status": "implemented"
-    },
-    {
-      "id": "fast_descent_guarded_linear_snap",
-      "category": "descent",
-      "scope": "least-squares; selected strategies have bound restrictions",
-      "explanation_url": "minimization/#eq-lm",
-      "status": "implemented"
-    },
-    {
       "id": "multistart_prune",
       "category": "descent",
       "scope": "least-squares; selected strategies have bound restrictions",

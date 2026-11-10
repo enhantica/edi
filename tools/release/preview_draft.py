@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 from plan import markdown_note, note_interfaces, release_body
-from promote import components_validator, digest, validate_cli, validate_wheel
+from promote import ROOT, components_validator, digest, validate_cli, validate_wheel
 from publish_assets import (
     check_existing,
     claim_reservation,
@@ -20,6 +20,12 @@ from publish_assets import (
 )
 
 PLATFORMS = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
+
+
+def testing_repository(platform: str) -> str:
+    """The testing repository the preview installers were built to read."""
+    policy = json.loads((ROOT / 'data/distribution.json').read_text(encoding='utf-8'))
+    return policy['primary_base'] + policy['repository_paths']['testing'].format(platform=platform)
 
 
 def prepare(
@@ -54,8 +60,7 @@ def prepare(
             metadata['edi_commit'] != commit
             or metadata['kind'] != 'online'
             or metadata['zip'] != archive.name
-            or metadata['repository_url']
-            != f'https://enhantica.github.io/edi/repository/testing/{platform}/'
+            or metadata['repository_url'] != testing_repository(platform)
         ):
             raise ValueError(f'Installer identity differs for {platform}')
         if (

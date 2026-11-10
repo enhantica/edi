@@ -270,8 +270,8 @@ disabled** rather than left out, so the layout is final:
   (`_minimizer.moments_near_zero`).
 - **Fields share the full row** unless a rule above says otherwise: a row of fields takes the sidebar content
   width, split evenly (the base's `GroupRow` fields, and `ParameterGrid` with `fillRows`, as Instrument).
-  Absorption now does so too: μR alone takes the row, ABSCOR1 and ABSCOR2 half each (the owner, 2026-09-29; it
-  was three columns wide). The sweep found no other half-empty row; the exceptions are deliberate — Peak
+  Absorption now does so too: its one field, μR or ABSCOR1, takes the row (the owner, 2026-09-29; it was
+  three columns wide; the second FullProf coefficient was removed on 2026-11-10). The sweep found no other half-empty row; the exceptions are deliberate — Peak
   profile's five-wide rows above, and Experiment type's grid three wide (§2).
 
 ### 6. Measured data: the increment

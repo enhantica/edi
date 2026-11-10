@@ -6,7 +6,7 @@ import EasyApplication.Gui.Elements as EaElements
 import edi.app
 
 // `absorption`: the family selector over the beam mode's families, then the
-// family's fields — CW μR, TOF the ABSCOR pair, none nothing.
+// family's field — CW μR, TOF ABSCOR1, none nothing.
 Column {
     id: group
 
@@ -25,8 +25,7 @@ Column {
         }
     }
 
-    // The family's fields share the full width, as the instrument's (edi ADR-0017 §5): μR alone, ABSCOR1 and
-    // ABSCOR2 half each.
+    // The family's one field takes the full width, as the instrument's (edi ADR-0017 §5): μR or ABSCOR1.
     ParameterGrid {
         fields: group.experiment ? group.experiment.absorption : null
         prefix: "absorption"

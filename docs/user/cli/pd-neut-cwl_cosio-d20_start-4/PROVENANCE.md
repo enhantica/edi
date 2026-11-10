@@ -37,4 +37,14 @@ new content ids are `tests/fitting/cosio-d20-s4` (tree) `6f1cec02b860ea573f055c0
 **Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: ladder iterations 7 → 6; fast-descent iterations 7 → 6;
-fast-descent-linear-snap iterations 7 → 6; fast-descent-guarded-linear-snap iterations 7 → 6.
+linear snap (retired) iterations 7 → 6; guarded linear snap (retired) iterations 7 → 6.
+
+
+**Linear-snap variants removed, 2026-11-10.** crysta retired its two linear-snap descents: they stopped at a wrong
+minimum on three examples. Their variants and pins went with them; the values above that name them are history.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; a refused step on a
+magnetic moment is retried at the length a quadratic model of the residual predicts. Measured with `python -m edi fit
+--report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: ladder iterations 6 → 7;
+fast-descent iterations 6 → 7; multistart-prune iterations 1 → 4. No `reference` value moved.

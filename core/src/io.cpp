@@ -27,6 +27,7 @@
 #include "assistant_project_io.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 #include "number_token.hpp"
+#include "crysta/descent.hpp"
 #include "crysta/magnetic.hpp"
 #include "crysta/single_crystal.hpp"
 
@@ -727,7 +728,7 @@ const std::set<std::string>& covered_categories() {
 
 const std::set<std::string>& known_covered_tags() {
     static const std::set<std::string> tags{
-        // _absorption
+        // _absorption; abscor2 is an older file's tag, read only to warn that it is ignored
         "_absorption.abscor1", "_absorption.abscor2", "_absorption.mu_r", "_absorption.type",
         // _extinction (a single crystal's)
         "_extinction.type", "_extinction.mosaic_distribution", "_extinction.domain_radius",
@@ -2437,18 +2438,18 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
     // The ruled selector/body contract applies at THIS boundary too, so both loaders accept
     // the same inputs and build the same model. The selector always exists (absent in the
     // file means "none") and an unknown one refuses; a typed family's parameters exist IFF
-    // the type says so — under TOF "cylinder" the ABSCOR pair is required and a missing key
+    // the type says so — under TOF "cylinder" ABSCOR1 is required and a missing key
     // takes the owner's general default ("0" ⇒ A ≡ 1); under TOF "none" a declared abscor key
     // refuses as contradictory. CW cylinder absorption is its own term, so a CW block never
-    // carries the pair — mirroring crysta, which reads nothing and refuses nothing there. The
+    // carries ABSCOR1 — mirroring crysta, which reads nothing and refuses nothing there. The
     // canonical state then crosses the delegated save unchanged — no new serializer. A
     // malformed value still fails closed through parse_parameter/to_double.
     experiment.absorption.type =
         (block.find("_absorption.type") != nullptr) ? *block.find("_absorption.type")
                                                     : std::string("none");
     // The selector vocabulary is beam-scoped — a CW block spells
-    // none/cylinder-hewat/cylinder-lobanov (the mu_r body), a TOF block none/cylinder (the
-    // ABSCOR pair) — and a typed family's parameters exist IFF the type says so, each family
+    // none/cylinder-hewat/cylinder-lobanov (the mu_r body), a TOF block none/cylinder
+    // (ABSCOR1) — and a typed family's parameters exist IFF the type says so, each family
     // reading only its OWN key list (crysta model.cpp's family_absorption_keys split).
     {
         const bool loader_is_cw = resolved.mode == BeamModeEnum::CONSTANT_WAVELENGTH;
@@ -2469,8 +2470,6 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
             // family contract) then supplies any missing coefficient's default.
             experiment.absorption.abscor1 =
                 find_spec_parameter(block, spec::absorption_abscor1, where);
-            experiment.absorption.abscor2 =
-                find_spec_parameter(block, spec::absorption_abscor2, where);
             apply_absorption_family(experiment.absorption, "cylinder");
         } else if (absorption_type == "cylinder-hewat" || absorption_type == "cylinder-lobanov") {
             experiment.absorption.mu_r = find_spec_parameter(block, spec::absorption_mu_r, where);
@@ -2480,7 +2479,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
             if (loader_is_cw) {
                 family_keys = {&spec::absorption_mu_r};
             } else {
-                family_keys = {&spec::absorption_abscor1, &spec::absorption_abscor2};
+                family_keys = {&spec::absorption_abscor1};
             }
             for (const ParameterSpec* spec : family_keys) {
                 if (block_has_tag(block, spec->edi_names[0])) {
@@ -3015,9 +3014,6 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr, const
         }
         if (experiment.absorption.abscor1) {
             absorption("abscor1", &*experiment.absorption.abscor1);
-        }
-        if (experiment.absorption.abscor2) {
-            absorption("abscor2", &*experiment.absorption.abscor2);
         }
         if (experiment.absorption.mu_r) {
             absorption("mu_r", &*experiment.absorption.mu_r);
@@ -3636,9 +3632,7 @@ Project empty_project(const std::string& name, const std::string& description) {
     project.experiments.clear();
     project.metadata.name = validated_project_name(name);
     project.metadata.description = description;
-    // A new project stops a fit on Shift/s.u. 0.1 (the owner, 2026-11-04); a file that declares no rule keeps the
-    // chi-square change.
-    project.minimizer_stop_rule = "shift_su";
+    // A new project declares no stop rules and takes crysta's default set, the one every project shares.
     return project;
 }
 
@@ -3752,6 +3746,13 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             }
         }
         BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string(), assistant_result);
+        // Older files carry FullProf's second absorption coefficient, which has no effect on the
+        // Hewat cylinder and is no longer kept. A nonzero value is said once; it is not saved again.
+        if (const std::string* abscor2 = experiment_block.find("_absorption.abscor2")) {
+            if (std::strtod(abscor2->c_str(), nullptr) != 0.0) {
+                warn("experiment '" + experiment.name + "': _absorption.abscor2 has no effect and is ignored");
+            }
+        }
         // A time-of-flight single crystal has no instrument category: its calculation reads none. Items a file
         // carries for one are read past, and said so (the owner, 2026-10-23).
         if (experiment.reflections.has_value() &&
@@ -3904,17 +3905,24 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         // never a transcribed list) — an unknown or lookalike token refuses naming the registry
         // rather than running the default.
         if (const std::string* descent = block.find("_minimizer.descent")) {
-            const std::vector<std::string> ids = descent_ids();
-            if (std::find(ids.begin(), ids.end(), *descent) == ids.end()) {
-                std::string registered;
-                for (const std::string& id : ids) {
-                    registered += (registered.empty() ? "" : ", ") + id;
+            // An older file may name a descent crysta has since retired: it loads as fast descent,
+            // says so once, and a save writes fast_descent.
+            if (crysta::is_retired_descent(*descent)) {
+                warn("_minimizer.descent " + *descent + " is retired; the fit runs fast_descent instead");
+                project.descent = "fast_descent";
+            } else {
+                const std::vector<std::string> ids = descent_ids();
+                if (std::find(ids.begin(), ids.end(), *descent) == ids.end()) {
+                    std::string registered;
+                    for (const std::string& id : ids) {
+                        registered += (registered.empty() ? "" : ", ") + id;
+                    }
+                    throw IoError("unknown _minimizer.descent '" + *descent +
+                                  "' (registered descents: " + registered +
+                                  "): " + analysis_file.string());
                 }
-                throw IoError("unknown _minimizer.descent '" + *descent +
-                              "' (registered descents: " + registered +
-                              "): " + analysis_file.string());
+                project.descent = *descent;
             }
-            project.descent = *descent;
         }
         if (const std::string* tolerance = block.find("_minimizer.chi_square_tolerance")) {
             double value = 0.0;
@@ -3929,13 +3937,30 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             }
             project.minimizer_chi_square_tolerance = value;
         }
-        // The stop rule, its Shift/s.u. value and the moment-zero option, as crysta reads them.
-        if (const std::string* rule = block.find("_minimizer.stop_rule")) {
-            if (*rule != "chi_square_change" && *rule != "shift_su") {
-                throw IoError("unknown _minimizer.stop_rule '" + *rule + "' (chi_square_change or shift_su): " +
+        // The stop rules, their Shift/s.u. value and the moment-zero option, as crysta reads them. An older file's
+        // single `_minimizer.stop_rule` reads as the set it meant: `shift_su` also stopped on the chi-square change.
+        const std::string* rules = block.find("_minimizer.stop_rules");
+        const std::string* old_rule = block.find("_minimizer.stop_rule");
+        if (rules != nullptr && old_rule != nullptr) {
+            throw IoError("_minimizer.stop_rules and the older _minimizer.stop_rule are both declared; keep "
+                          "_minimizer.stop_rules: " + analysis_file.string());
+        }
+        if (rules != nullptr) {
+            std::string text = *rules;
+            if (text.size() >= 2 && (text.front() == '"' || text.front() == '\'') && text.back() == text.front()) {
+                text = text.substr(1, text.size() - 2);
+            }
+            try {
+                set_minimizer_stop_rules(project, text);
+            } catch (const std::invalid_argument& error) {
+                throw IoError(std::string(error.what()) + ": " + analysis_file.string());
+            }
+        } else if (old_rule != nullptr) {
+            if (*old_rule != "chi_square_change" && *old_rule != "shift_su") {
+                throw IoError("unknown _minimizer.stop_rule '" + *old_rule + "' (chi_square_change or shift_su): " +
                               analysis_file.string());
             }
-            project.minimizer_stop_rule = *rule;
+            project.minimizer_stop_rules = *old_rule == "shift_su" ? "chi_square_change shift_su" : "chi_square_change";
         }
         if (const std::string* shift = block.find("_minimizer.shift_tolerance")) {
             double value = 0.0;
@@ -4136,6 +4161,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             result.profile_function = text("_fit_result.profile_function");
             result.background_function = text("_fit_result.background_function");
             result.descent = text("_fit_result.descent");
+            result.stopping_rule = text("_fit_result.stopping_rule");
+            result.stopping_value = factor("_fit_result.stopping_value");
+            result.last_shift_su = factor("_fit_result.last_shift_su");
             // A result cell: '.' or a column written before it existed is not recorded.
             const auto cell = [&where](const Loop& loop, const std::vector<std::string>& row,
                                        const std::string& tag) -> std::optional<double> {
@@ -4779,20 +4807,15 @@ void apply_absorption_family(AbsorptionBase& absorption, const std::string& toke
         if (!absorption.abscor1.has_value()) {
             absorption.abscor1 = default_coefficient(spec::absorption_abscor1);
         }
-        if (!absorption.abscor2.has_value()) {
-            absorption.abscor2 = default_coefficient(spec::absorption_abscor2);
-        }
         absorption.mu_r.reset();
     } else if (token == "cylinder-hewat" || token == "cylinder-lobanov") {
-        // The CW families carry the single mu_r body ("0" ⇒ A ≡ 1), never the pair.
+        // The CW families carry the single mu_r body ("0" ⇒ A ≡ 1), never ABSCOR1.
         if (!absorption.mu_r.has_value()) {
             absorption.mu_r = default_coefficient(spec::absorption_mu_r);
         }
         absorption.abscor1.reset();
-        absorption.abscor2.reset();
     } else {
         absorption.abscor1.reset();
-        absorption.abscor2.reset();
         absorption.mu_r.reset();
     }
 }

@@ -53,3 +53,10 @@ components Co1 x, y, z and Co2 y.
 
 From this start the three fits converge, the pooled reduced χ² 0.619. At 2.5 K the moments come out as Co1
 (1.198(47), 3.553(43), 0.751(138)) μB and Co2 My 3.313(45) μB, within about two s.u. of Table 4.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; a refused step on a
+magnetic moment is retried at the length a quadratic model of the residual predicts; the default descent now runs fast
+descent and the ladder for three iterations each from the start and continues with the one at the lower χ². Measured
+with `python -m edi fit --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`:
+iterations 14 → 7. No `reference` value moved.

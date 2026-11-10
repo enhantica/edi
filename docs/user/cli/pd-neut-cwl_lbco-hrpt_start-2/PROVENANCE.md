@@ -50,3 +50,8 @@ against crysta `4643af79`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 1.2994
 12 → 18; ladder rwp 0.07234163841 → 0.07233610852; fast-descent iterations 11 → 12; fast-descent rwp 0.07229565973 →
 0.07229565675; multistart-prune reduced_chi_square 1.297849659 → 1.297847388; multistart-prune iterations 1 → 3;
 multistart-prune rwp 0.07229572035 → 0.07229565707.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
+-m edi fit --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: multistart-prune
+iterations 3 → 9. No `reference` value moved.

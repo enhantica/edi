@@ -26,16 +26,24 @@ new content ids are `tests/fitting/lbco-hrpt-s4` (tree) `13faadd66ec255fa30ebb61
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 1.297269332 → 1.297275389;
 ladder iterations 9 → 7; ladder rwp 0.07229128414 → 0.07229145291; fast-descent rwp 0.07229128412 → 0.07229128849;
-fast-descent-linear-snap reduced_chi_square 1.297269339 → 1.297270929; fast-descent-linear-snap iterations 7 → 6;
-fast-descent-linear-snap rwp 0.07229128433 → 0.07229132862; fast-descent-guarded-linear-snap reduced_chi_square
-1.297269339 → 1.297270929; fast-descent-guarded-linear-snap iterations 7 → 6; fast-descent-guarded-linear-snap rwp
+linear snap (retired) reduced_chi_square 1.297269339 → 1.297270929; linear snap (retired) iterations 7 → 6;
+linear snap (retired) rwp 0.07229128433 → 0.07229132862; guarded linear snap (retired) reduced_chi_square
+1.297269339 → 1.297270929; guarded linear snap (retired) iterations 7 → 6; guarded linear snap (retired) rwp
 0.07229128433 → 0.07229132862.
 
 **Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
 χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
 against crysta `4643af79`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 1.297275389 → 1.297269332; ladder iterations 7
 → 9; ladder rwp 0.07229145291 → 0.07229128414; fast-descent iterations 9 → 10; fast-descent rwp 0.07229128849 →
-0.07229128492; fast-descent-linear-snap reduced_chi_square 1.297270929 → 1.297269331; fast-descent-linear-snap
-iterations 6 → 8; fast-descent-linear-snap rwp 0.07229132862 → 0.07229128411; fast-descent-guarded-linear-snap
-reduced_chi_square 1.297270929 → 1.297269331; fast-descent-guarded-linear-snap iterations 6 → 8;
-fast-descent-guarded-linear-snap rwp 0.07229132862 → 0.07229128411.
+0.07229128492; linear snap (retired) reduced_chi_square 1.297270929 → 1.297269331; linear snap (retired)
+iterations 6 → 8; linear snap (retired) rwp 0.07229132862 → 0.07229128411; guarded linear snap (retired)
+reduced_chi_square 1.297270929 → 1.297269331; guarded linear snap (retired) iterations 6 → 8;
+guarded linear snap (retired) rwp 0.07229132862 → 0.07229128411.
+
+**Linear-snap variants removed, 2026-11-10.** crysta retired its two linear-snap descents: they stopped at a wrong
+minimum on three examples. Their variants and pins went with them; the values above that name them are history.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
+-m edi fit --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: multistart-prune
+iterations 1 → 6. No `reference` value moved.

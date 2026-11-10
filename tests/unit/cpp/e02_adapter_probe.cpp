@@ -43,7 +43,6 @@ std::uint64_t maximum_stamp(const std::vector<crysta::Clock>& clocks) {
 void require_absorption_uses_public_value_cache_behavior(const edi::Project& source) {
     edi::BraggPdExperiment experiment = source.experiment();
     experiment.absorption.abscor1 = edi::Parameter(0.0);
-    experiment.absorption.abscor2 = edi::Parameter(0.0);
     experiment.absorption.type = "cylinder";
     experiment.peak.type = "tof-jorgensen-von-dreele";
     crysta::Structure structure(
@@ -52,6 +51,11 @@ void require_absorption_uses_public_value_cache_behavior(const edi::Project& sou
         edi::detail::to_crysta_atom_sites(source.structure().atom_sites));
     structure.name = source.structure().name.value();
     crysta::Project project(std::move(structure), edi::detail::to_crysta_experiment(experiment));
+    require(project.experiment().absorption.size() == 1,
+            "the converted Hewat cylinder must contain only its active coefficient");
+    require_parameter(
+        project.experiment().absorption.at(0), 0.0, 0.0, false,
+        "the active absorption coefficient preserves value uncertainty and free state");
     const crysta::NeutronScattering scattering =
         source.structure().scattering_lengths_fm.empty()
             ? crysta::load_neutron_scattering()

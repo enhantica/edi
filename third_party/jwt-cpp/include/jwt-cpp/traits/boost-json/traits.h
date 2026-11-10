@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: BSD-3-Clause
 #ifndef JWT_CPP_BOOSTJSON_TRAITS_H
 #define JWT_CPP_BOOSTJSON_TRAITS_H
 

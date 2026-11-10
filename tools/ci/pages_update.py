@@ -17,6 +17,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def _ever_deployed(repo: str) -> bool:
+    """Whether any github-pages deployment of the repository ever succeeded."""
+
+    def api(path):
+        return json.loads(subprocess.check_output(['gh', 'api', path], text=True))
+
+    deployments = api(f'repos/{repo}/deployments?environment=github-pages&per_page=100')
+    return any(
+        status.get('state') == 'success'
+        for deployment in deployments
+        for status in api(f'repos/{repo}/deployments/{deployment["id"]}/statuses?per_page=100')
+    )
+
+
 def deployed_base(artifacts, read_jobs) -> dict:
     """Find the newest artifact with a successful matching deployment step."""
     for artifact in sorted(artifacts, key=itemgetter('created_at'), reverse=True):
@@ -53,9 +67,15 @@ def deployed_base(artifacts, read_jobs) -> dict:
     )
 
 
-def overlay_component(site: Path, incoming: Path, component: str) -> None:
-    """Replace only the built component in a disposable copy of the deployed site."""
-    if not (site / 'index.html').is_file() or not (site / 'webapp/index.html').is_file():
+def overlay_component(site: Path, incoming: Path, component: str, *, first: bool = False) -> None:
+    """Replace only the built component in a disposable copy of the deployed site.
+
+    The very first deployment starts from an empty site with the documentation, and the web app
+    joins it next, so only the release components need both parts already deployed.
+    """
+    if not first and not (site / 'index.html').is_file():
+        raise RuntimeError('The deployed base must contain documentation')
+    if component in {'release', 'installers'} and not (site / 'webapp/index.html').is_file():
         raise RuntimeError('The deployed base must contain documentation and the web app')
     if component == 'docs':
         if not (incoming / 'index.html').is_file() or any(
@@ -75,7 +95,7 @@ def overlay_component(site: Path, incoming: Path, component: str) -> None:
                 child.unlink()
         shutil.copytree(incoming, site, dirs_exist_ok=True)
     elif component == 'wasm':
-        shutil.rmtree(site / 'webapp')
+        shutil.rmtree(site / 'webapp', ignore_errors=True)
         subprocess.run(
             ['bash', str(Path(__file__).with_name('docs-webapp.sh')), str(incoming), str(site)],
             check=True,
@@ -371,7 +391,18 @@ def main() -> None:
         )
         return [job for page in json.loads(response) for job in page['jobs']]
 
-    artifact = deployed_base(artifacts, read_jobs)
+    try:
+        artifact = deployed_base(artifacts, read_jobs)
+    except RuntimeError:
+        # A repository that has never deployed Pages starts from an empty site; one that has
+        # deployed before keeps the refusal, so a lost artifact never wipes the live site.
+        if _ever_deployed(args.repo):
+            raise
+        print('No Pages deployment yet: starting from an empty site')
+        args.site.mkdir(parents=True)
+        overlay_component(args.site, args.incoming, args.component, first=True)
+        check_site_size(args.site)
+        return
     print(
         f'Preserving deployed site from run {artifact["workflow_run"]["id"]}, '
         f'artifact {artifact["id"]}'

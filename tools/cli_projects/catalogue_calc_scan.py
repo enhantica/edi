@@ -32,7 +32,7 @@ def calculation_analysis() -> str:
     return text(
         ['_edi.schema_version 3'],
         ['_fitting_mode.type single'],
-        ['_minimizer.type crysta', '_minimizer.stop_rule shift_su'],
+        ['_minimizer.type crysta'],
     )
 
 
@@ -142,7 +142,6 @@ def pd_neut_cwl_cosio_d20_scan() -> dict[str, str]:
             [
                 '_minimizer.type crysta',
                 '_minimizer.max_iterations 1000',
-                '_minimizer.stop_rule shift_su',
             ],
             loop(
                 ['_alias.id', '_alias.parameter_unique_name'],

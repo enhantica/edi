@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: BSD-3-Clause
 #ifndef jkqtcommon_IMPORT_H
 #define jkqtcommon_IMPORT_H
 

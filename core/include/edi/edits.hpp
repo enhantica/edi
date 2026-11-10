@@ -8,6 +8,7 @@
 // the two equal. A field the library assigns without a rule (a name, a string, a plain number) needs
 // no function here; a parameter value goes through assign_value (model.hpp, beside Parameter).
 
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -112,12 +113,24 @@ inline void set_minimizer_chi_square_tolerance(Project& project, double toleranc
     project.minimizer_chi_square_tolerance = tolerance;
 }
 
-// The declared stop rule, `chi_square_change` or `shift_su`, as the loader reads `_minimizer.stop_rule`.
-inline void set_minimizer_stop_rule(Project& project, const std::string& rule) {
-    if (rule != "chi_square_change" && rule != "shift_su") {
-        throw std::invalid_argument("_minimizer.stop_rule must be chi_square_change or shift_su");
+// The declared stop rules, `chi_square_change`, `shift_su` or both separated by a space, as the loader reads
+// `_minimizer.stop_rules`; kept in crysta's fixed order. An empty text clears the choice (the default set).
+inline void set_minimizer_stop_rules(Project& project, const std::string& rules) {
+    bool chi = false;
+    bool shift = false;
+    std::istringstream words(rules);
+    for (std::string word; words >> word;) {
+        bool& seen = word == "chi_square_change" ? chi : word == "shift_su" ? shift : chi;
+        if ((word != "chi_square_change" && word != "shift_su") || seen) {
+            throw std::invalid_argument(
+                "_minimizer.stop_rules must name chi_square_change, shift_su or both, each once");
+        }
+        seen = true;
     }
-    project.minimizer_stop_rule = rule;
+    project.minimizer_stop_rules = chi && shift ? "chi_square_change shift_su"
+                                   : chi        ? "chi_square_change"
+                                   : shift      ? "shift_su"
+                                                : "";
 }
 
 // The declared Shift/s.u. value (a positive number, as the loader reads `_minimizer.shift_tolerance`).

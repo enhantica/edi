@@ -49,3 +49,9 @@ of the rounded 2.695, so every magnetic intensity is 3.1e-4 higher (crysta `769c
 minimum by a shorter path. Pins retaken with `python -m edi fit <copy> --report machine` linked against crysta
 `361b2b64`, `OMP_NUM_THREADS=1`: reduced_chi_square 6.245734584 → 6.245812633; iterations 57 → 41;
 param.Co.j2_coefficient.value 0.5894931888 → 0.5896782533, 0.003 of its s.u.
+
+**Re-pinned 2026-11-11.** A refused step on a magnetic moment is retried at the length a quadratic model of the residual
+predicts; the default descent now runs fast descent and the ladder for three iterations each from the start and
+continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full` linked
+against crysta `edab5435`, `OMP_NUM_THREADS=4`: reduced_chi_square 6.245812633 → 6.245620875; iterations 41 → 23;
+param.Co.j2_coefficient.value 0.5896782533 → 0.5867252778. No `reference` value moved.

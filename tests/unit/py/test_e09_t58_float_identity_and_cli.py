@@ -1,7 +1,7 @@
 """Float provenance and project-owned CLI behavior, from the  contract.
 
 Identity strings are synthetic format fixtures, not repository anchors. CLI doubles
-isolate routing/persistence; literal records follow the public schema-8 undo contract.
+isolate routing/persistence; literal records follow the public shared schema-nine undo contract.
 No refinement or generated scientific reference is used by these unit cases.
 """
 
@@ -224,7 +224,7 @@ def test_cli_fit_reads_analysis_and_saves_only_when_requested(monkeypatch, capsy
             False,
             'silent-save',
             (
-                'schema=8\nrecord=undo\nwas_no_op=false\nrestored=2\n'
+                'schema=9\nrecord=undo\nwas_no_op=false\nrestored=2\n'
                 'restored_parameter=structure.cell.length_a\nrestored_parameter=experiment.scale\n'
             ),
         ),
@@ -234,7 +234,7 @@ def test_cli_fit_reads_analysis_and_saves_only_when_requested(monkeypatch, capsy
             True,
             False,
             None,
-            'schema=8\nrecord=undo\nwas_no_op=false\nrestored=2\n',
+            'schema=9\nrecord=undo\nwas_no_op=false\nrestored=2\n',
         ),
         (
             'machine',
@@ -242,7 +242,7 @@ def test_cli_fit_reads_analysis_and_saves_only_when_requested(monkeypatch, capsy
             False,
             True,
             None,
-            'schema=8\nrecord=undo\nwas_no_op=true\nrestored=0\n',
+            'schema=9\nrecord=undo\nwas_no_op=true\nrestored=0\n',
         ),
         ('machine', 'off', False, False, 'silent-save', ''),
         (

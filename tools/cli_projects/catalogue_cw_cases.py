@@ -78,7 +78,6 @@ def analysis(*blocks: list[str], descent: str | None = None) -> str:
     minimizer = [
         '_minimizer.type crysta',
         '_minimizer.max_iterations 1000',
-        '_minimizer.stop_rule shift_su',
     ]
     if descent is not None:
         minimizer.append(f'_minimizer.descent {descent}')

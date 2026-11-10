@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: BSD-3-Clause
 window.MathJax = {
   tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]], processEscapes: true },
   svg: { fontCache: "local" },

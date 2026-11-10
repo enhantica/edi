@@ -21,3 +21,8 @@ The regression pins for reduced_chi_square, rwp were retaken with `python -m edi
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 8 → 7; reduced_chi_square 8.821294727 →
 8.821296155.
+
+**Re-pinned 2026-11-11.** The default descent now runs fast descent and the ladder for three iterations each from the
+start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
+linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 7 → 5; reduced_chi_square 8.821296155 → 8.821294726.
+No `reference` value moved.

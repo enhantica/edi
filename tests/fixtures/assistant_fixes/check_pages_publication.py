@@ -460,7 +460,10 @@ def test_diagnostic_components_cannot_replace_a_calendar_feed(tmp_path, route):
             json.dumps({'schema': 'edi.releases/1', 'releases': [{'version': '2026.11.0'}]})
         )
     component = 'release' if route == 'release-stable' else 'installers'
-    with pytest.raises(RuntimeError, match='feed'):
+    # A release must arrive as a complete Pages copy of the distribution, so bare stable
+    # components are refused there before the feed is read.
+    refusal = 'Pages copy of the distribution' if route == 'release-stable' else 'feed'
+    with pytest.raises(RuntimeError, match=refusal):
         MODULE.overlay_component(site, incoming, component)
 
 

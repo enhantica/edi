@@ -314,7 +314,10 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
                           [] { return std::string("analysis/analysis.edi"); }, {},
                           [saved] { return saved.discovered("analysis/analysis.edi"); })) {
     descent_options_->setItemOptions("minimizer.descent", edi::supported_descents(), edi::default_descent());
-    stop_rule_options_->setItemOptions("minimizer.stop_rule", {"chi_square_change", "shift_su"}, "chi_square_change");
+    // The non-empty sets of crysta's two stop rules, in its fixed order; a project that declares none takes both.
+    stop_rule_options_->setOptions({"chi_square_change", "shift_su", "chi_square_change shift_su"},
+                                   "chi_square_change shift_su",
+                                   {"χ² change", "Shift/s.u.", "χ² change or Shift/s.u."});
     moments_near_zero_options_->setItemOptions("minimizer.moments_near_zero", {"try_exact_zero", "keep_free"},
                                                "try_exact_zero");
     minimizer_type_options_->setItemOptions("minimizer.type", edi::supported_minimizer_types());
@@ -359,7 +362,7 @@ void AnalysisViewModel::setStopRule(const QString& rule) {
         return;
     }
     edi::Project& project = project_;
-    setLastError(editor_.apply_setting(edi::Edit::stop_rule(project, rule.toStdString())));
+    setLastError(editor_.apply_setting(edi::Edit::stop_rules(project, rule.toStdString())));
 }
 
 void AnalysisViewModel::setShiftTolerance(double tolerance) {
@@ -443,8 +446,8 @@ void AnalysisViewModel::sync() {
             emit hasChiSquareToleranceChanged();
         }
     }
-    const QString rule = QString::fromStdString(project_.minimizer_stop_rule.empty() ? std::string("chi_square_change")
-                                                                                      : project_.minimizer_stop_rule);
+    const QString rule = QString::fromStdString(project_.minimizer_stop_rules.empty() ? std::string("chi_square_change shift_su")
+                                                                                      : project_.minimizer_stop_rules);
     if (rule != stop_rule_) {
         stop_rule_ = rule;
         emit stopRuleChanged();

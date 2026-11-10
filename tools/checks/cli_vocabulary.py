@@ -17,6 +17,7 @@ import edi.__main__ as cli
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CRYSTA_FETCH = ROOT / 'build/crysta-src'
 DEFAULT_CRYSTA_BINARY = ROOT / 'build/crysta-prefix/bin/crysta'
+DEFAULT_CRYSTA_PREFIX_SHA = ROOT / 'build/crysta-prefix/.crysta-sha'
 DEFAULT_EXCEPTIONS = ROOT / 'tests/fixtures/c11_t51_cli_superset/exceptions.toml'
 EXCEPTION_KEYS = frozenset({'capability', 'issue', 'remove_after', 'reason'})
 # The removal boundary every CLI exception row names: the ADR that settles which engine options
@@ -28,8 +29,6 @@ CRYSTA_DESTINATION_OVERRIDES = {
     '--chi-square-tolerance': 'chi_square_tolerance',
     '--fast-descent': 'descent',
     '--ftol': 'chi_square_tolerance',
-    '--guarded-linear-snap': 'descent',
-    '--linear-snap': 'descent',
     '--no-ramp': 'cutoff_policy',
     '--out': 'output_file',
     '--parameter-tolerance': 'parameter_tolerance',
@@ -227,22 +226,39 @@ def superset_findings(
     return findings
 
 
-def load_pinned_crysta_source(fetch: Path) -> tuple[str | None, list[str]]:
+def _source_commit(fetch: Path, prefix_sha: Path) -> tuple[str | None, str]:
+    """The commit the fetched source is, and what it was checked against."""
+    root = subprocess.run(
+        ['git', '-C', str(fetch), 'rev-parse', '--show-toplevel'],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if root.returncode != 0 or Path(root.stdout.strip()).resolve() != fetch.resolve():
+        # An exported source tree (tools/ci/crysta-src.sh) has no history of its own and a git
+        # lookup would answer for the enclosing edi checkout: it must be the linked SDK's commit.
+        return prefix_sha.read_text(encoding='utf-8').strip(), 'linked SDK commit'
+    head = subprocess.run(
+        ['git', '-C', str(fetch), 'rev-parse', 'HEAD'],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return (head.stdout.strip() if head.returncode == 0 else None), 'fetched HEAD'
+
+
+def load_pinned_crysta_source(
+    fetch: Path, prefix_sha: Path = DEFAULT_CRYSTA_PREFIX_SHA
+) -> tuple[str | None, list[str]]:
     sha_record = fetch / 'CRYSTA_SOURCE_SHA'
     source_path = fetch / 'src/cli/main.cpp'
     try:
         recorded = sha_record.read_text(encoding='utf-8').strip()
-        result = subprocess.run(
-            ['git', '-C', str(fetch), 'rev-parse', 'HEAD'],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            return None, [f'producer: cannot resolve fetched crysta HEAD: {result.stderr.strip()}']
-        fetched = result.stdout.strip()
-        if recorded != fetched:
-            return None, [f'producer: recorded crysta {recorded!r} != fetched HEAD {fetched!r}']
+        expected, against = _source_commit(fetch, prefix_sha)
+        if expected is None:
+            return None, ['producer: cannot resolve fetched crysta HEAD']
+        if recorded != expected:
+            return None, [f'producer: recorded crysta {recorded!r} != {against} {expected!r}']
         return source_path.read_text(encoding='utf-8'), []
     except OSError as error:
         return None, [f'producer: pinned crysta fetch is unavailable: {error}']

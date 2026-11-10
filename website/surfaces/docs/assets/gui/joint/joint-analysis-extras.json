@@ -1089,15 +1089,7 @@
                     "token": "fast_descent"
                 },
                 {
-                    "label": "Fast descent with linear snap",
-                    "token": "fast_descent_linear_snap"
-                },
-                {
-                    "label": "Fast descent with guarded linear snap",
-                    "token": "fast_descent_guarded_linear_snap"
-                },
-                {
-                    "label": "Multi-start with pruning",
+                    "label": "Fast descent and ladder",
                     "token": "multistart_prune"
                 }
             ],

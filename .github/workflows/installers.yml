@@ -97,8 +97,6 @@ jobs:
         exclude:
           - runner: ${{ inputs.windows_only && 'ubuntu-24.04' || 'none' }}
           - runner: ${{ inputs.windows_only && 'macos-15' || 'none' }}
-          # Windows gets its crysta SDK in a later change (edi ADR-0083); until then only a diagnostic run builds it.
-          - runner: ${{ !inputs.windows_only && 'windows-2022' || 'none' }}
     env:
       PLATFORM: ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
@@ -179,7 +177,7 @@ jobs:
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/protocol_check.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/protocol"
       - name: The pinned crysta commit
         shell: bash
-        run: echo "CRYSTA_SOURCE_COMMIT=$(python3 tools/ci/crysta_sdk.py pins pixi.toml)" >>"$GITHUB_ENV"
+        run: echo "CRYSTA_SOURCE_COMMIT=$(sed -n 's/^CRYSTA_COMMIT = "\([0-9a-f]\{40\}\)" *$/\1/p' pixi.toml)" >>"$GITHUB_ENV"
       - name: Require an immutable engine source
         shell: bash
         run: |
@@ -189,9 +187,35 @@ jobs:
               raise RuntimeError('Installer qualification requires a complete engine commit')
           PYTHON
       - uses: ./.github/actions/crysta-sdk
+        if: runner.os != 'Windows'
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      # Windows has no prebuilt crysta SDK yet; the installer build compiles crysta from its source here.
+      - name: Mint a crysta installation token
+        id: crysta-token
+        if: runner.os == 'Windows'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+      - name: Check out the pinned crysta source
+        if: runner.os == 'Windows'
+        uses: actions/checkout@v5
+        with:
+          repository: enhantica/crysta
+          ref: ${{ env.CRYSTA_SOURCE_COMMIT }}
+          token: ${{ steps.crysta-token.outputs.token }}
+          path: .crysta
+          persist-credentials: false
+      - name: Record the crysta source commit
+        if: runner.os == 'Windows'
+        shell: bash
+        run: printf '%s\n' "$CRYSTA_SOURCE_COMMIT" >.crysta/CRYSTA_SOURCE_SHA
       - name: Unpack the pinned crysta source
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           mkdir -p .crysta
@@ -280,6 +304,12 @@ jobs:
           shutil.copy2(package / 'installer.json', delivery / 'installer.json')
           shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
           shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
+          # The tested offline installer goes onto the release beside the online one.
+          offline = Path('build/installer/package')
+          offline_metadata = json.loads((offline / 'installer.json').read_text())
+          shutil.copy2(offline / 'installer.json', delivery / 'offline-installer.json')
+          shutil.copy2('build/installer/test/passed.json', delivery / 'offline-qualification.json')
+          os.link(offline / offline_metadata['zip'], delivery / offline_metadata['zip'])
           cli_receipt = Path('build/installer/cli-qualification.json')
           if cli_receipt.is_file():
               cli = json.loads(cli_receipt.read_text())
@@ -297,14 +327,14 @@ jobs:
       - name: Upload qualified release files
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/delivery
           if-no-files-found: error
           compression-level: 0
       - name: Upload tested components
         uses: actions/upload-artifact@v4
         with:
-          name: installer-components-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-components-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/components
           if-no-files-found: error
           compression-level: 0
@@ -312,7 +342,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: installer-check-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-check-${{ runner.os }}-${{ github.run_attempt }}
           path: |
             build/installer/assistant-lifetime.xml
             build/installer/project-retirement.xml
@@ -335,7 +365,9 @@ jobs:
   qualify-release:
     name: record qualified release inputs
     needs: installers
-    if: inputs.release_plan_run != '' && !inputs.windows_only && !inputs.prepare_preview_release && inputs.preview_run == ''
+    if: >-
+      !cancelled() && needs.installers.result == 'success' && inputs.release_plan_run != ''
+      && !inputs.windows_only && !inputs.prepare_preview_release && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5

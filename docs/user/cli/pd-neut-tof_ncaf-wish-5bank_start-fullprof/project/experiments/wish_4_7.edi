@@ -43,7 +43,6 @@ _instrument.calib_d_to_tof_reciprocal 0.
 
 _absorption.type cylinder
 _absorption.abscor1 0.00430(10)
-_absorption.abscor2 0.0
 
 loop_
 _excluded_region.id

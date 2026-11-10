@@ -40,7 +40,7 @@ BUILT_INS = ('interface',)
 BY_HAND_SIMULATION = ROOT / 'app/tutorials/lbco-simulation-by-hand.json'
 SIMULATION_CASE = 'pd-neut-cwl_lbco_simulation'
 # The stop rules' names as the Minimizer group's selector shows them.
-STOP_RULES = {'shift_su': 'Shift/s.u.'}
+STOP_RULES = {'chi_square_change': 'χ² change', 'shift_su': 'Shift/s.u.'}
 # Each kind's From web… entry in its Load ▾ menu (TutorialPanel.webEntries).
 WEB_ENTRIES = {
     'structure': 'structures.load.web',

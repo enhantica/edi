@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: BSD-3-Clause
 (() => {
   'use strict';
   if (window.__ediNetworkMount) { window.__ediNetworkMount(); return; }
