@@ -179,6 +179,16 @@
    "file": "app/src/structure_view_options.cpp",
    "match": "QString::number(options_.moment_scale, 'g', 6)",
    "reason": "the `_structure_view.moment_scale` value a save writes, not a displayed value"
+  },
+  {
+   "file": "core/src/fit_policy.cpp",
+   "match": "std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::general, 4);",
+   "reason": "the independent run's fit message, which names each experiment with its reduced chi-square to four significant digits (ADR-0081); text inside a saved message, not an item's value"
+  },
+  {
+   "file": "core/src/report.cpp",
+   "match": "std::snprintf(mantissa, sizeof(mantissa), \"%.2f\", value / std::pow(10.0, power));",
+   "reason": "the CLI and report tables' power-of-ten form for a number outside the decimal range, a mantissa beside its exponent; a number in range keeps its item's format"
   }
  ],
  "names": [
@@ -416,6 +426,31 @@
    "file": "app/qml/Components/PerformanceGroup.qml",
    "literal": "Auto",
    "reason": "the engine thread count chosen by the machine, not the background estimate's auto choice"
+  },
+  {
+   "file": "core/src/report_json.cpp",
+   "literal": "All",
+   "reason": "the exported structure view's atoms choice, named as the app's Structure toolbar names it: a view setting, not a dictionary option"
+  },
+  {
+   "file": "core/src/report_json.cpp",
+   "literal": "None",
+   "reason": "the exported structure view's atoms choice, named as the app's Structure toolbar names it: a view setting, not a dictionary option"
+  },
+  {
+   "file": "core/src/report_json.cpp",
+   "literal": "VESTA",
+   "reason": "the exported structure view's colour scheme choice: a view setting, not a dictionary option"
+  },
+  {
+   "file": "core/src/report_json.cpp",
+   "literal": "Jmol",
+   "reason": "the exported structure view's colour scheme choice: a view setting, not a dictionary option"
+  },
+  {
+   "file": "data/report/report.js",
+   "literal": "Magnetic moments",
+   "reason": "the exported structure view's toggle for its moment arrows, a view setting, not the moment category"
   }
  ]
 }

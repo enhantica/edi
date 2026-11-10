@@ -67,11 +67,12 @@ extern "C" qint64 operation_file_write_cstring(QIODevice* file, const char* byte
     return file->write(bytes);
 }
 extern "C" void transaction_real_fetch_from(QObject*, QNetworkAccessManager*&, const QStringList&,
-                                            const QString&, edi_app::FetchDone);
+                                            const QString&, edi_app::FetchDone, edi_app::FetchProgress);
 extern "C" void transaction_real_fetch_url(QObject*, QNetworkAccessManager*&, const QUrl&,
-                                           edi_app::FetchDone);
+                                           edi_app::FetchDone, edi_app::FetchProgress);
 namespace edi_app {
-void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done) {
+void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url, FetchDone done,
+               FetchProgress progress) {
     if (holdOperationFetch) {
         operationFetches.push_back({url, std::move(done)});
         return;
@@ -80,10 +81,10 @@ void fetch_url(QObject* owner, QNetworkAccessManager*& manager, const QUrl& url,
         done({}, "Offline observer refuses an uninjected HTTP request", false);
         return;
     }
-    transaction_real_fetch_url(owner, manager, url, std::move(done));
+    transaction_real_fetch_url(owner, manager, url, std::move(done), std::move(progress));
 }
 void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringList& bases,
-                const QString& path, FetchDone done) {
+                const QString& path, FetchDone done, FetchProgress progress) {
     const bool remote = std::any_of(bases.begin(), bases.end(), [](const auto& base) {
         return base.startsWith("http:") || base.startsWith("https:");
     });
@@ -96,7 +97,7 @@ void fetch_from(QObject* owner, QNetworkAccessManager*& manager, const QStringLi
         done({}, "Offline observer refuses an uninjected HTTP collection", false);
         return;
     }
-    transaction_real_fetch_from(owner, manager, bases, path, std::move(done));
+    transaction_real_fetch_from(owner, manager, bases, path, std::move(done), std::move(progress));
 }
 }  // namespace edi_app
 namespace {
