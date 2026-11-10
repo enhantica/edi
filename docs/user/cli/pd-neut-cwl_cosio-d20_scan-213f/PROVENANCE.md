@@ -260,8 +260,8 @@ reference.
 | `01_212_002p3560.dat` | `002p3560_all594630.dat` | `c0a6cc202b237504a7627ea17a15fc672d5fdc52663c86d33086c980e1e2647d` |
 | `01_213_002p3440.dat` | `002p3440_all594631.dat` | `eb0b0ebdefb0b2225cebd3d7c244d5c94132b181cd367bbba001841f89961578` |
 
-**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
 after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; a refused step on a
 magnetic moment is retried at the length a quadratic model of the residual predicts. Measured with `python -m edi fit
---report machine --verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: iterations 6 → 8. No
+--report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 6 → 8. No
 `reference` value moved.

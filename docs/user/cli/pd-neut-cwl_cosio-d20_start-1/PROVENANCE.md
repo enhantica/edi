@@ -48,8 +48,9 @@ iterations 13 → 45; fast-descent rwp 0.03937389163 → 0.03937389334.
 **Linear-snap variants removed, 2026-11-10.** crysta retired its two linear-snap descents: they stopped at a wrong
 minimum on three examples. Their variants and pins went with them; the values above that name them are history.
 
-**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
-after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
--m edi fit --report machine --verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: fast-descent
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; a refused step on a
+magnetic moment is retried at the length a quadratic model of the residual predicts. Measured with `python -m edi fit
+--report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: fast-descent
 reduced_chi_square 4.387840717 → 4.387839645; fast-descent iterations 45 → 46; fast-descent rwp 0.03937389334 →
-0.03937388853. No `reference` value moved.
+0.03937388853; multistart-prune iterations 1 → 53. No `reference` value moved.

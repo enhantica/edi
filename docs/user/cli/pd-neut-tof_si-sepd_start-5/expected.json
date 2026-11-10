@@ -53,7 +53,7 @@
     "multistart-prune": {
       "quantities": {
         "reduced_chi_square": {
-          "value": 3.610940746,
+          "value": 3.610945792,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
@@ -65,7 +65,7 @@
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.0694100442,
+          "value": 0.0694100927,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null

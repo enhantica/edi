@@ -31,7 +31,7 @@ machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 22 �
 χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
 against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 11 → 38.
 
-**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
 after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
--m edi fit --report machine --verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: iterations 38 → 39.
+-m edi fit --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 38 → 39.
 No `reference` value moved.

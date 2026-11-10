@@ -20,7 +20,7 @@
       "tol_rel": 0.05
     },
     "iterations": {
-      "value": 7.0,
+      "value": 4.0,
       "kind": "regression-pin",
       "tol_abs": 0.0,
       "tol_rel": null
@@ -156,7 +156,7 @@
           "tol_rel": null
         },
         "iterations": {
-          "value": 21.0,
+          "value": 18.0,
           "kind": "regression-pin",
           "tol_abs": 0.0,
           "tol_rel": null

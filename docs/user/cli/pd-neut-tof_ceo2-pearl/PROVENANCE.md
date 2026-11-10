@@ -32,3 +32,9 @@ fitted. The example catalogue's CeO₂ case, started the way a user's own measur
 `python -m edi fit <copy> --dry --report machine`: converged in 5 iterations, `n_free=19`, `n_points_fitted=2237`,
 reduced χ² 3.8776, Rwp 5.294 %, under a second, with DIFC 4677.88. That is the source project's minimum (reduced χ²
 3.8776, Rwp 5.294 %); FullProf's fit of the same model prints χ² 3.88 and Rwp 5.29.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; the default descent now
+runs fast descent and the ladder for three iterations each from the start and continues with the one at the lower χ².
+Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `edab5435`,
+`OMP_NUM_THREADS=4`: iterations 5 → 2. No `reference` value moved.

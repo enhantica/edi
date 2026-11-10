@@ -50,9 +50,8 @@ minimum by a shorter path. Pins retaken with `python -m edi fit <copy> --report 
 `361b2b64`, `OMP_NUM_THREADS=1`: reduced_chi_square 6.245734584 → 6.245812633; iterations 57 → 41;
 param.Co.j2_coefficient.value 0.5894931888 → 0.5896782533, 0.003 of its s.u.
 
-**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
-after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; a refused step on a
-magnetic moment is retried at the length a quadratic model of the residual predicts; fast descent is now the default
-descent. Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `d074c0e9`,
-`OMP_NUM_THREADS=4`: reduced_chi_square 6.245812633 → 6.245620875; iterations 41 → 27; param.Co.j2_coefficient.value
-0.5896782533 → 0.5867252778. No `reference` value moved.
+**Re-pinned 2026-11-11.** A refused step on a magnetic moment is retried at the length a quadratic model of the residual
+predicts; the default descent now runs fast descent and the ladder for three iterations each from the start and
+continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full` linked
+against crysta `edab5435`, `OMP_NUM_THREADS=4`: reduced_chi_square 6.245812633 → 6.245620875; iterations 41 → 23;
+param.Co.j2_coefficient.value 0.5896782533 → 0.5867252778. No `reference` value moved.

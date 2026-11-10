@@ -24,7 +24,8 @@ change still ends a fit when it passes first), as every example does. Pins retak
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 11 → 7; reduced_chi_square 9.749205939 →
 9.749542021.
 
-**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
-after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; fast descent is now the
-default descent. Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `d074c0e9`,
-`OMP_NUM_THREADS=4`: iterations 7 → 8; reduced_chi_square 9.749542021 → 9.749302203. No `reference` value moved.
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; the default descent now
+runs fast descent and the ladder for three iterations each from the start and continues with the one at the lower χ².
+Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `edab5435`,
+`OMP_NUM_THREADS=4`: iterations 7 → 5; reduced_chi_square 9.749542021 → 9.749302203. No `reference` value moved.

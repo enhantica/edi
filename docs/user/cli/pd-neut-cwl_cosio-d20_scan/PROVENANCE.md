@@ -43,5 +43,6 @@ within 0.0002 per file (the owner, 2026-11-04).
 `expected.json` checks the scan's template file, fitted alone as a single fit (`"template": true`),
 because FullProf's reference is a fit of that file alone.
 
-**Re-pinned 2026-11-10.** Fast descent is now the default descent. Measured with `python -m edi fit --report machine
---verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: iterations 8 → 9. No `reference` value moved.
+**Re-pinned 2026-11-11.** The default descent now runs fast descent and the ladder for three iterations each from the
+start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
+linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 8 → 5. No `reference` value moved.

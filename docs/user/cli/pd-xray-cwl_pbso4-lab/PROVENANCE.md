@@ -25,6 +25,6 @@ experiment settings of the joint PbSO4 case (`catalogue_joint.py`).
   rounded, so they are free.
 - **Left out:** the tutorial's minimizer settings; edi uses crysta.
 
-**Open, 2026-11-10.** With fast descent as the default this fit stops at reduced χ² 2.976415, beside a second
-minimum (2.976404) 2e-4 above the one the ladder reaches (2.975772), and the cell lengths miss FullProf's by 2 to 3 of their s.u. The pins
-above are the ladder's and agree with the FullProf references; they stand until the default reaches that minimum.
+**Re-pinned 2026-11-11.** The default descent now runs fast descent and the ladder for three iterations each from the
+start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
+linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 12 → 9. No `reference` value moved.

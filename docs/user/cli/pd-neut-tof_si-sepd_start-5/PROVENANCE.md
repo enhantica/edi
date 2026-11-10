@@ -48,3 +48,9 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 
 **Linear-snap variants removed, 2026-11-10.** crysta retired its two linear-snap descents: they stopped at a wrong
 minimum on three examples. Their variants and pins went with them; the values above that name them are history.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
+-m edi fit --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: multistart-prune
+reduced_chi_square 3.610940746 → 3.610945792; multistart-prune rwp 0.0694100442 → 0.0694100927. No `reference` value
+moved.
