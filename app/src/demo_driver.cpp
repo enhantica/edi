@@ -659,6 +659,33 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"mainview-6-structure-keeps-correlations", {"appBar.tab.structure", basic}});
         steps_.push_back({"mainview-7-dark", {"theme:dark", "appBar.tab.analysis", "mainArea.tab.pattern"}});
     }
+    // The one main view on a new empty project, its first visits and its kept tab, and after an example loads; then
+    // frames taken while the pages slide,
+    // where the divider beside the sidebar stays put (the owner, 2026-11-11). The new project is written under the
+    // documents folder, so run it with a scratch HOME (`--demo-only mainview-empty-`).
+    if (only.startsWith(QLatin1String("mainview-empty-"))) {
+        steps_.push_back({"mainview-empty-1-structure",
+                          QStringList{"resize:1280x768", "theme:light", "appBar.tab.home", "home.start", "appBar.tab.project", basic,
+                                      "expand:group.getStarted", "project.create", "createProject.name", "type:sdc", "choose:OK",
+                                      "appBar.tab.structure", basic}});
+        steps_.push_back({"mainview-empty-2-structure-created", {"expand:group.structures", "structures.create"}});
+        steps_.push_back({"mainview-empty-3-experiment-first-visit", {"appBar.tab.experiment", basic}});
+        steps_.push_back({"mainview-empty-4-structure-keeps-pattern", {"appBar.tab.structure", basic}});
+        steps_.push_back({"mainview-empty-5-example-structure",
+                          QStringList{"appBar.button.save"} + start + open_example("pd-neut-cwl_cosio-d20_2k")
+                              + QStringList{"appBar.tab.structure", basic}});
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            const QString name = QStringLiteral("mainview-empty-slide-") + theme + QLatin1Char('-');
+            const QStringList pages{"experiment", "analysis", "structure", "experiment"};
+            steps_.push_back({name + "0-structure", {"theme:" + theme, "appBar.tab.structure"}});
+            for (qsizetype i = 0; i < pages.size(); ++i) {
+                const QString to = QString::number(i + 1) + "-to-" + pages[i];
+                steps_.push_back({name + to + "-40ms", {"wait-settled", "appBar.tab." + pages[i], "capture-at:40"}});
+                steps_.push_back({name + to + "-120ms", {"appBar.tab." + (i == 0 ? QStringLiteral("structure") : pages[i - 1]),
+                                                         "wait-settled", "appBar.tab." + pages[i], "capture-at:120"}});
+            }
+        }
+    }
     // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
     // (the owner, 2026-11-10). Run only when asked (`--demo-only concepts-`).
     if (only.startsWith(QLatin1String("concepts-"))) {
@@ -1450,13 +1477,24 @@ void DemoDriver::next_action() {
         run_step();
         return;
     }
-    const bool unsettled = step.actions.contains(QStringLiteral("capture-now"));
+    // capture-now captures a set time after the actions; capture-at:<ms> after that many milliseconds, to show an
+    // animation partway.
+    int unsettled_ms = step.actions.contains(QStringLiteral("capture-now")) ? kUnsettledCaptureMs : -1;
+    for (const QString& each : step.actions) {
+        if (each.startsWith(QLatin1String("capture-at:"))) unsettled_ms = each.mid(11).toInt();
+    }
+    const bool unsettled = unsettled_ms >= 0;
     if (action_ < step.actions.size()) {
         const QString& action = step.actions.at(action_);
         ++action_;
         if (documentation_) documentation_actions_.append(QJsonObject{{"scene", step.image}, {"action", action}});
-        if (action == QLatin1String("capture-now")) {
+        if (action == QLatin1String("capture-now") || action.startsWith(QLatin1String("capture-at:"))) {
             next_action();
+            return;
+        }
+        // The frame settles before the next action: a capture-now after it then shows an animation that starts there.
+        if (action == QLatin1String("wait-settled")) {
+            settle_then([this] { next_action(); });
             return;
         }
         if (action == QLatin1String("wait-fit")) {
@@ -1513,8 +1551,10 @@ void DemoDriver::next_action() {
         // What the action opened is drawn before the next; a step captured unsettled does not wait for it, nor
         // does an action a wait follows (a fit keeps the window changing until it ends).
         const bool waits = action_ < step.actions.size() && step.actions.at(action_).startsWith(QLatin1String("wait-"));
+        // A capture-at right after the action times itself from the action.
+        const bool captures = action_ < step.actions.size() && step.actions.at(action_).startsWith(QLatin1String("capture-at:"));
         if (unsettled || waits) {
-            QTimer::singleShot(kSettleIntervalMs, this, [this] { next_action(); });
+            QTimer::singleShot(captures ? 0 : kSettleIntervalMs, this, [this] { next_action(); });
         } else {
             settle_then([this] { next_action(); });
         }
@@ -1544,7 +1584,7 @@ void DemoDriver::next_action() {
         run_step();
     };
     if (unsettled) {
-        QTimer::singleShot(kUnsettledCaptureMs, this, [this, save] {
+        QTimer::singleShot(unsettled_ms, this, [this, save] {
             previous_frame_ = window_.grabWindow();
             save();
         });
