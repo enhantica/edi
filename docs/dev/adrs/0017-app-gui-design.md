@@ -445,7 +445,9 @@ one selected row, and the row's number in the first column, bold in the accent c
   of two equal columns; every control has its label above it; a choice is a box, never a checkbox; explanations are
   tooltips, with no text under a control; groups have a title with an icon and no frame; one spacing scale on every
   tab; every colour selector has a strip of its colours under it (ADR-0084); tables are framed with their header
-  inside. Appearance: Theme | When a legend click hides a curve; Palette | Map colours; Magnetic moment arrows.
+  inside; tabs span the bar evenly; read-only values are drawn as boxes; long values end with "…", paths are cut in
+  the middle with the home folder as `~`. Appearance: General (Theme), Charts (Palette | Map colours, then When a legend
+  click hides a curve), Structure view (Magnetic moment arrows).
   Interface: tooltips, the fit's end and the sidebar and Text tab choices. Performance: the thread counts, the scan
   view drawing and the detected graphics. Advanced: the message level, Diagnostics and the settings file. Removed:
   Enable user guides, the Experimental tab, the feedback address (kept in the settings file, ADR-0063) and the
