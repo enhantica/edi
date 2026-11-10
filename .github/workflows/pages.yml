@@ -121,7 +121,7 @@ jobs:
       group: pages-publication
       cancel-in-progress: false
     permissions:
-      contents: read
+      contents: write
       actions: read
       pages: write
       id-token: write
@@ -151,6 +151,9 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: pages-site-docs-${{ github.run_attempt }}
+      # The same site for the host behind easydiffraction.org, which pulls this branch.
+      - name: Update the deploy-docs branch
+        run: bash tools/ci/push_deploy_branch.sh site deploy-docs
 
   publish-wasm:
     name: publish WebAssembly
@@ -160,7 +163,7 @@ jobs:
       group: pages-publication
       cancel-in-progress: false
     permissions:
-      contents: read
+      contents: write
       actions: read
       pages: write
       id-token: write
@@ -190,3 +193,8 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: pages-site-wasm-${{ github.run_attempt }}
+      # The web app alone for app.easydiffraction.org, and the whole site for easydiffraction.org.
+      - name: Update the deploy-app and deploy-docs branches
+        run: |
+          bash tools/ci/push_deploy_branch.sh site/webapp deploy-app
+          bash tools/ci/push_deploy_branch.sh site deploy-docs
