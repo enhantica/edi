@@ -1,12 +1,11 @@
 {
-  "edi_build_commit": "570424f574d10fc82cfc20b919138d3aa7c14852",
+  "edi_build_commit": "2947878fb97d8475779d084a647b089ddc81b16b",
   "examples": [
     "pd-neut-cwl_lbco_simulation",
-    "pd-neut-tof_si_simulation",
-    "pd-xray-cwl_nacl_simulation",
     "pd-neut-cwl_lbco-hrpt",
     "pd-neut-cwl_hs-hrpt",
     "pd-neut-cwl_cosio-d20",
+    "pd-neut-cwl_cosio-d20_2k",
     "pd-neut-cwl_lmo-echidna",
     "pd-neut-cwl_y2o3-spodi",
     "pd-neut-cwl_yalo3-al2o3-spodi",
@@ -19,10 +18,12 @@
     "pd-xray-cwl_pbso4-lab",
     "pd-xray-cwl_lam7o3-p021",
     "pd-neut-xray-cwl_pbso4-d1a-lab",
-    "pd-neut-cwl_cosio-d20_scan",
+    "pd-neut-cwl_cosio-d20_scan-213f",
     "pd-xray-cwl_latp-bm01_scan",
+    "sc-neut-cwl_tb2ti2o7-heidi_simulation",
     "sc-neut-cwl_tb2ti2o7-heidi",
     "sc-neut-cwl_pr2nio4-5c2",
+    "sc-neut-cwl_cosio-heidi",
     "sc-neut-tof_taurine-senju"
   ],
   "paths": {
@@ -85,6 +86,21 @@
     ],
     "atom_site_aniso.id": [
       "project.structures[0].atom_site_aniso[0].id"
+    ],
+    "atom_site_moment.crystalaxis_x": [
+      "project.structures[0].atom_site_moment[0].crystalaxis_x"
+    ],
+    "atom_site_moment.crystalaxis_y": [
+      "project.structures[0].atom_site_moment[0].crystalaxis_y"
+    ],
+    "atom_site_moment.crystalaxis_z": [
+      "project.structures[0].atom_site_moment[0].crystalaxis_z"
+    ],
+    "atom_site_moment.id": [
+      "project.structures[0].atom_site_moment[0].id"
+    ],
+    "atom_site_moment.symmform": [
+      "project.structures[0].atom_site_moment[0].symmform"
     ],
     "background.id": [
       "project.experiments[0].background[0].id"
@@ -328,6 +344,12 @@
     ],
     "peak.type": [
       "project.experiments[0].peak.type"
+    ],
+    "scattering_length.length_fm": [
+      "project.structures[0].scattering_lengths_fm"
+    ],
+    "scattering_length.type_symbol": [
+      "project.structures[0].scattering_lengths_fm"
     ],
     "space_group.coord_system_code": [
       "project.structures[0].space_group.coord_system_code"

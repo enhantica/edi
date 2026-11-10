@@ -366,8 +366,8 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
 
     | Parameter or field | Python name |
     | --- | --- |
-    | [Type](../physics/parameters.md#scattering-length-type-symbol) | — |
-    | [Neutron scattering length](../physics/parameters.md#scattering-length-length-fm) | — |
+    | [Type](../physics/parameters.md#scattering-length-type-symbol) | <code>project.structures[0].scattering_lengths_fm</code> |
+    | [Neutron scattering length](../physics/parameters.md#scattering-length-length-fm) | <code>project.structures[0].scattering_lengths_fm</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="geom" aria-hidden="true">&#62790;</span> Bond settings](../physics/parameters.md#geom)**
 
