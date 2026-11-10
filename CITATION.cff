@@ -8,6 +8,6 @@ authors:
 version: "2026.11.0"
 doi: "10.5281/zenodo.0000000"
 date-released: "2026-11-10"
-url: "https://enhantica.github.io/edi"
+url: "https://easydiffraction.org"
 repository-code: "https://github.com/enhantica/edi"
 license: BSD-3-Clause

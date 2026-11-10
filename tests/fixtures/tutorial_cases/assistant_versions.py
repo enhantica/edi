@@ -10,7 +10,7 @@ import pytest
 from tests.fixtures.tutorial_cases.contract import ROOT
 from tests.fixtures.tutorial_cases.pipeline import executed_inputs, stage
 
-USER_BASE = 'https://enhantica.github.io/edi/'
+USER_BASE = 'https://easydiffraction.org/'
 PROMPT_BASE = 'https://easydiffraction.org/'
 PREVIEW_REF = 'e04-t45-examples-and-tutorials'
 BASES = {

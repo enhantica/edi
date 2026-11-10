@@ -1,7 +1,7 @@
 # EasyDiffraction in the browser
 
 This folder is the EasyDiffraction app built for WebAssembly: a static site. Copy it to any web host and open
-`index.html` (for example `https://enhantica.github.io/edi/webapp/`).
+`index.html` (for example `https://app.easydiffraction.org/`).
 
 ## What is in it
 

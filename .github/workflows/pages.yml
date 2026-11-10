@@ -71,7 +71,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/edi-releases.json"
-          pixi run site-build --require-outputs --base-url https://enhantica.github.io/edi/ --github-releases "$RUNNER_TEMP/edi-releases.json"
+          pixi run site-build --require-outputs --base-url https://easydiffraction.org/ --github-releases "$RUNNER_TEMP/edi-releases.json"
       - name: Place the public site at the root
         run: |
           for path in dev webapp; do

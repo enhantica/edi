@@ -10,6 +10,5 @@
   application did not close normally, the next start offers to send that run's log.
 - **How to cite.** Home → How to cite shows the citation and copies it as text or BibTeX.
 - **Recent projects** fills the sidebar's free height.
-- **This site** moved to [enhantica.github.io/edi](https://enhantica.github.io/edi/). The contributor documentation is
-  at [/dev/](https://enhantica.github.io/edi/dev/) and the web application at
-  [/webapp/](https://enhantica.github.io/edi/webapp/).
+- **This site** is at [easydiffraction.org](https://easydiffraction.org/), and the web application at
+  [app.easydiffraction.org](https://app.easydiffraction.org/).
