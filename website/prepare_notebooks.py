@@ -9,8 +9,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-# The release whose files pip reads (owner, 2026-11-10: every docs link points at v2026.11.0).
-PACKAGE_INDEX = 'https://github.com/enhantica/edi/releases/expanded_assets/v2026.11.0'
+# The package index the notebooks install from.
+PACKAGE_INDEX = 'https://download.easydiffraction.org/pypi/simple/'
 
 
 def setup_source(case: str, *, portable: bool = False, index: str = PACKAGE_INDEX) -> str:
@@ -27,7 +27,7 @@ def setup_source(case: str, *, portable: bool = False, index: str = PACKAGE_INDE
         'import importlib.util\n'
         '\n'
         "if importlib.util.find_spec('easydiffraction') is None:\n"
-        f'    %pip install easydiffraction --find-links {index}\n'
+        f'    %pip install easydiffraction --extra-index-url {index}\n'
     )
 
 

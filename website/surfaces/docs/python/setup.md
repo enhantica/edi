@@ -23,11 +23,11 @@ on GitHub; its dependencies come from PyPI.
     pixi add "python>=3.12"
     ```
 
-    In `pixi.toml`, add the release's files as a place to find the package:
+    In `pixi.toml`, add the EasyDiffraction package index:
 
     ```toml
     [pypi-options]
-    find-links = [{ url = "https://github.com/enhantica/edi/releases/expanded_assets/v2026.11.0" }]
+    extra-index-urls = ["https://download.easydiffraction.org/pypi/simple/"]
     ```
 
     Then add the package and check it:
@@ -52,7 +52,7 @@ on GitHub; its dependencies come from PyPI.
     `.\.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install and check:
 
     ```console
-    python -m pip install easydiffraction --find-links https://github.com/enhantica/edi/releases/expanded_assets/v2026.11.0
+    python -m pip install easydiffraction --extra-index-url https://download.easydiffraction.org/pypi/simple/
     python -c "import easydiffraction as edi; print(edi.Project)"
     python -m edi --help
     ```
