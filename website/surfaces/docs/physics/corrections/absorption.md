@@ -33,7 +33,8 @@ $$\lambda_h=2d_h\sin\theta_{\rm bank},\qquad u_h=\text{ABSCOR1}\,\lambda_h.$$
 
 The same Hewat expression uses that bank angle and reflection-specific wavelength. ABSCOR1 therefore carries the inverse-wavelength scale needed to produce $u_h$.
 
-<span role="img" aria-label="Planned" title="Planned">:status-planned:</span> ABSCOR2 is read and saved, but not yet used in the calculation (planned).
+FullProf's second coefficient, ABSCOR2, has no effect on this correction, so edi does not have it. An older project
+file that sets it loads with a warning that the value is ignored.
 
 ## Lobanov cylinder {#eq-lobanov}
 

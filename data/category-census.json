@@ -1436,13 +1436,6 @@
           ]
         },
         {
-          "member": "AbsorptionBase::abscor2",
-          "type": "OptionalParameter",
-          "items": [
-            "abscor2"
-          ]
-        },
-        {
           "member": "AbsorptionBase::mu_r",
           "type": "OptionalParameter",
           "items": [
@@ -4428,11 +4421,6 @@
     },
     {
       "member": "AbsorptionBase::abscor1",
-      "type": "OptionalParameter",
-      "category": "_absorption"
-    },
-    {
-      "member": "AbsorptionBase::abscor2",
       "type": "OptionalParameter",
       "category": "_absorption"
     },

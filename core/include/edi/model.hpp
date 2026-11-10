@@ -3767,23 +3767,20 @@ struct LinkedStructure : std::enable_shared_from_this<LinkedStructure> {
     detail::CategoryRow table_row;
 };
 
-// The absorption category — the per-bank FullProf ABSCOR pair behind the `_absorption.*`
-// keys: a typed family's parameters exist IFF
-// `type` says so — a loaded TOF "cylinder" block always holds both (a missing key defaults to
-// 0), any other loaded state holds neither. ABSCOR1 is the wavelength-linear muR coefficient
-// (muR = ABSCOR1 * lambda, kernel-proven); ABSCOR2's lambda-power is unpinned in the engine, so
-// freeing it is a hard error there and its spelling deliberately stays FullProf's (parity doc).
+// The absorption category behind the `_absorption.*` keys: a typed family's parameters exist
+// IFF `type` says so — a loaded TOF "cylinder" block always holds ABSCOR1 (a missing key
+// defaults to 0), any other loaded state holds none. ABSCOR1 is the wavelength-linear muR
+// coefficient (muR = ABSCOR1 * lambda).
 struct AbsorptionBase {
     OptionalParameter abscor1;
-    OptionalParameter abscor2;
     // The CW cylinder body — muR = mu * R (R the cylinder RADIUS), evaluated by the engine at
     // each reflection's Bragg theta. A typed family's parameters exist iff the type says so:
-    // TOF "cylinder" carries the ABSCOR pair, CW "cylinder-hewat"/"cylinder-lobanov" carry
-    // mu_r, "none" carries nothing.
+    // TOF "cylinder" carries ABSCOR1, CW "cylinder-hewat"/"cylinder-lobanov" carry mu_r,
+    // "none" carries nothing.
     OptionalParameter mu_r;
     std::optional<std::string> type;  // `_absorption.type`, e.g. "cylinder" / "none"
 
-    static constexpr std::array optional_parameter_members{&AbsorptionBase::abscor1,&AbsorptionBase::abscor2,&AbsorptionBase::mu_r};
+    static constexpr std::array optional_parameter_members{&AbsorptionBase::abscor1,&AbsorptionBase::mu_r};
     std::vector<Parameter*> parameters();  // the present family body, in order (R18)
     // Whether a collection holds the row this belongs to; that collection sets it.
     detail::RowLink row;
@@ -5721,8 +5718,8 @@ static_assert(detail::one_entry_per_column(InstrumentCategory::columns, Instrume
 struct AbsorptionCategory {
     using Owner = AbsorptionBase;
     static constexpr const char* name = "_absorption";
-    static constexpr auto columns = std::tuple{&AbsorptionBase::type, &AbsorptionBase::abscor1, &AbsorptionBase::abscor2, &AbsorptionBase::mu_r};
-    static constexpr std::array items{"type", "abscor1", "abscor2", "mu_r"};
+    static constexpr auto columns = std::tuple{&AbsorptionBase::type, &AbsorptionBase::abscor1, &AbsorptionBase::mu_r};
+    static constexpr std::array items{"type", "abscor1", "mu_r"};
     static constexpr std::array legacy{"_easydiffraction_absorption"};
 };
 static_assert(detail::one_entry_per_column(AbsorptionCategory::columns, AbsorptionCategory::items));

@@ -727,7 +727,7 @@ const std::set<std::string>& covered_categories() {
 
 const std::set<std::string>& known_covered_tags() {
     static const std::set<std::string> tags{
-        // _absorption
+        // _absorption; abscor2 is an older file's tag, read only to warn that it is ignored
         "_absorption.abscor1", "_absorption.abscor2", "_absorption.mu_r", "_absorption.type",
         // _extinction (a single crystal's)
         "_extinction.type", "_extinction.mosaic_distribution", "_extinction.domain_radius",
@@ -2437,18 +2437,18 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
     // The ruled selector/body contract applies at THIS boundary too, so both loaders accept
     // the same inputs and build the same model. The selector always exists (absent in the
     // file means "none") and an unknown one refuses; a typed family's parameters exist IFF
-    // the type says so — under TOF "cylinder" the ABSCOR pair is required and a missing key
+    // the type says so — under TOF "cylinder" ABSCOR1 is required and a missing key
     // takes the owner's general default ("0" ⇒ A ≡ 1); under TOF "none" a declared abscor key
     // refuses as contradictory. CW cylinder absorption is its own term, so a CW block never
-    // carries the pair — mirroring crysta, which reads nothing and refuses nothing there. The
+    // carries ABSCOR1 — mirroring crysta, which reads nothing and refuses nothing there. The
     // canonical state then crosses the delegated save unchanged — no new serializer. A
     // malformed value still fails closed through parse_parameter/to_double.
     experiment.absorption.type =
         (block.find("_absorption.type") != nullptr) ? *block.find("_absorption.type")
                                                     : std::string("none");
     // The selector vocabulary is beam-scoped — a CW block spells
-    // none/cylinder-hewat/cylinder-lobanov (the mu_r body), a TOF block none/cylinder (the
-    // ABSCOR pair) — and a typed family's parameters exist IFF the type says so, each family
+    // none/cylinder-hewat/cylinder-lobanov (the mu_r body), a TOF block none/cylinder
+    // (ABSCOR1) — and a typed family's parameters exist IFF the type says so, each family
     // reading only its OWN key list (crysta model.cpp's family_absorption_keys split).
     {
         const bool loader_is_cw = resolved.mode == BeamModeEnum::CONSTANT_WAVELENGTH;
@@ -2469,8 +2469,6 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
             // family contract) then supplies any missing coefficient's default.
             experiment.absorption.abscor1 =
                 find_spec_parameter(block, spec::absorption_abscor1, where);
-            experiment.absorption.abscor2 =
-                find_spec_parameter(block, spec::absorption_abscor2, where);
             apply_absorption_family(experiment.absorption, "cylinder");
         } else if (absorption_type == "cylinder-hewat" || absorption_type == "cylinder-lobanov") {
             experiment.absorption.mu_r = find_spec_parameter(block, spec::absorption_mu_r, where);
@@ -2480,7 +2478,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
             if (loader_is_cw) {
                 family_keys = {&spec::absorption_mu_r};
             } else {
-                family_keys = {&spec::absorption_abscor1, &spec::absorption_abscor2};
+                family_keys = {&spec::absorption_abscor1};
             }
             for (const ParameterSpec* spec : family_keys) {
                 if (block_has_tag(block, spec->edi_names[0])) {
@@ -3015,9 +3013,6 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr, const
         }
         if (experiment.absorption.abscor1) {
             absorption("abscor1", &*experiment.absorption.abscor1);
-        }
-        if (experiment.absorption.abscor2) {
-            absorption("abscor2", &*experiment.absorption.abscor2);
         }
         if (experiment.absorption.mu_r) {
             absorption("mu_r", &*experiment.absorption.mu_r);
@@ -3752,6 +3747,13 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             }
         }
         BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string(), assistant_result);
+        // Older files carry FullProf's second absorption coefficient, which has no effect on the
+        // Hewat cylinder and is no longer kept. A nonzero value is said once; it is not saved again.
+        if (const std::string* abscor2 = experiment_block.find("_absorption.abscor2")) {
+            if (std::strtod(abscor2->c_str(), nullptr) != 0.0) {
+                warn("experiment '" + experiment.name + "': _absorption.abscor2 has no effect and is ignored");
+            }
+        }
         // A time-of-flight single crystal has no instrument category: its calculation reads none. Items a file
         // carries for one are read past, and said so (the owner, 2026-10-23).
         if (experiment.reflections.has_value() &&
@@ -4779,20 +4781,15 @@ void apply_absorption_family(AbsorptionBase& absorption, const std::string& toke
         if (!absorption.abscor1.has_value()) {
             absorption.abscor1 = default_coefficient(spec::absorption_abscor1);
         }
-        if (!absorption.abscor2.has_value()) {
-            absorption.abscor2 = default_coefficient(spec::absorption_abscor2);
-        }
         absorption.mu_r.reset();
     } else if (token == "cylinder-hewat" || token == "cylinder-lobanov") {
-        // The CW families carry the single mu_r body ("0" ⇒ A ≡ 1), never the pair.
+        // The CW families carry the single mu_r body ("0" ⇒ A ≡ 1), never ABSCOR1.
         if (!absorption.mu_r.has_value()) {
             absorption.mu_r = default_coefficient(spec::absorption_mu_r);
         }
         absorption.abscor1.reset();
-        absorption.abscor2.reset();
     } else {
         absorption.abscor1.reset();
-        absorption.abscor2.reset();
         absorption.mu_r.reset();
     }
 }

@@ -1592,14 +1592,13 @@ Index build_index(Project& model, crysta::Project& cproject) {
                       Slot{&cexperiment.background_terms[i].coef, &experiment.background_terms[i]->coef});
     }
     // Presence-tracked: a model that never declared abscor1 has no such path, so a set() on it is an
-    // unknown path rather than a silent write to a 0 the model never carried. abscor2 is
-    // deliberately never indexed — crysta holds it fixed and freeing it is a hard error there.
+    // unknown path rather than a silent write to a 0 the model never carried.
     if (experiment.absorption.abscor1 && !cexperiment.absorption.empty()) {
         index.emplace("experiment.absorption.abscor1",
                       Slot{&cexperiment.absorption[0], &*experiment.absorption.abscor1});
     }
     // The CW families carry the single mu_r body at absorption[0] (crysta's cwl layout),
-    // refinable exactly as abscor1. The family contract keeps mu_r and the TOF pair mutually
+    // refinable exactly as abscor1. The family contract keeps mu_r and the TOF ABSCOR1 mutually
     // exclusive; a hand-built model carrying both fails closed at the injectivity check
     // below rather than silently double-mapping the slot.
     if (experiment.absorption.mu_r && !cexperiment.absorption.empty()) {
@@ -1736,9 +1735,6 @@ void validate_index(const Project& model, const Index& index, crysta::Project& c
     // the deliberately unmapped slots, asserted by address rather than by count.
     crysta::ExperimentBase& cexperiment = cproject.experiment();
     std::set<const crysta::Parameter*> allowed_unmapped;
-    if (cexperiment.absorption.size() > 1) {
-        allowed_unmapped.insert(&cexperiment.absorption[1]);  // abscor2: engine-fixed, never indexed
-    }
     if (!model.experiment().absorption.abscor1 && !model.experiment().absorption.mu_r &&
         !cexperiment.absorption.empty()) {
         allowed_unmapped.insert(&cexperiment.absorption[0]);  // absent in the model
@@ -2829,10 +2825,10 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
             built.data = crysta::PdDataBase(e.data->axis(), e.data->intensity_meas.get(),
                                             e.data->intensity_meas_su.get());
         }
-        // The persisted pair follows the FAMILY, not key presence — a typed family's
+        // The persisted ABSCOR1 follows the FAMILY, not key presence — a typed family's
         // parameters exist iff the type says so. Under "cylinder" the loader has already
-        // canonicalised both coefficients (a missing key defaulted to 0), so they cross as
-        // ordinary values; under "none" there is nothing to persist.
+        // canonicalised the coefficient (a missing key defaulted to 0), so it crosses as an
+        // ordinary value; under "none" there is nothing to persist.
         if (crysta::absorption_form_of(built.kind, built.absorption_type.get()) ==
             crysta::AbsorptionForm::None) {
             built.absorption.clear();
@@ -3440,7 +3436,7 @@ const Parameter& seed_scale(const ExperimentBase& e) {
 //   peak_type     selects the Jorgensen-von-Dreele Lorentzian free block; crysta defaults to plain
 //                 `tof-jorgensen`, under which a bracketed Lorentzian coefficient is REJECTED, so
 //                 omitting this silently changes the free set (or hard-errors);
-//   absorption    the per-bank ABSCOR1/ABSCOR2 pair; absent/0 means mu*R = 0, i.e. A == 1;
+//   absorption    the per-bank ABSCOR1; absent/0 means mu*R = 0, i.e. A == 1;
 //   dataset_weight, excluded_regions  the per-bank joint weight and mask;
 //   data_file     the plain-data file the measured data came from, which the save writes back.
 void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& built) {
@@ -3543,26 +3539,23 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
     const crysta::AbsorptionForm absorption_form =
         crysta::absorption_form_of(built.kind, built.absorption_type.get());
 
-    // AbsorptionBase: crysta expects [abscor1, abscor2]. A freed ABSCOR2 is passed through
-    // rather than silently cleared; crysta rejects it with its own structured error.
+    // AbsorptionBase: crysta expects [abscor1].
     built.absorption.clear();
     // TOF only, and — review-8 F4 — only for the CYLINDER family: a typed family's
     // parameters exist iff the type says so, for the CALCULATION exactly as for
-    // persistence. crysta's own loader fills the pair for a TOF cylinder block and leaves
+    // persistence. crysta's own loader fills ABSCOR1 for a TOF cylinder block and leaves
     // both a CW block's and a type-none block's absorption EMPTY (F-d-ABS reversed), so the
     // conversion mirrors exactly that — a declared no-absorption project computes with no
     // absorption, before and after its round trip alike. Under "cylinder" the model holds
-    // both coefficients (loader/factory canonical); value_or guards a hand-built partial
+    // ABSCOR1 (loader/factory canonical); value_or guards a hand-built partial
     // model only.
     if (built.kind == crysta::BeamModeEnum::TimeOfFlight &&
         absorption_form == crysta::AbsorptionForm::CylinderHewat) {
         built.absorption.push_back(
             param(e.absorption.abscor1.value_or(Parameter{}), crysta::CORRECTION, "abscor1"));
-        built.absorption.push_back(
-            param(e.absorption.abscor2.value_or(Parameter{}), crysta::CORRECTION, "abscor2"));
     }
     // The CW families carry the single mu_r body — [0]=mu_r, crysta's cwl layout, the same
-    // typed-family rule as the TOF pair (parameters exist iff the type says so).
+    // typed-family rule as the TOF ABSCOR1 (parameters exist iff the type says so).
     if (built.kind == crysta::BeamModeEnum::ConstantWavelength &&
         absorption_form != crysta::AbsorptionForm::None) {
         built.absorption.push_back(

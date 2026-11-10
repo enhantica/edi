@@ -92,7 +92,7 @@ side (tables (b)/(c)).
 
 | edi name | diffraction-lib name | surface | justification |
 | --- | --- | --- | --- |
-| `absorption.abscor1` / `absorption.abscor2` | *(no TOF absorption category upstream)* | Python attribute, identity path, `.edi` item | The FullProf `Iabscor=2` pair, kept as FullProf spells it. ABSCOR1 is kernel-proven (`muR = ABSCOR1 * lambda`, crysta `tof_profile.hpp`), but ABSCOR2's lambda-power is unpinned in the engine — a physical name for it would be a guess, and naming one half of a FullProf-defined pair alone would split the pair. Upstream's `cylinder_hewat` absorption is CW-only by its own `Compatibility` declaration, so there is no upstream TOF name to converge to. |
+| `absorption.abscor1` | *(no TOF absorption category upstream)* | Python attribute, identity path, `.edi` item | FullProf's `Iabscor=2` coefficient, kept as FullProf spells it (`muR = ABSCOR1 * lambda`, crysta `tof_profile.hpp`). FullProf's second coefficient has no effect on this correction and edi does not carry it. Upstream's `cylinder_hewat` absorption is CW-only by its own `Compatibility` declaration, so there is no upstream TOF name to converge to. |
 | `experiment_type.beam_mode` default `time-of-flight` | default `constant wavelength` | declared default (values and tokens are identical) | edi's entire pre-CW project corpus is TOF, and the loader derives the mode from the `_peak.type` family when the tag is absent. Adopting upstream's CW default would silently re-mode every legacy model. |
 | `Parameter.esd` | `Parameter.uncertainty` | Python attribute | `esd` is the IUCr/CIF vocabulary (the bracketed *standard uncertainty* every `.edi` value carries) and predates this task across edi's whole surface; the semantics are identical. Recorded rather than renamed: the packet's ruled rename table does not include it, and the CIF-anchored spelling has independent standing. |
 | `SampleFormEnum`, `BeamModeEnum`, `RadiationProbeEnum`, `ScatteringTypeEnum`, `PeakProfileTypeEnum` | `SampleFormEnum`, `BeamModeEnum`, `RadiationProbeEnum`, `ScatteringTypeEnum`, `PeakProfileTypeEnum` | Python/C++ type names | Values, field names and verbatim tokens match upstream exactly; only the type-name `…Enum` suffix is dropped (C++ house style — an enum's kind is carried by its type, not its name). |
@@ -153,7 +153,7 @@ aliases, minimizer selection, …), which arrives incrementally behind
 
 | diffraction-lib name | note |
 | --- | --- |
-| `absorption.mu_r` | upstream's CW cylinder absorption surface; edi's TOF `abscor1`/`abscor2` pair is a declared divergence — see table (a) |
+| `absorption.mu_r` | upstream's CW cylinder absorption surface; edi's TOF `abscor1` is a declared divergence — see table (a) |
 | `aliases.id` | the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) — the facade exists, this category is not yet ported |
 | `aliases.param` | the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) — the facade exists, this category is not yet ported |
 | `aliases.parameter_unique_name` | the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) — the facade exists, this category is not yet ported |

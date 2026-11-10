@@ -3561,8 +3561,7 @@ NB_MODULE(_edi, m) {
         },
         "Link a structure from keyword attributes (structure_id, scale, enabled) and add it.");
 
-    // The absorption category — the FullProf ABSCOR pair, presence-tracked (parity doc records
-    // why the spellings stay).
+    // The absorption category, presence-tracked; ABSCOR1 keeps FullProf's spelling (parity doc).
     nb::class_<edi::views::AbsorptionNode> absorption(m, "AbsorptionBase");
     absorption.def("__setattr__", renewing_setattr<edi::views::AbsorptionNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
     absorption.def_prop_rw(
@@ -3572,7 +3571,7 @@ NB_MODULE(_edi, m) {
             // family body, a typed token initialises it, anything else refuses. None spells
             // the loader's absent-means-none state. The vocabulary is beam-scoped exactly as
             // at the loader — a CW experiment spells none/cylinder-hewat/ cylinder-lobanov
-            // (the mu_r body); a TOF one none/cylinder (the ABSCOR pair), with the
+            // (the mu_r body); a TOF one none/cylinder (ABSCOR1), with the
             // "cylinder-hewat" inventory token mapping to its TOF file token. The rule is
             // edi::select_absorption's, on crysta's own
             // vocabulary (the adapter asks it); nothing is listed or mapped here.
@@ -3585,11 +3584,8 @@ NB_MODULE(_edi, m) {
     def_view_optional_parameter_field(cylinder_hewat_absorption, "abscor1",
                                       &edi::AbsorptionBase::abscor1,
                                       edi::spec::absorption_abscor1);
-    def_view_optional_parameter_field(cylinder_hewat_absorption, "abscor2",
-                                      &edi::AbsorptionBase::abscor2,
-                                      edi::spec::absorption_abscor2);
     // The CW face of the same lens — muR = mu * R (cylinder radius) at the reflection's
-    // Bragg theta, beside the TOF pair on the one cylinder-Hewat node (crysta's D9/R46
+    // Bragg theta, beside the TOF ABSCOR1 on the one cylinder-Hewat node (crysta's D9/R46
     // shape); each member resolves against the experiment's own family block.
     def_view_optional_parameter_field(cylinder_hewat_absorption, "mu_r",
                                       &edi::AbsorptionBase::mu_r,
@@ -3821,7 +3817,7 @@ NB_MODULE(_edi, m) {
                 const edi::AbsorptionBase& a = self.absorption;
                 std::string token =
                     a.type ? *a.type
-                           : ((a.abscor1 || a.abscor2 || a.mu_r) ? std::string("cylinder-hewat")
+                           : ((a.abscor1 || a.mu_r) ? std::string("cylinder-hewat")
                                                                  : std::string("none"));
                 if (a.type) {
                     // The declared file spelling classifies as its registry token, which is

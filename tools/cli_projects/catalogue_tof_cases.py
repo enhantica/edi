@@ -136,7 +136,6 @@ def cylinder(*, is_free: bool = True) -> list[str]:
         '',
         '_absorption.type cylinder',
         f'_absorption.abscor1 {maybe_free(0, is_free=is_free)}',
-        '_absorption.abscor2 0',
     ]
 
 

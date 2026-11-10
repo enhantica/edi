@@ -301,7 +301,6 @@ def experiment_text(case: str, pcr: Pcr, name: str, structure: str, data) -> str
         lines += [
             '_absorption.type cylinder',
             f'_absorption.abscor1 {param(abscor[0], abscor[1])}',
-            f'_absorption.abscor2 {param(abscor[2], abscor[3])}',
             '',
         ]
     else:
