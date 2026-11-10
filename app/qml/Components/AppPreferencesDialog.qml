@@ -131,22 +131,25 @@ AppDialog {
             }
         }
     }
-    // A value to read, drawn as a box is (frame, height, padding, text colour) without its arrow; a long value ends
-    // with "…" and shows whole as the tooltip.
-    component ReadOnlyField: EaElements.ComboBox {
+    // A value to read: plain text on a box's row height, without a frame, so it never looks like an input. A long
+    // value ends with "…" and shows whole as the tooltip.
+    component ReadOnlyField: EaElements.Label {
         id: readOnly
 
-        property string text
+        property string toolTipText: text
 
         width: dialog.columnWidth
+        height: dialog.rowHeight
+        verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
         textFormat: Text.PlainText
-        model: [text]
-        indicator: null
-        ToolTip.text: text
-        // Nothing to choose: a press opens no list.
-        MouseArea {
-            anchors.fill: parent
+
+        EaElements.ToolTip {
+            text: readOnly.toolTipText
+            requested: readOnlyHover.hovered
+        }
+        HoverHandler {
+            id: readOnlyHover
         }
     }
     // One column of a tab, its rows the same distance apart.
@@ -177,6 +180,8 @@ AppDialog {
     readonly property real rowHeight: themeBox.implicitHeight
     readonly property string updatesOff: qsTr("Available in installed desktop releases")
     readonly property real stripSpacing: EaStyle.Sizes.fontPixelSize * 0.25
+    // One line of an online source's three.
+    readonly property real onlineLineHeight: Math.round(EaStyle.Sizes.fontPixelSize * 1.6)
 
     objectName: "preferences"
     visible: Preferences.dialogShown
@@ -282,7 +287,7 @@ AppDialog {
         // A tab shows at once, without the swipe's slide.
         Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
-        // Appearance: the theme, then the charts' colours and behaviour, then the structure view's arrows. Rows with
+        // Appearance: the theme, then the structure view's arrows, then the charts' colours and behaviour. Rows with
         // colour strips pair up.
         TabColumn {
             width: dialog.contentRowWidth
@@ -301,6 +306,31 @@ AppDialog {
                         model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
                         currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
                         onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
+                    }
+                }
+            }
+            GroupTitle {
+                first: false
+                icon: "cubes"
+                text: qsTr("Structure view")
+            }
+            TabRow {
+                Field {
+                    label: qsTr("Magnetic moment arrows")
+                    spacing: dialog.stripSpacing
+                    FieldBox {
+                        readonly property var schemes: ["atom", "greyed", "single"]
+
+                        objectName: "preferences.momentColours"
+                        model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
+                        currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
+                        onActivated: index => Preferences.momentColours = schemes[index]
+                        ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
+                    }
+                    PaletteStrip {
+                        objectName: "preferences.momentColourStrip"
+                        width: dialog.columnWidth
+                        colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
                     }
                 }
             }
@@ -363,31 +393,6 @@ AppDialog {
                         model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
                         currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
                         onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
-                    }
-                }
-            }
-            GroupTitle {
-                first: false
-                icon: "cubes"
-                text: qsTr("Structure view")
-            }
-            TabRow {
-                Field {
-                    label: qsTr("Magnetic moment arrows")
-                    spacing: dialog.stripSpacing
-                    FieldBox {
-                        readonly property var schemes: ["atom", "greyed", "single"]
-
-                        objectName: "preferences.momentColours"
-                        model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
-                        currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
-                        onActivated: index => Preferences.momentColours = schemes[index]
-                        ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
-                    }
-                    PaletteStrip {
-                        objectName: "preferences.momentColourStrip"
-                        width: dialog.columnWidth
-                        colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
                     }
                 }
             }
@@ -527,27 +532,19 @@ AppDialog {
                 id: onlineTable
                 objectName: "preferences.online.sources"
                 width: parent.width
-                maxRowCountShow: 6
+                maxRowCountShow: 3
                 sourceModel: Session.onlineSources
                 defaultInfoText: qsTr("No online sources")
-                columns: [numberColumnWidth, AppSizes.dataColumnWidth * 1.8, -1, AppSizes.dataColumnWidth * 1.6, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                // Each source on three lines, as the Examples list draws an example: its name, what it holds and its
+                // URL, so every text shows whole.
+                tableRowHeight: Math.ceil(EaStyle.Sizes.fontPixelSize * 5.5)
+                columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                // Without a header, as the Examples list: each row's three lines say what they are.
                 header: EaComponents.ListViewHeader {
+                    visible: false
+                    implicitHeight: 0
                     EaComponents.ListViewLabel {}
-                    EaComponents.ListViewLabel {
-                        elide: Text.ElideRight
-                        text: qsTr("Name")
-                        horizontalAlignment: Text.AlignLeft
-                    }
-                    EaComponents.ListViewLabel {
-                        elide: Text.ElideRight
-                        text: qsTr("URL")
-                        horizontalAlignment: Text.AlignLeft
-                    }
-                    EaComponents.ListViewLabel {
-                        elide: Text.ElideRight
-                        text: qsTr("Holds")
-                        horizontalAlignment: Text.AlignLeft
-                    }
+                    EaComponents.ListViewLabel {}
                     EaComponents.ListViewLabel {}
                     EaComponents.ListViewLabel {}
                 }
@@ -566,44 +563,85 @@ AppDialog {
                         marksCurrentRow: true
                     }
                     // A built-in source's name and URL are read, not edited: the cell's own text is hidden under a
-                    // label that ends with "…" when too long, the whole text its tooltip.
-                    TextCell {
-                        objectName: "preferences.online.source.name." + onlineRow.model.id
-                        horizontalAlignment: Text.AlignLeft
-                        value: onlineRow.name
-                        enabled: !onlineRow.builtin
-                        color: onlineRow.builtin ? "transparent" : activeFocus || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
-                        onCommitted: text => Session.onlineSources.setName(onlineRow.model.id, text)
-                        EaComponents.ListViewLabel {
-                            anchors.fill: parent
-                            visible: onlineRow.builtin
-                            horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideRight
-                            text: onlineRow.name
+                    // label, which ends with "…" when too long, the whole text its tooltip.
+                    Item {
+                        height: onlineRow.height
+
+                        // A read-only source's lines whole, as the tooltip; an editable one shows its own.
+                        HoverHandler {
+                            id: onlineHover
                         }
-                    }
-                    TextCell {
-                        objectName: "preferences.online.source.url." + onlineRow.model.id
-                        horizontalAlignment: Text.AlignLeft
-                        value: onlineRow.url
-                        enabled: !onlineRow.builtin && !onlineRow.overridden
-                        color: !enabled ? "transparent" : activeFocus || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
-                        ToolTip.text: enabled ? onlineRow.url : ""
-                        onCommitted: text => Session.onlineSources.setUrl(onlineRow.model.id, text)
-                        EaComponents.ListViewLabel {
-                            anchors.fill: parent
-                            visible: !parent.enabled
-                            horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideRight
-                            text: onlineRow.url
-                            ToolTip.text: onlineRow.overridden ? qsTr("Set for this run by --online-source or EDI_ONLINE_SOURCES") : ""
+                        EaElements.ToolTip {
+                            requested: onlineHover.hovered && onlineRow.builtin
+                            text: [onlineRow.name, onlineRow.url, onlineRow.overridden ? qsTr("Set for this run by --online-source or EDI_ONLINE_SOURCES") : ""].filter(line => line !== "").join("\n")
                         }
-                    }
-                    EaComponents.ListViewLabel {
-                        objectName: "preferences.online.source.kinds." + onlineRow.model.id
-                        horizontalAlignment: Text.AlignLeft
-                        elide: Text.ElideRight
-                        text: onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : k === "project" ? qsTr("projects") : qsTr("data")).join(", ")
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width
+                            spacing: EaStyle.Sizes.fontPixelSize * 0.1
+
+                            Item {
+                                width: parent.width
+                                height: dialog.onlineLineHeight
+                                TextCell {
+                                    id: nameCell
+
+                                    objectName: "preferences.online.source.name." + onlineRow.model.id
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignLeft
+                                    value: onlineRow.name
+                                    enabled: !onlineRow.builtin
+                                    color: onlineRow.builtin ? "transparent" : activeFocus || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
+                                    onCommitted: text => Session.onlineSources.setName(onlineRow.model.id, text)
+                                    EaElements.Label {
+                                        anchors.fill: parent
+                                        leftPadding: parent.leftPadding
+                                        rightPadding: parent.rightPadding
+                                        visible: onlineRow.builtin
+                                        verticalAlignment: Text.AlignVCenter
+                                        elide: Text.ElideRight
+                                        // Read, not disabled: the name in the text colour, as the Examples titles.
+                                        color: EaStyle.Colors.themeForeground
+                                        text: onlineRow.name
+                                    }
+                                }
+                            }
+                            EaElements.Label {
+                                objectName: "preferences.online.source.kinds." + onlineRow.model.id
+                                width: parent.width
+                                height: dialog.onlineLineHeight
+                                leftPadding: nameCell.leftPadding
+                                rightPadding: nameCell.rightPadding
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                                color: EaStyle.Colors.themeForegroundMinor
+                                text: qsTr("Holds %1").arg(onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : k === "project" ? qsTr("projects") : qsTr("data")).join(", "))
+                            }
+                            Item {
+                                width: parent.width
+                                height: dialog.onlineLineHeight
+                                TextCell {
+                                    objectName: "preferences.online.source.url." + onlineRow.model.id
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignLeft
+                                    value: onlineRow.url
+                                    enabled: !onlineRow.builtin && !onlineRow.overridden
+                                    color: !enabled ? "transparent" : activeFocus || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForegroundMinor
+                                    ToolTip.text: enabled ? onlineRow.url : ""
+                                    onCommitted: text => Session.onlineSources.setUrl(onlineRow.model.id, text)
+                                    EaElements.Label {
+                                        anchors.fill: parent
+                                        leftPadding: parent.leftPadding
+                                        rightPadding: parent.rightPadding
+                                        visible: !parent.enabled
+                                        verticalAlignment: Text.AlignVCenter
+                                        elide: Text.ElideMiddle
+                                        color: EaStyle.Colors.themeForegroundMinor
+                                        text: onlineRow.url
+                                    }
+                                }
+                            }
+                        }
                     }
                     EaComponents.ListViewButton {
                         objectName: "preferences.online.source.enabled." + onlineRow.model.id
@@ -675,49 +713,24 @@ AppDialog {
                             property int maximum: ApplicationInfo.scanWorkersMaximum
                             signal chosen(int count)
 
-                            // The count the engine runs with, set rather than bound: the box rewrites its own text as
-                            // its list loads and as it is edited.
+                            // The count the engine runs with, set rather than bound: the list is rebuilt when the
+                            // machine's maximum is read.
                             function show() {
-                                currentIndex = find(String(Preferences.scanWorkersApplied));
-                                editText = String(Preferences.scanWorkersApplied);
-                            }
-                            // Enter or leaving the box takes a typed whole number, held to 1 and the maximum.
-                            function take() {
-                                const typed = parseInt(editText, 10);
-                                if (!isNaN(typed))
-                                    chosen(Math.max(1, Math.min(typed, maximum)));
+                                currentIndex = Math.max(0, Math.min(Preferences.scanWorkersApplied, maximum) - 1);
                             }
 
+                            // A plain list of every count up to the cores of this machine: a click opens it.
                             objectName: "preferences.scanWorkers"
                             enabled: ApplicationInfo.engineThreadsSelectable
-                            editable: true
-                            validator: IntValidator {
-                                bottom: 1
-                            }
-                            // Typed text where every other box's text sits.
-                            contentItem: TextInput {
-                                leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
-                                rightPadding: EaStyle.Sizes.fontPixelSize
-                                text: scanWorkersBox.editText
-                                font: scanWorkersBox.font
-                                color: scanWorkersBox.foregroundColor
-                                selectionColor: EaStyle.Colors.themeAccent
-                                selectedTextColor: EaStyle.Colors.themeBackground
-                                verticalAlignment: Text.AlignVCenter
-                                validator: scanWorkersBox.validator
-                                inputMethodHints: Qt.ImhDigitsOnly
-                                selectByMouse: true
-                                onEditingFinished: scanWorkersBox.take()
-                            }
                             model: {
                                 const counts = [];
-                                for (let count = 1; count <= Math.min(5, maximum); ++count)
+                                for (let count = 1; count <= Math.max(1, maximum); ++count)
                                     counts.push(String(count));
                                 return counts;
                             }
                             Component.onCompleted: show()
                             onModelChanged: show()
-                            onActivated: index => chosen(parseInt(textAt(index), 10))
+                            onActivated: index => chosen(index + 1)
                             onChosen: count => {
                                 Preferences.scanWorkers = count;
                                 show();
@@ -1105,7 +1118,7 @@ AppDialog {
                         // A path keeps its start and its file name: cut in the middle.
                         elide: Text.ElideMiddle
                         text: WebFiles.available ? qsTr("Stored in this browser") : ApplicationInfo.shownPath(EaGlobals.Vars.settingsFile)
-                        ToolTip.text: WebFiles.available ? text : ApplicationInfo.localPath(EaGlobals.Vars.settingsFile)
+                        toolTipText: WebFiles.available ? text : ApplicationInfo.localPath(EaGlobals.Vars.settingsFile)
                     }
                 }
                 Field {

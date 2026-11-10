@@ -28,6 +28,8 @@ has the newest entries.
 2. Under **Online sources**, press **Add online source**. A new row appears.
 3. Type a name and the collection's base URL: the address that holds its `index.json`.
 
+Each source is one row of three lines: its name, what it holds and its URL.
+
 The switch at the end of a row hides a source from **From web…** without removing it; the minus button removes a
 source you added. The two built-in sources can be switched off but not removed.
 
