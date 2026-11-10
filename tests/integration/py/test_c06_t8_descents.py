@@ -129,6 +129,34 @@ def test_retirement_prose_does_not_advertise_an_active_choice(tmp_path):
         'Explicitly retired migration prose must remain possible without a selectable old flow'
     )
 
+    path.write_text(
+        'The two descents (`fast_descent_linear_snap`,\n'
+        '`fast_descent_guarded_linear_snap`) are\nretired (ADR-0125).\n'
+    )
+    assert not advertisements(tmp_path, [path.name]), (
+        'Retirement prose retains its meaning when names and the predicate wrap across lines'
+    )
+    for caution in (
+        'Do not use fast_descent_linear_snap;\nit is retired.\n',
+        'Never select fast_descent_guarded_linear_snap; it was removed.\n',
+    ):
+        path.write_text(caution)
+        assert not advertisements(tmp_path, [path.name]), (
+            'A negated invitation with an explicit retirement notice is migration prose'
+        )
+    for suffix in (
+        'Choose fast_descent_linear_snap.\n',
+        '- Select fast_descent_guarded_linear_snap\n',
+        'Retired:\nUse fast_descent_linear_snap\n',
+        'Retired:\n```text\nfast_descent_linear_snap is retired\n```\n',
+        'Retired:\n~~~text\nfast_descent_linear_snap is retired\n~~~\n',
+        'Retired:\n````text\n```\nfast_descent_linear_snap is retired\n````\n',
+    ):
+        path.write_text('The old choices are retired.\n' + suffix)
+        assert advertisements(tmp_path, [path.name]), (
+            'A retirement notice cannot conceal an active invitation list item or code example'
+        )
+
 
 def test_python_registry_and_default_match_the_owner_decision():
     engine = module()
