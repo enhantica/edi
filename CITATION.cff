@@ -1,13 +1,16 @@
 cff-version: 1.2.0
 message: "If you use EasyDiffraction in your work, please cite it as below."
-# The DOI is a placeholder until the first release is archived. The app's How to cite reads this file.
+# For now the citation is the Zenodo record of the EasyDiffraction Python library. The app's How to cite reads this file.
 title: "EasyDiffraction"
 type: software
 authors:
-  - name: "The EasyDiffraction developers"
-version: "2026.11.0"
-doi: "10.5281/zenodo.0000000"
-date-released: "2026-11-10"
+  - name: "Andrew Sazonov"
+  - name: "Eric Lindgren"
+  - name: "Piotr Rozyczko"
+  - name: "Mridul Seth"
+version: "0.21.1"
+doi: "10.5281/zenodo.22905049"
+date-released: "2026-09-22"
 url: "https://enhantica.github.io/edi"
 repository-code: "https://github.com/enhantica/edi"
 license: BSD-3-Clause

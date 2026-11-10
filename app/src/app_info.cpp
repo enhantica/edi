@@ -417,9 +417,11 @@ Citation ApplicationInfo::citation() const {
     const QString who = authors.join(QStringLiteral(", "));
     const QString text = QStringLiteral("%1 (%2). %3 (version %4) [Computer software]. %5")
                              .arg(who, year, title, version, doi_url);
-    const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {{%1}},\n  title = {%2},\n"
+    // BibTeX separates people with "and"; one entity name stays in double braces so it is not split.
+    const QString bibtex_who = authors.size() == 1 ? QLatin1Char('{') + who + QLatin1Char('}') : authors.join(QStringLiteral(" and "));
+    const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {%1},\n  title = {%2},\n"
                                           "  year = {%3},\n  version = {%4},\n  doi = {%5},\n  url = {%6}\n}")
-                               .arg(who, title, year, version, doi, doi_url);
+                               .arg(bibtex_who, title, year, version, doi, doi_url);
     return {text, bibtex, doi, doi_url};
 }
 

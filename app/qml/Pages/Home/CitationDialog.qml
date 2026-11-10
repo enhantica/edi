@@ -7,7 +7,8 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// How to cite (Home): the citation as text and its DOI, both from CITATION.cff, copied as text or as BibTeX.
+// How to cite (Home): the citation as text and its DOI as a link, both from CITATION.cff. The buttons left of Close
+// copy it as text or as BibTeX.
 AppDialog {
     id: dialog
 
@@ -21,6 +22,23 @@ AppDialog {
 
     onAboutToShow: citation = ApplicationInfo.citation()
 
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: "citation.copy.text"
+            fontIcon: "copy"
+            text: qsTr("Copy as text")
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: ApplicationInfo.copyText(dialog.citation.text ?? "")
+        }
+        EaElements.Button {
+            objectName: "citation.copy.bibtex"
+            fontIcon: "copy"
+            text: qsTr("Copy as BibTeX")
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: ApplicationInfo.copyText(dialog.citation.bibtex ?? "")
+        }
+    }
+
     Column {
         id: column
 
@@ -33,31 +51,13 @@ AppDialog {
             wrapMode: Text.WordWrap
             text: dialog.citation.text ?? ""
         }
-        EaElements.Label {
+        // The DOI as a light link with the external-resource icon, as About's licence links are.
+        IconLink {
             objectName: "citation.doi"
-            width: parent.width
-            wrapMode: Text.WordWrap
-            textFormat: Text.StyledText
-            // The base label opens its https link in the browser.
-            text: dialog.citation.doiUrl ? `DOI: <a href="${dialog.citation.doiUrl}">${dialog.citation.doi}</a>` : ""
-        }
-        Row {
-            spacing: EaStyle.Sizes.fontPixelSize
-
-            EaElements.SideBarButton {
-                objectName: "citation.copy.text"
-                width: (column.width - parent.spacing) / 2
-                fontIcon: "copy"
-                text: qsTr("Copy as text")
-                onClicked: ApplicationInfo.copyText(dialog.citation.text ?? "")
-            }
-            EaElements.SideBarButton {
-                objectName: "citation.copy.bibtex"
-                width: (column.width - parent.spacing) / 2
-                fontIcon: "copy"
-                text: qsTr("Copy as BibTeX")
-                onClicked: ApplicationInfo.copyText(dialog.citation.bibtex ?? "")
-            }
+            visible: (dialog.citation.doiUrl ?? "") !== ""
+            fontIcon: "external-link-alt"
+            text: "DOI: " + (dialog.citation.doi ?? "")
+            onClicked: Qt.openUrlExternally(dialog.citation.doiUrl)
         }
     }
 }
