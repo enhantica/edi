@@ -1212,7 +1212,10 @@ std::string report_view_html(const ReportModel& model, const ReportView& view, c
             structure.variants.clear();
         }
     }
-    return report_document(part, libraries, Writer(part).view(view), kViewStyle);
+    const std::string body = Writer(part).view(view);
+    // The tables are written into the body; the page's script reads only the charts' groups.
+    part.parameters.clear();
+    return report_document(part, libraries, body, kViewStyle);
 }
 
 std::string fnv1a64(std::string_view bytes) {

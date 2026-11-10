@@ -356,7 +356,19 @@ function drawPattern(figure, pattern) {
     // An excluded region is a band in each pane, never across the gaps between them.
     for (const shape of pattern.browser.shapes) layout.shapes.push({ ...shape, xref: x, yref: `${y} domain` });
   }
-  const traces = pattern.browser.traces.map(trace => ({ ...trace, xaxis: (trace.yaxis ?? 'y').replace('y', 'x') }));
+  // A trace on another's grid names it (x_from); a structure's fill closes back along its lower edge (fill_back), which
+  // may be another trace's curve (fill_back_from).
+  const sent = pattern.browser.traces;
+  const traces = sent.map(({ x_from: from, fill_back: back, fill_back_from: backFrom, ...trace }) => {
+    const x = from === undefined ? trace.x : sent[from].x;
+    const lower = backFrom === undefined ? back : sent[backFrom].y;
+    return {
+      ...trace,
+      x: lower ? [...x, ...x.slice().reverse()] : x,
+      y: lower ? [...trace.y, ...lower.slice().reverse()] : trace.y,
+      xaxis: (trace.yaxis ?? 'y').replace('y', 'x'),
+    };
+  });
   const kinds = pattern.series.map(series => series.kind);
   // The app's read-out box of each measured point and tick, from the model's `hover` (hover_readout): lines by '\n',
   // each line's coloured pieces by '\x1e', each piece `<style key>\t<text>`.
@@ -366,7 +378,11 @@ function drawPattern(figure, pattern) {
     const [key, text] = piece.includes('\t') ? piece.split('\t') : ['', piece];
     return key ? `<span style="color:${colours[key]}">${escape(text)}</span>` : escape(text);
   }).join('')).join('<br>');
-  (pattern.hover ?? []).forEach((texts, i) => {
+  // A series' read-outs come whole, or as their shared wording and a column per value, null where a point has none
+  // (browser_readouts).
+  const whole = hover => Array.isArray(hover) ? hover : hover.values[0].map((first, point) => first === null ? '' :
+    hover.parts.reduce((text, part, k) => text + hover.values[k - 1][point] + part));
+  (pattern.hover ?? []).map(whole).forEach((texts, i) => {
     if (texts.length && traces[i]) traces[i].text = texts.map(readout);
   });
   // The residual's point shows its measured point's read-out, as the app's residual pane does.

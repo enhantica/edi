@@ -283,6 +283,16 @@ std::string browser_axis_title(const AxisDescription& axis, const std::vector<Se
 }
 // The source model's non-finite values become JSON null before the browser's original arithmetic (Number(null)).
 double browser_number(double value) { return std::isfinite(value) ? value : 0.0; }
+// A value a chart draws, to seven significant digits: more than any measured column carries and far below what a
+// zoomed chart can show, so a page does not carry the arithmetic's noise (763.9085429582981).
+double chart_number(double value) {
+    if (!std::isfinite(value) || value == 0.0) return value;
+    const int places = 6 - static_cast<int>(std::floor(std::log10(std::fabs(value))));
+    if (places > 22 || places < -22) return value;
+    // An exact power of ten on the integer side keeps the result the double nearest the rounded decimal.
+    const double scale = std::pow(10.0, std::abs(places));
+    return places >= 0 ? std::round(value * scale) / scale : std::round(value / scale) * scale;
+}
 // A derived Infinity/NaN must survive the JSON boundary; raw model values keep the existing null representation.
 Value renderer_number(double value) {
     if (std::isfinite(value)) return value;
@@ -311,12 +321,14 @@ Value browser_trace(const ReportPattern& report, const PatternSeries& series, st
     std::string name = browser_colour(series.label, style);
     if (series.kind == SeriesKind::Residual && !report.presentation.y_residual.segments.empty()) name = browser_colour("Residual (", style) + browser_axis_title(report.presentation.y_residual, styles) + browser_colour(")", style);
     Array x, y;
-    for (const PresentedPoint& point : series.points) { x.emplace_back(point.x); y.emplace_back(point.y); }
+    for (const PresentedPoint& point : series.points) { x.emplace_back(chart_number(point.x)); y.emplace_back(chart_number(point.y)); }
     // A structure's curve as the app draws it: its outline over a soft fill down to the background (bar_low), one
-    // closed shape, the outline back along the background.
+    // closed shape, the outline back along the background. The page closes it: `fill_back` is the lower edge, in x
+    // order.
     const bool filled = marked("fill") && series.bar_low.size() == series.points.size();
+    Array back;
     if (filled) {
-        for (std::size_t i = series.points.size(); i-- > 0;) { x.emplace_back(series.points[i].x); y.emplace_back(series.bar_low[i]); }
+        for (const double low : series.bar_low) back.emplace_back(chart_number(low));
     }
     Object line{{"dash", marked("dash") ? "dash" : "solid"}};
     if (style) { line.emplace_back("color", style->light); line.emplace_back("width", style->width_px); }
@@ -326,6 +338,7 @@ Value browser_trace(const ReportPattern& report, const PatternSeries& series, st
     if (filled && style) {
         for (auto& [key, value] : trace) if (key == "opacity") value = 1.0;
         trace.emplace_back("fill", "toself");
+        trace.emplace_back("fill_back", std::move(back));
         trace.emplace_back("fillcolor", browser_rgba(style->light, std::isfinite(style->opacity) ? style->opacity : 0.25));
     }
     if (marked("markers")) {
@@ -335,10 +348,10 @@ Value browser_trace(const ReportPattern& report, const PatternSeries& series, st
         Array high, low;
         for (std::size_t i = 0; i < series.points.size(); ++i) {
             const double value = series.points[i].y;
-            high.push_back(!std::isfinite(value) || !std::isfinite(series.bar_high[i]) ? Value(nullptr) : renderer_number(series.bar_high[i] - value));
+            high.push_back(!std::isfinite(value) || !std::isfinite(series.bar_high[i]) ? Value(nullptr) : renderer_number(chart_number(series.bar_high[i] - value)));
             if (!std::isfinite(value)) low.emplace_back(nullptr);
             else if (i >= series.bar_low.size()) low.push_back(renderer_number(std::numeric_limits<double>::quiet_NaN()));
-            else low.push_back(renderer_number(value - (std::isfinite(series.bar_low[i]) ? series.bar_low[i] : browser_number(report.presentation.y_main.min))));
+            else low.push_back(renderer_number(chart_number(value - (std::isfinite(series.bar_low[i]) ? series.bar_low[i] : browser_number(report.presentation.y_main.min)))));
         }
         Object errors{{"type", "data"}, {"symmetric", false}, {"thickness", 1}, {"width", 0}, {"array", std::move(high)}, {"arrayminus", std::move(low)}};
         if (style) errors.emplace_back("color", style->light);
@@ -361,6 +374,24 @@ Value browser_pattern(const ReportPattern& report, const std::vector<SeriesStyle
     bool bragg = false, residual = false; double fixed = 0.0;
     for (const PaneLayout& pane : report.presentation.layout) { bragg = bragg || pane.pane == Pane::Bragg; residual = residual || pane.pane == Pane::Residual; fixed += browser_number(pane.fixed_px); }
     for (std::size_t i = 0; i < report.presentation.series.size(); ++i) traces.push_back(browser_trace(report, report.presentation.series[i], i, styles));
+    // Curves share their grid, and a structure's fill closes along the background: an array that is an earlier
+    // trace's x (or another trace's y) names that trace instead (x_from, fill_back_from).
+    const auto member = [](Value& trace, const char* key) {
+        auto& members = std::get<Object>(trace.data);
+        return std::find_if(members.begin(), members.end(), [key](const auto& item) { return item.first == key; });
+    };
+    std::vector<std::string> grids, curves;
+    for (Value& trace : traces) curves.push_back(json::write(member(trace, "y")->second));
+    for (Value& trace : traces) {
+        const auto x = member(trace, "x");
+        grids.push_back(json::write(x->second));
+        const auto same = std::find(grids.begin(), grids.end() - 1, grids.back());
+        if (same != grids.end() - 1) *x = {"x_from", static_cast<double>(same - grids.begin())};
+        const auto back = member(trace, "fill_back");
+        if (back == std::get<Object>(trace.data).end()) continue;
+        const auto curve = std::find(curves.begin(), curves.end(), json::write(back->second));
+        if (curve != curves.end()) *back = {"fill_back_from", static_cast<double>(curve - curves.begin())};
+    }
     const auto* excluded = browser_style(styles, "excluded");
     for (const ExcludedBand& band : report.presentation.excluded) {
         Object shape{{"type", "rect"}, {"xref", "x"}, {"yref", "paper"}, {"x0", band.x_min}, {"x1", band.x_max}, {"y0", 0}, {"y1", 1}, {"line", Object{{"width", 0}}}, {"layer", "below"}};
@@ -392,11 +423,59 @@ Value browser_evolution(const ReportEvolution& series, const std::vector<SeriesS
     if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light); return out;
 }
 
+// A read-out's wording and its values: each piece (between '\n' and '\x1e') with a ": " ends in its value.
+std::vector<std::string> readout_parts(const std::string& text, std::vector<std::string>& values) {
+    std::vector<std::string> parts{""};
+    std::size_t start = 0;
+    while (start <= text.size()) {
+        const std::size_t end = std::min(text.find_first_of("\n\x1e", start), text.size());
+        const std::string piece = text.substr(start, end - start);
+        const std::size_t colon = piece.rfind(": ");
+        if (colon == std::string::npos) {
+            parts.back() += piece;
+        } else {
+            parts.back() += piece.substr(0, colon + 2);
+            values.push_back(piece.substr(colon + 2));
+            parts.emplace_back();
+        }
+        if (end < text.size()) parts.back() += text[end];
+        start = end + 1;
+    }
+    return parts;
+}
+// A series' read-outs for a page: one series' read-outs share their wording and differ in their numbers, so the page
+// gets the wording once and a column per value; the read-out of point i is parts[0] + values[0][i] + parts[1] + ...,
+// and a point without one (a tick's gap) is null in every column. Read-outs that do not share one wording stay whole.
+Value browser_readouts(const std::vector<std::string>& texts) {
+    std::vector<std::string> parts;
+    std::vector<std::vector<std::string>> split(texts.size());
+    for (std::size_t point = 0; point < texts.size(); ++point) {
+        if (texts[point].empty()) continue;
+        std::vector<std::string> wording = readout_parts(texts[point], split[point]);
+        if (parts.empty()) {
+            parts = std::move(wording);
+        } else if (wording != parts) {
+            return strings(texts);
+        }
+    }
+    if (parts.size() < 2) return strings(texts);
+    Array values(parts.size() - 1, Array{});
+    for (std::size_t point = 0; point < texts.size(); ++point) {
+        for (std::size_t column = 0; column + 1 < parts.size(); ++column) {
+            auto& items = std::get<Array>(values[column].data);
+            if (split[point].empty()) items.emplace_back(nullptr);
+            else items.emplace_back(std::move(split[point][column]));
+        }
+    }
+    return Object{{"parts", strings(parts)}, {"values", std::move(values)}};
+}
+
 Value pattern_json(const ReportPattern& pattern, const std::vector<SeriesStyle>& styles, bool browser) {
     const PatternPresentation& shown = pattern.presentation;
     Array series, excluded, layout, hover;
     for (const PatternSeries& item : shown.series) {
-        series.push_back(series_json(item));
+        // A page draws the browser traces and reads only each series' kind.
+        series.push_back(browser ? Value(Object{{"kind", name_of(item.kind, kKinds)}}) : series_json(item));
     }
     for (const ExcludedBand& band : shown.excluded) {
         excluded.push_back(numbers({band.x_min, band.x_max}));
@@ -406,7 +485,7 @@ Value pattern_json(const ReportPattern& pattern, const std::vector<SeriesStyle>&
             Object{{"pane", name_of(pane.pane, kPanes)}, {"stretch", pane.stretch}, {"fixed_px", pane.fixed_px}});
     }
     for (const std::vector<std::string>& texts : pattern.hover) {
-        hover.push_back(strings(texts));
+        hover.push_back(browser ? browser_readouts(texts) : strings(texts));
     }
     Array labels;
     for (const BraggRowLabel& label : shown.bragg_labels) {
