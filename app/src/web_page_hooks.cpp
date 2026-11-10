@@ -42,13 +42,13 @@ bool press(QObject* control) {
 
 QJsonObject state() {
     QObject* preferences = named("preferences");
-    QObject* develop = named("preferences.tab.develop");
+    QObject* develop = named("preferences.tab.advanced");
     QObject* diagnostics = named("diagnostics");
     auto* text = qobject_cast<QQuickItem*>(named("diagnostics.text"));
     auto* info = g_engine != nullptr ? g_engine->singletonInstance<ApplicationInfo*>("edi.app", "ApplicationInfo")
                                      : nullptr;
     if (preferences == nullptr || develop == nullptr || diagnostics == nullptr || text == nullptr || info == nullptr) {
-        return {{QStringLiteral("error"), QStringLiteral("the Preferences, Develop or Diagnostics controls were not found")}};
+        return {{QStringLiteral("error"), QStringLiteral("the Preferences, Advanced or Diagnostics controls were not found")}};
     }
     return {
         {QStringLiteral("preferencesVisible"), preferences->property("visible").toBool()},
@@ -62,7 +62,7 @@ QJsonObject state() {
 
 QJsonObject act(const std::string& action) {
     if (action == "open") {
-        if (!press(named("appBar.button.preferences")) || !press(named("preferences.tab.develop")) ||
+        if (!press(named("appBar.button.preferences")) || !press(named("preferences.tab.advanced")) ||
             !press(named("preferences.diagnostics"))) {
             return {{QStringLiteral("error"), QStringLiteral("Preferences, Develop or Diagnostics could not be opened")}};
         }

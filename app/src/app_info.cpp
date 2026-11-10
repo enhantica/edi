@@ -529,6 +529,14 @@ QColor ApplicationInfo::figureColour(const QString& scheme, int position, int co
                                                             static_cast<std::size_t>(std::max(count, 1)), dark)));
 }
 
+QList<QColor> ApplicationInfo::paletteColours(const QString& scheme, bool dark) const {
+    QList<QColor> out;
+    for (std::size_t position = 0; position < edi::kPaletteColourCount; ++position) {
+        out.append(QColor(QString::fromStdString(edi::figure_colour(colour_scheme(scheme), position, edi::kPaletteColourCount, dark))));
+    }
+    return out;
+}
+
 QColor ApplicationInfo::calculationColour(const QString& scheme, bool dark) const {
     return QColor(
         QString::fromStdString(edi::role_colour(colour_scheme(scheme), edi::ChartRole::TotalCalculation, dark)));
@@ -663,6 +671,23 @@ QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fa
     const edi::ColorScheme colors = scheme == QLatin1String("vesta") ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
     const edi::ElementColor found = edi::element_color(edi::element_of(typeSymbol.toStdString()), colors);
     return found.known ? QColor(found.color.r, found.color.g, found.color.b) : fallback;
+}
+
+QList<QColor> ApplicationInfo::momentColourSamples(const QString& colours, bool dark) const {
+    // The single grey and the greying are structure_scene.cpp's and structure_view_controller.cpp's.
+    const QColor single(dark ? QStringLiteral("#BDBDBD") : QStringLiteral("#616161"));
+    QList<QColor> out;
+    for (const char* symbol : {"Mn", "Fe", "Co", "Ni", "Cu", "Cr", "Gd", "Ho"}) {
+        const QColor own = elementColor(QString::fromLatin1(symbol), single);
+        if (colours == QLatin1String("single")) {
+            out.append(single);
+        } else if (colours == QLatin1String("atom")) {
+            out.append(own);
+        } else {
+            out.append(QColor((own.red() + 128) / 2, (own.green() + 128) / 2, (own.blue() + 128) / 2));
+        }
+    }
+    return out;
 }
 
 QColor ApplicationInfo::readableColour(const QColor& colour, const QList<QColor>& backgrounds) const {
@@ -4446,10 +4471,10 @@ void ApplicationInfo::resetPreferences() const {
         {"engineThreads", QJSValue(0)}, {"scanWorkers", QJSValue(1)}, {"loggingLevel", QJSValue(QStringLiteral("Warning"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
         {"analysisShowBySymmetry", QJSValue(false)}, {"analysisShowByConstraint", QJSValue(false)}, {"analysisShowFixedSettings", QJSValue(false)},
         {"showFitResults", QJSValue(true)}, {"scanRenderer", QJSValue(QStringLiteral("auto"))}, {"newProjectSuRule", QJSValue(QStringLiteral("iucr_99"))},
-        {"newReportLibraries", QJSValue(QStringLiteral("online"))}, {"colourScheme", QJSValue(QStringLiteral("earth"))}, {"patternYScale", QJSValue(QStringLiteral("linear"))},
+        {"newReportLibraries", QJSValue(QStringLiteral("online"))}, {"colourScheme", QJSValue(QStringLiteral("main"))}, {"patternYScale", QJSValue(QStringLiteral("linear"))},
         {"structureCurves", QJSValue(true)}, {"patternLegendShown", QJSValue(false)}, {"patternHoverShown", QJSValue(true)},
         {"patternMeasuredStyle", QJSValue(QStringLiteral("band"))}, {"patternPointerMode", QJSValue(QStringLiteral("zoom"))},
-        {"scanStackedPalette", QJSValue(QString{})}, {"scanMapColours", QJSValue(QStringLiteral("blue-red"))}, {"scanMapSmooth", QJSValue(true)},
+        {"scanMapColours", QJSValue(QStringLiteral("blue-red"))}, {"scanMapSmooth", QJSValue(true)},
         {"scanStackedReversed", QJSValue(false)}, {"scanStackedLegendShown", QJSValue(false)}, {"chartIncludedOnly", QJSValue(false)},
         {"chartSubtractBackground", QJSValue(false)}, {"singleCrystalQuantity", QJSValue(QStringLiteral("f_squared"))},
         {"chartHighlightSelected", QJSValue(true)}, {"chartHiddenRange", QJSValue(QStringLiteral("keep"))}, {"textShow", QJSValue(QStringLiteral("editable"))}
@@ -4472,21 +4497,6 @@ void ApplicationInfo::preferencesColourChanged() const {
     const auto value = panelUsageContextRead(f, "colourScheme");
     const auto offered = projectInvoke(f, "ApplicationInfo", "colourSchemeOrDefault", {value});
     if (!assistantSameName(f, offered, "colourScheme")) panelUsageContextWrite(f, "colourScheme", offered);
-}
-void ApplicationInfo::preferencesStackedPaletteChanged() const {
-    const auto f = panelUsageEngine(this);
-    auto array = panelUsageContextRead(f, "Array");
-    auto values = assistantContextField(f, "ApplicationInfo", "colourSchemes");
-    const auto first = panelUsageMemberCall(f, array, "from", {values});
-    array = panelUsageContextRead(f, "Array");
-    values = assistantContextField(f, "ApplicationInfo", "scanColourMaps");
-    const auto second = panelUsageMemberCall(f, array, "from", {values});
-    const auto offered = panelUsageMemberCall(f, first, "concat", {second});
-    if (!panelUsageContextRead(f, "scanStackedPalette").strictlyEquals(QJSValue(QString{}))) {
-        const auto chosen = panelUsageContextRead(f, "scanStackedPalette");
-        const auto index = panelUsageMemberCall(f, offered, "indexOf", {chosen});
-        if (assistantRelation(f, index, QJSValue(0), 0)) panelUsageContextWrite(f, "scanStackedPalette", QJSValue(QString{}));
-    }
 }
 void ApplicationInfo::preferencesLegacyPaletteChanged() const {
     const auto f = panelUsageEngine(this);
@@ -7693,13 +7703,6 @@ QJSValue ApplicationInfo::preferenceColourTitles() const {
     const auto f = panelUsageEngine(this);
     return panelUsageMemberCall(f, panelUsageContextRead(f, "choices"), "map", {projectGuardedClosure(f, 177, 1)});
 }
-QJSValue ApplicationInfo::preferenceStackedChoices() const {
-    const auto f = panelUsageEngine(this); const auto array = panelUsageContextRead(f, "Array");
-    const auto schemes = panelUsageMemberCall(f, array, "from", {assistantContextField(f, "ApplicationInfo", "colourSchemes")});
-    const auto second = panelUsageContextRead(f, "Array");
-    const auto maps = panelUsageMemberCall(f, second, "from", {assistantContextField(f, "ApplicationInfo", "scanColourMaps")});
-    return panelUsageMemberCall(f, schemes, "concat", {maps});
-}
 QJSValue ApplicationInfo::preferenceEngineThreads() const {
     const auto f = panelUsageEngine(this);
     if (!panelUsageTruth(assistantContextField(f, "ApplicationInfo", "engineThreadsSelectable")))
@@ -7729,7 +7732,7 @@ void ApplicationInfo::preferenceActivated(const QJSValue& index, int setting) co
         const char* text = setting == 6 ? (alternate ? "Left" : "Right") : setting == 7 ? (alternate ? "iucr_99" : "iucr_19") : (alternate ? "embedded" : "online");
         assistantMemberWrite(f, preferences, property, QJSValue(QString::fromLatin1(text))); return;
     }
-    const char* property = setting == 1 ? "colourScheme" : setting == 2 ? "scanStackedPalette" : setting == 3 ? "scanMapColours"
+    const char* property = setting == 1 ? "colourScheme" : setting == 3 ? "scanMapColours"
         : setting == 4 ? "chartHiddenRange" : setting == 5 ? "textShow" : "scanRenderer";
     const char* source = setting == 1 ? "schemes" : setting == 10 ? "values" : "choices";
     assistantMemberWrite(f, preferences, property, textIndex(f, panelUsageContextRead(f, source), index));
@@ -9439,12 +9442,6 @@ void scanWant(const PanelUsageFrame& f) {
 }
 } // namespace
 
-QJSValue ApplicationInfo::scanStackedPalette() const {
-    const auto f = panelUsageEngine(this); const auto stored = !assistantContextField(f, "Preferences", "scanStackedPalette").strictlyEquals(QJSValue(QStringLiteral("")))
-        ? assistantContextField(f, "Preferences", "scanStackedPalette") : assistantContextField(f, "Preferences", "colourScheme");
-    if (assistantRelation(f, panelUsageMemberCall(f, panelUsageContextRead(f, "stackedChoices"), "indexOf", {stored}), QJSValue(0), 2)) return stored;
-    const auto actor = panelUsageContextRead(f, "ApplicationInfo"); return panelUsageMemberCall(f, actor, "colourSchemeOrDefault", {assistantContextField(f, "Preferences", "colourScheme")});
-}
 QJSValue ApplicationInfo::chartCapitalised(const QJSValue& text) const { const auto f = panelUsageEngine(this); return chartCapitalisedValue(f, text); }
 void ApplicationInfo::scanSetZoom(const QJSValue& x, const QJSValue& y) const {
     const auto f = panelUsageEngine(this); panelUsageContextWrite(f, "settingZoom", QJSValue(true)); panelUsageContextWrite(f, "zoomX", x); panelUsageContextWrite(f, "zoomY", y);
@@ -9672,14 +9669,6 @@ QJSValue ApplicationInfo::digitTextRuns() const {
 }
 QJSValue ApplicationInfo::digitRunIsDigit(const QJSValue& text) const {
     const auto f = panelUsageEngine(this); return panelUsageDeferredMemberCall(f, panelRegex(f, QStringLiteral("^[0-9]$")), "test", [&] { return QJSValueList({text}); });
-}
-QJSValue ApplicationInfo::palettePositions() const {
-    const auto f = panelUsageEngine(this); const auto kinds = controlEmptyArray(f), project = assistantContextField(f, "Session", "project");
-    if (panelUsageTruth(project)) {
-        panelUsageEach(f, panelUsageRead(f, project, "experimentColourPositions"), [&](const QJSValue& position) { textIndexWrite(f, kinds, position, QJSValue(QStringLiteral("experiment"))); return panelUsageReady(f); });
-        panelUsageEach(f, panelUsageRead(f, project, "structureColourPositions"), [&](const QJSValue& position) { textIndexWrite(f, kinds, position, QJSValue(QStringLiteral("structure"))); return panelUsageReady(f); });
-    }
-    return kinds;
 }
 QJSValue ApplicationInfo::nameBlockIcon(const QJSValue& kind) const {
     return QJSValue(kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? QStringLiteral("layer-group") : kind.strictlyEquals(QJSValue(QStringLiteral("experiment"))) ? QStringLiteral("microscope") : kind.strictlyEquals(QJSValue(QStringLiteral("parameter"))) ? QStringLiteral("chart-line") : QString());

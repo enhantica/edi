@@ -11,12 +11,9 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The application preferences (the base's Components/PreferencesDialog.qml, rebuilt from its pieces as the
-// About dialog is; edi ADR-0017 §12): the base's tabs and layout and a Projects tab, with edi's changes — no 1D
-// plotting row, a colour scheme and a Sidebar side selector in Appearance, the settings file in Develop, and what is
-// not available yet (zoom, language) shown disabled with a "Not available yet" tooltip. Every tab has
-// the same two columns, labels and controls. The base's
-// own dialog stays hidden: the app bar opens this one.
+// The application preferences (edi ADR-0017 §12, ADR-0084): seven tabs, each one grid of two equal columns. Every
+// control has its label above it, a choice is a box rather than a checkbox, explanations are tooltips, and every
+// colour choice shows its colours in a strip under its box. Groups have a title with an icon, without a frame.
 AppDialog {
     id: dialog
 
@@ -38,96 +35,80 @@ AppDialog {
             requested: hover.hovered
         }
     }
+    // A group's title: its icon, then its name, not foldable and without a frame, as a sidebar group's title reads.
+    component GroupTitle: Row {
+        property string icon
+        property string text
+        property bool first: true
 
-    // One layout on every tab (the owner, 2026-10-14): the labels in one column as wide as the widest label, the controls
-    // in one column as wide as the longest item of any box or the longest button text, and each label level with the
-    // first line of its control.
-    component RowGrid: Grid {
-        columns: 2
-        topPadding: EaStyle.Sizes.fontPixelSize * 0.5
-        columnSpacing: EaStyle.Sizes.fontPixelSize
-        rowSpacing: EaStyle.Sizes.fontPixelSize
-        verticalItemAlignment: Grid.AlignTop
-    }
-    component RowLabel: EaElements.Label {
-        readonly property bool rowLabel: true
+        topPadding: first ? 0 : dialog.rowSpacing
+        spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
-        width: dialog.labelWidth
-        topPadding: dialog.lineOffset
-    }
-    component RowBox: EaElements.ComboBox {
-        readonly property bool rowBox: true
-
-        width: dialog.controlWidth
-    }
-    // A box that also takes a typed whole number from 1 to `maximum`: the list offers the usual counts, and Enter or
-    // leaving the box takes what was typed. `chosen` carries the count; a number past the bounds is taken at them.
-    component RowNumberBox: RowBox {
-        id: numberBox
-
-        property int maximum: 1
-        signal chosen(int count)
-
-        function take() {
-            const typed = parseInt(editText, 10);
-            if (!isNaN(typed))
-                chosen(Math.max(1, Math.min(typed, maximum)));
+        EaElements.Label {
+            anchors.verticalCenter: parent.verticalCenter
+            font.family: EaStyle.Fonts.iconsFamily
+            text: parent.icon
         }
-
-        editable: true
-        validator: IntValidator {
-            bottom: 1
+        EaElements.Label {
+            anchors.verticalCenter: parent.verticalCenter
+            text: parent.text
         }
-        // The typed text sits on the row's line, level with its label, as every other box's text does.
-        contentItem: TextInput {
-            topPadding: Math.max(0, dialog.lineOffset - numberBox.topPadding)
-            leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
-            rightPadding: EaStyle.Sizes.fontPixelSize
-            text: numberBox.editText
-            font: numberBox.font
-            color: numberBox.foregroundColor
-            selectionColor: EaStyle.Colors.themeAccent
-            selectedTextColor: EaStyle.Colors.themeBackground
-            verticalAlignment: Text.AlignTop
-            validator: numberBox.validator
-            inputMethodHints: Qt.ImhDigitsOnly
-            selectByMouse: true
-            onEditingFinished: numberBox.take()
-        }
-        onActivated: index => chosen(parseInt(textAt(index), 10))
     }
-    component RowButton: EaElements.SideBarButton {
-        readonly property bool rowButton: true
-
-        width: dialog.controlWidth
+    // A control's label, above it.
+    component FieldLabel: EaElements.Label {
+        width: dialog.columnWidth
+        bottomPadding: dialog.labelSpacing
+        elide: Text.ElideRight
+        color: EaStyle.Colors.themeForegroundMinor
+    }
+    component FieldBox: EaElements.ComboBox {
+        width: dialog.columnWidth
+    }
+    component FieldButton: EaElements.SideBarButton {
+        width: dialog.columnWidth
         height: dialog.rowHeight
     }
-    component RowCheckBox: EaElements.CheckBox {
-        height: dialog.rowHeight
-        leftPadding: -3
+    // A value to read, framed like a box but not editable.
+    component ReadOnlyField: EaElements.TextField {
+        width: dialog.columnWidth
+        horizontalAlignment: TextInput.AlignLeft
+        readOnly: true
+        color: EaStyle.Colors.themeForegroundMinor
+    }
+    // One column of a tab, its rows the same distance apart.
+    component TabColumn: Column {
+        width: dialog.columnWidth
+        spacing: dialog.rowSpacing
+    }
+    // A tab: two columns side by side, or rows that span both.
+    component TabRow: Row {
+        spacing: dialog.columnSpacing
+    }
+    // A table framed with its header inside the frame.
+    component TableFrame: Rectangle {
+        width: dialog.contentRowWidth
+        height: childrenRect.height + 2
+        color: "transparent"
+        border.color: AppColors.statusButtonBorder
+    }
+    // A label with its control (and a strip, if any) under it, as one row of a column.
+    component Field: Column {
+        property alias label: fieldLabel.text
+
+        width: dialog.columnWidth
+
+        FieldLabel {
+            id: fieldLabel
+        }
     }
 
-    // Every item under `item` that `wanted` accepts.
-    function itemsUnder(item, wanted) {
-        return ApplicationInfo.preferenceItemsUnder(item, wanted);
-    }
-    // The width a box needs for its longest item: its paddings, its text's own and its arrow, which the box draws inside
-    // its content.
-    function boxNeed(box) {
-        return ApplicationInfo.preferenceBoxNeed(box);
-    }
-    // The width a button needs for its text with an em at each side (its content reports no width of its own).
-    function buttonNeed(button) {
-        return ApplicationInfo.preferenceButtonNeed(button);
-    }
-
-    readonly property var rowItems: ApplicationInfo.preferenceRowItems()
-    readonly property real labelWidth: ApplicationInfo.preferenceRowWidth(false)
-    readonly property real controlWidth: ApplicationInfo.preferenceRowWidth(true)
-    readonly property real stackSpacing: EaStyle.Sizes.fontPixelSize * 0.5
+    readonly property real columnSpacing: EaStyle.Sizes.fontPixelSize * 2
+    readonly property real rowSpacing: EaStyle.Sizes.fontPixelSize
+    readonly property real labelSpacing: EaStyle.Sizes.fontPixelSize * 0.3
+    readonly property real contentRowWidth: Math.max(0, pages.availableWidth)
+    readonly property real columnWidth: Math.floor((contentRowWidth - columnSpacing) / 2)
     readonly property real rowHeight: themeBox.implicitHeight
-    // A label's line, centred on a control's height.
-    readonly property real lineOffset: Math.max(0, (rowHeight - lineMetrics.height) / 2)
+    readonly property real stripSpacing: EaStyle.Sizes.fontPixelSize * 0.25
 
     objectName: "preferences"
     visible: Preferences.dialogShown
@@ -147,8 +128,9 @@ AppDialog {
     title: qsTr("Preferences")
     standardButtons: Dialog.Ok
 
-    contentWidth: Math.max(bar.implicitWidth, pages.leftPadding + pages.rightPadding + labelWidth + EaStyle.Sizes.fontPixelSize + controlWidth)
-    // As tall as the tallest tab's rows need, so no tab's last row is cut (the owner, 2026-10-13).
+    // 720 px wide, so the online sources table fits its columns without wide gaps.
+    width: 720
+    // As tall as the tallest tab's rows need, so no tab's last row is cut.
     contentHeight: ApplicationInfo.preferenceContentHeight()
 
     EaElements.TabBar {
@@ -166,19 +148,14 @@ AppDialog {
         }
 
         EaElements.AppBarTabButton {
-            objectName: "preferences.tab.prompts"
-            fontIcon: "users"
-            text: qsTr("Prompts")
-        }
-        EaElements.AppBarTabButton {
-            objectName: "preferences.tab.updates"
-            fontIcon: "cloud-download-alt"
-            text: qsTr("Updates")
-        }
-        EaElements.AppBarTabButton {
             objectName: "preferences.tab.appearance"
             fontIcon: "paint-brush"
             text: qsTr("Appearance")
+        }
+        EaElements.AppBarTabButton {
+            objectName: "preferences.tab.interface"
+            fontIcon: "sliders-h"
+            text: qsTr("Interface")
         }
         EaElements.AppBarTabButton {
             objectName: "preferences.tab.projects"
@@ -191,6 +168,11 @@ AppDialog {
             text: qsTr("Performance")
         }
         EaElements.AppBarTabButton {
+            objectName: "preferences.tab.updates"
+            fontIcon: "cloud-download-alt"
+            text: qsTr("Updates")
+        }
+        EaElements.AppBarTabButton {
             objectName: "preferences.tab.aiAssistance"
             fontIcon: "robot"
             text: qsTr("AI assistance")
@@ -198,14 +180,9 @@ AppDialog {
             ToolTip.text: ApplicationInfo.assistantUnavailableReason
         }
         EaElements.AppBarTabButton {
-            objectName: "preferences.tab.experimental"
-            fontIcon: "flask"
-            text: qsTr("Experimental")
-        }
-        EaElements.AppBarTabButton {
-            objectName: "preferences.tab.develop"
-            fontIcon: "laptop-code"
-            text: qsTr("Develop")
+            objectName: "preferences.tab.advanced"
+            fontIcon: "cogs"
+            text: qsTr("Advanced")
         }
     }
 
@@ -217,301 +194,255 @@ AppDialog {
         anchors.left: parent.left
         anchors.right: parent.right
 
-        topPadding: EaStyle.Sizes.fontPixelSize * 0.75
+        topPadding: EaStyle.Sizes.fontPixelSize
         leftPadding: EaStyle.Sizes.fontPixelSize * 0.5
-        bottomPadding: EaStyle.Sizes.fontPixelSize * 3
+        rightPadding: EaStyle.Sizes.fontPixelSize * 0.5
+        bottomPadding: EaStyle.Sizes.fontPixelSize * 2
 
         currentIndex: bar.currentIndex
         interactive: false
         clip: true
         // A gap between the pages, so no tab's controls reach into the shown one.
         spacing: EaStyle.Sizes.fontPixelSize * 2
-        // A tab shows at once, without the swipe's slide, so its columns are where every other tab has them.
+        // A tab shows at once, without the swipe's slide.
         Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
-        // Prompts, as the base's
-        RowGrid {
-            // Tooltip level and delay (the owner, 2026-11-01): Important shows a tooltip where a control's label or icon
-            // does not say what it does, and on every disabled control.
-            RowLabel {
-                text: qsTr("Tooltips") + ":"
-            }
-            RowBox {
-                readonly property var levels: ["All", "Important", "Off"]
+        // Appearance: the colours on the left, the charts on the right; rows with strips pair up.
+        TabRow {
+            TabColumn {
+                GroupTitle {
+                    icon: "palette"
+                    text: qsTr("Colours")
+                }
+                Field {
+                    label: qsTr("Theme")
+                    FieldBox {
+                        id: themeBox
 
-                objectName: "preferences.toolTipLevel"
-                model: [qsTr("All"), qsTr("Important"), qsTr("Off")]
-                currentIndex: Math.max(0, levels.indexOf(Preferences.toolTipLevel))
-                onActivated: index => Preferences.toolTipLevel = levels[index]
-                ToolTip.text: qsTr("All: every control. Important: controls whose label does not say what they do, and disabled ones. Off: none")
-            }
-            RowLabel {
-                text: qsTr("Tooltip delay (ms)") + ":"
-            }
-            EaElements.SpinBox {
-                objectName: "preferences.toolTipDelay"
-                width: dialog.controlWidth
-                from: 0
-                to: 10000
-                stepSize: 100
-                editable: true
-                value: Preferences.toolTipDelay
-                onValueModified: Preferences.toolTipDelay = value
-                ToolTip.text: qsTr("How long the pointer rests on a control before its tooltip opens")
-            }
+                        objectName: "preferences.theme"
+                        model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
+                        currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
+                    }
+                }
+                // The figure palette of experiments and structures, the Pattern and Stacked views alike (ADR-0084).
+                Field {
+                    label: qsTr("Palette")
+                    spacing: dialog.stripSpacing
+                    FieldBox {
+                        readonly property var schemes: ApplicationInfo.colourSchemes
 
-            // Fitting works from every page's status bar, so whether a fit opens its results is an app preference
-            // (the owner, 2026-10-26).
-            RowLabel {
-                text: qsTr("Show fit results after fitting") + ":"
-            }
-            RowCheckBox {
-                objectName: "preferences.showFitResults"
-                checked: Preferences.showFitResults
-                onToggled: Preferences.showFitResults = checked
-                ToolTip.text: qsTr("Open the results window when a fit ends; the fit status in the status bar opens it too")
-            }
+                        objectName: "preferences.colours"
+                        model: ApplicationInfo.colourSchemeTitles
+                        currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)))
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 1)
+                        ToolTip.text: qsTr("The colours of experiments and structures in every chart, icon and report. From nine patterns in one view, they shade from the first experiment's colour to the second's")
+                    }
+                    PaletteStrip {
+                        objectName: "preferences.colourOrder"
+                        width: dialog.columnWidth
+                        colours: ApplicationInfo.paletteColours(Preferences.colourScheme, EaStyle.Colors.isDarkPalette)
+                    }
+                }
+                Field {
+                    label: qsTr("Magnetic moment arrows")
+                    spacing: dialog.stripSpacing
+                    FieldBox {
+                        readonly property var schemes: ["atom", "greyed", "single"]
 
-            RowLabel {
-                enabled: false
-                text: qsTr("Enable user guides") + ":"
+                        objectName: "preferences.momentColours"
+                        model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
+                        currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
+                        onActivated: index => Preferences.momentColours = schemes[index]
+                        ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
+                    }
+                    PaletteStrip {
+                        objectName: "preferences.momentColourStrip"
+                        width: dialog.columnWidth
+                        colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
+                    }
+                }
             }
-            RowCheckBox {
-                enabled: false
-                checked: false
+            TabColumn {
+                GroupTitle {
+                    icon: "chart-area"
+                    text: qsTr("Charts")
+                }
+                Field {
+                    label: qsTr("When a legend click hides a curve")
+                    FieldBox {
+                        readonly property list<string> choices: ["keep", "fit"]
+
+                        objectName: "preferences.hiddenRange"
+                        model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
+                        currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
+                    }
+                }
+                // The Map view's colour map, also chosen on the Map's toolbar.
+                Field {
+                    label: qsTr("Map colours")
+                    spacing: dialog.stripSpacing
+                    FieldBox {
+                        id: mapBox
+
+                        readonly property var choices: ApplicationInfo.scanColourMaps
+
+                        objectName: "preferences.mapColours"
+                        model: ApplicationInfo.preferenceColourTitles()
+                        currentIndex: Math.max(0, choices.indexOf(Preferences.scanMapColours))
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 3)
+                        ToolTip.text: qsTr("The Map view's colours, also chosen on its toolbar")
+                    }
+                    ColourMapBar {
+                        objectName: "preferences.mapColourStrip"
+                        map: mapBox.choices[mapBox.currentIndex] ?? "blue-red"
+                        dark: EaStyle.Colors.isDarkPalette
+                        barWidth: dialog.columnWidth
+                        barHeight: Math.round(EaStyle.Sizes.fontPixelSize * 0.4)
+                    }
+                }
             }
         }
 
-        // Availability always updates in the background; this setting controls optional prompts.
-        RowGrid {
-            RowLabel {
-                text: qsTr("Notify about updates") + ":"
+        // Interface: tooltips and fitting on the left, the sidebar and the Text tabs on the right.
+        TabRow {
+            TabColumn {
+                GroupTitle {
+                    icon: "comment-dots"
+                    text: qsTr("Tooltips")
+                }
+                Field {
+                    label: qsTr("Show tooltips for")
+                    FieldBox {
+                        readonly property var levels: ["All", "Important", "Off"]
+
+                        objectName: "preferences.toolTipLevel"
+                        model: [qsTr("All controls"), qsTr("Important controls"), qsTr("None")]
+                        currentIndex: Math.max(0, levels.indexOf(Preferences.toolTipLevel))
+                        onActivated: index => Preferences.toolTipLevel = levels[index]
+                        ToolTip.text: qsTr("Important: controls whose label or icon does not say what they do, and disabled ones")
+                    }
+                }
+                Field {
+                    label: qsTr("Tooltip delay (ms)")
+                    EaElements.SpinBox {
+                        objectName: "preferences.toolTipDelay"
+                        width: dialog.columnWidth
+                        from: 0
+                        to: 10000
+                        stepSize: 100
+                        editable: true
+                        value: Preferences.toolTipDelay
+                        onValueModified: Preferences.toolTipDelay = value
+                        ToolTip.text: qsTr("How long the pointer rests on a control before its tooltip opens")
+                    }
+                }
+                GroupTitle {
+                    first: false
+                    icon: "calculator"
+                    text: qsTr("Fitting")
+                }
+                Field {
+                    label: qsTr("When a fit ends")
+                    FieldBox {
+                        objectName: "preferences.showFitResults"
+                        model: [qsTr("Open the results window"), qsTr("Do nothing")]
+                        currentIndex: Preferences.showFitResults ? 0 : 1
+                        onActivated: index => Preferences.showFitResults = index === 0
+                        ToolTip.text: qsTr("The fit status in the status bar opens the results window too")
+                    }
+                }
             }
-            RowCheckBox {
-                objectName: "preferences.checkUpdateOnStart"
-                enabled: DesktopUpdates.managed
-                ToolTip.text: qsTr("Show release notes when a new version is found. The app checks at startup and hourly.")
-                checked: Preferences.updateNotifications
-                onToggled: Preferences.updateNotifications = checked
-            }
-            Item {
-                width: dialog.labelWidth
-                height: 1
-            }
-            RowButton {
-                objectName: "preferences.checkUpdateNow"
-                enabled: DesktopUpdates.managed && !DesktopUpdates.checking
-                highlighted: true
-                text: DesktopUpdates.checking ? qsTr("Checking…") : qsTr("Check now")
-                onClicked: DesktopUpdates.checkNow(true)
-            }
-            Item {
-                width: dialog.labelWidth
-                height: 1
-            }
-            EaElements.Label {
-                objectName: "preferences.updateStatus"
-                width: dialog.controlWidth
-                wrapMode: Text.Wrap
-                text: DesktopUpdates.status
-            }
-            Item {
-                visible: DesktopUpdates.managed
-                width: dialog.labelWidth
-                height: 1
-            }
-            RowButton {
-                objectName: "preferences.openMaintenanceTool"
-                visible: DesktopUpdates.managed
-                text: qsTr("Open Maintenance Tool")
-                onClicked: dialog.maintenanceRequested()
+            TabColumn {
+                GroupTitle {
+                    icon: "columns"
+                    text: qsTr("Sidebar")
+                }
+                Field {
+                    label: qsTr("Sidebar side")
+                    FieldBox {
+                        objectName: "preferences.sideBarSide"
+                        model: [qsTr("Left"), qsTr("Right")]
+                        currentIndex: Preferences.sideBarOnLeft ? 0 : 1
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 6)
+                    }
+                }
+                Field {
+                    label: qsTr("Sidebar groups open at once")
+                    FieldBox {
+                        objectName: "preferences.autoCollapse"
+                        model: [qsTr("One"), qsTr("Any number")]
+                        currentIndex: Preferences.autoCollapse ? 0 : 1
+                        onActivated: index => Preferences.autoCollapse = index === 0
+                        ToolTip.text: qsTr("With One, opening a group in the sidebar closes the other open groups")
+                    }
+                }
+                GroupTitle {
+                    first: false
+                    icon: "file-alt"
+                    text: qsTr("Text tabs")
+                }
+                Field {
+                    label: qsTr("Text tab shows")
+                    FieldBox {
+                        readonly property list<string> choices: ["editable", "everything"]
+
+                        objectName: "preferences.textShow"
+                        model: [qsTr("Editable categories"), qsTr("Everything")]
+                        currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
+                        // Through the Text tabs, which settle an unapplied edit first; until then the box shows the setting.
+                        onActivated: index => ApplicationInfo.textTabShowChoice(index, () => {
+                                currentIndex = Qt.binding(() => Math.max(0, choices.indexOf(Preferences.textShow)));
+                            })
+                        ToolTip.text: qsTr("Everything adds the measured data and results, read-only")
+                    }
+                }
             }
         }
 
-        // Appearance: the theme, the colour scheme, the sidebar's side and whether one sidebar group is open at a time; no 1D plotting row.
-        RowGrid {
-            RowLabel {
-                id: themeLabel
+        // Projects: the defaults a new project takes (a project keeps its own), then the online sources (ADR-0068).
+        TabColumn {
+            width: dialog.contentRowWidth
 
-                text: qsTr("Theme") + ":"
+            GroupTitle {
+                icon: "archive"
+                text: qsTr("New projects")
             }
-            RowBox {
-                id: themeBox
-
-                objectName: "preferences.theme"
-                model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
-                currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
-                onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
-            }
-
-            // The figure palette, one for experiments and structures (the owner, 2026-10-26), the palettes' tokens and
-            // names (edi::colour_scheme_names) in the order the core lists them, with its colour order under it; then
-            // the Stacked view's lines and the Map's colour map, as their charts offer them.
-            RowLabel {
-                text: qsTr("Palette") + ":"
-            }
-            Column {
-                spacing: dialog.stackSpacing
-
-                RowBox {
-                    readonly property var schemes: ApplicationInfo.colourSchemes
-
-                    objectName: "preferences.colours"
-                    model: ApplicationInfo.colourSchemeTitles
-                    currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)))
-                    onActivated: index => ApplicationInfo.preferenceActivated(index, 1)
-                    ToolTip.text: qsTr("The colours of experiments and structures: their icons, patterns, Bragg ticks and curves")
+            TabRow {
+                Field {
+                    label: qsTr("Uncertainty digits")
+                    FieldBox {
+                        objectName: "preferences.newProjectSuRule"
+                        model: [qsTr("IUCr recommendation"), qsTr("Always 2 digits")]
+                        currentIndex: Preferences.newProjectSuRule === "iucr_99" ? 1 : 0
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 7)
+                        ToolTip.text: qsTr("Only new projects use this; an open project keeps its own, on the Project page")
+                    }
                 }
-                PaletteStrip {
-                    objectName: "preferences.colourOrder"
+                Field {
+                    label: qsTr("Report chart libraries")
+                    FieldBox {
+                        objectName: "preferences.newReportLibraries"
+                        model: [qsTr("Online"), qsTr("Embedded")]
+                        currentIndex: Preferences.newReportLibraries === "embedded" ? 1 : 0
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 8)
+                        ToolTip.text: qsTr("Embedded reports open offline. Only new projects use this; an open project keeps its own, on the Report page")
+                    }
                 }
             }
-            RowLabel {
-                text: qsTr("Stacked") + ":"
+            GroupTitle {
+                first: false
+                icon: "globe"
+                text: qsTr("Online sources")
             }
-            RowBox {
-                readonly property var choices: ApplicationInfo.preferenceStackedChoices()
-                // Empty follows the palette.
-                readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme
-
-                objectName: "preferences.stackedColours"
-                model: ApplicationInfo.preferenceColourTitles()
-                currentIndex: Math.max(0, choices.indexOf(current))
-                onActivated: index => ApplicationInfo.preferenceActivated(index, 2)
-                ToolTip.text: qsTr("The Stacked view's patterns")
-            }
-            RowLabel {
-                text: qsTr("Map") + ":"
-            }
-            RowBox {
-                readonly property var choices: ApplicationInfo.scanColourMaps
-
-                objectName: "preferences.mapColours"
-                model: ApplicationInfo.preferenceColourTitles()
-                currentIndex: Math.max(0, choices.indexOf(Preferences.scanMapColours))
-                onActivated: index => ApplicationInfo.preferenceActivated(index, 3)
-                ToolTip.text: qsTr("The Map's colour map, also chosen on the Map's toolbar")
-            }
-            RowLabel {
-                text: qsTr("When a curve is hidden") + ":"
-            }
-            RowBox {
-                readonly property list<string> choices: ["keep", "fit"]
-
-                objectName: "preferences.hiddenRange"
-                model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
-                currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
-                onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
-                ToolTip.text: qsTr("What the pattern chart's y range does when a click on its legend hides or shows a curve")
-            }
-
-            // The magnetic moment arrows' colours (the owner, 2026-11-03).
-            RowLabel {
-                text: qsTr("Moment colours") + ":"
-            }
-            RowBox {
-                readonly property var schemes: ["atom", "greyed", "single"]
-
-                objectName: "preferences.momentColours"
-                model: [qsTr("Atom"), qsTr("Greyed atom"), qsTr("Single")]
-                currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
-                onActivated: index => Preferences.momentColours = schemes[index]
-                ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows: in the atom's colour, in that colour greyed, or in one grey")
-            }
-
-            RowLabel {
-                text: qsTr("Workflow sidebar side") + ":"
-            }
-            RowBox {
-                objectName: "preferences.sideBarSide"
-                model: [qsTr("Left"), qsTr("Right")]
-                currentIndex: Preferences.sideBarOnLeft ? 0 : 1
-                onActivated: index => ApplicationInfo.preferenceActivated(index, 6)
-            }
-
-            RowLabel {
-                visible: !ApplicationInfo.assistantAvailable
-                text: qsTr("Assistant") + ":"
-            }
-            EaElements.Label {
-                objectName: "preferences.assistantUnavailableReason"
-                visible: !ApplicationInfo.assistantAvailable
-                width: dialog.controlWidth
-                text: ApplicationInfo.assistantUnavailableReason
-                textFormat: Text.PlainText
-                wrapMode: Text.WordWrap
-            }
-
-            RowLabel {
-                text: qsTr("One sidebar group open at a time") + ":"
-            }
-            RowCheckBox {
-                objectName: "preferences.autoCollapse"
-                checked: Preferences.autoCollapse
-                onToggled: Preferences.autoCollapse = checked
-                ToolTip.text: qsTr("Opening a group in the sidebar closes the other open groups")
-            }
-
-            RowLabel {
-                text: qsTr("Text tab shows") + ":"
-            }
-            RowBox {
-                readonly property list<string> choices: ["editable", "everything"]
-
-                objectName: "preferences.textShow"
-                model: [qsTr("Editable"), qsTr("Everything")]
-                currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
-                // Through the Text tabs, which settle an unapplied edit first; until then the box shows the setting.
-                onActivated: index => ApplicationInfo.textTabShowChoice(index, () => {
-                        currentIndex = Qt.binding(() => Math.max(0, choices.indexOf(Preferences.textShow)));
-                    })
-                ToolTip.text: qsTr("What every Text tab shows: the categories you can edit, or also the measured data and results, read-only")
-            }
-        }
-
-        // Projects: only the defaults a new project takes. A project keeps its own: its s.u. rule on the Project
-        // page's Extra tab, its report's libraries on the Report page. The online sources table shares the page.
-        Column {
-            spacing: EaStyle.Sizes.fontPixelSize
-            RowGrid {
-                RowLabel {
-                    text: qsTr("New projects' uncertainties") + ":"
-                }
-                RowBox {
-                    objectName: "preferences.newProjectSuRule"
-                    model: [qsTr("IUCr recommendation"), qsTr("Always 2 digits")]
-                    currentIndex: Preferences.newProjectSuRule === "iucr_99" ? 1 : 0
-                    onActivated: index => ApplicationInfo.preferenceActivated(index, 7)
-                    ToolTip.text: qsTr("How a new project writes values with a standard uncertainty: 1 digit, or 2 from 10 to 19, or always 2")
-                }
-
-                RowLabel {
-                    text: qsTr("New reports' libraries") + ":"
-                }
-                RowBox {
-                    objectName: "preferences.newReportLibraries"
-                    model: [qsTr("Online"), qsTr("Embedded")]
-                    currentIndex: Preferences.newReportLibraries === "embedded" ? 1 : 0
-                    onActivated: index => ApplicationInfo.preferenceActivated(index, 8)
-                    ToolTip.text: qsTr("Whether a new project's HTML reports load plotly.js and three.js from the web or carry them, so they open offline")
-                }
-            }
-
-            // The online sources Load ▾ From web… searches (ADR-0068): COD and EasyDiffraction's collection are built
-            // in; a row can be disabled, and user rows added, edited or removed. A run started with --online-source or
-            // EDI_ONLINE_SOURCES shows that URL in place of the stored one.
-            Column {
-                width: parent.width
-                spacing: AppSizes.unit
-                EaElements.Label {
-                    width: parent.width
-                    text: qsTr("Online sources")
-                    font.bold: true
-                }
+            TableFrame {
                 DataTable {
                     id: onlineTable
                     objectName: "preferences.online.sources"
-                    width: parent.width
+                    x: 1
+                    y: 1
+                    width: parent.width - 2
                     maxRowCountShow: 6
                     sourceModel: Session.onlineSources
                     defaultInfoText: qsTr("No online sources")
@@ -586,91 +517,180 @@ AppDialog {
                         }
                     }
                 }
-                EaElements.SideBarButton {
-                    objectName: "preferences.online.sources.add"
-                    width: dialog.controlWidth
-                    text: qsTr("Add online source")
-                    fontIcon: "plus-circle"
-                    ToolTip.text: qsTr("Add a collection to search: a URL holding an index.json and the files it names")
-                    onClicked: Session.onlineSources.add()
-                }
+            }
+            FieldButton {
+                objectName: "preferences.online.sources.add"
+                text: qsTr("Add online source")
+                fontIcon: "plus-circle"
+                ToolTip.text: qsTr("Add a collection to search: a URL holding an index.json and the files it names")
+                onClicked: Session.onlineSources.add()
             }
         }
 
-        // Performance: how many threads a calculation runs on and how many files of a scan are fitted at once, both
-        // this machine's, never saved in a project (the owner, 2026-11-04). Where the app runs single-threaded (a
-        // browser without WebAssembly threads) both are one and disabled.
-        RowGrid {
-            RowLabel {
-                text: qsTr("Threads per calculation") + ":"
-            }
-            NotAvailable {
-                reason: ApplicationInfo.engineThreadsSelectable ? "" : qsTr("This browser runs the app on one thread")
-                RowBox {
-                    id: threadsBox
-
-                    objectName: "preferences.engineThreads"
-                    enabled: ApplicationInfo.engineThreadsSelectable
-                    model: {
-                        if (!ApplicationInfo.engineThreadsSelectable)
-                            return ["1"];
-                        const counts = [qsTr("Auto")];
-                        for (let count = 1; count <= ApplicationInfo.engineThreadsMaximum; ++count)
-                            counts.push(String(count));
-                        return counts;
-                    }
-                    currentIndex: ApplicationInfo.engineThreadsSelectable ? Math.min(Preferences.engineThreads, ApplicationInfo.engineThreadsMaximum) : 0
-                    // While several scan files are fitted at once, each of those fits runs on one thread.
-                    displayText: Preferences.scanWorkersApplied > 1 ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${qsTr("1 per scan fit")}</font>` : currentText
-                    onActivated: index => {
-                        if (ApplicationInfo.engineThreadsSelectable)
-                            Preferences.engineThreads = index;
-                    }
-                    ToolTip.text: Preferences.scanWorkersApplied > 1 ? qsTr("Threads one calculation or one fit runs on. While several scan files are fitted at once, each of those fits runs on one thread") : qsTr("Threads one calculation or one fit runs on; Auto leaves a core or two free")
+        // Performance: this computer's calculation and drawing, never saved in a project. Where the app runs
+        // single-threaded (a browser without WebAssembly threads) both counts are one and disabled.
+        TabRow {
+            TabColumn {
+                GroupTitle {
+                    icon: "microchip"
+                    text: qsTr("Calculation")
                 }
-            }
+                Field {
+                    label: qsTr("Threads per calculation")
+                    NotAvailable {
+                        reason: ApplicationInfo.engineThreadsSelectable ? "" : qsTr("This browser runs the app on one thread")
+                        FieldBox {
+                            id: threadsBox
 
-            RowLabel {
-                text: qsTr("Parallel fits in a scan") + ":"
-            }
-            NotAvailable {
-                reason: ApplicationInfo.engineThreadsSelectable ? "" : qsTr("This browser runs the app on one thread")
-                RowNumberBox {
-                    id: scanWorkersBox
-
-                    // The count the engine runs with, set rather than bound: the box rewrites its own text as its
-                    // list loads and as it is edited.
-                    function show() {
-                        currentIndex = find(String(Preferences.scanWorkersApplied));
-                        editText = String(Preferences.scanWorkersApplied);
-                    }
-
-                    objectName: "preferences.scanWorkers"
-                    enabled: ApplicationInfo.engineThreadsSelectable
-                    maximum: ApplicationInfo.scanWorkersMaximum
-                    model: {
-                        const counts = [];
-                        for (let count = 1; count <= Math.min(5, maximum); ++count)
-                            counts.push(String(count));
-                        return counts;
-                    }
-                    Component.onCompleted: show()
-                    onModelChanged: show()
-                    onChosen: count => {
-                        Preferences.scanWorkers = count;
-                        show();
-                    }
-                    Connections {
-                        target: Preferences
-                        function onScanWorkersAppliedChanged() {
-                            scanWorkersBox.show();
+                            objectName: "preferences.engineThreads"
+                            enabled: ApplicationInfo.engineThreadsSelectable
+                            model: {
+                                if (!ApplicationInfo.engineThreadsSelectable)
+                                    return ["1"];
+                                const counts = [qsTr("Auto")];
+                                for (let count = 1; count <= ApplicationInfo.engineThreadsMaximum; ++count)
+                                    counts.push(String(count));
+                                return counts;
+                            }
+                            currentIndex: ApplicationInfo.engineThreadsSelectable ? Math.min(Preferences.engineThreads, ApplicationInfo.engineThreadsMaximum) : 0
+                            // While several scan files are fitted at once, each of those fits runs on one thread.
+                            displayText: Preferences.scanWorkersApplied > 1 ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${qsTr("1 per scan fit")}</font>` : currentText
+                            onActivated: index => {
+                                if (ApplicationInfo.engineThreadsSelectable)
+                                    Preferences.engineThreads = index;
+                            }
+                            ToolTip.text: Preferences.scanWorkersApplied > 1 ? qsTr("Threads one calculation or one fit runs on. While several scan files are fitted at once, each of those fits runs on one thread") : qsTr("Threads one calculation or one fit runs on; Auto leaves a core or two free")
                         }
                     }
-                    ToolTip.text: qsTr("How many data files of a sequential or independent scan are fitted at once, up to the %1 cores of this machine. Each file of a group starts from where the previous group ended; 1 fits them one after another, each from the previous result").arg(maximum)
+                }
+                Field {
+                    label: qsTr("Parallel fits in a scan")
+                    NotAvailable {
+                        reason: ApplicationInfo.engineThreadsSelectable ? "" : qsTr("This browser runs the app on one thread")
+                        FieldBox {
+                            id: scanWorkersBox
+
+                            property int maximum: ApplicationInfo.scanWorkersMaximum
+                            signal chosen(int count)
+
+                            // The count the engine runs with, set rather than bound: the box rewrites its own text as
+                            // its list loads and as it is edited.
+                            function show() {
+                                currentIndex = find(String(Preferences.scanWorkersApplied));
+                                editText = String(Preferences.scanWorkersApplied);
+                            }
+                            // Enter or leaving the box takes a typed whole number, held to 1 and the maximum.
+                            function take() {
+                                const typed = parseInt(editText, 10);
+                                if (!isNaN(typed))
+                                    chosen(Math.max(1, Math.min(typed, maximum)));
+                            }
+
+                            objectName: "preferences.scanWorkers"
+                            enabled: ApplicationInfo.engineThreadsSelectable
+                            editable: true
+                            validator: IntValidator {
+                                bottom: 1
+                            }
+                            model: {
+                                const counts = [];
+                                for (let count = 1; count <= Math.min(5, maximum); ++count)
+                                    counts.push(String(count));
+                                return counts;
+                            }
+                            Component.onCompleted: show()
+                            onModelChanged: show()
+                            onAccepted: take()
+                            onActiveFocusChanged: if (!activeFocus)
+                                take()
+                            onActivated: index => chosen(parseInt(textAt(index), 10))
+                            onChosen: count => {
+                                Preferences.scanWorkers = count;
+                                show();
+                            }
+                            Connections {
+                                target: Preferences
+                                function onScanWorkersAppliedChanged() {
+                                    scanWorkersBox.show();
+                                }
+                            }
+                            ToolTip.text: qsTr("How many data files of a sequential or independent scan are fitted at once, up to the %1 cores of this machine. Each file of a group starts from where the previous group ended; 1 fits them one after another, each from the previous result").arg(maximum)
+                        }
+                    }
+                }
+            }
+            TabColumn {
+                GroupTitle {
+                    icon: "desktop"
+                    text: qsTr("Graphics")
+                }
+                // How the Stacked view draws its lines: on the GPU, or painted, which is faster without one; Automatic
+                // takes the detected graphics below (edi ADR-0041).
+                Field {
+                    label: qsTr("Scan view drawing")
+                    FieldBox {
+                        readonly property var values: ["auto", "gpu", "software"]
+
+                        objectName: "preferences.scanRenderer"
+                        model: [qsTr("Automatic"), qsTr("GPU"), qsTr("Software painter")]
+                        currentIndex: Math.max(0, values.indexOf(Preferences.scanRenderer))
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 10)
+                        ToolTip.text: qsTr("Software drawing is faster on a computer without a GPU")
+                    }
+                }
+                // What Qt draws with (edi ADR-0041), read in the first frame.
+                Field {
+                    label: qsTr("Detected graphics")
+                    ReadOnlyField {
+                        objectName: "preferences.graphics"
+                        text: !RenderingInfo.detected ? qsTr("Not detected yet") : (RenderingInfo.renderer !== "" ? RenderingInfo.api + ", " + RenderingInfo.renderer : RenderingInfo.api) + " · " + (RenderingInfo.software ? qsTr("software rendering, no GPU") : qsTr("GPU"))
+                    }
                 }
             }
         }
 
+        // Updates: availability always updates in the background; the notice is the optional prompt.
+        TabRow {
+            TabColumn {
+                Field {
+                    label: qsTr("New version notice")
+                    FieldBox {
+                        objectName: "preferences.checkUpdateOnStart"
+                        enabled: DesktopUpdates.managed
+                        model: [qsTr("Show"), qsTr("Don't show")]
+                        currentIndex: Preferences.updateNotifications ? 0 : 1
+                        onActivated: index => Preferences.updateNotifications = index === 0
+                        ToolTip.text: qsTr("The app checks at startup and every hour")
+                    }
+                }
+                FieldButton {
+                    objectName: "preferences.checkUpdateNow"
+                    enabled: DesktopUpdates.managed && !DesktopUpdates.checking
+                    highlighted: true
+                    fontIcon: "sync-alt"
+                    text: DesktopUpdates.checking ? qsTr("Checking…") : qsTr("Check now")
+                    onClicked: DesktopUpdates.checkNow(true)
+                }
+            }
+            TabColumn {
+                Field {
+                    label: qsTr("Status")
+                    ReadOnlyField {
+                        objectName: "preferences.updateStatus"
+                        text: DesktopUpdates.status
+                    }
+                }
+                FieldButton {
+                    objectName: "preferences.openMaintenanceTool"
+                    visible: DesktopUpdates.managed
+                    fontIcon: "cogs"
+                    text: qsTr("Open Maintenance Tool")
+                    onClicked: dialog.maintenanceRequested()
+                }
+            }
+        }
+
+        // AI assistance: the skill sources, then support and the cached history.
         ScrollView {
             id: aiPage
             implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height - bar.implicitHeight - AppSizes.unit * 8))
@@ -682,112 +702,111 @@ AppDialog {
                 ApplicationInfo.preferenceCopyDiagnostics(button, report);
             }
             clip: true
-            Column {
+            TabColumn {
                 id: aiContent
-                width: Math.max(0, aiPage.availableWidth)
-                spacing: AppSizes.unit
-                EaElements.Label {
-                    width: parent.width
+                width: dialog.contentRowWidth
+
+                GroupTitle {
+                    icon: "book"
                     text: qsTr("Skill sources")
-                    font.bold: true
                 }
-                DataTable {
-                    id: sourceTable
-                    objectName: "preferences.ai.sources"
-                    width: parent.width
-                    maxRowCountShow: 5
-                    sourceModel: aiPage.original ? aiPage.original.skillSources : null
-                    defaultInfoText: qsTr("No skill sources")
-                    columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
-                    header: EaComponents.ListViewHeader {
-                        EaComponents.ListViewLabel {}
-                        EaComponents.ListViewLabel {
-                            elide: Text.ElideRight
-                            text: qsTr("Source")
-                            horizontalAlignment: Text.AlignLeft
+                TableFrame {
+                    DataTable {
+                        id: sourceTable
+                        objectName: "preferences.ai.sources"
+                        x: 1
+                        y: 1
+                        width: parent.width - 2
+                        maxRowCountShow: 5
+                        sourceModel: aiPage.original ? aiPage.original.skillSources : null
+                        defaultInfoText: qsTr("No skill sources")
+                        columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                        header: EaComponents.ListViewHeader {
+                            EaComponents.ListViewLabel {}
+                            EaComponents.ListViewLabel {
+                                elide: Text.ElideRight
+                                text: qsTr("Source")
+                                horizontalAlignment: Text.AlignLeft
+                            }
+                            EaComponents.ListViewLabel {}
+                            EaComponents.ListViewLabel {}
                         }
-                        EaComponents.ListViewLabel {}
-                        EaComponents.ListViewLabel {}
-                    }
-                    delegate: TableRow {
-                        id: sourceRow
-                        readonly property string sourceId: model.id || ""
-                        required property string label
-                        required property string path
-                        required property bool builtin
-                        required property string status
-                        required property var model
-                        readonly property var original: aiPage.original
-                        property int presentation: 0
-                        onSourceIdChanged: ApplicationInfo.preferenceSourceRevision()
-                        onOriginalChanged: ApplicationInfo.preferenceSourceRevision()
-                        EaComponents.ListViewLabel {
-                            elide: Text.ElideRight
-                            text: sourceRow.index + 1
-                            horizontalAlignment: Text.AlignHCenter
-                            marksCurrentRow: true
-                        }
-                        EaComponents.ListViewLabel {
-                            objectName: "preferences.ai.source.label." + sourceRow.sourceId
-                            text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.label.startsWith("https://github.com/") ? sourceRow.label : sourceRow.path
-                            horizontalAlignment: Text.AlignLeft
-                            elide: Text.ElideRight
-                            ToolTip.text: text + (sourceRow.status.length ? "\n" + sourceRow.status : "")
-                        }
-                        EaComponents.ListViewButton {
-                            id: sourceEnabled
-                            objectName: "preferences.ai.source.enabled." + sourceRow.sourceId
-                            fontIcon: sourceRow.model.enabled ? "toggle-on" : "toggle-off"
-                            enabled: ApplicationInfo.assistantAvailable && sourceRow.original && !sourceRow.original.canCancel
-                            ToolTip.text: sourceRow.model.enabled ? qsTr("Disable this skill source") : qsTr("Enable this skill source")
-                            Accessible.name: ToolTip.text
-                            Accessible.checkable: true
-                            Accessible.checked: sourceRow.model.enabled
-                            property var gesture: null
-                            onPressed: ApplicationInfo.preferenceSourceGesture(false, true)
-                            onCanceled: gesture = null
-                            onClicked: ApplicationInfo.preferenceSourceGesture(false, false)
-                            Connections {
-                                target: sourceRow.original
-                                function onSkillSourcesChanged() {
-                                    sourceEnabled.gesture = null;
+                        delegate: TableRow {
+                            id: sourceRow
+                            readonly property string sourceId: model.id || ""
+                            required property string label
+                            required property string path
+                            required property bool builtin
+                            required property string status
+                            required property var model
+                            readonly property var original: aiPage.original
+                            property int presentation: 0
+                            onSourceIdChanged: ApplicationInfo.preferenceSourceRevision()
+                            onOriginalChanged: ApplicationInfo.preferenceSourceRevision()
+                            EaComponents.ListViewLabel {
+                                elide: Text.ElideRight
+                                text: sourceRow.index + 1
+                                horizontalAlignment: Text.AlignHCenter
+                                marksCurrentRow: true
+                            }
+                            EaComponents.ListViewLabel {
+                                objectName: "preferences.ai.source.label." + sourceRow.sourceId
+                                text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.label.startsWith("https://github.com/") ? sourceRow.label : sourceRow.path
+                                horizontalAlignment: Text.AlignLeft
+                                elide: Text.ElideRight
+                                ToolTip.text: text + (sourceRow.status.length ? "\n" + sourceRow.status : "")
+                            }
+                            EaComponents.ListViewButton {
+                                id: sourceEnabled
+                                objectName: "preferences.ai.source.enabled." + sourceRow.sourceId
+                                fontIcon: sourceRow.model.enabled ? "toggle-on" : "toggle-off"
+                                enabled: ApplicationInfo.assistantAvailable && sourceRow.original && !sourceRow.original.canCancel
+                                ToolTip.text: sourceRow.model.enabled ? qsTr("Disable this skill source") : qsTr("Enable this skill source")
+                                Accessible.name: ToolTip.text
+                                Accessible.checkable: true
+                                Accessible.checked: sourceRow.model.enabled
+                                property var gesture: null
+                                onPressed: ApplicationInfo.preferenceSourceGesture(false, true)
+                                onCanceled: gesture = null
+                                onClicked: ApplicationInfo.preferenceSourceGesture(false, false)
+                                Connections {
+                                    target: sourceRow.original
+                                    function onSkillSourcesChanged() {
+                                        sourceEnabled.gesture = null;
+                                    }
+                                }
+                            }
+                            EaComponents.ListViewButton {
+                                id: sourceRemove
+                                objectName: "preferences.ai.source.remove." + sourceRow.sourceId
+                                fontIcon: "minus-circle"
+                                enabled: ApplicationInfo.assistantAvailable && !sourceRow.builtin && sourceRow.original && !sourceRow.original.canCancel
+                                ToolTip.text: sourceRow.builtin ? qsTr("The built-in source cannot be removed") : qsTr("Remove this skill source")
+                                Accessible.name: ToolTip.text
+                                property var gesture: null
+                                onPressed: ApplicationInfo.preferenceSourceGesture(true, true)
+                                onCanceled: gesture = null
+                                onClicked: ApplicationInfo.preferenceSourceGesture(true, false)
+                                Connections {
+                                    target: sourceRow.original
+                                    function onSkillSourcesChanged() {
+                                        sourceRemove.gesture = null;
+                                    }
                                 }
                             }
                         }
-                        EaComponents.ListViewButton {
-                            id: sourceRemove
-                            objectName: "preferences.ai.source.remove." + sourceRow.sourceId
-                            fontIcon: "minus-circle"
-                            enabled: ApplicationInfo.assistantAvailable && !sourceRow.builtin && sourceRow.original && !sourceRow.original.canCancel
-                            ToolTip.text: sourceRow.builtin ? qsTr("The built-in source cannot be removed") : qsTr("Remove this skill source")
-                            Accessible.name: ToolTip.text
-                            property var gesture: null
-                            onPressed: ApplicationInfo.preferenceSourceGesture(true, true)
-                            onCanceled: gesture = null
-                            onClicked: ApplicationInfo.preferenceSourceGesture(true, false)
-                            Connections {
-                                target: sourceRow.original
-                                function onSkillSourcesChanged() {
-                                    sourceRemove.gesture = null;
-                                }
-                            }
-                        }
                     }
                 }
-                Row {
-                    width: parent.width
-                    spacing: AppSizes.unit
-                    EaElements.SideBarButton {
+                TabRow {
+                    FieldButton {
                         objectName: "preferences.ai.sources.add"
-                        width: (parent.width - parent.spacing) / 2
                         text: qsTr("Add skill source")
                         fontIcon: "plus-circle"
                         enabled: ApplicationInfo.assistantAvailable && !(aiPage.original ? aiPage.original.canCancel : false) && !(aiPage.original ? aiPage.original.skillSourceImporting : false)
                         onClicked: ApplicationInfo.preferenceBeginSourceSelection(false)
                     }
-                    EaElements.SideBarButton {
+                    FieldButton {
                         objectName: "preferences.ai.sources.web"
-                        width: (parent.width - parent.spacing) / 2
                         text: (aiPage.original ? aiPage.original.skillSourceImporting : false) ? qsTr("Cancel web import") : qsTr("Add skills from web")
                         fontIcon: (aiPage.original ? aiPage.original.skillSourceImporting : false) ? "times-circle" : "globe"
                         enabled: ApplicationInfo.assistantAvailable && !(aiPage.original ? aiPage.original.canCancel : false)
@@ -802,85 +821,112 @@ AppDialog {
                     wrapMode: Text.WrapAnywhere
                     color: EaStyle.Colors.red
                 }
-                EaElements.Label {
-                    text: qsTr("Diagnostics")
-                    font.bold: true
+                GroupTitle {
+                    first: false
+                    icon: "life-ring"
+                    text: qsTr("Support and history")
                 }
-                EaElements.CheckBox {
-                    objectName: "preferences.ai.copyTechnicalDetails"
-                    text: qsTr("Include technical details when copying steps")
-                    checked: Preferences.assistantCopyTechnicalDetails
-                    onToggled: Preferences.assistantCopyTechnicalDetails = checked
-                }
-                Row {
-                    width: parent.width
-                    spacing: AppSizes.unit
-                    EaElements.SideBarButton {
-                        id: copyWorkReport
-                        objectName: "preferences.ai.workReport"
-                        width: (parent.width - parent.spacing) / 2
-                        property bool copied: false
-                        text: copied ? qsTr("Copied") : qsTr("Copy work report")
-                        fontIcon: copied ? "check" : "copy"
-                        contentItem: Item {
-                            implicitWidth: copyWorkReportContent.implicitWidth
-                            Row {
-                                id: copyWorkReportContent
-                                anchors.centerIn: parent
-                                spacing: AppSizes.unit * 0.5
-                                EaElements.Label {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: copyWorkReport.fontIcon
-                                    font.family: EaStyle.Fonts.iconsFamily
-                                    color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-                                    Accessible.ignored: true
+                TabRow {
+                    TabColumn {
+                        Field {
+                            label: qsTr("Technical details in copied steps")
+                            FieldBox {
+                                objectName: "preferences.ai.copyTechnicalDetails"
+                                model: [qsTr("Leave out"), qsTr("Include")]
+                                currentIndex: Preferences.assistantCopyTechnicalDetails ? 1 : 0
+                                onActivated: index => Preferences.assistantCopyTechnicalDetails = index === 1
+                            }
+                        }
+                        Field {
+                            label: qsTr("Connection details")
+                            EaElements.SideBarButton {
+                                id: copyConnection
+                                objectName: "preferences.ai.copyConnection"
+                                width: dialog.columnWidth
+                                height: dialog.rowHeight
+                                property bool copied: false
+                                text: copied ? qsTr("Copied") : qsTr("Copy connection details")
+                                fontIcon: copied ? "check" : "copy"
+                                contentItem: Item {
+                                    implicitWidth: copyConnectionContent.implicitWidth
+                                    Row {
+                                        id: copyConnectionContent
+                                        anchors.centerIn: parent
+                                        spacing: AppSizes.unit * 0.5
+                                        EaElements.Label {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: copyConnection.fontIcon
+                                            font.family: EaStyle.Fonts.iconsFamily
+                                            color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                            Accessible.ignored: true
+                                        }
+                                        EaElements.Label {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: copyConnection.text
+                                            color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                        }
+                                    }
                                 }
-                                EaElements.Label {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: copyWorkReport.text
-                                    color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                onClicked: aiPage.copyDiagnostics(copyConnection, false)
+                                Timer {
+                                    id: connectionCopyFeedback
+                                    interval: EaStyle.Times.introAnimation
+                                    onTriggered: copyConnection.copied = false
                                 }
                             }
                         }
-                        onClicked: aiPage.copyDiagnostics(copyWorkReport, true)
-                        Timer {
-                            id: reportCopyFeedback
-                            interval: EaStyle.Times.introAnimation
-                            onTriggered: copyWorkReport.copied = false
                         }
                     }
-                    EaElements.SideBarButton {
-                        id: copyConnection
-                        objectName: "preferences.ai.copyConnection"
-                        width: (parent.width - parent.spacing) / 2
-                        property bool copied: false
-                        text: copied ? qsTr("Copied") : qsTr("Copy connection details")
-                        fontIcon: copied ? "check" : "copy"
-                        contentItem: Item {
-                            implicitWidth: copyConnectionContent.implicitWidth
-                            Row {
-                                id: copyConnectionContent
-                                anchors.centerIn: parent
-                                spacing: AppSizes.unit * 0.5
-                                EaElements.Label {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: copyConnection.fontIcon
-                                    font.family: EaStyle.Fonts.iconsFamily
-                                    color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-                                    Accessible.ignored: true
+                    TabColumn {
+                        Field {
+                            label: qsTr("Work report")
+                            EaElements.SideBarButton {
+                                id: copyWorkReport
+                                objectName: "preferences.ai.workReport"
+                                width: dialog.columnWidth
+                                height: dialog.rowHeight
+                                property bool copied: false
+                                text: copied ? qsTr("Copied") : qsTr("Copy work report")
+                                fontIcon: copied ? "check" : "copy"
+                                contentItem: Item {
+                                    implicitWidth: copyWorkReportContent.implicitWidth
+                                    Row {
+                                        id: copyWorkReportContent
+                                        anchors.centerIn: parent
+                                        spacing: AppSizes.unit * 0.5
+                                        EaElements.Label {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: copyWorkReport.fontIcon
+                                            font.family: EaStyle.Fonts.iconsFamily
+                                            color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                            Accessible.ignored: true
+                                        }
+                                        EaElements.Label {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: copyWorkReport.text
+                                            color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                        }
+                                    }
                                 }
-                                EaElements.Label {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: copyConnection.text
-                                    color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                onClicked: aiPage.copyDiagnostics(copyWorkReport, true)
+                                Timer {
+                                    id: reportCopyFeedback
+                                    interval: EaStyle.Times.introAnimation
+                                    onTriggered: copyWorkReport.copied = false
                                 }
                             }
                         }
-                        onClicked: aiPage.copyDiagnostics(copyConnection, false)
-                        Timer {
-                            id: connectionCopyFeedback
-                            interval: EaStyle.Times.introAnimation
-                            onTriggered: copyConnection.copied = false
+                        Field {
+                            label: qsTr("Cached chat history")
+                            FieldButton {
+                                objectName: "preferences.ai.clearCachedHistory"
+                                text: (aiPage.original ? aiPage.original.cachedHistoryClearing : false) ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
+                                fontIcon: "eraser"
+                                enabled: !(aiPage.original ? aiPage.original.canCancel : false) && !(aiPage.original ? aiPage.original.cachedHistoryClearing : false)
+                                ToolTip.text: qsTr("Clears only the saved chat display. Projects and sign-in are kept")
+                                onClicked: if (aiPage.original)
+                                    aiPage.original.clearCachedHistory()
+                            }
                         }
                     }
                 }
@@ -893,20 +939,6 @@ AppDialog {
                     color: EaStyle.Colors.red
                 }
                 EaElements.Label {
-                    text: qsTr("History")
-                    font.bold: true
-                }
-                EaElements.SideBarButton {
-                    objectName: "preferences.ai.clearCachedHistory"
-                    width: parent.width
-                    text: (aiPage.original ? aiPage.original.cachedHistoryClearing : false) ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
-                    fontIcon: "eraser"
-                    enabled: !(aiPage.original ? aiPage.original.canCancel : false) && !(aiPage.original ? aiPage.original.cachedHistoryClearing : false)
-                    ToolTip.text: qsTr("Clear the app's saved chat display only. Projects, reports, runtime sessions and sign-in are kept.")
-                    onClicked: if (aiPage.original)
-                        aiPage.original.clearCachedHistory()
-                }
-                EaElements.Label {
                     width: parent.width
                     text: (aiPage.original ? aiPage.original.cachedHistoryError : "")
                     visible: text.length > 0
@@ -917,130 +949,73 @@ AppDialog {
             }
         }
 
-        // Experimental: zoom and language are not available yet — the default zoom, English.
-        RowGrid {
-            RowLabel {
-                enabled: false
-                text: qsTr("Zoom") + ":"
-            }
-            NotAvailable {
-                RowBox {
-                    objectName: "preferences.zoom"
-                    enabled: false
-                    model: ["100%"]
+        // Advanced: troubleshooting, and the settings file (ADR-0031 §5). The run log goes to the terminal and to a
+        // file of each run (edi ADR-0062). The feedback address stays in the settings file only (edi ADR-0063).
+        TabRow {
+            TabColumn {
+                GroupTitle {
+                    icon: "bug"
+                    text: qsTr("Troubleshooting")
                 }
-            }
-
-            RowLabel {
-                enabled: false
-                text: qsTr("Language") + ":"
-            }
-            NotAvailable {
-                RowBox {
-                    objectName: "preferences.language"
-                    enabled: false
-                    model: [qsTr("English")]
-                }
-            }
-        }
-
-        // Develop, as the base's. The run log goes to the terminal and to a file of each run (edi ADR-0062).
-        RowGrid {
-            RowLabel {
-                text: qsTr("Message level") + ":"
-            }
-            RowBox {
-                objectName: "preferences.loggingLevel"
-                model: ["Debug", "Info", "Warning", "Error"]
-                ToolTip.text: qsTr("The messages to show and log: those at this level and above. Errors always show")
-                currentIndex: model.indexOf(Preferences.loggingLevel)
-                onActivated: Preferences.loggingLevel = currentValue
-            }
-
-            // Help and feedback's service (edi ADR-0063): empty keeps Send off.
-            RowLabel {
-                text: qsTr("Feedback address") + ":"
-            }
-            EaElements.TextField {
-                objectName: "preferences.feedbackEndpoint"
-                width: dialog.controlWidth
-                horizontalAlignment: TextInput.AlignLeft
-                placeholderText: qsTr("Not set up")
-                text: Preferences.feedbackEndpoint
-                onEditingFinished: Preferences.feedbackEndpoint = text.trim()
-            }
-
-            // What Qt draws with (edi ADR-0041): its graphics API and renderer, read in the first frame, and whether that
-            // means no GPU.
-            RowLabel {
-                text: qsTr("Graphics") + ":"
-            }
-            EaElements.Label {
-                objectName: "preferences.graphics"
-                width: dialog.controlWidth
-                topPadding: dialog.lineOffset
-                wrapMode: Text.Wrap
-                text: !RenderingInfo.detected ? qsTr("Not detected yet") : (RenderingInfo.renderer !== "" ? RenderingInfo.api + ", " + RenderingInfo.renderer : RenderingInfo.api) + " · " + (RenderingInfo.software ? qsTr("software rendering, no GPU") : qsTr("GPU"))
-            }
-
-            // How the Stacked view draws its lines: on the GPU, or painted, which is faster without one; Automatic takes
-            // the graphics above. Saved per machine.
-            RowLabel {
-                text: qsTr("Scan views") + ":"
-            }
-            RowBox {
-                objectName: "preferences.scanRenderer"
-                readonly property var values: ["auto", "gpu", "software"]
-                model: [qsTr("Automatic"), qsTr("GPU"), qsTr("Software painter")]
-                currentIndex: Math.max(0, values.indexOf(Preferences.scanRenderer))
-                onActivated: index => ApplicationInfo.preferenceActivated(index, 10)
-            }
-
-            // What the app runs on and with, to read and to copy (the owner, 2026-10-06).
-            RowLabel {
-                text: qsTr("Diagnostics") + ":"
-            }
-            RowButton {
-                objectName: "preferences.diagnostics"
-                text: qsTr("Show")
-                onClicked: diagnostics.open()
-            }
-
-            // ADR-0031 §5: where the app's settings are kept, the folder holding them and a reset. A long path is cut in
-            // its middle, and the whole of it is the tooltip.
-            RowLabel {
-                text: qsTr("Settings") + ":"
-            }
-            Column {
-                spacing: dialog.stackSpacing
-
-                EaElements.Label {
-                    id: settingsPath
-
-                    objectName: "preferences.settingsPath"
-                    width: dialog.controlWidth
-                    topPadding: dialog.lineOffset
-                    elide: Text.ElideMiddle
-                    text: WebFiles.available ? qsTr("Stored in this browser") : ApplicationInfo.localPath(EaGlobals.Vars.settingsFile)
-
-                    HoverHandler {
-                        id: pathHover
-                    }
-                    EaElements.ToolTip {
-                        text: settingsPath.text
-                        requested: pathHover.hovered && settingsPath.truncated
+                Field {
+                    label: qsTr("Message level")
+                    FieldBox {
+                        objectName: "preferences.loggingLevel"
+                        model: ["Debug", "Info", "Warning", "Error"]
+                        ToolTip.text: qsTr("The messages to show and log: those at this level and above. Errors always show")
+                        currentIndex: model.indexOf(Preferences.loggingLevel)
+                        onActivated: Preferences.loggingLevel = currentValue
                     }
                 }
-                RowButton {
-                    objectName: "preferences.openSettingsFolder"
-                    visible: !WebFiles.available
-                    text: qsTr("Open folder")
-                    onClicked: Qt.openUrlExternally(ApplicationInfo.folderOf(EaGlobals.Vars.settingsFile))
+                // What the app runs on and with, to read and to copy.
+                Field {
+                    label: qsTr("Diagnostics")
+                    FieldButton {
+                        objectName: "preferences.diagnostics"
+                        fontIcon: "info-circle"
+                        text: qsTr("Show diagnostics")
+                        onClicked: diagnostics.open()
+                    }
                 }
-                RowButton {
-                    objectName: "preferences.resetSettings"
-                    text: qsTr("Reset to defaults")
-                    onClicked: resetConfirm.open()
+            }
+            TabColumn {
+                GroupTitle {
+                    icon: "file-alt"
+                    text: qsTr("Settings file")
+                }
+                // A long path is cut in its middle, and the whole of it is the tooltip.
+                Field {
+                    label: qsTr("Stored in")
+                    ReadOnlyField {
+                        id: settingsPath
+
+                        objectName: "preferences.settingsPath"
+                        text: WebFiles.available ? qsTr("Stored in this browser") : ApplicationInfo.localPath(EaGlobals.Vars.settingsFile)
+                        ToolTip.text: text
+                    }
+                }
+                Field {
+                    label: " "
+                    TabRow {
+                        spacing: dialog.rowSpacing
+                        EaElements.SideBarButton {
+                            objectName: "preferences.openSettingsFolder"
+                            visible: !WebFiles.available
+                            width: (dialog.columnWidth - parent.spacing) / 2
+                            height: dialog.rowHeight
+                            fontIcon: "folder-open"
+                            text: qsTr("Open folder")
+                            onClicked: Qt.openUrlExternally(ApplicationInfo.folderOf(EaGlobals.Vars.settingsFile))
+                        }
+                        EaElements.SideBarButton {
+                            objectName: "preferences.resetSettings"
+                            width: WebFiles.available ? dialog.columnWidth : (dialog.columnWidth - parent.spacing) / 2
+                            height: dialog.rowHeight
+                            fontIcon: "undo"
+                            text: qsTr("Reset to defaults")
+                            onClicked: resetConfirm.open()
+                        }
+                    }
                 }
             }
         }
@@ -1119,17 +1094,6 @@ AppDialog {
         EaElements.Label {
             text: qsTr("Set every preference and page setting back to its default? The open project is not changed.")
         }
-    }
-
-    FontMetrics {
-        id: boxMetrics
-
-        font: themeBox.font
-    }
-    FontMetrics {
-        id: lineMetrics
-
-        font: themeLabel.font
     }
 
     DiagnosticsDialog {

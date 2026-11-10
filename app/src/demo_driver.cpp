@@ -213,8 +213,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                     "type:225", "key:Return"}});
     // A number outside 1-230, typed: red, and not applied.
     steps_.push_back({"c13-09-space-group-number-invalid", {"spaceGroup.itNumber", "key:Ctrl+A", "type:999"}});
-    // The diagnostics view, from Preferences > Develop, then both dialogs closed.
-    steps_.push_back({"c13-10-diagnostics", {"key:Escape", "appBar.button.preferences", "preferences.tab.develop",
+    // The diagnostics view, from Preferences > Advanced, then both dialogs closed.
+    steps_.push_back({"c13-10-diagnostics", {"key:Escape", "appBar.button.preferences", "preferences.tab.advanced",
                                              "preferences.diagnostics"}});
     steps_.push_back({"c13-11-diagnostics-closed", {"choose:OK", "choose:OK"}});
     // ... then ideas no capture above shows (edi ADR-0017): the Experiment type grid three
@@ -545,7 +545,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-09-pattern-toolbar", {analysis, "mainArea.analysis.tab.fitting"}});
     // The owner's app findings (2026-10-08): 9, Diagnostics' Show a button the Logging level box's size; 7, the sample
     // form and scattering type disabled while one choice is supported.
-    steps_.push_back({"t17-20-diagnostics-show", {"appBar.button.preferences", "preferences.tab.develop"}});
+    steps_.push_back({"t17-20-diagnostics-show", {"appBar.button.preferences", "preferences.tab.advanced"}});
     steps_.push_back({"t17-21-experiment-type", QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_cosio-d20")
                                                     + QStringList{experiment, basic, "expand:group.experiments"}});
     // 5 and 6: without an experiment Analysis and Summary are disabled; without a structure Experiment too.
@@ -631,19 +631,19 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                     "type:background"}});
     // Timing: the 162-file scan fitted and reset, each interval on a monotonic clock with its work checked. Run only
     // when asked (`--demo-only perf-`); the two controls must fail.
-    // Every Preferences tab in both themes, to check that each has the same label column and control width. Run only
-    // when asked (`--demo-only prefs-`).
+    // Every Preferences tab in both themes, to check that each keeps the same two columns. Run only when asked
+    // (`--demo-only prefs-`).
     if (only.startsWith(QLatin1String("prefs-"))) {
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("prefs-") + theme + QStringLiteral("-");
-            steps_.push_back({name + "1-prompts", {"key:Escape", "theme:" + theme, "appBar.button.preferences",
-                                                   "preferences.tab.prompts"}});
-            steps_.push_back({name + "2-updates", {"preferences.tab.updates"}});
-            steps_.push_back({name + "3-appearance", {"preferences.tab.appearance"}});
-            steps_.push_back({name + "4-projects", {"preferences.tab.projects"}});
-            steps_.push_back({name + "5-performance", {"preferences.tab.performance"}});
-            steps_.push_back({name + "6-experimental", {"preferences.tab.experimental"}});
-            steps_.push_back({name + "7-develop", {"preferences.tab.develop"}});
+            steps_.push_back({name + "1-appearance", {"key:Escape", "theme:" + theme, "appBar.button.preferences",
+                                                      "preferences.tab.appearance"}});
+            steps_.push_back({name + "2-interface", {"preferences.tab.interface"}});
+            steps_.push_back({name + "3-projects", {"preferences.tab.projects"}});
+            steps_.push_back({name + "4-performance", {"preferences.tab.performance"}});
+            steps_.push_back({name + "5-updates", {"preferences.tab.updates"}});
+            steps_.push_back({name + "6-ai-assistance", {"preferences.tab.aiAssistance"}});
+            steps_.push_back({name + "7-advanced", {"preferences.tab.advanced"}});
         }
     }
     // An example from an online collection (ADR-0068), opened from the Examples list, the list searched down to the
@@ -1309,7 +1309,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"perf-data-324f", {"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
                                              "mainArea.analysis.tab.stacked", "wait-scan:stacked",
                                              "timed-frames:stacked:data:10"}});
-        // The same with the Stacked lines on the GPU, chosen as a user chooses it in Develop.
+        // The same with the Stacked lines on the GPU, chosen as a user chooses it in Performance.
         views.insert(1, QStringLiteral("preference:scanRenderer=gpu"));
         steps_.push_back({"perf-gpu-views-324f", views});
         const QStringList updates{"resize:1280x800", scan, analysis, "sideBar.tab.settings", "expand:group.patternUpdates",

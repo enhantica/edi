@@ -435,7 +435,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void resetPreferences() const;
     Q_INVOKABLE void applyPreferences() const;
     Q_INVOKABLE void preferencesColourChanged() const;
-    Q_INVOKABLE void preferencesStackedPaletteChanged() const;
     Q_INVOKABLE void preferencesLegacyPaletteChanged() const;
     Q_INVOKABLE void persistPreference(int kind) const;
     Q_INVOKABLE QJSValue preferenceItemsUnder(const QJSValue& item, const QJSValue& wanted) const;
@@ -612,7 +611,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void preferenceCompleteSourceSelection(bool web, bool accepted) const;
     Q_INVOKABLE void preferenceRetireSourceSelection(const QJSValue& token, bool web) const;
     Q_INVOKABLE QJSValue preferenceColourTitles() const;
-    Q_INVOKABLE QJSValue preferenceStackedChoices() const;
     Q_INVOKABLE QJSValue preferenceEngineThreads() const;
     Q_INVOKABLE void preferenceActivated(const QJSValue& index, int setting) const;
     /// NumberText presentation; project uncertainty formatting remains ProjectViewModel/core-owned.
@@ -710,7 +708,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void singleHoverRead(const QJSValue& px, const QJSValue& py) const;
     Q_INVOKABLE void singlePointer(const QJSValue& mouse, int event) const;
     /// Scan view state/lifecycle and input procedures; ScanViewModel and ScanLayer own data and presentation.
-    Q_INVOKABLE QJSValue scanStackedPalette() const;
     Q_INVOKABLE QJSValue chartCapitalised(const QJSValue& text) const;
     Q_INVOKABLE void scanSetZoom(const QJSValue& x, const QJSValue& y) const;
     Q_INVOKABLE void scanResetZoom() const;
@@ -732,7 +729,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue digitCellWidth() const;
     Q_INVOKABLE QJSValue digitTextRuns() const;
     Q_INVOKABLE QJSValue digitRunIsDigit(const QJSValue& text) const;
-    Q_INVOKABLE QJSValue palettePositions() const;
     Q_INVOKABLE QJSValue nameBlockIcon(const QJSValue& kind) const;
     Q_INVOKABLE QJSValue nameParameterIcon(const QJSValue& name) const;
     Q_INVOKABLE QJSValue nameSegments(const QJSValue& item) const;
@@ -954,6 +950,8 @@ class ApplicationInfo : public QObject {
     // reads as edi::colour_scheme_or_default does), `count` one past the last position in use, in the theme:
     // edi::figure_colour. The calculated curve's colour in the palette and theme: edi::role_colour.
     Q_INVOKABLE QColor figureColour(const QString& scheme, int position, int count, bool dark) const;
+    // The palette's eleven figure colours in their order, in the theme: the strip under Preferences' Palette.
+    Q_INVOKABLE QList<QColor> paletteColours(const QString& scheme, bool dark) const;
     Q_INVOKABLE QColor calculationColour(const QString& scheme, bool dark) const;
     // How many colours a palette lists (edi::kPaletteColourCount), and whether it keeps its first two for experiments.
     Q_PROPERTY(int paletteColourCount READ paletteColourCount CONSTANT)
@@ -1007,6 +1005,9 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void restoreWindowGeometry(QObject* window, QObject* settings) const;
     Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
                                     const QString& scheme = QStringLiteral("jmol")) const;
+    // The colours the strip under Preferences' moment arrows selector shows for `colours` ("atom", "greyed" or
+    // "single"): a few magnetic elements' colours as the structure view draws their arrows (edi ADR-0078).
+    Q_INVOKABLE QList<QColor> momentColourSamples(const QString& colours, bool dark) const;
     // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 2:1 contrast on each, its hue kept (edi
     // ADR-0047).
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;

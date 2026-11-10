@@ -7,7 +7,7 @@
   host that sends no COOP/COEP headers (GitHub Pages), coi-serviceworker.js adds them once it controls the page: the page registers
   it and reloads under it, falling back only when that reload is still not isolated. `?build=multithread` or
   `?build=singlethread` forces a build. Why a build was chosen is kept in window.ediBuildInfo for the app's diagnostics view
-  (Preferences > Develop). While the build downloads, compiles and starts, the page shows the logo as a splash, its mark
+  (Preferences > Advanced). While the build downloads, compiles and starts, the page shows the logo as a splash, its mark
   turning as in EasyDiffractionBeta's loading window (mark.svg over name.svg, splash.css: the mark turns as an element, which
   the compositor keeps drawing while the module's start blocks the main thread); when the page has a message instead of the
   app, the logo stands still (logo.svg). The page takes the colour scheme the app's settings hold (light, dark, or the
@@ -210,7 +210,7 @@
         const build = chosen.build;
         started = build;
         startedReason = chosen.reason;
-        // What the app's diagnostics view shows about this choice (Preferences > Develop).
+        // What the app's diagnostics view shows about this choice (Preferences > Advanced).
         window.ediBuildInfo = {
           build,
           reason: chosen.reason,
