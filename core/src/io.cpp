@@ -27,6 +27,7 @@
 #include "assistant_project_io.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 #include "number_token.hpp"
+#include "crysta/descent.hpp"
 #include "crysta/magnetic.hpp"
 #include "crysta/single_crystal.hpp"
 
@@ -3904,17 +3905,24 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         // never a transcribed list) — an unknown or lookalike token refuses naming the registry
         // rather than running the default.
         if (const std::string* descent = block.find("_minimizer.descent")) {
-            const std::vector<std::string> ids = descent_ids();
-            if (std::find(ids.begin(), ids.end(), *descent) == ids.end()) {
-                std::string registered;
-                for (const std::string& id : ids) {
-                    registered += (registered.empty() ? "" : ", ") + id;
+            // An older file may name a descent crysta has since retired: it loads as fast descent,
+            // says so once, and a save writes fast_descent.
+            if (crysta::is_retired_descent(*descent)) {
+                warn("_minimizer.descent " + *descent + " is retired; the fit runs fast_descent instead");
+                project.descent = "fast_descent";
+            } else {
+                const std::vector<std::string> ids = descent_ids();
+                if (std::find(ids.begin(), ids.end(), *descent) == ids.end()) {
+                    std::string registered;
+                    for (const std::string& id : ids) {
+                        registered += (registered.empty() ? "" : ", ") + id;
+                    }
+                    throw IoError("unknown _minimizer.descent '" + *descent +
+                                  "' (registered descents: " + registered +
+                                  "): " + analysis_file.string());
                 }
-                throw IoError("unknown _minimizer.descent '" + *descent +
-                              "' (registered descents: " + registered +
-                              "): " + analysis_file.string());
+                project.descent = *descent;
             }
-            project.descent = *descent;
         }
         if (const std::string* tolerance = block.find("_minimizer.chi_square_tolerance")) {
             double value = 0.0;
