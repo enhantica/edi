@@ -42,7 +42,7 @@ def render(page: str, pages: list[list[dict]], *, kind: str = 'online') -> str:
     page = page.replace(
         {
             'online': 'Desktop installers will appear here when published.',
-            'cli': 'CLI downloads will appear here when published.',
+            'cli': 'Command line downloads will appear here when published.',
         }[kind],
         f'Latest version {version} ({display_date})',
     )
