@@ -18,8 +18,6 @@ On **Analysis → Extra**, expand **Minimizer**. Choose the descent strategy, th
 <!-- gui-options:guide-analysis-minimizer:minimizer.descent: -->
 - Ladder
 - Fast descent
-- Fast descent with linear snap
-- Fast descent with guarded linear snap
 - Multi-start with pruning
 <!-- /gui-options -->
 

@@ -48,3 +48,8 @@ inexact.
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 23 → 10; reduced_chi_square 9.731184512 →
 9.731198019.
+
+**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; fast descent is now the
+default descent. Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `697f33ee`,
+`OMP_NUM_THREADS=4`: iterations 10 → 11; reduced_chi_square 9.731198019 → 9.731189381. No `reference` value moved.

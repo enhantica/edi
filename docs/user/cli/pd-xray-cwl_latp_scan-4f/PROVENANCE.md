@@ -51,3 +51,9 @@ against crysta `4643af79`, `OMP_NUM_THREADS=1`: results[latp_312.dat].fit_result
 results[latp_296.dat].fit_result.reduced_chi_square 147601939.75607044 → 147598849.9391444;
 results[latp_288.dat].fit_result.reduced_chi_square 141240883.16532645 → 140761031.9166891;
 results[latp_288.dat].latp.cell.length_c 20.85029308919547 → 20.849933243047367.
+
+**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; fast descent is now the
+default descent. Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `697f33ee`,
+`OMP_NUM_THREADS=4`: results[latp_288.dat].fit_result.reduced_chi_square 140761031.9166891 → 141283624.70679507;
+results[latp_288.dat].latp.cell.length_c 20.849933243047367 → 20.85016787370379. No `reference` value moved.

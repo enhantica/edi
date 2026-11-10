@@ -39,3 +39,7 @@ against crysta `4643af79`, `OMP_NUM_THREADS=1`: ladder reduced_chi_square 1.2972
 iterations 6 → 8; fast-descent-linear-snap rwp 0.07229132862 → 0.07229128411; fast-descent-guarded-linear-snap
 reduced_chi_square 1.297270929 → 1.297269331; fast-descent-guarded-linear-snap iterations 6 → 8;
 fast-descent-guarded-linear-snap rwp 0.07229132862 → 0.07229128411.
+
+**Linear-snap variants removed, 2026-11-10.** The `fast-descent-linear-snap` and `fast-descent-guarded-linear-snap`
+descents were retired from crysta: they stopped at a wrong minimum on three examples. Their variants and pins went with
+them; the values above that name them are history.

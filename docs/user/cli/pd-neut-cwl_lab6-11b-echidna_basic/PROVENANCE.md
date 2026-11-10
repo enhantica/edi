@@ -21,3 +21,8 @@ The regression pins for reduced_chi_square, rwp were retaken with `python -m edi
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 8 → 7; reduced_chi_square 8.821294727 →
 8.821296155.
+
+**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
+-m edi fit --report machine --verbosity full` linked against crysta `697f33ee`, `OMP_NUM_THREADS=4`: iterations 7 → 8;
+reduced_chi_square 8.821296155 → 8.821294726. No `reference` value moved.

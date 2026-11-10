@@ -28,8 +28,6 @@ CRYSTA_DESTINATION_OVERRIDES = {
     '--chi-square-tolerance': 'chi_square_tolerance',
     '--fast-descent': 'descent',
     '--ftol': 'chi_square_tolerance',
-    '--guarded-linear-snap': 'descent',
-    '--linear-snap': 'descent',
     '--no-ramp': 'cutoff_policy',
     '--out': 'output_file',
     '--parameter-tolerance': 'parameter_tolerance',

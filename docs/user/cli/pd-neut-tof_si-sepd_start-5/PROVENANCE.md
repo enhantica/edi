@@ -45,3 +45,7 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 | fast-descent-guarded-linear-snap | `rwp` | 0.06941171565 | 0.06941004914 |
 | multistart-prune | `reduced_chi_square` | 3.611114145 | 3.610940746 |
 | multistart-prune | `rwp` | 0.06941171073 | 0.0694100442 |
+
+**Linear-snap variants removed, 2026-11-10.** The `fast-descent-linear-snap` and `fast-descent-guarded-linear-snap`
+descents were retired from crysta: they stopped at a wrong minimum on three examples. Their variants and pins went with
+them; the values above that name them are history.

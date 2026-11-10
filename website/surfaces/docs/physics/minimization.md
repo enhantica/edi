@@ -22,9 +22,7 @@ $D$ supplies the diagonal scaling/damping convention; $\lambda$ controls damping
 | Descent selector | Meaning |
 | --- | --- |
 | `ladder` | Damping-ladder LM search |
-| `fast_descent` | Additional in-iteration damping re-search |
-| `fast_descent_linear_snap` | Re-search with a full linear-block solve |
-| `fast_descent_guarded_linear_snap` | Accept a linear snap only when it improves the objective |
+| `fast_descent` | Additional in-iteration damping re-search (the default) |
 | `multistart_prune` | A two-probe multi-start/pruning strategy using one progress stream |
 
 The project records its descent, positive relative objective tolerance and positive iteration budget. A budget stop is not the same as convergence. Some strategies have restrictions when bounds are declared; inspect the reported diagnostic rather than assuming every combination is supported.

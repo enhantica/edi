@@ -43,3 +43,13 @@ machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: fast-descent ite
 χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
 against crysta `4643af79`, `OMP_NUM_THREADS=1`: fast-descent reduced_chi_square 4.387839632 → 4.387840717; fast-descent
 iterations 13 → 45; fast-descent rwp 0.03937389163 → 0.03937389334.
+
+**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
+-m edi fit --report machine --verbosity full` linked against crysta `697f33ee`, `OMP_NUM_THREADS=4`: fast-descent
+reduced_chi_square 4.387840717 → 4.387839645; fast-descent iterations 45 → 46; fast-descent rwp 0.03937389334 →
+0.03937388853. No `reference` value moved.
+
+**Linear-snap variants removed, 2026-11-10.** The `fast-descent-linear-snap` and `fast-descent-guarded-linear-snap`
+descents were retired from crysta: they stopped at a wrong minimum on three examples. Their variants and pins went with
+them; the values above that name them are history.

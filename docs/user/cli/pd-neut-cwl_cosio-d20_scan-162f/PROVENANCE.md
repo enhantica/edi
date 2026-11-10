@@ -190,3 +190,9 @@ title and description name the sample and scan, and `_metadata.purpose`, `.dimen
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: reduced_chi_square 14.65981576 → 14.65981734; iterations
 4 → 3.
+
+**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; a refused step on a
+magnetic moment is retried at the length a quadratic model of the residual predicts; fast descent is now the default
+descent. Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `697f33ee`,
+`OMP_NUM_THREADS=4`: reduced_chi_square 14.65981734 → 14.65981576; iterations 3 → 4. No `reference` value moved.

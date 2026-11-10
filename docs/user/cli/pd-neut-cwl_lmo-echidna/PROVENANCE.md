@@ -62,3 +62,8 @@ uncertainties apart (a 2.87488 against 2.87516 Å). As for the Bérar-Baldinozzi
 R<sub>wp</sub> and the number of free parameters, and every shared value on the `asymmetry-off` variant, against FullProf's
 fit with S/L and D/L at 0 (`knowledge/fitting/fullprof/pd-neut-cwl_lmo-echidna/asymmetry-off/`). That variant's edi fit
 agrees with it (a 2.872489 Å, c 14.170136 Å in FullProf's).
+
+**Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; fast descent is now the
+default descent. Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `697f33ee`,
+`OMP_NUM_THREADS=4`: iterations 5 → 6; asymmetry-off iterations 15 → 16. No `reference` value moved.
