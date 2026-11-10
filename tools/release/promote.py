@@ -48,7 +48,7 @@ def qualified_artifacts(run: dict, artifacts: list[dict], jobs: list[dict]) -> d
         names += [f'installer-{platform}-{attempt}', f'installer-components-{platform}-{attempt}']
     selected = {}
     for name in names:
-        # Runs before the installer workflow named artifacts by runner.os called the Windows ones x64:
+        # Runs made before artifacts were named by runner.os called the Windows ones x64:
         # the MSVC setup step exported Platform=x64 over the workflow's PLATFORM.
         aliases = {name, name.replace('-Windows-', '-x64-')}
         matches = [item for item in artifacts if item['name'] in aliases and not item['expired']]
