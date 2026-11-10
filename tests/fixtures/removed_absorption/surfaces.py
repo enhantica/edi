@@ -39,9 +39,11 @@ def violations(root, scopes):
                 continue
             if path.suffix.lower() in FULLPROF_INPUTS:
                 text = surface_text(path)
-                if re.match(r'COMM\s', text.lstrip(), re.IGNORECASE) and re.search(
-                    r'^\s*!\s*Job\b.*\bNpr\b', text, re.IGNORECASE | re.MULTILINE
-                ):
+                titled = re.match(r'COMM\s', text.lstrip(), re.IGNORECASE)
+                patterns = re.search(r'^\s*NPATT\s+[1-9]\d*\b', text, re.MULTILINE)
+                weights = re.search(r'^\s*W_PAT\s+[-+.\d]', text, re.MULTILINE)
+                jobs = re.search(r'^\s*!\s*Job\b.*\bNpr\b', text, re.IGNORECASE | re.MULTILINE)
+                if jobs and (titled or (patterns and weights)):
                     continue
             checked.append(path)
             if FIELD.search(surface_text(path)):

@@ -129,3 +129,17 @@ def test_a_fullprof_extension_cannot_hide_a_renamed_project(tmp_path, suffix):
     assert violations(tmp_path, ['public']), (
         'The input exemption must prove FullProf control syntax, not just a file extension'
     )
+
+
+@pytest.mark.parametrize('suffix', ['.pcr', '.inp', '.new'])
+def test_multipattern_fullprof_inputs_keep_their_own_column(tmp_path, suffix):
+    scope = tmp_path / 'public'
+    scope.mkdir()
+    (scope / 'clean.md').write_text('clean')
+    (scope / ('five-banks' + suffix)).write_text(
+        'A five-bank TOF example\nNPATT 5 1 1 1 1 1\nW_PAT .2 .2 .2 .2 .2\n'
+        '!Job Npr Nba Nex\n-1 13 28 2\n! ABS: ABSCOR1 ABSCOR2\n'
+    )
+    assert not violations(tmp_path, ['public']), (
+        'FullProf multi-pattern control inputs have a title and NPATT/W_PAT headers'
+    )

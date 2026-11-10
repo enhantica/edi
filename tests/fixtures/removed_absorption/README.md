@@ -6,7 +6,7 @@ manifest is retained; it is not a live member. JSON and notebook strings are
 decoded before checking names. Missing or empty surfaces fail the census.
 
 Only FullProf control inputs with a `.pcr`, `.inp` or `.new` extension and the
-`COMM` plus `!Job Npr` header are exempt. Renaming an Edi project to one of those
+`COMM` or multi-pattern `NPATT`/`W_PAT` preamble plus `!Job Npr` header are exempt. Renaming an Edi project to one of those
 extensions does not exempt it. Profiles, summaries and other output formats are
 checked normally.
 
