@@ -1033,7 +1033,7 @@ AppDialog {
         // the dialog one intrinsic upstream width, independent of that footer.
         width: contentItem.implicitWidth + leftPadding + rightPadding
         contentItem: Item {
-            implicitWidth: dialog.controlWidth
+            implicitWidth: dialog.columnWidth
             implicitHeight: webContent.implicitHeight
             Column {
                 id: webContent
