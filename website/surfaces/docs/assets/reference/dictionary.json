@@ -6213,24 +6213,14 @@
             "name": "descent",
             "options": [
                 {
-                    "description": "The default descent.",
+                    "description": "A damped descent that retries each step with growing damping.",
                     "label": "Ladder",
                     "token": "ladder"
                 },
                 {
-                    "description": "A faster descent that takes fewer steps.",
+                    "description": "The default descent; it adjusts the damping within each step.",
                     "label": "Fast descent",
                     "token": "fast_descent"
-                },
-                {
-                    "description": "The fast descent, solving the linear parameters exactly at each step.",
-                    "label": "Fast descent with linear snap",
-                    "token": "fast_descent_linear_snap"
-                },
-                {
-                    "description": "The fast descent, keeping a linear snap only when it lowers χ².",
-                    "label": "Fast descent with guarded linear snap",
-                    "token": "fast_descent_guarded_linear_snap"
                 },
                 {
                     "description": "Several starts, the worse ones dropped as the fit goes on.",
