@@ -395,6 +395,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
+                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -408,6 +409,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
+                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -421,6 +423,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
+                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -465,6 +468,19 @@ EaComponents.ApplicationWindow {
             page: mainViewFrame.page
             Component.onCompleted: AppState.mainView = mainView
         }
+    }
+    // The border between the main view and the sidebar belongs to the fixed main view, so it stays put while a page
+    // slides; the pages' own sidebar borders are hidden meanwhile (edi ADR-0017 §2).
+    Rectangle {
+        objectName: "mainArea.divider"
+        parent: mainViewFrame.parent
+        z: 3
+        x: Preferences.sideBarOnLeft ? mainViewFrame.x - width : mainViewFrame.x + mainViewFrame.width
+        y: mainViewFrame.y
+        width: EaStyle.Sizes.borderThickness
+        height: mainViewFrame.height
+        visible: mainViewFrame.visible
+        color: EaStyle.Colors.appBorder
     }
 
     statusBar: StatusBar {

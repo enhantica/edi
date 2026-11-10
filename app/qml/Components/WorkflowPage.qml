@@ -94,6 +94,18 @@ EaComponents.ContentPage {
     // the sidebar, and only their anchors change — nothing is mirrored, so text, icons and number order stay.
     function placeSideBar() {
         ApplicationInfo.placeWorkflowSidebar();
+        followOwnBorder();
+    }
+    // Hides the sidebar's own border, the base's thin child beside it, while the one main view draws a fixed one: the
+    // page's border would slide with the page and pass under the main view.
+    property bool ownBorderHidden: false
+    function followOwnBorder() {
+        const host = sideBar.parent;
+        for (let index = 0; host && index < host.children.length; ++index) {
+            const child = host.children[index];
+            if (child !== sideBar && child.width === EaStyle.Sizes.borderThickness)
+                child.visible = Qt.binding(() => !page.ownBorderHidden);
+        }
     }
 
     Connections {
