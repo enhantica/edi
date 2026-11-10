@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: BSD-3-Clause
 /* THIS IS a PRECOMILED HEADER-File for  JKQTCommon-Lib
  * it is not intended for external use!
  */

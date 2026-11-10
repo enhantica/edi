@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: BSD-3-Clause
 /*
     Copyright (c) 2008-2023 Jan W. Krieger (<jan@jkrieger.de>)
 
