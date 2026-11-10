@@ -809,11 +809,12 @@ std::string stopping_text(const FitResultRecord& record) {
                        : rule == "max_iterations"   ? "iteration limit (not converged)"
                        : rule == "no_accepted_step" ? "no step lowered χ² (not converged)"
                        : rule == "cancelled"        ? "cancelled"
+                       : rule == "polish_resumes"   ? "the final polish kept lowering χ² (not converged)"
                        : rule == "rounding_floor"   ? "χ² at rounding level"
                        : rule == "stationary"       ? "stationary point"
                        : rule == "parameter_tolerance" ? "parameter step below tolerance"
                                                        : rule;
-    if (record.stopping_value && rule != "max_iterations") {
+    if (record.stopping_value && rule != "max_iterations" && rule != "polish_resumes") {
         std::ostringstream value;
         value << std::setprecision(3) << *record.stopping_value;
         text += " (" + value.str() + ")";
