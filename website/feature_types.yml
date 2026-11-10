@@ -91,6 +91,7 @@ rows:
   Weighted least squares · Levenberg–Marquardt: all
   Maximum likelihood: all
   Bayesian analysis · MCMC sampling: all
+  Global minimization: all
   Covariance, uncertainties and correlations: all
   Profile and background-subtracted R factors: [pd]
   Phase Bragg and F factors: [pd]

@@ -45,3 +45,9 @@ The reduced-χ² scaling is an explicit convention. Do not silently substitute a
 A constraint relates quantities and reduces independent freedom. Physical admissibility limits, editable optimizer bounds and symmetry restrictions serve different purposes. The application's displayed minimum and maximum are model-admissibility information; they are not a promise of controls for setting optimizer search bounds.
 
 Use [Parameters](../user-guide/parameters.md) for practical interpretation. The fit's observation set and parameter count also determine the [reliability factors](reliability.md).
+
+## Global minimization (planned) {#global-minimization}
+
+Least squares improves a fit from its starting values, so a poor start can leave it in a local minimum. A global
+search, such as simulated annealing or several fits from different starting points, is planned to find a better start
+before the least-squares fit.
