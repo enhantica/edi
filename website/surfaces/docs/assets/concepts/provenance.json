@@ -1,19 +1,6 @@
 {
-  "retrieved": "2026-10-31",
-  "source_page": "https://docs.easydiffraction.org/lib/latest/user-guide/concept/",
-  "credit": "Illustrations reused from the prior EasyDiffraction concept guide, except the reduced pattern, the fitted pattern and the structure model, which edi renders from its Co2SiO4 example. That guide credits DOI 10.1126/science.1238932 for the instrument and detector figures.",
-  "assets": [
-    {
-      "file": "data-acquisition_instrument.png",
-      "source": "https://docs.easydiffraction.org/lib/latest/assets/images/user-guide/data-acquisition_instrument.png",
-      "sha256": "c7fdd3926ae6629982cfec566b5c17ed0c88c7ae5d2515f6c97a355e486c6c34"
-    },
-    {
-      "file": "data-acquisition_2d-raw-data.jpg",
-      "source": "https://docs.easydiffraction.org/lib/latest/assets/images/user-guide/data-acquisition_2d-raw-data.jpg",
-      "sha256": "4dff81b631addefd1fbfea0fbcf38887528414a0eab59a025fa59e915c554d69"
-    }
-  ],
+  "credit": "Every figure shows edi's Co2SiO4 example (docs/user/cli/pd-neut-cwl_cosio-d20_2k): D20 neutron powder data at 2.3 K.",
+  "assets": [],
   "presentation_inspiration": [
     {
       "path": "2026.09.21 - NOBUGS - GUI-EasyScience/index.html",
@@ -35,5 +22,20 @@
       "data-analysis_model.png",
       "dark/data-analysis_model.png"
     ]
+  },
+  "drawn": {
+    "files": [
+      "data-acquisition_instrument.svg",
+      "dark/data-acquisition_instrument.svg"
+    ],
+    "method": "drawn by hand from the D20 geometry of that example: the (100) and (001) magnetic and the (221) nuclear reflections at lambda = 1.87 Angstrom; Noto Sans subset embedded; tick colours of the Main palette"
+  },
+  "computed": {
+    "files": [
+      "data-acquisition_2d-raw-data.webp",
+      "dark/data-acquisition_2d-raw-data.webp"
+    ],
+    "script": "website/concepts-figures/final.py (with edicmap.py, the Blue-Red map in Oklab)",
+    "data": "website/concepts-figures/lo.npy: 2theta, intensity and s.u. of the measured D20 2.3 K pattern of that example"
   }
 }

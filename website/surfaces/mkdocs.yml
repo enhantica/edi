@@ -35,7 +35,7 @@ theme:
 extra_css:
   - assets/brand-colors.css?v=1
   - assets/wordmark.css?v=header-2
-  - assets/site-components.css?v=tables-4
+  - assets/site-components.css?v=tables-5
   - assets/experiment-tags.css?v=5
   - assets/parameter-reference.css?v=3
 extra_javascript:

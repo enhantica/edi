@@ -1243,19 +1243,19 @@
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-acquisition_2d-raw-data.jpg"
+   "path": "assets/concepts/data-acquisition_2d-raw-data.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-acquisition_2d-raw-data.jpg"
+   "path": "assets/concepts/dark/data-acquisition_2d-raw-data.webp"
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-acquisition_instrument.png"
+   "path": "assets/concepts/data-acquisition_instrument.svg"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-acquisition_instrument.png"
+   "path": "assets/concepts/dark/data-acquisition_instrument.svg"
   },
   {
    "theme": "light",
