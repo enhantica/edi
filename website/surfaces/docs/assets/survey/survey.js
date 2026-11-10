@@ -36,7 +36,7 @@
     },
     {
       title: 'Ways to use EasyDiffraction',
-      note: 'For each way of working: how interested you are, whether you have tried it, and if so how easy it was.',
+      note: 'For each way of working: how interested you are, and how easy it was if you have tried it.',
       questions: [{ key: 'interfaces', kind: 'interfaces', rows: interfaces }],
     },
     {
@@ -128,7 +128,7 @@
       if (other) cell.append(other);
     }
     if (q.kind === 'texts') {
-      const row = element('div', { class: 'ed-survey-texts' });
+      const row = element('div', { class: 'ed-survey-texts' });  // one under another
       for (let i = 0; i < q.count; ++i) row.append(element('input', { type: 'text', name: q.key, id: i === 0 ? controlId : id(q.key), placeholder: `${i + 1}.`, 'aria-label': `${q.text}, ${i + 1}`, maxlength: '300' }));
       cell.append(row);
     }
@@ -141,23 +141,24 @@
     return cell;
   }
 
-  // One row per interface: its name, then Interest, Tried and Ease of use, the last only when tried.
-  function interfaceTable(q) {
-    const table = element('div', { class: 'ed-survey-interfaces', role: 'table' });
-    table.append(element('div', { class: 'ed-survey-interface-head', role: 'row' }, ['Way of working', 'Interest', 'Tried', 'Ease of use'].map(text => element('span', { role: 'columnheader', text }))));
-    for (const [key, label] of q.rows) {
-      const tried = select(`tried_${key}`, [{ value: 'yes', text: 'Yes' }, { value: 'no', text: 'No' }]);
-      const ease = select(`ease_${key}`, rating(1, 5, 'hard', 'easy'));
-      ease.disabled = true;
-      tried.addEventListener('change', () => {
-        ease.disabled = tried.value !== 'yes';
-        if (ease.disabled) ease.value = '';
+  // Each interface: its name, then Interest and Ease of use side by side on the page's two columns. "Not tried" in
+  // Ease of use answers whether it was tried.
+  function interfaceFields(q) {
+    // The two column titles once, above every interface.
+    const titles = ['Interest', 'Ease of use'].map(text => element('span', { class: 'ed-survey-label ed-survey-minor ed-survey-coltitle', 'aria-hidden': 'true', text }));
+    return [...titles, ...q.rows.flatMap(([key, label]) => {
+      const heading = element('p', { class: 'ed-survey-subhead ed-survey-wide', text: label });
+      const pair = [
+        ['interest', 'Interest', rating(1, 5, 'low', 'high')],
+        ['ease', 'Ease of use', [...rating(1, 5, 'hard', 'easy'), { value: 'skip', text: 'Not tried' }]],
+      ].map(([what, title, options]) => {
+        const box = select(`${what}_${key}`, options);
+        box.id = id(`${what}_${key}`);
+        box.setAttribute('aria-label', `${label}: ${title.toLowerCase()}`);
+        return element('div', { class: 'ed-survey-field', 'data-key': `${what}_${key}` }, [box]);
       });
-      const interest = select(`interest_${key}`, rating(1, 5, 'low', 'high'));
-      for (const [box, what] of [[interest, 'interest'], [tried, 'tried'], [ease, 'ease of use']]) box.setAttribute('aria-label', `${label}: ${what}`);
-      table.append(element('div', { class: 'ed-survey-interface', role: 'row' }, [element('span', { role: 'rowheader', text: label }), interest, tried, ease]));
-    }
-    return table;
+      return [heading, ...pair];
+    })];
   }
 
   // The events open today, by the visitor's calendar date.
@@ -173,7 +174,8 @@
       for (const q of section.questions) {
         if (q.kind === 'interfaces') {
           for (const [key] of q.rows) {
-            const row = { interest: text(`interest_${key}`), tried: text(`tried_${key}`), ease: text(`ease_${key}`) };
+            const ease = text(`ease_${key}`);
+            const row = { interest: text(`interest_${key}`), tried: ease === 'skip' ? 'no' : ease ? 'yes' : '', ease: ease === 'skip' ? '' : ease };
             for (const name of Object.keys(row)) if (!row[name]) delete row[name];
             if (Object.keys(row).length) out[`interface_${key}`] = row;
           }
@@ -202,7 +204,7 @@
       const part = element('section', { class: 'ed-survey-section', id: `survey-${section.key || section.title.toLowerCase().replace(/[^a-z]+/g, '-')}` }, [element('h2', { text: section.title })]);
       if (section.note) part.append(element('p', { class: 'ed-survey-note', text: section.note }));
       const grid = element('div', { class: 'ed-survey-grid' });
-      for (const q of section.questions) grid.append(q.kind === 'interfaces' ? interfaceTable(q) : field(q));
+      for (const q of section.questions) grid.append(...(q.kind === 'interfaces' ? interfaceFields(q) : [field(q)]));
       part.append(grid);
       form.append(part);
     }
@@ -254,7 +256,6 @@
         if (code === 201) {
           form.reset();
           form.querySelectorAll('[name$="_other"]').forEach(other => (other.hidden = true));
-          form.querySelectorAll('select[name^="ease_"]').forEach(ease => (ease.disabled = true));
         }
         pending = false;
       });
