@@ -1,60 +1,66 @@
 // SPDX-License-Identifier: BSD-3-Clause
-/* The survey on About → Survey. The questions are listed here once; the form is built from them. The events come from
-   events.json beside this file: "General" always, any other only between its start and end dates. Answers go to the
-   feedback service the Get in touch form uses, at its /survey address. */
+/* The survey on About → Survey. The questions are listed here once; the form is built from them, with the field look
+   of the Get in touch form. The events come from events.json beside this file: "General" always, any other only
+   between its start and end dates. Answers go to the feedback service the Get in touch form uses, at /survey. */
 (() => {
   const app = window.edFeedbackForm || null;
   // Read while the script runs: events.json sits beside it.
   const eventsUrl = new URL('events.json', document.currentScript ? document.currentScript.src : window.location.href).href;
-  const scale = (low, high) => Array.from({ length: high - low + 1 }, (_, i) => String(low + i));
+
+  // A 1-5 (or 0-10) rating as select options, the ends named.
+  const rating = (low, high, lowWord, highWord) =>
+    Array.from({ length: high - low + 1 }, (_, i) => {
+      const n = low + i;
+      return { value: String(n), text: n === low ? `${n} — ${lowWord}` : n === high ? `${n} — ${highWord}` : String(n) };
+    });
   const interfaces = [
     ['web', 'Web application'],
     ['desktop', 'Desktop application'],
     ['notebooks', 'Python library in Jupyter notebooks'],
     ['scripting', 'Python library in scripts'],
     ['cli', 'Standalone command-line tool'],
-    ['cli_python', 'Command-line tool as a Python package (without Python scripting)'],
+    ['cli_python', 'Command-line tool as a Python package'],
   ];
 
-  // Each question: its key in the answers, its kind, its wording and its choices. A choice list starting with "none"
-  // makes "none" exclusive.
+  // Each question: its key in the answers, its kind and wording. "one" and "rating" are selects; "many" is a grid of
+  // checkboxes, where a first "None" is exclusive; "Other" in either shows a field for the user's own answer.
   const sections = [
     {
       title: 'About you',
       questions: [
         { key: 'position', kind: 'one', text: 'Your position', choices: ['Student', 'PhD student', 'Postdoc', 'Staff scientist', 'Instrument scientist', 'Professor or group leader', 'Industry', 'Other'] },
         { key: 'field', kind: 'one', text: 'Your field', choices: ['Physics', 'Chemistry', 'Materials science', 'Earth sciences', 'Biology', 'Engineering', 'Other'] },
-        { key: 'experience', kind: 'one', text: 'Your experience with diffraction data analysis', choices: ['None yet', 'Less than a year', '1 to 3 years', '3 to 10 years', 'More than 10 years'] },
+        { key: 'experience', kind: 'one', text: 'Experience with diffraction data analysis', choices: ['None yet', 'Less than a year', '1 to 3 years', '3 to 10 years', 'More than 10 years'] },
         { key: 'tools', kind: 'many', text: 'Programs you use now', choices: ['None', 'FullProf', 'GSAS-II', 'TOPAS', 'JANA', 'Other'] },
       ],
     },
     {
       title: 'Ways to use EasyDiffraction',
-      note: 'For each way of working: how interested you are (1 not at all, 5 very), whether you have tried it, and if so how easy it was (1 hard, 5 easy).',
+      note: 'For each way of working: how interested you are, whether you have tried it, and if so how easy it was.',
       questions: [{ key: 'interfaces', kind: 'interfaces', rows: interfaces }],
     },
     {
       title: 'Your experience so far',
       questions: [
-        { key: 'install', kind: 'scale', text: 'Installing and starting it (1 hard, 5 easy)', choices: scale(1, 5), skip: 'Not tried' },
-        { key: 'docs', kind: 'scale', text: 'Documentation and tutorials (1 not helpful, 5 very helpful)', choices: scale(1, 5), skip: 'Not read' },
-        { key: 'features', kind: 'scale', text: 'How well the features fit your work (1 poorly, 5 well)', choices: scale(1, 5), skip: 'Not sure' },
-        { key: 'missing', kind: 'texts', count: 3, text: 'Up to three missing features you would need to use it' },
+        { key: 'install', kind: 'rating', text: 'Installing and starting it', choices: rating(1, 5, 'hard', 'easy'), skip: 'Not tried' },
+        { key: 'docs', kind: 'rating', text: 'Documentation and tutorials', choices: rating(1, 5, 'not helpful', 'very helpful'), skip: 'Not read' },
+        { key: 'features', kind: 'rating', text: 'How well the features fit your work', choices: rating(1, 5, 'poorly', 'well'), skip: 'Not sure' },
+        { key: 'likely', kind: 'rating', text: 'How likely you are to use it for your work', choices: rating(0, 10, 'not at all', 'certainly') },
+        { key: 'missing', kind: 'texts', count: 3, text: 'Up to three missing features you would need' },
         { key: 'wishes', kind: 'texts', count: 3, text: 'Up to three features that would be nice to have' },
-        { key: 'likely', kind: 'scale', text: 'How likely are you to use EasyDiffraction for your own work? (0 not at all, 10 certainly)', choices: scale(0, 10) },
       ],
     },
     {
       title: 'AI help',
       key: 'ai',
       questions: [
-        { key: 'ai_interest', kind: 'scale', text: 'Your interest in AI help with diffraction analysis (1 low, 5 high)', choices: scale(1, 5), skip: 'Not interested', skipsSection: true },
-        { key: 'ai_uses', kind: 'many', text: 'How you would like to use it', choices: ["The app's built-in assistant", 'My own assistant writing notebooks or projects', 'Converting projects from other programs (FullProf, GSAS-II, …)', 'Explaining fit results or suggesting a fit strategy', 'Other'] },
-        { key: 'ai_providers', kind: 'many', text: 'Providers you use or could use', choices: ['None', 'ChatGPT (OpenAI)', 'Claude (Anthropic)', 'GitHub Copilot', 'Gemini (Google)', 'A local or self-hosted model', 'A service from my institution', 'Other'] },
+        { key: 'ai_interest', kind: 'rating', text: 'Your interest in AI help for diffraction', choices: rating(1, 5, 'low', 'high'), skip: 'Not interested' },
         { key: 'ai_access', kind: 'one', text: 'How you would prefer to get access', choices: ['Sign in with my existing subscription', 'My own API key (pay per use)', 'Provided by my institution', 'Only if free', 'Not sure'] },
         { key: 'ai_data', kind: 'one', text: 'Sending your data to an AI provider is', choices: ['Fine', 'Fine without the measured data', 'Not allowed for my work', 'Not sure'] },
-        { key: 'ai_assistant', kind: 'scale', text: "The app's built-in assistant, if you tried it (1 poor, 5 very good)", choices: scale(1, 5), skip: "Didn't try" },
-        { key: 'ai_assistant_note', kind: 'text', text: 'What worked or did not' },
+        { key: 'ai_assistant', kind: 'rating', text: "The app's built-in assistant, if you tried it", choices: rating(1, 5, 'poor', 'very good'), skip: "Didn't try" },
+        { key: 'ai_uses', kind: 'many', text: 'How you would like to use it', choices: ["The app's built-in assistant", 'My own assistant writing notebooks or projects', 'Converting projects from other programs', 'Explaining fit results or suggesting a fit strategy', 'Other'] },
+        { key: 'ai_providers', kind: 'many', text: 'Providers you use or could use', choices: ['None', 'ChatGPT (OpenAI)', 'Claude (Anthropic)', 'GitHub Copilot', 'Gemini (Google)', 'A local or self-hosted model', 'A service from my institution', 'Other'] },
+        { key: 'ai_assistant_note', kind: 'text', text: 'What worked or did not in the built-in assistant', wide: true },
       ],
     },
     {
@@ -70,109 +76,141 @@
     const node = document.createElement(tag);
     for (const [name, value] of Object.entries(attributes)) {
       if (name === 'text') node.textContent = value;
-      else node.setAttribute(name, value);
+      else if (value !== false && value !== undefined) node.setAttribute(name, value === true ? '' : value);
     }
     node.append(...children);
     return node;
   };
-  const slug = text => text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  let uid = 0;
+  const id = key => `survey-${key}-${++uid}`;
 
-  // A row of radio buttons, with an optional "skip" choice at its end.
-  function choiceRow(name, choices, skip) {
-    const row = element('div', { class: 'ed-survey-choices' });
-    for (const choice of skip ? [...choices, skip] : choices) {
-      row.append(element('label', {}, [element('input', { type: 'radio', name, value: choice === skip ? 'skip' : choice }), choice]));
-    }
-    return row;
-  }
-
-  function question(q) {
-    const box = element('fieldset', { class: 'ed-survey-question', 'data-key': q.key });
-    if (q.text) box.append(element('legend', { text: q.text }));
-    if (q.kind === 'one' || q.kind === 'scale') box.append(choiceRow(q.key, q.choices, q.skip));
-    if (q.kind === 'many') {
-      const row = element('div', { class: 'ed-survey-choices' });
-      for (const choice of q.choices) row.append(element('label', {}, [element('input', { type: 'checkbox', name: q.key, value: choice }), choice]));
-      // "None" first is exclusive: ticking it clears the others, ticking another clears it.
-      if (q.choices[0] === 'None') {
-        row.addEventListener('change', event => {
-          const boxes = Array.from(row.querySelectorAll('input'));
-          if (!event.target.checked) return;
-          if (event.target.value === 'None') boxes.slice(1).forEach(other => (other.checked = false));
-          else boxes[0].checked = false;
-        });
-      }
-      box.append(row);
-    }
-    if (q.kind === 'texts') for (let i = 0; i < q.count; ++i) box.append(element('input', { type: 'text', name: q.key, 'aria-label': `${q.text} ${i + 1}`, maxlength: '300' }));
-    if (q.kind === 'text') box.append(element('input', { type: 'text', name: q.key, 'aria-label': q.text, maxlength: '500' }));
-    if (q.kind === 'area') box.append(element('textarea', { name: q.key, 'aria-label': q.text, maxlength: '5000' }));
-    if (q.kind === 'email') {
-      box.append(element('input', { type: 'email', name: q.key, 'aria-label': q.text }));
-      box.append(element('label', { class: 'ed-survey-consent' }, [element('input', { type: 'checkbox', name: 'consent' }), 'You may contact me at this address about my answers.']));
-    }
-    if (q.kind === 'interfaces') {
-      const table = element('table', { class: 'ed-survey-interfaces' });
-      table.append(element('tr', {}, ['', 'Interest', 'Tried', 'Ease of use'].map(text => element('th', { text }))));
-      for (const [key, label] of q.rows) {
-        table.append(element('tr', {}, [
-          element('th', { text: label, scope: 'row' }),
-          element('td', {}, [choiceRow(`interest_${key}`, scale(1, 5))]),
-          element('td', {}, [element('input', { type: 'checkbox', name: `tried_${key}`, 'aria-label': `Tried: ${label}` })]),
-          element('td', {}, [choiceRow(`ease_${key}`, scale(1, 5))]),
-        ]));
-      }
-      box.append(table);
-    }
+  function select(name, options, placeholder = 'Choose…') {
+    const box = element('select', { name });
+    box.add(new Option(placeholder, ''));
+    for (const option of options) box.add(typeof option === 'string' ? new Option(option, option) : new Option(option.text, option.value));
     return box;
   }
 
-  // The events open today, by the visitor's calendar date; "General" first.
+  // The field for an "Other" answer, shown only while Other is chosen.
+  function otherField(key) {
+    return element('input', { type: 'text', name: `${key}_other`, placeholder: 'Your answer', 'aria-label': 'Other, your answer', maxlength: '200', hidden: true });
+  }
+
+  // A question as one cell of the grid: its label above its control.
+  function field(q) {
+    const cell = element('div', { class: `ed-survey-field${q.kind === 'many' || q.kind === 'texts' || q.kind === 'area' || q.kind === 'email' || q.wide ? ' ed-survey-wide' : ''}`, 'data-key': q.key });
+    const controlId = id(q.key);
+    cell.append(element('label', { class: 'ed-survey-label', for: controlId, text: q.text }));
+    if (q.kind === 'one' || q.kind === 'rating') {
+      const box = select(q.key, q.skip ? [...q.choices, { value: 'skip', text: q.skip }] : q.choices);
+      box.id = controlId;
+      cell.append(box);
+      if (q.choices.includes('Other')) {
+        const other = otherField(q.key);
+        box.addEventListener('change', () => (other.hidden = box.value !== 'Other'));
+        cell.append(other);
+      }
+    }
+    if (q.kind === 'many') {
+      const grid = element('div', { class: 'ed-survey-checks', id: controlId, role: 'group' });
+      for (const choice of q.choices) grid.append(element('label', {}, [element('input', { type: 'checkbox', name: q.key, value: choice }), choice]));
+      const other = q.choices.includes('Other') ? otherField(q.key) : null;
+      grid.addEventListener('change', event => {
+        const boxes = Array.from(grid.querySelectorAll('input'));
+        // A first "None" is exclusive: ticking it clears the others, ticking another clears it.
+        if (q.choices[0] === 'None' && event.target.checked) {
+          if (event.target.value === 'None') boxes.slice(1).forEach(other => (other.checked = false));
+          else boxes[0].checked = false;
+        }
+        if (other) other.hidden = !boxes.some(box => box.value === 'Other' && box.checked);
+      });
+      cell.append(grid);
+      if (other) cell.append(other);
+    }
+    if (q.kind === 'texts') {
+      const row = element('div', { class: 'ed-survey-texts' });
+      for (let i = 0; i < q.count; ++i) row.append(element('input', { type: 'text', name: q.key, id: i === 0 ? controlId : id(q.key), placeholder: `${i + 1}.`, 'aria-label': `${q.text}, ${i + 1}`, maxlength: '300' }));
+      cell.append(row);
+    }
+    if (q.kind === 'text') cell.append(element('input', { type: 'text', name: q.key, id: controlId, maxlength: '500' }));
+    if (q.kind === 'area') cell.append(element('textarea', { name: q.key, id: controlId, maxlength: '5000' }));
+    if (q.kind === 'email') {
+      cell.append(element('input', { type: 'email', name: q.key, id: controlId }));
+      cell.append(element('label', { class: 'ed-survey-consent' }, [element('input', { type: 'checkbox', name: 'consent' }), 'You may contact me at this address about my answers.']));
+    }
+    return cell;
+  }
+
+  // One row per interface: its name, then Interest, Tried and Ease of use, the last only when tried.
+  function interfaceTable(q) {
+    const table = element('div', { class: 'ed-survey-interfaces', role: 'table' });
+    table.append(element('div', { class: 'ed-survey-interface-head', role: 'row' }, ['Way of working', 'Interest', 'Tried', 'Ease of use'].map(text => element('span', { role: 'columnheader', text }))));
+    for (const [key, label] of q.rows) {
+      const tried = select(`tried_${key}`, [{ value: 'yes', text: 'Yes' }, { value: 'no', text: 'No' }]);
+      const ease = select(`ease_${key}`, rating(1, 5, 'hard', 'easy'));
+      ease.disabled = true;
+      tried.addEventListener('change', () => {
+        ease.disabled = tried.value !== 'yes';
+        if (ease.disabled) ease.value = '';
+      });
+      const interest = select(`interest_${key}`, rating(1, 5, 'low', 'high'));
+      for (const [box, what] of [[interest, 'interest'], [tried, 'tried'], [ease, 'ease of use']]) box.setAttribute('aria-label', `${label}: ${what}`);
+      table.append(element('div', { class: 'ed-survey-interface', role: 'row' }, [element('span', { role: 'rowheader', text: label }), interest, tried, ease]));
+    }
+    return table;
+  }
+
+  // The events open today, by the visitor's calendar date.
   function activeEvents(events, today) {
     return events.filter(event => (!event.start || event.start <= today) && (!event.end || today <= event.end));
   }
 
   function answers(form) {
     const data = new FormData(form);
+    const text = name => String(data.get(name) || '').trim();
     const out = {};
     for (const section of sections) {
       for (const q of section.questions) {
         if (q.kind === 'interfaces') {
           for (const [key] of q.rows) {
-            const row = { interest: data.get(`interest_${key}`), tried: data.get(`tried_${key}`) === 'on', ease: data.get(`ease_${key}`) };
-            if (row.interest || row.tried || row.ease) out[`interface_${key}`] = row;
+            const row = { interest: text(`interest_${key}`), tried: text(`tried_${key}`), ease: text(`ease_${key}`) };
+            for (const name of Object.keys(row)) if (!row[name]) delete row[name];
+            if (Object.keys(row).length) out[`interface_${key}`] = row;
           }
         } else if (q.kind === 'many' || q.kind === 'texts') {
           const values = data.getAll(q.key).map(value => String(value).trim()).filter(Boolean);
           if (values.length) out[q.key] = values;
-        } else if (q.kind !== 'email') {
-          const value = String(data.get(q.key) || '').trim();
-          if (value) out[q.key] = value;
+        } else if (q.kind !== 'email' && text(q.key)) {
+          out[q.key] = text(q.key);
         }
+        if (text(`${q.key}_other`) && (out[q.key] === 'Other' || (out[q.key] || []).includes?.('Other'))) out[`${q.key}_other`] = text(`${q.key}_other`);
       }
     }
     // "Not interested" in AI help leaves the rest of that section out.
-    if (out.ai_interest === 'skip') for (const q of sections.find(s => s.key === 'ai').questions.slice(1)) delete out[q.key];
+    if (out.ai_interest === 'skip') for (const q of sections.find(s => s.key === 'ai').questions.slice(1)) delete out[q.key], delete out[`${q.key}_other`];
     return out;
   }
 
   function build(form, events) {
-    const event = element('fieldset', { class: 'ed-survey-question', 'data-key': 'event' }, [element('legend', { text: 'Event' })]);
-    const select = element('select', { name: 'event', 'aria-label': 'Event' });
-    for (const { name, title } of events) select.add(new Option(title, name));
-    event.append(select);
-    form.append(event);
+    const top = element('div', { class: 'ed-survey-grid' }, [
+      element('div', { class: 'ed-survey-field', 'data-key': 'event' }, [element('label', { class: 'ed-survey-label', for: 'survey-event', text: 'Event' }), select('event', events.map(({ name, title }) => ({ value: name, text: title })), 'General')]),
+    ]);
+    top.querySelector('select').id = 'survey-event';
+    top.querySelector('select').remove(0);
+    form.append(top);
     for (const section of sections) {
-      const part = element('section', { class: 'ed-survey-section', id: `survey-${slug(section.title)}` }, [element('h2', { text: section.title })]);
-      if (section.note) part.append(element('p', { text: section.note }));
-      part.append(...section.questions.map(question));
+      const part = element('section', { class: 'ed-survey-section', id: `survey-${section.key || section.title.toLowerCase().replace(/[^a-z]+/g, '-')}` }, [element('h2', { text: section.title })]);
+      if (section.note) part.append(element('p', { class: 'ed-survey-note', text: section.note }));
+      const grid = element('div', { class: 'ed-survey-grid' });
+      for (const q of section.questions) grid.append(q.kind === 'interfaces' ? interfaceTable(q) : field(q));
+      part.append(grid);
       form.append(part);
     }
-    // "Not interested" greys out the rest of the AI section.
-    const ai = form.querySelector('#survey-ai_help');
-    ai.addEventListener('change', () => {
+    // "Not interested" disables the rest of the AI section.
+    const ai = form.querySelector('#survey-ai');
+    form.elements.ai_interest.addEventListener('change', () => {
       const off = form.elements.ai_interest.value === 'skip';
-      ai.querySelectorAll('.ed-survey-question').forEach((box, index) => index > 0 && (box.disabled = off));
+      ai.querySelectorAll('input, select, textarea').forEach(control => control.name !== 'ai_interest' && (control.disabled = off));
     });
     const send = element('button', { type: 'submit', text: 'Send' });
     const status = element('p', { class: 'ed-contact-status', role: 'status' });
@@ -213,7 +251,11 @@
           code = 0;
         }
         status.textContent = code === 201 ? 'Thank you! Your answers were sent.' : code === 429 ? app.status.tooMany : code === 0 ? app.status.offline : app.status.failed.replace('%1', String(code));
-        if (code === 201) form.reset();
+        if (code === 201) {
+          form.reset();
+          form.querySelectorAll('[name$="_other"]').forEach(other => (other.hidden = true));
+          form.querySelectorAll('select[name^="ease_"]').forEach(ease => (ease.disabled = true));
+        }
         pending = false;
       });
     }
