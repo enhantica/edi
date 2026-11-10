@@ -227,16 +227,6 @@ EaComponents.ApplicationWindow {
             Accessible.name: !ApplicationInfo.assistantAvailable ? qsTr("AI assistant unavailable") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
             Accessible.description: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app")
             onClicked: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantToolbarActivated(window, assistantToggle, window.assistantPanel, Session, Preferences, assistantDesktopOnlyDialog) : assistantDesktopOnlyDialog.open()
-
-            // The status bar's faint rule, between the tabs and the app controls (the owner, 2026-11-01).
-            Rectangle {
-                objectName: "appBar.separator"
-                x: -EaStyle.Sizes.fontPixelSize * 0.5
-                anchors.verticalCenter: parent.verticalCenter
-                width: EaStyle.Sizes.borderThickness
-                height: Math.round(EaStyle.Sizes.fontPixelSize * 6 / 7)
-                color: EaStyle.Colors.appBarBorder
-            }
         },
         // The tooltip switch (the owner, 2026-11-01): a click turns tooltips off, or back on at the last level used; a right
         // click opens Preferences, where the level and the delay are.
