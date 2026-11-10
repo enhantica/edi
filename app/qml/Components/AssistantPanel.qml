@@ -241,7 +241,7 @@ Popup {
                     width: Math.max(0, parent.width - headerActions.implicitWidth - AppSizes.unit * 2)
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
-                    text: qsTr("Assistant")
+                    text: qsTr("AI assistant")
                     font.bold: true
                     color: EaStyle.Colors.themeForegroundHovered
                 }
