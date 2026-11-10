@@ -12,6 +12,24 @@ int main(int argc, char** argv) {
     }
     const auto scheme = edi::colour_scheme_from_name(argv[1]);
     if (!scheme) return 2;
+    if (argc >= 4 && std::string(argv[2]) == "table") {
+        const bool dark = std::string(argv[3]) == "dark";
+        for (std::size_t i = 0; i < 11; ++i)
+            std::cout << i << '\t' << edi::figure_colour(*scheme, i, 11, dark) << '\n';
+        return 0;
+    }
+    if (argc >= 4 && std::string(argv[2]) == "patterns") {
+        const bool dark = std::string(argv[3]) == "dark";
+        for (std::size_t structures : {3, 4, 8}) {
+            std::vector<std::size_t> taken;
+            for (std::size_t i = 0; i < structures; ++i) taken.push_back(i + 2);
+            for (std::size_t count : {1, 2, 7, 8, 9, 13, 257})
+                for (std::size_t i = 0; i < count; ++i)
+                    std::cout << structures << '\t' << count << '\t' << i << '\t'
+                              << edi::pattern_set_colour(*scheme, i, count, taken, dark) << '\n';
+        }
+        return 0;
+    }
     if (argc == 3) {
 #ifdef HAS_CHART_ROLES
         for (bool dark : {false, true})
