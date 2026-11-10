@@ -242,6 +242,8 @@ exclude_docs: |
 # Defining `plugins` drops the implicit default, so `search` is restated explicitly.
 # mkdocs-jupyter renders the Verification notebooks PRE-EXECUTED (the CI docs job runs
 # notebook-exec-ci before docs-build); include_requirejs is required for the plotly figures.
+# No copy of each notebook beside its page: a run tutorial is tens of MB, and the public site
+# already offers it for download.
 hooks:
   - tools/docs/features_projection_hook.py
 
@@ -251,7 +253,7 @@ plugins:
       include: ['*.ipynb']
       execute: false
       allow_errors: false
-      include_source: true
+      include_source: false
       include_requirejs: true
 
 markdown_extensions:
