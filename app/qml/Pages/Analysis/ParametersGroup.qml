@@ -312,14 +312,16 @@ SideBarGroup {
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
             // A layout of its own (the owner, 2026-10-27): the name a little wider than its longest shown name, icons
-            // and text; the units as their text; value, s.u., min and max share the rest equally; free at the right
-            // with a wider gap before it. Value takes what rounding leaves.
-            equalColumns: true
+            // and text; the units, min and max as their text; start, value, s.u. and change each fit their widest
+            // text and share what is left; free at the right with a wider gap before it. Start and change are the
+            // report's fit table columns, empty before a fit (owner record 2026-11-10).
+            spreadColumns: [2, 3, 5, 6]
             readonly property real nameWidth: (fittedWidths[1] ?? 0) + autoColumnPadding + EaStyle.Sizes.fontPixelSize
-            readonly property real unitsWidth: (fittedWidths[3] ?? 0) + autoColumnPadding
+            readonly property real unitsWidth: (fittedWidths[4] ?? 0) + autoColumnPadding
+            readonly property real minWidth: (fittedWidths[7] ?? 0) + autoColumnPadding
+            readonly property real maxWidth: (fittedWidths[8] ?? 0) + autoColumnPadding
             readonly property real freeWidth: group.measured ? group.freeColumnWidth : 0
-            readonly property real restWidth: Math.max(0, width - numberColumnWidth - nameWidth - unitsWidth - freeWidth - EaStyle.Sizes.tableColumnSpacing * (group.measured ? 7 : 6) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2)
-            columns: [numberColumnWidth, nameWidth, -1, unitsWidth, restWidth * 0.25, restWidth * 0.25, restWidth * 0.25].concat(group.measured ? [freeWidth] : [])
+            columns: [numberColumnWidth, nameWidth, -1, -1, unitsWidth, -1, -1, minWidth, maxWidth].concat(group.measured ? [freeWidth] : [])
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -330,6 +332,11 @@ SideBarGroup {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Name")
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignRight
+                    text: qsTr("Start")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -349,6 +356,11 @@ SideBarGroup {
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignRight
+                    text: qsTr("Change")
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignRight
                     text: qsTr("Min")
                 }
                 EaComponents.ListViewLabel {
@@ -360,8 +372,8 @@ SideBarGroup {
                 // filters show, as one Undo step (the owner, 2026-10-11). The arrow ends where the right-aligned check
                 // boxes do; its menu opens centred, so the title is as wide as itself.
                 EaComponents.ListViewLabel {
-                    elide: Text.ElideRight
                     id: freeTitle
+                    elide: Text.ElideRight
                     // Laid out here, not by the table's alignment rule.
                     readonly property bool keepsAlignment: true
                     objectName: "parameters.freeHeader"
@@ -452,6 +464,12 @@ SideBarGroup {
                         requested: nameHover.hovered
                     }
                 }
+                NumberLabel {
+                    objectName: `parameters.start.${row.index}`
+                    horizontalAlignment: Text.AlignRight
+                    color: EaStyle.Colors.themeForegroundMinor
+                    number: row.parameter ? row.parameter.startText : ""
+                }
                 ParameterCell {
                     id: valueCell
                     columnAlignment: Text.AlignRight
@@ -473,6 +491,12 @@ SideBarGroup {
                     number: row.parameter ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
                     narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
                     full: row.parameter && row.parameter.hasUncertainty ? NumberText.plainFull(row.parameter.uncertainty) : ""
+                }
+                EaComponents.ListViewLabel {
+                    objectName: `parameters.change.${row.index}`
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignRight
+                    text: row.parameter ? row.parameter.changeText : ""
                 }
                 NumberLabel {
                     horizontalAlignment: Text.AlignRight

@@ -166,6 +166,30 @@ void ParameterItem::refreshFileText() {
         file_su_ = su;
         emit fileSuChanged();
     }
+    refreshStart();
+}
+
+void ParameterItem::refreshStart() {
+    // The report's fit table cells (report_model.cpp): the start as a bound is written, the change in % of it.
+    QString start;
+    QString change;
+    if (own_ == nullptr && parameter_->spec != nullptr) {
+        if (const std::optional<double> before = parameter_->start_value.get(); before.has_value()) {
+            std::string text;
+            try {
+                text = edi::file_text(uid_.toStdString(), *before);
+            } catch (const std::invalid_argument&) {
+            }
+            start = QString::fromStdString(edi::table_number(*before, text, true));
+            change = QString::fromStdString(
+                edi::display_exponents(edi::format_change(parameter_->value.get(), *before)));
+        }
+    }
+    if (start != start_text_ || change != change_text_) {
+        start_text_ = start;
+        change_text_ = change;
+        emit startTextChanged();
+    }
 }
 
 double ParameterItem::sliderStep() const {
@@ -286,6 +310,7 @@ int ParameterItem::publish(bool formatted) {
     }
     // A symmetry change alters how a value is written without changing it, so the text is read again each time.
     if (formatted) refreshFileText();
+    refreshStart();
     return changed;
 }
 
