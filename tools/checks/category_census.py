@@ -135,6 +135,8 @@ NOT_STORAGE = {
     'Project::edits_': "the project's editor record",
     'Project::tail_': "the project's last member, which links its collections to its record",
     'FitResultRecord::scan_results': "a scan's results by file, shared, not saved (ADR-0034)",
+    'FitResultRecord::start_adjustments': 'the starting values a fit moved off zero, shown once, not saved',
+    'FitResultRecord::undefined_su': 'the free parameters whose s.u. a fit could not compute, not saved',
     'Structure::magnetic': (
         "the magnetic description as written, crysta's to read, check and write (ADR-0078)"
     ),

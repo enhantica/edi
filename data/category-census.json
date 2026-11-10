@@ -1739,6 +1739,13 @@
           "member": "ExperimentBase::calculation_only",
           "type": "bool",
           "items": []
+        },
+        {
+          "member": "ExperimentBase::sin_theta_over_lambda_max",
+          "type": "std::optional<double>",
+          "items": [
+            "sin_theta_over_lambda_max"
+          ]
         }
       ],
       "owner": "ExperimentBase",
@@ -1912,10 +1919,10 @@
           ]
         },
         {
-          "member": "Project::minimizer_stop_rule",
+          "member": "Project::minimizer_stop_rules",
           "type": "std::string",
           "items": [
-            "stop_rule"
+            "stop_rules"
           ]
         },
         {
@@ -2091,6 +2098,27 @@
           "type": "std::string",
           "items": [
             "descent"
+          ]
+        },
+        {
+          "member": "FitResultRecord::stopping_rule",
+          "type": "std::string",
+          "items": [
+            "stopping_rule"
+          ]
+        },
+        {
+          "member": "FitResultRecord::stopping_value",
+          "type": "std::optional<double>",
+          "items": [
+            "stopping_value"
+          ]
+        },
+        {
+          "member": "FitResultRecord::last_shift_su",
+          "type": "std::optional<double>",
+          "items": [
+            "last_shift_su"
           ]
         }
       ],
@@ -2873,6 +2901,27 @@
           "type": "ComputedColumn<double>",
           "items": [
             "intensity_calc"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::generated_index_h",
+          "type": "ComputedColumn<std::int32_t>",
+          "items": [
+            "index_h"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::generated_index_k",
+          "type": "ComputedColumn<std::int32_t>",
+          "items": [
+            "index_k"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::generated_index_l",
+          "type": "ComputedColumn<std::int32_t>",
+          "items": [
+            "index_l"
           ]
         }
       ]
@@ -4630,6 +4679,21 @@
       "category": "_refln"
     },
     {
+      "member": "ReflnDataBase::generated_index_h",
+      "type": "ComputedColumn<std::int32_t>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::generated_index_k",
+      "type": "ComputedColumn<std::int32_t>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::generated_index_l",
+      "type": "ComputedColumn<std::int32_t>",
+      "category": "_refln"
+    },
+    {
       "member": "PrefOrient::structure_id",
       "type": "ItemKey",
       "category": "_preferred_orientation"
@@ -5036,6 +5100,11 @@
       "category": "_reflns"
     },
     {
+      "member": "ExperimentBase::sin_theta_over_lambda_max",
+      "type": "std::optional<double>",
+      "category": "_data_range"
+    },
+    {
       "member": "ExperimentBase::background_estimate_inputs",
       "type": "std::uint64_t",
       "category": "_background_estimate"
@@ -5320,6 +5389,11 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "FitResultBase::mode",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "FitResultBase::correlations",
       "type": "std::vector<FitParameterCorrelation>",
       "not_storage": "a fit report"
@@ -5342,6 +5416,21 @@
     {
       "member": "FitResultBase::converged",
       "type": "bool",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::stopping_rule",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::stopping_value",
+      "type": "double",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::last_shift_su",
+      "type": "double",
       "not_storage": "a fit report"
     },
     {
@@ -5637,6 +5726,16 @@
       "category": "_fit_result"
     },
     {
+      "member": "FitResultRecord::start_adjustments",
+      "type": "std::vector<std::string>",
+      "not_storage": "the starting values a fit moved off zero, shown once, not saved"
+    },
+    {
+      "member": "FitResultRecord::undefined_su",
+      "type": "std::vector<std::string>",
+      "not_storage": "the free parameters whose s.u. a fit could not compute, not saved"
+    },
+    {
       "member": "FitResultRecord::prof_wr_factor",
       "type": "std::optional<double>",
       "category": "_fit_result"
@@ -5674,6 +5773,21 @@
     {
       "member": "FitResultRecord::descent",
       "type": "std::string",
+      "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::stopping_rule",
+      "type": "std::string",
+      "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::stopping_value",
+      "type": "std::optional<double>",
+      "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::last_shift_su",
+      "type": "std::optional<double>",
       "category": "_fit_result"
     },
     {
@@ -5807,7 +5921,7 @@
       "category": "_minimizer"
     },
     {
-      "member": "Project::minimizer_stop_rule",
+      "member": "Project::minimizer_stop_rules",
       "type": "std::string",
       "category": "_minimizer"
     },
