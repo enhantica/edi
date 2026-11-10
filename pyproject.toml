@@ -48,7 +48,7 @@ preview = true   # enable not-yet-stable rules (FURB, …) — canonical
 # Excluded: the vendored library clones, the build outputs and the `*_hidden.py` test modules, whose
 # lint belongs with their own suite. The docs tree is NOT excluded, so the verification notebooks'
 # jupytext sources under docs/dev/verification/ stay linted.
-extend-exclude = ["knowledge/libraries", "docs/user/guides", "build", "site", "tests/*_hidden.py", "tests/**/*_hidden.py"]
+extend-exclude = ["knowledge/libraries", "docs/user/guides", "build", "site", "tests/*_hidden.py", "tests/**/*_hidden.py", "docs/user/tutorials/*.ipynb"]
 
 [tool.ruff.lint]
 select = [

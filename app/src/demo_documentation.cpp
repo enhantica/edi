@@ -356,6 +356,10 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
     }
     // Files attached to the assistant's message by the same calls as its file dialog: `assistant-attach:<a>|<b>`.
     if (action.startsWith("assistant-attach:")) {
+#if !EDI_APP_ASSISTANT
+        fail("this build has no assistant to attach files to");
+        return false;
+#else
         auto* session = session_for(window_);
         auto* assistant = session ? session->assistant() : nullptr;
         QList<QUrl> urls;
@@ -369,6 +373,7 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
             return false;
         }
         return true;
+#endif
     }
     if (action == "close-fit-results") {
         auto* session = session_for(window_);
