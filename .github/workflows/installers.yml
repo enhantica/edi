@@ -319,14 +319,14 @@ jobs:
       - name: Upload qualified release files
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/delivery
           if-no-files-found: error
           compression-level: 0
       - name: Upload tested components
         uses: actions/upload-artifact@v4
         with:
-          name: installer-components-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-components-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/components
           if-no-files-found: error
           compression-level: 0
@@ -334,7 +334,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: installer-check-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-check-${{ runner.os }}-${{ github.run_attempt }}
           path: |
             build/installer/assistant-lifetime.xml
             build/installer/project-retirement.xml
