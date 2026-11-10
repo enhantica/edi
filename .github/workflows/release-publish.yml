@@ -15,17 +15,9 @@ jobs:
   publish:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    concurrency:
-      group: pages-publication
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: write
       actions: write
-      pages: write
-      id-token: write
     steps:
       - uses: actions/checkout@v5
         with:
@@ -61,6 +53,11 @@ jobs:
           for platform in linux-64 osx-arm64; do
             cp "crysta-sdk-archives/crysta-sdk-$SHA-$platform.tar.gz" publication/assets/
           done
+      # The web app Pages built from the release commit, as one archive beside the installers.
+      - name: Attach the web app
+        run: python tools/release/webapp_archive.py --repo "$GITHUB_REPOSITORY" --publication publication
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Write and check the three copies of the release
         run: python tools/release/distribution.py --publication publication --output copies --repo "$GITHUB_REPOSITORY"
         env:
@@ -79,20 +76,6 @@ jobs:
         run: python tools/release/publish_assets.py --repo "$GITHUB_REPOSITORY" --folder publication
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Preserve the site and assemble repositories with their release feed
-        run: python tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component release --incoming copies/pages --site site
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          name: pages-site-release-${{ github.run_attempt }}
-          path: site
-          retention-days: 90
-      - name: Deploy release to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: pages-site-release-${{ github.run_attempt }}
       - name: Publish the verified download assets
         run: python tools/release/publish_assets.py --repo "$GITHUB_REPOSITORY" --folder publication --finalize
         env:

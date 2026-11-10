@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: BSD-3-Clause
 #ifndef JWT_CPP_KAZUHO_PICOJSON_DEFAULTS_H
 #define JWT_CPP_KAZUHO_PICOJSON_DEFAULTS_H
 

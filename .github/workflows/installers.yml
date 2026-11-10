@@ -302,6 +302,12 @@ jobs:
           shutil.copy2(package / 'installer.json', delivery / 'installer.json')
           shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
           shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
+          # The tested offline installer goes onto the release beside the online one.
+          offline = Path('build/installer/package')
+          offline_metadata = json.loads((offline / 'installer.json').read_text())
+          shutil.copy2(offline / 'installer.json', delivery / 'offline-installer.json')
+          shutil.copy2('build/installer/test/passed.json', delivery / 'offline-qualification.json')
+          os.link(offline / offline_metadata['zip'], delivery / offline_metadata['zip'])
           cli_receipt = Path('build/installer/cli-qualification.json')
           if cli_receipt.is_file():
               cli = json.loads(cli_receipt.read_text())
@@ -319,14 +325,14 @@ jobs:
       - name: Upload qualified release files
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/delivery
           if-no-files-found: error
           compression-level: 0
       - name: Upload tested components
         uses: actions/upload-artifact@v4
         with:
-          name: installer-components-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-components-${{ runner.os }}-${{ github.run_attempt }}
           path: build/installer/components
           if-no-files-found: error
           compression-level: 0
@@ -334,7 +340,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: installer-check-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          name: installer-check-${{ runner.os }}-${{ github.run_attempt }}
           path: |
             build/installer/assistant-lifetime.xml
             build/installer/project-retirement.xml
@@ -357,7 +363,9 @@ jobs:
   qualify-release:
     name: record qualified release inputs
     needs: installers
-    if: inputs.release_plan_run != '' && !inputs.windows_only && !inputs.prepare_preview_release && inputs.preview_run == ''
+    if: >-
+      !cancelled() && needs.installers.result == 'success' && inputs.release_plan_run != ''
+      && !inputs.windows_only && !inputs.prepare_preview_release && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5

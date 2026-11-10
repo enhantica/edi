@@ -5728,12 +5728,12 @@
     {
       "member": "FitResultRecord::start_adjustments",
       "type": "std::vector<std::string>",
-      "not_storage": "the starting values a fit moved off zero, shown once, not saved"
+      "not_storage": "the starting values the fit moved off zero, not saved"
     },
     {
       "member": "FitResultRecord::undefined_su",
       "type": "std::vector<std::string>",
-      "not_storage": "the free parameters whose s.u. a fit could not compute, not saved"
+      "not_storage": "the free parameters without a computed s.u., not saved"
     },
     {
       "member": "FitResultRecord::prof_wr_factor",

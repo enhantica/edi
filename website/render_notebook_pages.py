@@ -40,7 +40,7 @@ BRAND_CSS = DOCS / 'assets/brand-colors.css'
 SITE_TABLE_SIZE = '12.8px'
 SITE_TEXT_COLOUR = 'rgba(0, 0, 0, 0.87)'
 # A report view of ``project.display``: a frame whose document carries the drawn data.
-FRAME = re.compile(r'<iframe ([^>]*?)srcdoc="([^"]*)"></iframe>')
+FRAME = re.compile(r'<iframe ([^>]*?)srcdoc=(?:"([^"]*)"|\'([^\']*)\')></iframe>')
 
 
 def _view_fonts() -> str:
@@ -108,7 +108,8 @@ class _Views:
         self.count += 1
         name = f'{self.count}.html'
         self.folder.mkdir(parents=True, exist_ok=True)
-        document = html.unescape(match.group(2)).replace('</head>', _view_fonts() + '</head>', 1)
+        source = match.group(2) if match.group(2) is not None else match.group(3)
+        document = html.unescape(source).replace('</head>', _view_fonts() + '</head>', 1)
         (self.folder / name).write_text(document, encoding='utf-8')
         return f'<iframe {match.group(1)}loading="lazy" src="{self.url}{name}"></iframe>'
 

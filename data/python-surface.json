@@ -7341,6 +7341,15 @@
     "reason": "C",
     "verdict": "public"
    },
+   "log_level": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "machine_report": {
     "need": {
      "by": "deviation",
@@ -7378,6 +7387,15 @@
     "verdict": "public"
    },
    "scan_summary": {
+    "need": {
+     "by": "deviation",
+     "ref": "D40",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "set_log_level": {
     "need": {
      "by": "deviation",
      "ref": "D40",
@@ -8608,6 +8626,9 @@
   "load_collection": {
    "kind": "function"
   },
+  "log_level": {
+   "kind": "function"
+  },
   "machine_report": {
    "kind": "function"
   },
@@ -8621,6 +8642,9 @@
    "kind": "function"
   },
   "scan_summary": {
+   "kind": "function"
+  },
+  "set_log_level": {
    "kind": "function"
   },
   "stream_header": {
