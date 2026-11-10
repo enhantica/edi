@@ -121,7 +121,7 @@ jobs:
       group: pages-publication
       cancel-in-progress: false
     permissions:
-      contents: write
+      contents: read
       actions: read
       pages: write
       id-token: write
@@ -151,8 +151,18 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: pages-site-docs-${{ github.run_attempt }}
-      # The same site for the host behind easydiffraction.org, which pulls this branch.
+      - name: Mint a token for edi-sites
+        id: sites-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: edi-sites
+      # The same site for the host behind easydiffraction.org, which pulls this branch of edi-sites.
       - name: Update the deploy-docs branch
+        env:
+          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
         run: bash tools/ci/push_deploy_branch.sh site deploy-docs
 
   publish-wasm:
@@ -163,7 +173,7 @@ jobs:
       group: pages-publication
       cancel-in-progress: false
     permissions:
-      contents: write
+      contents: read
       actions: read
       pages: write
       id-token: write
@@ -193,8 +203,18 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: pages-site-wasm-${{ github.run_attempt }}
+      - name: Mint a token for edi-sites
+        id: sites-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: edi-sites
       # The web app alone for app.easydiffraction.org, and the whole site for easydiffraction.org.
       - name: Update the deploy-app and deploy-docs branches
+        env:
+          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
         run: |
           bash tools/ci/push_deploy_branch.sh site/webapp deploy-app
           bash tools/ci/push_deploy_branch.sh site deploy-docs
