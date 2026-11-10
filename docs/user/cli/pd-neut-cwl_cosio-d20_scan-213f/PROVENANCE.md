@@ -263,5 +263,5 @@ reference.
 **Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
 after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; a refused step on a
 magnetic moment is retried at the length a quadratic model of the residual predicts. Measured with `python -m edi fit
---report machine --verbosity full` linked against crysta `697f33ee`, `OMP_NUM_THREADS=4`: iterations 6 → 8. No
+--report machine --verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: iterations 6 → 8. No
 `reference` value moved.

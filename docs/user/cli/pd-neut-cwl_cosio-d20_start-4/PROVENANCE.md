@@ -37,13 +37,13 @@ new content ids are `tests/fitting/cosio-d20-s4` (tree) `6f1cec02b860ea573f055c0
 **Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: ladder iterations 7 → 6; fast-descent iterations 7 → 6;
-fast-descent-linear-snap iterations 7 → 6; fast-descent-guarded-linear-snap iterations 7 → 6.
+linear snap (retired) iterations 7 → 6; guarded linear snap (retired) iterations 7 → 6.
+
+
+**Linear-snap variants removed, 2026-11-10.** crysta retired its two linear-snap descents: they stopped at a wrong
+minimum on three examples. Their variants and pins went with them; the values above that name them are history.
 
 **Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
 after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
--m edi fit --report machine --verbosity full` linked against crysta `697f33ee`, `OMP_NUM_THREADS=4`: ladder iterations 6
+-m edi fit --report machine --verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: ladder iterations 6
 → 7; fast-descent iterations 6 → 7. No `reference` value moved.
-
-**Linear-snap variants removed, 2026-11-10.** The `fast-descent-linear-snap` and `fast-descent-guarded-linear-snap`
-descents were retired from crysta: they stopped at a wrong minimum on three examples. Their variants and pins went with
-them; the values above that name them are history.

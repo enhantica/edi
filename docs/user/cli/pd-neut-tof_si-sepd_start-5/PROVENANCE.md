@@ -39,13 +39,12 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 | ladder | `rwp` | 0.06941175916 | 0.0694100927 |
 | fast-descent | `reduced_chi_square` | 3.611119171 | 3.610945779 |
 | fast-descent | `rwp` | 0.06941175903 | 0.06941009258 |
-| fast-descent-linear-snap | `reduced_chi_square` | 3.611114657 | 3.61094126 |
-| fast-descent-linear-snap | `rwp` | 0.06941171565 | 0.06941004914 |
-| fast-descent-guarded-linear-snap | `reduced_chi_square` | 3.611114657 | 3.61094126 |
-| fast-descent-guarded-linear-snap | `rwp` | 0.06941171565 | 0.06941004914 |
+| linear snap (retired) | `reduced_chi_square` | 3.611114657 | 3.61094126 |
+| linear snap (retired) | `rwp` | 0.06941171565 | 0.06941004914 |
+| guarded linear snap (retired) | `reduced_chi_square` | 3.611114657 | 3.61094126 |
+| guarded linear snap (retired) | `rwp` | 0.06941171565 | 0.06941004914 |
 | multistart-prune | `reduced_chi_square` | 3.611114145 | 3.610940746 |
 | multistart-prune | `rwp` | 0.06941171073 | 0.0694100442 |
 
-**Linear-snap variants removed, 2026-11-10.** The `fast-descent-linear-snap` and `fast-descent-guarded-linear-snap`
-descents were retired from crysta: they stopped at a wrong minimum on three examples. Their variants and pins went with
-them; the values above that name them are history.
+**Linear-snap variants removed, 2026-11-10.** crysta retired its two linear-snap descents: they stopped at a wrong
+minimum on three examples. Their variants and pins went with them; the values above that name them are history.

@@ -53,6 +53,6 @@ param.Co.j2_coefficient.value 0.5894931888 → 0.5896782533, 0.003 of its s.u.
 **Re-pinned 2026-11-10.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
 after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; a refused step on a
 magnetic moment is retried at the length a quadratic model of the residual predicts; fast descent is now the default
-descent. Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `697f33ee`,
-`OMP_NUM_THREADS=4`: reduced_chi_square 6.245812633 → 6.245621763; iterations 41 → 26; param.Co.j2_coefficient.value
-0.5896782533 → 0.5867576574. No `reference` value moved.
+descent. Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `d074c0e9`,
+`OMP_NUM_THREADS=4`: reduced_chi_square 6.245812633 → 6.245620875; iterations 41 → 27; param.Co.j2_coefficient.value
+0.5896782533 → 0.5867252778. No `reference` value moved.

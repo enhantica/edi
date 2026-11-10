@@ -24,3 +24,11 @@ experiment settings of the joint PbSO4 case (`catalogue_joint.py`).
   shift, the scale and the six Chebyshev terms. The tutorial keeps the coordinates and Biso fixed; here they start
   rounded, so they are free.
 - **Left out:** the tutorial's minimizer settings; edi uses crysta.
+
+**Re-pinned 2026-11-10.** Fast descent is now the default descent. Measured with `python -m edi fit --report machine
+--verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: iterations 12 → 20; reduced_chi_square
+2.975771851 → 2.976414988. No `reference` value moved.
+
+**Open, 2026-11-10.** With fast descent as the default this fit stops at reduced χ² 2.976415, where the ladder reaches
+2.975772, and the cell lengths miss FullProf's by 2 to 3 of their s.u. The FullProf references stand; the fit has to
+reach them again.

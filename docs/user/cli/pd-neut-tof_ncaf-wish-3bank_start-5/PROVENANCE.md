@@ -33,3 +33,7 @@ re-taken from `python -m edi fit` with that build. Reference values are unchange
 | ladder | `rwp` | 0.07254201564 | 0.07257054915 |
 | edi | `reduced_chi_square` | 14.12339787 | 14.13451059 |
 | edi | `rwp` | 0.07254201564 | 0.07257054915 |
+
+**Re-pinned 2026-11-10.** Fast descent is now the default descent. Measured with `python -m edi fit --report machine
+--verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: edi rwp 0.07257054915 → 0.07257054787. No
+`reference` value moved.

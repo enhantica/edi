@@ -50,6 +50,6 @@ under which every path stops at 36 iterations with reduced χ² 9.731270484: ite
 9.731261117 → 9.731270484.
 
 **Re-pinned 2026-11-10.** Fast descent is now the default descent. Measured with `python -m edi fit --report machine
---verbosity full` linked against crysta `697f33ee`, `OMP_NUM_THREADS=4`: reduced_chi_square 9.731270484 → 9.731273171;
+--verbosity full` linked against crysta `d074c0e9`, `OMP_NUM_THREADS=4`: reduced_chi_square 9.731270484 → 9.731273171;
 asymmetry-off iterations 18 → 19; asymmetry-off reduced_chi_square 12.88691907 → 12.88658333. No `reference` value
 moved.
