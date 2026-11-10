@@ -10,25 +10,32 @@
 </p>
 
 **EasyDiffraction** is software for calculating diffraction patterns
-from a structural model and refining its parameters against measured
+from a structural model and fitting its parameters to measured
 data, for powder and single-crystal neutron and X-ray diffraction.
 
-**EasyDiffraction** comes with five interfaces that share one
+**EasyDiffraction** comes with three interfaces that share one
 calculation engine and one project format, so a project started in one
 opens in the others:
 
-- 🌐 **Web app**: runs in a current browser, with nothing to install.
-- 🖥️ **Desktop app**: for macOS (Apple silicon) and Linux (x86-64).
-- 🐍 **Python package**: `import easydiffraction as edi`, for scripts
-  and Jupyter notebooks.
-- ⌨️ **Command line**: `edi` (or `python -m edi`), for batch work on
-  saved projects.
-- 🤖 **AI assistant**: in the desktop and web apps, it explains and
-  carries out analysis steps in the open project.
+- 🖥️ **Application**, a graphical interface:
+  - in your browser, with nothing to install;
+  - on your desktop, for macOS (Apple silicon) and Linux (x86-64).
+- 🐍 **Python**, the `easydiffraction` package:
+  - in your own scripts;
+  - in Jupyter notebooks.
+- ⌨️ **Command line**, for saved projects without writing code:
+  - the standalone `edi` executable, with no Python needed;
+  - `python -m edi` from the Python package.
 
-License: source code under the [BSD 3-Clause License](LICENSE); the
-application built from it under the
-[GNU General Public License version 3](COPYING).
+The application also includes an 🤖 **AI assistant** that explains and
+carries out analysis steps in the open project.
+
+### Licences
+
+- **Source code**: [BSD 3-Clause License](LICENSE).
+- **Application** built from it: [GNU General Public License version 3](COPYING).
+- **Third-party components**: their own licences, listed in
+  [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES).
 
 ## Useful Links
 
