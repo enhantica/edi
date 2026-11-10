@@ -68,6 +68,54 @@ AppDialog {
         width: dialog.columnWidth
         height: dialog.rowHeight
     }
+    // A number box whose minus and plus sit at its right, the plus where a box's arrow is, at the arrow's size.
+    component FieldSpinBox: EaElements.SpinBox {
+        id: spin
+
+        readonly property real iconRight: themeBox.padding
+
+        width: dialog.columnWidth
+        contentItem: TextInput {
+            leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
+            rightPadding: EaStyle.Sizes.fontPixelSize * 3.5
+            readOnly: !spin.editable
+            validator: spin.validator
+            inputMethodHints: Qt.ImhDigitsOnly
+            font: spin.font
+            text: spin.displayText
+            color: EaStyle.Colors.themeForeground
+            selectionColor: EaStyle.Colors.themeAccent
+            selectedTextColor: EaStyle.Colors.themeBackground
+            verticalAlignment: Qt.AlignVCenter
+            selectByMouse: true
+        }
+        up.indicator: EaElements.Label {
+            x: spin.width - width - spin.iconRight
+            height: spin.height
+            verticalAlignment: Text.AlignVCenter
+            font.family: EaStyle.Fonts.iconsFamily
+            text: "plus"
+            TapHandler {
+                onTapped: {
+                    spin.increase();
+                    spin.valueModified();
+                }
+            }
+        }
+        down.indicator: EaElements.Label {
+            x: spin.width - width - spin.iconRight - EaStyle.Sizes.fontPixelSize * 1.75
+            height: spin.height
+            verticalAlignment: Text.AlignVCenter
+            font.family: EaStyle.Fonts.iconsFamily
+            text: "minus"
+            TapHandler {
+                onTapped: {
+                    spin.decrease();
+                    spin.valueModified();
+                }
+            }
+        }
+    }
     // A value to read, framed like a box but not editable.
     component ReadOnlyField: EaElements.TextField {
         width: dialog.columnWidth
@@ -326,9 +374,8 @@ AppDialog {
                 }
                 Field {
                     label: qsTr("Tooltip delay (ms)")
-                    EaElements.SpinBox {
+                    FieldSpinBox {
                         objectName: "preferences.toolTipDelay"
-                        width: dialog.columnWidth
                         from: 0
                         to: 10000
                         stepSize: 100
