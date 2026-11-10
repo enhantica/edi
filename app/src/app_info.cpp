@@ -9788,6 +9788,11 @@ void ApplicationInfo::workingAnimation(bool started) const {
 }
 
 namespace {
+// A local path as a field shows it: the home folder as "~".
+QString homeShortened(const QString& path) {
+    const QString home = QDir::homePath();
+    return path.startsWith(home + QLatin1Char('/')) ? QStringLiteral("~") + path.mid(home.size()) : path;
+}
 QJSValue recentLabel(const PanelUsageFrame& f, const char* source, const QJSValue& name) {
     const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(source))});
     return panelUsageDeferredMemberCall(f, format, "arg", [&] { return QJSValueList({name}); });
@@ -9807,7 +9812,7 @@ QJSValue recentRowCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
     if (operation == 320) return QJSValue(assistantRelation(f, panelUsageRead(f, arg(0), "length"), QJSValue(0), 1));
     if (operation == 321) {
-        const auto path = arg(0); auto row = panelUsageLiteral(f); panelUsageWrite(f, row.value, "path", path); panelUsageWrite(f, row.value, "label", path); panelUsageWrite(f, row.value, "inBrowser", QJSValue(false));
+        const auto path = arg(0); auto row = panelUsageLiteral(f); panelUsageWrite(f, row.value, "path", path); panelUsageWrite(f, row.value, "label", QJSValue(homeShortened(path.toString()))); panelUsageWrite(f, row.value, "inBrowser", QJSValue(false));
         panelUsageWrite(f, row.value, "available", panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "Session"), "projectDirectoryExists", [&] { return QJSValueList({path}); })); return panelUsageComplete(f, row);
     }
     if (operation == 322) return QJSValue(!arg(0).strictlyEquals(saved(0)));
