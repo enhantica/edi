@@ -440,14 +440,23 @@ one selected row, and the row's number in the first column, bold in the accent c
 
 ### 12. Preferences, and the sidebar's side
 
+- **Layout (2026-11-10, replaces the label-and-control rows below where they differ):** seven tabs, Appearance,
+  Interface, Projects, Performance, Updates, AI assistance and Advanced, in a dialog 720 px wide. Each tab is one grid
+  of two equal columns; every control has its label above it; a choice is a box, never a checkbox; explanations are
+  tooltips, with no text under a control; groups have a title with an icon and no frame; one spacing scale on every
+  tab; every colour selector has a strip of its colours under it (ADR-0084); tables are framed with their header
+  inside. Appearance: Theme | When a legend click hides a curve; Palette | Map colours; Magnetic moment arrows.
+  Interface: tooltips, the fit's end and the sidebar and Text tab choices. Performance: the thread counts, the scan
+  view drawing and the detected graphics. Advanced: the message level, Diagnostics and the settings file. Removed:
+  Enable user guides, the Experimental tab, the feedback address (kept in the settings file, ADR-0063) and the
+  Stacked colour choice (the Stacked view follows the palette, ADR-0084).
 - **edi shows its own Preferences dialog** (`Components/AppPreferencesDialog.qml`), rebuilt from the base's
-  pieces as the About dialog is, with the base's tabs and layout and two of edi's own: Prompts, Updates,
-  Appearance, Projects, Performance, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
+  pieces as the About dialog is. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Palette — Earth (the default), Classic, Soft, Natural or Colour-blind safe** (the
+- **Appearance**: Theme; **Palette — Main (the default) or Colour-blind safe** (the
   experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app draws;
-  ADR-0038), listed from the core, with the colour order under it (ADR-0038 §7); a stored earlier palette reads and
+  ADR-0038, ADR-0084), listed from the core, with its colour strip under it; a stored earlier palette reads and
   is kept as its nearest new one;
   **Sidebar — Left or Right** (the owner, 2026-09-29); One sidebar group open at a time (the owner, 2026-10-27; it
   was Auto collapse). **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
