@@ -631,6 +631,13 @@ when the x axis changes, once, on the chart where it changes, so a chart shown a
 given for its new axis. The structure curves switch in place: a curve not drawn holds no points (Qt Graphs kept an
 area's last drawing when the area was hidden or removed). The Report page's charts stay separate.
 
+**Save image** (every chart's and the structure view's last toolbar button, the owner, 2026-11-08) saves what the view
+shows without its toolbar: a chart's toolbar band is cut off the top, and the structure view's floating toolbar is
+hidden for the grab (the owner, 2026-11-10). The desktop's dialog starts in one folder every Save image shares and
+remembers, `Preferences.imageFolder`, the folder the last image went to; before the first, the open project's
+`reports/` folder (made when missing), or the pictures folder for a project without a place of its own. A saved report
+says so in the window's short notice, with the files and their folder.
+
 **Long structure names fit** (the owner, 2026-10-21): the panes' shared left edge moves right far enough for the
 widest tick-row label (the structure's icon and name), so a name never runs into the plot.
 

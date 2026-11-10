@@ -7,12 +7,47 @@ import EasyApplication.Gui.Style as EaStyle
 import edi.app
 
 // Save image, the last button of a chart's or the structure view's toolbar, in its own group (the owner,
-// 2026-11-08): a PNG of `target` as shown. The desktop asks where to save it; the browser downloads it.
+// 2026-11-08): a PNG of `target` as shown, without its toolbar. The desktop asks where to save it, starting in the one
+// folder every Save image remembers, at first the project's reports folder (the owner, 2026-11-10); the browser
+// downloads it.
 Row {
     id: save
 
     property Item target: null
     property string fileName: "image"
+    // Whether the band the toolbar takes at the top of `target` is cut off: a chart's toolbar has its own band, the
+    // structure view's floats over the scene, which stays whole.
+    property bool cropToolbar: true
+
+    // The toolbar line this button is in: its ancestor that `target` holds directly.
+    function toolbarLine() {
+        for (let item = save; item !== null; item = item.parent) {
+            if (item.parent === save.target)
+                return item;
+        }
+        return null;
+    }
+    function grab() {
+        const line = toolbarLine();
+        const shownOpacity = line ? line.opacity : 1;
+        // Below the toolbar's band when it is at the top, as a fraction of the height.
+        const cut = line && cropToolbar && line.y + line.height < target.height / 2 ? (line.y + line.height) / target.height : 0;
+        if (line)
+            line.opacity = 0;
+        save.target.grabToImage(result => {
+            if (line)
+                line.opacity = shownOpacity;
+            if (WebFiles.available) {
+                ApplicationInfo.downloadImage(result.image, save.fileName + ".png", cut);
+            } else {
+                dialog.grabbed = result;
+                dialog.cut = cut;
+                dialog.currentFolder = ApplicationInfo.imageFolder(Preferences.imageFolder, Session.project ? Session.project.path : "", Session.project !== null && !Session.needsSaveAs);
+                dialog.currentFile = dialog.currentFolder + "/" + save.fileName + ".png";
+                dialog.open();
+            }
+        });
+    }
 
     spacing: AppSizes.toolbarSpacing
 
@@ -25,27 +60,21 @@ Row {
         fontIcon: "camera"
         toolTip: qsTr("Save image")
         enabled: save.target !== null
-        onClicked: save.target.grabToImage(result => {
-            if (WebFiles.available) {
-                ApplicationInfo.downloadImage(result.image, save.fileName + ".png");
-            } else {
-                dialog.grabbed = result;
-                dialog.open();
-            }
-        })
+        onClicked: save.grab()
     }
     FileDialog {
         id: dialog
 
         property var grabbed: null
+        property real cut: 0
 
         title: qsTr("Save image")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "png"
-        currentFile: "file:///" + save.fileName + ".png"
         nameFilters: [qsTr("PNG images (*.png)")]
         onAccepted: {
-            ApplicationInfo.saveImage(grabbed.image, selectedFile);
+            ApplicationInfo.saveImage(grabbed.image, selectedFile, cut);
+            Preferences.imageFolder = ApplicationInfo.folderOf(selectedFile).toString();
             grabbed = null;
         }
         onRejected: grabbed = null

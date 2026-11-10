@@ -726,17 +726,39 @@ void ApplicationInfo::setMessageLevel(const QString& level) const {
     }
 }
 
-bool ApplicationInfo::saveImage(const QVariant& image, const QUrl& file) const {
+namespace {
+
+QImage croppedImage(const QVariant& image, double cut) {
     const QImage picture = image.value<QImage>();
+    if (picture.isNull() || cut <= 0 || cut >= 1) return picture;
+    const int top = static_cast<int>(std::lround(cut * picture.height()));
+    return picture.copy(0, top, picture.width(), picture.height() - top);
+}
+
+}  // namespace
+
+bool ApplicationInfo::saveImage(const QVariant& image, const QUrl& file, double cut) const {
+    const QImage picture = croppedImage(image, cut);
     return !picture.isNull() && picture.save(file.toLocalFile(), "PNG");
 }
 
-bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name) const {
-    const QImage picture = image.value<QImage>();
+bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name, double cut) const {
+    const QImage picture = croppedImage(image, cut);
     QByteArray data;
     QBuffer buffer(&data);
     if (picture.isNull() || !buffer.open(QIODevice::WriteOnly) || !picture.save(&buffer, "PNG")) return false;
     return edi_app::WebFiles::download(data, name);
+}
+
+QUrl ApplicationInfo::imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const {
+    const QUrl remembered(stored);
+    if (!stored.isEmpty() && remembered.isLocalFile() && QFileInfo(remembered.toLocalFile()).isDir()) return remembered;
+    if (ownPlace && !projectPath.isEmpty()) {
+        const QString reports = QDir(projectPath).filePath(QStringLiteral("reports"));
+        if (QDir().mkpath(reports)) return QUrl::fromLocalFile(reports);
+    }
+    const QString pictures = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    return QUrl::fromLocalFile(pictures.isEmpty() ? QDir::homePath() : pictures);
 }
 
 QString ApplicationInfo::diagnostics() const {

@@ -971,6 +971,16 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    // A saved report says so in the short notice below, with the files and their folder (the owner, 2026-11-10).
+    Connections {
+        target: Session.project ? Session.project.report : null
+        function onSaved(location) {
+            const files = location.split(", ");
+            const names = files.map(file => file.substring(file.lastIndexOf("/") + 1)).join(", ");
+            const folder = files[0].substring(0, files[0].lastIndexOf("/"));
+            webNotice.show(WebFiles.available ? qsTr("Report saved: %1, handed to the browser to download.").arg(names) : qsTr("Report saved: %1, in %2").arg(names).arg(ApplicationInfo.shownLocalPath(folder)));
+        }
+    }
     // A short notice at the foot of the window, gone after a few seconds or on a click.
     Popup {
         id: webNotice

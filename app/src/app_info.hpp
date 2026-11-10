@@ -246,8 +246,12 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void setMessageLevel(const QString& level) const;
     // Save image on a chart or the structure view: the grabbed image (ItemGrabResult.image) as a PNG file on the
     // desktop, or handed to the browser to download as `name`.
-    Q_INVOKABLE bool saveImage(const QVariant& image, const QUrl& file) const;
-    Q_INVOKABLE bool downloadImage(const QVariant& image, const QString& name) const;
+    // A grabbed image saved as PNG, less the top `cut` of its height (the toolbar's band, as a fraction).
+    Q_INVOKABLE bool saveImage(const QVariant& image, const QUrl& file, double cut = 0) const;
+    Q_INVOKABLE bool downloadImage(const QVariant& image, const QString& name, double cut = 0) const;
+    // Where Save image starts: the folder last saved to while it exists; else the project's reports folder, made
+    // when missing, for a project with a place of its own; else the pictures folder.
+    Q_INVOKABLE QUrl imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const;
 #if EDI_APP_ASSISTANT
     /// Original Panel projection/selection on the current QML thread; no cache or canonical lookup.
     /// Borrows actual Panel/engine values; original JS errors remain pending except the projection's explicit catch.
@@ -965,6 +969,8 @@ class ApplicationInfo : public QObject {
         const QString home = QDir::toNativeSeparators(QDir::homePath());
         return path.startsWith(home + QDir::separator()) ? QStringLiteral("~") + path.mid(home.size()) : path;
     }
+    // A local path given as text, shown as shownPath shows it.
+    Q_INVOKABLE QString shownLocalPath(const QString& path) const { return shownPath(QUrl::fromLocalFile(path)); }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {
         return QUrl::fromLocalFile(QFileInfo(file.toLocalFile()).absolutePath());
     }
