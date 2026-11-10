@@ -172,7 +172,7 @@ jobs:
       - name: Validate calendar release policy offline
         run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/releases" --noconftest -o addopts= -o python_files="check_*.py" --ignore="${{ github.workspace }}/tests/fixtures/releases/check_notebook_package_origin.py" -q
       - name: Check installer boundaries and native UTC conversion offline
-        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/installer" --noconftest -o addopts= -q
+        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/installer" --noconftest -o addopts= -o python_files="check_*.py" -q
       - name: Acquire the pinned Qt Installer Framework
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
       - name: Check installer transport before building the application
