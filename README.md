@@ -34,19 +34,18 @@ application built from it under the
 
 ### For Users
 
-- 📖 [Documentation](https://enhantica.github.io/edi/)
-- 🌐 [Web app](https://enhantica.github.io/edi/webapp/)
-- 🖥️ [Desktop app](https://enhantica.github.io/edi/application/desktop/)
-- 🐍 [Python package](https://enhantica.github.io/edi/python/setup/)
-- ⌨️ [Command line](https://enhantica.github.io/edi/cli/standalone/)
-- 🤖 [AI assistant](https://enhantica.github.io/edi/user-guide/ai-assistant/)
-- 🧪 [Tutorials](https://enhantica.github.io/edi/user-guide/tutorials/)
+- 📖 [Documentation](https://easydiffraction.org/)
+- 🌐 [Web app](https://app.easydiffraction.org/)
+- 🖥️ [Desktop app](https://easydiffraction.org/application/desktop/)
+- 🐍 [Python package](https://easydiffraction.org/python/setup/)
+- ⌨️ [Command line](https://easydiffraction.org/cli/standalone/)
+- 🤖 [AI assistant](https://easydiffraction.org/user-guide/ai-assistant/)
+- 🧪 [Tutorials](https://easydiffraction.org/user-guide/tutorials/)
 - ⬇️ [Releases](https://github.com/enhantica/edi/releases)
-- 💬 [Get in Touch](https://enhantica.github.io/edi/about/community/)
-- 🧾 [Citation](https://enhantica.github.io/edi/about/citation/)
+- 💬 [Get in Touch](https://easydiffraction.org/about/community/)
+- 🧾 [Citation](https://easydiffraction.org/about/citation/)
 
 ### For Contributors
 
 - 🧑‍💻 [Source Code](https://github.com/enhantica/edi)
 - 🐞 [Issue Tracker](https://github.com/enhantica/edi/issues)
-- 🛠️ [Developer Documentation](https://enhantica.github.io/edi/dev/)

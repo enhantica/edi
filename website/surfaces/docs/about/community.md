@@ -31,4 +31,4 @@ Leave out unpublished or confidential data.
 
 ## Other ways
 
-You can also open an issue on [GitHub](https://github.com/enhantica/edi/issues). If you would like to work on the code, start with the [contributor documentation](https://enhantica.github.io/edi/dev/).
+You can also open an issue on [GitHub](https://github.com/enhantica/edi/issues).

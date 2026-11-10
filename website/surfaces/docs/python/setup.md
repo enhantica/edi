@@ -27,7 +27,7 @@ on GitHub; its dependencies come from PyPI.
 
     ```toml
     [pypi-options]
-    extra-index-urls = ["https://enhantica.github.io/edi-download/pypi/simple/"]
+    extra-index-urls = ["https://download.easydiffraction.org/pypi/simple/"]
     ```
 
     Then add the package and check it:
@@ -52,14 +52,13 @@ on GitHub; its dependencies come from PyPI.
     `.\.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install and check:
 
     ```console
-    python -m pip install "easydiffraction==2026.11.0" --extra-index-url https://enhantica.github.io/edi-download/pypi/simple/
+    python -m pip install "easydiffraction==2026.11.0" --extra-index-url https://download.easydiffraction.org/pypi/simple/
     python -c "import easydiffraction as edi; print(edi.Project)"
     python -m edi --help
     ```
 
     To upgrade, run the install command again with the new release's version.
 
-Building edi from source is described in the [contributor documentation](https://easydiffraction.org/dev/).
 
 ## In a notebook
 

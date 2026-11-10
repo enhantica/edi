@@ -1,6 +1,6 @@
 # The EasyDiffraction website
 
-The public site at <https://enhantica.github.io/edi/>, built with [Zensical](https://zensical.org). EasyDiffraction is
+The public site at <https://easydiffraction.org/>, built with [Zensical](https://zensical.org). EasyDiffraction is
 the public name; `edi` is the package and code name. The site has Home, User guide, Application, Python, Command
 Line, Physics and About. Each interface has the same menu as the User guide: Start here, then an Analysis workflow with
 Project, Structure, Experiment, Analysis and Report, then Examples at the bottom. In Application, each stage's entries repeat the app's
@@ -19,7 +19,7 @@ python -m http.server 8873 --bind 127.0.0.1 --directory website/_build
 Then open <http://127.0.0.1:8873/>. `site-build` renders the generated pages, builds `surfaces/` with
 `zensical build --strict`, writes plain Markdown under `reference/` and a root `llms.txt`, and checks the generated
 links, the Physics catalogue headings and the parameter reference. Pages passes
-`--base-url https://enhantica.github.io/edi/`.
+`--base-url https://easydiffraction.org/`.
 
 ## Layout
 
