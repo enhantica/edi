@@ -99,6 +99,8 @@ QtObject {
     signal createFailed
     // The Analysis page's Evolution tab, asked for from the results window after a scan (edi ADR-0017 §19).
     signal evolutionRequested
+    // The window's one main view of the Structure, Experiment and Analysis pages (MainView), set by the window.
+    property var mainView: null
     // Help and feedback, asked for from Home, About or the crash popup: the window's form opens on `kind` ("feedback",
     // "question", "problem" or "idea"), with `log` attached instead of this run's when it is not empty (Main.qml).
     signal feedbackRequested(string kind, string log)

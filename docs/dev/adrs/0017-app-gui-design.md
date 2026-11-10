@@ -66,6 +66,16 @@ The decisions it rests on, unchanged here:
 
 ### 2. The main area and the Experiment type group
 
+- **One main view** (the owner, 2026-11-10; proposal and mockups in the E04-T49 analysis): the Structure, Experiment
+  and Analysis pages share one main view, `MainView`, with the tabs Structure, Pattern, Correlations, Stacked, Map and
+  Evolution (`mainArea.tab.structure`, `.pattern`, `.correlations`, `.stacked`, `.map`, `.evolution`). It is drawn over
+  those pages' main area in the pages' view, which stays put while the pages slide, so the app bar's pages change only
+  the sidebar. Opening a page keeps the shown tab and switches only when that tab cannot show anything yet: to
+  Structure on the Structure page, to Pattern on the others. A tab that cannot show is disabled, as before (Correlations
+  before a fit, Stacked and Map without a scan or a joint fit, Evolution outside the scan modes). The block selector
+  above the views lists the structures on the Structure tab and the experiments on the others. Project and Report keep
+  their own main views. Each view exists once, so a structure edited on the Analysis page's slider redraws in the
+  Structure tab beside it.
 - **The supported minimum app size** (the owner, 2026-10-25) is 1024 × 640 logical pixels, `AppSizes.minimumAppWidth`
   and `minimumAppHeight`, one value for both of its uses. It was checked on every page at that size (`edi_app --demo
   <dir> --demo-only minimum-`): every page's sidebar reaches each input by scrolling, a group's fields stay on one row,

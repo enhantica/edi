@@ -230,7 +230,7 @@ void keep_frame(ScreenObservation& o) {
 // Adaptive mode: show Evolution while the fit runs, then the pattern again a second later.
 void hold_and_release(ScreenObservation& o, ProjectViewModel* project) {
     if (o.result.contains("heldMs")) return;
-    press(o.window->findChild<QObject*>("mainArea.analysis.tab.evolution"));
+    press(o.window->findChild<QObject*>("mainArea.tab.evolution"));
     o.result["heldMs"] = static_cast<double>(o.clock.elapsed());
     o.result["heldGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
     o.result["finishedAtHold"] = static_cast<int>(completed().size());
@@ -238,7 +238,7 @@ void hold_and_release(ScreenObservation& o, ProjectViewModel* project) {
         o.result["finishedAtRelease"] = QJsonArray::fromStringList(completed());
         o.result["releasedGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
         o.result["releasedMs"] = static_cast<double>(o.clock.elapsed());
-        press(o.window->findChild<QObject*>("mainArea.analysis.tab.fitting"));
+        press(o.window->findChild<QObject*>("mainArea.tab.pattern"));
     });
 }
 

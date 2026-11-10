@@ -48,8 +48,8 @@ their declared example to illustrate controls specific to that project type.
 | [12-fit-profile](surfaces/docs/assets/gui/y2o3/12-fit-profile.png) | analysis / — | `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `statusBar.fit.button` → `wait-fit` → `close-fit-results` | `workflow.analysis.mainContent`, `group.parameters` |
 | 12-run-refinement | analysis / — | `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `reveal:parameters.nameFilter` → `fill:parameters.nameFilter` → `parameters.freeHeader` → `parameters.freeHeader.free` → `parameters.clearFilters` → `statusBar.fit.button` → `wait-fit` → `close-fit-results` | action only |
 | 12-save-refined | analysis / — | `save-as:checkpoints/refined` | action only |
-| [12-correlations](surfaces/docs/assets/gui/y2o3/12-correlations.png) | analysis / — | `mainArea.analysis.tab.correlations` | `workflow.analysis.mainContent` |
-| 12-pattern-return | analysis / — | `mainArea.analysis.tab.fitting` | action only |
+| [12-correlations](surfaces/docs/assets/gui/y2o3/12-correlations.png) | analysis / — | `mainArea.tab.correlations` | `workflow.analysis.mainContent` |
+| 12-pattern-return | analysis / — | `mainArea.tab.pattern` | action only |
 | [13-analysis-basic](surfaces/docs/assets/gui/y2o3/13-analysis-basic.png) | analysis / Main | `appBar.tab.analysis` → `if-enabled:sideBar.tab.basic` → `sideBar.tab.basic` | `appBar`, `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar`, `statusBar` |
 | [13-analysis-extras](surfaces/docs/assets/gui/y2o3/13-analysis-extras.png) | analysis / Extra | `appBar.tab.analysis` → `if-enabled:sideBar.tab.extras` → `sideBar.tab.extras` | `appBar`, `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar`, `statusBar` |
 | [13-analysis-text](surfaces/docs/assets/gui/y2o3/13-analysis-text.png) | analysis / Text | `appBar.tab.analysis` → `if-enabled:sideBar.tab.text` → `sideBar.tab.text` | `appBar`, `workflow.analysis.mainContent`, `workflow.analysis.manualSidebar`, `statusBar` |
@@ -89,7 +89,7 @@ their declared example to illustrate controls specific to that project type.
 | [guide-experiment-orientation](surfaces/docs/assets/gui/y2o3/guide-experiment-orientation.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.extras` → `reveal:group.preferred_orientation` → `expand:group.preferred_orientation` → `reveal:group.preferred_orientation` | `group.preferred_orientation` |
 | [guide-experiment-scattering](surfaces/docs/assets/gui/y2o3/guide-experiment-scattering.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.extras` → `reveal:group.scattering_source` → `expand:group.scattering_source` → `reveal:group.scattering_source` | `group.scattering_source` |
 | [guide-analysis-aliases](surfaces/docs/assets/gui/y2o3/guide-analysis-aliases.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.alias` → `expand:group.alias` → `reveal:group.alias` | `group.alias` |
-| [guide-analysis-correlations](surfaces/docs/assets/gui/y2o3/guide-analysis-correlations.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.analysis.tab.correlations` | `workflow.analysis.mainContent` |
+| [guide-analysis-correlations](surfaces/docs/assets/gui/y2o3/guide-analysis-correlations.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.tab.correlations` | `workflow.analysis.mainContent` |
 | [guide-project-uncertainties](surfaces/docs/assets/gui/y2o3/guide-project-uncertainties.png) | project / — | `appBar.tab.project` → `sideBar.tab.extras` → `reveal:group.su_format` → `expand:group.su_format` → `reveal:group.su_format` | `group.su_format` |
 | [guide-experiment-data-settings](surfaces/docs/assets/gui/y2o3/guide-experiment-data-settings.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.extras` → `reveal:group.data` → `expand:group.data` → `reveal:group.data` | `group.data` |
 | [guide-experiment-cutoff](surfaces/docs/assets/gui/y2o3/guide-experiment-cutoff.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.extras` → `reveal:group.peak` → `expand:group.peak` → `reveal:peak.cutoff_fwhm` | `peak.cutoff_fwhm` |
@@ -130,13 +130,13 @@ their declared example to illustrate controls specific to that project type.
 | [scan-performance-analysis](surfaces/docs/assets/gui/scan/scan-performance-analysis.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.settings` → `reveal:group.performance` → `expand:group.performance` | `group.performance` |
 | [scan-declaration](surfaces/docs/assets/gui/scan/scan-declaration.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.sequential_fit` → `expand:group.sequential_fit` | `group.sequential_fit` |
 | [scan-extraction](surfaces/docs/assets/gui/scan/scan-extraction.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.sequential_fit_extract` → `expand:group.sequential_fit_extract` | `group.sequential_fit_extract` |
-| [scan-experiment-stacked](surfaces/docs/assets/gui/scan/scan-experiment-stacked.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.experiment.tab.stacked` → `wait-scan:stacked` | `workflow.experiment.mainContent` |
-| [scan-experiment-map](surfaces/docs/assets/gui/scan/scan-experiment-map.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.experiment.tab.map` → `wait-scan:map` | `workflow.experiment.mainContent` |
-| [scan-analysis-stacked](surfaces/docs/assets/gui/scan/scan-analysis-stacked.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.analysis.tab.stacked` → `wait-scan:stacked` | `workflow.analysis.mainContent` |
-| [scan-analysis-map](surfaces/docs/assets/gui/scan/scan-analysis-map.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.analysis.tab.map` → `wait-scan:map` | `workflow.analysis.mainContent` |
-| [scan-evolution](surfaces/docs/assets/gui/scan/scan-evolution.png) | analysis / — | `appBar.tab.analysis` → `mainArea.analysis.tab.evolution` | `workflow.analysis.mainContent` |
-| [scan-progress-controls](surfaces/docs/assets/gui/scan/scan-progress-controls.png) | analysis / — | `mainArea.analysis.tab.fitting` → `sideBar.tab.basic` | `statusBar` |
-| [scan-correlations](surfaces/docs/assets/gui/scan/scan-correlations.png) | analysis / — | `appBar.tab.analysis` → `mainArea.analysis.tab.correlations` | `workflow.analysis.mainContent` |
+| [scan-experiment-stacked](surfaces/docs/assets/gui/scan/scan-experiment-stacked.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.tab.stacked` → `wait-scan:stacked` | `workflow.experiment.mainContent` |
+| [scan-experiment-map](surfaces/docs/assets/gui/scan/scan-experiment-map.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.tab.map` → `wait-scan:map` | `workflow.experiment.mainContent` |
+| [scan-analysis-stacked](surfaces/docs/assets/gui/scan/scan-analysis-stacked.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.tab.stacked` → `wait-scan:stacked` | `workflow.analysis.mainContent` |
+| [scan-analysis-map](surfaces/docs/assets/gui/scan/scan-analysis-map.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.tab.map` → `wait-scan:map` | `workflow.analysis.mainContent` |
+| [scan-evolution](surfaces/docs/assets/gui/scan/scan-evolution.png) | analysis / — | `appBar.tab.analysis` → `mainArea.tab.evolution` | `workflow.analysis.mainContent` |
+| [scan-progress-controls](surfaces/docs/assets/gui/scan/scan-progress-controls.png) | analysis / — | `mainArea.tab.pattern` → `sideBar.tab.basic` | `statusBar` |
+| [scan-correlations](surfaces/docs/assets/gui/scan/scan-correlations.png) | analysis / — | `appBar.tab.analysis` → `mainArea.tab.correlations` | `workflow.analysis.mainContent` |
 
 ## pd-neut-xray-cwl_pbso4-d1a-lab
 
@@ -171,11 +171,11 @@ their declared example to illustrate controls specific to that project type.
 | [joint-result](surfaces/docs/assets/gui/joint/joint-result.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.fit_result` → `expand:group.fit_result` | `group.fit_result` |
 | [joint-experiment-results](surfaces/docs/assets/gui/joint/joint-experiment-results.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.fit_result_bank` → `expand:group.fit_result_bank` | `group.fit_result_bank` |
 | [joint-structure-results](surfaces/docs/assets/gui/joint/joint-structure-results.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.extras` → `reveal:group.fit_result_phase` → `expand:group.fit_result_phase` | `group.fit_result_phase` |
-| [joint-experiment-stacked](surfaces/docs/assets/gui/joint/joint-experiment-stacked.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.experiment.tab.stacked` → `wait-scan:stacked` | `workflow.experiment.mainContent` |
-| [joint-experiment-map](surfaces/docs/assets/gui/joint/joint-experiment-map.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.experiment.tab.map` → `wait-scan:map` | `workflow.experiment.mainContent` |
-| [joint-analysis-stacked](surfaces/docs/assets/gui/joint/joint-analysis-stacked.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.analysis.tab.stacked` → `wait-scan:stacked` | `workflow.analysis.mainContent` |
-| [joint-analysis-map](surfaces/docs/assets/gui/joint/joint-analysis-map.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.analysis.tab.map` → `wait-scan:map` | `workflow.analysis.mainContent` |
-| [joint-correlations](surfaces/docs/assets/gui/joint/joint-correlations.png) | analysis / — | `appBar.tab.analysis` → `mainArea.analysis.tab.correlations` | `workflow.analysis.mainContent` |
+| [joint-experiment-stacked](surfaces/docs/assets/gui/joint/joint-experiment-stacked.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.tab.stacked` → `wait-scan:stacked` | `workflow.experiment.mainContent` |
+| [joint-experiment-map](surfaces/docs/assets/gui/joint/joint-experiment-map.png) | experiment / — | `appBar.tab.experiment` → `sideBar.tab.basic` → `mainArea.tab.map` → `wait-scan:map` | `workflow.experiment.mainContent` |
+| [joint-analysis-stacked](surfaces/docs/assets/gui/joint/joint-analysis-stacked.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.tab.stacked` → `wait-scan:stacked` | `workflow.analysis.mainContent` |
+| [joint-analysis-map](surfaces/docs/assets/gui/joint/joint-analysis-map.png) | analysis / — | `appBar.tab.analysis` → `sideBar.tab.basic` → `mainArea.tab.map` → `wait-scan:map` | `workflow.analysis.mainContent` |
+| [joint-correlations](surfaces/docs/assets/gui/joint/joint-correlations.png) | analysis / — | `appBar.tab.analysis` → `mainArea.tab.correlations` | `workflow.analysis.mainContent` |
 
 ## sc-neut-cwl_tb2ti2o7-heidi
 

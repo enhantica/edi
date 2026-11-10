@@ -100,13 +100,13 @@
         {
           "title": "Structure view",
           "text": "The structure view draws the cell and its atoms. Drag to turn it.",
-          "target": "mainArea.structure.tab.view",
+          "target": "mainArea.tab.structure",
           "open": true
         },
         {
           "title": "Pattern",
           "text": "Pattern shows the pattern this structure gives.",
-          "target": "mainArea.structure.tab.pattern",
+          "target": "mainArea.tab.pattern",
           "open": true
         },
         {
@@ -198,19 +198,19 @@
         {
           "title": "Pattern",
           "text": "Pattern shows the measured pattern and the one the model calculates.",
-          "target": "mainArea.experiment.tab.chart",
+          "target": "mainArea.tab.pattern",
           "open": true
         },
         {
           "title": "Stacked",
           "text": "Stacked draws the patterns of a scan one above another. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
-          "target": "mainArea.experiment.tab.stacked",
+          "target": "mainArea.tab.stacked",
           "open": true
         },
         {
           "title": "Map",
           "text": "Map draws the patterns of a scan as a colour map. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
-          "target": "mainArea.experiment.tab.map",
+          "target": "mainArea.tab.map",
           "open": true
         },
         {
@@ -318,7 +318,7 @@
         {
           "title": "Pattern",
           "text": "Pattern compares the calculated pattern with the measurement, with the difference below.",
-          "target": "mainArea.analysis.tab.fitting",
+          "target": "mainArea.tab.pattern",
           "open": true
         },
         {
@@ -372,25 +372,25 @@
         {
           "title": "Pattern",
           "text": "After the fit, Pattern shows the calculated pattern on the measured one, with the difference below.",
-          "target": "mainArea.analysis.tab.fitting",
+          "target": "mainArea.tab.pattern",
           "open": true
         },
         {
           "title": "Correlations",
           "text": "Correlations, filled by the fit: how strongly the fitted parameters depend on each other.",
-          "target": "mainArea.analysis.tab.correlations",
+          "target": "mainArea.tab.correlations",
           "open": true
         },
         {
           "title": "Stacked",
           "text": "Stacked draws the fits of a scan one above another. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
-          "target": "mainArea.analysis.tab.stacked",
+          "target": "mainArea.tab.stacked",
           "open": true
         },
         {
           "title": "Map",
           "text": "Map draws the fits of a scan as a colour map. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
-          "target": "mainArea.analysis.tab.map",
+          "target": "mainArea.tab.map",
           "open": true
         },
         {

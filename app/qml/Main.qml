@@ -439,6 +439,34 @@ EaComponents.ApplicationWindow {
         }
     ]
 
+    // The one main view of the Structure, Experiment and Analysis pages (MainView; the owner, 2026-11-10), over their
+    // main areas in the pages' view, which stays put while the pages slide: only the sidebar changes from page to
+    // page. Placed where a loaded workflow page has its main area.
+    Rectangle {
+        id: mainViewFrame
+
+        readonly property Item area: [structureLoader, experimentLoader, analysisLoader].map(loader => loader.item).find(page => page !== null && page !== undefined)?.mainArea ?? null
+        readonly property int page: EaGlobals.Vars.appBarCurrentIndex
+
+        parent: structureLoader.SwipeView.view
+        z: 2
+        x: area ? area.x : 0
+        y: area ? area.y : 0
+        width: area ? area.width : 0
+        height: area ? area.height : 0
+        visible: area !== null && Session.project !== null && page >= AppState.Page.Structure && page <= AppState.Page.Analysis
+        color: EaStyle.Colors.contentBackground
+        clip: true
+
+        MainView {
+            id: mainView
+
+            shown: mainViewFrame.visible
+            page: mainViewFrame.page
+            Component.onCompleted: AppState.mainView = mainView
+        }
+    }
+
     statusBar: StatusBar {
         assistantChatShown: window.assistantPanelVisible && window.assistantPanelShown
         assistantManualTakeover: window.assistantManualTakeover

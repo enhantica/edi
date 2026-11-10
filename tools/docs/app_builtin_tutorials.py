@@ -560,7 +560,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         ]
     if ident == 'correlations':
         text = 'The **Correlations** view shows which fitted parameters move together.'
-        tab = 'mainArea.analysis.tab.correlations'
+        tab = 'mainArea.tab.correlations'
         return [step('Correlations', text, 'analysis', tab, 'open:' + tab)]
     if ident == 'calculated':
         text = 'On **Analysis**, the main view draws the pattern calculated from the model.'

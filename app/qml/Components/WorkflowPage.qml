@@ -26,6 +26,9 @@ EaComponents.ContentPage {
     // Retained offscreen pages keep their tree/state but cannot acquire input focus.
     enabled: current
     readonly property Item assistantOverlayHost: sideBar.parent
+    // The main area's place in the page: the Structure, Experiment and Analysis pages leave it to the window's one
+    // main view, drawn over it (MainView).
+    readonly property Item mainArea: mainContent.parent
     property alias mainTabs: mainContent.tabs
     property alias mainItems: mainContent.items
     property alias basicItem: basicLoader.sourceComponent

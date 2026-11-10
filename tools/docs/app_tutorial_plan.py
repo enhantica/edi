@@ -524,7 +524,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                 'calculated',
                 'analysis',
                 'See the calculated pattern',
-                ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.analysis.tab.fitting'],
+                ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.tab.pattern'],
                 ['workflow.analysis.mainContent'],
             )
             shot(
@@ -965,14 +965,14 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         'correlations',
         'analysis',
         'Inspect the correlations',
-        ['mainArea.analysis.tab.correlations'],
+        ['mainArea.tab.correlations'],
         ['workflow.analysis.mainContent'],
     )
     shot(
         'report',
         'report',
         'Review the report',
-        ['mainArea.analysis.tab.fitting', 'appBar.tab.report', 'sideBar.tab.basic'],
+        ['mainArea.tab.pattern', 'appBar.tab.report', 'sideBar.tab.basic'],
         ['workflow.report.mainContent'],
         'Main',
     )
