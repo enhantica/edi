@@ -18,7 +18,7 @@ On **Analysis → Extra**, expand **Minimizer**. Choose the descent strategy, th
 <!-- gui-options:guide-analysis-minimizer:minimizer.descent: -->
 - Ladder
 - Fast descent
-- Multi-start with pruning
+- Fast descent and ladder
 <!-- /gui-options -->
 
 Keep the default strategy for a first fit. Before changing search settings, check the starting model, free parameters and residual. See [minimization and uncertainty](../../physics/minimization.md) for the objective and interpretation of results.

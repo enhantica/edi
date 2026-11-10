@@ -63,7 +63,7 @@ and the command line carries none of them: `python -m edi fit` takes the project
 
 | Tag | Values | Absent |
 | --- | --- | --- |
-| `_minimizer.descent` | the descent strategy: `ladder`, `fast_descent` or `multistart_prune`; an older file naming one of the retired linear-snap descents loads as `fast_descent` with a warning | `fast_descent` |
+| `_minimizer.descent` | the descent strategy: `ladder`, `fast_descent` or `multistart_prune`, which runs fast descent and the ladder briefly from the start and continues with the lower χ²; an older file naming one of the retired linear-snap descents loads as `fast_descent` with a warning | `multistart_prune` |
 | `_minimizer.chi_square_tolerance` | a positive number: the relative chi-square improvement below which the fit has converged | `1e-6` |
 | `_minimizer.max_iterations` | a positive integer: the iteration budget | `50` |
 | `_minimizer.stop_rule` | what ends a fit as converged: `chi_square_change` (the tolerance above) or `shift_su`, every free parameter's last shift and the shift of a full undamped step below `shift_tolerance` times its s.u. (a χ² plateau that an undamped step cannot lower also ends the fit) | `chi_square_change` (a new project declares `shift_su`) |

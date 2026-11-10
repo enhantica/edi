@@ -1057,7 +1057,7 @@
                     "token": "fast_descent"
                 },
                 {
-                    "label": "Multi-start with pruning",
+                    "label": "Fast descent and ladder",
                     "token": "multistart_prune"
                 }
             ],

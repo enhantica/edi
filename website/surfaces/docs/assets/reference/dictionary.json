@@ -6218,13 +6218,13 @@
                     "token": "ladder"
                 },
                 {
-                    "description": "The default descent; it adjusts the damping within each step.",
+                    "description": "A damped descent that adjusts the damping within each step.",
                     "label": "Fast descent",
                     "token": "fast_descent"
                 },
                 {
-                    "description": "Several starts, the worse ones dropped as the fit goes on.",
-                    "label": "Multi-start with pruning",
+                    "description": "The default: fast descent and the ladder run from the start, and the one at the lower χ² continues.",
+                    "label": "Fast descent and ladder",
                     "token": "multistart_prune"
                 }
             ],

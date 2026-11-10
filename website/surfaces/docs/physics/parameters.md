@@ -2887,8 +2887,8 @@ The descent strategy of the minimizer.
 | Option | Meaning |
 | --- | --- |
 | Ladder | A damped descent that retries each step with growing damping. |
-| Fast descent | The default descent; it adjusts the damping within each step. |
-| Multi-start with pruning | Several starts, the worse ones dropped as the fit goes on. |
+| Fast descent | A damped descent that adjusts the damping within each step. |
+| Fast descent and ladder | The default: fast descent and the ladder run from the start, and the one at the lower χ² continues. |
 
 [Names across interfaces](../user-guide/parameters.md#names-minimizer)
 
