@@ -19,7 +19,7 @@ The app lists it as **Co₂SiO₄ [Pnma.1] · D20 @ ILL**.
 - **Command line:** `python -m edi fit docs/user/cli/pd-neut-cwl_cosio-d20_2k/project --dry` (fits without writing
   back; drop `--dry` to save the result into the project).
 - **App:** open it from the Examples on the Home page. The structure view draws each cobalt's moment as an arrow; the
-  toolbar shows or hides them, and the arrow length per Bohr magneton is set under Preferences, Appearance.
+  toolbar shows or hides them, and the arrow length per Bohr magneton is set in the Structure page's Appearance group.
 - **Python:** `edi.Project.load("docs/user/cli/pd-neut-cwl_cosio-d20_2k/project")`.
 
 All three read the same files, in `docs/user/cli/pd-neut-cwl_cosio-d20_2k/project`.
