@@ -71,7 +71,7 @@
       title: 'Anything else',
       questions: [
         { key: 'comments', kind: 'area', text: 'Anything else you would like to tell us' },
-        { key: 'email', kind: 'email', text: 'Your e-mail, if we may contact you about your answers' },
+        { key: 'contact', kind: 'contact' },
       ],
     },
   ];
@@ -102,7 +102,7 @@
 
   // A question as one cell of the grid: its label above its control.
   function field(q) {
-    const cell = element('div', { class: `ed-survey-field${q.kind === 'many' || q.kind === 'texts' || q.kind === 'area' || q.kind === 'email' || q.wide ? ' ed-survey-wide' : ''}`, 'data-key': q.key });
+    const cell = element('div', { class: `ed-survey-field${q.kind === 'many' || q.kind === 'texts' || q.kind === 'area' || q.wide ? ' ed-survey-wide' : ''}`, 'data-key': q.key });
     const controlId = id(q.key);
     cell.append(element('label', { class: 'ed-survey-label', for: controlId, text: q.text }));
     if (q.kind === 'one' || q.kind === 'rating') {
@@ -138,10 +138,7 @@
     }
     if (q.kind === 'text') cell.append(element('input', { type: 'text', name: q.key, id: controlId, maxlength: '500' }));
     if (q.kind === 'area') cell.append(element('textarea', { name: q.key, id: controlId, maxlength: '5000' }));
-    if (q.kind === 'email') {
-      cell.append(element('input', { type: 'email', name: q.key, id: controlId }));
-      cell.append(element('label', { class: 'ed-survey-consent' }, [element('input', { type: 'checkbox', name: 'consent' }), 'You may contact me at this address about my answers.']));
-    }
+
     return cell;
   }
 
@@ -186,7 +183,7 @@
         } else if (q.kind === 'many' || q.kind === 'texts') {
           const values = data.getAll(q.key).map(value => String(value).trim()).filter(Boolean);
           if (values.length) out[q.key] = values;
-        } else if (q.kind !== 'email' && text(q.key)) {
+        } else if (q.kind !== 'contact' && text(q.key)) {
           out[q.key] = text(q.key);
         }
         if (text(`${q.key}_other`) && (out[q.key] === 'Other' || (out[q.key] || []).includes?.('Other'))) out[`${q.key}_other`] = text(`${q.key}_other`);
@@ -197,9 +194,24 @@
     return out;
   }
 
+  // Name and e-mail side by side, then affiliation with the consent under the e-mail: inputs without a label above,
+  // their placeholders saying what they are, as the Get in touch form's (the owner, 2026-11-10).
+  function contactFields() {
+    const words = (app && app.contact) || { name: 'Name (optional)', email: 'E-mail (optional)', affiliation: 'Affiliation (optional)' };
+    const input = (type, name) => element('div', { class: 'ed-survey-field', 'data-key': name }, [element('input', { type, name, placeholder: words[name], 'aria-label': words[name] })]);
+    return [
+      input('text', 'name'),
+      input('email', 'email'),
+      input('text', 'affiliation'),
+      element('div', { class: 'ed-survey-field ed-survey-consent-cell', 'data-key': 'consent' }, [
+        element('label', { class: 'ed-survey-consent' }, [element('input', { type: 'checkbox', name: 'consent' }), 'You may e-mail me about my answers.']),
+      ]),
+    ];
+  }
+
   function build(form, events) {
     const top = element('div', { class: 'ed-survey-grid' }, [
-      element('div', { class: 'ed-survey-field', 'data-key': 'event' }, [element('label', { class: 'ed-survey-label', for: 'survey-event', text: 'Event' }), select('event', events.map(({ name, title }) => ({ value: name, text: title })), 'General')]),
+      element('div', { class: 'ed-survey-field ed-survey-wide', 'data-key': 'event' }, [element('label', { class: 'ed-survey-label', for: 'survey-event', text: 'Event' }), select('event', events.map(({ name, title }) => ({ value: name, text: title })), 'General')]),
     ]);
     top.querySelector('select').id = 'survey-event';
     top.querySelector('select').remove(0);
@@ -208,7 +220,7 @@
       const part = element('section', { class: 'ed-survey-section', id: `survey-${section.key || section.title.toLowerCase().replace(/[^a-z]+/g, '-')}` }, [element('h2', { text: section.title })]);
       if (section.note) part.append(element('p', { class: 'ed-survey-note', text: section.note }));
       const grid = element('div', { class: 'ed-survey-grid' });
-      for (const q of section.questions) grid.append(...(q.kind === 'interfaces' ? interfaceFields(q) : [field(q)]));
+      for (const q of section.questions) grid.append(...(q.kind === 'interfaces' ? interfaceFields(q) : q.kind === 'contact' ? contactFields() : [field(q)]));
       part.append(grid);
       form.append(part);
     }
@@ -246,8 +258,11 @@
           return;
         }
         const message = { event: form.elements.event.value || 'general', answers: answers(form), app: { source: 'website', page: window.location.pathname } };
-        const email = form.elements.email.value.trim();
-        if (email && form.elements.consent.checked) message.contact = { email };
+        // Name and affiliation when filled in; the e-mail only with the consent to be contacted.
+        const contact = {};
+        for (const key of ['name', 'affiliation']) if (form.elements[key].value.trim()) contact[key] = form.elements[key].value.trim();
+        if (form.elements.email.value.trim() && form.elements.consent.checked) contact.email = form.elements.email.value.trim();
+        if (Object.keys(contact).length) message.contact = contact;
         pending = true;
         status.textContent = app.status.sending;
         let code = 0;

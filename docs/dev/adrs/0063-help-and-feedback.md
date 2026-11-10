@@ -62,8 +62,11 @@ message: `POST /feedback` with `kind` (`feedback`, `question`, `problem` or `ide
 - The website's Survey page (About → Survey, 2026-11-10) sends to the same service at `/survey` in place of
   `/feedback`: `event` (a name from `website/surfaces/docs/assets/survey/events.json`, `general` always, any other
   only between its `start` and `end` dates), `answers` (an object of the answered questions only), optional
-  `contact` (`email`, sent only with the consent box ticked) and `app` as the Get in touch form sends it. The service
-  labels the issue `survey` and `event:<name>` and refuses an event the file does not list or whose dates have
-  passed; the page lists only the events open that day.  ## Consequences
+  `contact` (`name` and `affiliation` when filled in, `email` only with the consent box ticked; the fields look like
+  the Get in touch form's, the owner, 2026-11-10) and `app` as the Get in touch form sends it. The service labels the
+  issue `survey` and `event:<name>` and refuses an event the file does not list or whose dates have passed; the page
+  lists only the events open that day.
+
+## Consequences
 - A log leaves the user's computer only when they press Send with the box ticked.
 - Turning sending on is one setting once the feedback service is deployed; the app changes nothing else.

@@ -186,6 +186,8 @@
 .md-typeset .ed-survey-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ed-survey-gap) var(--ed-survey-column);align-items:start}
 .md-typeset .ed-survey-field{display:flex;flex-direction:column;gap:.35rem;min-width:0}
 .md-typeset .ed-survey-wide{grid-column:1 / -1}
+.md-typeset .ed-survey-consent-cell{align-self:center}
+.md-typeset .ed-survey-form>button,.md-typeset .ed-survey-form>.ed-contact-status{margin-top:calc(var(--ed-survey-gap) * -1.5)}
 .md-typeset .ed-survey-label{font-size:.8rem;font-weight:600}
 .md-typeset .ed-survey-minor{font-weight:400;color:var(--md-default-fg-color--light)}
 .md-typeset .ed-survey-subhead{margin:calc(var(--ed-survey-gap) * .4) 0 calc(var(--ed-survey-gap) * -.6);font-size:.8rem;font-weight:600}
